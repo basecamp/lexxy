@@ -23,7 +23,7 @@ module Actiontext
           ActionText::ContentHelper.allowed_tags = default_allowed_tags + %w[ video audio source embed ]
 
           default_allowed_attributes = Class.new.include(ActionText::ContentHelper).new.sanitizer_allowed_attributes
-          ActionText::ContentHelper.allowed_attributes = default_allowed_attributes + %w[ controls poster data-language ]
+          ActionText::ContentHelper.allowed_attributes = default_allowed_attributes + %w[ controls poster data-language style ]
         end
       end
 
