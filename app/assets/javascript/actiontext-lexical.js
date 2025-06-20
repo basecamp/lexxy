@@ -8933,8 +8933,6 @@ class LexicalEditorElement extends HTMLElement {
     }
 
     this.selection = null;
-
-    this.internals.setFormValue("");
   }
 
   #reconnect() {
