@@ -33,7 +33,24 @@ export default class Clipboard {
         this.contents.createLinkWithSelectedText(text)
       } else {
         this.#pasteMarkdown(text)
+        if (isUrl(text) && this.editorElement.unfurlUrl) {
+          this.#fetchUnfurl(this.editorElement.unfurlUrl, text)
+            .then(response => response.json())
+            .then(data => this.contents.unfurlLink(text, data))
+        }
       }
+    })
+  }
+
+  #fetchUnfurl(unfurlUrl, linkUrl) {
+    return fetch(unfurlUrl, {
+      method: "POST",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+        "Content-Type":     "application/json",
+        "Accept":           "application/json"
+      },
+      body: JSON.stringify({ url: linkUrl })
     })
   }
 

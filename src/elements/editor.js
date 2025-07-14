@@ -83,6 +83,10 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.getAttribute("attachments") !== "false"
   }
 
+  get unfurlUrl() {
+    return this.dataset.unfurlUrl
+  }
+
   focus() {
     this.editor.focus()
   }
