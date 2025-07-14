@@ -1,6 +1,6 @@
 import {
   $createParagraphNode, $getSelection, $setSelection, $insertNodes, $isElementNode, $isParagraphNode, $isTextNode,
-  $isRangeSelection, $createLineBreakNode, $createTextNode, HISTORY_MERGE_TAG, $isNodeSelection, $isDecoratorNode
+  $isRangeSelection, $createLineBreakNode, $createTextNode, HISTORY_MERGE_TAG, $isNodeSelection, $getRoot
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -119,6 +119,30 @@ export default class Contents {
 
       selection.insertNodes([ linkNode ])
     })
+  }
+
+  unfurlLink(linkUrl, unfurlData) {
+    if (unfurlData.title) {
+      this.editor.update(() => {
+        // I couldn't find a better way to search for matching Lexical nodes.
+        const textNodes = []
+        function traverseNodes(node) {
+          if ($isTextNode(node) && node.getTextContent() === linkUrl) { textNodes.push(node) }
+          if ($isElementNode(node)) {
+            for (const child of node.getChildren()) { traverseNodes(child) }
+          }
+        }
+        traverseNodes($getRoot())
+
+        textNodes.forEach(linkNode => {
+          linkNode.setTextContent(unfurlData.title)
+
+          // Ensure cursor is after the text link.
+          // (This is racy but I'm not sure how to do it more cleanly.)
+          linkNode.selectEnd()
+        })
+      })
+    }
   }
 
   textBackUntil(string) {
