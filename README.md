@@ -3,7 +3,7 @@
 A modern rich text editor for Rails.
 
 > [!IMPORTANT]  
-> This is an early beta. It hasn't been battle-tested yet. Please try it out and report any issues you find.
+> This is an early beta. It hasn't been well tested yet. Please try it out and report any issues you find.
 
 ## Features
 
