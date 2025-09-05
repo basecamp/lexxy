@@ -1,6 +1,6 @@
 import {
   $createParagraphNode, $getSelection, $setSelection, $insertNodes, $isElementNode, $isParagraphNode, $isTextNode,
-  $isRangeSelection, $createLineBreakNode, $createTextNode, HISTORY_MERGE_TAG, $isNodeSelection, $isDecoratorNode
+  $isRangeSelection, $createLineBreakNode, $createTextNode, HISTORY_MERGE_TAG, $isNodeSelection
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"

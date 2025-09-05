@@ -1,0 +1,32 @@
+# Rails-specific files
+app/
+bin/sync-version
+config/
+lib/tasks/
+test/
+Gemfile
+Gemfile.lock
+lexxy.gemspec
+Rakefile
+
+# Development files
+.git/
+.github/
+.idea/
+.rubocop.yml
+.ruby-version
+node_modules/
+pkg/
+docs/
+
+# Build configs (keep only NPM-specific)
+rollup.config.mjs
+*.log
+yarn.lock
+package-lock.json
+
+# Editor files
+.DS_Store
+*.swp
+*.swo
+*~
