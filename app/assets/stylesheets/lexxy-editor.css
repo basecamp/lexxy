@@ -18,7 +18,8 @@
     }
   }
 
-  button {
+  button,
+  summary {
     -webkit-appearance: none;
     appearance: none;
     background: var(--lexxy-color-canvas);
@@ -83,10 +84,12 @@
   font-size: inherit;
   gap: var(--lexxy-toolbar-gap);
   max-inline-size: 100%;
+  /* overflow-x: auto; */
   padding: 2px;
   position: relative;
 
-  > button {
+  button[data-command],
+  summary {
     aspect-ratio: 1;
     block-size: 2lh;
     color: currentColor;
@@ -110,6 +113,34 @@
       background-color: var(--lexxy-color-selected);
     }
   }
+}
+
+:where(.lexxy-editor__toolbar-overflow) {
+  display: none;
+  position: relative;
+  z-index: 1;
+
+  summary {
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    [open] & {
+      filter: brightness(0.9);
+    }
+  }
+}
+
+:where(.lexxy-editor__toolbar-overflow-menu) {
+  background-color: var(--lexxy-color-canvas);
+  border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
+  box-shadow: var(--lexxy-shadow);
+  display: flex;
+  inset-inline-end: 0;
+  padding: var(--lexxy-toolbar-gap);
+  position: absolute;
 }
 
 /* Link dialog

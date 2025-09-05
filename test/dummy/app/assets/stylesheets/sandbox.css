@@ -19,6 +19,7 @@ main {
 }
 
 section {
+  min-inline-size: 0;
   padding: var(--sandbox-padding);
 
   &:first-child {
