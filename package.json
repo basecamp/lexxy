@@ -1,14 +1,33 @@
 {
-  "name": "lexxy",
-  "version": "0.0.1",
-  "description": "Lexxy - A rich text editor",
-  "main": "dist/lexxy.js",
+  "name": "@37signals/lexxy",
+  "version": "0.1.3-beta",
+  "description": "Lexxy - A modern rich text editor for Rails.",
+  "module": "dist/lexxy.esm.js",
+  "type": "module",
+  "exports": "./dist/lexxy.esm.js",
+  "files": [
+    "dist"
+  ],
   "repository": "https://github.com/basecamp/lexxy.git",
   "author": "Jorge Manrubia <jorge@37signals.com>",
   "license": "MIT",
   "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-terser": "^0.4.4",
+    "rollup": "^4.44.1",
+    "rollup-plugin-gzip": "^4.1.1"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "build:npm": "rollup -c rollup.config.npm.mjs",
+    "watch": "rollup -wc",
+    "prerelease": "yarn build:npm",
+    "release": "yarn build:npm && yarn publish"
+  },
+  "dependencies": {
     "@lexical/clipboard": "^0.32.1",
     "@lexical/code": "^0.32.1",
+    "@lexical/history": "^0.32.1",
     "@lexical/html": "^0.32.1",
     "@lexical/link": "^0.32.1",
     "@lexical/list": "^0.32.1",
@@ -17,19 +36,16 @@
     "@lexical/selection": "^0.32.1",
     "@lexical/table": "^0.32.1",
     "@lexical/utils": "^0.32.1",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@rollup/plugin-terser": "^0.4.4",
-    "prismjs": "^1.30.0",
-    "rollup": "^4.44.1",
-    "rollup-plugin-gzip": "^4.1.1"
-  },
-  "scripts": {
-    "build": "rollup -c",
-    "watch": "rollup -wc"
-  },
-  "dependencies": {
-    "@lexical/history": "^0.32.1",
     "dompurify": "^3.2.6",
-    "marked": "^16.0.0"
+    "marked": "^16.0.0",
+    "prismjs": "^1.30.0"
+  },
+  "peerDependencies": {
+    "@rails/activestorage": "^7.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@rails/activestorage": {
+      "optional": true
+    }
   }
 }
