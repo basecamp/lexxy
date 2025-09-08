@@ -89,6 +89,7 @@
   position: relative;
 
   button[data-command],
+  button[data-dialog-target],
   summary {
     aspect-ratio: 1;
     block-size: 2lh;
