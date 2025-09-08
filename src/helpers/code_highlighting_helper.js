@@ -1,7 +1,7 @@
 import { createElement } from "./html_helper"
 
 export function highlightAll() {
-  const elements = document.querySelectorAll("pre[data-language]")
+  const elements = document.querySelectorAll("code[data-language]")
 
   elements.forEach(preElement => {
     highlightElement(preElement)
