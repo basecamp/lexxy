@@ -325,7 +325,39 @@ The sandbox app is available at http://localhost:3000. There is also a CRUD exam
 
 ## Events
 
-* `lexxy:change`: Fired whenever the editor content changes.
+### `lexxy:change`
+
+Fired whenever the editor content changes - on typing, pasting, deleting, or any content modification. The event provides access to the current editor value.
+
+**Examples:**
+
+```javascript
+// app/javascript/controllers/editor_controller.js
+import { Controller } from "@hotwired/stimulus"
+
+export default class extends Controller {
+  connect() {
+    console.log("Editor connected")
+  }
+  
+  handleChange(event) {
+    const content = event.target.value
+    console.log("Content changed:", content)
+    // Use for autosave, word count, validation, etc.
+  }
+}
+```
+
+```erb
+<!-- Connect the lexxy:change event to your Stimulus controller -->
+<div data-controller="editor">
+  <%= form_with model: @post do |form| %>
+    <div data-action="lexxy:change->editor#handleChange">
+      <%= form.rich_text_area :content %>
+    </div>
+  <% end %>
+</div>
+```
 
 ## Contributing
 
