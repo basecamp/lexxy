@@ -266,9 +266,7 @@ end
 And the action would just list the prompt items:
 
 ```erb
-<% @people.each do |person| %>
-  <%= render "people/prompt_item", person: person %>
-<% end %>
+<%= render partial: "people/prompt_item", collection: @people %>
 ```
 
 ### Free HTML attachments
