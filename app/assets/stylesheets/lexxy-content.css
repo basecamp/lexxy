@@ -37,6 +37,18 @@
     }
   }
 
+  .lexxy-content__italic {
+    font-style: italic;
+  }
+
+  .lexxy-content__bold {
+    font-weight: bold;
+  }
+
+  .lexxy-content__underline {
+    text-decoration: underline;
+  }
+
   blockquote {
     border-inline-start: 0.25em solid var(--lexxy-color-ink-lighter);
     font-style: italic;

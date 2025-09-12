@@ -1,4 +1,9 @@
 export default {
+  text: {
+    bold: "lexxy-content__bold",
+    italic: "lexxy-content__italic",
+    underline: "lexxy-content__underline",
+  },
   codeHighlight: {
     atrule: 'code-token__attr',
     attr: 'code-token__attr',
