@@ -5,7 +5,7 @@ import {
 
 import { $generateNodesFromDOM } from "@lexical/html"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
-import { $createLinkNode } from "@lexical/link"
+import { $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListItemNode, $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
@@ -132,13 +132,7 @@ export default class Contents {
     if (!this.hasSelectedText()) return
 
     this.editor.update(() => {
-      const selection = $getSelection()
-      const selectedText = selection.getTextContent()
-
-      const linkNode = $createLinkNode(url)
-      linkNode.append($createTextNode(selectedText))
-
-      selection.insertNodes([ linkNode ])
+      $toggleLink(url)
     })
   }
 
@@ -192,7 +186,7 @@ export default class Contents {
   }
 
   replaceTextBackUntil(stringToReplace, replacementNodes) {
-    replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ]
+    replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [replacementNodes]
 
     this.editor.update(() => {
       const { anchorNode, offset } = this.#getTextAnchorData()
@@ -231,7 +225,7 @@ export default class Contents {
       } else if (currentParagraph && $isElementNode(currentParagraph)) {
         currentParagraph.insertAfter(uploadedImageNode)
       } else {
-        $insertNodes([ uploadedImageNode ])
+        $insertNodes([uploadedImageNode])
       }
     }, { tag: HISTORY_MERGE_TAG })
   }
@@ -275,7 +269,7 @@ export default class Contents {
       wrappingNode.append(...topLevelElement.getChildren())
       topLevelElement.replace(wrappingNode)
     } else {
-      $insertNodes([ newNodeFn() ])
+      $insertNodes([newNodeFn()])
     }
   }
 
