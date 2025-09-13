@@ -61,10 +61,8 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   formResetCallback() {
-    this.editor.update(() => {
-      this.value = this.#initialValue
-      this.editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
-    })
+    this.value = this.#initialValue
+    this.editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
   }
 
   get form() {
