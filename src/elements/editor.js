@@ -1,4 +1,4 @@
-import { createEditor, $getRoot, $createTextNode, $getNodeByKey, $addUpdateTag, SKIP_DOM_SELECTION_TAG, KEY_ENTER_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode } from "lexical"
+import { createEditor, $getRoot, $createTextNode, $getNodeByKey, $addUpdateTag, SKIP_DOM_SELECTION_TAG, KEY_ENTER_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, CLEAR_HISTORY_COMMAND } from "lexical"
 import { ListNode, ListItemNode, registerList } from "@lexical/list"
 import { LinkNode, AutoLinkNode } from "@lexical/link"
 import { registerRichText, QuoteNode, HeadingNode } from "@lexical/rich-text"
@@ -24,6 +24,8 @@ export default class LexicalEditorElement extends HTMLElement {
   static commands = [ "bold", "italic", "" ]
 
   static observedAttributes = [ "connected" ]
+
+  #initialValue = ''
 
   constructor() {
     super()
@@ -56,6 +58,13 @@ export default class LexicalEditorElement extends HTMLElement {
     if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
       requestAnimationFrame(() => this.#reconnect())
     }
+  }
+
+  formResetCallback() {
+    this.editor.update(() => {
+      this.value = this.#initialValue
+      this.editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
+    })
   }
 
   get form() {
@@ -229,7 +238,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #loadInitialValue() {
     const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p></p>"
-    this.value = initialHtml
+    this.value = this.#initialValue = initialHtml
   }
 
   #resetBeforeTurboCaches() {
