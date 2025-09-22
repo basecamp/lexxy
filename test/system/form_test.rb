@@ -51,4 +51,12 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     assert_equal_html "<p>Hello everyone</p>", find_editor.value
   end
+
+  test "Clearing value of editor doesn't add trailing markup" do
+    visit edit_post_path(posts(:hello_world))
+
+    find_editor.value =  ""
+
+    assert_equal_html "", find_editor.value
+  end
 end
