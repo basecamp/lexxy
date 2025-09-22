@@ -108,11 +108,10 @@ export default class LexicalEditorElement extends HTMLElement {
 
   set value(html) {
     this.editor.update(() => {
-      const isEmpty = html == ""
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       const root = $getRoot()
       root.clear()
-      if (!isEmpty) root.append(...this.#parseHtmlIntoLexicalNodes(html))
+      if (html !== "") root.append(...this.#parseHtmlIntoLexicalNodes(html))
       root.select()
 
       this.#toggleEmptyStatus()
