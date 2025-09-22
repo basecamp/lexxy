@@ -1356,6 +1356,11 @@ const getNonce = () => {
   return element?.content
 };
 
+const getNonce = () => {
+  const element = document.head.querySelector("meta[name=csp-nonce]");
+  return element?.content
+};
+
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -7520,10 +7525,11 @@ class LexicalEditorElement extends HTMLElement {
 
   set value(html) {
     this.editor.update(() => {
+      const isEmpty = html == "";
       Ys(Mi);
       const root = ps();
       root.clear();
-      root.append(...this.#parseHtmlIntoLexicalNodes(html));
+      if (!isEmpty) root.append(...this.#parseHtmlIntoLexicalNodes(html));
       root.select();
 
       this.#toggleEmptyStatus();
