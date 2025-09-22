@@ -7525,11 +7525,10 @@ class LexicalEditorElement extends HTMLElement {
 
   set value(html) {
     this.editor.update(() => {
-      const isEmpty = html == "";
       Ys(Mi);
       const root = ps();
       root.clear();
-      if (!isEmpty) root.append(...this.#parseHtmlIntoLexicalNodes(html));
+      if (html !== "") root.append(...this.#parseHtmlIntoLexicalNodes(html));
       root.select();
 
       this.#toggleEmptyStatus();
