@@ -64,6 +64,8 @@ export class CommandDispatcher {
 
   dispatchInsertUnorderedList() {
     const selection = $getSelection()
+    if (!selection) return;
+
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "bullet") {
@@ -75,6 +77,8 @@ export class CommandDispatcher {
 
   dispatchInsertOrderedList() {
     const selection = $getSelection()
+    if (!selection) return;
+
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "number") {
