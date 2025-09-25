@@ -1356,6 +1356,11 @@ const getNonce = () => {
   return element?.content
 };
 
+const getNonce = () => {
+  const element = document.head.querySelector("meta[name=csp-nonce]");
+  return element?.content
+};
+
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -5950,6 +5955,8 @@ class CommandDispatcher {
 
   dispatchInsertUnorderedList() {
     const selection = Nr();
+    if (!selection) return;
+
     const anchorNode = selection.anchor.getNode();
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "bullet") {
@@ -5961,6 +5968,8 @@ class CommandDispatcher {
 
   dispatchInsertOrderedList() {
     const selection = Nr();
+    if (!selection) return;
+
     const anchorNode = selection.anchor.getNode();
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "number") {
