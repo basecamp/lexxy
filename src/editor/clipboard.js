@@ -1,6 +1,7 @@
 import { marked } from "marked"
 import { isUrl } from "../helpers/string_helper";
 import { nextFrame } from "../helpers/timing_helpers";
+import { dispatchLinkEvent } from "../helpers/link_event_helper";
 
 export default class Clipboard {
   constructor(editorElement) {
@@ -33,6 +34,9 @@ export default class Clipboard {
     item.getAsString((text) => {
       if (isUrl(text) && this.contents.hasSelectedText()) {
         this.contents.createLinkWithSelectedText(text)
+      } else if (isUrl(text)) {
+        const nodeKey = this.contents.createLink(text)
+        dispatchLinkEvent("created", this.editorElement, nodeKey, { url: text })
       } else {
         this.#pasteMarkdown(text)
       }

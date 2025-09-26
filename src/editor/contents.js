@@ -1,11 +1,11 @@
 import {
   $createParagraphNode, $getSelection, $setSelection, $insertNodes, $isElementNode, $isParagraphNode, $isTextNode,
-  $isRangeSelection, $createLineBreakNode, $createTextNode, HISTORY_MERGE_TAG, $isNodeSelection
+  $isRangeSelection, $createLineBreakNode, $createTextNode, HISTORY_MERGE_TAG, $isNodeSelection, $getNodeByKey
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
-import { $toggleLink } from "@lexical/link"
+import { $toggleLink, $createLinkNode } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListItemNode, $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
@@ -126,6 +126,24 @@ export default class Contents {
         this.#selectNewParagraphs(newParagraphs)
       }
     })
+  }
+
+  createLink(url) {
+    let linkNodeKey = null
+
+    this.editor.update(() => {
+      const textNode = $createTextNode(url)
+      const linkNode = $createLinkNode(url)
+      linkNode.append(textNode)
+
+      const selection = $getSelection()
+      if ($isRangeSelection(selection)) {
+        selection.insertNodes([linkNode])
+        linkNodeKey = linkNode.getKey()
+      }
+    })
+
+    return linkNodeKey
   }
 
   createLinkWithSelectedText(url) {
@@ -253,6 +271,59 @@ export default class Contents {
           return true
         }
       }
+    })
+  }
+
+  replaceNodeWithHTML(nodeKey, html) {
+    this.editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      if (!node) return
+
+      const selection = $getSelection()
+      let wasSelected = false
+
+      if ($isRangeSelection(selection)) {
+        const selectedNodes = selection.getNodes()
+        wasSelected = selectedNodes.includes(node) || selectedNodes.some(n => n.getParent() === node)
+
+        if (wasSelected) {
+          $setSelection(null)
+        }
+      }
+
+      const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
+      if (htmlNodes.length === 0) return
+
+      const firstReplacementNode = htmlNodes[0]
+      node.replace(firstReplacementNode)
+
+      if (htmlNodes.length > 1) {
+        let previousNode = firstReplacementNode
+        htmlNodes.slice(1).forEach(htmlNode => {
+          previousNode.insertAfter(htmlNode)
+          previousNode = htmlNode
+        })
+      }
+
+      if (wasSelected && firstReplacementNode) {
+        firstReplacementNode.selectEnd()
+      }
+    })
+  }
+
+  insertHTMLBelowNode(nodeKey, html) {
+    this.editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      if (!node) return
+
+      const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
+      if (htmlNodes.length === 0) return
+
+      let previousNode = node
+      htmlNodes.forEach(htmlNode => {
+        previousNode.insertAfter(htmlNode)
+        previousNode = htmlNode
+      })
     })
   }
 
