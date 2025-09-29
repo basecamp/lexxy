@@ -292,36 +292,11 @@ export default class Contents {
         }
       }
 
-      if (options.attachment) {
-        const attachmentConfig = typeof options.attachment === 'object' ? options.attachment : {}
-        const customNode = new CustomActionTextAttachmentNode({
-          sgid: attachmentConfig.sgid || null,
-          contentType: "text/html",
-          innerHtml: html
-        })
-        node.replace(customNode)
+      const replacementNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
+      node.replace(replacementNode)
 
-        if (wasSelected) {
-          customNode.selectEnd()
-        }
-      } else {
-        const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
-        if (htmlNodes.length === 0) return
-
-        const firstReplacementNode = htmlNodes[0]
-        node.replace(firstReplacementNode)
-
-        if (htmlNodes.length > 1) {
-          let previousNode = firstReplacementNode
-          htmlNodes.slice(1).forEach(htmlNode => {
-            previousNode.insertAfter(htmlNode)
-            previousNode = htmlNode
-          })
-        }
-
-        if (wasSelected && firstReplacementNode) {
-          firstReplacementNode.selectEnd()
-        }
+      if (wasSelected) {
+        replacementNode.selectEnd()
       }
     })
   }
@@ -336,23 +311,8 @@ export default class Contents {
         previousNode = node.getTopLevelElementOrThrow()
       } catch {}
 
-      if (options.attachment) {
-        const attachmentConfig = typeof options.attachment === 'object' ? options.attachment : {}
-        const customNode = new CustomActionTextAttachmentNode({
-          sgid: attachmentConfig.sgid || null,
-          contentType: "text/html",
-          innerHtml: html
-        })
-        previousNode.insertAfter(customNode)
-      } else {
-        const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
-        if (htmlNodes.length === 0) return
-
-        htmlNodes.forEach(htmlNode => {
-          previousNode.insertAfter(htmlNode)
-          previousNode = htmlNode
-        })
-      }
+      const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
+      previousNode.insertAfter(newNode)
     })
   }
 
@@ -596,6 +556,21 @@ export default class Contents {
         paragraph.append($createLineBreakNode())
       }
     }
+  }
+
+  #createCustomAttachmentNodeWithHtml(html, options = {}) {
+    const attachmentConfig = typeof options === 'object' ? options : {}
+
+    return new CustomActionTextAttachmentNode({
+      sgid: attachmentConfig.sgid || null,
+      contentType: "text/html",
+      innerHtml: html
+    })
+  }
+
+  #createHtmlNodeWith(html) {
+    const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
+    return htmlNodes[0] || $createParagraphNode()
   }
 
   #shouldUploadFile(file) {
