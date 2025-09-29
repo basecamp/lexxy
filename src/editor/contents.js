@@ -320,6 +320,10 @@ export default class Contents {
       if (htmlNodes.length === 0) return
 
       let previousNode = node
+      try {
+        previousNode = node.getTopLevelElementOrThrow()
+      } catch {}
+
       htmlNodes.forEach(htmlNode => {
         previousNode.insertAfter(htmlNode)
         previousNode = htmlNode
