@@ -6590,6 +6590,105 @@ class Selection {
   }
 }
 
+class CustomActionTextAttachmentNode extends gi {
+  static getType() {
+    return "custom_action_text_attachment"
+  }
+
+  static clone(node) {
+    return new CustomActionTextAttachmentNode({ ...node }, node.__key)
+  }
+
+  static importJSON(serializedNode) {
+    return new CustomActionTextAttachmentNode({ ...serializedNode })
+  }
+
+  static importDOM() {
+    return {
+      "action-text-attachment": (attachment) => {
+        const content = attachment.getAttribute("content");
+        if (!attachment.getAttribute("content")) {
+          return null
+        }
+
+        return {
+          conversion: () => {
+            // Preserve initial space if present since Lexical removes it
+            const nodes = [];
+            const previousSibling = attachment.previousSibling;
+            if (previousSibling && previousSibling.nodeType === Node.TEXT_NODE && /\s$/.test(previousSibling.textContent)) {
+              nodes.push(Xn(" "));
+            }
+
+            nodes.push(new CustomActionTextAttachmentNode({
+              sgid: attachment.getAttribute("sgid"),
+              innerHtml: JSON.parse(content),
+              contentType: attachment.getAttribute("content-type")
+            }));
+
+            nodes.push(Xn(" "));
+
+            return { node: nodes }
+          },
+          priority: 2
+        }
+      }
+    }
+  }
+
+  constructor({ sgid, contentType, innerHtml }, key) {
+    super(key);
+
+    this.sgid = sgid;
+    this.contentType = contentType || "application/vnd.actiontext.unknown";
+    this.innerHtml = innerHtml;
+  }
+
+  createDOM() {
+    const figure = createElement("action-text-attachment", { "content-type": this.contentType, "data-lexxy-decorator": true });
+
+    figure.addEventListener("click", (event) => {
+      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
+    });
+
+    figure.insertAdjacentHTML("beforeend", this.innerHtml);
+
+    return figure
+  }
+
+  updateDOM() {
+    return true
+  }
+
+  isInline() {
+    return true
+  }
+
+  exportDOM() {
+    const attachment = createElement("action-text-attachment", {
+      sgid: this.sgid,
+      content: JSON.stringify(this.innerHtml),
+      "content-type": this.contentType
+    });
+
+    return { element: attachment }
+  }
+
+  exportJSON() {
+    return {
+      type: "custom_action_text_attachment",
+      version: 1,
+      sgid: this.sgid,
+      contentType: this.contentType,
+      innerHtml: this.innerHtml
+    }
+  }
+
+  decorate() {
+    return null
+  }
+}
+
 class Contents {
   constructor(editorElement) {
     this.editorElement = editorElement;
@@ -6854,7 +6953,7 @@ class Contents {
     });
   }
 
-  replaceNodeWithHTML(nodeKey, html) {
+  replaceNodeWithHTML(nodeKey, html, options = {}) {
     this.editor.update(() => {
       const node = us(nodeKey);
       if (!node) return
@@ -6871,39 +6970,67 @@ class Contents {
         }
       }
 
-      const htmlNodes = h$2(this.editor, parseHtml(html));
-      if (htmlNodes.length === 0) return
-
-      const firstReplacementNode = htmlNodes[0];
-      node.replace(firstReplacementNode);
-
-      if (htmlNodes.length > 1) {
-        let previousNode = firstReplacementNode;
-        htmlNodes.slice(1).forEach(htmlNode => {
-          previousNode.insertAfter(htmlNode);
-          previousNode = htmlNode;
+      if (options.attachment) {
+        const attachmentConfig = typeof options.attachment === 'object' ? options.attachment : {};
+        const customNode = new CustomActionTextAttachmentNode({
+          sgid: attachmentConfig.sgid || null,
+          contentType: attachmentConfig.contentType || "text/html",
+          innerHtml: html
         });
-      }
+        node.replace(customNode);
 
-      if (wasSelected && firstReplacementNode) {
-        firstReplacementNode.selectEnd();
+        if (wasSelected) {
+          customNode.selectEnd();
+        }
+      } else {
+        const htmlNodes = h$2(this.editor, parseHtml(html));
+        if (htmlNodes.length === 0) return
+
+        const firstReplacementNode = htmlNodes[0];
+        node.replace(firstReplacementNode);
+
+        if (htmlNodes.length > 1) {
+          let previousNode = firstReplacementNode;
+          htmlNodes.slice(1).forEach(htmlNode => {
+            previousNode.insertAfter(htmlNode);
+            previousNode = htmlNode;
+          });
+        }
+
+        if (wasSelected && firstReplacementNode) {
+          firstReplacementNode.selectEnd();
+        }
       }
     });
   }
 
-  insertHTMLBelowNode(nodeKey, html) {
+  insertHTMLBelowNode(nodeKey, html, options = {}) {
     this.editor.update(() => {
       const node = us(nodeKey);
       if (!node) return
 
-      const htmlNodes = h$2(this.editor, parseHtml(html));
-      if (htmlNodes.length === 0) return
-
       let previousNode = node;
-      htmlNodes.forEach(htmlNode => {
-        previousNode.insertAfter(htmlNode);
-        previousNode = htmlNode;
-      });
+      try {
+        previousNode = node.getTopLevelElementOrThrow();
+      } catch {}
+
+      if (options.attachment) {
+        const attachmentConfig = typeof options.attachment === 'object' ? options.attachment : {};
+        const customNode = new CustomActionTextAttachmentNode({
+          sgid: attachmentConfig.sgid || null,
+          contentType: attachmentConfig.contentType || "text/html",
+          innerHtml: html
+        });
+        previousNode.insertAfter(customNode);
+      } else {
+        const htmlNodes = h$2(this.editor, parseHtml(html));
+        if (htmlNodes.length === 0) return
+
+        htmlNodes.forEach(htmlNode => {
+          previousNode.insertAfter(htmlNode);
+          previousNode = htmlNode;
+        });
+      }
     });
   }
 
@@ -7175,8 +7302,8 @@ function filterMatches(text, potentialMatch) {
 
 function dispatchLinkEvent(event, editorElement, nodeKey, payload) {
   const linkManipulationMethods = {
-    replaceLinkWith: (html) => editorElement.contents.replaceNodeWithHTML(nodeKey, html),
-    insertBelowLink: (html) => editorElement.contents.insertHTMLBelowNode(nodeKey, html)
+    replaceLinkWith: (html, options) => editorElement.contents.replaceNodeWithHTML(nodeKey, html, options),
+    insertBelowLink: (html, options) => editorElement.contents.insertHTMLBelowNode(nodeKey, html, options)
   };
 
   dispatch(editorElement, `lexxy:link-${event}`, {
@@ -7254,105 +7381,6 @@ class Clipboard {
 
     window.scrollTo(scrollX, scrollY);
     this.editor.focus();
-  }
-}
-
-class CustomActionTextAttachmentNode extends gi {
-  static getType() {
-    return "custom_action_text_attachment"
-  }
-
-  static clone(node) {
-    return new CustomActionTextAttachmentNode({ ...node }, node.__key)
-  }
-
-  static importJSON(serializedNode) {
-    return new CustomActionTextAttachmentNode({ ...serializedNode })
-  }
-
-  static importDOM() {
-    return {
-      "action-text-attachment": (attachment) => {
-        const content = attachment.getAttribute("content");
-        if (!attachment.getAttribute("content")) {
-          return null
-        }
-
-        return {
-          conversion: () => {
-            // Preserve initial space if present since Lexical removes it
-            const nodes = [];
-            const previousSibling = attachment.previousSibling;
-            if (previousSibling && previousSibling.nodeType === Node.TEXT_NODE && /\s$/.test(previousSibling.textContent)) {
-              nodes.push(Xn(" "));
-            }
-
-            nodes.push(new CustomActionTextAttachmentNode({
-              sgid: attachment.getAttribute("sgid"),
-              innerHtml: JSON.parse(content),
-              contentType: attachment.getAttribute("content-type")
-            }));
-
-            nodes.push(Xn(" "));
-
-            return { node: nodes }
-          },
-          priority: 2
-        }
-      }
-    }
-  }
-
-  constructor({ sgid, contentType, innerHtml }, key) {
-    super(key);
-
-    this.sgid = sgid;
-    this.contentType = contentType || "application/vnd.actiontext.unknown";
-    this.innerHtml = innerHtml;
-  }
-
-  createDOM() {
-    const figure = createElement("action-text-attachment", { "content-type": this.contentType, "data-lexxy-decorator": true });
-
-    figure.addEventListener("click", (event) => {
-      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
-    });
-
-    figure.insertAdjacentHTML("beforeend", this.innerHtml);
-
-    return figure
-  }
-
-  updateDOM() {
-    return true
-  }
-
-  isInline() {
-    return true
-  }
-
-  exportDOM() {
-    const attachment = createElement("action-text-attachment", {
-      sgid: this.sgid,
-      content: JSON.stringify(this.innerHtml),
-      "content-type": this.contentType
-    });
-
-    return { element: attachment }
-  }
-
-  exportJSON() {
-    return {
-      type: "custom_action_text_attachment",
-      version: 1,
-      sgid: this.sgid,
-      contentType: this.contentType,
-      innerHtml: this.innerHtml
-    }
-  }
-
-  decorate() {
-    return null
   }
 }
 

@@ -5,6 +5,7 @@ import {
 
 import { $generateNodesFromDOM } from "@lexical/html"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
+import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $toggleLink, $createLinkNode } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListItemNode, $isListNode } from "@lexical/list"
@@ -274,7 +275,7 @@ export default class Contents {
     })
   }
 
-  replaceNodeWithHTML(nodeKey, html) {
+  replaceNodeWithHTML(nodeKey, html, options = {}) {
     this.editor.update(() => {
       const node = $getNodeByKey(nodeKey)
       if (!node) return
@@ -291,43 +292,67 @@ export default class Contents {
         }
       }
 
-      const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
-      if (htmlNodes.length === 0) return
-
-      const firstReplacementNode = htmlNodes[0]
-      node.replace(firstReplacementNode)
-
-      if (htmlNodes.length > 1) {
-        let previousNode = firstReplacementNode
-        htmlNodes.slice(1).forEach(htmlNode => {
-          previousNode.insertAfter(htmlNode)
-          previousNode = htmlNode
+      if (options.attachment) {
+        const attachmentConfig = typeof options.attachment === 'object' ? options.attachment : {}
+        const customNode = new CustomActionTextAttachmentNode({
+          sgid: attachmentConfig.sgid || null,
+          contentType: attachmentConfig.contentType || "text/html",
+          innerHtml: html
         })
-      }
+        node.replace(customNode)
 
-      if (wasSelected && firstReplacementNode) {
-        firstReplacementNode.selectEnd()
+        if (wasSelected) {
+          customNode.selectEnd()
+        }
+      } else {
+        const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
+        if (htmlNodes.length === 0) return
+
+        const firstReplacementNode = htmlNodes[0]
+        node.replace(firstReplacementNode)
+
+        if (htmlNodes.length > 1) {
+          let previousNode = firstReplacementNode
+          htmlNodes.slice(1).forEach(htmlNode => {
+            previousNode.insertAfter(htmlNode)
+            previousNode = htmlNode
+          })
+        }
+
+        if (wasSelected && firstReplacementNode) {
+          firstReplacementNode.selectEnd()
+        }
       }
     })
   }
 
-  insertHTMLBelowNode(nodeKey, html) {
+  insertHTMLBelowNode(nodeKey, html, options = {}) {
     this.editor.update(() => {
       const node = $getNodeByKey(nodeKey)
       if (!node) return
-
-      const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
-      if (htmlNodes.length === 0) return
 
       let previousNode = node
       try {
         previousNode = node.getTopLevelElementOrThrow()
       } catch {}
 
-      htmlNodes.forEach(htmlNode => {
-        previousNode.insertAfter(htmlNode)
-        previousNode = htmlNode
-      })
+      if (options.attachment) {
+        const attachmentConfig = typeof options.attachment === 'object' ? options.attachment : {}
+        const customNode = new CustomActionTextAttachmentNode({
+          sgid: attachmentConfig.sgid || null,
+          contentType: attachmentConfig.contentType || "text/html",
+          innerHtml: html
+        })
+        previousNode.insertAfter(customNode)
+      } else {
+        const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
+        if (htmlNodes.length === 0) return
+
+        htmlNodes.forEach(htmlNode => {
+          previousNode.insertAfter(htmlNode)
+          previousNode = htmlNode
+        })
+      }
     })
   }
 
