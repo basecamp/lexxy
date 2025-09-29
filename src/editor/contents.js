@@ -296,7 +296,7 @@ export default class Contents {
         const attachmentConfig = typeof options.attachment === 'object' ? options.attachment : {}
         const customNode = new CustomActionTextAttachmentNode({
           sgid: attachmentConfig.sgid || null,
-          contentType: attachmentConfig.contentType || "text/html",
+          contentType: "text/html",
           innerHtml: html
         })
         node.replace(customNode)
@@ -340,7 +340,7 @@ export default class Contents {
         const attachmentConfig = typeof options.attachment === 'object' ? options.attachment : {}
         const customNode = new CustomActionTextAttachmentNode({
           sgid: attachmentConfig.sgid || null,
-          contentType: attachmentConfig.contentType || "text/html",
+          contentType: "text/html",
           innerHtml: html
         })
         previousNode.insertAfter(customNode)
