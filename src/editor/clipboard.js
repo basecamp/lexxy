@@ -1,7 +1,7 @@
 import { marked } from "marked"
 import { isUrl } from "../helpers/string_helper";
 import { nextFrame } from "../helpers/timing_helpers";
-import { dispatchLinkEvent } from "../helpers/link_event_helper";
+import { dispatch } from "./html_helper"
 
 export default class Clipboard {
   constructor(editorElement) {
@@ -36,10 +36,22 @@ export default class Clipboard {
         this.contents.createLinkWithSelectedText(text)
       } else if (isUrl(text)) {
         const nodeKey = this.contents.createLink(text)
-        dispatchLinkEvent("created", this.editorElement, nodeKey, { url: text })
+        this.#dispatchLinkEvent("created", this.editorElement, nodeKey, { url: text })
       } else {
         this.#pasteMarkdown(text)
       }
+    })
+  }
+
+  #dispatchLinkCreatedEvent(nodeKey, payload) {
+    const linkManipulationMethods = {
+      replaceLinkWith: (html, options) => this.contents.replaceNodeWithHTML(nodeKey, html, options),
+      insertBelowLink: (html, options) => this.contents.insertHTMLBelowNode(nodeKey, html, options)
+    }
+
+    dispatch(this.editorElement, "lexxy:link-created", {
+      ...payload,
+      ...linkManipulationMethods
     })
   }
 
