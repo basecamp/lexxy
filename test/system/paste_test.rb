@@ -17,6 +17,12 @@ class PasteTest < ApplicationSystemTestCase
     assert_equal_html %(<p>Hello <a href="https://37signals.com">everyone</a></p>), find_editor.value
   end
 
+  test "keep content when pasting URLs" do
+    visit edit_post_path(posts(:hello_world))
+    find_editor.paste "https://37signals.com"
+    assert_equal_html %(<p><a href=\"https://37signals.com\">https://37signals.com</a>Hello everyone</p>), find_editor.value
+  end
+
   test "create links when pasting URLs keeps formatting" do
     visit edit_post_path(posts(:hello_world))
     find_editor.select("everyone")
