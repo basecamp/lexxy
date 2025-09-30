@@ -47,7 +47,6 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     find_editor.send " Changed!"
 
     click_on "Reset"
-    click_on "Update Post"
 
     assert_equal_html "<p>Hello everyone</p>", find_editor.value
   end
