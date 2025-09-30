@@ -6589,6 +6589,105 @@ class Selection {
   }
 }
 
+class CustomActionTextAttachmentNode extends gi {
+  static getType() {
+    return "custom_action_text_attachment"
+  }
+
+  static clone(node) {
+    return new CustomActionTextAttachmentNode({ ...node }, node.__key)
+  }
+
+  static importJSON(serializedNode) {
+    return new CustomActionTextAttachmentNode({ ...serializedNode })
+  }
+
+  static importDOM() {
+    return {
+      "action-text-attachment": (attachment) => {
+        const content = attachment.getAttribute("content");
+        if (!attachment.getAttribute("content")) {
+          return null
+        }
+
+        return {
+          conversion: () => {
+            // Preserve initial space if present since Lexical removes it
+            const nodes = [];
+            const previousSibling = attachment.previousSibling;
+            if (previousSibling && previousSibling.nodeType === Node.TEXT_NODE && /\s$/.test(previousSibling.textContent)) {
+              nodes.push(Xn(" "));
+            }
+
+            nodes.push(new CustomActionTextAttachmentNode({
+              sgid: attachment.getAttribute("sgid"),
+              innerHtml: JSON.parse(content),
+              contentType: attachment.getAttribute("content-type")
+            }));
+
+            nodes.push(Xn(" "));
+
+            return { node: nodes }
+          },
+          priority: 2
+        }
+      }
+    }
+  }
+
+  constructor({ sgid, contentType, innerHtml }, key) {
+    super(key);
+
+    this.sgid = sgid;
+    this.contentType = contentType || "application/vnd.actiontext.unknown";
+    this.innerHtml = innerHtml;
+  }
+
+  createDOM() {
+    const figure = createElement("action-text-attachment", { "content-type": this.contentType, "data-lexxy-decorator": true });
+
+    figure.addEventListener("click", (event) => {
+      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
+    });
+
+    figure.insertAdjacentHTML("beforeend", this.innerHtml);
+
+    return figure
+  }
+
+  updateDOM() {
+    return true
+  }
+
+  isInline() {
+    return true
+  }
+
+  exportDOM() {
+    const attachment = createElement("action-text-attachment", {
+      sgid: this.sgid,
+      content: JSON.stringify(this.innerHtml),
+      "content-type": this.contentType
+    });
+
+    return { element: attachment }
+  }
+
+  exportJSON() {
+    return {
+      type: "custom_action_text_attachment",
+      version: 1,
+      sgid: this.sgid,
+      contentType: this.contentType,
+      innerHtml: this.innerHtml
+    }
+  }
+
+  decorate() {
+    return null
+  }
+}
+
 class Contents {
   constructor(editorElement) {
     this.editorElement = editorElement;
@@ -6705,6 +6804,24 @@ class Contents {
         this.#selectNewParagraphs(newParagraphs);
       }
     });
+  }
+
+  createLink(url) {
+    let linkNodeKey = null;
+
+    this.editor.update(() => {
+      const textNode = Xn(url);
+      const linkNode = d$1(url);
+      linkNode.append(textNode);
+
+      const selection = Nr();
+      if (cr(selection)) {
+        selection.insertNodes([linkNode]);
+        linkNodeKey = linkNode.getKey();
+      }
+    });
+
+    return linkNodeKey
   }
 
   createLinkWithSelectedText(url) {
@@ -6832,6 +6949,47 @@ class Contents {
           return true
         }
       }
+    });
+  }
+
+  replaceNodeWithHTML(nodeKey, html, options = {}) {
+    this.editor.update(() => {
+      const node = us(nodeKey);
+      if (!node) return
+
+      const selection = Nr();
+      let wasSelected = false;
+
+      if (cr(selection)) {
+        const selectedNodes = selection.getNodes();
+        wasSelected = selectedNodes.includes(node) || selectedNodes.some(n => n.getParent() === node);
+
+        if (wasSelected) {
+          ms(null);
+        }
+      }
+
+      const replacementNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html);
+      node.replace(replacementNode);
+
+      if (wasSelected) {
+        replacementNode.selectEnd();
+      }
+    });
+  }
+
+  insertHTMLBelowNode(nodeKey, html, options = {}) {
+    this.editor.update(() => {
+      const node = us(nodeKey);
+      if (!node) return
+
+      let previousNode = node;
+      try {
+        previousNode = node.getTopLevelElementOrThrow();
+      } catch {}
+
+      const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html);
+      previousNode.insertAfter(newNode);
     });
   }
 
@@ -7077,6 +7235,21 @@ class Contents {
     }
   }
 
+  #createCustomAttachmentNodeWithHtml(html, options = {}) {
+    const attachmentConfig = typeof options === 'object' ? options : {};
+
+    return new CustomActionTextAttachmentNode({
+      sgid: attachmentConfig.sgid || null,
+      contentType: "text/html",
+      innerHtml: html
+    })
+  }
+
+  #createHtmlNodeWith(html) {
+    const htmlNodes = h$3(this.editor, parseHtml(html));
+    return htmlNodes[0] || Pi()
+  }
+
   #shouldUploadFile(file) {
     return dispatch(this.editorElement, 'lexxy:file-accept', { file }, true)
   }
@@ -7204,9 +7377,24 @@ class Clipboard {
     item.getAsString((text) => {
       if (isUrl(text) && this.contents.hasSelectedText()) {
         this.contents.createLinkWithSelectedText(text);
+      } else if (isUrl(text)) {
+        const nodeKey = this.contents.createLink(text);
+        this.#dispatchLinkInsertEvent(nodeKey, { url: text });
       } else {
         this.#pasteMarkdown(text);
       }
+    });
+  }
+
+  #dispatchLinkInsertEvent(nodeKey, payload) {
+    const linkManipulationMethods = {
+      replaceLinkWith: (html, options) => this.contents.replaceNodeWithHTML(nodeKey, html, options),
+      insertBelowLink: (html, options) => this.contents.insertHTMLBelowNode(nodeKey, html, options)
+    };
+
+    dispatch(this.editorElement, "lexxy:insert-link", {
+      ...payload,
+      ...linkManipulationMethods
     });
   }
 
@@ -7239,105 +7427,6 @@ class Clipboard {
 
     window.scrollTo(scrollX, scrollY);
     this.editor.focus();
-  }
-}
-
-class CustomActionTextAttachmentNode extends gi {
-  static getType() {
-    return "custom_action_text_attachment"
-  }
-
-  static clone(node) {
-    return new CustomActionTextAttachmentNode({ ...node }, node.__key)
-  }
-
-  static importJSON(serializedNode) {
-    return new CustomActionTextAttachmentNode({ ...serializedNode })
-  }
-
-  static importDOM() {
-    return {
-      "action-text-attachment": (attachment) => {
-        const content = attachment.getAttribute("content");
-        if (!attachment.getAttribute("content")) {
-          return null
-        }
-
-        return {
-          conversion: () => {
-            // Preserve initial space if present since Lexical removes it
-            const nodes = [];
-            const previousSibling = attachment.previousSibling;
-            if (previousSibling && previousSibling.nodeType === Node.TEXT_NODE && /\s$/.test(previousSibling.textContent)) {
-              nodes.push(Xn(" "));
-            }
-
-            nodes.push(new CustomActionTextAttachmentNode({
-              sgid: attachment.getAttribute("sgid"),
-              innerHtml: JSON.parse(content),
-              contentType: attachment.getAttribute("content-type")
-            }));
-
-            nodes.push(Xn(" "));
-
-            return { node: nodes }
-          },
-          priority: 2
-        }
-      }
-    }
-  }
-
-  constructor({ sgid, contentType, innerHtml }, key) {
-    super(key);
-
-    this.sgid = sgid;
-    this.contentType = contentType || "application/vnd.actiontext.unknown";
-    this.innerHtml = innerHtml;
-  }
-
-  createDOM() {
-    const figure = createElement("action-text-attachment", { "content-type": this.contentType, "data-lexxy-decorator": true });
-
-    figure.addEventListener("click", (event) => {
-      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
-    });
-
-    figure.insertAdjacentHTML("beforeend", this.innerHtml);
-
-    return figure
-  }
-
-  updateDOM() {
-    return true
-  }
-
-  isInline() {
-    return true
-  }
-
-  exportDOM() {
-    const attachment = createElement("action-text-attachment", {
-      sgid: this.sgid,
-      content: JSON.stringify(this.innerHtml),
-      "content-type": this.contentType
-    });
-
-    return { element: attachment }
-  }
-
-  exportJSON() {
-    return {
-      type: "custom_action_text_attachment",
-      version: 1,
-      sgid: this.sgid,
-      contentType: this.contentType,
-      innerHtml: this.innerHtml
-    }
-  }
-
-  decorate() {
-    return null
   }
 }
 
