@@ -28,6 +28,8 @@ module Lexxy
             value.to_html
         when ActionText::RichText
             value.body_before_type_cast
+        else
+            value.to_s
         end
   
         if html.presence
