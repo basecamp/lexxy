@@ -31,7 +31,7 @@ module Lexxy
         else
             value.to_s
         end
-  
+
         if html.presence
           Nokogiri::HTML.fragment(html).tap do |fragment|
             fragment.css("action-text-attachment").each do |node|
