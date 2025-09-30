@@ -36,14 +36,14 @@ export default class Clipboard {
         this.contents.createLinkWithSelectedText(text)
       } else if (isUrl(text)) {
         const nodeKey = this.contents.createLink(text)
-        this.#dispatchLinkCreatedEvent(nodeKey, { url: text })
+        this.#dispatchLinkInsertEvent(nodeKey, { url: text })
       } else {
         this.#pasteMarkdown(text)
       }
     })
   }
 
-  #dispatchLinkCreatedEvent(nodeKey, payload) {
+  #dispatchLinkInsertEvent(nodeKey, payload) {
     const linkManipulationMethods = {
       replaceLinkWith: (html, options) => this.contents.replaceNodeWithHTML(nodeKey, html, options),
       insertBelowLink: (html, options) => this.contents.insertHTMLBelowNode(nodeKey, html, options)
