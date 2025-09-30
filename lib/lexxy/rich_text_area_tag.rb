@@ -21,9 +21,16 @@ module Lexxy
     alias_method :lexxy_rich_text_area_tag, :lexxy_rich_textarea_tag
 
     private
-      # Tempoary: we need to *adaptarize* action text
+      # Temporary: we need to *adaptarize* action text
       def render_custom_attachments_in(value)
-        if html = value.try(:body_before_type_cast).presence
+        html = case value
+        when ActionText::Content
+            value.to_html
+        when ActionText::RichText
+            value.body_before_type_cast
+        end
+  
+        if html.presence
           Nokogiri::HTML.fragment(html).tap do |fragment|
             fragment.css("action-text-attachment").each do |node|
               if node["url"].blank?
