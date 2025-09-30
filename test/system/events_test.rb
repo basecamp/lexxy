@@ -35,14 +35,14 @@ class EventsTest < ApplicationSystemTestCase
     assert_no_attachment content_type: "text/plain"
   end
 
-  test "dispatch lexxs:link-created event when a link is pasted in" do
+  test "dispatch lexxs:insert-link event when a link is pasted in" do
     visit edit_post_path(posts(:empty))
 
-    assert_no_dispatched_event "lexxy:link-created"
+    assert_no_dispatched_event "lexxy:insert-link"
 
     find_editor.paste "https://37signals.com"
 
-    assert_dispatched_event "lexxy:link-created"
+    assert_dispatched_event "lexxy:insert-link"
 
     find_editor.value = ""
 

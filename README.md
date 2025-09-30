@@ -361,7 +361,7 @@ Fired when a file is dropped or inserted into the editor.
 - Access the file via `event.detail.file`.
 - Call `event.preventDefault()` to cancel the upload and prevent attaching the file.
 
-### `lexxy:link-created`
+### `lexxy:insert-link`
 
 Fired when a plain text link is pasted into the editor.
 Access the link’s URL via `event.detail.url`.
