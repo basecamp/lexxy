@@ -50,4 +50,14 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     assert_equal_html "<p>Hello everyone</p>", find_editor.value
   end
+
+  test "supports required field" do
+    visit posts_path
+    click_on "New post"
+
+    click_on "Create Post"
+
+    assert_selector "lexxy-editor:invalid"
+    assert_current_path new_post_path
+  end
 end
