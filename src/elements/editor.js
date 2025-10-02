@@ -31,6 +31,7 @@ export default class LexicalEditorElement extends HTMLElement {
     super()
     this.internals = this.attachInternals()
     this.internals.role = "presentation"
+    this.validationMessage = Object.assign(document.createElement("textarea"), { required: true }).validationMessage
   }
 
   connectedCallback() {
@@ -361,7 +362,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #validateRequired() {
     if (this.hasAttribute("required") && this.#isEmpty) {
-      this.internals.setValidity({ valueMissing: true }, "Please fill out this field.", this.editorContentElement)
+      this.internals.setValidity({ valueMissing: true }, this.validationMessage, this.editorContentElement)
     } else {
       this.internals.setValidity({})
     }
