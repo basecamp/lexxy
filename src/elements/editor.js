@@ -252,6 +252,7 @@ export default class LexicalEditorElement extends HTMLElement {
       this.cachedValue = null
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
+      this.#validateRequired()
     }))
   }
 
@@ -356,6 +357,14 @@ export default class LexicalEditorElement extends HTMLElement {
 
   get #isEmpty() {
     return !this.editorContentElement.textContent.trim() && !containsVisuallyRelevantChildren(this.editorContentElement)
+  }
+
+  #validateRequired() {
+    if (this.hasAttribute("required") && this.#isEmpty) {
+      this.internals.setValidity({ valueMissing: true }, "Please fill out this field.", this.editorContentElement)
+    } else {
+      this.internals.setValidity({})
+    }
   }
 
   #reset() {
