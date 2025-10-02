@@ -1,11 +1,12 @@
 import {
   $createParagraphNode, $getSelection, $setSelection, $insertNodes, $isElementNode, $isParagraphNode, $isTextNode,
-  $isRangeSelection, $createLineBreakNode, $createTextNode, HISTORY_MERGE_TAG, $isNodeSelection
+  $isRangeSelection, $createLineBreakNode, $createTextNode, HISTORY_MERGE_TAG, $isNodeSelection, $getNodeByKey
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
-import { $toggleLink } from "@lexical/link"
+import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { $toggleLink, $createLinkNode } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListItemNode, $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
@@ -126,6 +127,24 @@ export default class Contents {
         this.#selectNewParagraphs(newParagraphs)
       }
     })
+  }
+
+  createLink(url) {
+    let linkNodeKey = null
+
+    this.editor.update(() => {
+      const textNode = $createTextNode(url)
+      const linkNode = $createLinkNode(url)
+      linkNode.append(textNode)
+
+      const selection = $getSelection()
+      if ($isRangeSelection(selection)) {
+        selection.insertNodes([linkNode])
+        linkNodeKey = linkNode.getKey()
+      }
+    })
+
+    return linkNodeKey
   }
 
   createLinkWithSelectedText(url) {
@@ -253,6 +272,47 @@ export default class Contents {
           return true
         }
       }
+    })
+  }
+
+  replaceNodeWithHTML(nodeKey, html, options = {}) {
+    this.editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      if (!node) return
+
+      const selection = $getSelection()
+      let wasSelected = false
+
+      if ($isRangeSelection(selection)) {
+        const selectedNodes = selection.getNodes()
+        wasSelected = selectedNodes.includes(node) || selectedNodes.some(n => n.getParent() === node)
+
+        if (wasSelected) {
+          $setSelection(null)
+        }
+      }
+
+      const replacementNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
+      node.replace(replacementNode)
+
+      if (wasSelected) {
+        replacementNode.selectEnd()
+      }
+    })
+  }
+
+  insertHTMLBelowNode(nodeKey, html, options = {}) {
+    this.editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      if (!node) return
+
+      let previousNode = node
+      try {
+        previousNode = node.getTopLevelElementOrThrow()
+      } catch {}
+
+      const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
+      previousNode.insertAfter(newNode)
     })
   }
 
@@ -496,6 +556,21 @@ export default class Contents {
         paragraph.append($createLineBreakNode())
       }
     }
+  }
+
+  #createCustomAttachmentNodeWithHtml(html, options = {}) {
+    const attachmentConfig = typeof options === 'object' ? options : {}
+
+    return new CustomActionTextAttachmentNode({
+      sgid: attachmentConfig.sgid || null,
+      contentType: "text/html",
+      innerHtml: html
+    })
+  }
+
+  #createHtmlNodeWith(html) {
+    const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
+    return htmlNodes[0] || $createParagraphNode()
   }
 
   #shouldUploadFile(file) {

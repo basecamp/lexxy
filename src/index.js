@@ -3,6 +3,8 @@
 window.Prism = window.Prism || {}
 Prism.manual = true
 
+import "./config/dom_purify"
+
 import "./elements/toolbar"
 import "./elements/editor"
 import "./elements/link_dialog"

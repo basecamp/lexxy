@@ -5,6 +5,7 @@ import {
   KEY_BACKSPACE_COMMAND, DecoratorNode, $createParagraphNode
 } from "lexical"
 import { nextFrame } from "../helpers/timing_helpers"
+import { getNonce } from "../helpers/csp_helper"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
 
 export default class Selection {
@@ -352,6 +353,7 @@ export default class Selection {
     marker.style.width = "1px"
     marker.style.height = "1em"
     marker.style.lineHeight = "normal"
+    marker.setAttribute("nonce", getNonce())
     return marker
   }
 

@@ -4,6 +4,7 @@ import {
   FORMAT_TEXT_COMMAND,
   $isTextNode
 } from "lexical"
+import { getNonce } from "../helpers/csp_helper"
 import { $isListNode, $isListItemNode } from "@lexical/list"
 import { $isQuoteNode, $isHeadingNode } from "@lexical/rich-text"
 import { $isCodeNode, $isCodeHighlightNode } from "@lexical/code"
@@ -182,7 +183,8 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#resetToolbar()
     this.#compactMenu()
 
-    this.#overflow.style.display = this.#overflowMenu.children.length ? "block" : "none";
+    this.#overflow.style.display = this.#overflowMenu.children.length ? "block" : "none"
+    this.#overflow.setAttribute("nonce", getNonce())
   }
 
   get #overflow() {

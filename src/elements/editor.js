@@ -1,4 +1,4 @@
-import { createEditor, $getRoot, $createTextNode, $getNodeByKey, $addUpdateTag, SKIP_DOM_SELECTION_TAG, KEY_ENTER_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, CLEAR_HISTORY_COMMAND } from "lexical"
+import { createEditor, $getRoot, $getNodeByKey, $addUpdateTag, SKIP_DOM_SELECTION_TAG, KEY_ENTER_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, CLEAR_HISTORY_COMMAND } from "lexical"
 import { ListNode, ListItemNode, registerList } from "@lexical/list"
 import { LinkNode, AutoLinkNode } from "@lexical/link"
 import { registerRichText, QuoteNode, HeadingNode } from "@lexical/rich-text"
@@ -252,6 +252,7 @@ export default class LexicalEditorElement extends HTMLElement {
       this.cachedValue = null
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
+      this.#validateRequired()
     }))
   }
 
@@ -356,6 +357,14 @@ export default class LexicalEditorElement extends HTMLElement {
 
   get #isEmpty() {
     return !this.editorContentElement.textContent.trim() && !containsVisuallyRelevantChildren(this.editorContentElement)
+  }
+
+  #validateRequired() {
+    if (this.hasAttribute("required") && this.#isEmpty) {
+      this.internals.setValidity({ valueMissing: true }, "Please fill out this field.", this.editorContentElement)
+    } else {
+      this.internals.setValidity({})
+    }
   }
 
   #reset() {

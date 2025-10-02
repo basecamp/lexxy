@@ -1,6 +1,7 @@
 import { $isCodeNode, CODE_LANGUAGE_FRIENDLY_NAME_MAP, normalizeCodeLang } from "@lexical/code"
 import { $getSelection, $isRangeSelection } from "lexical"
-import { createElement } from "../helpers/html_helper";
+import { createElement } from "../helpers/html_helper"
+import { getNonce } from "../helpers/csp_helper"
 
 export default class CodeLanguagePicker extends HTMLElement {
   connectedCallback() {
@@ -19,6 +20,7 @@ export default class CodeLanguagePicker extends HTMLElement {
     })
 
     this.languagePickerElement.style.position = "absolute"
+    this.languagePickerElement.setAttribute("nonce", getNonce())
     this.editorElement.appendChild(this.languagePickerElement)
   }
 

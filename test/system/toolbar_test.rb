@@ -8,7 +8,7 @@ class ToolbarTest < ApplicationSystemTestCase
   test "bold" do
     find_editor.select("everyone")
     click_on "Bold"
-    assert_equal_html "<p>Hello <b><strong>everyone</strong></b>", find_editor.value
+    assert_equal_html "<p>Hello <b><strong>everyone</strong></b></p>", find_editor.value
   end
 
   test "italic" do

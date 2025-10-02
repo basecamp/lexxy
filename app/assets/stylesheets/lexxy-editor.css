@@ -2,6 +2,11 @@
 
 :where(lexxy-editor) {
   --lexxy-editor-padding: 1ch;
+  --lexxy-editor-rows: 8lh;
+  @supports (min-block-size: attr(rows lh)) {
+    --lexxy-editor-rows: attr(rows lh, 8lh);
+  }
+
   --lexxy-toolbar-gap: 2px;
 
   border: 1px solid var(--lexxy-color-ink-lighter);
@@ -63,7 +68,7 @@
 }
 
 :where(.lexxy-editor__content) {
-  min-block-size: 8lh;
+  min-block-size: var(--lexxy-editor-rows);
   outline: 0;
   padding: var(--lexxy-editor-padding);
 }

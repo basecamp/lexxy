@@ -78,6 +78,10 @@ class EditorHandler
     find("#{toolbar_selector} [data-command=\"#{command}\"]").click
   end
 
+  def inner_html
+    content_element.native.attribute("innerHTML")
+  end
+
   private
     def content_element
       @content_element ||= editor_element.find(".lexxy-editor__content")

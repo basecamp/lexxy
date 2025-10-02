@@ -1,4 +1,5 @@
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
+import { getNonce } from "../helpers/csp_helper"
 import { COMMAND_PRIORITY_HIGH, KEY_ENTER_COMMAND, KEY_TAB_COMMAND, KEY_SPACE_COMMAND, $isTextNode, $isRangeSelection, $getSelection, $isNodeSelection, $getNodeByKey } from "lexical"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { isPath, isUrl } from "../helpers/string_helper"
@@ -311,6 +312,7 @@ export default class LexicalPromptElement extends HTMLElement {
     const popoverContainer = createElement("ul", { role: "listbox", id: generateDomId("prompt-popover") }) // Avoiding [popover] due to not being able to position at an arbitrary X, Y position.
     popoverContainer.classList.add("lexxy-prompt-menu")
     popoverContainer.style.position = "absolute"
+    popoverContainer.setAttribute("nonce", getNonce())
     popoverContainer.append(...(await this.source.buildListItems()))
     popoverContainer.addEventListener("click", this.#handlePopoverClick)
     this.#editorElement.appendChild(popoverContainer)
