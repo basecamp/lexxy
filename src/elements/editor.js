@@ -26,12 +26,12 @@ export default class LexicalEditorElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
 
   #initialValue = ""
+  #validationTextArea = document.createElement("textarea")
 
   constructor() {
     super()
     this.internals = this.attachInternals()
     this.internals.role = "presentation"
-    this.validationMessage = Object.assign(document.createElement("textarea"), { required: true }).validationMessage
   }
 
   connectedCallback() {
@@ -225,6 +225,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
     this.internals.setFormValue(html)
     this._internalFormValue = html
+    this.#validationTextArea.value = this.#isEmpty ? "" : html
 
     if (changed) {
       dispatch(this, "lexxy:change")
@@ -253,7 +254,7 @@ export default class LexicalEditorElement extends HTMLElement {
       this.cachedValue = null
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
-      this.#validateRequired()
+      this.#setValidity()
     }))
   }
 
@@ -360,11 +361,11 @@ export default class LexicalEditorElement extends HTMLElement {
     return !this.editorContentElement.textContent.trim() && !containsVisuallyRelevantChildren(this.editorContentElement)
   }
 
-  #validateRequired() {
-    if (this.hasAttribute("required") && this.#isEmpty) {
-      this.internals.setValidity({ valueMissing: true }, this.validationMessage, this.editorContentElement)
-    } else {
+  #setValidity() {
+    if (this.#validationTextArea.validity.valid) {
       this.internals.setValidity({})
+    } else {
+      this.internals.setValidity(this.#validationTextArea.validity, this.#validationTextArea.validationMessage, this.editorContentElement)
     }
   }
 
