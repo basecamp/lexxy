@@ -23,7 +23,7 @@ export default class LexicalEditorElement extends HTMLElement {
   static debug = true
   static commands = [ "bold", "italic", "" ]
 
-  static observedAttributes = [ "connected" ]
+  static observedAttributes = [ "connected", "required" ]
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
@@ -58,6 +58,11 @@ export default class LexicalEditorElement extends HTMLElement {
   attributeChangedCallback(name, oldValue, newValue) {
     if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
       requestAnimationFrame(() => this.#reconnect())
+    }
+
+    if (name === "required" && this.isConnected) {
+      this.#validationTextArea.required = this.hasAttribute("required")
+      this.#setValidity()
     }
   }
 
