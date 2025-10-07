@@ -3,3 +3,9 @@ hello_world:
   name: body
   body:
     <p>Hello everyone</p>
+
+hello_james:
+  record: hello_james (Post)
+  name: body
+  body:
+    <p>Hello <%= ActionText::FixtureSet.attachment("people", :james) %></p>
