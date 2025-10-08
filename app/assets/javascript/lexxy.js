@@ -1356,11 +1356,6 @@ const getNonce = () => {
   return element?.content
 };
 
-const getNonce = () => {
-  const element = document.head.querySelector("meta[name=csp-nonce]");
-  return element?.content
-};
-
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
