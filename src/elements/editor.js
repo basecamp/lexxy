@@ -111,7 +111,7 @@ export default class LexicalEditorElement extends HTMLElement {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       const root = $getRoot()
       root.clear()
-      root.append(...this.#parseHtmlIntoLexicalNodes(html))
+      if (html !== "") root.append(...this.#parseHtmlIntoLexicalNodes(html))
       root.select()
 
       this.#toggleEmptyStatus()

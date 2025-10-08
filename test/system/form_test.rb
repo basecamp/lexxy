@@ -60,4 +60,12 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_selector "lexxy-editor:invalid"
     assert_current_path new_post_path
   end
+
+  test "Clearing value of editor doesn't add trailing markup" do
+    visit edit_post_path(posts(:hello_world))
+
+    find_editor.value =  ""
+
+    assert_equal_html "", find_editor.value
+  end
 end

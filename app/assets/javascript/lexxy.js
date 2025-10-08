@@ -7523,7 +7523,7 @@ class LexicalEditorElement extends HTMLElement {
       Ys(Mi);
       const root = ps();
       root.clear();
-      root.append(...this.#parseHtmlIntoLexicalNodes(html));
+      if (html !== "") root.append(...this.#parseHtmlIntoLexicalNodes(html));
       root.select();
 
       this.#toggleEmptyStatus();
