@@ -23,9 +23,10 @@ export default class LexicalEditorElement extends HTMLElement {
   static debug = true
   static commands = [ "bold", "italic", "" ]
 
-  static observedAttributes = [ "connected" ]
+  static observedAttributes = [ "connected", "required" ]
 
   #initialValue = ""
+  #validationTextArea = document.createElement("textarea")
 
   constructor() {
     super()
@@ -57,6 +58,11 @@ export default class LexicalEditorElement extends HTMLElement {
   attributeChangedCallback(name, oldValue, newValue) {
     if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
       requestAnimationFrame(() => this.#reconnect())
+    }
+
+    if (name === "required" && this.isConnected) {
+      this.#validationTextArea.required = this.hasAttribute("required")
+      this.#setValidity()
     }
   }
 
@@ -224,6 +230,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
     this.internals.setFormValue(html)
     this._internalFormValue = html
+    this.#validationTextArea.value = this.#isEmpty ? "" : html
 
     if (changed) {
       dispatch(this, "lexxy:change")
@@ -252,7 +259,7 @@ export default class LexicalEditorElement extends HTMLElement {
       this.cachedValue = null
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
-      this.#validateRequired()
+      this.#setValidity()
     }))
   }
 
@@ -359,11 +366,11 @@ export default class LexicalEditorElement extends HTMLElement {
     return !this.editorContentElement.textContent.trim() && !containsVisuallyRelevantChildren(this.editorContentElement)
   }
 
-  #validateRequired() {
-    if (this.hasAttribute("required") && this.#isEmpty) {
-      this.internals.setValidity({ valueMissing: true }, "Please fill out this field.", this.editorContentElement)
-    } else {
+  #setValidity() {
+    if (this.#validationTextArea.validity.valid) {
       this.internals.setValidity({})
+    } else {
+      this.internals.setValidity(this.#validationTextArea.validity, this.#validationTextArea.validationMessage, this.editorContentElement)
     }
   }
 
