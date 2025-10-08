@@ -5950,6 +5950,8 @@ class CommandDispatcher {
 
   dispatchInsertUnorderedList() {
     const selection = Nr();
+    if (!selection) return;
+
     const anchorNode = selection.anchor.getNode();
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "bullet") {
@@ -5961,6 +5963,8 @@ class CommandDispatcher {
 
   dispatchInsertOrderedList() {
     const selection = Nr();
+    if (!selection) return;
+
     const anchorNode = selection.anchor.getNode();
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "number") {
