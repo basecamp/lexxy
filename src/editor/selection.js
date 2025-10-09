@@ -145,9 +145,9 @@ export default class Selection {
 
   #processSelectionChangeCommands() {
     this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, this.#selectPreviousNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousNode.bind(this), COMMAND_PRIORITY_LOW)
     this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#selectNextNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextNode.bind(this), COMMAND_PRIORITY_LOW)
+    this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectNodeInPreviousLine.bind(this), COMMAND_PRIORITY_LOW)
+    this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNodeInNextLine.bind(this), COMMAND_PRIORITY_LOW)
 
     this.editor.registerCommand(KEY_DELETE_COMMAND, this.#deleteSelectedOrNext.bind(this), COMMAND_PRIORITY_LOW)
     this.editor.registerCommand(KEY_BACKSPACE_COMMAND, this.#deletePreviousOrNext.bind(this), COMMAND_PRIORITY_LOW)
@@ -269,6 +269,36 @@ export default class Selection {
     } else {
       this.#selectInLexical(this.nodeAfterCursor)
     }
+  }
+
+  #selectNodeInPreviousLine() {
+    return this.#selectNodeInTopLevelSibling((topLevelElement) => topLevelElement.getPreviousSibling())
+  }
+
+  #selectNodeInNextLine() {
+    return this.#selectNodeInTopLevelSibling((topLevelElement) => topLevelElement.getNextSibling())
+  }
+
+  #selectNodeInTopLevelSibling(fn) {
+    let shouldPreventDefault = false
+
+    this.editor.getEditorState().read(async () => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const anchorNode = selection.anchor.getNode()
+      const topLevelElement = anchorNode.getTopLevelElement()
+      if (!topLevelElement) return
+
+      const sibling = fn(topLevelElement)
+      if (sibling instanceof DecoratorNode) {
+        await nextFrame()
+        this.#selectInLexical(sibling)
+        shouldPreventDefault = true
+      }
+    })
+
+    return shouldPreventDefault
   }
 
   async #withCurrentNode(fn) {

@@ -6282,9 +6282,9 @@ class Selection {
 
   #processSelectionChangeCommands() {
     this.editor.registerCommand(Te$1, this.#selectPreviousNode.bind(this), Ii);
-    this.editor.registerCommand(Ne$1, this.#selectPreviousNode.bind(this), Ii);
     this.editor.registerCommand(ve$1, this.#selectNextNode.bind(this), Ii);
-    this.editor.registerCommand(we$1, this.#selectNextNode.bind(this), Ii);
+    this.editor.registerCommand(Ne$1, this.#selectNodeInPreviousLine.bind(this), Ii);
+    this.editor.registerCommand(we$1, this.#selectNodeInNextLine.bind(this), Ii);
 
     this.editor.registerCommand(De$1, this.#deleteSelectedOrNext.bind(this), Ii);
     this.editor.registerCommand(Ae$1, this.#deletePreviousOrNext.bind(this), Ii);
@@ -6406,6 +6406,36 @@ class Selection {
     } else {
       this.#selectInLexical(this.nodeAfterCursor);
     }
+  }
+
+  #selectNodeInPreviousLine() {
+    return this.#selectNodeInTopLevelSibling((topLevelElement) => topLevelElement.getPreviousSibling())
+  }
+
+  #selectNodeInNextLine() {
+    return this.#selectNodeInTopLevelSibling((topLevelElement) => topLevelElement.getNextSibling())
+  }
+
+  #selectNodeInTopLevelSibling(fn) {
+    let shouldPreventDefault = false;
+
+    this.editor.getEditorState().read(async () => {
+      const selection = Nr();
+      if (!cr(selection)) return
+
+      const anchorNode = selection.anchor.getNode();
+      const topLevelElement = anchorNode.getTopLevelElement();
+      if (!topLevelElement) return
+
+      const sibling = fn(topLevelElement);
+      if (sibling instanceof gi) {
+        await nextFrame();
+        this.#selectInLexical(sibling);
+        shouldPreventDefault = true;
+      }
+    });
+
+    return shouldPreventDefault
   }
 
   async #withCurrentNode(fn) {
