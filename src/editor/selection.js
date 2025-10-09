@@ -280,6 +280,11 @@ export default class Selection {
   }
 
   #selectNodeInTopLevelSibling(fn) {
+    if (this.current) {
+      this.clear()
+      return false
+    }
+
     let shouldPreventDefault = false
 
     this.editor.getEditorState().read(async () => {
