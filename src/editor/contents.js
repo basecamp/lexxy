@@ -218,6 +218,30 @@ export default class Contents {
     })
   }
 
+  createParagraphAfterNode(node, text) {
+    const newParagraph = $createParagraphNode()
+    node.insertAfter(newParagraph)
+    newParagraph.selectStart()
+
+    // Insert the typed text
+    if (text) {
+      newParagraph.append($createTextNode(text))
+      newParagraph.select(1, 1) // Place cursor after the text
+    }
+  }
+
+  createParagraphBeforeNode(node, text) {
+    const newParagraph = $createParagraphNode()
+    node.insertBefore(newParagraph)
+    newParagraph.selectStart()
+
+    // Insert the typed text
+    if (text) {
+      newParagraph.append($createTextNode(text))
+      newParagraph.select(1, 1) // Place cursor after the text
+    }
+  }
+
   uploadFile(file) {
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")

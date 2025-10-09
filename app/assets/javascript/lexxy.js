@@ -5091,6 +5091,17 @@ function getListType(node) {
   return null
 }
 
+function isPrintableCharacter(event) {
+  // Ignore if modifier keys are pressed (except Shift for uppercase)
+  if (event.ctrlKey || event.metaKey || event.altKey) return false
+
+  // Ignore special keys
+  if (event.key.length > 1 && event.key !== 'Enter' && event.key !== 'Space') return false
+
+  // Accept single character keys (letters, numbers, punctuation)
+  return event.key.length === 1
+}
+
 class LexicalToolbarElement extends HTMLElement {
   constructor() {
     super();
@@ -6142,6 +6153,7 @@ class Selection {
 
     this.#listenForNodeSelections();
     this.#processSelectionChangeCommands();
+    this.#handleInputWhenDecoratorNodesSelected();
   }
 
   clear() {
@@ -6301,6 +6313,57 @@ class Selection {
     this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
       this.#selectOrAppendNextLine();
     });
+  }
+
+  // In Safari, when the only node in the document is an attachment, it won't let you enter text
+  // before/below it. There is probably a better fix here, but this workaround solves the problem until
+  // we find it.
+  #handleInputWhenDecoratorNodesSelected() {
+    this.editor.getRootElement().addEventListener("keydown", (event) => {
+      if (isPrintableCharacter(event)) {
+        this.editor.update(() => {
+          const selection = Nr();
+
+          if (cr(selection) && selection.isCollapsed()) {
+            const anchorNode = selection.anchor.getNode();
+            const offset = selection.anchor.offset;
+
+            const nodeBefore = this.#getNodeBeforePosition(anchorNode, offset);
+            const nodeAfter = this.#getNodeAfterPosition(anchorNode, offset);
+
+            if (nodeBefore instanceof gi && !nodeBefore.isInline()) {
+              event.preventDefault();
+              this.#contents.createParagraphAfterNode(nodeBefore, event.key);
+              return
+            } else if (nodeAfter instanceof gi && !nodeAfter.isInline()) {
+              event.preventDefault();
+              this.#contents.createParagraphBeforeNode(nodeAfter, event.key);
+              return
+            }
+          }
+        });
+      }
+    }, true);
+  }
+
+  #getNodeBeforePosition(node, offset) {
+    if (Qn(node) && offset === 0) {
+      return node.getPreviousSibling()
+    }
+    if (di(node) && offset > 0) {
+      return node.getChildAtIndex(offset - 1)
+    }
+    return null
+  }
+
+  #getNodeAfterPosition(node, offset) {
+    if (Qn(node) && offset === node.getTextContentSize()) {
+      return node.getNextSibling()
+    }
+    if (di(node)) {
+      return node.getChildAtIndex(offset)
+    }
+    return null
   }
 
   #syncSelectedClasses() {
@@ -6897,6 +6960,30 @@ class Contents {
 
       this.#performTextReplacement(anchorNode, offset, lastIndex, replacementNodes);
     });
+  }
+
+  createParagraphAfterNode(node, text) {
+    const newParagraph = Pi();
+    node.insertAfter(newParagraph);
+    newParagraph.selectStart();
+
+    // Insert the typed text
+    if (text) {
+      newParagraph.append(Xn(text));
+      newParagraph.select(1, 1); // Place cursor after the text
+    }
+  }
+
+  createParagraphBeforeNode(node, text) {
+    const newParagraph = Pi();
+    node.insertBefore(newParagraph);
+    newParagraph.selectStart();
+
+    // Insert the typed text
+    if (text) {
+      newParagraph.append(Xn(text));
+      newParagraph.select(1, 1); // Place cursor after the text
+    }
   }
 
   uploadFile(file) {
