@@ -45,6 +45,8 @@ class AttachmentsTest < ApplicationSystemTestCase
   end
 
   test "disable attachments" do
+    allow_console_messages
+
     visit edit_post_path(posts(:empty), attachments_disabled: true)
 
     attach_file file_fixture("example.png") do
