@@ -112,6 +112,26 @@ class ToolbarTest < ApplicationSystemTestCase
     assert_no_selector "lexxy-toolbar"
   end
 
+  test "attachments icon display" do
+    assert_selector "lexxy-toolbar button[name=upload]"
+
+    visit edit_post_path(posts(:empty), attachments_disabled: true)
+
+    assert_no_selector "lexxy-toolbar button[name=upload]"
+
+    visit edit_post_path(posts(:empty), attachments_disabled: false)
+
+    assert_selector "lexxy-toolbar button[name=upload]"
+
+    visit edit_post_path(posts(:empty), attachments_disabled: nil)
+
+    assert_selector "lexxy-toolbar button[name=upload]"
+
+    visit edit_post_path(posts(:empty), attachments_disabled: 'invalid')
+
+    assert_selector "lexxy-toolbar button[name=upload]"
+  end
+
   test "undo and redo commands" do
     # Start with empty editor
     visit edit_post_path(posts(:empty))
