@@ -7770,6 +7770,7 @@ class LexicalEditorElement extends HTMLElement {
   #createDefaultToolbar() {
     const toolbar = createElement("lexxy-toolbar");
     toolbar.innerHTML = LexicalToolbarElement.defaultTemplate;
+    toolbar.setAttribute("data-attachments", this.supportsAttachments);
     this.prepend(toolbar);
     return toolbar
   }

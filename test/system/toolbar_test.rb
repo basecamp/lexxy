@@ -105,4 +105,10 @@ class ToolbarTest < ApplicationSystemTestCase
 
     assert_no_selector "lexxy-toolbar"
   end
+
+  test "disable attachments" do
+    visit edit_post_path(posts(:empty), attachments_disabled: true)
+
+    assert_no_selector "lexxy-toolbar button[name=upload]"
+  end
 end
