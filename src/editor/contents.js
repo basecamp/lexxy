@@ -10,7 +10,8 @@ import { $toggleLink, $createLinkNode } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListItemNode, $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
-import { nextFrame } from "../helpers/timing_helpers.js";
+import { nextFrame } from "../helpers/timing_helpers.js"
+import { $createAttachmentGalleryNode } from "../nodes/attachment_gallery_node"
 
 export default class Contents {
   constructor(editorElement) {
@@ -244,14 +245,14 @@ export default class Contents {
   }
 
   uploadFile(file) {
-    if (!this.editorElement.supportsAttachments) {
-      console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
-      return
-    }
+    this.uploadFiles([file])
+  }
 
-    if (!this.#shouldUploadFile(file)) {
-      return
-    }
+  uploadFiles(files) {
+    if (!this.editorElement.supportsAttachments) return
+
+    const validFiles = files.filter(file => this.#shouldUploadFile(file))
+    if (validFiles.length === 0) return
 
     const uploadUrl = this.editorElement.directUploadUrl
     const blobUrlTemplate = this.editorElement.blobUrlTemplate
@@ -261,16 +262,21 @@ export default class Contents {
       const anchorNode = selection?.anchor.getNode()
       const currentParagraph = anchorNode?.getTopLevelElement()
 
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor })
+      const uploadNodes = validFiles.map(file =>
+        new ActionTextAttachmentUploadNode({
+          file: file,
+          uploadUrl: uploadUrl,
+          blobUrlTemplate: blobUrlTemplate,
+          editor: this.editor
+        })
+      )
 
-      if (currentParagraph && $isParagraphNode(currentParagraph) && currentParagraph.getChildrenSize() === 0) {
-        // If we're inside an empty paragraph, replace it
-        currentParagraph.replace(uploadedImageNode)
-      } else if (currentParagraph && $isElementNode(currentParagraph)) {
-        currentParagraph.insertAfter(uploadedImageNode)
-      } else {
-        $insertNodes([uploadedImageNode])
-      }
+      // Wrap multiple files in a gallery, insert single files directly
+      const nodeToInsert = uploadNodes.length >= 2
+        ? this.#createGalleryWithNodes(uploadNodes)
+        : uploadNodes[0]
+
+      this.#insertNode(nodeToInsert, currentParagraph)
     }, { tag: HISTORY_MERGE_TAG })
   }
 
@@ -631,6 +637,22 @@ export default class Contents {
   #createHtmlNodeWith(html) {
     const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
     return htmlNodes[0] || $createParagraphNode()
+  }
+
+  #createGalleryWithNodes(uploadNodes) {
+    const gallery = $createAttachmentGalleryNode()
+    uploadNodes.forEach(node => gallery.append(node))
+    return gallery
+  }
+
+  #insertNode(node, currentParagraph) {
+    if (currentParagraph && $isParagraphNode(currentParagraph) && currentParagraph.getChildrenSize() === 0) {
+      currentParagraph.replace(node)
+    } else if (currentParagraph && $isElementNode(currentParagraph)) {
+      currentParagraph.insertAfter(node)
+    } else {
+      $insertNodes([node])
+    }
   }
 
   #shouldUploadFile(file) {

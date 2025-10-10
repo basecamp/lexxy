@@ -6,7 +6,7 @@ const VISUALLY_RELEVANT_ELEMENTS_SELECTOR = [
   "form", "input", "textarea", "select", "button", "code", "blockquote"
 ].join(",")
 
-const ALLOWED_HTML_TAGS = [ "a", "action-text-attachment", "b", "blockquote", "br", "code", "em",
+const ALLOWED_HTML_TAGS = [ "a", "action-text-attachment", "b", "blockquote", "br", "code", "div", "em",
   "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "i", "img", "li", "ol", "p", "pre", "q", "strong", "ul" ]
 
 const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",

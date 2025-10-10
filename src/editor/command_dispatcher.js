@@ -138,9 +138,8 @@ export class CommandDispatcher {
         const files = Array.from(target.files)
         if (!files.length) return
 
-        for (const file of files) {
-          this.contents.uploadFile(file)
-        }
+        // Upload files as a batch to enable gallery creation
+        this.contents.uploadFiles(files)
       }
     })
 
