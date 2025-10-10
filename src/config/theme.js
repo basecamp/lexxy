@@ -2,6 +2,7 @@ export default {
   text: {
     bold: "lexxy-content__bold",
     italic: "lexxy-content__italic",
+    strikethrough: "lexxy-content__strikethrough",
     underline: "lexxy-content__underline",
   },
   codeHighlight: {

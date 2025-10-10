@@ -44,6 +44,10 @@
   .lexxy-content__bold {
     font-weight: bold;
   }
+  
+  .lexxy-content__strikethrough {
+    text-decoration: line-through;
+  }
 
   .lexxy-content__underline {
     text-decoration: underline;
