@@ -6148,12 +6148,14 @@ function nextFrame() {
 class Selection {
   constructor(editorElement) {
     this.editorElement = editorElement;
+    this.editorContentElement = editorElement.editorContentElement;
     this.editor = this.editorElement.editor;
     this.previouslySelectedKeys = new Set();
 
     this.#listenForNodeSelections();
     this.#processSelectionChangeCommands();
     this.#handleInputWhenDecoratorNodesSelected();
+    this.#containEditorFocus();
   }
 
   clear() {
@@ -6292,6 +6294,84 @@ class Selection {
     return this.#findPreviousSiblingUp(anchorNode)
   }
 
+  get isCursorAtTop() {
+    // Check if a decorator node at the top is selected
+    if (this.current) {
+      const nodes = this.current.getNodes();
+      if (nodes.length === 1 && nodes[0] instanceof gi) {
+        const topLevelElement = nodes[0].getTopLevelElement();
+        if (topLevelElement && topLevelElement.getPreviousSibling() === null) {
+          return true
+        }
+      }
+    }
+
+    let isAtTop = false;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Nr();
+      if (!cr(selection) || !selection.isCollapsed()) return
+
+      const anchorNode = selection.anchor.getNode();
+      const topLevelElement = anchorNode.getTopLevelElement();
+      if (!topLevelElement) return
+
+      // Check if this is the first top-level element
+      if (topLevelElement.getPreviousSibling() !== null) return
+
+      // Check if cursor is at the very beginning of this element
+      const offset = selection.anchor.offset;
+      if (Qn(anchorNode)) {
+        // Cursor is at top only if at offset 0 of the first text node
+        isAtTop = offset === 0 && anchorNode.getPreviousSibling() === null;
+      } else if (di(anchorNode)) {
+        // Cursor is at top only if at the start of the element
+        isAtTop = offset === 0;
+      }
+    });
+
+    return isAtTop
+  }
+
+  get isCursorAtBottom() {
+    // Check if a decorator node at the bottom is selected
+    if (this.current) {
+      const nodes = this.current.getNodes();
+      if (nodes.length === 1 && nodes[0] instanceof gi) {
+        const topLevelElement = nodes[0].getTopLevelElement();
+        if (topLevelElement && topLevelElement.getNextSibling() === null) {
+          return true
+        }
+      }
+    }
+
+    let isAtBottom = false;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Nr();
+      if (!cr(selection) || !selection.isCollapsed()) return
+
+      const anchorNode = selection.anchor.getNode();
+      const topLevelElement = anchorNode.getTopLevelElement();
+      if (!topLevelElement) return
+
+      // Check if this is the last top-level element
+      if (topLevelElement.getNextSibling() !== null) return
+
+      // Check if cursor is at the very end of this element
+      const offset = selection.anchor.offset;
+      if (Qn(anchorNode)) {
+        // Cursor is at bottom only if at the end of the last text node
+        isAtBottom = offset === anchorNode.getTextContentSize() && anchorNode.getNextSibling() === null;
+      } else if (di(anchorNode)) {
+        // Cursor is at bottom only if at the end of the element
+        isAtBottom = offset === anchorNode.getChildrenSize();
+      }
+    });
+
+    return isAtBottom
+  }
+
   get #contents() {
     return this.editorElement.contents
   }
@@ -6394,6 +6474,42 @@ class Selection {
       return node.getChildAtIndex(offset)
     }
     return null
+  }
+
+  #containEditorFocus() {
+    // Workaround for a bizarre Chrome bug where the cursor abandons the editor to focus on not-focusable elements
+    // above when navigating UP/DOWN when Lexical shows its fake cursor on custom decorator nodes.
+    this.editorContentElement.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowUp") {
+        const lexicalCursor = this.editor.getRootElement().querySelector('[data-lexical-cursor]');
+
+        if (lexicalCursor) {
+          let currentElement = lexicalCursor.previousElementSibling;
+          while (currentElement && currentElement.hasAttribute('data-lexical-cursor')) {
+            currentElement = currentElement.previousElementSibling;
+          }
+
+          if (!currentElement) {
+            event.preventDefault();
+          }
+        }
+      }
+
+      if (event.key === "ArrowDown") {
+        const lexicalCursor = this.editor.getRootElement().querySelector('[data-lexical-cursor]');
+
+        if (lexicalCursor) {
+          let currentElement = lexicalCursor.nextElementSibling;
+          while (currentElement && currentElement.hasAttribute('data-lexical-cursor')) {
+            currentElement = currentElement.nextElementSibling;
+          }
+
+          if (!currentElement) {
+            event.preventDefault();
+          }
+        }
+      }
+    }, true);
   }
 
   #syncSelectedClasses() {
