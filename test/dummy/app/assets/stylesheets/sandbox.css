@@ -154,6 +154,10 @@ code[class*="language-"] {
   font-style: italic;
 }
 
+.token.strikethrough {
+  text-decoration: line-through;
+}
+
 .token.entity {
   cursor: help;
 }
