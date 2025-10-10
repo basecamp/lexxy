@@ -5091,6 +5091,17 @@ function getListType(node) {
   return null
 }
 
+function isPrintableCharacter(event) {
+  // Ignore if modifier keys are pressed (except Shift for uppercase)
+  if (event.ctrlKey || event.metaKey || event.altKey) return false
+
+  // Ignore special keys
+  if (event.key.length > 1 && event.key !== 'Enter' && event.key !== 'Space') return false
+
+  // Accept single character keys (letters, numbers, punctuation)
+  return event.key.length === 1
+}
+
 class LexicalToolbarElement extends HTMLElement {
   constructor() {
     super();
@@ -6137,11 +6148,14 @@ function nextFrame() {
 class Selection {
   constructor(editorElement) {
     this.editorElement = editorElement;
+    this.editorContentElement = editorElement.editorContentElement;
     this.editor = this.editorElement.editor;
     this.previouslySelectedKeys = new Set();
 
     this.#listenForNodeSelections();
     this.#processSelectionChangeCommands();
+    this.#handleInputWhenDecoratorNodesSelected();
+    this.#containEditorFocus();
   }
 
   clear() {
@@ -6235,6 +6249,21 @@ class Selection {
     return this.#findNextSiblingUp(anchorNode)
   }
 
+  get topLevelNodeAfterCursor() {
+    const { anchorNode, offset } = this.#getCollapsedSelectionData();
+    if (!anchorNode) return null
+
+    if (Qn(anchorNode)) {
+      return this.#getNextNodeFromTextEnd(anchorNode)
+    }
+
+    if (di(anchorNode)) {
+      return this.#getNodeAfterElementNode(anchorNode, offset)
+    }
+
+    return this.#findNextSiblingUp(anchorNode)
+  }
+
   get nodeBeforeCursor() {
     const { anchorNode, offset } = this.#getCollapsedSelectionData();
     if (!anchorNode) return null
@@ -6250,6 +6279,21 @@ class Selection {
     return this.#findPreviousSiblingUp(anchorNode)
   }
 
+  get topLevelNodeBeforeCursor() {
+    const { anchorNode, offset } = this.#getCollapsedSelectionData();
+    if (!anchorNode) return null
+
+    if (Qn(anchorNode)) {
+      return this.#getPreviousNodeFromTextStart(anchorNode)
+    }
+
+    if (di(anchorNode)) {
+      return this.#getNodeBeforeElementNode(anchorNode, offset)
+    }
+
+    return this.#findPreviousSiblingUp(anchorNode)
+  }
+  
   get #contents() {
     return this.editorElement.contents
   }
@@ -6270,9 +6314,9 @@ class Selection {
 
   #processSelectionChangeCommands() {
     this.editor.registerCommand(Te$1, this.#selectPreviousNode.bind(this), Ii);
-    this.editor.registerCommand(Ne$1, this.#selectPreviousNode.bind(this), Ii);
     this.editor.registerCommand(ve$1, this.#selectNextNode.bind(this), Ii);
-    this.editor.registerCommand(we$1, this.#selectNextNode.bind(this), Ii);
+    this.editor.registerCommand(Ne$1, this.#selectPreviousTopLevelNode.bind(this), Ii);
+    this.editor.registerCommand(we$1, this.#selectNextTopLevelNode.bind(this), Ii);
 
     this.editor.registerCommand(De$1, this.#deleteSelectedOrNext.bind(this), Ii);
     this.editor.registerCommand(Ae$1, this.#deletePreviousOrNext.bind(this), Ii);
@@ -6301,6 +6345,93 @@ class Selection {
     this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
       this.#selectOrAppendNextLine();
     });
+  }
+
+  // In Safari, when the only node in the document is an attachment, it won't let you enter text
+  // before/below it. There is probably a better fix here, but this workaround solves the problem until
+  // we find it.
+  #handleInputWhenDecoratorNodesSelected() {
+    this.editor.getRootElement().addEventListener("keydown", (event) => {
+      if (isPrintableCharacter(event)) {
+        this.editor.update(() => {
+          const selection = Nr();
+
+          if (cr(selection) && selection.isCollapsed()) {
+            const anchorNode = selection.anchor.getNode();
+            const offset = selection.anchor.offset;
+
+            const nodeBefore = this.#getNodeBeforePosition(anchorNode, offset);
+            const nodeAfter = this.#getNodeAfterPosition(anchorNode, offset);
+
+            if (nodeBefore instanceof gi && !nodeBefore.isInline()) {
+              event.preventDefault();
+              this.#contents.createParagraphAfterNode(nodeBefore, event.key);
+              return
+            } else if (nodeAfter instanceof gi && !nodeAfter.isInline()) {
+              event.preventDefault();
+              this.#contents.createParagraphBeforeNode(nodeAfter, event.key);
+              return
+            }
+          }
+        });
+      }
+    }, true);
+  }
+
+  #getNodeBeforePosition(node, offset) {
+    if (Qn(node) && offset === 0) {
+      return node.getPreviousSibling()
+    }
+    if (di(node) && offset > 0) {
+      return node.getChildAtIndex(offset - 1)
+    }
+    return null
+  }
+
+  #getNodeAfterPosition(node, offset) {
+    if (Qn(node) && offset === node.getTextContentSize()) {
+      return node.getNextSibling()
+    }
+    if (di(node)) {
+      return node.getChildAtIndex(offset)
+    }
+    return null
+  }
+
+  #containEditorFocus() {
+    // Workaround for a bizarre Chrome bug where the cursor abandons the editor to focus on not-focusable elements
+    // above when navigating UP/DOWN when Lexical shows its fake cursor on custom decorator nodes.
+    this.editorContentElement.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowUp") {
+        const lexicalCursor = this.editor.getRootElement().querySelector('[data-lexical-cursor]');
+
+        if (lexicalCursor) {
+          let currentElement = lexicalCursor.previousElementSibling;
+          while (currentElement && currentElement.hasAttribute('data-lexical-cursor')) {
+            currentElement = currentElement.previousElementSibling;
+          }
+
+          if (!currentElement) {
+            event.preventDefault();
+          }
+        }
+      }
+
+      if (event.key === "ArrowDown") {
+        const lexicalCursor = this.editor.getRootElement().querySelector('[data-lexical-cursor]');
+
+        if (lexicalCursor) {
+          let currentElement = lexicalCursor.nextElementSibling;
+          while (currentElement && currentElement.hasAttribute('data-lexical-cursor')) {
+            currentElement = currentElement.nextElementSibling;
+          }
+
+          if (!currentElement) {
+            event.preventDefault();
+          }
+        }
+      }
+    }, true);
   }
 
   #syncSelectedClasses() {
@@ -6342,6 +6473,22 @@ class Selection {
       await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0));
     } else {
       this.#selectInLexical(this.nodeAfterCursor);
+    }
+  }
+
+  async #selectPreviousTopLevelNode() {
+    if (this.current) {
+      await this.#withCurrentNode((currentNode) => currentNode.selectPrevious());
+    } else {
+      this.#selectInLexical(this.topLevelNodeBeforeCursor);
+    }
+  }
+
+  async #selectNextTopLevelNode() {
+    if (this.current) {
+      await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0));
+    } else {
+      this.#selectInLexical(this.topLevelNodeAfterCursor);
     }
   }
 
@@ -6899,6 +7046,30 @@ class Contents {
     });
   }
 
+  createParagraphAfterNode(node, text) {
+    const newParagraph = Pi();
+    node.insertAfter(newParagraph);
+    newParagraph.selectStart();
+
+    // Insert the typed text
+    if (text) {
+      newParagraph.append(Xn(text));
+      newParagraph.select(1, 1); // Place cursor after the text
+    }
+  }
+
+  createParagraphBeforeNode(node, text) {
+    const newParagraph = Pi();
+    node.insertBefore(newParagraph);
+    newParagraph.selectStart();
+
+    // Insert the typed text
+    if (text) {
+      newParagraph.append(Xn(text));
+      newParagraph.select(1, 1); // Place cursor after the text
+    }
+  }
+
   uploadFile(file) {
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])");
@@ -6933,25 +7104,34 @@ class Contents {
   deleteSelectedNodes() {
     this.editor.update(() => {
       if (ur(this.#selection.current)) {
-        let nodesWereRemoved = false;
-        this.#selection.current.getNodes().forEach((node) => {
+        const nodesToRemove = this.#selection.current.getNodes();
+        if (nodesToRemove.length === 0) return
+
+        // Use splice() instead of node.remove() for proper removal and
+        // reconciliation. Would have issues with removing unintended decorator nodes
+        // with node.remove()
+        nodesToRemove.forEach((node) => {
           const parent = node.getParent();
+          if (!di(parent)) return
 
-          node.remove();
+          const children = parent.getChildren();
+          const index = children.indexOf(node);
 
-          if (parent.getType() === "root" && parent.getChildrenSize() === 0) {
-            parent.append(Pi());
+          if (index >= 0) {
+            parent.splice(index, 1, []);
           }
-
-          nodesWereRemoved = true;
         });
 
-        if (nodesWereRemoved) {
-          this.#selection.clear();
-          this.editor.focus();
-
-          return true
+        // Check if root is empty after all removals
+        const root = ps();
+        if (root.getChildrenSize() === 0) {
+          root.append(Pi());
         }
+
+        this.#selection.clear();
+        this.editor.focus();
+
+        return true
       }
     });
   }

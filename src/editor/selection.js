@@ -6,16 +6,19 @@ import {
 } from "lexical"
 import { nextFrame } from "../helpers/timing_helpers"
 import { getNonce } from "../helpers/csp_helper"
-import { getNearestListItemNode } from "../helpers/lexical_helper"
+import { getNearestListItemNode, isPrintableCharacter } from "../helpers/lexical_helper"
 
 export default class Selection {
   constructor(editorElement) {
     this.editorElement = editorElement
+    this.editorContentElement = editorElement.editorContentElement
     this.editor = this.editorElement.editor
     this.previouslySelectedKeys = new Set()
 
     this.#listenForNodeSelections()
     this.#processSelectionChangeCommands()
+    this.#handleInputWhenDecoratorNodesSelected()
+    this.#containEditorFocus()
   }
 
   clear() {
@@ -109,12 +112,42 @@ export default class Selection {
     return this.#findNextSiblingUp(anchorNode)
   }
 
+  get topLevelNodeAfterCursor() {
+    const { anchorNode, offset } = this.#getCollapsedSelectionData()
+    if (!anchorNode) return null
+
+    if ($isTextNode(anchorNode)) {
+      return this.#getNextNodeFromTextEnd(anchorNode)
+    }
+
+    if ($isElementNode(anchorNode)) {
+      return this.#getNodeAfterElementNode(anchorNode, offset)
+    }
+
+    return this.#findNextSiblingUp(anchorNode)
+  }
+
   get nodeBeforeCursor() {
     const { anchorNode, offset } = this.#getCollapsedSelectionData()
     if (!anchorNode) return null
 
     if ($isTextNode(anchorNode)) {
       return this.#getNodeBeforeTextNode(anchorNode, offset)
+    }
+
+    if ($isElementNode(anchorNode)) {
+      return this.#getNodeBeforeElementNode(anchorNode, offset)
+    }
+
+    return this.#findPreviousSiblingUp(anchorNode)
+  }
+
+  get topLevelNodeBeforeCursor() {
+    const { anchorNode, offset } = this.#getCollapsedSelectionData()
+    if (!anchorNode) return null
+
+    if ($isTextNode(anchorNode)) {
+      return this.#getPreviousNodeFromTextStart(anchorNode)
     }
 
     if ($isElementNode(anchorNode)) {
@@ -144,9 +177,9 @@ export default class Selection {
 
   #processSelectionChangeCommands() {
     this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, this.#selectPreviousNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousNode.bind(this), COMMAND_PRIORITY_LOW)
     this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#selectNextNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextNode.bind(this), COMMAND_PRIORITY_LOW)
+    this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
+    this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
 
     this.editor.registerCommand(KEY_DELETE_COMMAND, this.#deleteSelectedOrNext.bind(this), COMMAND_PRIORITY_LOW)
     this.editor.registerCommand(KEY_BACKSPACE_COMMAND, this.#deletePreviousOrNext.bind(this), COMMAND_PRIORITY_LOW)
@@ -175,6 +208,93 @@ export default class Selection {
     this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
       this.#selectOrAppendNextLine()
     })
+  }
+
+  // In Safari, when the only node in the document is an attachment, it won't let you enter text
+  // before/below it. There is probably a better fix here, but this workaround solves the problem until
+  // we find it.
+  #handleInputWhenDecoratorNodesSelected() {
+    this.editor.getRootElement().addEventListener("keydown", (event) => {
+      if (isPrintableCharacter(event)) {
+        this.editor.update(() => {
+          const selection = $getSelection()
+
+          if ($isRangeSelection(selection) && selection.isCollapsed()) {
+            const anchorNode = selection.anchor.getNode()
+            const offset = selection.anchor.offset
+
+            const nodeBefore = this.#getNodeBeforePosition(anchorNode, offset)
+            const nodeAfter = this.#getNodeAfterPosition(anchorNode, offset)
+
+            if (nodeBefore instanceof DecoratorNode && !nodeBefore.isInline()) {
+              event.preventDefault()
+              this.#contents.createParagraphAfterNode(nodeBefore, event.key)
+              return
+            } else if (nodeAfter instanceof DecoratorNode && !nodeAfter.isInline()) {
+              event.preventDefault()
+              this.#contents.createParagraphBeforeNode(nodeAfter, event.key)
+              return
+            }
+          }
+        })
+      }
+    }, true)
+  }
+
+  #getNodeBeforePosition(node, offset) {
+    if ($isTextNode(node) && offset === 0) {
+      return node.getPreviousSibling()
+    }
+    if ($isElementNode(node) && offset > 0) {
+      return node.getChildAtIndex(offset - 1)
+    }
+    return null
+  }
+
+  #getNodeAfterPosition(node, offset) {
+    if ($isTextNode(node) && offset === node.getTextContentSize()) {
+      return node.getNextSibling()
+    }
+    if ($isElementNode(node)) {
+      return node.getChildAtIndex(offset)
+    }
+    return null
+  }
+
+  #containEditorFocus() {
+    // Workaround for a bizarre Chrome bug where the cursor abandons the editor to focus on not-focusable elements
+    // above when navigating UP/DOWN when Lexical shows its fake cursor on custom decorator nodes.
+    this.editorContentElement.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowUp") {
+        const lexicalCursor = this.editor.getRootElement().querySelector('[data-lexical-cursor]')
+
+        if (lexicalCursor) {
+          let currentElement = lexicalCursor.previousElementSibling
+          while (currentElement && currentElement.hasAttribute('data-lexical-cursor')) {
+            currentElement = currentElement.previousElementSibling
+          }
+
+          if (!currentElement) {
+            event.preventDefault()
+          }
+        }
+      }
+
+      if (event.key === "ArrowDown") {
+        const lexicalCursor = this.editor.getRootElement().querySelector('[data-lexical-cursor]')
+
+        if (lexicalCursor) {
+          let currentElement = lexicalCursor.nextElementSibling
+          while (currentElement && currentElement.hasAttribute('data-lexical-cursor')) {
+            currentElement = currentElement.nextElementSibling
+          }
+
+          if (!currentElement) {
+            event.preventDefault()
+          }
+        }
+      }
+    }, true)
   }
 
   #syncSelectedClasses() {
@@ -216,6 +336,22 @@ export default class Selection {
       await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
     } else {
       this.#selectInLexical(this.nodeAfterCursor)
+    }
+  }
+
+  async #selectPreviousTopLevelNode() {
+    if (this.current) {
+      await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
+    } else {
+      this.#selectInLexical(this.topLevelNodeBeforeCursor)
+    }
+  }
+
+  async #selectNextTopLevelNode() {
+    if (this.current) {
+      await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
+    } else {
+      this.#selectInLexical(this.topLevelNodeAfterCursor)
     }
   }
 

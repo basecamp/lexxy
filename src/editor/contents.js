@@ -1,6 +1,6 @@
 import {
   $createParagraphNode, $getSelection, $setSelection, $insertNodes, $isElementNode, $isParagraphNode, $isTextNode,
-  $isRangeSelection, $createLineBreakNode, $createTextNode, HISTORY_MERGE_TAG, $isNodeSelection, $getNodeByKey
+  $isRangeSelection, $createLineBreakNode, $createTextNode, HISTORY_MERGE_TAG, $isNodeSelection, $getNodeByKey, $getRoot
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -218,6 +218,30 @@ export default class Contents {
     })
   }
 
+  createParagraphAfterNode(node, text) {
+    const newParagraph = $createParagraphNode()
+    node.insertAfter(newParagraph)
+    newParagraph.selectStart()
+
+    // Insert the typed text
+    if (text) {
+      newParagraph.append($createTextNode(text))
+      newParagraph.select(1, 1) // Place cursor after the text
+    }
+  }
+
+  createParagraphBeforeNode(node, text) {
+    const newParagraph = $createParagraphNode()
+    node.insertBefore(newParagraph)
+    newParagraph.selectStart()
+
+    // Insert the typed text
+    if (text) {
+      newParagraph.append($createTextNode(text))
+      newParagraph.select(1, 1) // Place cursor after the text
+    }
+  }
+
   uploadFile(file) {
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
@@ -252,25 +276,34 @@ export default class Contents {
   deleteSelectedNodes() {
     this.editor.update(() => {
       if ($isNodeSelection(this.#selection.current)) {
-        let nodesWereRemoved = false
-        this.#selection.current.getNodes().forEach((node) => {
+        const nodesToRemove = this.#selection.current.getNodes()
+        if (nodesToRemove.length === 0) return
+
+        // Use splice() instead of node.remove() for proper removal and
+        // reconciliation. Would have issues with removing unintended decorator nodes
+        // with node.remove()
+        nodesToRemove.forEach((node) => {
           const parent = node.getParent()
+          if (!$isElementNode(parent)) return
 
-          node.remove()
+          const children = parent.getChildren()
+          const index = children.indexOf(node)
 
-          if (parent.getType() === "root" && parent.getChildrenSize() === 0) {
-            parent.append($createParagraphNode())
+          if (index >= 0) {
+            parent.splice(index, 1, [])
           }
-
-          nodesWereRemoved = true
         })
 
-        if (nodesWereRemoved) {
-          this.#selection.clear()
-          this.editor.focus()
-
-          return true
+        // Check if root is empty after all removals
+        const root = $getRoot()
+        if (root.getChildrenSize() === 0) {
+          root.append($createParagraphNode())
         }
+
+        this.#selection.clear()
+        this.editor.focus()
+
+        return true
       }
     })
   }
