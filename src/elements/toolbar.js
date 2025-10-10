@@ -59,7 +59,7 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   // Not using popover because of CSS anchoring still not widely available.
   #toggleDialog(button) {
-    const dialog = document.getElementById(button.dataset.dialogTarget).parentNode
+    const dialog = this.querySelector("lexxy-link-dialog .link-dialog").parentNode
 
     if (dialog.open) {
       dialog.close()
@@ -235,7 +235,7 @@ export default class LexicalToolbarElement extends HTMLElement {
       </button>
 
       <lexxy-link-dialog class="lexxy-link-dialog">
-        <dialog id="link-dialog" closedby="any">
+        <dialog class="link-dialog" closedby="any">
           <form method="dialog">
             <input type="url" placeholder="Enter a URL…" class="input" required>
             <div class="lexxy-dialog-actions">
