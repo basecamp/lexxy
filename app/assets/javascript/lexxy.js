@@ -5583,7 +5583,7 @@ class ActionTextAttachmentNode extends gi {
     this.altText = altText || "";
     this.caption = caption || "";
     this.contentType = contentType || "";
-    this.fileName = fileName;
+    this.fileName = fileName || "";
     this.fileSize = fileSize;
     this.width = width;
     this.height = height;
@@ -7102,38 +7102,25 @@ class Contents {
     }, { tag: Ti });
   }
 
-  deleteSelectedNodes() {
+  async deleteSelectedNodes() {
+    let focusNode = null;
+
     this.editor.update(() => {
       if (ur(this.#selection.current)) {
         const nodesToRemove = this.#selection.current.getNodes();
         if (nodesToRemove.length === 0) return
 
-        // Use splice() instead of node.remove() for proper removal and
-        // reconciliation. Would have issues with removing unintended decorator nodes
-        // with node.remove()
-        nodesToRemove.forEach((node) => {
-          const parent = node.getParent();
-          if (!di(parent)) return
-
-          const children = parent.getChildren();
-          const index = children.indexOf(node);
-
-          if (index >= 0) {
-            parent.splice(index, 1, []);
-          }
-        });
-
-        // Check if root is empty after all removals
-        const root = ps();
-        if (root.getChildrenSize() === 0) {
-          root.append(Pi());
-        }
-
-        this.#selection.clear();
-        this.editor.focus();
-
-        return true
+        focusNode = this.#findAdjacentNodeTo(nodesToRemove);
+        this.#deleteNodes(nodesToRemove);
       }
+    });
+
+    await nextFrame();
+
+    this.editor.update(() => {
+      this.#selectAfterDeletion(focusNode);
+      this.#selection.clear();
+      this.editor.focus();
     });
   }
 
@@ -7266,6 +7253,45 @@ class Contents {
 
   #removeNodes(nodesToDelete) {
     nodesToDelete.forEach((node) => node.remove());
+  }
+
+  #deleteNodes(nodes) {
+    // Use splice() instead of node.remove() for proper removal and
+    // reconciliation. Would have issues with removing unintended decorator nodes
+    // with node.remove()
+    nodes.forEach((node) => {
+      const parent = node.getParent();
+      if (!di(parent)) return
+
+      const children = parent.getChildren();
+      const index = children.indexOf(node);
+
+      if (index >= 0) {
+        parent.splice(index, 1, []);
+      }
+    });
+  }
+
+  #findAdjacentNodeTo(nodes) {
+    const firstNode = nodes[0];
+    const lastNode = nodes[nodes.length - 1];
+
+    return firstNode?.getPreviousSibling() || lastNode?.getNextSibling()
+  }
+
+  #selectAfterDeletion(focusNode) {
+    const root = ps();
+    if (root.getChildrenSize() === 0) {
+      const newParagraph = Pi();
+      root.append(newParagraph);
+      newParagraph.selectStart();
+    } else if (focusNode) {
+      if (Qn(focusNode) || Fi(focusNode)) {
+        focusNode.selectEnd();
+      } else {
+        focusNode.selectNext(0, 0);
+      }
+    }
   }
 
   #collectSelectedListItems(selection) {

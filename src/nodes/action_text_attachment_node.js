@@ -62,7 +62,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     this.altText = altText || ""
     this.caption = caption || ""
     this.contentType = contentType || ""
-    this.fileName = fileName
+    this.fileName = fileName || ""
     this.fileSize = fileSize
     this.width = width
     this.height = height
