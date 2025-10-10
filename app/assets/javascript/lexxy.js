@@ -7182,25 +7182,34 @@ class Contents {
   deleteSelectedNodes() {
     this.editor.update(() => {
       if (ur(this.#selection.current)) {
-        let nodesWereRemoved = false;
-        this.#selection.current.getNodes().forEach((node) => {
+        const nodesToRemove = this.#selection.current.getNodes();
+        if (nodesToRemove.length === 0) return
+
+        // Use splice() instead of node.remove() for proper removal and
+        // reconciliation. Would have issues with removing unintended decorator nodes
+        // with node.remove()
+        nodesToRemove.forEach((node) => {
           const parent = node.getParent();
+          if (!di(parent)) return
 
-          node.remove();
+          const children = parent.getChildren();
+          const index = children.indexOf(node);
 
-          if (parent.getType() === "root" && parent.getChildrenSize() === 0) {
-            parent.append(Pi());
+          if (index >= 0) {
+            parent.splice(index, 1, []);
           }
-
-          nodesWereRemoved = true;
         });
 
-        if (nodesWereRemoved) {
-          this.#selection.clear();
-          this.editor.focus();
-
-          return true
+        // Check if root is empty after all removals
+        const root = ps();
+        if (root.getChildrenSize() === 0) {
+          root.append(Pi());
         }
+
+        this.#selection.clear();
+        this.editor.focus();
+
+        return true
       }
     });
   }
