@@ -6293,7 +6293,7 @@ class Selection {
 
     return this.#findPreviousSiblingUp(anchorNode)
   }
-  
+
   get #contents() {
     return this.editorElement.contents
   }
