@@ -41,6 +41,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
           conversion: () => ({
             node: new ActionTextAttachmentNode({
               src: img.getAttribute("src"),
+              caption: img.getAttribute("alt") || "",
               contentType: "image/*",
               width: img.getAttribute("width"),
               height: img.getAttribute("height")
