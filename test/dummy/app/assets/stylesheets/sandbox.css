@@ -1,8 +1,52 @@
+:root {
+  --sandbox-background-color: oklch(98% 0 0);
+  --sandbox-text-color: oklch(20% 0 0);
+  --sandbox-code-color: #2d3748;
+
+  /* Dark mode colors */
+  @media (prefers-color-scheme: dark) {
+    --sandbox-background-color: oklch(15% 0 0);
+    --sandbox-text-color: oklch(96% 0 0);
+    --sandbox-code-color: #f7fafc;
+  
+    /* Lexxy dark mode colors */
+    --lexxy-color-ink: oklch(96% 0 0);
+    --lexxy-color-ink-medium: oklch(75% 0 0);
+    --lexxy-color-ink-light: oklch(55% 0 0);
+    --lexxy-color-ink-lighter: oklch(40% 0 0);
+    --lexxy-color-ink-lightest: oklch(25% 0 0);
+    --lexxy-color-ink-inverted: oklch(15% 0 0);
+
+    --lexxy-color-accent-dark: oklch(70% 0.30 260);
+    --lexxy-color-accent-medium: oklch(75% 0.196 258);
+    --lexxy-color-accent-light: oklch(45% 0.04 254);
+    --lexxy-color-accent-lightest: oklch(35% 0.04 254);
+
+    --lexxy-color-red: oklch(70% 0.15 27);
+    --lexxy-color-green: oklch(70% 0.15 145);
+    --lexxy-color-blue: oklch(75% 0.196 258);
+    --lexxy-color-purple: oklch(70% 0.15 305);
+
+    --lexxy-color-code-token-att: #ff7b72;
+    --lexxy-color-code-token-comment: #8b949e;
+    --lexxy-color-code-token-function: #d2a8ff;
+    --lexxy-color-code-token-operator: #ff7b72;
+    --lexxy-color-code-token-property: #79c0ff;
+    --lexxy-color-code-token-punctuation: #f0f6fc;
+    --lexxy-color-code-token-selector: #7ee787;
+    --lexxy-color-code-token-variable: #ffa657;
+
+    --lexxy-shadow: 0 0 0 1px rgba(100, 100, 100, 0.3);
+  }
+}
+
 html {
   font-size: 16px;
 }
 
 body {
+  background-color: var(--sandbox-background-color);
+  color: var(--sandbox-text-color);
   margin: 0;
   padding: 0;
 }
@@ -23,12 +67,11 @@ section {
   padding: var(--sandbox-padding);
 
   &:first-child {
-    box-shadow: 1px 0 2px oklch(95% 0 0);
     position: relative;
   }
 
   &:last-child {
-    background: oklch(98% 0 0);
+    background: rgba(100, 100, 100, 0.1);
     overflow: hidden;
   }
 }
@@ -55,7 +98,7 @@ h2 {
 
 pre[class*="language-"],
 code[class*="language-"] {
-  color: #2d3748;
+  color: var(--sandbox-code-color);
   background: none;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
   font-size: 0.9rem;

@@ -8,7 +8,8 @@
   --lexxy-color-ink-inverted: white;
 
   --lexxy-color-accent-dark: oklch(57% 0.19 260);
-  --lexxy-color-accent-medium: oklch(66% 0.196 258);
+  --lexxy-color-accent-medium: oklch(75% 0.196 258);
+  --lexxy-color-accent-light: oklch(88% 0.026 254);
   --lexxy-color-accent-lightest: oklch(92% 0.026 254);
 
   --lexxy-color-red: oklch(60% 0.15 27);
@@ -30,7 +31,8 @@
   --lexxy-color-text-subtle: var(--lexxy-color-ink-medium);
   --lexxy-color-link: var(--lexxy-color-accent-dark);
   --lexxy-color-selected: var(--lexxy-color-accent-lightest);
-  --lexxy-color-selected-dark: var(--lexxy-color-blue-medium);
+  --lexxy-color-selected-hover: var(--lexxy-color-accent-light);
+  --lexxy-color-selected-dark: var(--lexxy-color-blue);
   --lexxy-color-code-bg: var(--lexxy-color-ink-lightest);
 
   /* Typography */
