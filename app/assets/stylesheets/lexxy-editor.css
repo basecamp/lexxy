@@ -35,7 +35,7 @@
     inline-size: auto;
 
     @media(any-hover: hover) {
-      &:hover {
+      &:hover:not([aria-disabled="true"]) {
         filter: brightness(0.9);
       }
     }
@@ -102,12 +102,17 @@
   display: grid;
   place-items: center;
 
-  &:is(:active) {
+  &:is(:active):not([aria-disabled="true"]) {
     background-color: var(--lexxy-color-selected);
   }
 
   &[aria-pressed="true"] {
     background-color: var(--lexxy-color-selected);
+  }
+
+  &[aria-disabled="true"] {
+    cursor: default;
+    opacity: 0.3;
   }
 
   svg {
@@ -118,6 +123,10 @@
     inline-size: var(--lexxy-toolbar-icon-size);
     user-select: none;
   }
+}
+
+:where(.lexxy-editor__toolbar-spacer) {
+  flex: 1;
 }
 
 :where(.lexxy-editor__toolbar-overflow) {

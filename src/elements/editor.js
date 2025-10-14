@@ -279,7 +279,8 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #registerComponents() {
     registerRichText(this.editor)
-    registerHistory(this.editor, createEmptyHistoryState(), 20)
+    this.historyState = createEmptyHistoryState()
+    registerHistory(this.editor, this.historyState, 20)
     registerList(this.editor)
     this.#registerCodeHiglightingComponents()
     registerMarkdownShortcuts(this.editor, TRANSFORMERS)
