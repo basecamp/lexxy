@@ -189,6 +189,10 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#overflow.setAttribute("nonce", getNonce())
   }
 
+  get #spacer() {
+    return this.querySelector(".lexxy-editor__toolbar-spacer")
+  }
+
   get #overflow() {
     return this.querySelector(".lexxy-editor__toolbar-overflow")
   }
@@ -199,7 +203,15 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   #resetToolbar() {
     while (this.#overflowMenu.children.length > 0) {
-      this.insertBefore(this.#overflowMenu.children[0], this.#overflow);
+      var child = this.#overflowMenu.children[0]
+
+      // Move undo and redo after spacer, and the rest before spacer
+      var to = this.#spacer
+      if (child.name === "undo" || child.name === "redo") {
+        to = this.#overflow
+      }
+
+      this.insertBefore(this.#overflowMenu.children[0], to);
     }
   }
 
@@ -209,10 +221,10 @@ export default class LexicalToolbarElement extends HTMLElement {
 
     for (const button of buttons) {
       if (this.#toolbarIsOverflowing()) {
-        this.#overflowMenu.appendChild(button)
+        this.#overflowMenu.prepend(button)
         movedToOverflow = true
       } else {
-        if (movedToOverflow) this.#overflowMenu.appendChild(button)
+        if (movedToOverflow) this.#overflowMenu.prepend(button)
         break
       }
     }
