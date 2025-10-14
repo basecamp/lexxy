@@ -270,6 +270,10 @@ export default class LexicalToolbarElement extends HTMLElement {
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 8a2 2 0 110 4 2 2 0 010-4z""/><path d="M22 2a1 1 0 011 1v18a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1h20zM3 18.714L9 11l5.25 6.75L17 15l4 4V4H3v14.714z"/></svg>
       </button>
 
+      <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 12C0 11.4477 0.447715 11 1 11H23C23.5523 11 24 11.4477 24 12C24 12.5523 23.5523 13 23 13H1C0.447716 13 0 12.5523 0 12Z"/><path d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5C20 6.10457 19.1046 7 18 7H6C4.89543 7 4 6.10457 4 5Z"/><path d="M4 19C4 17.8954 4.89543 17 6 17H18C19.1046 17 20 17.8954 20 19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19Z"/></svg>
+      </button>
+
       <details class="lexxy-editor__toolbar-overflow">
         <summary class="lexxy-editor__toolbar-button" aria-label="Show more toolbar buttons">•••</summary>
         <div class="lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons"></div>

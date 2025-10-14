@@ -328,6 +328,20 @@
   --lexxy-attachment-icon-color: var(--lexxy-color-green);
 }
 
+/* Horizontal divider */
+:where(.horizontal-divider) {
+  margin: 0;
+  margin-block-end: .5em;
+  padding: 1.5em 0 .5em;
+
+  hr {
+    border: 0;
+    border-block-end: 1px solid currentColor;
+    inline-size: 20%;
+    margin: 0;
+  }
+}
+
 /* Custom attachments such as mentions, etc. */
 :where(action-text-attachment[content-type^="application/vnd.actiontext"]) {
   --lexxy-attachment-bg-color: transparent;

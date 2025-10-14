@@ -10,6 +10,7 @@ import { registerHistory, createEmptyHistoryState } from '@lexical/history'
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
+import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { containsVisuallyRelevantChildren, createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
@@ -183,6 +184,7 @@ export default class LexicalEditorElement extends HTMLElement {
       CodeHighlightNode,
       LinkNode,
       AutoLinkNode,
+      HorizontalDividerNode,
 
       CustomActionTextAttachmentNode,
     ]

@@ -11,7 +11,8 @@ import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } fr
 import { CodeNode, $isCodeNode } from "@lexical/code"
 import { $toggleLink } from "@lexical/link"
 import { createElement } from "../helpers/html_helper"
-import { getListType } from "../helpers/lexical_helper";
+import { getListType } from "../helpers/lexical_helper"
+import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 
 const COMMANDS = [
   "bold",
@@ -23,6 +24,7 @@ const COMMANDS = [
   "insertOrderedList",
   "insertQuoteBlock",
   "insertCodeBlock",
+  "insertHorizontalDivider",
   "uploadAttachments"
 ]
 
@@ -99,6 +101,16 @@ export class CommandDispatcher {
       } else {
         this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new CodeNode("plain"))
       }
+    })
+  }
+
+  dispatchInsertHorizontalDivider() {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+  
+      const dividerNode = new HorizontalDividerNode()
+      selection.insertNodes([dividerNode])
     })
   }
 
