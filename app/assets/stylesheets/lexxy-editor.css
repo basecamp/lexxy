@@ -129,8 +129,14 @@
   flex: 1;
 }
 
+/* Make sure spacer is only displayed if there's another button before it */
+* + :where(.lexxy-editor__toolbar-spacer) {
+  min-inline-size: 1lh;
+}
+
 :where(.lexxy-editor__toolbar-overflow) {
   display: none;
+  justify-self: flex-end;
   position: relative;
   z-index: 1;
 
