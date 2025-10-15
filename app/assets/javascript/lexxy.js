@@ -6075,11 +6075,7 @@ class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.editor.update(() => {
-      const selection = Nr();
-      if (!cr(selection)) return
-  
-      const dividerNode = new HorizontalDividerNode();
-      selection.insertNodes([dividerNode]);
+      this.contents;
     });
   }
 
@@ -7010,23 +7006,7 @@ class Contents {
 
     return result
   }
-
-  hasSelectedWords() {
-    let result = false;
-
-    this.editor.update(() => {
-      const selection = Nr();
-      if (!cr(selection)) return
-
-      // Check if we have selected text within a line (not entire lines)
-      result = !selection.isCollapsed() &&
-        selection.anchor.getNode().getTopLevelElement() ===
-        selection.focus.getNode().getTopLevelElement();
-    });
-
-    return result
-  }
-
+  
   unwrapSelectedListItems() {
     this.editor.update(() => {
       const selection = Nr();

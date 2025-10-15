@@ -100,22 +100,6 @@ export default class Contents {
     return result
   }
 
-  hasSelectedWords() {
-    let result = false
-
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      // Check if we have selected text within a line (not entire lines)
-      result = !selection.isCollapsed() &&
-        selection.anchor.getNode().getTopLevelElement() ===
-        selection.focus.getNode().getTopLevelElement()
-    })
-
-    return result
-  }
-
   unwrapSelectedListItems() {
     this.editor.update(() => {
       const selection = $getSelection()

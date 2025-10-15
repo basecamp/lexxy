@@ -106,11 +106,7 @@ export class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-  
-      const dividerNode = new HorizontalDividerNode()
-      selection.insertNodes([dividerNode])
+      this.contents
     })
   }
 
