@@ -5369,6 +5369,10 @@ class LexicalToolbarElement extends HTMLElement {
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 8a2 2 0 110 4 2 2 0 010-4z""/><path d="M22 2a1 1 0 011 1v18a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1h20zM3 18.714L9 11l5.25 6.75L17 15l4 4V4H3v14.714z"/></svg>
       </button>
 
+      <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 12C0 11.4477 0.447715 11 1 11H23C23.5523 11 24 11.4477 24 12C24 12.5523 23.5523 13 23 13H1C0.447716 13 0 12.5523 0 12Z"/><path d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5C20 6.10457 19.1046 7 18 7H6C4.89543 7 4 6.10457 4 5Z"/><path d="M4 19C4 17.8954 4.89543 17 6 17H18C19.1046 17 20 17.8954 20 19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19Z"/></svg>
+      </button>
+
       <details class="lexxy-editor__toolbar-overflow">
         <summary class="lexxy-editor__toolbar-button" aria-label="Show more toolbar buttons">•••</summary>
         <div class="lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons"></div>
@@ -5462,11 +5466,11 @@ function bytesToHumanSize(bytes) {
 
 const VISUALLY_RELEVANT_ELEMENTS_SELECTOR = [
   "img", "video", "audio", "iframe", "embed", "object", "picture", "source", "canvas", "svg", "math",
-  "form", "input", "textarea", "select", "button", "code", "blockquote"
+  "form", "input", "textarea", "select", "button", "code", "blockquote", "hr"
 ].join(",");
 
 const ALLOWED_HTML_TAGS = [ "a", "action-text-attachment", "b", "blockquote", "br", "code", "em",
-  "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "i", "img", "li", "ol", "p", "pre", "q", "s", "strong", "ul" ];
+  "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "ol", "p", "pre", "q", "s", "strong", "ul" ];
 
 const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",
   "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "presentation",
@@ -5920,6 +5924,74 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 }
 
+class HorizontalDividerNode extends gi {
+  static getType() {
+    return "horizontal_divider"
+  }
+
+  static clone(node) {
+    return new HorizontalDividerNode(node.__key)
+  }
+
+  static importJSON(serializedNode) {
+    return new HorizontalDividerNode()
+  }
+
+  static importDOM() {
+    return {
+      "hr": (hr) => {
+        return {
+          conversion: () => ({
+            node: new HorizontalDividerNode()
+          }),
+          priority: 1
+        }
+      }
+    }
+  }
+
+  constructor(key) {
+    super(key);
+  }
+
+  createDOM() {
+    const figure = createElement("figure", { className: "horizontal-divider" });
+    const hr = createElement("hr");
+
+    figure.addEventListener("click", (event) => {
+      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
+    });
+
+    figure.appendChild(hr);
+
+    return figure
+  }
+
+  updateDOM() {
+    return true
+  }
+
+  isInline() {
+    return false
+  }
+
+  exportDOM() {
+    const hr = createElement("hr");
+    return { element: hr }
+  }
+
+  exportJSON() {
+    return {
+      type: "horizontal_divider",
+      version: 1
+    }
+  }
+
+  decorate() {
+    return null
+  }
+}
+
 const COMMANDS = [
   "bold",
   "italic",
@@ -5931,6 +6003,7 @@ const COMMANDS = [
   "insertOrderedList",
   "insertQuoteBlock",
   "insertCodeBlock",
+  "insertHorizontalDivider",
   "uploadAttachments"
 ];
 
@@ -6011,6 +6084,12 @@ class CommandDispatcher {
       } else {
         this.contents.toggleNodeWrappingAllSelectedLines((node) => I$1(node), () => new K$1("plain"));
       }
+    });
+  }
+
+  dispatchInsertHorizontalDivider() {
+    this.editor.update(() => {
+      this.contents.insertAtCursor(new HorizontalDividerNode());
     });
   }
 
@@ -6871,6 +6950,23 @@ class Contents {
     });
   }
 
+  insertAtCursor(node) {
+    this.editor.update(() => {
+      const selection = Nr();
+      const selectedNodes = selection?.getNodes();
+
+      if (cr(selection)) {
+        Fr([ node ]);
+      } else if (ur(selection) && selectedNodes && selectedNodes.length > 0) {
+        const lastNode = selectedNodes[selectedNodes.length - 1];
+        lastNode.insertAfter(node);
+      } else {
+        const root = ps();
+        root.append(node);
+      }
+    });
+  }
+
   insertNodeWrappingEachSelectedLine(newNodeFn) {
     this.editor.update(() => {
       const selection = Nr();
@@ -6942,22 +7038,6 @@ class Contents {
     return result
   }
 
-  hasSelectedWords() {
-    let result = false;
-
-    this.editor.update(() => {
-      const selection = Nr();
-      if (!cr(selection)) return
-
-      // Check if we have selected text within a line (not entire lines)
-      result = !selection.isCollapsed() &&
-        selection.anchor.getNode().getTopLevelElement() ===
-        selection.focus.getNode().getTopLevelElement();
-    });
-
-    return result
-  }
-
   unwrapSelectedListItems() {
     this.editor.update(() => {
       const selection = Nr();
@@ -6982,7 +7062,7 @@ class Contents {
 
       const selection = Nr();
       if (cr(selection)) {
-        selection.insertNodes([linkNode]);
+        selection.insertNodes([ linkNode ]);
         linkNodeKey = linkNode.getKey();
       }
     });
@@ -7048,7 +7128,7 @@ class Contents {
   }
 
   replaceTextBackUntil(stringToReplace, replacementNodes) {
-    replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [replacementNodes];
+    replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ];
 
     this.editor.update(() => {
       const { anchorNode, offset } = this.#getTextAnchorData();
@@ -7099,20 +7179,8 @@ class Contents {
     const blobUrlTemplate = this.editorElement.blobUrlTemplate;
 
     this.editor.update(() => {
-      const selection = Nr();
-      const anchorNode = selection?.anchor.getNode();
-      const currentParagraph = anchorNode?.getTopLevelElement();
-
       const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor });
-
-      if (currentParagraph && Fi(currentParagraph) && currentParagraph.getChildrenSize() === 0) {
-        // If we're inside an empty paragraph, replace it
-        currentParagraph.replace(uploadedImageNode);
-      } else if (currentParagraph && di(currentParagraph)) {
-        currentParagraph.insertAfter(uploadedImageNode);
-      } else {
-        Fr([uploadedImageNode]);
-      }
+      this.insertAtCursor(uploadedImageNode);
     }, { tag: Ti });
   }
 
@@ -7192,7 +7260,7 @@ class Contents {
       wrappingNode.append(...topLevelElement.getChildren());
       topLevelElement.replace(wrappingNode);
     } else {
-      Fr([newNodeFn()]);
+      Fr([ newNodeFn() ]);
     }
   }
 
@@ -7823,6 +7891,7 @@ class LexicalEditorElement extends HTMLElement {
       rt,
       g$1,
       m$2,
+      HorizontalDividerNode,
 
       CustomActionTextAttachmentNode,
     ];
