@@ -6939,9 +6939,13 @@ class Contents {
   insertAtCursor(node) {
     this.editor.update(() => {
       const selection = Nr();
+      const selectedNodes = selection?.getNodes();
 
       if (cr(selection)) {
-        Fr([node]);
+        Fr([ node ]);
+      } else if (ur(selection) && selectedNodes && selectedNodes.length > 0) {
+        const lastNode = selectedNodes[selectedNodes.length - 1];
+        lastNode.insertAfter(node);
       } else {
         const root = ps();
         root.append(node);
@@ -7044,7 +7048,7 @@ class Contents {
 
       const selection = Nr();
       if (cr(selection)) {
-        selection.insertNodes([linkNode]);
+        selection.insertNodes([ linkNode ]);
         linkNodeKey = linkNode.getKey();
       }
     });
@@ -7110,7 +7114,7 @@ class Contents {
   }
 
   replaceTextBackUntil(stringToReplace, replacementNodes) {
-    replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [replacementNodes];
+    replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ];
 
     this.editor.update(() => {
       const { anchorNode, offset } = this.#getTextAnchorData();
@@ -7242,7 +7246,7 @@ class Contents {
       wrappingNode.append(...topLevelElement.getChildren());
       topLevelElement.replace(wrappingNode);
     } else {
-      Fr([newNodeFn()]);
+      Fr([ newNodeFn() ]);
     }
   }
 

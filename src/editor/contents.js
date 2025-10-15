@@ -32,9 +32,13 @@ export default class Contents {
   insertAtCursor(node) {
     this.editor.update(() => {
       const selection = $getSelection()
+      const selectedNodes = selection?.getNodes()
 
       if ($isRangeSelection(selection)) {
-        $insertNodes([node])
+        $insertNodes([ node ])
+      } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
+        const lastNode = selectedNodes[selectedNodes.length - 1]
+        lastNode.insertAfter(node)
       } else {
         const root = $getRoot()
         root.append(node)
@@ -137,7 +141,7 @@ export default class Contents {
 
       const selection = $getSelection()
       if ($isRangeSelection(selection)) {
-        selection.insertNodes([linkNode])
+        selection.insertNodes([ linkNode ])
         linkNodeKey = linkNode.getKey()
       }
     })
@@ -203,7 +207,7 @@ export default class Contents {
   }
 
   replaceTextBackUntil(stringToReplace, replacementNodes) {
-    replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [replacementNodes]
+    replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ]
 
     this.editor.update(() => {
       const { anchorNode, offset } = this.#getTextAnchorData()
@@ -335,7 +339,7 @@ export default class Contents {
       wrappingNode.append(...topLevelElement.getChildren())
       topLevelElement.replace(wrappingNode)
     } else {
-      $insertNodes([newNodeFn()])
+      $insertNodes([ newNodeFn() ])
     }
   }
 
