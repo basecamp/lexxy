@@ -5457,7 +5457,7 @@ function bytesToHumanSize(bytes) {
 
 const VISUALLY_RELEVANT_ELEMENTS_SELECTOR = [
   "img", "video", "audio", "iframe", "embed", "object", "picture", "source", "canvas", "svg", "math",
-  "form", "input", "textarea", "select", "button", "code", "blockquote"
+  "form", "input", "textarea", "select", "button", "code", "blockquote", "hr"
 ].join(",");
 
 const ALLOWED_HTML_TAGS = [ "a", "action-text-attachment", "b", "blockquote", "br", "code", "em",
@@ -6075,7 +6075,7 @@ class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.editor.update(() => {
-      this.contents;
+      this.contents.insertAtCursor(new HorizontalDividerNode());
     });
   }
 
@@ -6936,6 +6936,19 @@ class Contents {
     });
   }
 
+  insertAtCursor(node) {
+    this.editor.update(() => {
+      const selection = Nr();
+
+      if (cr(selection)) {
+        Fr([node]);
+      } else {
+        const root = ps();
+        root.append(node);
+      }
+    });
+  }
+
   insertNodeWrappingEachSelectedLine(newNodeFn) {
     this.editor.update(() => {
       const selection = Nr();
@@ -7006,7 +7019,7 @@ class Contents {
 
     return result
   }
-  
+
   unwrapSelectedListItems() {
     this.editor.update(() => {
       const selection = Nr();
@@ -7148,20 +7161,8 @@ class Contents {
     const blobUrlTemplate = this.editorElement.blobUrlTemplate;
 
     this.editor.update(() => {
-      const selection = Nr();
-      const anchorNode = selection?.anchor.getNode();
-      const currentParagraph = anchorNode?.getTopLevelElement();
-
       const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor });
-
-      if (currentParagraph && Fi(currentParagraph) && currentParagraph.getChildrenSize() === 0) {
-        // If we're inside an empty paragraph, replace it
-        currentParagraph.replace(uploadedImageNode);
-      } else if (currentParagraph && di(currentParagraph)) {
-        currentParagraph.insertAfter(uploadedImageNode);
-      } else {
-        Fr([uploadedImageNode]);
-      }
+      this.insertAtCursor(uploadedImageNode);
     }, { tag: Ti });
   }
 

@@ -106,7 +106,7 @@ export class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.editor.update(() => {
-      this.contents
+      this.contents.insertAtCursor(new HorizontalDividerNode())
     })
   }
 

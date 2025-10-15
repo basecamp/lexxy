@@ -29,6 +29,19 @@ export default class Contents {
     })
   }
 
+  insertAtCursor(node) {
+    this.editor.update(() => {
+      const selection = $getSelection()
+
+      if ($isRangeSelection(selection)) {
+        $insertNodes([node])
+      } else {
+        const root = $getRoot()
+        root.append(node)
+      }
+    })
+  }
+
   insertNodeWrappingEachSelectedLine(newNodeFn) {
     this.editor.update(() => {
       const selection = $getSelection()
@@ -241,20 +254,8 @@ export default class Contents {
     const blobUrlTemplate = this.editorElement.blobUrlTemplate
 
     this.editor.update(() => {
-      const selection = $getSelection()
-      const anchorNode = selection?.anchor.getNode()
-      const currentParagraph = anchorNode?.getTopLevelElement()
-
       const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor })
-
-      if (currentParagraph && $isParagraphNode(currentParagraph) && currentParagraph.getChildrenSize() === 0) {
-        // If we're inside an empty paragraph, replace it
-        currentParagraph.replace(uploadedImageNode)
-      } else if (currentParagraph && $isElementNode(currentParagraph)) {
-        currentParagraph.insertAfter(uploadedImageNode)
-      } else {
-        $insertNodes([uploadedImageNode])
-      }
+      this.insertAtCursor(uploadedImageNode)
     }, { tag: HISTORY_MERGE_TAG })
   }
 

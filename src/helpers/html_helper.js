@@ -3,7 +3,7 @@ import { mimeTypeToExtension } from "./storage_helper";
 
 const VISUALLY_RELEVANT_ELEMENTS_SELECTOR = [
   "img", "video", "audio", "iframe", "embed", "object", "picture", "source", "canvas", "svg", "math",
-  "form", "input", "textarea", "select", "button", "code", "blockquote"
+  "form", "input", "textarea", "select", "button", "code", "blockquote", "hr"
 ].join(",")
 
 const ALLOWED_HTML_TAGS = [ "a", "action-text-attachment", "b", "blockquote", "br", "code", "em",
