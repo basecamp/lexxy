@@ -125,17 +125,17 @@ class ToolbarTest < ApplicationSystemTestCase
     assert_equal_html "<p>Hello World</p>", find_editor.value
 
     # Click undo 2 times
-    find_editor.toggle_command("undo")
+    click_on "Undo"
     assert_equal_html "<p>Hello</p>", find_editor.value
 
-    find_editor.toggle_command("undo")
+    click_on "Undo"
     assert_equal_html "<p><br></p>", find_editor.value
 
     # Click redo 2 times
-    find_editor.toggle_command("redo")
+    click_on "Redo"
     assert_equal_html "<p>Hello</p>", find_editor.value
 
-    find_editor.toggle_command("redo")
+    click_on "Redo"
     assert_equal_html "<p>Hello World</p>", find_editor.value
   end
 end

@@ -75,13 +75,7 @@ class EditorHandler
   end
 
   def toggle_command(command, toolbar_selector = "lexxy-toolbar")
-    begin
-      find("#{toolbar_selector} [data-command=\"#{command}\"]").click
-
-    # If not found in main toolbar, try the overflow menu
-    rescue Capybara::ElementNotFound
-      find("#{toolbar_selector} .lexxy-editor__toolbar-overflow-menu [data-command=\"#{command}\"]").click
-    end
+    find("#{toolbar_selector} [data-command=\"#{command}\"]").click
   end
 
   def inner_html
