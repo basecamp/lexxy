@@ -16,10 +16,11 @@ import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 
 const COMMANDS = [
   "bold",
-  "rotateHeadingFormat",
   "italic",
+  "strikethrough",
   "link",
   "unlink",
+  "rotateHeadingFormat",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -54,6 +55,10 @@ export class CommandDispatcher {
 
   dispatchItalic() {
     this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")
+  }
+
+  dispatchStrikethrough() {
+    this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")
   }
 
   dispatchLink(url) {

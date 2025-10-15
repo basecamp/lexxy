@@ -22,7 +22,7 @@ import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_atta
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = true
-  static commands = [ "bold", "italic", "" ]
+  static commands = [ "bold", "italic", "strikethrough" ]
 
   static observedAttributes = [ "connected", "required" ]
 

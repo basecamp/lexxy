@@ -120,6 +120,7 @@ export default class LexicalToolbarElement extends HTMLElement {
 
     const isBold = selection.hasFormat("bold")
     const isItalic = selection.hasFormat("italic")
+    const isStrikethrough = selection.hasFormat("strikethrough")
     const isInCode = $isCodeNode(topLevelElement) || selection.hasFormat("code")
     const isInList = this.#isInList(anchorNode)
     const listType = getListType(anchorNode)
@@ -129,6 +130,7 @@ export default class LexicalToolbarElement extends HTMLElement {
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
+    this.#setButtonPressed("strikethrough", isStrikethrough)
     this.#setButtonPressed("code", isInCode)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
     this.#setButtonPressed("ordered-list", isInList && listType === "number")
@@ -228,6 +230,12 @@ export default class LexicalToolbarElement extends HTMLElement {
 
       <button class="lexxy-editor__toolbar-button" type="button" name="italic" data-command="italic" title="Italic">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.1 4h-1.5l-3.2 16h1.5l-.4 2h-7l.4-2h1.5l3.2-16h-1.5l.4-2h7l-.4 2z"/></svg>
+      </button>
+
+      <button class="lexxy-editor__toolbar-button" type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M4.70588 16.1591C4.81459 19.7901 7.48035 22 11.6668 22C15.9854 22 18.724 19.6296 18.724 15.8779C18.724 15.5007 18.6993 15.1427 18.6474 14.8066H14.3721C14.8637 15.2085 15.0799 15.7037 15.0799 16.3471C15.0799 17.7668 13.7532 18.7984 11.8113 18.7984C9.88053 18.7984 8.38582 17.7531 8.21659 16.1591H4.70588ZM5.23953 9.31962H9.88794C9.10723 8.88889 8.75888 8.33882 8.75888 7.57339C8.75888 6.13992 9.96576 5.18793 11.7631 5.18793C13.5852 5.18793 14.8761 6.1797 14.9959 7.81344H18.4102C18.3485 4.31824 15.8038 2 11.752 2C7.867 2 5.09129 4.35802 5.09129 7.92044C5.09129 8.41838 5.14071 8.88477 5.23953 9.31962ZM2.23529 10.6914C1.90767 10.6914 1.59347 10.8359 1.36181 11.0931C1.13015 11.3504 1 11.6993 1 12.0631C1 12.4269 1.13015 12.7758 1.36181 13.0331C1.59347 13.2903 1.90767 13.4348 2.23529 13.4348H20.7647C21.0923 13.4348 21.4065 13.2903 21.6382 13.0331C21.8699 12.7758 22 12.4269 22 12.0631C22 11.6993 21.8699 11.3504 21.6382 11.0931C21.4065 10.8359 21.0923 10.6914 20.7647 10.6914H2.23529Z"/>
+        </svg>
       </button>
 
       <button class="lexxy-editor__toolbar-button" type="button" name="link" title="Link" data-dialog-target="link-dialog" data-hotkey="cmd+k ctrl+k">

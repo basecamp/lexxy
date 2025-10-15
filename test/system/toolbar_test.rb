@@ -17,6 +17,12 @@ class ToolbarTest < ApplicationSystemTestCase
     assert_equal_html "<p>Hello <i><em>everyone</em></i></p>", find_editor.value
   end
 
+  test "strikethrough" do
+    find_editor.select("everyone")
+    click_on "Strikethrough"
+    assert_equal_html "<p>Hello <s>everyone</s></p>", find_editor.value
+  end
+
   test "rotate headers" do
     find_editor.select("everyone")
 
