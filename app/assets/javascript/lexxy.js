@@ -5589,9 +5589,9 @@ function containsVisuallyRelevantChildren(element) {
   return element.querySelector(VISUALLY_RELEVANT_ELEMENTS_SELECTOR)
 }
 
-function sanitize(html) {
+function sanitize(html, { additionalAllowedTags = [] }) {
   const sanitizedHtml = purify.sanitize(html, {
-    ALLOWED_TAGS: ALLOWED_HTML_TAGS,
+    ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(additionalAllowedTags.filter(t => t !== undefined)),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     SAFE_FOR_XML: false // So that it does not stripe attributes that contains serialized HTML (like content)
   });
@@ -7272,8 +7272,7 @@ class Contents {
     const blobUrlTemplate = this.editorElement.blobUrlTemplate;
 
     this.editor.update(() => {
-      const editorConfig = { actionText: { attachmentTagName: "bc-attachment" } };
-      const attachmentTagName = editorConfig?.actionText?.attachmentTagName;
+      const attachmentTagName = this.editorElement.config.actionText?.attachmentTagName;
 
       const uploadedImageNode = new ActionTextAttachmentUploadNode({ tagName: attachmentTagName, file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor });
       this.insertAtCursor(uploadedImageNode);
@@ -7822,6 +7821,8 @@ class Clipboard {
   }
 }
 
+const editorConfig = { actionText: { attachmentTagName: "bc-attachment" } };
+
 class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = true
@@ -7831,6 +7832,8 @@ class LexicalEditorElement extends HTMLElement {
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
+
+  #config = editorConfig
 
   constructor() {
     super();
@@ -7875,6 +7878,10 @@ class LexicalEditorElement extends HTMLElement {
     this.editor.dispatchCommand(Ve$1, undefined);
   }
 
+  get config() {
+    return this.#config
+  }
+
   get form() {
     return this.internals.form
   }
@@ -7909,7 +7916,7 @@ class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize(m$3(this.editor, null));
+        this.cachedValue = sanitize(m$3(this.editor, null), { additionalAllowedTags: [this.config.actionText?.attachmentTagName] });
       });
     }
 
@@ -8001,7 +8008,6 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   get #htmlMaps() {
-    const editorConfig = { actionText: { attachmentTagName: "bc-attachment" } };
     return {
       import: this.#constructHtmlImportMap(editorConfig)
     }

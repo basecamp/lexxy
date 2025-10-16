@@ -54,9 +54,9 @@ export function containsVisuallyRelevantChildren(element) {
   return element.querySelector(VISUALLY_RELEVANT_ELEMENTS_SELECTOR)
 }
 
-export function sanitize(html) {
+export function sanitize(html, { additionalAllowedTags = [] }) {
   const sanitizedHtml = DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ALLOWED_HTML_TAGS,
+    ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(additionalAllowedTags.filter(t => t !== undefined)),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     SAFE_FOR_XML: false // So that it does not stripe attributes that contains serialized HTML (like content)
   })

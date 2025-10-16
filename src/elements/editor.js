@@ -19,6 +19,8 @@ import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 
+const editorConfig = { actionText: { attachmentTagName: "bc-attachment" } }
+
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = true
@@ -28,6 +30,8 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
+
+  #config = editorConfig
 
   constructor() {
     super()
@@ -72,6 +76,10 @@ export default class LexicalEditorElement extends HTMLElement {
     this.editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
   }
 
+  get config() {
+    return this.#config
+  }
+
   get form() {
     return this.internals.form
   }
@@ -106,7 +114,7 @@ export default class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
+        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null), { additionalAllowedTags: [this.config.actionText?.attachmentTagName] })
       })
     }
 
@@ -198,7 +206,6 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #htmlMaps() {
-    const editorConfig = { actionText: { attachmentTagName: "bc-attachment" } }
     return {
       import: this.#constructHtmlImportMap(editorConfig)
     }

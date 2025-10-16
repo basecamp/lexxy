@@ -258,8 +258,7 @@ export default class Contents {
     const blobUrlTemplate = this.editorElement.blobUrlTemplate
 
     this.editor.update(() => {
-      const editorConfig = { actionText: { attachmentTagName: "bc-attachment" } }
-      const attachmentTagName = editorConfig?.actionText?.attachmentTagName ?? DEFAULT_ATTACHMENT_TAG_NAME
+      const attachmentTagName = this.editorElement.config.actionText?.attachmentTagName
 
       const uploadedImageNode = new ActionTextAttachmentUploadNode({ tagName: attachmentTagName, file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor })
       this.insertAtCursor(uploadedImageNode)
