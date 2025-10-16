@@ -1,5 +1,6 @@
 import Lexxy from "../config/lexxy"
 import { $createTextNode, DecoratorNode } from "lexical"
+
 import { createElement, dispatchCustomEvent } from "../helpers/html_helper"
 
 export class CustomActionTextAttachmentNode extends DecoratorNode {
@@ -16,9 +17,10 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   static importDOM() {
+
     return {
-      [Lexxy.global.get("attachmentTagName")]: (attachment) => {
-        if (!attachment.getAttribute("content")) {
+      [this.TAG_NAME]: (element) => {
+        if (!element.getAttribute("content")) {
           return null
         }
 
@@ -47,16 +49,21 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     }
   }
 
-  constructor({ sgid, contentType, innerHtml }, key) {
+  static get TAG_NAME() {
+    return Lexxy.global.get("attachmentTagName")
+  }
+
+  constructor({ tagName, sgid, contentType, innerHtml }, key) {
     super(key)
 
+    this.tagName = tagName || CustomActionTextAttachmentNode.TAG_NAME
     this.sgid = sgid
     this.contentType = contentType || "application/vnd.actiontext.unknown"
     this.innerHtml = innerHtml
   }
 
   createDOM() {
-    const figure = createElement(Lexxy.global.get("attachmentTagName"), { "content-type": this.contentType, "data-lexxy-decorator": true })
+    const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true })
 
     figure.addEventListener("click", (event) => {
       dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() })
@@ -80,7 +87,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   exportDOM() {
-    const attachment = createElement(Lexxy.global.get("attachmentTagName"), {
+    const attachment = createElement(this.tagName, {
       sgid: this.sgid,
       content: JSON.stringify(this.innerHtml),
       "content-type": this.contentType
@@ -93,6 +100,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     return {
       type: "custom_action_text_attachment",
       version: 1,
+      tagName: this.tagName,
       sgid: this.sgid,
       contentType: this.contentType,
       innerHtml: this.innerHtml
