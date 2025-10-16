@@ -4,6 +4,7 @@ export default {
     italic: "lexxy-content__italic",
     strikethrough: "lexxy-content__strikethrough",
     underline: "lexxy-content__underline",
+    highlight: "lexxy-content__highlight"
   },
   codeHighlight: {
     atrule: "code-token__attr",

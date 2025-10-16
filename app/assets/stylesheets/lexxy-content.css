@@ -53,6 +53,12 @@
     text-decoration: underline;
   }
 
+  mark,
+  .lexxy-content__highlight {
+    background-color: transparent;
+    color: inherit;
+  }
+
   blockquote {
     border-inline-start: 0.25em solid var(--lexxy-color-ink-lighter);
     font-style: italic;

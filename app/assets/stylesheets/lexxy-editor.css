@@ -191,9 +191,10 @@
     border-radius: var(--lexxy-radius);
     box-shadow: var(--lexxy-shadow);
     color: var(--lexxy-color-ink);
+    inset-block-start: 4ch;
     padding: 1ch;
     position: absolute;
-    z-index: 1;
+    z-index: 3;
   }
 
   .lexxy-dialog-actions {
@@ -228,6 +229,65 @@
   button[type="submit"] {
     background-color: var(--lexxy-color-accent-dark);
     color: var(--lexxy-color-ink-inverted);
+  }
+}
+
+:where(.lexxy-color-dialog) {
+  display: contents;
+
+  dialog {
+    background-color: var(--lexxy-color-canvas);
+    border: 1px solid var(--lexxy-color-ink-lighter);
+    border-radius: var(--lexxy-radius);
+    box-shadow: var(--lexxy-shadow);
+    color: var(--lexxy-color-ink);
+    inset-block-start: 4ch;
+    padding: 0.5ch;
+    z-index: 3;
+
+    .lexxy-color-dialog-content {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5ch;
+
+      [data-button-group] {
+        display: flex;
+        flex-direction: row;
+        gap: 0.5ch;
+      }
+    }
+
+    button {
+      block-size: 3.2ch;
+      inline-size: 3.2ch;
+      position: relative;
+      outline: none;
+
+      &:after {
+        align-self: center;
+        content: "Aa";
+        display: inline-block;
+        position: absolute;
+        inset-block-start: 0;
+        inset-block-end: 0;
+        inset-inline-end: 0;
+        inset-inline-start: 0;
+      }
+
+      &:hover {
+        opacity: 0.8;
+      }
+
+      &[aria-pressed="true"] {
+        box-shadow: 0 0 0 2px var(--lexxy-color-canvas), 0 0 0 4px var(--lexxy-color-accent-dark);
+      }
+    }
+
+    .lexxy-color-dialog-reset {
+      inline-size: 100%;
+
+      &:after { display: none; }
+    }
   }
 }
 
