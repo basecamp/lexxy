@@ -2,6 +2,8 @@ import { DecoratorNode } from "lexical"
 import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper";
 import { bytesToHumanSize, mimeTypeToExtension } from "../helpers/storage_helper";
 
+const DEFAULT_ATTACHMENT_TAG_NAME = "action-text-attachment"
+
 export class ActionTextAttachmentNode extends DecoratorNode {
   static getType() {
     return "action_text_attachment"
@@ -15,12 +17,16 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return new ActionTextAttachmentNode({ ...serializedNode })
   }
 
-  static importDOM() {
+  static importDOM(editorConfig) {
+
+    const attachmentTagName = editorConfig?.actionText?.attachmentTagName ?? DEFAULT_ATTACHMENT_TAG_NAME
+
     return {
-      "action-text-attachment": (attachment) => {
+      [attachmentTagName]: (attachment) => {
         return {
           conversion: () => ({
             node: new ActionTextAttachmentNode({
+              tagName: attachmentTagName,
               sgid: attachment.getAttribute("sgid"),
               src: attachment.getAttribute("url"),
               previewable: attachment.getAttribute("previewable"),
@@ -40,6 +46,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
         return {
           conversion: () => ({
             node: new ActionTextAttachmentNode({
+              tagName: attachmentTagName,
               src: img.getAttribute("src"),
               caption: img.getAttribute("alt") || "",
               contentType: "image/*",
@@ -53,9 +60,10 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     }
   }
 
-  constructor({ sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
+  constructor({ tagName, sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
     super(key)
 
+    this.tagName = tagName
     this.sgid = sgid
     this.src = src
     this.previewable = previewable
@@ -95,7 +103,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   exportDOM() {
-    const attachment = createElement("action-text-attachment", {
+    const attachment = createElement(this.tagName, {
       sgid: this.sgid,
       previewable: this.previewable || null,
       url: this.src,
@@ -116,6 +124,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return {
       type: "action_text_attachment",
       version: 1,
+      tagName: this.tagName,
       sgid: this.sgid,
       src: this.src,
       previewable: this.previewable,

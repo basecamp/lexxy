@@ -166,7 +166,8 @@ export default class LexicalEditorElement extends HTMLElement {
         throw error
       },
       theme: theme,
-      nodes: this.#lexicalNodes
+      nodes: this.#lexicalNodes,
+      html: this.#htmlMaps
     })
 
     editor.setRootElement(this.editorContentElement)
@@ -194,6 +195,21 @@ export default class LexicalEditorElement extends HTMLElement {
     }
 
     return nodes
+  }
+
+  get #htmlMaps() {
+    const editorConfig = { actionText: { attachmentTagName: "bc-attachment" } }
+    return {
+      import: this.#constructHtmlImportMap(editorConfig)
+    }
+  }
+
+  #constructHtmlImportMap(editorConfig) {
+    return this.#lexicalNodes.reduce(
+      (importMap = {}, node) => {
+        return { ...importMap, ...node.importDOM(editorConfig) }
+      }
+    )
   }
 
   #createEditorContentElement() {
