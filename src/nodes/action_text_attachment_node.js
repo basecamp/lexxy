@@ -17,11 +17,15 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   static importDOM() {
+
+    const attachmentTagName = lexxyConfig.global.get("attachmentTagName")
+
     return {
-      [lexxyConfig.global.get("attachmentTagName")]: (attachment) => {
+      [attachmentTagName]: (attachment) => {
         return {
-          conversion: () => ({
+          conversion: (attachment) => ({
             node: new ActionTextAttachmentNode({
+              tagName: attachmentTagName,
               sgid: attachment.getAttribute("sgid"),
               src: attachment.getAttribute("url"),
               previewable: attachment.getAttribute("previewable"),
@@ -33,46 +37,49 @@ export class ActionTextAttachmentNode extends DecoratorNode {
               width: attachment.getAttribute("width"),
               height: attachment.getAttribute("height")
             })
-          }),
-          priority: 1
+          }), priority: 1
         }
       },
-      "img": (img) => {
+      "img": () => {
         return {
-          conversion: () => ({
+          conversion: (img) => ({
             node: new ActionTextAttachmentNode({
+              tagName: attachmentTagName,
               src: img.getAttribute("src"),
               caption: img.getAttribute("alt") || "",
               contentType: "image/*",
               width: img.getAttribute("width"),
               height: img.getAttribute("height")
             })
-          }),
-          priority: 1
+          }), priority: 1
         }
       },
       "video": (video) => {
-        const videoSource = video.getAttribute("src") || video.querySelector("source")?.src
-        const fileName = videoSource?.split("/")?.pop()
-        const contentType = video.querySelector("source")?.getAttribute("content-type") || "video/*"
 
         return {
-          conversion: () => ({
-            node: new ActionTextAttachmentNode({
-              src: videoSource,
-              fileName: fileName,
-              contentType: contentType
-            })
-          }),
-          priority: 1
+          conversion: (video) => {
+            const videoSource = video.getAttribute("src") || video.querySelector("source")?.src
+            const fileName = videoSource?.split("/")?.pop()
+            const contentType = video.querySelector("source")?.getAttribute("content-type") || "video/*"
+
+            return {
+              node: new ActionTextAttachmentNode({
+                tagName: attachmentTagName,
+                src: videoSource,
+                fileName: fileName,
+                contentType: contentType
+              })
+            }
+          }, priority: 1
         }
       }
     }
   }
 
-  constructor({ sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
+  constructor({ tagName, sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
     super(key)
 
+    this.tagName = tagName
     this.sgid = sgid
     this.src = src
     this.previewable = previewable
@@ -116,7 +123,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   exportDOM() {
-    const attachment = createElement(lexxyConfig.global.get("attachmentTagName"), {
+    const attachment = createElement(this.tagName, {
       sgid: this.sgid,
       previewable: this.previewable || null,
       url: this.src,
@@ -137,6 +144,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return {
       type: "action_text_attachment",
       version: 1,
+      tagName: this.tagName,
       sgid: this.sgid,
       src: this.src,
       previewable: this.previewable,
