@@ -12,6 +12,7 @@ import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lex
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { CodeNode, $isCodeNode } from "@lexical/code"
 import { $toggleLink } from "@lexical/link"
+import { $patchStyleText } from "@lexical/selection"
 import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
@@ -69,6 +70,16 @@ export class CommandDispatcher {
   dispatchHighlight() {
     this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "highlight")
 
+    this.editor.update(() => {
+        const selection = $getSelection();
+        const isHighlighted = selection.hasFormat("highlight");
+        if (isHighlighted) {
+          $patchStyleText(selection, {color: "red"});
+        } else {
+          $patchStyleText(selection, {color: null});
+        }
+      }
+    );
   }
 
   dispatchLink(url) {
