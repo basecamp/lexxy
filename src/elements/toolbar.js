@@ -169,19 +169,6 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#updateUndoRedoButtonStates()
   }
 
-  #isSelectionInInlineCode(selection) {
-    const nodes = selection.getNodes()
-    return nodes.some(node => {
-      if ($isCodeHighlightNode(node)) return true
-      // Check parent for text nodes inside code highlight
-      if ($isTextNode(node)) {
-        const parent = node.getParent()
-        if (parent && $isCodeHighlightNode(parent)) return true
-      }
-      return false
-    })
-  }
-
   #isInList(node) {
     let current = node
     while (current) {
