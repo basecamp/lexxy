@@ -5323,7 +5323,6 @@ class LexicalToolbarElement extends HTMLElement {
 
   #resetToolbar() {
     while (this.#overflowMenu.children.length > 0) {
-      this.#overflowMenu.children[0];
       this.insertBefore(this.#overflowMenu.children[0], this.#overflow);
     }
   }
