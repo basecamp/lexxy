@@ -37,6 +37,8 @@
     }
   }
 
+  mark { background: transparent; }
+
   .lexxy-content__italic {
     font-style: italic;
   }
@@ -51,6 +53,10 @@
 
   .lexxy-content__underline {
     text-decoration: underline;
+  }
+
+  .lexxy-content__highlight {
+    background-color: rgba(255, 0, 0, 0.2);
   }
 
   blockquote {
