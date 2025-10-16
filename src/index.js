@@ -8,6 +8,7 @@ import "./config/dom_purify"
 import "./elements/toolbar"
 import "./elements/editor"
 import "./elements/link_dialog"
+import "./elements/color_dialog"
 import "./elements/prompt"
 import "./elements/code_language_picker"
 
