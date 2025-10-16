@@ -19,8 +19,9 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return new ActionTextAttachmentUploadNode({ ...serializedNode })
   }
 
-  constructor({ file, uploadUrl, blobUrlTemplate, editor, progress }, key) {
-    super({ contentType: file.type }, key)
+  constructor(node, key) {
+    const { file, uploadUrl, blobUrlTemplate, editor, progress } = node
+    super({ ...node, contentType: file.type }, key)
     this.file = file
     this.uploadUrl = uploadUrl
     this.blobUrlTemplate = blobUrlTemplate
@@ -143,6 +144,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       const latest = $getNodeByKey(this.getKey())
       if (latest) {
         latest.replace(new ActionTextAttachmentNode({
+          tagName: this.tagName,
           sgid: blob.attachable_sgid,
           src: blob.previewable ? blob.url : src,
           altText: blob.filename,

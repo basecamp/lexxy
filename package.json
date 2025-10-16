@@ -1,6 +1,6 @@
 {
   "name": "@37signals/lexxy",
-  "version": "0.1.19-beta",
+  "version": "0.1.20-beta.bc",
   "description": "Lexxy - A modern rich text editor for Rails.",
   "module": "dist/lexxy.esm.js",
   "type": "module",

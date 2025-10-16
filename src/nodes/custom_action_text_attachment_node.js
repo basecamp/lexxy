@@ -1,5 +1,7 @@
 import { $createTextNode, DecoratorNode } from "lexical"
+
 import { createElement, dispatchCustomEvent } from "../helpers/html_helper"
+import { ATTACHMENT_TAG_NAME } from "../config/attachment_tag_name"
 
 export class CustomActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -15,15 +17,15 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   static importDOM() {
+
     return {
-      "action-text-attachment": (attachment) => {
-        const content = attachment.getAttribute("content")
-        if (!attachment.getAttribute("content")) {
+      [ATTACHMENT_TAG_NAME]: (element) => {
+        if (!element.getAttribute("content")) {
           return null
         }
 
         return {
-          conversion: () => {
+          conversion: (attachment) => {
             // Preserve initial space if present since Lexical removes it
             const nodes = []
             const previousSibling = attachment.previousSibling
@@ -32,8 +34,9 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
             }
 
             nodes.push(new CustomActionTextAttachmentNode({
+              tagName: ATTACHMENT_TAG_NAME,
               sgid: attachment.getAttribute("sgid"),
-              innerHtml: JSON.parse(content),
+              innerHtml: JSON.parse(attachment.getAttribute("content")),
               contentType: attachment.getAttribute("content-type")
             }))
 
@@ -47,16 +50,17 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     }
   }
 
-  constructor({ sgid, contentType, innerHtml }, key) {
+  constructor({ tagName, sgid, contentType, innerHtml }, key) {
     super(key)
 
+    this.tagName = tagName || ATTACHMENT_TAG_NAME
     this.sgid = sgid
     this.contentType = contentType || "application/vnd.actiontext.unknown"
     this.innerHtml = innerHtml
   }
 
   createDOM() {
-    const figure = createElement("action-text-attachment", { "content-type": this.contentType, "data-lexxy-decorator": true })
+    const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true })
 
     figure.addEventListener("click", (event) => {
       dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() })
@@ -76,7 +80,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   exportDOM() {
-    const attachment = createElement("action-text-attachment", {
+    const attachment = createElement(this.tagName, {
       sgid: this.sgid,
       content: JSON.stringify(this.innerHtml),
       "content-type": this.contentType
@@ -89,6 +93,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     return {
       type: "custom_action_text_attachment",
       version: 1,
+      tagName: this.tagName,
       sgid: this.sgid,
       contentType: this.contentType,
       innerHtml: this.innerHtml
