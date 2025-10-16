@@ -3,6 +3,7 @@ import { DecoratorNode } from "lexical"
 import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 
+
 export class ActionTextAttachmentNode extends DecoratorNode {
   static getType() {
     return "action_text_attachment"
@@ -18,7 +19,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   static importDOM() {
     return {
-      [Lexxy.global.get("attachmentTagName")]: () => {
+      [this.TAG_NAME]: () => {
         return {
           conversion: (attachment) => ({
             node: new ActionTextAttachmentNode({
@@ -33,8 +34,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
               width: attachment.getAttribute("width"),
               height: attachment.getAttribute("height")
             })
-          }),
-          priority: 1
+          }), priority: 1
         }
       },
       "img": () => {
@@ -47,8 +47,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
               width: img.getAttribute("width"),
               height: img.getAttribute("height")
             })
-          }),
-          priority: 1
+          }), priority: 1
         }
       },
       "video": () => {
@@ -72,9 +71,14 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     }
   }
 
-  constructor({ sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
+  static get TAG_NAME() {
+    return Lexxy.global.get("attachmentTagName")
+  }
+
+  constructor({ tagName, sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
     super(key)
 
+    this.tagName = tagName || ActionTextAttachmentNode.TAG_NAME
     this.sgid = sgid
     this.src = src
     this.previewable = previewable
@@ -118,7 +122,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   exportDOM() {
-    const attachment = createElement(Lexxy.global.get("attachmentTagName"), {
+    const attachment = createElement(this.tagName, {
       sgid: this.sgid,
       previewable: this.previewable || null,
       url: this.src,
@@ -139,6 +143,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return {
       type: "action_text_attachment",
       version: 1,
+      tagName: this.tagName,
       sgid: this.sgid,
       src: this.src,
       previewable: this.previewable,
