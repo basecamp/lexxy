@@ -1,6 +1,8 @@
 import DOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 
+import { ATTACHMENT_TAG_NAME } from "./attachment_tag_name"
+
 const ALLOWED_HTML_TAGS = [ "a", "action-text-attachment", "b", "blockquote", "br", "code", "em",
   "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "ul" ]
 
@@ -38,7 +40,7 @@ DOMPurify.addHook("uponSanitizeElement", (node, data) => {
 })
 
 DOMPurify.setConfig({
-  ALLOWED_TAGS: ALLOWED_HTML_TAGS,
+  ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(ATTACHMENT_TAG_NAME),
   ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
   SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
 })

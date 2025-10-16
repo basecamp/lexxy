@@ -8,6 +8,7 @@ import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 
 import theme from "../config/theme"
+import { ATTACHMENT_TAG_NAME } from "../config/attachment_tag_name"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
@@ -126,7 +127,7 @@ export default class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
+        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null), { additionalAllowedTags: [ ATTACHMENT_TAG_NAME ] })
       })
     }
 
