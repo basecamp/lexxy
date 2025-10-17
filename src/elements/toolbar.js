@@ -16,8 +16,6 @@ export default class LexicalToolbarElement extends HTMLElement {
     super()
     this.internals = this.attachInternals()
     this.internals.role = "toolbar"
-    this.canUndo = false
-    this.canRedo = false
   }
 
   connectedCallback() {
@@ -115,21 +113,21 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   #monitorHistoryChanges() {
     this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
-        const historyState = this.editorElement.historyState
-        if (historyState) {
-          this.canUndo = historyState.undoStack.length > 0
-          this.canRedo = historyState.redoStack.length > 0
-
-          this.#updateUndoRedoButtonStates()
-        }
-      })
+      this.#updateUndoRedoButtonStates()
     })
   }
 
   #updateUndoRedoButtonStates() {
-    this.#setButtonDisabled("undo", !this.canUndo)
-    this.#setButtonDisabled("redo", !this.canRedo)
+    this.editor.getEditorState().read(() => {
+      const historyState = this.editorElement.historyState
+      if (historyState) {
+        const canUndo = historyState.undoStack.length > 0
+        const canRedo = historyState.redoStack.length > 0
+
+        this.#setButtonDisabled("undo", !canUndo)
+        this.#setButtonDisabled("redo", !canRedo)
+      }
+    })
   }
 
   #setButtonDisabled(name, isDisabled) {
