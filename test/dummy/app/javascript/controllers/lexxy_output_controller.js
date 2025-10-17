@@ -6,6 +6,10 @@ import htmlParser from "prettier/parser-html"
 export default class extends Controller {
   static targets = [ "editor", "output" ]
 
+  connect() {
+    this.refresh()
+  }
+
   async refresh(event) {
     const code = this.editorTarget.value.trim()
     let formattedCode = await prettier.format(code, {

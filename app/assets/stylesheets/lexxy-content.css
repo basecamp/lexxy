@@ -64,6 +64,10 @@
     display: none;
   }
 
+  a {
+    color: var(--lexxy-color-link);
+  }
+
   img,
   video,
   embed,
@@ -208,7 +212,8 @@
   font-size: var(--lexxy-text-small);
 
   input {
-    color: inherit;
+    background: var(--lexxy-color-canvas);
+    color: var(--lexxy-color-text);
     border: none;
     inline-size: 100%;
     max-inline-size: 100%;

@@ -11,6 +11,7 @@
 
   border: 1px solid var(--lexxy-color-ink-lighter);
   border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
+  background-color: var(--lexxy-color-canvas);
   display: block;
   overflow: visible;
   position: relative;
@@ -35,8 +36,13 @@
     inline-size: auto;
 
     @media(any-hover: hover) {
+<<<<<<< HEAD
       &:hover:not([aria-disabled="true"]) {
         filter: brightness(0.9);
+=======
+      &:hover {
+        background: var(--lexxy-color-ink-lightest);
+>>>>>>> origin/main
       }
     }
   }
@@ -102,12 +108,20 @@
   display: grid;
   place-items: center;
 
+<<<<<<< HEAD
   &:is(:active):not([aria-disabled="true"]) {
     background-color: var(--lexxy-color-selected);
   }
 
+=======
+  &:is(:active),
+>>>>>>> origin/main
   &[aria-pressed="true"] {
     background-color: var(--lexxy-color-selected);
+
+    &:hover {
+      background-color: var(--lexxy-color-selected-hover);
+    }
   }
 
   &[aria-disabled="true"] {
@@ -148,7 +162,7 @@
     }
 
     [open] & {
-      filter: brightness(0.9);
+      background-color: var(--lexxy-color-ink-lightest);
     }
   }
 }
@@ -195,13 +209,16 @@
   }
 
   input[type="url"] {
+    background-color: var(--lexxy-color-canvas);
     border: 1px solid var(--lexxy-color-ink-lighter);
     border-radius: var(--lexxy-radius);
+    color: var(--lexxy-color-text);
     min-inline-size: 30ch;
   }
 
   button {
     background-color: var(--lexxy-color-ink-lightest);
+    color: var(--lexxy-color-text);
     inline-size: 100%;
     justify-content: center;
   }
