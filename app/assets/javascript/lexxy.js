@@ -5212,11 +5212,8 @@ class LexicalToolbarElement extends HTMLElement {
     this.editor.getEditorState().read(() => {
       const historyState = this.editorElement.historyState;
       if (historyState) {
-        const canUndo = historyState.undoStack.length > 0;
-        const canRedo = historyState.redoStack.length > 0;
-
-        this.#setButtonDisabled("undo", !canUndo);
-        this.#setButtonDisabled("redo", !canRedo);
+        this.#setButtonDisabled("undo", historyState.undoStack.length === 0);
+        this.#setButtonDisabled("redo", historyState.redoStack.length === 0);
       }
     });
   }
