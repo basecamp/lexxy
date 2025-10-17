@@ -11,7 +11,7 @@ const ALLOWED_HTML_TAGS = [ "a", "action-text-attachment", "b", "blockquote", "b
 
 const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",
   "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "presentation",
-  "previewable", "sgid", "src", "style", "title", "url", "width" ]
+  "previewable", "sgid", "src", "title", "url", "width" ]
 
 export function createElement(name, properties) {
   const element = document.createElement(name)

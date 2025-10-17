@@ -18,6 +18,7 @@ import LexicalToolbar from "./toolbar"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { registerFormatTextWithClassPlugin } from "./color_highlighting"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -284,6 +285,7 @@ export default class LexicalEditorElement extends HTMLElement {
     registerList(this.editor)
     this.#registerCodeHiglightingComponents()
     registerMarkdownShortcuts(this.editor, TRANSFORMERS)
+    registerFormatTextWithClassPlugin(this.editor)
   }
 
   #registerCodeHiglightingComponents() {
