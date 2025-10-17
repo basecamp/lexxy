@@ -340,8 +340,14 @@ export default class Selection {
   }
 
   async #selectPreviousTopLevelNode() {
+    this.editor.update(() => {
+      $setSelection(null)
+      this.clear()
+    })
+
     if (this.current) {
       await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
+      return true
     } else {
       this.#selectInLexical(this.topLevelNodeBeforeCursor)
     }

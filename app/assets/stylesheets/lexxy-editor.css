@@ -36,13 +36,8 @@
     inline-size: auto;
 
     @media(any-hover: hover) {
-<<<<<<< HEAD
       &:hover:not([aria-disabled="true"]) {
-        filter: brightness(0.9);
-=======
-      &:hover {
         background: var(--lexxy-color-ink-lightest);
->>>>>>> origin/main
       }
     }
   }
@@ -108,14 +103,7 @@
   display: grid;
   place-items: center;
 
-<<<<<<< HEAD
-  &:is(:active):not([aria-disabled="true"]) {
-    background-color: var(--lexxy-color-selected);
-  }
-
-=======
-  &:is(:active),
->>>>>>> origin/main
+  &:is(:active):not([aria-disabled="true"]),
   &[aria-pressed="true"] {
     background-color: var(--lexxy-color-selected);
 
