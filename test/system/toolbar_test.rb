@@ -111,4 +111,31 @@ class ToolbarTest < ApplicationSystemTestCase
 
     assert_no_selector "lexxy-toolbar"
   end
+
+  test "undo and redo commands" do
+    # Start with empty editor
+    visit edit_post_path(posts(:empty))
+
+    # Type first text
+    find_editor.send "Hello"
+    assert_equal_html "<p>Hello</p>", find_editor.value
+
+    # Type second text
+    find_editor.send " World"
+    assert_equal_html "<p>Hello World</p>", find_editor.value
+
+    # Click undo 2 times
+    click_on "Undo"
+    assert_equal_html "<p>Hello</p>", find_editor.value
+
+    click_on "Undo"
+    assert_equal_html "<p><br></p>", find_editor.value
+
+    # Click redo 2 times
+    click_on "Redo"
+    assert_equal_html "<p>Hello</p>", find_editor.value
+
+    click_on "Redo"
+    assert_equal_html "<p>Hello World</p>", find_editor.value
+  end
 end

@@ -36,7 +36,7 @@
     inline-size: auto;
 
     @media(any-hover: hover) {
-      &:hover {
+      &:hover:not([aria-disabled="true"]) {
         background: var(--lexxy-color-ink-lightest);
       }
     }
@@ -103,13 +103,18 @@
   display: grid;
   place-items: center;
 
-  &:is(:active),
+  &:is(:active):not([aria-disabled="true"]),
   &[aria-pressed="true"] {
     background-color: var(--lexxy-color-selected);
 
     &:hover {
       background-color: var(--lexxy-color-selected-hover);
     }
+  }
+
+  &[aria-disabled="true"] {
+    cursor: default;
+    opacity: 0.3;
   }
 
   svg {
@@ -122,8 +127,18 @@
   }
 }
 
+:where(.lexxy-editor__toolbar-spacer) {
+  flex: 1;
+}
+
+/* Make sure spacer is only displayed if there's another button before it */
+* + :where(.lexxy-editor__toolbar-spacer) {
+  min-inline-size: 1lh;
+}
+
 :where(.lexxy-editor__toolbar-overflow) {
   display: none;
+  justify-self: flex-end;
   position: relative;
   z-index: 1;
 
