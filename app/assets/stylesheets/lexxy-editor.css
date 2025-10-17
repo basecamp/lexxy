@@ -94,6 +94,10 @@
   max-inline-size: 100%;
   padding: 2px;
   position: relative;
+
+  &[data-attachments="false"] button[name="upload"]{
+    display: none;
+  }
 }
 
 :where(.lexxy-editor__toolbar-button) {

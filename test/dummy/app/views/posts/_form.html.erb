@@ -11,7 +11,7 @@
   <div>
     <%= form.label :body, style: "display: block" %>
     <%= form.rich_text_area :body, placeholder: "Write something...",
-          attachments: params[:attachments_disabled] ? "false" : nil,
+          attachments: (params[:attachments_disabled] != "true"),
           toolbar: params[:toolbar_disabled] ? "false" : nil, required: true do %>
       <lexxy-prompt trigger="1" empty-results="No results"  name="mention">
         <%= render partial: "people/prompt_item", collection: Person.all, as: :person %>
