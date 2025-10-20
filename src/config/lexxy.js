@@ -1,7 +1,8 @@
 import Configuration from "./configuration"
 
 const global = new Configuration({
-  attachmentTagName: "action-text-attachment"
+  attachmentTagName: "action-text-attachment",
+  authenticatedUploads: false
 })
 
 const presets = new Configuration({

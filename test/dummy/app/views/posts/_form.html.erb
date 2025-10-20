@@ -5,6 +5,13 @@
   </script>
 <% end %>
 
+<% if params[:configure_authenticated_uploads] == "true" %>
+  <script type="module">
+    import * as Lexxy from "lexxy"
+    Lexxy.configure({ global: { authenticatedUploads: true }})
+  </script>
+<% end %>
+
 <%= form_with model: post, data: { controller: "events-logger file-acceptance unfurl-link",
   file_acceptance_type_value: params[:attachment_type],
   action: "lexxy:focus->events-logger#log lexxy:blur->events-logger#log lexxy:change->events-logger#log lexxy:insert-link->events-logger#log lexxy:insert-link->unfurl-link#unfurl lexxy:file-accept->file-acceptance#acceptFile" } do |form| %>
