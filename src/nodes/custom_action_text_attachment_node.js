@@ -56,7 +56,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
     this.tagName = tagName
     this.sgid = sgid
-    this.contentType = contentType || "application/vnd.actiontext.unknown"
+    this.contentType = contentType || `${ATTACHMENT_CONTENT_TYPE_PREFIX}.unknown`
     this.innerHtml = innerHtml
   }
 

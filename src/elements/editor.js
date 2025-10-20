@@ -9,6 +9,7 @@ import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 import { TableCellNode, TableNode, TableRowNode, registerTablePlugin, registerTableSelectionObserver, setScrollableTablesActive } from "@lexical/table"
 
 import theme from "../config/theme"
+import { ATTACHMENT_TAG_NAME } from "../config/attachments"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
