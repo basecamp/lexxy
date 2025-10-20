@@ -5608,7 +5608,7 @@ function generateDomId(prefix) {
   return `${prefix}-${randomPart}`
 }
 
-const DEFAULT_ATTACHMENT_TAG_NAME = "action-text-attachment";
+const DEFAULT_ATTACHMENT_TAG_NAME$1 = "action-text-attachment";
 
 class ActionTextAttachmentNode extends gi {
   static getType() {
@@ -5625,7 +5625,7 @@ class ActionTextAttachmentNode extends gi {
 
   static importDOM(editorConfig) {
 
-    const attachmentTagName = editorConfig?.actionText?.attachmentTagName ?? DEFAULT_ATTACHMENT_TAG_NAME;
+    const attachmentTagName = editorConfig?.actionText?.attachmentTagName ?? DEFAULT_ATTACHMENT_TAG_NAME$1;
 
     return {
       [attachmentTagName]: (attachment) => {
@@ -5669,7 +5669,7 @@ class ActionTextAttachmentNode extends gi {
   constructor({ tagName, sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
     super(key);
 
-    this.tagName = tagName;
+    this.tagName = tagName || DEFAULT_ATTACHMENT_TAG_NAME$1;
     this.sgid = sgid;
     this.src = src;
     this.previewable = previewable;
@@ -6927,6 +6927,8 @@ class Selection {
   }
 }
 
+const DEFAULT_ATTACHMENT_TAG_NAME = "action-text-attachment";
+
 class CustomActionTextAttachmentNode extends gi {
   static getType() {
     return "custom_action_text_attachment"
@@ -6940,9 +6942,12 @@ class CustomActionTextAttachmentNode extends gi {
     return new CustomActionTextAttachmentNode({ ...serializedNode })
   }
 
-  static importDOM() {
+  static importDOM(editorConfig) {
+
+    const attachmentTagName = editorConfig?.actionText?.attachmentTagName ?? DEFAULT_ATTACHMENT_TAG_NAME;
+
     return {
-      "action-text-attachment": (attachment) => {
+      [attachmentTagName]: (attachment) => {
         const content = attachment.getAttribute("content");
         if (!attachment.getAttribute("content")) {
           return null
@@ -6958,6 +6963,7 @@ class CustomActionTextAttachmentNode extends gi {
             }
 
             nodes.push(new CustomActionTextAttachmentNode({
+              tagName: attachmentTagName,
               sgid: attachment.getAttribute("sgid"),
               innerHtml: JSON.parse(content),
               contentType: attachment.getAttribute("content-type")
@@ -6973,16 +6979,17 @@ class CustomActionTextAttachmentNode extends gi {
     }
   }
 
-  constructor({ sgid, contentType, innerHtml }, key) {
+  constructor({ tagName, sgid, contentType, innerHtml }, key) {
     super(key);
 
+    this.tagName = tagName || DEFAULT_ATTACHMENT_TAG_NAME;
     this.sgid = sgid;
     this.contentType = contentType || "application/vnd.actiontext.unknown";
     this.innerHtml = innerHtml;
   }
 
   createDOM() {
-    const figure = createElement("action-text-attachment", { "content-type": this.contentType, "data-lexxy-decorator": true });
+    const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true });
 
     figure.addEventListener("click", (event) => {
       dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
@@ -7002,7 +7009,7 @@ class CustomActionTextAttachmentNode extends gi {
   }
 
   exportDOM() {
-    const attachment = createElement("action-text-attachment", {
+    const attachment = createElement(this.tagName, {
       sgid: this.sgid,
       content: JSON.stringify(this.innerHtml),
       "content-type": this.contentType
@@ -7015,6 +7022,7 @@ class CustomActionTextAttachmentNode extends gi {
     return {
       type: "custom_action_text_attachment",
       version: 1,
+      tagName: this.tagName,
       sgid: this.sgid,
       contentType: this.contentType,
       innerHtml: this.innerHtml
@@ -7625,8 +7633,10 @@ class Contents {
 
   #createCustomAttachmentNodeWithHtml(html, options = {}) {
     const attachmentConfig = typeof options === 'object' ? options : {};
+    const attachmentTagName = this.editorElement.config.actionText?.attachmentTagName;
 
     return new CustomActionTextAttachmentNode({
+      tagName: attachmentTagName,
       sgid: attachmentConfig.sgid || null,
       contentType: "text/html",
       innerHtml: html
@@ -8717,7 +8727,9 @@ class LexicalPromptElement extends HTMLElement {
 
   #insertTemplateAsAttachment(promptItem, template, stringToReplace) {
     this.#editor.update(() => {
-      const attachmentNode = new CustomActionTextAttachmentNode({ sgid: promptItem.getAttribute("sgid"), contentType: `application/vnd.actiontext.${this.name}`, innerHtml: template.innerHTML });
+      const attachmentTagName = this.#editorElement.config.actionText?.attachmentTagName;
+
+      const attachmentNode = new CustomActionTextAttachmentNode({ tagName: attachmentTagName, sgid: promptItem.getAttribute("sgid"), contentType: `application/vnd.actiontext.${this.name}`, innerHtml: template.innerHTML });
       this.#editorContents.replaceTextBackUntil(stringToReplace, attachmentNode);
     });
   }

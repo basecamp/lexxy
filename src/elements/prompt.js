@@ -295,7 +295,9 @@ export default class LexicalPromptElement extends HTMLElement {
 
   #insertTemplateAsAttachment(promptItem, template, stringToReplace) {
     this.#editor.update(() => {
-      const attachmentNode = new CustomActionTextAttachmentNode({ sgid: promptItem.getAttribute("sgid"), contentType: `application/vnd.actiontext.${this.name}`, innerHtml: template.innerHTML })
+      const attachmentTagName = this.#editorElement.config.actionText?.attachmentTagName
+
+      const attachmentNode = new CustomActionTextAttachmentNode({ tagName: attachmentTagName, sgid: promptItem.getAttribute("sgid"), contentType: `application/vnd.actiontext.${this.name}`, innerHtml: template.innerHTML })
       this.#editorContents.replaceTextBackUntil(stringToReplace, attachmentNode)
     })
   }

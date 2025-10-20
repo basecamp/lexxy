@@ -63,7 +63,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   constructor({ tagName, sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
     super(key)
 
-    this.tagName = tagName
+    this.tagName = tagName || DEFAULT_ATTACHMENT_TAG_NAME
     this.sgid = sgid
     this.src = src
     this.previewable = previewable

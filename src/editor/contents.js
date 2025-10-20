@@ -611,8 +611,10 @@ export default class Contents {
 
   #createCustomAttachmentNodeWithHtml(html, options = {}) {
     const attachmentConfig = typeof options === 'object' ? options : {}
+    const attachmentTagName = this.editorElement.config.actionText?.attachmentTagName
 
     return new CustomActionTextAttachmentNode({
+      tagName: attachmentTagName,
       sgid: attachmentConfig.sgid || null,
       contentType: "text/html",
       innerHtml: html
