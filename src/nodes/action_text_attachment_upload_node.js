@@ -1,7 +1,7 @@
 import { $getNodeByKey } from "lexical"
 import { DirectUpload } from "@rails/activestorage"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
-import { createElement } from "../helpers/html_helper"
+import { createElement, dispatchCustomEvent } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { HISTORY_MERGE_TAG } from "lexical"
 import { bytesToHumanSize } from "../helpers/storage_helper"
@@ -108,7 +108,12 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const upload = new DirectUpload(this.file, this.uploadUrl, this)
 
     upload.delegate = {
+      directUploadWillCreateBlobWithXHR: (request) => {
+        dispatchCustomEvent(figure, "lexxy:before-blob-request", { request })
+      },
       directUploadWillStoreFileWithXHR: (request) => {
+        dispatchCustomEvent(figure, "lexxy:before-storage-request", { request })
+
         request.upload.addEventListener("progress", (event) => {
           this.editor.update(() => {
             progressBar.value = Math.round(event.loaded / event.total * 100)
@@ -139,8 +144,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       const image = figure.querySelector("img")
 
       const src = this.blobUrlTemplate
-                    .replace(":signed_id", blob.signed_id)
-                    .replace(":filename", encodeURIComponent(blob.filename))
+        .replace(":signed_id", blob.signed_id)
+        .replace(":filename", encodeURIComponent(blob.filename))
       const latest = $getNodeByKey(this.getKey())
       if (latest) {
         latest.replace(new ActionTextAttachmentNode({

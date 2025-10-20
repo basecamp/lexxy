@@ -6040,7 +6040,12 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const upload = new DirectUpload(this.file, this.uploadUrl, this);
 
     upload.delegate = {
+      directUploadWillCreateBlobWithXHR: (request) => {
+        dispatchCustomEvent(figure, "lexxy:before-blob-request", { request });
+      },
       directUploadWillStoreFileWithXHR: (request) => {
+        dispatchCustomEvent(figure, "lexxy:before-storage-request", { request });
+
         request.upload.addEventListener("progress", (event) => {
           this.editor.update(() => {
             progressBar.value = Math.round(event.loaded / event.total * 100);
@@ -6071,8 +6076,8 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       const image = figure.querySelector("img");
 
       const src = this.blobUrlTemplate
-                    .replace(":signed_id", blob.signed_id)
-                    .replace(":filename", encodeURIComponent(blob.filename));
+        .replace(":signed_id", blob.signed_id)
+        .replace(":filename", encodeURIComponent(blob.filename));
       const latest = xo(this.getKey());
       if (latest) {
         latest.replace(new ActionTextAttachmentNode({
