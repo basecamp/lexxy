@@ -7,6 +7,7 @@ import DeferredPromptSource from "../editor/prompt/deferred_source"
 import RemoteFilterSource from "../editor/prompt/remote_filter_source"
 import { $generateNodesFromDOM } from "@lexical/html"
 import { nextFrame } from "../helpers/timing_helpers"
+import { ATTACHMENT_CONTENT_TYPE_PREFIX } from "../config/attachments"
 
 const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found"
 
@@ -375,7 +376,7 @@ export default class LexicalPromptElement extends HTMLElement {
 
   #insertTemplateAsAttachment(promptItem, template, stringToReplace) {
     this.#editor.update(() => {
-      const attachmentNode = new CustomActionTextAttachmentNode({ sgid: promptItem.getAttribute("sgid"), contentType: `application/vnd.actiontext.${this.name}`, innerHtml: template.innerHTML })
+      const attachmentNode = new CustomActionTextAttachmentNode({ sgid: promptItem.getAttribute("sgid"), contentType: `${ATTACHMENT_CONTENT_TYPE_PREFIX}.${this.name}`, innerHtml: template.innerHTML })
       this.#editorContents.replaceTextBackUntil(stringToReplace, attachmentNode)
     })
   }
