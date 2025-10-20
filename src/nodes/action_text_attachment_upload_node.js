@@ -1,3 +1,4 @@
+import Lexxy from "../config/lexxy"
 import { $getNodeByKey } from "lexical"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { createElement } from "../helpers/html_helper"
@@ -110,11 +111,17 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   async #startUpload(progressBar, figure) {
     const { DirectUpload } = await import("@rails/activestorage")
+    const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads")
 
     const upload = new DirectUpload(this.file, this.uploadUrl, this)
 
     upload.delegate = {
+      directUploadWillCreateBlobWithXHR: (request) => {
+        if (shouldAuthenticateUploads) request.withCredentials = true
+      },
       directUploadWillStoreFileWithXHR: (request) => {
+        if (shouldAuthenticateUploads) request.withCredentials = true
+
         request.upload.addEventListener("progress", (event) => {
           this.editor.update(() => {
             progressBar.value = Math.round(event.loaded / event.total * 100)

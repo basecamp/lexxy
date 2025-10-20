@@ -51,7 +51,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
         }
       },
       "video": () => {
-
         return {
           conversion: (video) => {
             const videoSource = video.getAttribute("src") || video.querySelector("source")?.src
@@ -114,7 +113,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   getTextContent() {
-    return `[${ this.caption || this.fileName }]\n\n`
+    return `[${this.caption || this.fileName}]\n\n`
   }
 
   isInline() {
