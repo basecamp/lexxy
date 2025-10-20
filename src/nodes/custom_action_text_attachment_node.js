@@ -1,7 +1,9 @@
 import { $createTextNode, DecoratorNode } from "lexical"
 
 import { createElement, dispatchCustomEvent } from "../helpers/html_helper"
-import { ATTACHMENT_TAG_NAME } from "../config/attachment_tag_name"
+import { ATTACHMENT_TAG_NAME } from "../config/attachments"
+import { ATTACHMENT_CONTENT_TYPE_PREFIX } from "../config/attachments"
+
 
 export class CustomActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -55,7 +57,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
     this.tagName = tagName || ATTACHMENT_TAG_NAME
     this.sgid = sgid
-    this.contentType = contentType || "application/vnd.actiontext.unknown"
+    this.contentType = contentType || `${ATTACHMENT_CONTENT_TYPE_PREFIX}.unknown`
     this.innerHtml = innerHtml
     this.plainText = plainText
   }

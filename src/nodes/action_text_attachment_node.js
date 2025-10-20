@@ -1,7 +1,7 @@
 import { DecoratorNode } from "lexical"
 import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize, mimeTypeToExtension } from "../helpers/storage_helper"
-import { ATTACHMENT_TAG_NAME } from "../config/attachment_tag_name"
+import { ATTACHMENT_TAG_NAME } from "../config/attachments"
 
 export class ActionTextAttachmentNode extends DecoratorNode {
   static getType() {
