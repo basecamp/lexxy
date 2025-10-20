@@ -1,7 +1,7 @@
 import { DecoratorNode, $getNodeByKey } from "lexical"
 import { DirectUpload } from "@rails/activestorage"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
-import { createAttachmentFigure, createElement } from "../helpers/html_helper"
+import { createAttachmentFigure, createElement, dispatchCustomEvent} from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { HISTORY_MERGE_TAG } from 'lexical'
 import { bytesToHumanSize } from "../helpers/storage_helper";
@@ -93,7 +93,12 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const upload = new DirectUpload(this.file, this.uploadUrl, this)
 
     upload.delegate = {
+      directUploadWillCreateBlobWithXHR: (request) => {
+        dispatchCustomEvent(figure, "lexxy:before-blob-request", { request })
+      },
       directUploadWillStoreFileWithXHR: (request) => {
+        dispatchCustomEvent(figure, "lexxy:before-storage-request", { request })
+
         request.upload.addEventListener("progress", (event) => {
           this.editor.update(() => {
             progressBar.value = Math.round((event.loaded / event.total) * 100)

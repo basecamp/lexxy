@@ -5936,7 +5936,12 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const upload = new DirectUpload(this.file, this.uploadUrl, this);
 
     upload.delegate = {
+      directUploadWillCreateBlobWithXHR: (request) => {
+        dispatchCustomEvent(figure, "lexxy:before-blob-request", { request });
+      },
       directUploadWillStoreFileWithXHR: (request) => {
+        dispatchCustomEvent(figure, "lexxy:before-storage-request", { request });
+
         request.upload.addEventListener("progress", (event) => {
           this.editor.update(() => {
             progressBar.value = Math.round((event.loaded / event.total) * 100);
