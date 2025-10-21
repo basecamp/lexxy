@@ -15,6 +15,11 @@ import { $toggleLink } from "@lexical/link"
 import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import { ActionTextAttachmentMarkNode } from "../nodes/action_text_attachment_mark_node"
+
+import {
+  $wrapSelectionInMarkNode, MarkNode,
+} from '@lexical/mark';
 
 const COMMANDS = [
   "bold",
@@ -28,6 +33,7 @@ const COMMANDS = [
   "insertQuoteBlock",
   "insertCodeBlock",
   "insertHorizontalDivider",
+  "insertCommentOnSelection",
   "uploadAttachments",
   "undo",
   "redo"
@@ -118,6 +124,41 @@ export class CommandDispatcher {
       this.contents.insertAtCursor(new HorizontalDividerNode())
     })
   }
+
+  dispatchInsertCommentOnSelection(comment) {
+    const payload = {
+      body: comment
+    }
+    const selection = $getSelection();
+
+    // Get the selected text
+    const selectedText = selection.getTextContent()
+
+    // Extract the selected nodes
+    const selectedNodes = selection.extract()
+
+    const token = document.querySelector('meta[name=csrf-token]').getAttribute('content');
+    fetch("/admin/comments", {
+      method: "POST",
+      body: JSON.stringify({"comment": payload}),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': token
+      }
+    })
+    .then(r => r.json())
+    .then(data => {
+      this.editor.update(() => {
+        if ($isRangeSelection(selection)) {
+          const isBackward = selection.isBackward();
+          $wrapSelectionInMarkNode(selection, isBackward, "", ([]) => {
+            return new ActionTextAttachmentMarkNode([], data)
+          });
+        }
+      })
+    });
+  }
+
 
   dispatchRotateHeadingFormat() {
     this.editor.update(() => {

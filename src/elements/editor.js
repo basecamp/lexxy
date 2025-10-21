@@ -1,4 +1,15 @@
-import { createEditor, $getRoot, $getNodeByKey, $addUpdateTag, SKIP_DOM_SELECTION_TAG, KEY_ENTER_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, CLEAR_HISTORY_COMMAND } from "lexical"
+import {
+  createEditor,
+  $getRoot,
+  $getNodeByKey,
+  $addUpdateTag,
+  SKIP_DOM_SELECTION_TAG,
+  KEY_ENTER_COMMAND,
+  COMMAND_PRIORITY_NORMAL,
+  DecoratorNode,
+  CLEAR_HISTORY_COMMAND,
+  $getSelection, $isRangeSelection
+} from "lexical"
 import { ListNode, ListItemNode, registerList } from "@lexical/list"
 import { LinkNode, AutoLinkNode } from "@lexical/link"
 import { registerRichText, QuoteNode, HeadingNode } from "@lexical/rich-text"
@@ -18,6 +29,8 @@ import LexicalToolbar from "./toolbar"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import {MarkNode} from "@lexical/mark";
+import { $createActionTextAttachmentMarkNode, ActionTextAttachmentMarkNode } from "../nodes/action_text_attachment_mark_node"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -187,6 +200,13 @@ export default class LexicalEditorElement extends HTMLElement {
       HorizontalDividerNode,
 
       CustomActionTextAttachmentNode,
+      MarkNode,
+      ActionTextAttachmentMarkNode,
+      {
+        replace: MarkNode,
+        with: () => $createActionTextAttachmentMarkNode(),
+        withKlass: ActionTextAttachmentMarkNode
+      },
     ]
 
     if (this.supportsAttachments) {

@@ -179,6 +179,11 @@
   .token.punctuation {
     color: var(--lexxy-color-code-token-punctuation);
   }
+
+  action-text-attachment-mark-node {
+    background-color: yellow;
+    color: black;
+  }
 }
 
 :where([data-lexical-cursor]) {

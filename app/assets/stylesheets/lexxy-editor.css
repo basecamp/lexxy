@@ -168,7 +168,7 @@
 /* Link dialog
 /* -------------------------------------------------------------------------- */
 
-:where(.lexxy-link-dialog) {
+:where(.lexxy-link-dialog, .lexxy-comment-dialog) {
   display: contents;
 
   dialog {

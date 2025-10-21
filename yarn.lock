@@ -96,6 +96,14 @@
     "@lexical/utils" "0.32.1"
     lexical "0.32.1"
 
+"@lexical/mark@^0.32.1":
+  version "0.32.1"
+  resolved "https://registry.yarnpkg.com/@lexical/mark/-/mark-0.32.1.tgz#762c7887f09bbe833e21c0c487ae5a5c5ac93610"
+  integrity sha512-AXF2wmUvvSI45y+sgZKnU0pnUdttd9v75DDQgdplqtCkyDqHVGxVCNCrLE+PJtzIrwJxtA2UyC8yFZMBM92HpA==
+  dependencies:
+    "@lexical/utils" "0.32.1"
+    lexical "0.32.1"
+
 "@lexical/markdown@^0.32.1":
   version "0.32.1"
   resolved "https://registry.yarnpkg.com/@lexical/markdown/-/markdown-0.32.1.tgz#e8bba69b1ec5f520e01305ba681623f4165dceb8"
