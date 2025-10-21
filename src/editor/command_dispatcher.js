@@ -1,8 +1,6 @@
 import {
   $createTextNode,
-  $getRoot,
   $getSelection,
-  $isElementNode,
   $isRangeSelection,
   COMMAND_PRIORITY_LOW,
   FORMAT_TEXT_COMMAND,
@@ -15,7 +13,7 @@ import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lex
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
-import { createElement, dispatch } from "../helpers/html_helper"
+import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { ActionTextAttachmentMarkNode } from "../nodes/action_text_attachment_mark_node"
@@ -36,8 +34,7 @@ const COMMANDS = [
   "insertQuoteBlock",
   "insertCodeBlock",
   "insertHorizontalDivider",
-  "insertMarkNodeOnSelection",
-  "insertMarkNodeDeletionTrigger",
+  "insertCommentOnSelection",
   "uploadAttachments",
   "undo",
   "redo"
@@ -141,38 +138,40 @@ export class CommandDispatcher {
     })
   }
 
-  dispatchInsertMarkNodeOnSelection(metaContent) {
+  dispatchInsertCommentOnSelection(comment) {
+    const payload = {
+      body: comment
+    }
     const selection = $getSelection();
-    this.editor.update(() => {
-      if ($isRangeSelection(selection)) {
-        const isBackward = selection.isBackward();
-        let i = 0
-        const selectionGroupId = [...Array(8)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-        $wrapSelectionInMarkNode(selection, isBackward, "", ([]) => {
-          let dataset = { selectionGroup: selectionGroupId }
-          if (i === 0) { dataset.createMetaContent = metaContent; i++; }
-          return new ActionTextAttachmentMarkNode([], dataset)
-        });
-        dispatch(this.editorElement, "lexxy:addMarkNodeOnSelection", { selectionGroupId: selectionGroupId })
+
+    // Get the selected text
+    const selectedText = selection.getTextContent()
+
+    // Extract the selected nodes
+    const selectedNodes = selection.extract()
+
+    const token = document.querySelector('meta[name=csrf-token]').getAttribute('content');
+    fetch("/admin/comments", {
+      method: "POST",
+      body: JSON.stringify({"comment": payload}),
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': token
       }
     })
+    .then(r => r.json())
+    .then(data => {
+      this.editor.update(() => {
+        if ($isRangeSelection(selection)) {
+          const isBackward = selection.isBackward();
+          $wrapSelectionInMarkNode(selection, isBackward, "", ([]) => {
+            return new ActionTextAttachmentMarkNode([], data)
+          });
+        }
+      })
+    });
   }
 
-  dispatchInsertMarkNodeDeletionTrigger(sgid) {
-    this.editor.update(() => {
-      const rootNode = $getRoot();
-      const traverse = (node) => {
-        if (node.getType() === 'action_text_attachment_mark_node' && node.sgid && node.sgid === sgid) {
-          const writableNode = node.getWritable();
-          writableNode.__dataset.deleteMetaContent = true;
-        }
-        if ($isElementNode(node)) {
-          node.getChildren().forEach(traverse);
-        }
-      };
-      traverse(rootNode);
-    })
-  }
 
   dispatchRotateHeadingFormat() {
     this.editor.update(() => {
