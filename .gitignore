@@ -10,3 +10,4 @@
 /test/dummy/tmp/
 /dist/
 /node_modules/
+.idea
