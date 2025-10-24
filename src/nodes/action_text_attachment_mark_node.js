@@ -6,36 +6,52 @@ import { createElement } from "../helpers/html_helper";
 import {MarkNode} from "@lexical/mark";
 import {addClassNamesToElement} from "@lexical/utils";
 
+/**
+ * ActionTextAttachmentMarkNode
+ * - represents comments saved in rails backend
+ * - MarkNode from lexical is used to spread comment over multiple html nodes
+ * - Adds an attribute (data-selection-group) for grouping selection before rails creates instance
+ * - Adds an attribute (data-comment) for storing user input that creates or updates the rails instance
+ *
+ */
 export class ActionTextAttachmentMarkNode extends MarkNode {
+
+    constructor(ids = [], dataset = {}, sgid = null) {
+        super(ids, null)
+        this.__dataset = dataset || null
+        this.sgid = sgid
+    }
+
     static getType() {
         return 'action_text_attachment_mark_node';
     }
 
-    constructor(ids = [], serverResponse = {}) {
-        super(ids, null)
-        this.__sgid = serverResponse.sgid || ''
-        this.__src = serverResponse.path || serverResponse.src || ''
-    }
-
     static importJSON(serializedNode) {
-        console.log("importJSON")
         const node = $createActionTextAttachmentMarkNode({
-            sgid: serializedNode.sgid,
-            src: serializedNode.src
+            dataset: serializedNode.dataset
         })
+        node.setAttribute('sgid', serializedNode.sgid)
         node.setIds(serializedNode.ids)
         return node
     }
 
     static importDOM() {
-        console.log("importDOM()")
         return {
             'action-text-attachment-mark-node': (node) => ({
                 conversion: (element) => {
-                    const sgid = element.getAttribute('sgid') || ''
-                    const src = element.getAttribute('src') || element.getAttribute('url') || ''
+                    let dataset = {}
+                    if (element.getAttribute('data-comment') !== undefined) {
+                        dataset.comment = element.getAttribute('data-comment')
+                    }
+                    if (element.getAttribute('data-selection-group') !== undefined) {
+                        dataset.selectionGroup = element.getAttribute('data-selection-group')
+                    }
+
+                    this.sgid = element.getAttribute("sgid")
+                    node = $createActionTextAttachmentMarkNode(dataset, (this.sgid || null))
+
                     return {
-                        node: $createActionTextAttachmentMarkNode({ sgid, path: src })
+                        node: node
                     }
                 },
                 priority: 1
@@ -44,18 +60,19 @@ export class ActionTextAttachmentMarkNode extends MarkNode {
     }
 
     static clone(node) {
-        return new ActionTextAttachmentMarkNode(node.__ids, {
-            sgid: node.__sgid,
-            src: node.__src
-        })
+        console.log("clone")
+        return new ActionTextAttachmentMarkNode(node.__ids, node.__dataset)
     }
 
     createDOM(config) {
-        const element = createElement('action-text-attachment-mark-node', {
-            "sgid": this.__sgid,
-            "src": this.__src,
-        })
+        const element = createElement('action-text-attachment-mark-node', {sgid: this.sgid})
         addClassNamesToElement(element, config.theme.mark);
+        if (this.__dataset.comment) {
+            element.setAttribute("data-comment", this.__dataset.comment)
+        }
+        if (this.__dataset.selectionGroup) {
+            element.setAttribute("data-selection-group", this.__dataset.selectionGroup)
+        }
         if (this.__ids.length > 1) {
             addClassNamesToElement(element, config.theme.markOverlap);
         }
@@ -64,14 +81,20 @@ export class ActionTextAttachmentMarkNode extends MarkNode {
 
     exportDOM(editor) {
         const element = document.createElement("action-text-attachment-mark-node")
-        element.setAttribute("sgid", this.__sgid || '')
-        element.setAttribute("src", this.__src || '')
+        if (this.sgid) {
+            element.setAttribute("sgid", this.sgid)
+        }
+        if (this.__dataset.comment) {
+            element.setAttribute("data-comment", this.__dataset.comment)
+        }
+        if (this.__dataset.selectionGroup) {
+            element.setAttribute("data-selection-group", this.__dataset.selectionGroup)
+        }
         element.setAttribute("content-type", "text/html; charset=utf-8")
         return { element }
     }
 
     updateDOM() {
-        console.log("updateDOM()")
         return true
     }
 
@@ -86,26 +109,21 @@ export class ActionTextAttachmentMarkNode extends MarkNode {
     }
 
     exportJSON() {
-        console.log("exportJSON()")
         return {
             ...super.exportJSON(),
             type: "action_text_attachment_mark_node",
-            sgid: this.__sgid,
-            src: this.__src
+            comment: this.__dataset.comment,
+            selectionGroup: this.__dataset.selectionGroup,
+            sgid: this.sgid
         }
     }
 
-    get sgid() {
+    get comment() {
         const self = this.getLatest()
-        return self.__sgid
-    }
-
-    get src() {
-        const self = this.getLatest()
-        return self.__src
+        return self.__dataset.comment || ''
     }
 }
 
-export function $createActionTextAttachmentMarkNode(serverResponse = {}) {
-    return $applyNodeReplacement(new ActionTextAttachmentMarkNode([], serverResponse));
+export function $createActionTextAttachmentMarkNode(dataset = {}, sgid = null) {
+    return $applyNodeReplacement(new ActionTextAttachmentMarkNode([], dataset, sgid));
 }

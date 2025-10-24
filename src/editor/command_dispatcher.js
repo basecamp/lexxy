@@ -139,37 +139,22 @@ export class CommandDispatcher {
   }
 
   dispatchInsertCommentOnSelection(comment) {
-    const payload = {
-      body: comment
-    }
     const selection = $getSelection();
+    // const selectedText = selection.getTextContent()
+    // const selectedNodes = selection.extract()
 
-    // Get the selected text
-    const selectedText = selection.getTextContent()
-
-    // Extract the selected nodes
-    const selectedNodes = selection.extract()
-
-    const token = document.querySelector('meta[name=csrf-token]').getAttribute('content');
-    fetch("/admin/comments", {
-      method: "POST",
-      body: JSON.stringify({"comment": payload}),
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': token
+    this.editor.update(() => {
+      if ($isRangeSelection(selection)) {
+        const isBackward = selection.isBackward();
+        let i = 0
+        const selectionGroupId = [...Array(8)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+        $wrapSelectionInMarkNode(selection, isBackward, "", ([]) => {
+          let dataset = { selectionGroup: selectionGroupId }
+          if (i === 0) { dataset.comment = comment; i++; }
+          return new ActionTextAttachmentMarkNode([], dataset)
+        });
       }
     })
-    .then(r => r.json())
-    .then(data => {
-      this.editor.update(() => {
-        if ($isRangeSelection(selection)) {
-          const isBackward = selection.isBackward();
-          $wrapSelectionInMarkNode(selection, isBackward, "", ([]) => {
-            return new ActionTextAttachmentMarkNode([], data)
-          });
-        }
-      })
-    });
   }
 
 
