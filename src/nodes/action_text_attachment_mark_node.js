@@ -60,8 +60,7 @@ export class ActionTextAttachmentMarkNode extends MarkNode {
     }
 
     static clone(node) {
-        console.log("clone")
-        return new ActionTextAttachmentMarkNode(node.__ids, node.__dataset)
+        return new ActionTextAttachmentMarkNode(node.__ids, node.__dataset, node.sgid)
     }
 
     createDOM(config) {

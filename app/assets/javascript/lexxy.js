@@ -6109,8 +6109,7 @@ class ActionTextAttachmentMarkNode extends f {
     }
 
     static clone(node) {
-        console.log("clone");
-        return new ActionTextAttachmentMarkNode(node.__ids, node.__dataset)
+        return new ActionTextAttachmentMarkNode(node.__ids, node.__dataset, node.sgid)
     }
 
     createDOM(config) {
@@ -7944,7 +7943,7 @@ class Clipboard {
 
 class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
-  static debug = true
+  static debug = false
   static commands = [ "bold", "italic", "strikethrough" ]
 
   static observedAttributes = [ "connected", "required" ]
