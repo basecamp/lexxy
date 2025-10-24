@@ -6055,36 +6055,52 @@ class HorizontalDividerNode extends gi {
 
 const l=[];class f extends fi{static getType(){return "mark"}static clone(t){return new f(t.__ids,t.__key)}static importDOM(){return null}static importJSON(t){return a().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setIDs(t.ids)}exportJSON(){return {...super.exportJSON(),ids:this.getIDs()}}constructor(t=l,e){super(e),this.__ids=t;}createDOM(t){const e=document.createElement("mark");return rt$2(e,t.theme.mark),this.__ids.length>1&&rt$2(e,t.theme.markOverlap),e}updateDOM(t,e,r){const n=t.__ids,s=this.__ids,i=n.length,o=s.length,l=r.theme.markOverlap;return i!==o&&(1===i?2===o&&rt$2(e,l):1===o&&it$3(e,l)),false}hasID(t){return this.getIDs().includes(t)}getIDs(){return Array.from(this.getLatest().__ids)}setIDs(t){const e=this.getWritable();return e.__ids=t,e}addID(t){const e=this.getWritable();return e.__ids.includes(t)?e:e.setIDs([...e.__ids,t])}deleteID(t){const e=this.getWritable(),r=e.__ids.indexOf(t);if(-1===r)return e;const n=Array.from(e.__ids);return n.splice(r,1),e.setIDs(n)}insertNewAfter(t,e=true){const r=a(this.__ids);return this.insertAfter(r,e),r}canInsertTextBefore(){return  false}canInsertTextAfter(){return  false}canBeEmpty(){return  false}isInline(){return  true}extractWithChild(t,r,n){if(!cr(r)||"html"===n)return  false;const s=r.anchor,i=r.focus,o=s.getNode(),c=i.getNode(),u=r.isBackward()?s.offset-i.offset:i.offset-s.offset;return this.isParentOf(o)&&this.isParentOf(c)&&this.getTextContent().length===u}excludeFromCopy(t){return "clone"!==t}}function a(t=l){return no(new f(t))}function d$1(t){return t instanceof f}function _$1(t,e,r,c){const u=vr(),[l,f]=t.isBackward()?[t.focus,t.anchor]:[t.anchor,t.focus];let h,_;u.anchor.set(l.key,l.offset,l.type),u.focus.set(f.key,f.offset,f.type);const m=u.extract();for(const t of m){if(di(_)&&_.isParentOf(t))continue;let e=null;if(Qn(t))e=t;else {if(d$1(t))continue;(di(t)||_i(t))&&t.isInline()&&(e=t);}if(null!==e){if(e&&e.is(h))continue;const t=e.getParent();if(null!=t&&t.is(h)||(_=void 0),h=t,void 0===_){_=(c||a)([r]),e.insertBefore(_);}_.append(e);}else h=void 0,_=void 0;}di(_)&&(e?_.selectStart():_.selectEnd());}
 
+/**
+ * ActionTextAttachmentMarkNode
+ * - represents comments saved in rails backend
+ * - MarkNode from lexical is used to spread comment over multiple html nodes
+ * - Adds an attribute (data-selection-group) for grouping selection before rails creates instance
+ * - Adds an attribute (data-comment) for storing user input that creates or updates the rails instance
+ *
+ */
 class ActionTextAttachmentMarkNode extends f {
+
+    constructor(ids = [], dataset = {}, sgid = null) {
+        super(ids, null);
+        this.__dataset = dataset || null;
+        this.sgid = sgid;
+    }
+
     static getType() {
         return 'action_text_attachment_mark_node';
     }
 
-    constructor(ids = [], serverResponse = {}) {
-        super(ids, null);
-        this.__sgid = serverResponse.sgid || '';
-        this.__src = serverResponse.path || serverResponse.src || '';
-    }
-
     static importJSON(serializedNode) {
-        console.log("importJSON");
         const node = $createActionTextAttachmentMarkNode({
-            sgid: serializedNode.sgid,
-            src: serializedNode.src
+            dataset: serializedNode.dataset
         });
+        node.setAttribute('sgid', serializedNode.sgid);
         node.setIds(serializedNode.ids);
         return node
     }
 
     static importDOM() {
-        console.log("importDOM()");
         return {
             'action-text-attachment-mark-node': (node) => ({
                 conversion: (element) => {
-                    const sgid = element.getAttribute('sgid') || '';
-                    const src = element.getAttribute('src') || element.getAttribute('url') || '';
+                    let dataset = {};
+                    if (element.getAttribute('data-comment') !== undefined) {
+                        dataset.comment = element.getAttribute('data-comment');
+                    }
+                    if (element.getAttribute('data-selection-group') !== undefined) {
+                        dataset.selectionGroup = element.getAttribute('data-selection-group');
+                    }
+
+                    this.sgid = element.getAttribute("sgid");
+                    node = $createActionTextAttachmentMarkNode(dataset, (this.sgid || null));
+
                     return {
-                        node: $createActionTextAttachmentMarkNode({ sgid, path: src })
+                        node: node
                     }
                 },
                 priority: 1
@@ -6093,18 +6109,19 @@ class ActionTextAttachmentMarkNode extends f {
     }
 
     static clone(node) {
-        return new ActionTextAttachmentMarkNode(node.__ids, {
-            sgid: node.__sgid,
-            src: node.__src
-        })
+        console.log("clone");
+        return new ActionTextAttachmentMarkNode(node.__ids, node.__dataset)
     }
 
     createDOM(config) {
-        const element = createElement('action-text-attachment-mark-node', {
-            "sgid": this.__sgid,
-            "src": this.__src,
-        });
+        const element = createElement('action-text-attachment-mark-node', {sgid: this.sgid});
         rt$2(element, config.theme.mark);
+        if (this.__dataset.comment) {
+            element.setAttribute("data-comment", this.__dataset.comment);
+        }
+        if (this.__dataset.selectionGroup) {
+            element.setAttribute("data-selection-group", this.__dataset.selectionGroup);
+        }
         if (this.__ids.length > 1) {
             rt$2(element, config.theme.markOverlap);
         }
@@ -6113,14 +6130,20 @@ class ActionTextAttachmentMarkNode extends f {
 
     exportDOM(editor) {
         const element = document.createElement("action-text-attachment-mark-node");
-        element.setAttribute("sgid", this.__sgid || '');
-        element.setAttribute("src", this.__src || '');
+        if (this.sgid) {
+            element.setAttribute("sgid", this.sgid);
+        }
+        if (this.__dataset.comment) {
+            element.setAttribute("data-comment", this.__dataset.comment);
+        }
+        if (this.__dataset.selectionGroup) {
+            element.setAttribute("data-selection-group", this.__dataset.selectionGroup);
+        }
         element.setAttribute("content-type", "text/html; charset=utf-8");
         return { element }
     }
 
     updateDOM() {
-        console.log("updateDOM()");
         return true
     }
 
@@ -6135,28 +6158,23 @@ class ActionTextAttachmentMarkNode extends f {
     }
 
     exportJSON() {
-        console.log("exportJSON()");
         return {
             ...super.exportJSON(),
             type: "action_text_attachment_mark_node",
-            sgid: this.__sgid,
-            src: this.__src
+            comment: this.__dataset.comment,
+            selectionGroup: this.__dataset.selectionGroup,
+            sgid: this.sgid
         }
     }
 
-    get sgid() {
+    get comment() {
         const self = this.getLatest();
-        return self.__sgid
-    }
-
-    get src() {
-        const self = this.getLatest();
-        return self.__src
+        return self.__dataset.comment || ''
     }
 }
 
-function $createActionTextAttachmentMarkNode(serverResponse = {}) {
-    return no(new ActionTextAttachmentMarkNode([], serverResponse));
+function $createActionTextAttachmentMarkNode(dataset = {}, sgid = null) {
+    return no(new ActionTextAttachmentMarkNode([], dataset, sgid));
 }
 
 const COMMANDS = [
@@ -6264,36 +6282,21 @@ class CommandDispatcher {
   }
 
   dispatchInsertCommentOnSelection(comment) {
-    const payload = {
-      body: comment
-    };
     const selection = Nr();
+    // const selectedText = selection.getTextContent()
+    // const selectedNodes = selection.extract()
 
-    // Get the selected text
-    selection.getTextContent();
-
-    // Extract the selected nodes
-    selection.extract();
-
-    const token = document.querySelector('meta[name=csrf-token]').getAttribute('content');
-    fetch("/admin/comments", {
-      method: "POST",
-      body: JSON.stringify({"comment": payload}),
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': token
+    this.editor.update(() => {
+      if (cr(selection)) {
+        const isBackward = selection.isBackward();
+        let i = 0;
+        const selectionGroupId = [...Array(8)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+        _$1(selection, isBackward, "", ([]) => {
+          let dataset = { selectionGroup: selectionGroupId };
+          if (i === 0) { dataset.comment = comment; i++; }
+          return new ActionTextAttachmentMarkNode([], dataset)
+        });
       }
-    })
-    .then(r => r.json())
-    .then(data => {
-      this.editor.update(() => {
-        if (cr(selection)) {
-          const isBackward = selection.isBackward();
-          _$1(selection, isBackward, "", ([]) => {
-            return new ActionTextAttachmentMarkNode([], data)
-          });
-        }
-      });
     });
   }
 

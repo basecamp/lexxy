@@ -181,8 +181,12 @@
   }
 
   action-text-attachment-mark-node {
-    background-color: yellow;
-    color: black;
+    border-bottom: 2px solid rgba(255,212,0,1);
+    padding-bottom: 1px;
+  }
+  action-text-attachment-mark-node.highlight {
+    background: #ffd40080;
+    border-bottom: 2px solid rgba(255,212,0,1);
   }
 }
 
