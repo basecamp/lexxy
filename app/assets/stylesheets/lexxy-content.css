@@ -182,7 +182,6 @@
 
   action-text-attachment-mark-node {
     border-bottom: 2px solid rgba(255,212,0,1);
-    padding-bottom: 1px;
   }
   action-text-attachment-mark-node.highlight {
     background: #ffd40080;
