@@ -5410,7 +5410,7 @@ class LexicalToolbarElement extends HTMLElement {
           <form method="dialog">
             <textarea rows="10" placeholder="Comment…" class="input" required></textarea>
             <div class="lexxy-dialog-actions">
-              <button type="submit" class="btn" value="insertCommentOnSelection">Save</button>
+              <button type="submit" class="btn" value="insertMarkNodeOnSelection">Save</button>
             </div>
           </form>
         </dialog>
@@ -6055,19 +6055,91 @@ class HorizontalDividerNode extends gi {
 
 const l=[];class f extends fi{static getType(){return "mark"}static clone(t){return new f(t.__ids,t.__key)}static importDOM(){return null}static importJSON(t){return a().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setIDs(t.ids)}exportJSON(){return {...super.exportJSON(),ids:this.getIDs()}}constructor(t=l,e){super(e),this.__ids=t;}createDOM(t){const e=document.createElement("mark");return rt$2(e,t.theme.mark),this.__ids.length>1&&rt$2(e,t.theme.markOverlap),e}updateDOM(t,e,r){const n=t.__ids,s=this.__ids,i=n.length,o=s.length,l=r.theme.markOverlap;return i!==o&&(1===i?2===o&&rt$2(e,l):1===o&&it$3(e,l)),false}hasID(t){return this.getIDs().includes(t)}getIDs(){return Array.from(this.getLatest().__ids)}setIDs(t){const e=this.getWritable();return e.__ids=t,e}addID(t){const e=this.getWritable();return e.__ids.includes(t)?e:e.setIDs([...e.__ids,t])}deleteID(t){const e=this.getWritable(),r=e.__ids.indexOf(t);if(-1===r)return e;const n=Array.from(e.__ids);return n.splice(r,1),e.setIDs(n)}insertNewAfter(t,e=true){const r=a(this.__ids);return this.insertAfter(r,e),r}canInsertTextBefore(){return  false}canInsertTextAfter(){return  false}canBeEmpty(){return  false}isInline(){return  true}extractWithChild(t,r,n){if(!cr(r)||"html"===n)return  false;const s=r.anchor,i=r.focus,o=s.getNode(),c=i.getNode(),u=r.isBackward()?s.offset-i.offset:i.offset-s.offset;return this.isParentOf(o)&&this.isParentOf(c)&&this.getTextContent().length===u}excludeFromCopy(t){return "clone"!==t}}function a(t=l){return no(new f(t))}function d$1(t){return t instanceof f}function _$1(t,e,r,c){const u=vr(),[l,f]=t.isBackward()?[t.focus,t.anchor]:[t.anchor,t.focus];let h,_;u.anchor.set(l.key,l.offset,l.type),u.focus.set(f.key,f.offset,f.type);const m=u.extract();for(const t of m){if(di(_)&&_.isParentOf(t))continue;let e=null;if(Qn(t))e=t;else {if(d$1(t))continue;(di(t)||_i(t))&&t.isInline()&&(e=t);}if(null!==e){if(e&&e.is(h))continue;const t=e.getParent();if(null!=t&&t.is(h)||(_=void 0),h=t,void 0===_){_=(c||a)([r]),e.insertBefore(_);}_.append(e);}else h=void 0,_=void 0;}di(_)&&(e?_.selectStart():_.selectEnd());}
 
+class LinkDialog extends HTMLElement {
+  connectedCallback() {
+    this.dialog = this.querySelector("dialog");
+    this.input = this.querySelector("input");
+
+    this.addEventListener("submit", this.#handleSubmit.bind(this));
+    this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this));
+    this.addEventListener("keydown", this.#handleKeyDown.bind(this));
+  }
+
+  show(editor) {
+    this.input.value = this.#selectedLinkUrl;
+    this.dialog.show();
+  }
+
+  close() {
+    this.dialog.close();
+  }
+
+  #handleSubmit(event) {
+    const command = event.submitter?.value;
+    this.#editor.dispatchCommand(command, this.input.value);
+  }
+
+  #handleUnlink(event) {
+    this.#editor.dispatchCommand("unlink");
+    this.close();
+  }
+
+  #handleKeyDown(event) {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      this.close();
+    }
+  }
+
+  get #selectedLinkUrl() {
+    let url = "";
+
+    this.#editor.getEditorState().read(() => {
+      const selection = Nr();
+      if (!cr(selection)) return
+
+      let node = selection.getNodes()[0];
+      while (node && node.getParent()) {
+        if (p(node)) {
+          url = node.getURL();
+          break
+        }
+        node = node.getParent();
+      }
+    });
+
+    return url
+  }
+
+  get #editor() {
+    return this.closest("lexxy-toolbar").editor
+  }
+}
+
+// We should extend the native dialog and avoid the intermediary <dialog> but not
+// supported by Safari yet: customElements.define("lexxy-link-dialog", LinkDialog, { extends: "dialog" })
+customElements.define("lexxy-link-dialog", LinkDialog);
+
 /**
  * ActionTextAttachmentMarkNode
- * - represents comments saved in rails backend
- * - MarkNode from lexical is used to spread comment over multiple html nodes
+ * - This model references meta elements (like comments) in rich texts. The actual meta content will be saved and updated in RoR backend
+ * - MarkNode from lexical is used to spread meta references over multiple html nodes of the rich text
  * - Adds an attribute (data-selection-group) for grouping selection before rails creates instance
- * - Adds an attribute (data-comment) for storing user input that creates or updates the rails instance
+ * - Adds an attribute (data-create-meta-content) for triggering the creation and storage of the meta user input as some ActiveStorage instance in backend
+ * - Adds an attribute (data-delete-meta-content) for triggering the deletion of the referenced ActiveStorage instance in backend
+ * - After creation the sgid is used for identification
+ * - Updating of the meta content (UX and storage) should be provided by the parent application
  *
  */
 class ActionTextAttachmentMarkNode extends f {
 
     constructor(ids = [], dataset = {}, sgid = null) {
         super(ids, null);
-        this.__dataset = dataset || null;
+        this.__dataset = dataset || {
+            createMetaContent: null,
+            deleteMetaContent: null,
+            selectionGroup: null
+        };
         this.sgid = sgid;
     }
 
@@ -6076,9 +6148,7 @@ class ActionTextAttachmentMarkNode extends f {
     }
 
     static importJSON(serializedNode) {
-        const node = $createActionTextAttachmentMarkNode({
-            dataset: serializedNode.dataset
-        });
+        const node = $createActionTextAttachmentMarkNode(serializedNode.dataset);
         node.setAttribute('sgid', serializedNode.sgid);
         node.setIds(serializedNode.ids);
         return node
@@ -6089,15 +6159,18 @@ class ActionTextAttachmentMarkNode extends f {
             'action-text-attachment-mark-node': (node) => ({
                 conversion: (element) => {
                     let dataset = {};
-                    if (element.getAttribute('data-comment') !== undefined) {
-                        dataset.comment = element.getAttribute('data-comment');
+                    if (element.getAttribute('data-create-meta-content') !== undefined) {
+                        dataset.createMetaContent = element.getAttribute('data-create-meta-content');
+                    }
+                    if (element.getAttribute('data-delete-meta-content') !== undefined) {
+                        dataset.deleteMetaContent = element.getAttribute('data-delete-meta-content');
                     }
                     if (element.getAttribute('data-selection-group') !== undefined) {
                         dataset.selectionGroup = element.getAttribute('data-selection-group');
                     }
 
                     this.sgid = element.getAttribute("sgid");
-                    node = $createActionTextAttachmentMarkNode(dataset, (this.sgid || null));
+                    node = $createActionTextAttachmentMarkNode(dataset, this.sgid);
 
                     return {
                         node: node
@@ -6115,12 +6188,7 @@ class ActionTextAttachmentMarkNode extends f {
     createDOM(config) {
         const element = createElement('action-text-attachment-mark-node', {sgid: this.sgid});
         rt$2(element, config.theme.mark);
-        if (this.__dataset.comment) {
-            element.setAttribute("data-comment", this.__dataset.comment);
-        }
-        if (this.__dataset.selectionGroup) {
-            element.setAttribute("data-selection-group", this.__dataset.selectionGroup);
-        }
+        this.setContentAttributes(element);
         if (this.__ids.length > 1) {
             rt$2(element, config.theme.markOverlap);
         }
@@ -6132,14 +6200,21 @@ class ActionTextAttachmentMarkNode extends f {
         if (this.sgid) {
             element.setAttribute("sgid", this.sgid);
         }
-        if (this.__dataset.comment) {
-            element.setAttribute("data-comment", this.__dataset.comment);
+        this.setContentAttributes(element);
+        element.setAttribute("content-type", "text/html; charset=utf-8");
+        return { element }
+    }
+
+    setContentAttributes(element) {
+        if (this.__dataset.createMetaContent) {
+            element.setAttribute("data-create-meta-content", this.__dataset.createMetaContent);
+        }
+        if (this.__dataset.deleteMetaContent) {
+            element.setAttribute("data-delete-meta-content", this.__dataset.deleteMetaContent);
         }
         if (this.__dataset.selectionGroup) {
             element.setAttribute("data-selection-group", this.__dataset.selectionGroup);
         }
-        element.setAttribute("content-type", "text/html; charset=utf-8");
-        return { element }
     }
 
     updateDOM() {
@@ -6160,15 +6235,13 @@ class ActionTextAttachmentMarkNode extends f {
         return {
             ...super.exportJSON(),
             type: "action_text_attachment_mark_node",
-            comment: this.__dataset.comment,
-            selectionGroup: this.__dataset.selectionGroup,
-            sgid: this.sgid
+            sgid: this.sgid,
+            dataset: {
+                createMetaContent: this.__dataset.createMetaContent,
+                deleteMetaContent: this.__dataset.deleteMetaContent,
+                selectionGroup: this.__dataset.selectionGroup,
+            }
         }
-    }
-
-    get comment() {
-        const self = this.getLatest();
-        return self.__dataset.comment || ''
     }
 }
 
@@ -6188,7 +6261,8 @@ const COMMANDS = [
   "insertQuoteBlock",
   "insertCodeBlock",
   "insertHorizontalDivider",
-  "insertCommentOnSelection",
+  "insertMarkNodeOnSelection",
+  "insertMarkNodeDeletionTrigger",
   "uploadAttachments",
   "undo",
   "redo"
@@ -6280,11 +6354,8 @@ class CommandDispatcher {
     });
   }
 
-  dispatchInsertCommentOnSelection(comment) {
+  dispatchInsertMarkNodeOnSelection(metaContent) {
     const selection = Nr();
-    // const selectedText = selection.getTextContent()
-    // const selectedNodes = selection.extract()
-
     this.editor.update(() => {
       if (cr(selection)) {
         const isBackward = selection.isBackward();
@@ -6292,13 +6363,29 @@ class CommandDispatcher {
         const selectionGroupId = [...Array(8)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
         _$1(selection, isBackward, "", ([]) => {
           let dataset = { selectionGroup: selectionGroupId };
-          if (i === 0) { dataset.comment = comment; i++; }
+          if (i === 0) { dataset.createMetaContent = metaContent; i++; }
           return new ActionTextAttachmentMarkNode([], dataset)
         });
+        dispatch(this.editorElement, "lexxy:addMarkNodeOnSelection", { selectionGroupId: selectionGroupId });
       }
     });
   }
-
+  
+  dispatchInsertMarkNodeDeletionTrigger(sgid) {
+    this.editor.update(() => {
+      const rootNode = ps();
+      const traverse = (node) => {
+        if (node.getType() === 'action_text_attachment_mark_node' && node.sgid && node.sgid === sgid) {
+          const writableNode = node.getWritable();
+          writableNode.__dataset.deleteMetaContent = true;
+        }
+        if (di(node)) {
+          node.getChildren().forEach(traverse);
+        }
+      };
+      traverse(rootNode);
+    });
+  }
 
   dispatchRotateHeadingFormat() {
     this.editor.update(() => {
@@ -8334,71 +8421,6 @@ class LexicalEditorElement extends HTMLElement {
 }
 
 customElements.define("lexxy-editor", LexicalEditorElement);
-
-class LinkDialog extends HTMLElement {
-  connectedCallback() {
-    this.dialog = this.querySelector("dialog");
-    this.input = this.querySelector("input");
-
-    this.addEventListener("submit", this.#handleSubmit.bind(this));
-    this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this));
-    this.addEventListener("keydown", this.#handleKeyDown.bind(this));
-  }
-
-  show(editor) {
-    this.input.value = this.#selectedLinkUrl;
-    this.dialog.show();
-  }
-
-  close() {
-    this.dialog.close();
-  }
-
-  #handleSubmit(event) {
-    const command = event.submitter?.value;
-    this.#editor.dispatchCommand(command, this.input.value);
-  }
-
-  #handleUnlink(event) {
-    this.#editor.dispatchCommand("unlink");
-    this.close();
-  }
-
-  #handleKeyDown(event) {
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      this.close();
-    }
-  }
-
-  get #selectedLinkUrl() {
-    let url = "";
-
-    this.#editor.getEditorState().read(() => {
-      const selection = Nr();
-      if (!cr(selection)) return
-
-      let node = selection.getNodes()[0];
-      while (node && node.getParent()) {
-        if (p(node)) {
-          url = node.getURL();
-          break
-        }
-        node = node.getParent();
-      }
-    });
-
-    return url
-  }
-
-  get #editor() {
-    return this.closest("lexxy-toolbar").editor
-  }
-}
-
-// We should extend the native dialog and avoid the intermediary <dialog> but not
-// supported by Safari yet: customElements.define("lexxy-link-dialog", LinkDialog, { extends: "dialog" })
-customElements.define("lexxy-link-dialog", LinkDialog);
 
 class CommentDialog extends HTMLElement {
     connectedCallback() {

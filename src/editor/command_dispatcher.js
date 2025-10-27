@@ -5,14 +5,16 @@ import {
   COMMAND_PRIORITY_LOW,
   FORMAT_TEXT_COMMAND,
   UNDO_COMMAND,
-  REDO_COMMAND
+  REDO_COMMAND,
+  $getRoot,
+  $isElementNode
 } from "lexical"
 
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { CodeNode, $isCodeNode } from "@lexical/code"
 import { $toggleLink } from "@lexical/link"
-import { createElement } from "../helpers/html_helper"
+import { createElement, dispatch } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { ActionTextAttachmentMarkNode } from "../nodes/action_text_attachment_mark_node"
@@ -33,7 +35,8 @@ const COMMANDS = [
   "insertQuoteBlock",
   "insertCodeBlock",
   "insertHorizontalDivider",
-  "insertCommentOnSelection",
+  "insertMarkNodeOnSelection",
+  "insertMarkNodeDeletionTrigger",
   "uploadAttachments",
   "undo",
   "redo"
@@ -125,11 +128,8 @@ export class CommandDispatcher {
     })
   }
 
-  dispatchInsertCommentOnSelection(comment) {
+  dispatchInsertMarkNodeOnSelection(metaContent) {
     const selection = $getSelection();
-    // const selectedText = selection.getTextContent()
-    // const selectedNodes = selection.extract()
-
     this.editor.update(() => {
       if ($isRangeSelection(selection)) {
         const isBackward = selection.isBackward();
@@ -137,13 +137,29 @@ export class CommandDispatcher {
         const selectionGroupId = [...Array(8)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
         $wrapSelectionInMarkNode(selection, isBackward, "", ([]) => {
           let dataset = { selectionGroup: selectionGroupId }
-          if (i === 0) { dataset.comment = comment; i++; }
+          if (i === 0) { dataset.createMetaContent = metaContent; i++; }
           return new ActionTextAttachmentMarkNode([], dataset)
         });
+        dispatch(this.editorElement, "lexxy:addMarkNodeOnSelection", { selectionGroupId: selectionGroupId })
       }
     })
   }
-
+  
+  dispatchInsertMarkNodeDeletionTrigger(sgid) {
+    this.editor.update(() => {
+      const rootNode = $getRoot();
+      const traverse = (node) => {
+        if (node.getType() === 'action_text_attachment_mark_node' && node.sgid && node.sgid === sgid) {
+          const writableNode = node.getWritable();
+          writableNode.__dataset.deleteMetaContent = true;
+        }
+        if ($isElementNode(node)) {
+          node.getChildren().forEach(traverse);
+        }
+      };
+      traverse(rootNode);
+    })
+  }
 
   dispatchRotateHeadingFormat() {
     this.editor.update(() => {

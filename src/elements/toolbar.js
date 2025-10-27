@@ -319,7 +319,7 @@ export default class LexicalToolbarElement extends HTMLElement {
           <form method="dialog">
             <textarea rows="10" placeholder="Comment…" class="input" required></textarea>
             <div class="lexxy-dialog-actions">
-              <button type="submit" class="btn" value="insertCommentOnSelection">Save</button>
+              <button type="submit" class="btn" value="insertMarkNodeOnSelection">Save</button>
             </div>
           </form>
         </dialog>
