@@ -2,6 +2,8 @@ import {
   $createTextNode,
   $getSelection,
   $isRangeSelection,
+  $getRoot,
+  $isElementNode,
   COMMAND_PRIORITY_LOW,
   FORMAT_TEXT_COMMAND,
   PASTE_COMMAND,
@@ -34,7 +36,8 @@ const COMMANDS = [
   "insertQuoteBlock",
   "insertCodeBlock",
   "insertHorizontalDivider",
-  "insertCommentOnSelection",
+  "insertMarkNodeOnSelection",
+  "insertMarkNodeDeletionTrigger",
   "uploadAttachments",
   "undo",
   "redo"
@@ -107,7 +110,7 @@ export class CommandDispatcher {
 
   dispatchInsertOrderedList() {
     const selection = $getSelection()
-    if (!selection) return
+    if (!selection) return;
 
     const anchorNode = selection.anchor.getNode()
 
@@ -138,11 +141,8 @@ export class CommandDispatcher {
     })
   }
 
-  dispatchInsertCommentOnSelection(comment) {
+  dispatchInsertMarkNodeOnSelection(metaContent) {
     const selection = $getSelection();
-    // const selectedText = selection.getTextContent()
-    // const selectedNodes = selection.extract()
-
     this.editor.update(() => {
       if ($isRangeSelection(selection)) {
         const isBackward = selection.isBackward();
@@ -150,13 +150,29 @@ export class CommandDispatcher {
         const selectionGroupId = [...Array(8)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
         $wrapSelectionInMarkNode(selection, isBackward, "", ([]) => {
           let dataset = { selectionGroup: selectionGroupId }
-          if (i === 0) { dataset.comment = comment; i++; }
+          if (i === 0) { dataset.createMetaContent = metaContent; i++; }
           return new ActionTextAttachmentMarkNode([], dataset)
         });
+        dispatch(this.editorElement, "lexxy:addMarkNodeOnSelection", { selectionGroupId: selectionGroupId })
       }
     })
   }
 
+  dispatchInsertMarkNodeDeletionTrigger(sgid) {
+    this.editor.update(() => {
+      const rootNode = $getRoot();
+      const traverse = (node) => {
+        if (node.getType() === 'action_text_attachment_mark_node' && node.sgid && node.sgid === sgid) {
+          const writableNode = node.getWritable();
+          writableNode.__dataset.deleteMetaContent = true;
+        }
+        if ($isElementNode(node)) {
+          node.getChildren().forEach(traverse);
+        }
+      };
+      traverse(rootNode);
+    })
+  }
 
   dispatchRotateHeadingFormat() {
     this.editor.update(() => {
