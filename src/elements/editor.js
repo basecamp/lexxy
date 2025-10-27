@@ -1,15 +1,4 @@
-import {
-  createEditor,
-  $getRoot,
-  $getNodeByKey,
-  $addUpdateTag,
-  SKIP_DOM_SELECTION_TAG,
-  KEY_ENTER_COMMAND,
-  COMMAND_PRIORITY_NORMAL,
-  DecoratorNode,
-  CLEAR_HISTORY_COMMAND,
-  $getSelection, $isRangeSelection
-} from "lexical"
+import { createEditor, $getRoot, $getNodeByKey, $addUpdateTag, SKIP_DOM_SELECTION_TAG, KEY_ENTER_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, CLEAR_HISTORY_COMMAND } from "lexical"
 import { ListNode, ListItemNode, registerList } from "@lexical/list"
 import { LinkNode, AutoLinkNode } from "@lexical/link"
 import { registerRichText, QuoteNode, HeadingNode } from "@lexical/rich-text"
@@ -34,7 +23,7 @@ import { $createActionTextAttachmentMarkNode, ActionTextAttachmentMarkNode } fro
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
-  static debug = false
+  static debug = true
   static commands = [ "bold", "italic", "strikethrough" ]
 
   static observedAttributes = [ "connected", "required" ]
