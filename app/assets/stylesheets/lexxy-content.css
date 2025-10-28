@@ -181,11 +181,10 @@
   }
 
   action-text-attachment-mark-node {
-    border-bottom: 2px solid rgba(255,212,0,1);
-  }
-  action-text-attachment-mark-node.highlight {
-    background: #ffd40080;
-    border-bottom: 2px solid rgba(255,212,0,1);
+    &:not(lexxy-editor &) {
+      display: inline;
+      border-bottom: 2px solid rgba(255, 212, 0, 1);
+    }
   }
 }
 
@@ -195,6 +194,15 @@
   border-inline-start: 1px solid currentColor;
   line-height: inherit;
   margin-block: 1em;
+}
+
+:where(lexxy-editor) {
+  action-text-attachment-mark-node {
+    display: inline;
+    span {
+      border-bottom: 2px solid rgba(255,212,0,1);
+    }
+  }
 }
 
 /* Attachments

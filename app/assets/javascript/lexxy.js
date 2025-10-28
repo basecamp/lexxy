@@ -6055,71 +6055,6 @@ class HorizontalDividerNode extends gi {
 
 const l=[];class f extends fi{static getType(){return "mark"}static clone(t){return new f(t.__ids,t.__key)}static importDOM(){return null}static importJSON(t){return a().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setIDs(t.ids)}exportJSON(){return {...super.exportJSON(),ids:this.getIDs()}}constructor(t=l,e){super(e),this.__ids=t;}createDOM(t){const e=document.createElement("mark");return rt$2(e,t.theme.mark),this.__ids.length>1&&rt$2(e,t.theme.markOverlap),e}updateDOM(t,e,r){const n=t.__ids,s=this.__ids,i=n.length,o=s.length,l=r.theme.markOverlap;return i!==o&&(1===i?2===o&&rt$2(e,l):1===o&&it$3(e,l)),false}hasID(t){return this.getIDs().includes(t)}getIDs(){return Array.from(this.getLatest().__ids)}setIDs(t){const e=this.getWritable();return e.__ids=t,e}addID(t){const e=this.getWritable();return e.__ids.includes(t)?e:e.setIDs([...e.__ids,t])}deleteID(t){const e=this.getWritable(),r=e.__ids.indexOf(t);if(-1===r)return e;const n=Array.from(e.__ids);return n.splice(r,1),e.setIDs(n)}insertNewAfter(t,e=true){const r=a(this.__ids);return this.insertAfter(r,e),r}canInsertTextBefore(){return  false}canInsertTextAfter(){return  false}canBeEmpty(){return  false}isInline(){return  true}extractWithChild(t,r,n){if(!cr(r)||"html"===n)return  false;const s=r.anchor,i=r.focus,o=s.getNode(),c=i.getNode(),u=r.isBackward()?s.offset-i.offset:i.offset-s.offset;return this.isParentOf(o)&&this.isParentOf(c)&&this.getTextContent().length===u}excludeFromCopy(t){return "clone"!==t}}function a(t=l){return no(new f(t))}function d$1(t){return t instanceof f}function _$1(t,e,r,c){const u=vr(),[l,f]=t.isBackward()?[t.focus,t.anchor]:[t.anchor,t.focus];let h,_;u.anchor.set(l.key,l.offset,l.type),u.focus.set(f.key,f.offset,f.type);const m=u.extract();for(const t of m){if(di(_)&&_.isParentOf(t))continue;let e=null;if(Qn(t))e=t;else {if(d$1(t))continue;(di(t)||_i(t))&&t.isInline()&&(e=t);}if(null!==e){if(e&&e.is(h))continue;const t=e.getParent();if(null!=t&&t.is(h)||(_=void 0),h=t,void 0===_){_=(c||a)([r]),e.insertBefore(_);}_.append(e);}else h=void 0,_=void 0;}di(_)&&(e?_.selectStart():_.selectEnd());}
 
-class LinkDialog extends HTMLElement {
-  connectedCallback() {
-    this.dialog = this.querySelector("dialog");
-    this.input = this.querySelector("input");
-
-    this.addEventListener("submit", this.#handleSubmit.bind(this));
-    this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this));
-    this.addEventListener("keydown", this.#handleKeyDown.bind(this));
-  }
-
-  show(editor) {
-    this.input.value = this.#selectedLinkUrl;
-    this.dialog.show();
-  }
-
-  close() {
-    this.dialog.close();
-  }
-
-  #handleSubmit(event) {
-    const command = event.submitter?.value;
-    this.#editor.dispatchCommand(command, this.input.value);
-  }
-
-  #handleUnlink(event) {
-    this.#editor.dispatchCommand("unlink");
-    this.close();
-  }
-
-  #handleKeyDown(event) {
-    if (event.key === "Escape") {
-      event.stopPropagation();
-      this.close();
-    }
-  }
-
-  get #selectedLinkUrl() {
-    let url = "";
-
-    this.#editor.getEditorState().read(() => {
-      const selection = Nr();
-      if (!cr(selection)) return
-
-      let node = selection.getNodes()[0];
-      while (node && node.getParent()) {
-        if (p(node)) {
-          url = node.getURL();
-          break
-        }
-        node = node.getParent();
-      }
-    });
-
-    return url
-  }
-
-  get #editor() {
-    return this.closest("lexxy-toolbar").editor
-  }
-}
-
-// We should extend the native dialog and avoid the intermediary <dialog> but not
-// supported by Safari yet: customElements.define("lexxy-link-dialog", LinkDialog, { extends: "dialog" })
-customElements.define("lexxy-link-dialog", LinkDialog);
-
 /**
  * ActionTextAttachmentMarkNode
  * - This model references meta elements (like comments) in rich texts. The actual meta content will be saved and updated in RoR backend
@@ -8030,7 +7965,7 @@ class Clipboard {
 
 class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
-  static debug = false
+  static debug = true
   static commands = [ "bold", "italic", "strikethrough" ]
 
   static observedAttributes = [ "connected", "required" ]
@@ -8421,6 +8356,71 @@ class LexicalEditorElement extends HTMLElement {
 }
 
 customElements.define("lexxy-editor", LexicalEditorElement);
+
+class LinkDialog extends HTMLElement {
+  connectedCallback() {
+    this.dialog = this.querySelector("dialog");
+    this.input = this.querySelector("input");
+
+    this.addEventListener("submit", this.#handleSubmit.bind(this));
+    this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this));
+    this.addEventListener("keydown", this.#handleKeyDown.bind(this));
+  }
+
+  show(editor) {
+    this.input.value = this.#selectedLinkUrl;
+    this.dialog.show();
+  }
+
+  close() {
+    this.dialog.close();
+  }
+
+  #handleSubmit(event) {
+    const command = event.submitter?.value;
+    this.#editor.dispatchCommand(command, this.input.value);
+  }
+
+  #handleUnlink(event) {
+    this.#editor.dispatchCommand("unlink");
+    this.close();
+  }
+
+  #handleKeyDown(event) {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      this.close();
+    }
+  }
+
+  get #selectedLinkUrl() {
+    let url = "";
+
+    this.#editor.getEditorState().read(() => {
+      const selection = Nr();
+      if (!cr(selection)) return
+
+      let node = selection.getNodes()[0];
+      while (node && node.getParent()) {
+        if (p(node)) {
+          url = node.getURL();
+          break
+        }
+        node = node.getParent();
+      }
+    });
+
+    return url
+  }
+
+  get #editor() {
+    return this.closest("lexxy-toolbar").editor
+  }
+}
+
+// We should extend the native dialog and avoid the intermediary <dialog> but not
+// supported by Safari yet: customElements.define("lexxy-link-dialog", LinkDialog, { extends: "dialog" })
+customElements.define("lexxy-link-dialog", LinkDialog);
 
 class CommentDialog extends HTMLElement {
     connectedCallback() {

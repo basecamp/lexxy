@@ -1,11 +1,7 @@
-import {
-    $applyNodeReplacement,
-} from 'lexical';
+import { $applyNodeReplacement } from 'lexical';
 import { createElement } from "../helpers/html_helper";
-
-import {MarkNode} from "@lexical/mark";
-import {addClassNamesToElement} from "@lexical/utils";
-import {LinkDialog} from "../elements/link_dialog.js";
+import { MarkNode } from "@lexical/mark";
+import { addClassNamesToElement } from "@lexical/utils";
 
 /**
  * ActionTextAttachmentMarkNode
