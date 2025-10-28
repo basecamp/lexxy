@@ -690,6 +690,11 @@ export default class Contents {
   #insertNode(node, currentParagraph) {
     if (currentParagraph && $isParagraphNode(currentParagraph) && currentParagraph.getChildrenSize() === 0) {
       currentParagraph.replace(node)
+      // If we're replacing an empty paragraph with a gallery, ensure there's a paragraph after for cursor placement
+      if (node.getType() === 'attachment_gallery') {
+        const newParagraph = $createParagraphNode()
+        node.insertAfter(newParagraph)
+      }
     } else if (currentParagraph && $isElementNode(currentParagraph)) {
       currentParagraph.insertAfter(node)
     } else {
@@ -698,14 +703,11 @@ export default class Contents {
   }
 
   #selectOutsideNode(node) {
-    const nextNode = node.getNextSibling() || node.getPreviousSibling()
-    if (nextNode) {
-      if ($isTextNode(nextNode) || $isParagraphNode(nextNode)) {
-        nextNode.selectStart()
-      } else {
-        nextNode.selectNext(0, 0)
-      }
+    const nextNode = node.getNextSibling()
+    if (nextNode && ($isTextNode(nextNode) || $isParagraphNode(nextNode))) {
+      nextNode.selectStart()
     } else {
+      // If there's no suitable next node, create a new paragraph after the gallery
       const newParagraph = $createParagraphNode()
       node.insertAfter(newParagraph)
       newParagraph.selectStart()

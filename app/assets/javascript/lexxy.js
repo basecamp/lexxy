@@ -7726,6 +7726,11 @@ class Contents {
   #insertNode(node, currentParagraph) {
     if (currentParagraph && Fi(currentParagraph) && currentParagraph.getChildrenSize() === 0) {
       currentParagraph.replace(node);
+      // If we're replacing an empty paragraph with a gallery, ensure there's a paragraph after for cursor placement
+      if (node.getType() === 'attachment_gallery') {
+        const newParagraph = Pi();
+        node.insertAfter(newParagraph);
+      }
     } else if (currentParagraph && di(currentParagraph)) {
       currentParagraph.insertAfter(node);
     } else {
@@ -7734,14 +7739,11 @@ class Contents {
   }
 
   #selectOutsideNode(node) {
-    const nextNode = node.getNextSibling() || node.getPreviousSibling();
-    if (nextNode) {
-      if (Qn(nextNode) || Fi(nextNode)) {
-        nextNode.selectStart();
-      } else {
-        nextNode.selectNext(0, 0);
-      }
+    const nextNode = node.getNextSibling();
+    if (nextNode && (Qn(nextNode) || Fi(nextNode))) {
+      nextNode.selectStart();
     } else {
+      // If there's no suitable next node, create a new paragraph after the gallery
       const newParagraph = Pi();
       node.insertAfter(newParagraph);
       newParagraph.selectStart();
