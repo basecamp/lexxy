@@ -41,7 +41,6 @@ export class AttachmentGalleryNode extends ElementNode {
     const className = this.getGalleryClassName()
     if (dom.className !== className) {
       dom.className = className
-      return true
     }
     return false
   }

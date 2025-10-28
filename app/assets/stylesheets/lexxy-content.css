@@ -369,6 +369,11 @@
   margin-inline: auto;
   max-inline-size: 100%;
 
+  /* Make action-text-attachment elements proper grid items */
+  action-text-attachment {
+    display: block;
+  }
+
   /* Two images: side by side */
   &.attachment-gallery--2 {
     grid-template-columns: repeat(2, 1fr);
