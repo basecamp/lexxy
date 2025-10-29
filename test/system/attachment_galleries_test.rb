@@ -6,7 +6,7 @@ class AttachmentGalleriesTest < ApplicationSystemTestCase
   end
 
   test "creates gallery when uploading two images at once" do
-    attach_file [file_fixture("example.png"), file_fixture("example2.png")] do
+    attach_file [ file_fixture("example.png"), file_fixture("example2.png") ] do
       click_on "Upload file"
     end
 
@@ -23,7 +23,7 @@ class AttachmentGalleriesTest < ApplicationSystemTestCase
   end
 
   test "removes gallery wrapper when deleting down to one image" do
-    attach_file [file_fixture("example.png"), file_fixture("example2.png")] do
+    attach_file [ file_fixture("example.png"), file_fixture("example2.png") ] do
       click_on "Upload file"
     end
 
