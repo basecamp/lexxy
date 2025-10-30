@@ -5528,6 +5528,8 @@ var theme = {
   }
 };
 
+const ATTACHMENT_TAG_NAME = "bc-attachment";
+
 function bytesToHumanSize(bytes) {
   if (bytes === 0) return "0 B"
   const sizes = [ "B", "KB", "MB", "GB", "TB", "PB" ];
@@ -5608,8 +5610,6 @@ function generateDomId(prefix) {
   return `${prefix}-${randomPart}`
 }
 
-const DEFAULT_ATTACHMENT_TAG_NAME$1 = "action-text-attachment";
-
 class ActionTextAttachmentNode extends gi {
   static getType() {
     return "action_text_attachment"
@@ -5623,16 +5623,14 @@ class ActionTextAttachmentNode extends gi {
     return new ActionTextAttachmentNode({ ...serializedNode })
   }
 
-  static importDOM(editorConfig) {
-
-    const attachmentTagName = editorConfig?.actionText?.attachmentTagName ?? DEFAULT_ATTACHMENT_TAG_NAME$1;
+  static importDOM() {
 
     return {
-      [attachmentTagName]: (attachment) => {
+      [ATTACHMENT_TAG_NAME]: () => {
         return {
-          conversion: () => ({
+          conversion: (attachment) => ({
             node: new ActionTextAttachmentNode({
-              tagName: attachmentTagName,
+              tagName: ATTACHMENT_TAG_NAME,
               sgid: attachment.getAttribute("sgid"),
               src: attachment.getAttribute("url"),
               previewable: attachment.getAttribute("previewable"),
@@ -5648,11 +5646,11 @@ class ActionTextAttachmentNode extends gi {
           priority: 1
         }
       },
-      "img": (img) => {
+      "img": () => {
         return {
-          conversion: () => ({
+          conversion: (img) => ({
             node: new ActionTextAttachmentNode({
-              tagName: attachmentTagName,
+              tagName: ATTACHMENT_TAG_NAME,
               src: img.getAttribute("src"),
               caption: img.getAttribute("alt") || "",
               contentType: "image/*",
@@ -5669,7 +5667,7 @@ class ActionTextAttachmentNode extends gi {
   constructor({ tagName, sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
     super(key);
 
-    this.tagName = tagName || DEFAULT_ATTACHMENT_TAG_NAME$1;
+    this.tagName = tagName || ATTACHMENT_TAG_NAME;
     this.sgid = sgid;
     this.src = src;
     this.previewable = previewable;
@@ -6927,8 +6925,6 @@ class Selection {
   }
 }
 
-const DEFAULT_ATTACHMENT_TAG_NAME = "action-text-attachment";
-
 class CustomActionTextAttachmentNode extends gi {
   static getType() {
     return "custom_action_text_attachment"
@@ -6942,19 +6938,16 @@ class CustomActionTextAttachmentNode extends gi {
     return new CustomActionTextAttachmentNode({ ...serializedNode })
   }
 
-  static importDOM(editorConfig) {
-
-    const attachmentTagName = editorConfig?.actionText?.attachmentTagName ?? DEFAULT_ATTACHMENT_TAG_NAME;
+  static importDOM() {
 
     return {
-      [attachmentTagName]: (attachment) => {
-        const content = attachment.getAttribute("content");
-        if (!attachment.getAttribute("content")) {
+      [ATTACHMENT_TAG_NAME]: (element) => {
+        if (!element.getAttribute("content")) {
           return null
         }
 
         return {
-          conversion: () => {
+          conversion: (attachment) => {
             // Preserve initial space if present since Lexical removes it
             const nodes = [];
             const previousSibling = attachment.previousSibling;
@@ -6963,9 +6956,9 @@ class CustomActionTextAttachmentNode extends gi {
             }
 
             nodes.push(new CustomActionTextAttachmentNode({
-              tagName: attachmentTagName,
+              tagName: ATTACHMENT_TAG_NAME,
               sgid: attachment.getAttribute("sgid"),
-              innerHtml: JSON.parse(content),
+              innerHtml: JSON.parse(attachment.getAttribute("content")),
               contentType: attachment.getAttribute("content-type")
             }));
 
@@ -6982,7 +6975,7 @@ class CustomActionTextAttachmentNode extends gi {
   constructor({ tagName, sgid, contentType, innerHtml }, key) {
     super(key);
 
-    this.tagName = tagName || DEFAULT_ATTACHMENT_TAG_NAME;
+    this.tagName = tagName || ATTACHMENT_TAG_NAME;
     this.sgid = sgid;
     this.contentType = contentType || "application/vnd.actiontext.unknown";
     this.innerHtml = innerHtml;
@@ -7280,9 +7273,7 @@ class Contents {
     const blobUrlTemplate = this.editorElement.blobUrlTemplate;
 
     this.editor.update(() => {
-      const attachmentTagName = this.editorElement.config.actionText?.attachmentTagName;
-
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ tagName: attachmentTagName, file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor });
+      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor });
       this.insertAtCursor(uploadedImageNode);
     }, { tag: Ti });
   }
@@ -7633,10 +7624,8 @@ class Contents {
 
   #createCustomAttachmentNodeWithHtml(html, options = {}) {
     const attachmentConfig = typeof options === 'object' ? options : {};
-    const attachmentTagName = this.editorElement.config.actionText?.attachmentTagName;
 
     return new CustomActionTextAttachmentNode({
-      tagName: attachmentTagName,
       sgid: attachmentConfig.sgid || null,
       contentType: "text/html",
       innerHtml: html
@@ -7831,8 +7820,6 @@ class Clipboard {
   }
 }
 
-const editorConfig = { actionText: { attachmentTagName: "bc-attachment" } };
-
 class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = true
@@ -7842,8 +7829,6 @@ class LexicalEditorElement extends HTMLElement {
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
-
-  #config = editorConfig
 
   constructor() {
     super();
@@ -7888,10 +7873,6 @@ class LexicalEditorElement extends HTMLElement {
     this.editor.dispatchCommand(Ve$1, undefined);
   }
 
-  get config() {
-    return this.#config
-  }
-
   get form() {
     return this.internals.form
   }
@@ -7926,7 +7907,7 @@ class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize(m$3(this.editor, null), { additionalAllowedTags: [this.config.actionText?.attachmentTagName] });
+        this.cachedValue = sanitize(m$3(this.editor, null), { additionalAllowedTags: [ ATTACHMENT_TAG_NAME ] });
       });
     }
 
@@ -7986,8 +7967,7 @@ class LexicalEditorElement extends HTMLElement {
         throw error
       },
       theme: theme,
-      nodes: this.#lexicalNodes,
-      html: this.#htmlMaps
+      nodes: this.#lexicalNodes
     });
 
     editor.setRootElement(this.editorContentElement);
@@ -8015,20 +7995,6 @@ class LexicalEditorElement extends HTMLElement {
     }
 
     return nodes
-  }
-
-  get #htmlMaps() {
-    return {
-      import: this.#constructHtmlImportMap(editorConfig)
-    }
-  }
-
-  #constructHtmlImportMap(editorConfig) {
-    return this.#lexicalNodes.reduce(
-      (importMap = {}, node) => {
-        return { ...importMap, ...node.importDOM(editorConfig) }
-      }
-    )
   }
 
   #createEditorContentElement() {
@@ -8727,9 +8693,7 @@ class LexicalPromptElement extends HTMLElement {
 
   #insertTemplateAsAttachment(promptItem, template, stringToReplace) {
     this.#editor.update(() => {
-      const attachmentTagName = this.#editorElement.config.actionText?.attachmentTagName;
-
-      const attachmentNode = new CustomActionTextAttachmentNode({ tagName: attachmentTagName, sgid: promptItem.getAttribute("sgid"), contentType: `application/vnd.actiontext.${this.name}`, innerHtml: template.innerHTML });
+      const attachmentNode = new CustomActionTextAttachmentNode({ sgid: promptItem.getAttribute("sgid"), contentType: `application/vnd.actiontext.${this.name}`, innerHtml: template.innerHTML });
       this.#editorContents.replaceTextBackUntil(stringToReplace, attachmentNode);
     });
   }

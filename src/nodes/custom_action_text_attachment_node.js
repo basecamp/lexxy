@@ -1,8 +1,7 @@
 import { $createTextNode, DecoratorNode } from "lexical"
 import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize, mimeTypeToExtension } from "../helpers/storage_helper"
-
-const DEFAULT_ATTACHMENT_TAG_NAME = "action-text-attachment"
+import { ATTACHMENT_TAG_NAME } from "../config/attachment_tag_name"
 
 export class CustomActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -17,19 +16,16 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     return new CustomActionTextAttachmentNode({ ...serializedNode })
   }
 
-  static importDOM(editorConfig) {
-
-    const attachmentTagName = editorConfig?.actionText?.attachmentTagName ?? DEFAULT_ATTACHMENT_TAG_NAME
+  static importDOM() {
 
     return {
-      [attachmentTagName]: (attachment) => {
-        const content = attachment.getAttribute("content")
-        if (!attachment.getAttribute("content")) {
+      [ATTACHMENT_TAG_NAME]: (element) => {
+        if (!element.getAttribute("content")) {
           return null
         }
 
         return {
-          conversion: () => {
+          conversion: (attachment) => {
             // Preserve initial space if present since Lexical removes it
             const nodes = []
             const previousSibling = attachment.previousSibling
@@ -38,9 +34,9 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
             }
 
             nodes.push(new CustomActionTextAttachmentNode({
-              tagName: attachmentTagName,
+              tagName: ATTACHMENT_TAG_NAME,
               sgid: attachment.getAttribute("sgid"),
-              innerHtml: JSON.parse(content),
+              innerHtml: JSON.parse(attachment.getAttribute("content")),
               contentType: attachment.getAttribute("content-type")
             }))
 
@@ -57,7 +53,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   constructor({ tagName, sgid, contentType, innerHtml }, key) {
     super(key)
 
-    this.tagName = tagName || DEFAULT_ATTACHMENT_TAG_NAME
+    this.tagName = tagName || ATTACHMENT_TAG_NAME
     this.sgid = sgid
     this.contentType = contentType || "application/vnd.actiontext.unknown"
     this.innerHtml = innerHtml

@@ -1,8 +1,7 @@
 import { DecoratorNode } from "lexical"
 import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper";
 import { bytesToHumanSize, mimeTypeToExtension } from "../helpers/storage_helper";
-
-const DEFAULT_ATTACHMENT_TAG_NAME = "action-text-attachment"
+import { ATTACHMENT_TAG_NAME } from "../config/attachment_tag_name";
 
 export class ActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -17,16 +16,14 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return new ActionTextAttachmentNode({ ...serializedNode })
   }
 
-  static importDOM(editorConfig) {
-
-    const attachmentTagName = editorConfig?.actionText?.attachmentTagName ?? DEFAULT_ATTACHMENT_TAG_NAME
+  static importDOM() {
 
     return {
-      [attachmentTagName]: (attachment) => {
+      [ATTACHMENT_TAG_NAME]: () => {
         return {
-          conversion: () => ({
+          conversion: (attachment) => ({
             node: new ActionTextAttachmentNode({
-              tagName: attachmentTagName,
+              tagName: ATTACHMENT_TAG_NAME,
               sgid: attachment.getAttribute("sgid"),
               src: attachment.getAttribute("url"),
               previewable: attachment.getAttribute("previewable"),
@@ -42,11 +39,11 @@ export class ActionTextAttachmentNode extends DecoratorNode {
           priority: 1
         }
       },
-      "img": (img) => {
+      "img": () => {
         return {
-          conversion: () => ({
+          conversion: (img) => ({
             node: new ActionTextAttachmentNode({
-              tagName: attachmentTagName,
+              tagName: ATTACHMENT_TAG_NAME,
               src: img.getAttribute("src"),
               caption: img.getAttribute("alt") || "",
               contentType: "image/*",
@@ -63,7 +60,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   constructor({ tagName, sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
     super(key)
 
-    this.tagName = tagName || DEFAULT_ATTACHMENT_TAG_NAME
+    this.tagName = tagName || ATTACHMENT_TAG_NAME
     this.sgid = sgid
     this.src = src
     this.previewable = previewable

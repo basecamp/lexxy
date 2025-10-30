@@ -8,6 +8,7 @@ import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { registerHistory, createEmptyHistoryState } from '@lexical/history'
 
 import theme from "../config/theme"
+import { ATTACHMENT_TAG_NAME } from "../config/attachment_tag_name"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
@@ -19,8 +20,6 @@ import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 
-const editorConfig = { actionText: { attachmentTagName: "bc-attachment" } }
-
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = true
@@ -30,8 +29,6 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
-
-  #config = editorConfig
 
   constructor() {
     super()
@@ -76,10 +73,6 @@ export default class LexicalEditorElement extends HTMLElement {
     this.editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
   }
 
-  get config() {
-    return this.#config
-  }
-
   get form() {
     return this.internals.form
   }
@@ -114,7 +107,7 @@ export default class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null), { additionalAllowedTags: [this.config.actionText?.attachmentTagName] })
+        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null), { additionalAllowedTags: [ ATTACHMENT_TAG_NAME ] })
       })
     }
 
@@ -174,8 +167,7 @@ export default class LexicalEditorElement extends HTMLElement {
         throw error
       },
       theme: theme,
-      nodes: this.#lexicalNodes,
-      html: this.#htmlMaps
+      nodes: this.#lexicalNodes
     })
 
     editor.setRootElement(this.editorContentElement)
@@ -203,20 +195,6 @@ export default class LexicalEditorElement extends HTMLElement {
     }
 
     return nodes
-  }
-
-  get #htmlMaps() {
-    return {
-      import: this.#constructHtmlImportMap(editorConfig)
-    }
-  }
-
-  #constructHtmlImportMap(editorConfig) {
-    return this.#lexicalNodes.reduce(
-      (importMap = {}, node) => {
-        return { ...importMap, ...node.importDOM(editorConfig) }
-      }
-    )
   }
 
   #createEditorContentElement() {

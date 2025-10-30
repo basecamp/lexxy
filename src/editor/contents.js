@@ -258,9 +258,7 @@ export default class Contents {
     const blobUrlTemplate = this.editorElement.blobUrlTemplate
 
     this.editor.update(() => {
-      const attachmentTagName = this.editorElement.config.actionText?.attachmentTagName
-
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ tagName: attachmentTagName, file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor })
+      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor })
       this.insertAtCursor(uploadedImageNode)
     }, { tag: HISTORY_MERGE_TAG })
   }
@@ -611,10 +609,8 @@ export default class Contents {
 
   #createCustomAttachmentNodeWithHtml(html, options = {}) {
     const attachmentConfig = typeof options === 'object' ? options : {}
-    const attachmentTagName = this.editorElement.config.actionText?.attachmentTagName
 
     return new CustomActionTextAttachmentNode({
-      tagName: attachmentTagName,
       sgid: attachmentConfig.sgid || null,
       contentType: "text/html",
       innerHtml: html
