@@ -17,16 +17,16 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   connectedCallback() {
-    requestAnimationFrame(() => this.#refreshToolbarOverflow());
+    requestAnimationFrame(() => this.#refreshToolbarOverflow())
 
-    this._resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow());
-    this._resizeObserver.observe(this);
+    this._resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
+    this._resizeObserver.observe(this)
   }
 
   disconnectedCallback() {
     if (this._resizeObserver) {
-      this._resizeObserver.disconnect();
-      this._resizeObserver = null;
+      this._resizeObserver.disconnect()
+      this._resizeObserver = null
     }
   }
 
