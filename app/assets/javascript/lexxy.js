@@ -5110,12 +5110,17 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   connectedCallback() {
-    this.#refreshToolbarOverflow();
-    window.addEventListener("resize", this.#refreshToolbarOverflow);
+    requestAnimationFrame(() => this.#refreshToolbarOverflow());
+
+    this._resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow());
+    this._resizeObserver.observe(this);
   }
 
   disconnectedCallback() {
-    window.removeEventListener("resize", this.#refreshToolbarOverflow);
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
   }
 
   setEditor(editorElement) {
