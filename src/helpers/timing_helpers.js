@@ -1,6 +1,5 @@
 export function debounceAsync(fn, wait) {
   let timeout
-  let lastCall
 
   return (...args) => {
     clearTimeout(timeout)
@@ -14,8 +13,6 @@ export function debounceAsync(fn, wait) {
           reject(err)
         }
       }, wait)
-
-      lastCall = timeout
     })
   }
 }

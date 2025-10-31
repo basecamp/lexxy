@@ -1,10 +1,10 @@
-import { DecoratorNode, $getNodeByKey } from "lexical"
+import { $getNodeByKey } from "lexical"
 import { DirectUpload } from "@rails/activestorage"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
-import { createAttachmentFigure, createElement } from "../helpers/html_helper"
+import { createElement } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
-import { HISTORY_MERGE_TAG } from 'lexical'
-import { bytesToHumanSize } from "../helpers/storage_helper";
+import { HISTORY_MERGE_TAG } from "lexical"
+import { bytesToHumanSize } from "../helpers/storage_helper"
 
 export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   static getType() {
@@ -12,7 +12,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   static clone(node) {
-    return new ActionTextAttachmentUploadNode({ ...node }, node.__key);
+    return new ActionTextAttachmentUploadNode({ ...node }, node.__key)
   }
 
   constructor({ file, uploadUrl, blobUrlTemplate, editor, progress }, key) {
@@ -65,7 +65,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   #getFileExtension() {
-    return this.file.name.split('.').pop().toLowerCase()
+    return this.file.name.split(".").pop().toLowerCase()
   }
 
   #createCaption() {
@@ -95,7 +95,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       directUploadWillStoreFileWithXHR: (request) => {
         request.upload.addEventListener("progress", (event) => {
           this.editor.update(() => {
-            progressBar.value = Math.round((event.loaded / event.total) * 100)
+            progressBar.value = Math.round(event.loaded / event.total * 100)
           })
         })
       }

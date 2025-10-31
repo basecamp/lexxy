@@ -12,8 +12,10 @@
   "author": "Jorge Manrubia <jorge@37signals.com>",
   "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "^9.15.0",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-terser": "^0.4.4",
+    "eslint": "^9.15.0",
     "rollup": "^4.44.1",
     "rollup-plugin-gzip": "^4.1.1"
   },
@@ -21,6 +23,7 @@
     "build": "rollup -c",
     "build:npm": "rollup -c rollup.config.npm.mjs",
     "watch": "rollup -wc",
+    "lint": "eslint",
     "prerelease": "yarn build:npm",
     "release": "yarn build:npm && yarn publish"
   },

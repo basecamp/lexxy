@@ -1,15 +1,13 @@
 import {
   $getSelection,
-  $isRangeSelection,
-  FORMAT_TEXT_COMMAND,
-  $isTextNode
+  $isRangeSelection
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
-import { $isListNode, $isListItemNode } from "@lexical/list"
-import { $isQuoteNode, $isHeadingNode } from "@lexical/rich-text"
-import { $isCodeNode, $isCodeHighlightNode } from "@lexical/code"
+import { $isListItemNode, $isListNode } from "@lexical/list"
+import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
+import { $isCodeNode } from "@lexical/code"
 import { $isLinkNode } from "@lexical/link"
-import { getListType } from "../helpers/lexical_helper";
+import { getListType } from "../helpers/lexical_helper"
 
 export default class LexicalToolbarElement extends HTMLElement {
   constructor() {
@@ -71,7 +69,7 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #bindHotkeys() {
-    this.editorElement.addEventListener('keydown', (event) => {
+    this.editorElement.addEventListener("keydown", (event) => {
       const buttons = this.querySelectorAll("[data-hotkey]")
       buttons.forEach((button) => {
         const hotkeys = button.dataset.hotkey.toLowerCase().split(/\s+/)
@@ -87,13 +85,13 @@ export default class LexicalToolbarElement extends HTMLElement {
   #keyCombinationFor(event) {
     const pressedKey = event.key.toLowerCase()
     const modifiers = [
-      event.ctrlKey ? 'ctrl' : null,
-      event.metaKey ? 'cmd' : null,
-      event.altKey ? 'alt' : null,
-      event.shiftKey ? 'shift' : null,
+      event.ctrlKey ? "ctrl" : null,
+      event.metaKey ? "cmd" : null,
+      event.altKey ? "alt" : null,
+      event.shiftKey ? "shift" : null,
     ].filter(Boolean)
 
-    return [ ...modifiers, pressedKey ].join('+')
+    return [ ...modifiers, pressedKey ].join("+")
   }
 
   #assignButtonTabindex() {
@@ -167,19 +165,6 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#updateUndoRedoButtonStates()
   }
 
-  #isSelectionInInlineCode(selection) {
-    const nodes = selection.getNodes()
-    return nodes.some(node => {
-      if ($isCodeHighlightNode(node)) return true
-      // Check parent for text nodes inside code highlight
-      if ($isTextNode(node)) {
-        const parent = node.getParent()
-        if (parent && $isCodeHighlightNode(parent)) return true
-      }
-      return false
-    })
-  }
-
   #isInList(node) {
     let current = node
     while (current) {
@@ -227,7 +212,7 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   #resetToolbar() {
     while (this.#overflowMenu.children.length > 0) {
-      this.insertBefore(this.#overflowMenu.children[0], this.#overflow);
+      this.insertBefore(this.#overflowMenu.children[0], this.#overflow)
     }
   }
 

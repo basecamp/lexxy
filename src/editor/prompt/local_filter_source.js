@@ -1,5 +1,5 @@
 import BaseSource from "./base_source"
-import { filterMatches } from "../../helpers/string_helper";
+import { filterMatches } from "../../helpers/string_helper"
 
 export default class LocalFilterSource extends BaseSource {
   async buildListItems(filter = "") {

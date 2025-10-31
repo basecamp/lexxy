@@ -1,6 +1,6 @@
 import { DecoratorNode } from "lexical"
-import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper";
-import { bytesToHumanSize, mimeTypeToExtension } from "../helpers/storage_helper";
+import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper"
+import { bytesToHumanSize } from "../helpers/storage_helper"
 
 export class ActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -8,7 +8,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   static clone(node) {
-    return new ActionTextAttachmentNode({ ...node }, node.__key);
+    return new ActionTextAttachmentNode({ ...node }, node.__key)
   }
 
   static importJSON(serializedNode) {
@@ -146,7 +146,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #createDOMForImage() {
-    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions})
+    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions })
   }
 
   get #imageDimensions() {
@@ -158,8 +158,8 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #createDOMForFile() {
-    const extension = this.fileName ? this.fileName.split('.').pop().toLowerCase() : 'unknown'
-    return createElement("span", { className: "attachment__icon", textContent: `${extension}`})
+    const extension = this.fileName ? this.fileName.split(".").pop().toLowerCase() : "unknown"
+    return createElement("span", { className: "attachment__icon", textContent: `${extension}` })
   }
 
   #createDOMForNotImage() {
@@ -194,9 +194,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     caption.appendChild(input)
 
     return caption
-  }
-
-  #updateCaption(input) {
   }
 
   #handleCaptionInputBlurred(event) {
