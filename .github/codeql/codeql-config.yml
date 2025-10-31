@@ -1,0 +1,11 @@
+name: "CodeQL Config"
+
+paths-ignore:
+  - 'app/assets/javascript/**'
+  - 'app/assets/javascript/*.js'
+  - 'dist/**'
+  - 'node_modules/**'
+  - 'vendor/**'
+
+paths:
+  - 'src/**'
