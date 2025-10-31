@@ -49,6 +49,22 @@ export class ActionTextAttachmentNode extends DecoratorNode {
           }),
           priority: 1
         }
+      },
+      "video": (video) => {
+        const videoSource = video.getAttribute("src") || video.querySelector("source")?.src
+        const fileName = videoSource?.split("/")?.pop()
+        const contentType = video.querySelector("source")?.getAttribute("content-type") || "video/*"
+
+        return {
+          conversion: () => ({
+            node: new ActionTextAttachmentNode({
+              src: videoSource,
+              fileName: fileName,
+              contentType: contentType
+            })
+          }),
+          priority: 1
+        }
       }
     }
   }
@@ -166,10 +182,13 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     const figcaption = createElement("figcaption", { className: "attachment__caption" })
 
     const nameTag = createElement("strong", { className: "attachment__name", textContent: this.caption || this.fileName })
-    const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.fileSize) })
 
     figcaption.appendChild(nameTag)
-    figcaption.appendChild(sizeSpan)
+
+    if (this.fileSize) {
+      const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.fileSize) })
+      figcaption.appendChild(sizeSpan)
+    }
 
     return figcaption
   }
