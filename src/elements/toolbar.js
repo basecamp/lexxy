@@ -25,7 +25,7 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   disconnectedCallback() {
     if (this._resizeObserver) {
-      try { this._resizeObserver.disconnect(); } catch (_) {}
+      this._resizeObserver.disconnect();
       this._resizeObserver = null;
     }
   }
