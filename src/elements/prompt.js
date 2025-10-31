@@ -1,13 +1,12 @@
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { COMMAND_PRIORITY_HIGH, KEY_ENTER_COMMAND, KEY_TAB_COMMAND, KEY_SPACE_COMMAND, $isTextNode, $isRangeSelection, $getSelection, $isNodeSelection, $getNodeByKey } from "lexical"
+import { $getSelection, $isNodeSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_HIGH, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { isPath, isUrl } from "../helpers/string_helper"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
 import RemoteFilterSource from "../editor/prompt/remote_filter_source"
 import { $generateNodesFromDOM } from "@lexical/html"
-import { nextFrame } from "../helpers/timing_helpers";
+import { nextFrame } from "../helpers/timing_helpers"
 
 const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found"
 
@@ -313,7 +312,7 @@ export default class LexicalPromptElement extends HTMLElement {
     popoverContainer.classList.add("lexxy-prompt-menu")
     popoverContainer.style.position = "absolute"
     popoverContainer.setAttribute("nonce", getNonce())
-    popoverContainer.append(...(await this.source.buildListItems()))
+    popoverContainer.append(...await this.source.buildListItems())
     popoverContainer.addEventListener("click", this.#handlePopoverClick)
     this.#editorElement.appendChild(popoverContainer)
     return popoverContainer
