@@ -1,6 +1,5 @@
-import { createElement } from "../helpers/html_helper";
-import { $getSelection, $isRangeSelection } from "lexical";
-import { $isLinkNode } from "@lexical/link";
+import { $getSelection, $isRangeSelection } from "lexical"
+import { $isLinkNode } from "@lexical/link"
 
 export class LinkDialog extends HTMLElement {
   connectedCallback() {

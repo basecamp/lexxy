@@ -1,16 +1,16 @@
 import {
-  $createParagraphNode, $getSelection, $setSelection, $insertNodes, $isElementNode, $isParagraphNode, $isTextNode,
-  $isRangeSelection, $createLineBreakNode, $createTextNode, HISTORY_MERGE_TAG, $isNodeSelection, $getNodeByKey, $getRoot
+  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
+  $isElementNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { $toggleLink, $createLinkNode } from "@lexical/link"
+import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
-import { $isListItemNode, $isListNode } from "@lexical/list"
+import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
-import { nextFrame } from "../helpers/timing_helpers.js";
+import { nextFrame } from "../helpers/timing_helpers.js"
 
 export default class Contents {
   constructor(editorElement) {
@@ -562,8 +562,8 @@ export default class Contents {
     firstParagraph.selectStart()
     const currentSelection = $getSelection()
     if (currentSelection && $isRangeSelection(currentSelection)) {
-      currentSelection.anchor.set(firstParagraph.getKey(), 0, 'element')
-      currentSelection.focus.set(lastParagraph.getKey(), lastParagraph.getChildrenSize(), 'element')
+      currentSelection.anchor.set(firstParagraph.getKey(), 0, "element")
+      currentSelection.focus.set(lastParagraph.getKey(), lastParagraph.getChildrenSize(), "element")
     }
   }
 
@@ -617,14 +617,14 @@ export default class Contents {
       const last = children[children.length - 1]
       const beforeLast = children[children.length - 2]
 
-      if (($isTextNode(last) && last.getTextContent() === "") && (beforeLast && !$isTextNode(beforeLast))) {
+      if ($isTextNode(last) && last.getTextContent() === "" && (beforeLast && !$isTextNode(beforeLast))) {
         paragraph.append($createLineBreakNode())
       }
     }
   }
 
   #createCustomAttachmentNodeWithHtml(html, options = {}) {
-    const attachmentConfig = typeof options === 'object' ? options : {}
+    const attachmentConfig = typeof options === "object" ? options : {}
 
     return new CustomActionTextAttachmentNode({
       sgid: attachmentConfig.sgid || null,
@@ -639,6 +639,6 @@ export default class Contents {
   }
 
   #shouldUploadFile(file) {
-    return dispatch(this.editorElement, 'lexxy:file-accept', { file }, true)
+    return dispatch(this.editorElement, "lexxy:file-accept", { file }, true)
   }
 }

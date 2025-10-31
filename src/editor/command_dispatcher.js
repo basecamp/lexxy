@@ -1,18 +1,18 @@
 import {
   $getSelection,
   $isRangeSelection,
-  PASTE_COMMAND,
   COMMAND_PRIORITY_LOW,
   FORMAT_TEXT_COMMAND,
-  UNDO_COMMAND,
+  PASTE_COMMAND,
   REDO_COMMAND,
+  UNDO_COMMAND,
   $getRoot,
   $isElementNode
 } from "lexical"
 
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
-import { CodeNode, $isCodeNode } from "@lexical/code"
+import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $toggleLink } from "@lexical/link"
 import { createElement, dispatch } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
@@ -84,7 +84,7 @@ export class CommandDispatcher {
 
   dispatchInsertUnorderedList() {
     const selection = $getSelection()
-    if (!selection) return;
+    if (!selection) return
 
     const anchorNode = selection.anchor.getNode()
 
@@ -97,7 +97,7 @@ export class CommandDispatcher {
 
   dispatchInsertOrderedList() {
     const selection = $getSelection()
-    if (!selection) return;
+    if (!selection) return
 
     const anchorNode = selection.anchor.getNode()
 
@@ -144,7 +144,7 @@ export class CommandDispatcher {
       }
     })
   }
-  
+
   dispatchInsertMarkNodeDeletionTrigger(sgid) {
     this.editor.update(() => {
       const rootNode = $getRoot();

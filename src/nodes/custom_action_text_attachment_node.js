@@ -1,6 +1,5 @@
 import { $createTextNode, DecoratorNode } from "lexical"
-import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper"
-import { bytesToHumanSize, mimeTypeToExtension } from "../helpers/storage_helper"
+import { createElement, dispatchCustomEvent } from "../helpers/html_helper"
 
 export class CustomActionTextAttachmentNode extends DecoratorNode {
   static getType() {

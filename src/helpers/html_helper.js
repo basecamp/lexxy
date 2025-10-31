@@ -1,5 +1,4 @@
-import DOMPurify from 'dompurify'
-import { mimeTypeToExtension } from "./storage_helper";
+import DOMPurify from "dompurify"
 
 const VISUALLY_RELEVANT_ELEMENTS_SELECTOR = [
   "img", "video", "audio", "iframe", "embed", "object", "picture", "source", "canvas", "svg", "math",
@@ -31,9 +30,9 @@ export function parseHtml(html) {
 }
 
 export function createAttachmentFigure(contentType, isPreviewable, fileName) {
-  const extension = fileName ? fileName.split('.').pop().toLowerCase() : "unknown"
+  const extension = fileName ? fileName.split(".").pop().toLowerCase() : "unknown"
   return createElement("figure", {
-    className: `attachment attachment--${isPreviewable ? 'preview' : 'file'} attachment--${extension}`,
+    className: `attachment attachment--${isPreviewable ? "preview" : "file"} attachment--${extension}`,
     "data-content-type": contentType
   })
 }

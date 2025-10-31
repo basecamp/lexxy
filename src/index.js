@@ -14,4 +14,4 @@ import "./elements/code_language_picker"
 
 import "prismjs/components/prism-ruby"
 
-export { highlightAll } from './helpers/code_highlighting_helper'
+export { highlightAll } from "./helpers/code_highlighting_helper"
