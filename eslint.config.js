@@ -40,7 +40,8 @@ export default [
         requestAnimationFrame: "readonly",
         cancelAnimationFrame: "readonly",
         customElements: "readonly",
-        Prism: "readonly"
+        Prism: "readonly",
+        ResizeObserver: "readonly"
       }
     },
     rules: {
