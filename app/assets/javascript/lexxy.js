@@ -6128,10 +6128,12 @@ class CommandDispatcher {
       if (!cr(selection)) return
 
       const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
-      let nextTag = "h2";
+      let nextTag = "h1";
       if (At(topLevelElement)) {
         const currentTag = topLevelElement.getTag();
-        if (currentTag === "h2") {
+        if (currentTag === "h1") {
+          nextTag = "h2";
+        } else if (currentTag === "h2") {
           nextTag = "h3";
         } else if (currentTag === "h3") {
           nextTag = "h4";
