@@ -56,7 +56,6 @@ export default [
       "getter-return": ["error"],
       "keyword-spacing": ["error"],
       "no-empty": "off",
-      "no-extra-parens": ["error"],
       "no-multi-spaces": ["error", { "exceptions": { "VariableDeclarator": true } }],
       "no-multiple-empty-lines": ["error", { "max": 2 }],
       "no-restricted-globals": ["error", "event"],
