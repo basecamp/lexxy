@@ -2,6 +2,7 @@ require_relative "rich_text_area_tag"
 require_relative "form_helper"
 require_relative "form_builder"
 require_relative "action_text_tag"
+require_relative "attachable"
 
 require "active_storage/blob_with_preview_url"
 
@@ -19,6 +20,7 @@ module Lexxy
         ActionView::Helpers::FormHelper.prepend(Lexxy::FormHelper)
         ActionView::Helpers::FormBuilder.prepend(Lexxy::FormBuilder)
         ActionView::Helpers::Tags::ActionText.prepend(Lexxy::ActionTextTag)
+        ActionText::Attachable.singleton_class.prepend(Lexxy::Attachable)
 
         Lexxy.override_action_text_defaults if app.config.lexxy.override_action_text_defaults
       end
