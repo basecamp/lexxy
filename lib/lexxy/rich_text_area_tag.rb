@@ -31,6 +31,8 @@ module Lexxy
             end
             node
           end
+        else
+          value
         end
       end
   end
