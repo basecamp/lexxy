@@ -1,8 +1,8 @@
 import {
-  $createNodeSelection, $isElementNode, $isRangeSelection, $getNodeByKey, $getSelection, $isNodeSelection,
-  $setSelection, $getRoot, $isTextNode, $isLineBreakNode, COMMAND_PRIORITY_LOW, SELECTION_CHANGE_COMMAND, KEY_ARROW_LEFT_COMMAND,
-  KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_DELETE_COMMAND,
-  KEY_BACKSPACE_COMMAND, DecoratorNode, $createParagraphNode
+  $createNodeSelection, $createParagraphNode, $getNodeByKey, $getRoot, $getSelection, $isElementNode,
+  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, COMMAND_PRIORITY_LOW, DecoratorNode,
+  KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
+  KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, SELECTION_CHANGE_COMMAND
 } from "lexical"
 import { nextFrame } from "../helpers/timing_helpers"
 import { getNonce } from "../helpers/csp_helper"
@@ -266,11 +266,11 @@ export default class Selection {
     // above when navigating UP/DOWN when Lexical shows its fake cursor on custom decorator nodes.
     this.editorContentElement.addEventListener("keydown", (event) => {
       if (event.key === "ArrowUp") {
-        const lexicalCursor = this.editor.getRootElement().querySelector('[data-lexical-cursor]')
+        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
 
         if (lexicalCursor) {
           let currentElement = lexicalCursor.previousElementSibling
-          while (currentElement && currentElement.hasAttribute('data-lexical-cursor')) {
+          while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
             currentElement = currentElement.previousElementSibling
           }
 
@@ -281,11 +281,11 @@ export default class Selection {
       }
 
       if (event.key === "ArrowDown") {
-        const lexicalCursor = this.editor.getRootElement().querySelector('[data-lexical-cursor]')
+        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
 
         if (lexicalCursor) {
           let currentElement = lexicalCursor.nextElementSibling
-          while (currentElement && currentElement.hasAttribute('data-lexical-cursor')) {
+          while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
             currentElement = currentElement.nextElementSibling
           }
 
@@ -473,7 +473,7 @@ export default class Selection {
   }
 
   #isRectUnreliable(rect) {
-    return (rect.width === 0 && rect.height === 0) || (rect.top === 0 && rect.left === 0)
+    return rect.width === 0 && rect.height === 0 || rect.top === 0 && rect.left === 0
   }
 
   #createAndInsertMarker(range) {
@@ -504,7 +504,7 @@ export default class Selection {
 
   #calculateCursorPosition(rect, range) {
     const rootRect = this.editor.getRootElement().getBoundingClientRect()
-    let x = rect.left - rootRect.left
+    const x = rect.left - rootRect.left
     let y = rect.top - rootRect.top
 
     const fontSize = this.#getFontSizeForCursor(range)

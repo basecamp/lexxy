@@ -1,6 +1,6 @@
 import { DecoratorNode } from "lexical"
-import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper";
-import { bytesToHumanSize, mimeTypeToExtension } from "../helpers/storage_helper";
+import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper"
+import { bytesToHumanSize } from "../helpers/storage_helper"
 
 export class ActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -8,7 +8,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   static clone(node) {
-    return new ActionTextAttachmentNode({ ...node }, node.__key);
+    return new ActionTextAttachmentNode({ ...node }, node.__key)
   }
 
   static importJSON(serializedNode) {
@@ -45,6 +45,22 @@ export class ActionTextAttachmentNode extends DecoratorNode {
               contentType: "image/*",
               width: img.getAttribute("width"),
               height: img.getAttribute("height")
+            })
+          }),
+          priority: 1
+        }
+      },
+      "video": (video) => {
+        const videoSource = video.getAttribute("src") || video.querySelector("source")?.src
+        const fileName = videoSource?.split("/")?.pop()
+        const contentType = video.querySelector("source")?.getAttribute("content-type") || "video/*"
+
+        return {
+          conversion: () => ({
+            node: new ActionTextAttachmentNode({
+              src: videoSource,
+              fileName: fileName,
+              contentType: contentType
             })
           }),
           priority: 1
@@ -146,7 +162,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #createDOMForImage() {
-    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions})
+    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions })
   }
 
   get #imageDimensions() {
@@ -158,18 +174,21 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #createDOMForFile() {
-    const extension = this.fileName ? this.fileName.split('.').pop().toLowerCase() : 'unknown'
-    return createElement("span", { className: "attachment__icon", textContent: `${extension}`})
+    const extension = this.fileName ? this.fileName.split(".").pop().toLowerCase() : "unknown"
+    return createElement("span", { className: "attachment__icon", textContent: `${extension}` })
   }
 
   #createDOMForNotImage() {
     const figcaption = createElement("figcaption", { className: "attachment__caption" })
 
     const nameTag = createElement("strong", { className: "attachment__name", textContent: this.caption || this.fileName })
-    const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.fileSize) })
 
     figcaption.appendChild(nameTag)
-    figcaption.appendChild(sizeSpan)
+
+    if (this.fileSize) {
+      const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.fileSize) })
+      figcaption.appendChild(sizeSpan)
+    }
 
     return figcaption
   }
@@ -194,9 +213,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     caption.appendChild(input)
 
     return caption
-  }
-
-  #updateCaption(input) {
   }
 
   #handleCaptionInputBlurred(event) {

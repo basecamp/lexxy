@@ -1,6 +1,6 @@
 import { marked } from "marked"
-import { isUrl } from "../helpers/string_helper";
-import { nextFrame } from "../helpers/timing_helpers";
+import { isUrl } from "../helpers/string_helper"
+import { nextFrame } from "../helpers/timing_helpers"
 import { dispatch } from "../helpers/html_helper"
 
 export default class Clipboard {
@@ -63,7 +63,7 @@ export default class Clipboard {
   #handlePastedFiles(clipboardData) {
     if (!this.editorElement.supportsAttachments) return
 
-    const html = clipboardData.getData('text/html')
+    const html = clipboardData.getData("text/html")
     if (html) return // Ignore if image copied from browser since we will load it as a remote image
 
     this.#preservingScrollPosition(() => {

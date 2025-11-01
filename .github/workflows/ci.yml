@@ -18,8 +18,20 @@ jobs:
           ruby-version: ruby-3.3.7
           bundler-cache: true
 
-      - name: Lint code for consistent style
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint Ruby code for consistent style
         run: bin/rubocop -f github
+
+      - name: Lint JavaScript code for consistent style
+        run: yarn lint
 
   test:
     runs-on: ubuntu-latest

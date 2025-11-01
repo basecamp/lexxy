@@ -1,11 +1,11 @@
-import { createEditor, $getRoot, $getNodeByKey, $addUpdateTag, SKIP_DOM_SELECTION_TAG, KEY_ENTER_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, CLEAR_HISTORY_COMMAND } from "lexical"
-import { ListNode, ListItemNode, registerList } from "@lexical/list"
-import { LinkNode, AutoLinkNode } from "@lexical/link"
-import { registerRichText, QuoteNode, HeadingNode } from "@lexical/rich-text"
-import { $generateNodesFromDOM, $generateHtmlFromNodes } from "@lexical/html"
+import { $addUpdateTag, $getNodeByKey, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, createEditor } from "lexical"
+import { ListItemNode, ListNode, registerList } from "@lexical/list"
+import { AutoLinkNode, LinkNode } from "@lexical/link"
+import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
+import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
-import { registerHistory, createEmptyHistoryState } from '@lexical/history'
+import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
