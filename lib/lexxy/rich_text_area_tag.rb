@@ -23,13 +23,15 @@ module Lexxy
     private
       # Tempoary: we need to *adaptarize* action text
       def render_custom_attachments_in(value)
-        if value.respond_to?(:body) && html = value.body_before_type_cast.presence
-          ActionText::Fragment.wrap(html).replace(ActionText::Attachment.tag_name) do |node|
-            if node["url"].blank?
-              attachment = ActionText::Attachment.from_node(node)
-              node["content"] = render_action_text_attachment(attachment).to_json
+        if value.respond_to?(:body)
+          if html = value.body_before_type_cast.presence
+            ActionText::Fragment.wrap(html).replace(ActionText::Attachment.tag_name) do |node|
+              if node["url"].blank?
+                attachment = ActionText::Attachment.from_node(node)
+                node["content"] = render_action_text_attachment(attachment).to_json
+              end
+              node
             end
-            node
           end
         else
           value
