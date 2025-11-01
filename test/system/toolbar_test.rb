@@ -127,7 +127,7 @@ class ToolbarTest < ApplicationSystemTestCase
 
     assert_selector "lexxy-toolbar button[name=upload]"
 
-    visit edit_post_path(posts(:empty), attachments_disabled: 'invalid')
+    visit edit_post_path(posts(:empty), attachments_disabled: "invalid")
 
     assert_selector "lexxy-toolbar button[name=upload]"
   end
