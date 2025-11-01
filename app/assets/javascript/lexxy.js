@@ -5613,6 +5613,22 @@ class ActionTextAttachmentNode extends gi {
           }),
           priority: 1
         }
+      },
+      "video": (video) => {
+        const videoSource = video.getAttribute("src") || video.querySelector("source")?.src;
+        const fileName = videoSource?.split("/")?.pop();
+        const contentType = video.querySelector("source")?.getAttribute("content-type") || "video/*";
+
+        return {
+          conversion: () => ({
+            node: new ActionTextAttachmentNode({
+              src: videoSource,
+              fileName: fileName,
+              contentType: contentType
+            })
+          }),
+          priority: 1
+        }
       }
     }
   }
@@ -5730,10 +5746,13 @@ class ActionTextAttachmentNode extends gi {
     const figcaption = createElement("figcaption", { className: "attachment__caption" });
 
     const nameTag = createElement("strong", { className: "attachment__name", textContent: this.caption || this.fileName });
-    const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.fileSize) });
 
     figcaption.appendChild(nameTag);
-    figcaption.appendChild(sizeSpan);
+
+    if (this.fileSize) {
+      const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.fileSize) });
+      figcaption.appendChild(sizeSpan);
+    }
 
     return figcaption
   }
@@ -8101,6 +8120,7 @@ class LexicalEditorElement extends HTMLElement {
   #createDefaultToolbar() {
     const toolbar = createElement("lexxy-toolbar");
     toolbar.innerHTML = LexicalToolbarElement.defaultTemplate;
+    toolbar.setAttribute("data-attachments", this.supportsAttachments); // Drives toolbar CSS styles
     this.prepend(toolbar);
     return toolbar
   }
