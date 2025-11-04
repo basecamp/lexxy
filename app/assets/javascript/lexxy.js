@@ -7179,12 +7179,21 @@ class FormatEscaper {
 
     const anchorNode = selection.anchor.getNode();
 
+    return this.#handleLists(event, anchorNode)
+      || this.#handleBlockquotes(event, anchorNode)
+  }
+
+  #handleLists(event, anchorNode) {
     if (this.#shouldEscapeFromEmptyListItem(anchorNode)) {
       event.preventDefault();
       this.#escapeFromList(anchorNode);
       return true
     }
 
+    return false
+  }
+
+  #handleBlockquotes(event, anchorNode) {
     if (this.#shouldEscapeFromEmptyParagraphInBlockquote(anchorNode)) {
       event.preventDefault();
       this.#escapeFromBlockquote(anchorNode);
