@@ -30,4 +30,12 @@ class PasteTest < ApplicationSystemTestCase
     find_editor.paste "https://37signals.com"
     assert_equal_html %(<p>Hello <a href="https://37signals.com"><b><strong>everyone</strong></b></a></p>), find_editor.value
   end
+
+  test "don't convert markdown when pasting into code block" do
+    find_editor.paste "some text"
+    find_editor.toggle_command("insertCodeBlock")
+    find_editor.paste "Hello **there**"
+    assert_includes find_editor.value, "**there**"
+    refute_includes find_editor.value, "<strong>there</strong>"
+  end
 end

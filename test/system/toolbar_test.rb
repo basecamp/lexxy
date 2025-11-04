@@ -78,11 +78,18 @@ class ToolbarTest < ApplicationSystemTestCase
     find_editor.select("everyone")
 
     click_on "Quote"
-    assert_equal_html "<blockquote>Hello everyone</blockquote>", find_editor.value
+    assert_equal_html "<blockquote><p>Hello everyone</p></blockquote>", find_editor.value
 
     find_editor.select("everyone")
     click_on "Quote"
     assert_equal_html "<p>Hello everyone</p>", find_editor.value
+  end
+
+  test "multi line quote" do
+    find_editor.value = "<p>Hello</p><p>Everyone</p>"
+    find_editor.select_all
+    click_on "Quote"
+    assert_equal_html "<blockquote><p>Hello</p><p>Everyone</p></blockquote>", find_editor.value
   end
 
   test "links" do

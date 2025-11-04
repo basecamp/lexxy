@@ -6166,7 +6166,7 @@ class CommandDispatcher {
   }
 
   dispatchInsertQuoteBlock() {
-    this.contents.toggleNodeWrappingAllSelectedLines((node) => Ot$1(node), () => _t$1());
+    this.contents.toggleNodeWrappingAllSelectedNodes((node) => Ot$1(node), () => _t$1());
   }
 
   dispatchInsertCodeBlock() {
@@ -7033,10 +7033,277 @@ class CustomActionTextAttachmentNode extends ki {
   }
 }
 
+class FormatEscaper {
+  constructor(editorElement) {
+    this.editorElement = editorElement;
+    this.editor = editorElement.editor;
+  }
+
+  monitor() {
+    this.editor.registerCommand(
+      Ne$1,
+      (event) => this.#handleEnterKey(event),
+      Bi
+    );
+  }
+
+  #handleEnterKey(event) {
+    const selection = Lr();
+    if (!yr(selection)) return false
+
+    const anchorNode = selection.anchor.getNode();
+
+    return this.#handleLists(event, anchorNode)
+      || this.#handleBlockquotes(event, anchorNode)
+  }
+
+  #handleLists(event, anchorNode) {
+    if (this.#shouldEscapeFromEmptyListItem(anchorNode) || this.#shouldEscapeFromEmptyParagraphInListItem(anchorNode)) {
+      event.preventDefault();
+      this.#escapeFromList(anchorNode);
+      return true
+    }
+
+    return false
+  }
+
+  #handleBlockquotes(event, anchorNode) {
+    if (this.#shouldEscapeFromEmptyParagraphInBlockquote(anchorNode)) {
+      event.preventDefault();
+      this.#escapeFromBlockquote(anchorNode);
+      return true
+    }
+
+    return false
+  }
+
+  #shouldEscapeFromEmptyListItem(node) {
+    const listItem = this.#getListItemNode(node);
+    if (!listItem) return false
+
+    return this.#isNodeEmpty(listItem)
+  }
+
+  #shouldEscapeFromEmptyParagraphInListItem(node) {
+    const paragraph = this.#getParagraphNode(node);
+    if (!paragraph) return false
+
+    if (!this.#isNodeEmpty(paragraph)) return false
+
+    const parent = paragraph.getParent();
+    return parent && ot$2(parent)
+  }
+
+  #isNodeEmpty(node) {
+    if (node.getTextContent().trim() !== "") return false
+
+    const children = node.getChildren();
+    if (children.length === 0) return true
+
+    return children.every(child => {
+      if (jn(child)) return true
+      return this.#isNodeEmpty(child)
+    })
+  }
+
+  #getListItemNode(node) {
+    let currentNode = node;
+
+    while (currentNode) {
+      if (ot$2(currentNode)) {
+        return currentNode
+      }
+      currentNode = currentNode.getParent();
+    }
+
+    return null
+  }
+
+  #escapeFromList(anchorNode) {
+    const listItem = this.#getListItemNode(anchorNode);
+    if (!listItem) return
+
+    const parentList = listItem.getParent();
+    if (!parentList || !dt$1(parentList)) return
+
+    const blockquote = parentList.getParent();
+    const isInBlockquote = blockquote && Ot$1(blockquote);
+
+    if (isInBlockquote) {
+      const listItemsAfter = this.#getListItemSiblingsAfter(listItem);
+      const nonEmptyListItems = listItemsAfter.filter(item => !this.#isNodeEmpty(item));
+
+      if (nonEmptyListItems.length > 0) {
+        this.#splitBlockquoteWithList(blockquote, parentList, listItem, nonEmptyListItems);
+        return
+      }
+    }
+
+    const paragraph = Li();
+    parentList.insertAfter(paragraph);
+
+    listItem.remove();
+    paragraph.selectStart();
+  }
+
+  #shouldEscapeFromEmptyParagraphInBlockquote(node) {
+    const paragraph = this.#getParagraphNode(node);
+    if (!paragraph) return false
+
+    if (!this.#isNodeEmpty(paragraph)) return false
+
+    const parent = paragraph.getParent();
+    return parent && Ot$1(parent)
+  }
+
+  #getParagraphNode(node) {
+    let currentNode = node;
+
+    while (currentNode) {
+      if (Ii(currentNode)) {
+        return currentNode
+      }
+      currentNode = currentNode.getParent();
+    }
+
+    return null
+  }
+
+  #escapeFromBlockquote(anchorNode) {
+    const paragraph = this.#getParagraphNode(anchorNode);
+    if (!paragraph) return
+
+    const blockquote = paragraph.getParent();
+    if (!blockquote || !Ot$1(blockquote)) return
+
+    const siblingsAfter = this.#getSiblingsAfter(paragraph);
+    const nonEmptySiblings = siblingsAfter.filter(sibling => !this.#isNodeEmpty(sibling));
+
+    if (nonEmptySiblings.length > 0) {
+      this.#splitBlockquote(blockquote, paragraph, nonEmptySiblings);
+    } else {
+      const newParagraph = Li();
+      blockquote.insertAfter(newParagraph);
+      paragraph.remove();
+      newParagraph.selectStart();
+    }
+  }
+
+  #getSiblingsAfter(node) {
+    const siblings = [];
+    let sibling = node.getNextSibling();
+
+    while (sibling) {
+      siblings.push(sibling);
+      sibling = sibling.getNextSibling();
+    }
+
+    return siblings
+  }
+
+  #getListItemSiblingsAfter(listItem) {
+    const siblings = [];
+    let sibling = listItem.getNextSibling();
+
+    while (sibling) {
+      if (ot$2(sibling)) {
+        siblings.push(sibling);
+      }
+      sibling = sibling.getNextSibling();
+    }
+
+    return siblings
+  }
+
+  #splitBlockquoteWithList(blockquote, parentList, emptyListItem, listItemsAfter) {
+    const blockquoteSiblingsAfterList = this.#getSiblingsAfter(parentList);
+    const nonEmptyBlockquoteSiblings = blockquoteSiblingsAfterList.filter(sibling => !this.#isNodeEmpty(sibling));
+
+    const middleParagraph = Li();
+    blockquote.insertAfter(middleParagraph);
+
+    const newList = ht$3(parentList.getListType());
+
+    const newBlockquote = _t$1();
+    middleParagraph.insertAfter(newBlockquote);
+    newBlockquote.append(newList);
+
+    listItemsAfter.forEach(item => {
+      newList.append(item);
+    });
+
+    nonEmptyBlockquoteSiblings.forEach(sibling => {
+      newBlockquote.append(sibling);
+    });
+
+    emptyListItem.remove();
+
+    this.#removeTrailingEmptyListItems(parentList);
+    this.#removeTrailingEmptyNodes(newBlockquote);
+
+    if (parentList.getChildrenSize() === 0) {
+      parentList.remove();
+
+      if (blockquote.getChildrenSize() === 0) {
+        blockquote.remove();
+      }
+    } else {
+      this.#removeTrailingEmptyNodes(blockquote);
+    }
+
+    middleParagraph.selectStart();
+  }
+
+  #removeTrailingEmptyListItems(list) {
+    const items = list.getChildren();
+    for (let i = items.length - 1; i >= 0; i--) {
+      const item = items[i];
+      if (ot$2(item) && this.#isNodeEmpty(item)) {
+        item.remove();
+      } else {
+        break
+      }
+    }
+  }
+
+  #removeTrailingEmptyNodes(blockquote) {
+    const children = blockquote.getChildren();
+    for (let i = children.length - 1; i >= 0; i--) {
+      const child = children[i];
+      if (this.#isNodeEmpty(child)) {
+        child.remove();
+      } else {
+        break
+      }
+    }
+  }
+
+  #splitBlockquote(blockquote, emptyParagraph, siblingsAfter) {
+    const newParagraph = Li();
+    blockquote.insertAfter(newParagraph);
+
+    const newBlockquote = _t$1();
+    newParagraph.insertAfter(newBlockquote);
+
+    siblingsAfter.forEach(sibling => {
+      newBlockquote.append(sibling);
+    });
+
+    emptyParagraph.remove();
+
+    this.#removeTrailingEmptyNodes(blockquote);
+    this.#removeTrailingEmptyNodes(newBlockquote);
+
+    newParagraph.selectStart();
+  }
+}
+
 class Contents {
   constructor(editorElement) {
     this.editorElement = editorElement;
     this.editor = editorElement.editor;
+
+    new FormatEscaper(editorElement).monitor();
   }
 
   insertHtml(html) {
@@ -7097,20 +7364,23 @@ class Contents {
       if (isFormatAppliedFn(topLevelElement)) {
         this.removeFormattingFromSelectedLines();
       } else {
-        this.insertNodeWrappingAllSelectedLines(newNodeFn);
+        this.#insertNodeWrappingAllSelectedLines(newNodeFn);
       }
     });
   }
 
-  insertNodeWrappingAllSelectedLines(newNodeFn) {
+  toggleNodeWrappingAllSelectedNodes(isFormatAppliedFn, newNodeFn) {
     this.editor.update(() => {
       const selection = Lr();
       if (!yr(selection)) return
 
-      if (selection.isCollapsed()) {
-        this.#wrapCurrentLine(selection, newNodeFn);
+      const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
+
+      // Check if format is already applied
+      if (isFormatAppliedFn(topLevelElement)) {
+        this.#unwrap(topLevelElement);
       } else {
-        this.#wrapMultipleSelectedLines(selection, newNodeFn);
+        this.#insertNodeWrappingAllSelectedNodes(newNodeFn);
       }
     });
   }
@@ -7349,6 +7619,80 @@ class Contents {
 
   get #selection() {
     return this.editorElement.selection
+  }
+
+  #unwrap(node) {
+    const children = node.getChildren();
+
+    children.forEach((child) => {
+      node.insertBefore(child);
+    });
+
+    node.remove();
+  }
+
+  #insertNodeWrappingAllSelectedNodes(newNodeFn) {
+    this.editor.update(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const selectedNodes = selection.extract();
+      if (selectedNodes.length === 0) return
+
+      const topLevelElements = new Set();
+      selectedNodes.forEach((node) => {
+        const topLevel = node.getTopLevelElementOrThrow();
+        topLevelElements.add(topLevel);
+      });
+
+      const elements = this.#removeTrailingEmptyParagraphs(Array.from(topLevelElements));
+      if (elements.length === 0) return
+
+      const wrappingNode = newNodeFn();
+      elements[0].insertBefore(wrappingNode);
+      elements.forEach((element) => {
+        wrappingNode.append(element);
+      });
+
+      wo(null);
+    });
+  }
+
+  #removeTrailingEmptyParagraphs(elements) {
+    let lastNonEmptyIndex = elements.length - 1;
+
+    // Find the last non-empty paragraph
+    while (lastNonEmptyIndex >= 0) {
+      const element = elements[lastNonEmptyIndex];
+      if (!Ii(element) || !this.#isElementEmpty(element)) {
+        break
+      }
+      lastNonEmptyIndex--;
+    }
+
+    return elements.slice(0, lastNonEmptyIndex + 1)
+  }
+
+  #isElementEmpty(element) {
+    // Check text content first
+    if (element.getTextContent().trim() !== "") return false
+
+    // Check if it only contains line breaks
+    const children = element.getChildren();
+    return children.length === 0 || children.every(child => jn(child))
+  }
+
+  #insertNodeWrappingAllSelectedLines(newNodeFn) {
+    this.editor.update(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      if (selection.isCollapsed()) {
+        this.#wrapCurrentLine(selection, newNodeFn);
+      } else {
+        this.#wrapMultipleSelectedLines(selection, newNodeFn);
+      }
+    });
   }
 
   #wrapCurrentLine(selection, newNodeFn) {
@@ -7751,7 +8095,7 @@ class Clipboard {
 
     if (!clipboardData) return false
 
-    if (this.#isOnlyPlainTextPasted(clipboardData)) {
+    if (this.#isOnlyPlainTextPasted(clipboardData) && !this.#isPastingIntoCodeBlock()) {
       this.#pastePlainText(clipboardData);
       event.preventDefault();
       return true
@@ -7763,6 +8107,27 @@ class Clipboard {
   #isOnlyPlainTextPasted(clipboardData) {
     const types = Array.from(clipboardData.types);
     return types.length === 1 && types[0] === "text/plain"
+  }
+
+  #isPastingIntoCodeBlock() {
+    let result = false;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      let currentNode = selection.anchor.getNode();
+
+      while (currentNode) {
+        if (X$1(currentNode)) {
+          result = true;
+          return
+        }
+        currentNode = currentNode.getParent();
+      }
+    });
+
+    return result
   }
 
   #pastePlainText(clipboardData) {

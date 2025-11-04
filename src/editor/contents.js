@@ -1,6 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
-  $isElementNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -11,11 +11,14 @@ import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
 import { nextFrame } from "../helpers/timing_helpers.js"
+import { FormatEscaper } from "./format_escaper"
 
 export default class Contents {
   constructor(editorElement) {
     this.editorElement = editorElement
     this.editor = editorElement.editor
+
+    new FormatEscaper(editorElement).monitor()
   }
 
   insertHtml(html) {
@@ -76,20 +79,23 @@ export default class Contents {
       if (isFormatAppliedFn(topLevelElement)) {
         this.removeFormattingFromSelectedLines()
       } else {
-        this.insertNodeWrappingAllSelectedLines(newNodeFn)
+        this.#insertNodeWrappingAllSelectedLines(newNodeFn)
       }
     })
   }
 
-  insertNodeWrappingAllSelectedLines(newNodeFn) {
+  toggleNodeWrappingAllSelectedNodes(isFormatAppliedFn, newNodeFn) {
     this.editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
-      if (selection.isCollapsed()) {
-        this.#wrapCurrentLine(selection, newNodeFn)
+      const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
+
+      // Check if format is already applied
+      if (isFormatAppliedFn(topLevelElement)) {
+        this.#unwrap(topLevelElement)
       } else {
-        this.#wrapMultipleSelectedLines(selection, newNodeFn)
+        this.#insertNodeWrappingAllSelectedNodes(newNodeFn)
       }
     })
   }
@@ -328,6 +334,80 @@ export default class Contents {
 
   get #selection() {
     return this.editorElement.selection
+  }
+
+  #unwrap(node) {
+    const children = node.getChildren()
+
+    children.forEach((child) => {
+      node.insertBefore(child)
+    })
+
+    node.remove()
+  }
+
+  #insertNodeWrappingAllSelectedNodes(newNodeFn) {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const selectedNodes = selection.extract()
+      if (selectedNodes.length === 0) return
+
+      const topLevelElements = new Set()
+      selectedNodes.forEach((node) => {
+        const topLevel = node.getTopLevelElementOrThrow()
+        topLevelElements.add(topLevel)
+      })
+
+      const elements = this.#removeTrailingEmptyParagraphs(Array.from(topLevelElements))
+      if (elements.length === 0) return
+
+      const wrappingNode = newNodeFn()
+      elements[0].insertBefore(wrappingNode)
+      elements.forEach((element) => {
+        wrappingNode.append(element)
+      })
+
+      $setSelection(null)
+    })
+  }
+
+  #removeTrailingEmptyParagraphs(elements) {
+    let lastNonEmptyIndex = elements.length - 1
+
+    // Find the last non-empty paragraph
+    while (lastNonEmptyIndex >= 0) {
+      const element = elements[lastNonEmptyIndex]
+      if (!$isParagraphNode(element) || !this.#isElementEmpty(element)) {
+        break
+      }
+      lastNonEmptyIndex--
+    }
+
+    return elements.slice(0, lastNonEmptyIndex + 1)
+  }
+
+  #isElementEmpty(element) {
+    // Check text content first
+    if (element.getTextContent().trim() !== "") return false
+
+    // Check if it only contains line breaks
+    const children = element.getChildren()
+    return children.length === 0 || children.every(child => $isLineBreakNode(child))
+  }
+
+  #insertNodeWrappingAllSelectedLines(newNodeFn) {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      if (selection.isCollapsed()) {
+        this.#wrapCurrentLine(selection, newNodeFn)
+      } else {
+        this.#wrapMultipleSelectedLines(selection, newNodeFn)
+      }
+    })
   }
 
   #wrapCurrentLine(selection, newNodeFn) {
