@@ -78,7 +78,7 @@ class ToolbarTest < ApplicationSystemTestCase
     find_editor.select("everyone")
 
     click_on "Quote"
-    assert_equal_html "<blockquote>Hello everyone</blockquote>", find_editor.value
+    assert_equal_html "<blockquote><p>Hello everyone</p></blockquote>", find_editor.value
 
     find_editor.select("everyone")
     click_on "Quote"
@@ -89,7 +89,7 @@ class ToolbarTest < ApplicationSystemTestCase
     find_editor.value = "<p>Hello</p><p>Everyone</p>"
     find_editor.select_all
     click_on "Quote"
-    assert_equal_html "<blockquote>Hello<br><br>Everyone</blockquote>", find_editor.value
+    assert_equal_html "<blockquote><p>Hello</p><p>Everyone</p></blockquote>", find_editor.value
   end
 
   test "links" do

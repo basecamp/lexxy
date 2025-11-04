@@ -1,6 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
-  $isElementNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -354,14 +354,13 @@ export default class Contents {
       const selectedNodes = selection.extract()
       if (selectedNodes.length === 0) return
 
-      // Get all top-level elements from selected nodes
       const topLevelElements = new Set()
       selectedNodes.forEach((node) => {
         const topLevel = node.getTopLevelElementOrThrow()
         topLevelElements.add(topLevel)
       })
 
-      const elements = Array.from(topLevelElements)
+      const elements = this.#removeTrailingEmptyParagraphs(Array.from(topLevelElements))
       if (elements.length === 0) return
 
       const wrappingNode = newNodeFn()
@@ -372,6 +371,30 @@ export default class Contents {
 
       $setSelection(null)
     })
+  }
+
+  #removeTrailingEmptyParagraphs(elements) {
+    let lastNonEmptyIndex = elements.length - 1
+
+    // Find the last non-empty paragraph
+    while (lastNonEmptyIndex >= 0) {
+      const element = elements[lastNonEmptyIndex]
+      if (!$isParagraphNode(element) || !this.#isElementEmpty(element)) {
+        break
+      }
+      lastNonEmptyIndex--
+    }
+
+    return elements.slice(0, lastNonEmptyIndex + 1)
+  }
+
+  #isElementEmpty(element) {
+    // Check text content first
+    if (element.getTextContent().trim() !== "") return false
+
+    // Check if it only contains line breaks
+    const children = element.getChildren()
+    return children.length === 0 || children.every(child => $isLineBreakNode(child))
   }
 
   #insertNodeWrappingAllSelectedLines(newNodeFn) {
