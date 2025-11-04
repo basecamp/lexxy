@@ -7159,10 +7159,118 @@ class CustomActionTextAttachmentNode extends gi {
   }
 }
 
+class FormatEscaper {
+  constructor(editorElement) {
+    this.editorElement = editorElement;
+    this.editor = editorElement.editor;
+  }
+
+  monitor() {
+    this.editor.registerCommand(
+      Ne$1,
+      (event) => this.#handleEnterKey(event),
+      Bi
+    );
+  }
+
+  #handleEnterKey(event) {
+    const selection = Lr();
+    if (!yr(selection)) return false
+
+    const anchorNode = selection.anchor.getNode();
+
+    if (this.#shouldEscapeFromEmptyListItem(anchorNode)) {
+      event.preventDefault();
+      this.#escapeFromList(anchorNode);
+      return true
+    }
+
+    if (this.#shouldEscapeFromEmptyParagraphInBlockquote(anchorNode)) {
+      event.preventDefault();
+      this.#escapeFromBlockquote(anchorNode);
+      return true
+    }
+
+    return false
+  }
+
+  #shouldEscapeFromEmptyListItem(node) {
+    const listItem = this.#getListItemNode(node);
+    if (!listItem) return false
+
+    return listItem.getTextContent().trim() === ""
+  }
+
+  #getListItemNode(node) {
+    let currentNode = node;
+
+    while (currentNode) {
+      if (ot$2(currentNode)) {
+        return currentNode
+      }
+      currentNode = currentNode.getParent();
+    }
+
+    return null
+  }
+
+  #escapeFromList(anchorNode) {
+    const listItem = this.#getListItemNode(anchorNode);
+    if (!listItem) return
+
+    const parentList = listItem.getParent();
+    if (!parentList || !dt$1(parentList)) return
+
+    const paragraph = Li();
+    parentList.insertAfter(paragraph);
+
+    listItem.remove();
+    paragraph.selectStart();
+  }
+
+  #shouldEscapeFromEmptyParagraphInBlockquote(node) {
+    const paragraph = this.#getParagraphNode(node);
+    if (!paragraph) return false
+
+    if (paragraph.getTextContent().trim() !== "") return false
+
+    const parent = paragraph.getParent();
+    return parent && Ot$1(parent)
+  }
+
+  #getParagraphNode(node) {
+    let currentNode = node;
+
+    while (currentNode) {
+      if (Ii(currentNode)) {
+        return currentNode
+      }
+      currentNode = currentNode.getParent();
+    }
+
+    return null
+  }
+
+  #escapeFromBlockquote(anchorNode) {
+    const paragraph = this.#getParagraphNode(anchorNode);
+    if (!paragraph) return
+
+    const blockquote = paragraph.getParent();
+    if (!blockquote || !Ot$1(blockquote)) return
+
+    const newParagraph = Li();
+    blockquote.insertAfter(newParagraph);
+    paragraph.remove();
+    newParagraph.selectStart();
+  }
+}
+
 class Contents {
   constructor(editorElement) {
     this.editorElement = editorElement;
     this.editor = editorElement.editor;
+
+    new FormatEscaper(editorElement).monitor();
   }
 
   insertHtml(html) {
