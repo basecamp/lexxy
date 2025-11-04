@@ -11,7 +11,6 @@ import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
 import { nextFrame } from "../helpers/timing_helpers.js"
-import { $isQuoteNode } from "@lexical/rich-text"
 import { FormatEscaper } from "./format_escaper"
 
 export default class Contents {
