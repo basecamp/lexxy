@@ -22,6 +22,8 @@ export class FormatEscaper {
 
     const anchorNode = selection.anchor.getNode()
 
+    if (!this.#isInsideBlockquote(anchorNode)) return false
+
     return this.#handleLists(event, anchorNode)
       || this.#handleBlockquotes(event, anchorNode)
   }
@@ -41,6 +43,19 @@ export class FormatEscaper {
       event.preventDefault()
       this.#escapeFromBlockquote(anchorNode)
       return true
+    }
+
+    return false
+  }
+
+  #isInsideBlockquote(node) {
+    let currentNode = node
+
+    while (currentNode) {
+      if ($isQuoteNode(currentNode)) {
+        return true
+      }
+      currentNode = currentNode.getParent()
     }
 
     return false
