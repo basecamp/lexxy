@@ -6225,7 +6225,19 @@ class CommandDispatcher {
   }
 
   dispatchLink(url) {
-    this.#toggleLink(url);
+    this.editor.update(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      if (selection.isCollapsed()) {
+        const autoLinkNode = I$1(url);
+        const textNode = sr(url);
+        autoLinkNode.append(textNode);
+        selection.insertNodes([ autoLinkNode ]);
+      } else {
+        J$1(url);
+      }
+    });
   }
 
   dispatchUnlink() {

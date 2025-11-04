@@ -1,19 +1,20 @@
 import {
+  $createTextNode,
+  $getRoot,
   $getSelection,
+  $isElementNode,
   $isRangeSelection,
   COMMAND_PRIORITY_LOW,
   FORMAT_TEXT_COMMAND,
   PASTE_COMMAND,
   REDO_COMMAND,
-  UNDO_COMMAND,
-  $getRoot,
-  $isElementNode
+  UNDO_COMMAND
 } from "lexical"
 
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
-import { $toggleLink } from "@lexical/link"
+import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { createElement, dispatch } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
@@ -75,7 +76,19 @@ export class CommandDispatcher {
   }
 
   dispatchLink(url) {
-    this.#toggleLink(url)
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      if (selection.isCollapsed()) {
+        const autoLinkNode = $createAutoLinkNode(url)
+        const textNode = $createTextNode(url)
+        autoLinkNode.append(textNode)
+        selection.insertNodes([ autoLinkNode ])
+      } else {
+        $toggleLink(url)
+      }
+    })
   }
 
   dispatchUnlink() {
