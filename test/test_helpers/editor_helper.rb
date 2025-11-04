@@ -1,10 +1,7 @@
 module EditorHelper
   def find_editor(selector = "lexxy-editor")
     @handlers_by_selector ||= {}
-    @handlers_by_selector[selector] = begin
-      editor_element = find(selector)
-      EditorHandler.new(page, editor_element)
-    end
+    @handlers_by_selector[selector] ||= EditorHandler.new(page, selector)
   end
 
   def assert_figure_attachment(content_type:, &block)
