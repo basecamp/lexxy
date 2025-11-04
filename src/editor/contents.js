@@ -77,20 +77,23 @@ export default class Contents {
       if (isFormatAppliedFn(topLevelElement)) {
         this.removeFormattingFromSelectedLines()
       } else {
-        this.insertNodeWrappingAllSelectedLines(newNodeFn)
+        this.#insertNodeWrappingAllSelectedLines(newNodeFn)
       }
     })
   }
 
-  insertNodeWrappingAllSelectedLines(newNodeFn) {
+  toggleNodeWrappingAllSelectedNodes(isFormatAppliedFn, newNodeFn) {
     this.editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
-      if (selection.isCollapsed()) {
-        this.#wrapCurrentLine(selection, newNodeFn)
+      const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
+
+      // Check if format is already applied
+      if (isFormatAppliedFn(topLevelElement)) {
+        this.#unwrap(topLevelElement)
       } else {
-        this.#wrapMultipleSelectedLines(selection, newNodeFn)
+        this.#insertNodeWrappingAllSelectedNodes(newNodeFn)
       }
     })
   }
@@ -331,6 +334,57 @@ export default class Contents {
     return this.editorElement.selection
   }
 
+  #unwrap(node) {
+    const children = node.getChildren()
+
+    children.forEach((child) => {
+      node.insertBefore(child)
+    })
+
+    node.remove()
+  }
+
+  #insertNodeWrappingAllSelectedNodes(newNodeFn) {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const selectedNodes = selection.extract()
+      if (selectedNodes.length === 0) return
+
+      // Get all top-level elements from selected nodes
+      const topLevelElements = new Set()
+      selectedNodes.forEach((node) => {
+        const topLevel = node.getTopLevelElementOrThrow()
+        topLevelElements.add(topLevel)
+      })
+
+      const elements = Array.from(topLevelElements)
+      if (elements.length === 0) return
+
+      const wrappingNode = newNodeFn()
+      elements[0].insertBefore(wrappingNode)
+      elements.forEach((element) => {
+        wrappingNode.append(element)
+      })
+
+      $setSelection(null)
+    })
+  }
+
+  #insertNodeWrappingAllSelectedLines(newNodeFn) {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      if (selection.isCollapsed()) {
+        this.#wrapCurrentLine(selection, newNodeFn)
+      } else {
+        this.#wrapMultipleSelectedLines(selection, newNodeFn)
+      }
+    })
+  }
+
   #wrapCurrentLine(selection, newNodeFn) {
     const anchorNode = selection.anchor.getNode()
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
@@ -399,17 +453,10 @@ export default class Contents {
       wrappingNode.append($createTextNode(lineText))
       if (index < lines.length - 1) {
         wrappingNode.append($createLineBreakNode())
-        if (this.#shouldSeparateWrappedInsideOf(wrappingNode)) {
-          wrappingNode.append($createLineBreakNode())
-        }
       }
     })
 
     return wrappingNode
-  }
-
-  #shouldSeparateWrappedInsideOf(wrappingNode) {
-    return $isQuoteNode(wrappingNode)
   }
 
   #replaceWithWrappingNode(selection, wrappingNode) {

@@ -6166,7 +6166,7 @@ class CommandDispatcher {
   }
 
   dispatchInsertQuoteBlock() {
-    this.contents.toggleNodeWrappingAllSelectedLines((node) => Ot$1(node), () => _t$1());
+    this.contents.toggleNodeWrappingAllSelectedNodes((node) => Ot$1(node), () => _t$1());
   }
 
   dispatchInsertCodeBlock() {
@@ -7097,20 +7097,23 @@ class Contents {
       if (isFormatAppliedFn(topLevelElement)) {
         this.removeFormattingFromSelectedLines();
       } else {
-        this.insertNodeWrappingAllSelectedLines(newNodeFn);
+        this.#insertNodeWrappingAllSelectedLines(newNodeFn);
       }
     });
   }
 
-  insertNodeWrappingAllSelectedLines(newNodeFn) {
+  toggleNodeWrappingAllSelectedNodes(isFormatAppliedFn, newNodeFn) {
     this.editor.update(() => {
       const selection = Lr();
       if (!yr(selection)) return
 
-      if (selection.isCollapsed()) {
-        this.#wrapCurrentLine(selection, newNodeFn);
+      const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
+
+      // Check if format is already applied
+      if (isFormatAppliedFn(topLevelElement)) {
+        this.#unwrap(topLevelElement);
       } else {
-        this.#wrapMultipleSelectedLines(selection, newNodeFn);
+        this.#insertNodeWrappingAllSelectedNodes(newNodeFn);
       }
     });
   }
@@ -7351,6 +7354,57 @@ class Contents {
     return this.editorElement.selection
   }
 
+  #unwrap(node) {
+    const children = node.getChildren();
+
+    children.forEach((child) => {
+      node.insertBefore(child);
+    });
+
+    node.remove();
+  }
+
+  #insertNodeWrappingAllSelectedNodes(newNodeFn) {
+    this.editor.update(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const selectedNodes = selection.extract();
+      if (selectedNodes.length === 0) return
+
+      // Get all top-level elements from selected nodes
+      const topLevelElements = new Set();
+      selectedNodes.forEach((node) => {
+        const topLevel = node.getTopLevelElementOrThrow();
+        topLevelElements.add(topLevel);
+      });
+
+      const elements = Array.from(topLevelElements);
+      if (elements.length === 0) return
+
+      const wrappingNode = newNodeFn();
+      elements[0].insertBefore(wrappingNode);
+      elements.forEach((element) => {
+        wrappingNode.append(element);
+      });
+
+      wo(null);
+    });
+  }
+
+  #insertNodeWrappingAllSelectedLines(newNodeFn) {
+    this.editor.update(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      if (selection.isCollapsed()) {
+        this.#wrapCurrentLine(selection, newNodeFn);
+      } else {
+        this.#wrapMultipleSelectedLines(selection, newNodeFn);
+      }
+    });
+  }
+
   #wrapCurrentLine(selection, newNodeFn) {
     const anchorNode = selection.anchor.getNode();
     const topLevelElement = anchorNode.getTopLevelElementOrThrow();
@@ -7419,17 +7473,10 @@ class Contents {
       wrappingNode.append(sr(lineText));
       if (index < lines.length - 1) {
         wrappingNode.append(Jn());
-        if (this.#shouldSeparateWrappedInsideOf(wrappingNode)) {
-          wrappingNode.append(Jn());
-        }
       }
     });
 
     return wrappingNode
-  }
-
-  #shouldSeparateWrappedInsideOf(wrappingNode) {
-    return Ot$1(wrappingNode)
   }
 
   #replaceWithWrappingNode(selection, wrappingNode) {
