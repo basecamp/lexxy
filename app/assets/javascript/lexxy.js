@@ -7419,10 +7419,17 @@ class Contents {
       wrappingNode.append(sr(lineText));
       if (index < lines.length - 1) {
         wrappingNode.append(Jn());
+        if (this.#shouldSeparateWrappedInsideOf(wrappingNode)) {
+          wrappingNode.append(Jn());
+        }
       }
     });
 
     return wrappingNode
+  }
+
+  #shouldSeparateWrappedInsideOf(wrappingNode) {
+    return Ot$1(wrappingNode)
   }
 
   #replaceWithWrappingNode(selection, wrappingNode) {

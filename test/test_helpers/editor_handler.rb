@@ -11,6 +11,7 @@ class EditorHandler
   def value=(value)
     editor_element.set value
     page.execute_script("arguments[0].value = '#{value}'", editor_element)
+    sleep 0.1
   end
 
   def send(*keys)
@@ -52,6 +53,19 @@ class EditorHandler
           break
         }
       }
+    JS
+    sleep 0.1
+  end
+
+  def select_all
+    simulate_first_interaction_if_needed
+    page.execute_script <<~JS, content_element
+      const editable = arguments[0]
+      const range = document.createRange()
+      range.selectNodeContents(editable)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
     JS
     sleep 0.1
   end
