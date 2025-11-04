@@ -1,11 +1,11 @@
 class EditorHandler
-  attr_reader :page, :editor_element
+  attr_reader :page, :selector
 
   delegate_missing_to :editor_element
 
-  def initialize(page, editor_element)
+  def initialize(page, selector)
     @page = page
-    @editor_element = editor_element
+    @selector = selector
   end
 
   def value=(value)
@@ -14,10 +14,13 @@ class EditorHandler
   end
 
   def send(*keys)
+    simulate_first_interaction_if_needed
     content_element.send_keys *keys
   end
 
   def send_key(key)
+    simulate_first_interaction_if_needed
+
     page.execute_script <<~JS, content_element
       const event = new KeyboardEvent('keydown', {
         bubbles: true,
@@ -30,6 +33,8 @@ class EditorHandler
   end
 
   def select(text)
+    simulate_first_interaction_if_needed
+
     page.execute_script <<~JS, editor_element
       const editable = arguments[0]
       const walker = document.createTreeWalker(editable, NodeFilter.SHOW_TEXT)
@@ -83,7 +88,19 @@ class EditorHandler
   end
 
   private
+    def editor_element
+      page.find(selector)
+    end
+
     def content_element
-      @content_element ||= editor_element.find(".lexxy-editor__content")
+      editor_element.find(".lexxy-editor__content")
+    end
+
+    def simulate_first_interaction_if_needed
+      # Adding text or selecting text will not work otherwise
+      unless @first_interaction_simulated
+        content_element.click
+        @first_interaction_simulated = true
+      end
     end
 end

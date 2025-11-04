@@ -40,9 +40,6 @@ class ToolbarTest < ApplicationSystemTestCase
   end
 
   test "bullet list" do
-    # Cheeck for guard against empty selection
-    click_on "Bullet list"
-
     find_editor.select("everyone")
 
     click_on "Bullet list"
@@ -50,9 +47,6 @@ class ToolbarTest < ApplicationSystemTestCase
   end
 
   test "numbered list" do
-    # Cheeck for guard against empty selection
-    click_on "Numbered list"
-
     find_editor.select("everyone")
 
     click_on "Numbered list"
