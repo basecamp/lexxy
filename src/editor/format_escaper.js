@@ -1,4 +1,4 @@
-import { $createParagraphNode, $getSelection, $isRangeSelection, $isParagraphNode, KEY_ENTER_COMMAND, COMMAND_PRIORITY_HIGH } from "lexical"
+import { $createParagraphNode, $getSelection, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ENTER_COMMAND } from "lexical"
 import { $isListItemNode, $isListNode } from "@lexical/list"
 import { $isQuoteNode } from "@lexical/rich-text"
 
