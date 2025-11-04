@@ -7421,6 +7421,22 @@ class Contents {
     }, { tag: Ti });
   }
 
+  insertAttachment({ content, sgid, contentType = "text/html" }) {
+    if (!content || !sgid) {
+      console.error("insertAttachment requires both 'content' and 'sgid' parameters");
+      return
+    }
+
+    this.editor.update(() => {
+      const attachmentNode = new CustomActionTextAttachmentNode({
+        sgid: sgid,
+        contentType: contentType,
+        innerHtml: content
+      });
+      this.insertAtCursor(attachmentNode);
+    });
+  }
+
   async deleteSelectedNodes() {
     let focusNode = null;
 
