@@ -8501,8 +8501,8 @@ class LexicalPromptElement extends HTMLElement {
 
   async #showPopover() {
     this.popoverElement ??= await this.#buildPopover();
+    this.#resetPopoverPosition();
     await this.#filterOptions();
-    this.#positionPopover();
     this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", true);
     this.#selectFirstOption();
 
@@ -8557,17 +8557,27 @@ class LexicalPromptElement extends HTMLElement {
     const contentRect = this.#editorContentElement.getBoundingClientRect();
     const verticalOffset = contentRect.top - editorRect.top;
 
-    this.popoverElement.style.left = `${x}px`;
+    if (!this.popoverElement.hasAttribute("data-anchored")) {
+      this.popoverElement.style.left = `${x}px`;
+      this.popoverElement.toggleAttribute("data-anchored", true);
+    }
+
     this.popoverElement.style.top = `${y + verticalOffset}px`;
     this.popoverElement.style.bottom = "auto";
 
     const popoverRect = this.popoverElement.getBoundingClientRect();
     const isClippedAtBottom = popoverRect.bottom > window.innerHeight;
 
-    if (isClippedAtBottom) {
-      this.popoverElement.style.bottom = `${y - verticalOffset + fontSize}px`;
-      this.popoverElement.style.top = "auto";
+    if (isClippedAtBottom || this.popoverElement.hasAttribute("data-clipped-at-bottom")) {
+      this.popoverElement.style.top = `${y + verticalOffset - popoverRect.height - fontSize}px`;
+      this.popoverElement.style.bottom = "auto";
+      this.popoverElement.toggleAttribute("data-clipped-at-bottom", true);
     }
+  }
+
+  #resetPopoverPosition() {
+    this.popoverElement.removeAttribute("data-clipped-at-bottom");
+    this.popoverElement.removeAttribute("data-anchored");
   }
 
   async #hidePopover() {
@@ -8595,6 +8605,7 @@ class LexicalPromptElement extends HTMLElement {
 
     if (this.#editorContents.containsTextBackUntil(this.trigger)) {
       await this.#showFilteredOptions();
+      this.#positionPopover();
     } else {
       this.#hidePopover();
     }
