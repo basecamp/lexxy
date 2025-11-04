@@ -2,6 +2,8 @@ import { marked } from "marked"
 import { isUrl } from "../helpers/string_helper"
 import { nextFrame } from "../helpers/timing_helpers"
 import { dispatch } from "../helpers/html_helper"
+import { $getSelection, $isRangeSelection } from "lexical"
+import { $isCodeNode } from "@lexical/code"
 
 export default class Clipboard {
   constructor(editorElement) {
@@ -15,7 +17,7 @@ export default class Clipboard {
 
     if (!clipboardData) return false
 
-    if (this.#isOnlyPlainTextPasted(clipboardData)) {
+    if (this.#isOnlyPlainTextPasted(clipboardData) && !this.#isPastingIntoCodeBlock()) {
       this.#pastePlainText(clipboardData)
       event.preventDefault()
       return true
@@ -27,6 +29,27 @@ export default class Clipboard {
   #isOnlyPlainTextPasted(clipboardData) {
     const types = Array.from(clipboardData.types)
     return types.length === 1 && types[0] === "text/plain"
+  }
+
+  #isPastingIntoCodeBlock() {
+    let result = false
+
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      let currentNode = selection.anchor.getNode()
+
+      while (currentNode) {
+        if ($isCodeNode(currentNode)) {
+          result = true
+          return
+        }
+        currentNode = currentNode.getParent()
+      }
+    })
+
+    return result
   }
 
   #pastePlainText(clipboardData) {
