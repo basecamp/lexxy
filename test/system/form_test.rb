@@ -38,6 +38,7 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     click_on "Create Post"
     click_on "Edit this post"
 
+
     assert_equal_html "<p><br></p><p>That</p>", find_editor.value
   end
 
