@@ -11,6 +11,7 @@ import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
 import { nextFrame } from "../helpers/timing_helpers.js"
+import { $isQuoteNode } from "@lexical/rich-text";
 
 export default class Contents {
   constructor(editorElement) {
@@ -414,10 +415,17 @@ export default class Contents {
       wrappingNode.append($createTextNode(lineText))
       if (index < lines.length - 1) {
         wrappingNode.append($createLineBreakNode())
+        if (this.#shouldSeparateWrappedInsideOf(wrappingNode)) {
+          wrappingNode.append($createLineBreakNode())
+        }
       }
     })
 
     return wrappingNode
+  }
+
+  #shouldSeparateWrappedInsideOf(wrappingNode) {
+    return $isQuoteNode(wrappingNode)
   }
 
   #replaceWithWrappingNode(selection, wrappingNode) {
