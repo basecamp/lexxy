@@ -7922,7 +7922,7 @@ class Clipboard {
 
     if (!clipboardData) return false
 
-    if (this.#isOnlyPlainTextPasted(clipboardData)) {
+    if (this.#isOnlyPlainTextPasted(clipboardData) && !this.#isPastingIntoCodeBlock()) {
       this.#pastePlainText(clipboardData);
       event.preventDefault();
       return true
@@ -7934,6 +7934,27 @@ class Clipboard {
   #isOnlyPlainTextPasted(clipboardData) {
     const types = Array.from(clipboardData.types);
     return types.length === 1 && types[0] === "text/plain"
+  }
+
+  #isPastingIntoCodeBlock() {
+    let result = false;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      let currentNode = selection.anchor.getNode();
+
+      while (currentNode) {
+        if (X$1(currentNode)) {
+          result = true;
+          return
+        }
+        currentNode = currentNode.getParent();
+      }
+    });
+
+    return result
   }
 
   #pastePlainText(clipboardData) {
