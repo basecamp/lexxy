@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    lexxy (0.1.16.beta)
+    lexxy (0.1.17.beta)
       rails (>= 8.0.2)
 
 GEM
