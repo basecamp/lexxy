@@ -109,7 +109,7 @@ export class CommandDispatcher {
   }
 
   dispatchInsertQuoteBlock() {
-    this.contents.toggleNodeWrappingAllSelectedLines((node) => $isQuoteNode(node), () => $createQuoteNode())
+    this.contents.toggleNodeWrappingAllSelectedNodes((node) => $isQuoteNode(node), () => $createQuoteNode())
   }
 
   dispatchInsertCodeBlock() {
