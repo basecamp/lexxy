@@ -167,6 +167,13 @@
   inset-inline-end: 0;
   padding: var(--lexxy-toolbar-gap);
   position: absolute;
+
+  @media (max-width: 380px) {
+    width: 60vw;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
 }
 
 /* Link dialog
