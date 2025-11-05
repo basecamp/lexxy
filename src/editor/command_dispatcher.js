@@ -1,9 +1,9 @@
 import {
   $createTextNode,
-  $getSelection,
-  $isRangeSelection,
   $getRoot,
+  $getSelection,
   $isElementNode,
+  $isRangeSelection,
   COMMAND_PRIORITY_LOW,
   FORMAT_TEXT_COMMAND,
   PASTE_COMMAND,
@@ -15,14 +15,12 @@ import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lex
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
-import { createElement } from "../helpers/html_helper"
+import { createElement, dispatch } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { ActionTextAttachmentMarkNode } from "../nodes/action_text_attachment_mark_node"
 
-import {
-  $wrapSelectionInMarkNode, MarkNode,
-} from '@lexical/mark';
+import { $wrapSelectionInMarkNode } from "@lexical/mark"
 
 const COMMANDS = [
   "bold",
@@ -147,12 +145,13 @@ export class CommandDispatcher {
       if ($isRangeSelection(selection)) {
         const isBackward = selection.isBackward();
         let i = 0
-        const selectionGroupId = [...Array(8)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-        $wrapSelectionInMarkNode(selection, isBackward, "", ([]) => {
-          let dataset = { selectionGroup: selectionGroupId }
-          if (i === 0) { dataset.createMetaContent = metaContent; i++; }
+        const selectionGroupId = [ ...Array(8) ].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+
+        $wrapSelectionInMarkNode(selection, isBackward, "", () => {
+          const dataset = { selectionGroup: selectionGroupId }
+          if (i === 0) { dataset.createMetaContent = metaContent; i++ }
           return new ActionTextAttachmentMarkNode([], dataset)
-        });
+        })
         dispatch(this.editorElement, "lexxy:addMarkNodeOnSelection", { selectionGroupId: selectionGroupId })
       }
     })
@@ -160,17 +159,17 @@ export class CommandDispatcher {
 
   dispatchInsertMarkNodeDeletionTrigger(sgid) {
     this.editor.update(() => {
-      const rootNode = $getRoot();
-      const traverse = (node) => {
-        if (node.getType() === 'action_text_attachment_mark_node' && node.sgid && node.sgid === sgid) {
-          const writableNode = node.getWritable();
-          writableNode.__dataset.deleteMetaContent = true;
+      const rootNode = $getRoot()
+      function traverse(node){
+        if (node.getType() === "action_text_attachment_mark_node" && node.sgid && node.sgid === sgid) {
+          const writableNode = node.getWritable()
+          writableNode.__dataset.deleteMetaContent = true
         }
         if ($isElementNode(node)) {
-          node.getChildren().forEach(traverse);
+          node.getChildren().forEach(traverse)
         }
-      };
-      traverse(rootNode);
+      }
+      traverse(rootNode)
     })
   }
 

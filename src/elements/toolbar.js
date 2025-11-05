@@ -64,6 +64,11 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   // Not using popover because of CSS anchoring still not widely available.
   #toggleDialog(button) {
+    if (button.dataset.dialogTarget == "comment-dialog") {
+      const dialog = this.querySelector("#comment-dialog").parentNode
+      dialog.show()
+      return
+    }
     const dialog = this.querySelector("lexxy-link-dialog .link-dialog").parentNode
 
     if (dialog.open) {
