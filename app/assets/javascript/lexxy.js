@@ -7401,15 +7401,10 @@ class Contents {
       const selection = Lr();
       if (!yr(selection)) return
 
-      if (selection.isCollapsed()) {
-        jr([ newNodeFn() ]);
-        return
-      }
-
-      const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
+      const topLevelElement = selection.anchor.getNode().getTopLevelElement();
 
       // Check if format is already applied
-      if (isFormatAppliedFn(topLevelElement)) {
+      if (topLevelElement && isFormatAppliedFn(topLevelElement)) {
         this.#unwrap(topLevelElement);
       } else {
         this.#insertNodeWrappingAllSelectedNodes(newNodeFn);
@@ -7639,10 +7634,7 @@ class Contents {
       const node = xo(nodeKey);
       if (!node) return
 
-      let previousNode = node;
-      try {
-        previousNode = node.getTopLevelElementOrThrow();
-      } catch {}
+      const previousNode = node.getTopLevelElement() || node;
 
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html);
       previousNode.insertAfter(newNode);
@@ -7669,16 +7661,21 @@ class Contents {
       if (!yr(selection)) return
 
       const selectedNodes = selection.extract();
-      if (selectedNodes.length === 0) return
-
+      if (selectedNodes.length === 0) {
+        return
+      }
       const topLevelElements = new Set();
       selectedNodes.forEach((node) => {
         const topLevel = node.getTopLevelElementOrThrow();
         topLevelElements.add(topLevel);
       });
 
-      const elements = this.#removeTrailingEmptyParagraphs(Array.from(topLevelElements));
-      if (elements.length === 0) return
+      const elements = this.#withoutTrailingEmptyParagraphs(Array.from(topLevelElements));
+      if (elements.length === 0) {
+        this.#removeStandaloneEmptyParagraph();
+        this.insertAtCursor(newNodeFn());
+        return
+      }
 
       const wrappingNode = newNodeFn();
       elements[0].insertBefore(wrappingNode);
@@ -7690,7 +7687,7 @@ class Contents {
     });
   }
 
-  #removeTrailingEmptyParagraphs(elements) {
+  #withoutTrailingEmptyParagraphs(elements) {
     let lastNonEmptyIndex = elements.length - 1;
 
     // Find the last non-empty paragraph
@@ -7712,6 +7709,16 @@ class Contents {
     // Check if it only contains line breaks
     const children = element.getChildren();
     return children.length === 0 || children.every(child => jn(child))
+  }
+
+  #removeStandaloneEmptyParagraph() {
+    const root = No();
+    if (root.getChildrenSize() === 1) {
+      const firstChild = root.getFirstChild();
+      if (firstChild && Ii(firstChild) && this.#isElementEmpty(firstChild)) {
+        firstChild.remove();
+      }
+    }
   }
 
   #insertNodeWrappingAllSelectedLines(newNodeFn) {
