@@ -6125,8 +6125,8 @@ const a=[];class f extends Ci{__ids;static getType(){return "mark"}static clone(
  */
 class ActionTextAttachmentMarkNode extends f {
 
-    constructor(ids = [], dataset = {}, sgid = null) {
-        super(ids, null);
+    constructor(ids = [], dataset = {}, sgid = null, key) {
+        super(ids, key);
         this.__dataset = dataset || {
             createMetaContent: null,
             deleteMetaContent: null,
@@ -6136,29 +6136,26 @@ class ActionTextAttachmentMarkNode extends f {
     }
 
     static getType() {
-        return 'action_text_attachment_mark_node';
+        return "action_text_attachment_mark_node"
     }
 
     static importJSON(serializedNode) {
-        const node = $createActionTextAttachmentMarkNode(serializedNode.dataset);
-        node.setAttribute('sgid', serializedNode.sgid);
-        node.setIds(serializedNode.ids);
-        return node
+        return $createActionTextAttachmentMarkNode(serializedNode.dataset, serializedNode.sgid)
     }
 
     static importDOM() {
         return {
-            'action-text-attachment-mark-node': (node) => ({
+            "action-text-attachment-mark-node": (node) => ({
                 conversion: (element) => {
-                    let dataset = {};
-                    if (element.getAttribute('data-create-meta-content') !== undefined) {
-                        dataset.createMetaContent = element.getAttribute('data-create-meta-content');
+                    const dataset = {};
+                    if (element.getAttribute("data-create-meta-content") !== undefined) {
+                        dataset.createMetaContent = element.getAttribute("data-create-meta-content");
                     }
-                    if (element.getAttribute('data-delete-meta-content') !== undefined) {
-                        dataset.deleteMetaContent = element.getAttribute('data-delete-meta-content');
+                    if (element.getAttribute("data-delete-meta-content") !== undefined) {
+                        dataset.deleteMetaContent = element.getAttribute("data-delete-meta-content");
                     }
-                    if (element.getAttribute('data-selection-group') !== undefined) {
-                        dataset.selectionGroup = element.getAttribute('data-selection-group');
+                    if (element.getAttribute("data-selection-group") !== undefined) {
+                        dataset.selectionGroup = element.getAttribute("data-selection-group");
                     }
 
                     this.sgid = element.getAttribute("sgid");
@@ -6174,17 +6171,17 @@ class ActionTextAttachmentMarkNode extends f {
     }
 
     static clone(node) {
-        return new ActionTextAttachmentMarkNode(node.__ids, node.__dataset, node.sgid)
+        return new ActionTextAttachmentMarkNode(node.__ids, node.__dataset, node.sgid, node.__key)
     }
 
     createDOM(config) {
-        const element = createElement('action-text-attachment-mark-node', {sgid: this.sgid});
+        const element = createElement("action-text-attachment-mark-node", {sgid: this.sgid});
         lt$3(element, config.theme.mark);
         this.setContentAttributes(element);
         if (this.__ids.length > 1) {
             lt$3(element, config.theme.markOverlap);
         }
-        return element;
+        return element
     }
 
     exportDOM(editor) {
@@ -6210,11 +6207,25 @@ class ActionTextAttachmentMarkNode extends f {
     }
 
     updateDOM() {
-        return true
+        // Return false to let Lexical update the DOM incrementally rather than replacing it
+        // This is important for proper handling of child nodes during updates and deletions
+        return false
     }
 
     isInline() {
         return true
+    }
+
+    canMergeWith(node) {
+        // Only allow merging with ActionTextAttachmentMarkNodes that have the same IDs
+        // This prevents issues during deletion where Lexical might try to merge incompatible nodes
+        if (!super.canMergeWith(node)) {
+            return false
+        }
+        // Also check that dataset and sgid match
+        return node instanceof ActionTextAttachmentMarkNode &&
+               this.sgid === node.sgid &&
+               this.__dataset.selectionGroup === node.__dataset.selectionGroup
     }
 
     excludeFromCopy(destination) {
@@ -6364,14 +6375,12 @@ class CommandDispatcher {
       if (yr(selection)) {
         const isBackward = selection.isBackward();
         let i = 0;
-        const selectionGroupId = [ ...Array(8) ].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-
-        m$1(selection, isBackward, "", () => {
+        const selectionGroupId = [ ...Array(8) ].map(() => Math.floor(Math.random() * 16).toString(16)).join("");
+        m$1(selection, isBackward, "", ([]) => {
           const dataset = { selectionGroup: selectionGroupId };
           if (i === 0) { dataset.createMetaContent = metaContent; i++; }
           return new ActionTextAttachmentMarkNode([], dataset)
         });
-        dispatch(this.editorElement, "lexxy:addMarkNodeOnSelection", { selectionGroupId: selectionGroupId });
       }
     });
   }
