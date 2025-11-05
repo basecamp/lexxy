@@ -140,10 +140,10 @@ export class CommandDispatcher {
   }
 
   dispatchInsertMarkNodeOnSelection(metaContent) {
-    const selection = $getSelection();
+    const selection = $getSelection()
     this.editor.update(() => {
       if ($isRangeSelection(selection)) {
-        const isBackward = selection.isBackward();
+        const isBackward = selection.isBackward()
         let i = 0
         const selectionGroupId = [ ...Array(8) ].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 
