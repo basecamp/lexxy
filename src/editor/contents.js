@@ -89,10 +89,10 @@ export default class Contents {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
-      const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
+      const topLevelElement = selection.anchor.getNode().getTopLevelElement()
 
       // Check if format is already applied
-      if (isFormatAppliedFn(topLevelElement)) {
+      if (topLevelElement && isFormatAppliedFn(topLevelElement)) {
         this.#unwrap(topLevelElement)
       } else {
         this.#insertNodeWrappingAllSelectedNodes(newNodeFn)
@@ -322,10 +322,7 @@ export default class Contents {
       const node = $getNodeByKey(nodeKey)
       if (!node) return
 
-      let previousNode = node
-      try {
-        previousNode = node.getTopLevelElementOrThrow()
-      } catch {}
+      const previousNode = node.getTopLevelElement() || node
 
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
       previousNode.insertAfter(newNode)
@@ -352,16 +349,21 @@ export default class Contents {
       if (!$isRangeSelection(selection)) return
 
       const selectedNodes = selection.extract()
-      if (selectedNodes.length === 0) return
-
+      if (selectedNodes.length === 0) {
+        return
+      }
       const topLevelElements = new Set()
       selectedNodes.forEach((node) => {
         const topLevel = node.getTopLevelElementOrThrow()
         topLevelElements.add(topLevel)
       })
 
-      const elements = this.#removeTrailingEmptyParagraphs(Array.from(topLevelElements))
-      if (elements.length === 0) return
+      const elements = this.#withoutTrailingEmptyParagraphs(Array.from(topLevelElements))
+      if (elements.length === 0) {
+        this.#removeStandaloneEmptyParagraph()
+        this.insertAtCursor(newNodeFn())
+        return
+      }
 
       const wrappingNode = newNodeFn()
       elements[0].insertBefore(wrappingNode)
@@ -373,7 +375,7 @@ export default class Contents {
     })
   }
 
-  #removeTrailingEmptyParagraphs(elements) {
+  #withoutTrailingEmptyParagraphs(elements) {
     let lastNonEmptyIndex = elements.length - 1
 
     // Find the last non-empty paragraph
@@ -395,6 +397,16 @@ export default class Contents {
     // Check if it only contains line breaks
     const children = element.getChildren()
     return children.length === 0 || children.every(child => $isLineBreakNode(child))
+  }
+
+  #removeStandaloneEmptyParagraph() {
+    const root = $getRoot()
+    if (root.getChildrenSize() === 1) {
+      const firstChild = root.getFirstChild()
+      if (firstChild && $isParagraphNode(firstChild) && this.#isElementEmpty(firstChild)) {
+        firstChild.remove()
+      }
+    }
   }
 
   #insertNodeWrappingAllSelectedLines(newNodeFn) {

@@ -74,6 +74,11 @@ class ToolbarTest < ApplicationSystemTestCase
     assert_equal_html "<p>Hello everyone</p>", find_editor.value
   end
 
+  test "insert quote without selection" do
+    click_on "Quote"
+    assert_equal_html "<p>Hello everyone</p><blockquote><br></blockquote>", find_editor.value
+  end
+
   test "quote" do
     find_editor.select("everyone")
 
