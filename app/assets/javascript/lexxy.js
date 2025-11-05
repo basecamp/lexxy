@@ -7401,6 +7401,11 @@ class Contents {
       const selection = Lr();
       if (!yr(selection)) return
 
+      if (selection.isCollapsed()) {
+        jr([ newNodeFn() ]);
+        return
+      }
+
       const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
 
       // Check if format is already applied
