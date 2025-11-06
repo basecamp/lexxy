@@ -140,29 +140,29 @@ export default class LexicalPromptElement extends HTMLElement {
     listItem.scrollIntoView({ block: "nearest", behavior: "smooth" })
 
     // Preserve and restore selection before/after focusing to prevent cursor jump
-    let selectionState = null;
+    let selectionState = null
     this.#editor.getEditorState().read(() => {
-      const selection = $getSelection();
+      const selection = $getSelection()
       if (selection && $isRangeSelection(selection)) {
         selectionState = {
           anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
           focus: { key: selection.focus.key, offset: selection.focus.offset }
-        };
+        }
       }
-    });
+    })
 
-    this.#editorElement.focus();
+    this.#editorElement.focus()
 
     if (selectionState) {
       nextFrame().then(() => {
         this.#editor.update(() => {
-          const selection = $getSelection();
+          const selection = $getSelection()
           if (selection && $isRangeSelection(selection)) {
-            selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text");
-            selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text");
+            selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text")
+            selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text")
           }
-        }, { discrete: true });
-      });
+        }, { discrete: true })
+      })
     }
 
     this.#editorContentElement.setAttribute("aria-controls", this.popoverElement.id)
