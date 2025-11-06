@@ -130,6 +130,12 @@ export class CommandDispatcher {
     this.editor.update(() => {
       this.contents.insertAtCursor(new HorizontalDividerNode())
     })
+    
+    // Blur the active element and focus the editor
+    if (document.activeElement && document.activeElement !== this.editor.getRootElement()) {
+      document.activeElement.blur()
+    }
+    this.editor.focus()
   }
 
   dispatchRotateHeadingFormat() {
