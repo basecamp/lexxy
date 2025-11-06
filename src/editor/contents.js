@@ -675,7 +675,8 @@ export default class Contents {
     lastInsertedNode.insertAfter(textNodeAfter)
 
     this.#appendLineBreakIfNeeded(textNodeAfter.getParentOrThrow())
-    textNodeAfter.select(0, 0)
+    const cursorOffset = textAfterCursor ? 0 : 1
+    textNodeAfter.select(cursorOffset, cursorOffset)
   }
 
   #insertReplacementNodes(startNode, replacementNodes) {
