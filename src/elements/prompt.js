@@ -136,6 +136,9 @@ export default class LexicalPromptElement extends HTMLElement {
     listItem.toggleAttribute("aria-selected", true)
     listItem.focus()
 
+    // Scroll the selected item into view
+    listItem.scrollIntoView({ block: "nearest", behavior: "smooth" })
+
     // Preserve and restore selection before/after focusing to prevent cursor jump
     let selectionState = null;
     this.#editor.getEditorState().read(() => {
