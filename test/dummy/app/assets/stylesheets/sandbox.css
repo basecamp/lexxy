@@ -222,3 +222,32 @@ pre[data-line] {
   line-height: inherit;
   white-space: pre;
 }
+
+/* Person mention styles with circular profile icons */
+/* -------------------------------------------------------------------------- */
+
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .person--avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background-color: oklch(70% 0.15 260);
+    color: white;
+    font-size: 0.5rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  &.person--inline {
+    background-color: oklch(0.7 0.175 240 / 15%);
+    border-radius: 0.25rem;
+    padding: 0 0.25rem;
+  }
+}
