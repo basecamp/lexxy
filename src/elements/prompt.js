@@ -135,7 +135,33 @@ export default class LexicalPromptElement extends HTMLElement {
     this.#clearSelection()
     listItem.toggleAttribute("aria-selected", true)
     listItem.focus()
-    this.#editorElement.focus()
+
+    // Preserve and restore selection before/after focusing to prevent cursor jump
+    let selectionState = null;
+    this.#editor.getEditorState().read(() => {
+      const selection = $getSelection();
+      if (selection && $isRangeSelection(selection)) {
+        selectionState = {
+          anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
+          focus: { key: selection.focus.key, offset: selection.focus.offset }
+        };
+      }
+    });
+
+    this.#editorElement.focus();
+
+    if (selectionState) {
+      nextFrame().then(() => {
+        this.#editor.update(() => {
+          const selection = $getSelection();
+          if (selection && $isRangeSelection(selection)) {
+            selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text");
+            selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text");
+          }
+        }, { discrete: true });
+      });
+    }
+
     this.#editorContentElement.setAttribute("aria-controls", this.popoverElement.id)
     this.#editorContentElement.setAttribute("aria-activedescendant", listItem.id)
     this.#editorContentElement.setAttribute("aria-haspopup", "listbox")
