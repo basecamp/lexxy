@@ -62,17 +62,20 @@ export default class LexicalPromptElement extends HTMLElement {
         const selection = $getSelection()
         if (!selection) return
         let node
+        let offset
         if ($isRangeSelection(selection)) {
           node = selection.anchor.getNode()
+          offset = selection.anchor.offset
         } else if ($isNodeSelection(selection)) {
           [ node ] = selection.getNodes()
+          offset = 0
         }
 
-        if (node && $isTextNode(node)) {
-          const text = node.getTextContent().trim()
-          const lastChar = [ ...text ].pop()
+        if (node && $isTextNode(node) && offset > 0) {
+          const fullText = node.getTextContent()
+          const charBeforeCursor = fullText[offset - 1]
 
-          if (lastChar === this.trigger) {
+          if (charBeforeCursor === this.trigger) {
             unregister()
             this.#showPopover()
           }
