@@ -6151,6 +6151,12 @@ class CommandDispatcher {
     this.editor.update(() => {
       this.contents.insertAtCursor(new HorizontalDividerNode());
     });
+    
+    // Blur the active element and focus the editor
+    if (document.activeElement && document.activeElement !== this.editor.getRootElement()) {
+      document.activeElement.blur();
+    }
+    this.editor.focus();
   }
 
   dispatchRotateHeadingFormat() {
@@ -8884,6 +8890,22 @@ class LexicalPromptElement extends HTMLElement {
     if (this.#doesSpaceSelect) {
       this.keyListeners.push(this.#editor.registerCommand(Me$1, this.#handleSelectedOption.bind(this), Ki));
     }
+
+    // Register arrow keys with HIGH priority to prevent Lexical's selection handlers from running
+    this.keyListeners.push(this.#editor.registerCommand(Ne$1, this.#handleArrowUp.bind(this), Ki));
+    this.keyListeners.push(this.#editor.registerCommand(we$1, this.#handleArrowDown.bind(this), Ki));
+  }
+
+  #handleArrowUp(event) {
+    this.#moveSelectionUp();
+    event.preventDefault();
+    return true
+  }
+
+  #handleArrowDown(event) {
+    this.#moveSelectionDown();
+    event.preventDefault();
+    return true
   }
 
   #selectFirstOption() {
@@ -8901,10 +8923,8 @@ class LexicalPromptElement extends HTMLElement {
   #selectOption(listItem) {
     this.#clearSelection();
     listItem.toggleAttribute("aria-selected", true);
-    listItem.focus();
-
-    // Scroll the selected item into view
     listItem.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    listItem.focus();
 
     // Preserve and restore selection before/after focusing to prevent cursor jump
     let selectionState = null;
@@ -8917,18 +8937,16 @@ class LexicalPromptElement extends HTMLElement {
         };
       }
     });
-
+ 
     this.#editorElement.focus();
 
     if (selectionState) {
-      nextFrame().then(() => {
-        this.#editor.update(() => {
-          const selection = Nr();
-          if (selection && cr(selection)) {
-            selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text");
-            selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text");
-          }
-        }, { discrete: true });
+      this.#editor.update(() => {
+        const selection = Nr();
+        if (selection && cr(selection)) {
+          selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text");
+          selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text");
+        }
       });
     }
 
@@ -9039,15 +9057,8 @@ class LexicalPromptElement extends HTMLElement {
       this.#hidePopover();
       this.#editorElement.focus();
       event.stopPropagation();
-    } else if (event.key === "ArrowDown") {
-      this.#moveSelectionDown();
-      event.preventDefault();
-      event.stopPropagation();
-    } else if (event.key === "ArrowUp") {
-      this.#moveSelectionUp();
-      event.preventDefault();
-      event.stopPropagation();
     }
+    // Arrow keys are now handled via Lexical commands with HIGH priority
   }
 
   #moveSelectionDown() {
