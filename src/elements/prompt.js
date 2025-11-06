@@ -228,6 +228,7 @@ export default class LexicalPromptElement extends HTMLElement {
 
     if (this.#editorContents.containsTextBackUntil(this.trigger)) {
       await this.#showFilteredOptions()
+      await nextFrame()
       this.#positionPopover()
     } else {
       this.#hidePopover()
