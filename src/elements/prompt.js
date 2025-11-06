@@ -1,6 +1,6 @@
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $getSelection, $isNodeSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_HIGH, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $getSelection, $isNodeSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
@@ -117,6 +117,22 @@ export default class LexicalPromptElement extends HTMLElement {
     if (this.#doesSpaceSelect) {
       this.keyListeners.push(this.#editor.registerCommand(KEY_SPACE_COMMAND, this.#handleSelectedOption.bind(this), COMMAND_PRIORITY_HIGH))
     }
+
+    // Register arrow keys with HIGH priority to prevent Lexical's selection handlers from running
+    this.keyListeners.push(this.#editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#handleArrowUp.bind(this), COMMAND_PRIORITY_HIGH))
+    this.keyListeners.push(this.#editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#handleArrowDown.bind(this), COMMAND_PRIORITY_HIGH))
+  }
+
+  #handleArrowUp(event) {
+    this.#moveSelectionUp()
+    event.preventDefault()
+    return true
+  }
+
+  #handleArrowDown(event) {
+    this.#moveSelectionDown()
+    event.preventDefault()
+    return true
   }
 
   #selectFirstOption() {
@@ -272,15 +288,8 @@ export default class LexicalPromptElement extends HTMLElement {
       this.#hidePopover()
       this.#editorElement.focus()
       event.stopPropagation()
-    } else if (event.key === "ArrowDown") {
-      this.#moveSelectionDown()
-      event.preventDefault()
-      event.stopPropagation()
-    } else if (event.key === "ArrowUp") {
-      this.#moveSelectionUp()
-      event.preventDefault()
-      event.stopPropagation()
     }
+    // Arrow keys are now handled via Lexical commands with HIGH priority
   }
 
   #moveSelectionDown() {
