@@ -14,6 +14,7 @@ export default class LexicalPromptElement extends HTMLElement {
   constructor() {
     super()
     this.keyListeners = []
+    this.cursorPositionListener = null
   }
 
   connectedCallback() {
@@ -84,6 +85,47 @@ export default class LexicalPromptElement extends HTMLElement {
     })
   }
 
+  #addCursorPositionListener() {
+    this.cursorPositionListener = this.#editor.registerUpdateListener(() => {
+      if (!this.popoverElement?.classList.contains("lexxy-prompt-menu--visible")) return
+
+      this.#editor.read(() => {
+        const selection = $getSelection()
+        if (!selection) return
+        let node
+        let offset
+        if ($isRangeSelection(selection)) {
+          node = selection.anchor.getNode()
+          offset = selection.anchor.offset
+        } else if ($isNodeSelection(selection)) {
+          [ node ] = selection.getNodes()
+          offset = 0
+        }
+
+        if (node && $isTextNode(node) && offset > 0) {
+          const fullText = node.getTextContent()
+          const textBeforeCursor = fullText.slice(0, offset)
+          const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger)
+
+          // If trigger is not found, or cursor is at or before the trigger position, hide popover
+          if (lastTriggerIndex === -1 || offset <= lastTriggerIndex) {
+            this.#hidePopover()
+          }
+        } else {
+          // Cursor is not in a text node or at offset 0, hide popover
+          this.#hidePopover()
+        }
+      })
+    })
+  }
+
+  #removeCursorPositionListener() {
+    if (this.cursorPositionListener) {
+      this.cursorPositionListener()
+      this.cursorPositionListener = null
+    }
+  }
+
   get #editor() {
     return this.#editorElement.editor
   }
@@ -107,6 +149,7 @@ export default class LexicalPromptElement extends HTMLElement {
     this.#editorElement.addEventListener("lexxy:change", this.#filterOptions)
 
     this.#registerKeyListeners()
+    this.#addCursorPositionListener()
   }
 
   #registerKeyListeners() {
@@ -225,6 +268,7 @@ export default class LexicalPromptElement extends HTMLElement {
     this.#editorElement.removeEventListener("keydown", this.#handleKeydownOnPopover)
 
     this.#unregisterKeyListeners()
+    this.#removeCursorPositionListener()
 
     await nextFrame()
     this.#addTriggerListener()
