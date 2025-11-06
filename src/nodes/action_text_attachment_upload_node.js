@@ -15,6 +15,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return new ActionTextAttachmentUploadNode({ ...node }, node.__key)
   }
 
+  static importJSON(serializedNode) {
+    return new ActionTextAttachmentUploadNode({ ...serializedNode })
+  }
+
   constructor({ file, uploadUrl, blobUrlTemplate, editor, progress }, key) {
     super({ contentType: file.type }, key)
     this.file = file
@@ -52,6 +56,17 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       img.src = this.src
     }
     return { element: img }
+  }
+
+  exportJSON() {
+    return {
+      type: "action_text_attachment_upload",
+      version: 1,
+      progress: this.progress,
+      uploadUrl: this.uploadUrl,
+      blobUrlTemplate: this.blobUrlTemplate,
+      ...super.exportJSON()
+    }
   }
 
   #createDOMForImage() {
