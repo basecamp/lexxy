@@ -6774,22 +6774,24 @@ class Selection {
     const node = this.nodeAfterCursor;
     if (node instanceof ki) {
       this.#selectInLexical(node);
+      return true
     } else {
       this.#contents.deleteSelectedNodes();
     }
 
-    return true
+    return false
   }
 
   #deletePreviousOrNext() {
     const node = this.nodeBeforeCursor;
     if (node instanceof ki) {
       this.#selectInLexical(node);
+      return true
     } else {
       this.#contents.deleteSelectedNodes();
     }
 
-    return true
+    return false
   }
 
   #getValidSelectionRange() {
