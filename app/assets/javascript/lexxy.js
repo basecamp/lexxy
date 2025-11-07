@@ -6443,6 +6443,32 @@ class Selection {
     return { node: null, offset: 0 }
   }
 
+  preservingSelection(fn) {
+    let selectionState = null;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (selection && yr(selection)) {
+        selectionState = {
+          anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
+          focus: { key: selection.focus.key, offset: selection.focus.offset }
+        };
+      }
+    });
+
+    fn();
+
+    if (selectionState) {
+      this.editor.update(() => {
+        const selection = Lr();
+        if (selection && yr(selection)) {
+          selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text");
+          selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text");
+        }
+      });
+    }
+  }
+
   get hasSelectedWordsInSingleLine() {
     const selection = Lr();
     if (!yr(selection)) return false
@@ -9051,29 +9077,10 @@ class LexicalPromptElement extends HTMLElement {
     listItem.scrollIntoView({ block: "nearest", behavior: "smooth" });
     listItem.focus();
 
-    // Preserve and restore selection before/after focusing to prevent cursor jump
-    let selectionState = null;
-    this.#editor.getEditorState().read(() => {
-      const selection = Lr();
-      if (selection && yr(selection)) {
-        selectionState = {
-          anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
-          focus: { key: selection.focus.key, offset: selection.focus.offset }
-        };
-      }
+    // Preserve selection to prevent cursor jump
+    this.#selection.preservingSelection(() => {
+      this.#editorElement.focus();
     });
-
-    this.#editorElement.focus();
-
-    if (selectionState) {
-      this.#editor.update(() => {
-        const selection = Lr();
-        if (selection && yr(selection)) {
-          selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text");
-          selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text");
-        }
-      });
-    }
 
     this.#editorContentElement.setAttribute("aria-controls", this.popoverElement.id);
     this.#editorContentElement.setAttribute("aria-activedescendant", listItem.id);

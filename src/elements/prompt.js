@@ -1,6 +1,6 @@
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $getSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $isTextNode, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
@@ -185,29 +185,10 @@ export default class LexicalPromptElement extends HTMLElement {
     listItem.scrollIntoView({ block: "nearest", behavior: "smooth" })
     listItem.focus()
 
-    // Preserve and restore selection before/after focusing to prevent cursor jump
-    let selectionState = null
-    this.#editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (selection && $isRangeSelection(selection)) {
-        selectionState = {
-          anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
-          focus: { key: selection.focus.key, offset: selection.focus.offset }
-        }
-      }
+    // Preserve selection to prevent cursor jump
+    this.#selection.preservingSelection(() => {
+      this.#editorElement.focus()
     })
-
-    this.#editorElement.focus()
-
-    if (selectionState) {
-      this.#editor.update(() => {
-        const selection = $getSelection()
-        if (selection && $isRangeSelection(selection)) {
-          selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text")
-          selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text")
-        }
-      })
-    }
 
     this.#editorContentElement.setAttribute("aria-controls", this.popoverElement.id)
     this.#editorContentElement.setAttribute("aria-activedescendant", listItem.id)
