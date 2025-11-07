@@ -6208,13 +6208,9 @@ class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.editor.update(() => {
-      this.contents.insertAtCursor(new HorizontalDividerNode());
+      this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode());
     });
-    
-    // Blur the active element and focus the editor
-    if (document.activeElement && document.activeElement !== this.editor.getRootElement()) {
-      document.activeElement.blur();
-    }
+
     this.editor.focus();
   }
 
@@ -7384,6 +7380,11 @@ class Contents {
     });
   }
 
+  insertAtCursorEnsuringLineBelow(node) {
+    this.insertAtCursor(node);
+    this.#insertLineBelowIfLastNode(node);
+  }
+
   insertNodeWrappingEachSelectedLine(newNodeFn) {
     this.editor.update(() => {
       const selection = Lr();
@@ -7666,6 +7667,17 @@ class Contents {
 
   get #selection() {
     return this.editorElement.selection
+  }
+
+  #insertLineBelowIfLastNode(node) {
+    this.editor.update(() => {
+      const nextSibling = node.getNextSibling();
+      if (!nextSibling) {
+        const newParagraph = Li();
+        node.insertAfter(newParagraph);
+        newParagraph.selectStart();
+      }
+    });
   }
 
   #unwrap(node) {
@@ -8334,7 +8346,7 @@ class LexicalEditorElement extends HTMLElement {
     return this.getAttribute("attachments") !== "false"
   }
 
-  focus() {
+  async focus() {
     this.editor.focus();
   }
 

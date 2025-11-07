@@ -49,6 +49,11 @@ export default class Contents {
     })
   }
 
+  insertAtCursorEnsuringLineBelow(node) {
+    this.insertAtCursor(node)
+    this.#insertLineBelowIfLastNode(node)
+  }
+
   insertNodeWrappingEachSelectedLine(newNodeFn) {
     this.editor.update(() => {
       const selection = $getSelection()
@@ -331,6 +336,17 @@ export default class Contents {
 
   get #selection() {
     return this.editorElement.selection
+  }
+
+  #insertLineBelowIfLastNode(node) {
+    this.editor.update(() => {
+      const nextSibling = node.getNextSibling()
+      if (!nextSibling) {
+        const newParagraph = $createParagraphNode()
+        node.insertAfter(newParagraph)
+        newParagraph.selectStart()
+      }
+    })
   }
 
   #unwrap(node) {

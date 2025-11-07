@@ -128,13 +128,9 @@ export class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.editor.update(() => {
-      this.contents.insertAtCursor(new HorizontalDividerNode())
+      this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
     })
-    
-    // Blur the active element and focus the editor
-    if (document.activeElement && document.activeElement !== this.editor.getRootElement()) {
-      document.activeElement.blur()
-    }
+
     this.editor.focus()
   }
 
