@@ -99,7 +99,7 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.getAttribute("attachments") !== "false"
   }
 
-  async focus() {
+  focus() {
     this.editor.focus()
   }
 
