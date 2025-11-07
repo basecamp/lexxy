@@ -6423,6 +6423,26 @@ class Selection {
     });
   }
 
+  selectedNodeWithOffset() {
+    const selection = Lr();
+    if (!selection) return { node: null, offset: 0 }
+
+    if (yr(selection)) {
+      return {
+        node: selection.anchor.getNode(),
+        offset: selection.anchor.offset
+      }
+    } else if (xr(selection)) {
+      const [ node ] = selection.getNodes();
+      return {
+        node,
+        offset: 0
+      }
+    }
+
+    return { node: null, offset: 0 }
+  }
+
   get hasSelectedWordsInSingleLine() {
     const selection = Lr();
     if (!yr(selection)) return false
@@ -8346,7 +8366,7 @@ class LexicalEditorElement extends HTMLElement {
     return this.getAttribute("attachments") !== "false"
   }
 
-  async focus() {
+  focus() {
     this.editor.focus();
   }
 
@@ -8860,7 +8880,6 @@ class LexicalPromptElement extends HTMLElement {
   constructor() {
     super();
     this.keyListeners = [];
-    this.cursorPositionListener = null;
   }
 
   connectedCallback() {
@@ -8886,6 +8905,14 @@ class LexicalPromptElement extends HTMLElement {
     return this.hasAttribute("supports-space-in-searches")
   }
 
+  get open() {
+    return this.popoverElement?.classList?.contains("lexxy-prompt-menu--visible")
+  }
+
+  get closed() {
+    return !this.open
+  }
+
   get #doesSpaceSelect() {
     return !this.supportsSpaceInSearches
   }
@@ -8906,19 +8933,10 @@ class LexicalPromptElement extends HTMLElement {
   #addTriggerListener() {
     const unregister = this.#editor.registerUpdateListener(() => {
       this.#editor.read(() => {
-        const selection = Lr();
-        if (!selection) return
-        let node;
-        let offset;
-        if (yr(selection)) {
-          node = selection.anchor.getNode();
-          offset = selection.anchor.offset;
-        } else if (xr(selection)) {
-          [ node ] = selection.getNodes();
-          offset = 0;
-        }
+        const { node, offset } = this.#selection.selectedNodeWithOffset();
+        if (!node) return
 
-        if (node && lr(node) && offset > 0) {
+        if (lr(node) && offset > 0) {
           const fullText = node.getTextContent();
           const charBeforeCursor = fullText[offset - 1];
 
@@ -8933,22 +8951,13 @@ class LexicalPromptElement extends HTMLElement {
 
   #addCursorPositionListener() {
     this.cursorPositionListener = this.#editor.registerUpdateListener(() => {
-      if (!this.popoverElement?.classList.contains("lexxy-prompt-menu--visible")) return
+      if (this.closed) return
 
       this.#editor.read(() => {
-        const selection = Lr();
-        if (!selection) return
-        let node;
-        let offset;
-        if (yr(selection)) {
-          node = selection.anchor.getNode();
-          offset = selection.anchor.offset;
-        } else if (xr(selection)) {
-          [ node ] = selection.getNodes();
-          offset = 0;
-        }
+        const { node, offset } = this.#selection.selectedNodeWithOffset();
+        if (!node) return
 
-        if (node && lr(node) && offset > 0) {
+        if (lr(node) && offset > 0) {
           const fullText = node.getTextContent();
           const textBeforeCursor = fullText.slice(0, offset);
           const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger);
@@ -9053,7 +9062,7 @@ class LexicalPromptElement extends HTMLElement {
         };
       }
     });
- 
+
     this.#editorElement.focus();
 
     if (selectionState) {

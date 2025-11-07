@@ -1,6 +1,6 @@
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $getSelection, $isNodeSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $getSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
@@ -14,7 +14,6 @@ export default class LexicalPromptElement extends HTMLElement {
   constructor() {
     super()
     this.keyListeners = []
-    this.cursorPositionListener = null
   }
 
   connectedCallback() {
@@ -40,6 +39,14 @@ export default class LexicalPromptElement extends HTMLElement {
     return this.hasAttribute("supports-space-in-searches")
   }
 
+  get open() {
+    return this.popoverElement?.classList?.contains("lexxy-prompt-menu--visible")
+  }
+
+  get closed() {
+    return !this.open
+  }
+
   get #doesSpaceSelect() {
     return !this.supportsSpaceInSearches
   }
@@ -60,19 +67,10 @@ export default class LexicalPromptElement extends HTMLElement {
   #addTriggerListener() {
     const unregister = this.#editor.registerUpdateListener(() => {
       this.#editor.read(() => {
-        const selection = $getSelection()
-        if (!selection) return
-        let node
-        let offset
-        if ($isRangeSelection(selection)) {
-          node = selection.anchor.getNode()
-          offset = selection.anchor.offset
-        } else if ($isNodeSelection(selection)) {
-          [ node ] = selection.getNodes()
-          offset = 0
-        }
+        const { node, offset } = this.#selection.selectedNodeWithOffset()
+        if (!node) return
 
-        if (node && $isTextNode(node) && offset > 0) {
+        if ($isTextNode(node) && offset > 0) {
           const fullText = node.getTextContent()
           const charBeforeCursor = fullText[offset - 1]
 
@@ -87,22 +85,13 @@ export default class LexicalPromptElement extends HTMLElement {
 
   #addCursorPositionListener() {
     this.cursorPositionListener = this.#editor.registerUpdateListener(() => {
-      if (!this.popoverElement?.classList.contains("lexxy-prompt-menu--visible")) return
+      if (this.closed) return
 
       this.#editor.read(() => {
-        const selection = $getSelection()
-        if (!selection) return
-        let node
-        let offset
-        if ($isRangeSelection(selection)) {
-          node = selection.anchor.getNode()
-          offset = selection.anchor.offset
-        } else if ($isNodeSelection(selection)) {
-          [ node ] = selection.getNodes()
-          offset = 0
-        }
+        const { node, offset } = this.#selection.selectedNodeWithOffset()
+        if (!node) return
 
-        if (node && $isTextNode(node) && offset > 0) {
+        if ($isTextNode(node) && offset > 0) {
           const fullText = node.getTextContent()
           const textBeforeCursor = fullText.slice(0, offset)
           const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger)
@@ -207,7 +196,7 @@ export default class LexicalPromptElement extends HTMLElement {
         }
       }
     })
- 
+
     this.#editorElement.focus()
 
     if (selectionState) {

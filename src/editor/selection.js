@@ -63,6 +63,26 @@ export default class Selection {
     })
   }
 
+  selectedNodeWithOffset() {
+    const selection = $getSelection()
+    if (!selection) return { node: null, offset: 0 }
+
+    if ($isRangeSelection(selection)) {
+      return {
+        node: selection.anchor.getNode(),
+        offset: selection.anchor.offset
+      }
+    } else if ($isNodeSelection(selection)) {
+      const [ node ] = selection.getNodes()
+      return {
+        node,
+        offset: 0
+      }
+    }
+
+    return { node: null, offset: 0 }
+  }
+
   get hasSelectedWordsInSingleLine() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return false
