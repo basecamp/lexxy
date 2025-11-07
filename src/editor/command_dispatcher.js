@@ -128,8 +128,10 @@ export class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.editor.update(() => {
-      this.contents.insertAtCursor(new HorizontalDividerNode())
+      this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
     })
+
+    this.editor.focus()
   }
 
   dispatchRotateHeadingFormat() {

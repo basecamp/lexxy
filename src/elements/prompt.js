@@ -1,6 +1,6 @@
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $getSelection, $isNodeSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_HIGH, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $isTextNode, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
@@ -39,6 +39,14 @@ export default class LexicalPromptElement extends HTMLElement {
     return this.hasAttribute("supports-space-in-searches")
   }
 
+  get open() {
+    return this.popoverElement?.classList?.contains("lexxy-prompt-menu--visible")
+  }
+
+  get closed() {
+    return !this.open
+  }
+
   get #doesSpaceSelect() {
     return !this.supportsSpaceInSearches
   }
@@ -59,26 +67,52 @@ export default class LexicalPromptElement extends HTMLElement {
   #addTriggerListener() {
     const unregister = this.#editor.registerUpdateListener(() => {
       this.#editor.read(() => {
-        const selection = $getSelection()
-        if (!selection) return
-        let node
-        if ($isRangeSelection(selection)) {
-          node = selection.anchor.getNode()
-        } else if ($isNodeSelection(selection)) {
-          [ node ] = selection.getNodes()
-        }
+        const { node, offset } = this.#selection.selectedNodeWithOffset()
+        if (!node) return
 
-        if (node && $isTextNode(node)) {
-          const text = node.getTextContent().trim()
-          const lastChar = [ ...text ].pop()
+        if ($isTextNode(node) && offset > 0) {
+          const fullText = node.getTextContent()
+          const charBeforeCursor = fullText[offset - 1]
 
-          if (lastChar === this.trigger) {
+          if (charBeforeCursor === this.trigger) {
             unregister()
             this.#showPopover()
           }
         }
       })
     })
+  }
+
+  #addCursorPositionListener() {
+    this.cursorPositionListener = this.#editor.registerUpdateListener(() => {
+      if (this.closed) return
+
+      this.#editor.read(() => {
+        const { node, offset } = this.#selection.selectedNodeWithOffset()
+        if (!node) return
+
+        if ($isTextNode(node) && offset > 0) {
+          const fullText = node.getTextContent()
+          const textBeforeCursor = fullText.slice(0, offset)
+          const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger)
+
+          // If trigger is not found, or cursor is at or before the trigger position, hide popover
+          if (lastTriggerIndex === -1 || offset <= lastTriggerIndex) {
+            this.#hidePopover()
+          }
+        } else {
+          // Cursor is not in a text node or at offset 0, hide popover
+          this.#hidePopover()
+        }
+      })
+    })
+  }
+
+  #removeCursorPositionListener() {
+    if (this.cursorPositionListener) {
+      this.cursorPositionListener()
+      this.cursorPositionListener = null
+    }
   }
 
   get #editor() {
@@ -104,6 +138,7 @@ export default class LexicalPromptElement extends HTMLElement {
     this.#editorElement.addEventListener("lexxy:change", this.#filterOptions)
 
     this.#registerKeyListeners()
+    this.#addCursorPositionListener()
   }
 
   #registerKeyListeners() {
@@ -114,6 +149,22 @@ export default class LexicalPromptElement extends HTMLElement {
     if (this.#doesSpaceSelect) {
       this.keyListeners.push(this.#editor.registerCommand(KEY_SPACE_COMMAND, this.#handleSelectedOption.bind(this), COMMAND_PRIORITY_HIGH))
     }
+
+    // Register arrow keys with HIGH priority to prevent Lexical's selection handlers from running
+    this.keyListeners.push(this.#editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#handleArrowUp.bind(this), COMMAND_PRIORITY_HIGH))
+    this.keyListeners.push(this.#editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#handleArrowDown.bind(this), COMMAND_PRIORITY_HIGH))
+  }
+
+  #handleArrowUp(event) {
+    this.#moveSelectionUp()
+    event.preventDefault()
+    return true
+  }
+
+  #handleArrowDown(event) {
+    this.#moveSelectionDown()
+    event.preventDefault()
+    return true
   }
 
   #selectFirstOption() {
@@ -131,8 +182,14 @@ export default class LexicalPromptElement extends HTMLElement {
   #selectOption(listItem) {
     this.#clearSelection()
     listItem.toggleAttribute("aria-selected", true)
+    listItem.scrollIntoView({ block: "nearest", behavior: "smooth" })
     listItem.focus()
-    this.#editorElement.focus()
+
+    // Preserve selection to prevent cursor jump
+    this.#selection.preservingSelection(() => {
+      this.#editorElement.focus()
+    })
+
     this.#editorContentElement.setAttribute("aria-controls", this.popoverElement.id)
     this.#editorContentElement.setAttribute("aria-activedescendant", listItem.id)
     this.#editorContentElement.setAttribute("aria-haspopup", "listbox")
@@ -181,6 +238,7 @@ export default class LexicalPromptElement extends HTMLElement {
     this.#editorElement.removeEventListener("keydown", this.#handleKeydownOnPopover)
 
     this.#unregisterKeyListeners()
+    this.#removeCursorPositionListener()
 
     await nextFrame()
     this.#addTriggerListener()
@@ -199,6 +257,7 @@ export default class LexicalPromptElement extends HTMLElement {
 
     if (this.#editorContents.containsTextBackUntil(this.trigger)) {
       await this.#showFilteredOptions()
+      await nextFrame()
       this.#positionPopover()
     } else {
       this.#hidePopover()
@@ -239,15 +298,8 @@ export default class LexicalPromptElement extends HTMLElement {
       this.#hidePopover()
       this.#editorElement.focus()
       event.stopPropagation()
-    } else if (event.key === "ArrowDown") {
-      this.#moveSelectionDown()
-      event.preventDefault()
-      event.stopPropagation()
-    } else if (event.key === "ArrowUp") {
-      this.#moveSelectionUp()
-      event.preventDefault()
-      event.stopPropagation()
     }
+    // Arrow keys are now handled via Lexical commands with HIGH priority
   }
 
   #moveSelectionDown() {

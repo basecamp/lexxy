@@ -1,0 +1,13 @@
+<lexxy-prompt-item search="<%= "#{person.name} #{person.initials}" %>" sgid="<%= person.attachable_sgid %>">
+  <template type="menu">
+    <span class="person person--prompt-item">
+      <span class="person--avatar"><%= person.initials %></span>
+      <span class="person--name"><%= person.name %></span>
+    </span>
+  </template>
+  <template type="editor">
+  <span class="person person--inline">
+    <span class="person--name"><%= person.name %></span>
+  </span>
+  </template>
+</lexxy-prompt-item>

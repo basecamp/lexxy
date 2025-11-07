@@ -63,6 +63,52 @@ export default class Selection {
     })
   }
 
+  selectedNodeWithOffset() {
+    const selection = $getSelection()
+    if (!selection) return { node: null, offset: 0 }
+
+    if ($isRangeSelection(selection)) {
+      return {
+        node: selection.anchor.getNode(),
+        offset: selection.anchor.offset
+      }
+    } else if ($isNodeSelection(selection)) {
+      const [ node ] = selection.getNodes()
+      return {
+        node,
+        offset: 0
+      }
+    }
+
+    return { node: null, offset: 0 }
+  }
+
+  preservingSelection(fn) {
+    let selectionState = null
+
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (selection && $isRangeSelection(selection)) {
+        selectionState = {
+          anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
+          focus: { key: selection.focus.key, offset: selection.focus.offset }
+        }
+      }
+    })
+
+    fn()
+
+    if (selectionState) {
+      this.editor.update(() => {
+        const selection = $getSelection()
+        if (selection && $isRangeSelection(selection)) {
+          selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text")
+          selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text")
+        }
+      })
+    }
+  }
+
   get hasSelectedWordsInSingleLine() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return false

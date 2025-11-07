@@ -6208,8 +6208,10 @@ class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.editor.update(() => {
-      this.contents.insertAtCursor(new HorizontalDividerNode());
+      this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode());
     });
+
+    this.editor.focus();
   }
 
   dispatchRotateHeadingFormat() {
@@ -6419,6 +6421,52 @@ class Selection {
     this.editor.update(() => {
       No().selectEnd();
     });
+  }
+
+  selectedNodeWithOffset() {
+    const selection = Lr();
+    if (!selection) return { node: null, offset: 0 }
+
+    if (yr(selection)) {
+      return {
+        node: selection.anchor.getNode(),
+        offset: selection.anchor.offset
+      }
+    } else if (xr(selection)) {
+      const [ node ] = selection.getNodes();
+      return {
+        node,
+        offset: 0
+      }
+    }
+
+    return { node: null, offset: 0 }
+  }
+
+  preservingSelection(fn) {
+    let selectionState = null;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (selection && yr(selection)) {
+        selectionState = {
+          anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
+          focus: { key: selection.focus.key, offset: selection.focus.offset }
+        };
+      }
+    });
+
+    fn();
+
+    if (selectionState) {
+      this.editor.update(() => {
+        const selection = Lr();
+        if (selection && yr(selection)) {
+          selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text");
+          selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text");
+        }
+      });
+    }
   }
 
   get hasSelectedWordsInSingleLine() {
@@ -7378,6 +7426,11 @@ class Contents {
     });
   }
 
+  insertAtCursorEnsuringLineBelow(node) {
+    this.insertAtCursor(node);
+    this.#insertLineBelowIfLastNode(node);
+  }
+
   insertNodeWrappingEachSelectedLine(newNodeFn) {
     this.editor.update(() => {
       const selection = Lr();
@@ -7660,6 +7713,17 @@ class Contents {
 
   get #selection() {
     return this.editorElement.selection
+  }
+
+  #insertLineBelowIfLastNode(node) {
+    this.editor.update(() => {
+      const nextSibling = node.getNextSibling();
+      if (!nextSibling) {
+        const newParagraph = Li();
+        node.insertAfter(newParagraph);
+        newParagraph.selectStart();
+      }
+    });
   }
 
   #unwrap(node) {
@@ -8004,7 +8068,8 @@ class Contents {
     lastInsertedNode.insertAfter(textNodeAfter);
 
     this.#appendLineBreakIfNeeded(textNodeAfter.getParentOrThrow());
-    textNodeAfter.select(0, 0);
+    const cursorOffset = textAfterCursor ? 0 : 1;
+    textNodeAfter.select(cursorOffset, cursorOffset);
   }
 
   #insertReplacementNodes(startNode, replacementNodes) {
@@ -8866,6 +8931,14 @@ class LexicalPromptElement extends HTMLElement {
     return this.hasAttribute("supports-space-in-searches")
   }
 
+  get open() {
+    return this.popoverElement?.classList?.contains("lexxy-prompt-menu--visible")
+  }
+
+  get closed() {
+    return !this.open
+  }
+
   get #doesSpaceSelect() {
     return !this.supportsSpaceInSearches
   }
@@ -8886,26 +8959,52 @@ class LexicalPromptElement extends HTMLElement {
   #addTriggerListener() {
     const unregister = this.#editor.registerUpdateListener(() => {
       this.#editor.read(() => {
-        const selection = Lr();
-        if (!selection) return
-        let node;
-        if (yr(selection)) {
-          node = selection.anchor.getNode();
-        } else if (xr(selection)) {
-          [ node ] = selection.getNodes();
-        }
+        const { node, offset } = this.#selection.selectedNodeWithOffset();
+        if (!node) return
 
-        if (node && lr(node)) {
-          const text = node.getTextContent().trim();
-          const lastChar = [ ...text ].pop();
+        if (lr(node) && offset > 0) {
+          const fullText = node.getTextContent();
+          const charBeforeCursor = fullText[offset - 1];
 
-          if (lastChar === this.trigger) {
+          if (charBeforeCursor === this.trigger) {
             unregister();
             this.#showPopover();
           }
         }
       });
     });
+  }
+
+  #addCursorPositionListener() {
+    this.cursorPositionListener = this.#editor.registerUpdateListener(() => {
+      if (this.closed) return
+
+      this.#editor.read(() => {
+        const { node, offset } = this.#selection.selectedNodeWithOffset();
+        if (!node) return
+
+        if (lr(node) && offset > 0) {
+          const fullText = node.getTextContent();
+          const textBeforeCursor = fullText.slice(0, offset);
+          const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger);
+
+          // If trigger is not found, or cursor is at or before the trigger position, hide popover
+          if (lastTriggerIndex === -1 || offset <= lastTriggerIndex) {
+            this.#hidePopover();
+          }
+        } else {
+          // Cursor is not in a text node or at offset 0, hide popover
+          this.#hidePopover();
+        }
+      });
+    });
+  }
+
+  #removeCursorPositionListener() {
+    if (this.cursorPositionListener) {
+      this.cursorPositionListener();
+      this.cursorPositionListener = null;
+    }
   }
 
   get #editor() {
@@ -8931,6 +9030,7 @@ class LexicalPromptElement extends HTMLElement {
     this.#editorElement.addEventListener("lexxy:change", this.#filterOptions);
 
     this.#registerKeyListeners();
+    this.#addCursorPositionListener();
   }
 
   #registerKeyListeners() {
@@ -8941,6 +9041,22 @@ class LexicalPromptElement extends HTMLElement {
     if (this.#doesSpaceSelect) {
       this.keyListeners.push(this.#editor.registerCommand(be$1, this.#handleSelectedOption.bind(this), Bi));
     }
+
+    // Register arrow keys with HIGH priority to prevent Lexical's selection handlers from running
+    this.keyListeners.push(this.#editor.registerCommand(ke$1, this.#handleArrowUp.bind(this), Bi));
+    this.keyListeners.push(this.#editor.registerCommand(Te$1, this.#handleArrowDown.bind(this), Bi));
+  }
+
+  #handleArrowUp(event) {
+    this.#moveSelectionUp();
+    event.preventDefault();
+    return true
+  }
+
+  #handleArrowDown(event) {
+    this.#moveSelectionDown();
+    event.preventDefault();
+    return true
   }
 
   #selectFirstOption() {
@@ -8958,8 +9074,14 @@ class LexicalPromptElement extends HTMLElement {
   #selectOption(listItem) {
     this.#clearSelection();
     listItem.toggleAttribute("aria-selected", true);
+    listItem.scrollIntoView({ block: "nearest", behavior: "smooth" });
     listItem.focus();
-    this.#editorElement.focus();
+
+    // Preserve selection to prevent cursor jump
+    this.#selection.preservingSelection(() => {
+      this.#editorElement.focus();
+    });
+
     this.#editorContentElement.setAttribute("aria-controls", this.popoverElement.id);
     this.#editorContentElement.setAttribute("aria-activedescendant", listItem.id);
     this.#editorContentElement.setAttribute("aria-haspopup", "listbox");
@@ -9008,6 +9130,7 @@ class LexicalPromptElement extends HTMLElement {
     this.#editorElement.removeEventListener("keydown", this.#handleKeydownOnPopover);
 
     this.#unregisterKeyListeners();
+    this.#removeCursorPositionListener();
 
     await nextFrame();
     this.#addTriggerListener();
@@ -9026,6 +9149,7 @@ class LexicalPromptElement extends HTMLElement {
 
     if (this.#editorContents.containsTextBackUntil(this.trigger)) {
       await this.#showFilteredOptions();
+      await nextFrame();
       this.#positionPopover();
     } else {
       this.#hidePopover();
@@ -9066,15 +9190,8 @@ class LexicalPromptElement extends HTMLElement {
       this.#hidePopover();
       this.#editorElement.focus();
       event.stopPropagation();
-    } else if (event.key === "ArrowDown") {
-      this.#moveSelectionDown();
-      event.preventDefault();
-      event.stopPropagation();
-    } else if (event.key === "ArrowUp") {
-      this.#moveSelectionUp();
-      event.preventDefault();
-      event.stopPropagation();
     }
+    // Arrow keys are now handled via Lexical commands with HIGH priority
   }
 
   #moveSelectionDown() {
