@@ -5239,9 +5239,7 @@ class LexicalToolbarElement extends HTMLElement {
   #assignButtonTabindex() {
     const baseTabIndex = parseInt(this.editorElement.editorContentElement.getAttribute("tabindex") ?? "0");
     this.#buttons.forEach((button, index) => {
-      let i = baseTabIndex + index + 1;
-      if (button.getAttribute("role") === "separator") i = -1;
-      button.setAttribute("tabindex", i);
+      button.setAttribute("tabindex", baseTabIndex + index + 1);
     });
   }
 
@@ -5361,7 +5359,7 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #compactMenu() {
-    const buttons = this.#buttons.reverse();
+    const buttons = this.#buttonsWithSeparator.reverse();
     let movedToOverflow = false;
 
     for (const button of buttons) {
@@ -5376,6 +5374,10 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   get #buttons() {
+    return Array.from(this.querySelectorAll(":scope > button"))
+  }
+
+  get #buttonsWithSeparator() {
     return Array.from(this.querySelectorAll(":scope > button, :scope > [role=separator]"))
   }
 
