@@ -38,4 +38,8 @@ module EditorHelper
   def assert_no_mention_attachments
     assert_no_css "action-text-attachment[content-type='application/vnd.actiontext.mention']"
   end
+
+  def wait_for_editor
+    assert_css "lexxy-editor[connected]"
+  end
 end

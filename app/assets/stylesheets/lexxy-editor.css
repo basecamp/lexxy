@@ -163,10 +163,20 @@
   background-color: var(--lexxy-color-canvas);
   border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
   box-shadow: var(--lexxy-shadow);
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--lexxy-toolbar-gap);
   inset-inline-end: 0;
   padding: var(--lexxy-toolbar-gap);
   position: absolute;
+
+  .lexxy-editor__toolbar-spacer {
+    display: none;
+  }
+
+  * + .lexxy-editor__toolbar-spacer + button {
+    margin-left: 0.5lh;
+  }
 }
 
 /* Link dialog
