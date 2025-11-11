@@ -367,7 +367,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #isEmpty() {
-    return this.editorContentElement.innerHTML === "<p><br></p>"
+    return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
   }
 
   #setValidity() {
