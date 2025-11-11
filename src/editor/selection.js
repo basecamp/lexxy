@@ -27,8 +27,10 @@ export default class Selection {
 
   set current(selection) {
     if ($isNodeSelection(selection)) {
-      this._current = $getSelection()
-      this.#syncSelectedClasses()
+      this.editor.getEditorState().read(() => {
+        this._current = $getSelection()
+        this.#syncSelectedClasses()
+      })
     } else {
       this.editor.update(() => {
         this.#syncSelectedClasses()
@@ -212,8 +214,9 @@ export default class Selection {
 
     this._currentlySelectedKeys = new Set()
 
-    if (this.current) {
-      for (const node of this.current.getNodes()) {
+    const selection = $getSelection()
+    if (selection && $isNodeSelection(selection)) {
+      for (const node of selection.getNodes()) {
         this._currentlySelectedKeys.add(node.getKey())
       }
     }
