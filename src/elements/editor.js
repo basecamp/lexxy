@@ -13,7 +13,7 @@ import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
-import { containsVisuallyRelevantChildren, createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
+import { createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
 import LexicalToolbar from "./toolbar"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
@@ -367,7 +367,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #isEmpty() {
-    return !this.editorContentElement.textContent.trim() && !containsVisuallyRelevantChildren(this.editorContentElement)
+    return this.editorContentElement.innerHTML === "<p><br></p>"
   }
 
   #setValidity() {
