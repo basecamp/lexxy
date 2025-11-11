@@ -389,7 +389,9 @@ export default class Selection {
     if (this.current) {
       await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
     } else {
-      this.#selectInLexical(this.topLevelNodeBeforeCursor)
+      if (this.#isCursorOnFirstLineOfBlock()) {
+        this.#selectInLexical(this.topLevelNodeBeforeCursor)
+      }
     }
   }
 
@@ -397,8 +399,74 @@ export default class Selection {
     if (this.current) {
       await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
     } else {
-      this.#selectInLexical(this.topLevelNodeAfterCursor)
+      if (this.#isCursorOnLastLineOfBlock()) {
+        this.#selectInLexical(this.topLevelNodeAfterCursor)
+      }
     }
+  }
+
+  #isCursorOnFirstLineOfBlock() {
+    const metrics = this.#getCursorBlockMetrics()
+    if (!metrics) return true
+
+    const { cursorRect, blockRect, lineHeight } = metrics
+
+    const distanceFromTop = cursorRect.top - blockRect.top
+    return distanceFromTop < lineHeight * 0.8
+  }
+
+  #isCursorOnLastLineOfBlock() {
+    const metrics = this.#getCursorBlockMetrics()
+    if (!metrics) return true
+
+    const { cursorRect, blockRect, lineHeight } = metrics
+
+    const distanceFromBottom = blockRect.bottom - cursorRect.bottom
+    return distanceFromBottom < lineHeight * 0.8
+  }
+
+  #getCursorBlockMetrics() {
+    const nativeSelection = window.getSelection();
+    if (!nativeSelection || nativeSelection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = nativeSelection.getRangeAt(0);
+    const cursorRect = range.getBoundingClientRect();
+
+    let blockElement = null;
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection();
+      if (!$isRangeSelection(selection)) {
+        return;
+      }
+
+      const anchorNode = selection.anchor.getNode();
+      const topLevelElement = anchorNode.getTopLevelElement();
+      if (topLevelElement) {
+        blockElement = this.editor.getElementByKey(topLevelElement.getKey());
+      }
+    });
+
+    if (!blockElement) {
+      return null;
+    }
+
+    const blockRect = blockElement.getBoundingClientRect();
+    const lineHeight = this.#getLineHeight(blockElement);
+
+    return { cursorRect, blockRect, lineHeight };
+  }
+
+  #getLineHeight(element) {
+    const computed = window.getComputedStyle(element)
+    const lineHeight = computed.lineHeight
+
+    if (lineHeight === 'normal') {
+      return parseFloat(computed.fontSize)
+    }
+
+    return parseFloat(lineHeight)
   }
 
   async #withCurrentNode(fn) {
@@ -601,8 +669,27 @@ export default class Selection {
     if (anchorNode.getNextSibling() instanceof DecoratorNode) {
       return anchorNode.getNextSibling()
     }
-    const parent = anchorNode.getParent()
-    return parent ? parent.getNextSibling() : null
+
+    // Walk up the tree to find the first ancestor with a next sibling
+    let current = anchorNode
+    while (current) {
+      const nextSibling = current.getNextSibling()
+      if (nextSibling) {
+        // If it's a DecoratorNode, return it
+        if (nextSibling instanceof DecoratorNode) {
+          return nextSibling
+        }
+        // Otherwise, try to find a DecoratorNode in its descendants
+        return this.#findFirstDecoratorDescendant(nextSibling)
+      }
+      current = current.getParent()
+      // Stop if we've reached the root
+      if (!current || current === $getRoot()) {
+        break
+      }
+    }
+
+    return null
   }
 
   #getNodeAfterElementNode(anchorNode, offset) {
@@ -623,8 +710,27 @@ export default class Selection {
     if (anchorNode.getPreviousSibling() instanceof DecoratorNode) {
       return anchorNode.getPreviousSibling()
     }
-    const parent = anchorNode.getParent()
-    return parent.getPreviousSibling()
+
+    // Walk up the tree to find the first ancestor with a previous sibling
+    let current = anchorNode
+    while (current) {
+      const prevSibling = current.getPreviousSibling()
+      if (prevSibling) {
+        // If it's a DecoratorNode, return it
+        if (prevSibling instanceof DecoratorNode) {
+          return prevSibling
+        }
+        // Otherwise, try to find a DecoratorNode in its descendants
+        return this.#findLastDecoratorDescendant(prevSibling)
+      }
+      current = current.getParent()
+      // Stop if we've reached the root
+      if (!current || current === $getRoot()) {
+        break
+      }
+    }
+
+    return null
   }
 
   #getNodeBeforeElementNode(anchorNode, offset) {
@@ -648,5 +754,37 @@ export default class Selection {
       current = current.getParent()
     }
     return current ? current.getPreviousSibling() : null
+  }
+
+  #findFirstDecoratorDescendant(node) {
+    if (node instanceof DecoratorNode) {
+      return node
+    }
+
+    if ($isElementNode(node)) {
+      const children = node.getChildren()
+      for (const child of children) {
+        const result = this.#findFirstDecoratorDescendant(child)
+        if (result) return result
+      }
+    }
+
+    return null
+  }
+  
+  #findLastDecoratorDescendant(node) {
+    if (node instanceof DecoratorNode) {
+      return node
+    }
+
+    if ($isElementNode(node)) {
+      const children = node.getChildren()
+      for (let i = children.length - 1; i >= 0; i--) {
+        const result = this.#findLastDecoratorDescendant(children[i])
+        if (result) return result
+      }
+    }
+
+    return null
   }
 }
