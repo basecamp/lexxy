@@ -3,6 +3,7 @@ require "application_system_test_case"
 class ToolbarTest < ApplicationSystemTestCase
   setup do
     visit edit_post_path(posts(:hello_world))
+    wait_for_editor
   end
 
   test "bold" do
