@@ -102,7 +102,7 @@ export default class LexicalToolbarElement extends HTMLElement {
   #assignButtonTabindex() {
     const baseTabIndex = parseInt(this.editorElement.editorContentElement.getAttribute("tabindex") ?? "0")
     this.#buttons.forEach((button, index) => {
-      var i = baseTabIndex + index + 1
+      let i = baseTabIndex + index + 1
       if (button.getAttribute("role") === "separator") i = -1
       button.setAttribute("tabindex", i)
     })
