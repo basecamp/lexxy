@@ -5359,7 +5359,7 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #compactMenu() {
-    const buttons = this.#buttons.reverse();
+    const buttons = this.#buttonsWithSeparator.reverse();
     let movedToOverflow = false;
 
     for (const button of buttons) {
@@ -5374,6 +5374,10 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   get #buttons() {
+    return Array.from(this.querySelectorAll(":scope > button"))
+  }
+
+  get #buttonsWithSeparator() {
     return Array.from(this.querySelectorAll(":scope > button, :scope > [role=separator]"))
   }
 
@@ -5530,11 +5534,6 @@ var theme = {
   }
 };
 
-const VISUALLY_RELEVANT_ELEMENTS_SELECTOR = [
-  "img", "video", "audio", "iframe", "embed", "object", "picture", "source", "canvas", "svg", "math",
-  "form", "input", "textarea", "select", "button", "code", "blockquote", "hr"
-].join(",");
-
 const ALLOWED_HTML_TAGS = [ "a", "action-text-attachment", "b", "blockquote", "br", "code", "em",
   "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "ol", "p", "pre", "q", "s", "strong", "ul" ];
 
@@ -5577,10 +5576,6 @@ function dispatchCustomEvent(element, name, detail) {
     bubbles: true,
   });
   element.dispatchEvent(event);
-}
-
-function containsVisuallyRelevantChildren(element) {
-  return element.querySelector(VISUALLY_RELEVANT_ELEMENTS_SELECTOR)
 }
 
 function sanitize(html) {
@@ -8660,7 +8655,7 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   get #isEmpty() {
-    return !this.editorContentElement.textContent.trim() && !containsVisuallyRelevantChildren(this.editorContentElement)
+    return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
   }
 
   #setValidity() {

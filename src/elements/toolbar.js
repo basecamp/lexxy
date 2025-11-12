@@ -222,7 +222,7 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #compactMenu() {
-    const buttons = this.#buttons.reverse()
+    const buttons = this.#buttonsWithSeparator.reverse()
     let movedToOverflow = false
 
     for (const button of buttons) {
@@ -237,6 +237,10 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   get #buttons() {
+    return Array.from(this.querySelectorAll(":scope > button"))
+  }
+
+  get #buttonsWithSeparator() {
     return Array.from(this.querySelectorAll(":scope > button, :scope > [role=separator]"))
   }
 
