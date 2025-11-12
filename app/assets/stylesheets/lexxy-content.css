@@ -44,7 +44,7 @@
   .lexxy-content__bold {
     font-weight: bold;
   }
-  
+
   .lexxy-content__strikethrough {
     text-decoration: line-through;
   }
@@ -211,12 +211,14 @@
   color: var(--lexxy-color-text-subtle);
   font-size: var(--lexxy-text-small);
 
-  input {
+  textarea {
     background: var(--lexxy-color-canvas);
-    color: var(--lexxy-color-text);
     border: none;
+    color: inherit;
+    font-family: inherit;
     inline-size: 100%;
     max-inline-size: 100%;
+    resize: none;
     text-align: center;
 
     &:focus {
