@@ -54,6 +54,12 @@ export default class Contents {
     this.#insertLineBelowIfLastNode(node)
   }
 
+  insertAtCursorEnsuringLinesAround(node) {
+    this.insertAtCursor(node)
+    this.#insertLineAboveIfFirstNode(node)
+    this.#insertLineBelowIfLastNode(node)
+  }
+
   insertNodeWrappingEachSelectedLine(newNodeFn) {
     this.editor.update(() => {
       const selection = $getSelection()
@@ -270,7 +276,7 @@ export default class Contents {
 
     this.editor.update(() => {
       const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor })
-      this.insertAtCursor(uploadedImageNode)
+      this.insertAtCursorEnsuringLinesAround(uploadedImageNode)
     }, { tag: HISTORY_MERGE_TAG })
   }
 
@@ -282,6 +288,12 @@ export default class Contents {
         const nodesToRemove = this.#selection.current.getNodes()
         if (nodesToRemove.length === 0) return
 
+        // Remove a trailing empty paragraph if it exists
+        const followingNode = nodesToRemove[nodesToRemove.length - 1].getNextSibling()
+        if ($isParagraphNode(followingNode) && this.#isElementEmpty(followingNode)) {
+          followingNode.remove()
+        }
+        
         focusNode = this.#findAdjacentNodeTo(nodesToRemove)
         this.#deleteNodes(nodesToRemove)
       }
@@ -344,6 +356,17 @@ export default class Contents {
       if (!nextSibling) {
         const newParagraph = $createParagraphNode()
         node.insertAfter(newParagraph)
+        newParagraph.selectStart()
+      }
+    })
+  }
+
+  #insertLineAboveIfFirstNode(node) {
+    this.editor.update(() => {
+      const previousSibling = node.getPreviousSibling()
+      if (!previousSibling) {
+        const newParagraph = $createParagraphNode()
+        node.insertBefore(newParagraph)
         newParagraph.selectStart()
       }
     })
