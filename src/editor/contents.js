@@ -293,7 +293,7 @@ export default class Contents {
         if ($isParagraphNode(followingNode) && this.#isElementEmpty(followingNode)) {
           followingNode.remove()
         }
-        
+
         focusNode = this.#findAdjacentNodeTo(nodesToRemove)
         this.#deleteNodes(nodesToRemove)
       }

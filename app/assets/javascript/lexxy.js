@@ -6786,7 +6786,7 @@ class Selection {
   #getCursorBlockMetrics() {
     const nativeSelection = window.getSelection();
     if (!nativeSelection || nativeSelection.rangeCount === 0) {
-      return null;
+      return null
     }
 
     const range = nativeSelection.getRangeAt(0);
@@ -6796,7 +6796,7 @@ class Selection {
     this.editor.getEditorState().read(() => {
       const selection = Lr();
       if (!yr(selection)) {
-        return;
+        return
       }
 
       const anchorNode = selection.anchor.getNode();
@@ -6807,20 +6807,20 @@ class Selection {
     });
 
     if (!blockElement) {
-      return null;
+      return null
     }
 
     const blockRect = blockElement.getBoundingClientRect();
     const lineHeight = this.#getLineHeight(blockElement);
 
-    return { cursorRect, blockRect, lineHeight };
+    return { cursorRect, blockRect, lineHeight }
   }
 
   #getLineHeight(element) {
     const computed = window.getComputedStyle(element);
     const lineHeight = computed.lineHeight;
 
-    if (lineHeight === 'normal') {
+    if (lineHeight === "normal") {
       return parseFloat(computed.fontSize)
     }
 
@@ -7129,7 +7129,7 @@ class Selection {
 
     return null
   }
-  
+
   #findLastDecoratorDescendant(node) {
     if (node instanceof ki) {
       return node
@@ -7806,7 +7806,7 @@ class Contents {
         if (Ii(followingNode) && this.#isElementEmpty(followingNode)) {
           followingNode.remove();
         }
-        
+
         focusNode = this.#findAdjacentNodeTo(nodesToRemove);
         this.#deleteNodes(nodesToRemove);
       }

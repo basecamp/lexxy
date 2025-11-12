@@ -429,43 +429,43 @@ export default class Selection {
   }
 
   #getCursorBlockMetrics() {
-    const nativeSelection = window.getSelection();
+    const nativeSelection = window.getSelection()
     if (!nativeSelection || nativeSelection.rangeCount === 0) {
-      return null;
+      return null
     }
 
-    const range = nativeSelection.getRangeAt(0);
-    const cursorRect = range.getBoundingClientRect();
+    const range = nativeSelection.getRangeAt(0)
+    const cursorRect = range.getBoundingClientRect()
 
-    let blockElement = null;
+    let blockElement = null
     this.editor.getEditorState().read(() => {
-      const selection = $getSelection();
+      const selection = $getSelection()
       if (!$isRangeSelection(selection)) {
-        return;
+        return
       }
 
-      const anchorNode = selection.anchor.getNode();
-      const topLevelElement = anchorNode.getTopLevelElement();
+      const anchorNode = selection.anchor.getNode()
+      const topLevelElement = anchorNode.getTopLevelElement()
       if (topLevelElement) {
-        blockElement = this.editor.getElementByKey(topLevelElement.getKey());
+        blockElement = this.editor.getElementByKey(topLevelElement.getKey())
       }
-    });
+    })
 
     if (!blockElement) {
-      return null;
+      return null
     }
 
-    const blockRect = blockElement.getBoundingClientRect();
-    const lineHeight = this.#getLineHeight(blockElement);
+    const blockRect = blockElement.getBoundingClientRect()
+    const lineHeight = this.#getLineHeight(blockElement)
 
-    return { cursorRect, blockRect, lineHeight };
+    return { cursorRect, blockRect, lineHeight }
   }
 
   #getLineHeight(element) {
     const computed = window.getComputedStyle(element)
     const lineHeight = computed.lineHeight
 
-    if (lineHeight === 'normal') {
+    if (lineHeight === "normal") {
       return parseFloat(computed.fontSize)
     }
 
@@ -774,7 +774,7 @@ export default class Selection {
 
     return null
   }
-  
+
   #findLastDecoratorDescendant(node) {
     if (node instanceof DecoratorNode) {
       return node
