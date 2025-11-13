@@ -79,7 +79,7 @@ export default class LexicalPromptElement extends HTMLElement {
             const isAtStart = offset === 1
 
             const charBeforeTrigger = offset > 1 ? fullText[offset - 2] : null
-            const isPrecededBySpaceOrNewline = charBeforeTrigger === ' ' || charBeforeTrigger === '\n'
+            const isPrecededBySpaceOrNewline = charBeforeTrigger === " " || charBeforeTrigger === "\n"
 
             if (isAtStart || isPrecededBySpaceOrNewline) {
               unregister()
