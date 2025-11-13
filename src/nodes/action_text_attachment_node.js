@@ -199,11 +199,10 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   #createEditableCaption() {
     const caption = createElement("figcaption", { className: "attachment__caption" })
-    const input = createElement("input", {
-      type: "text",
-      class: "input",
+    const input = createElement("textarea", {
       value: this.caption,
-      placeholder: this.fileName
+      placeholder: this.fileName,
+      rows: "1"
     })
 
     input.addEventListener("focusin", () => input.placeholder = "Add caption...")

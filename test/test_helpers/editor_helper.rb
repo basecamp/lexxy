@@ -12,7 +12,7 @@ module EditorHelper
   def assert_image_figure_attachment(content_type: "image/png", caption:)
     assert_figure_attachment(content_type: content_type) do
       assert_selector("img[src*='/rails/active_storage']")
-      assert_selector "figcaption input[placeholder='#{caption}']"
+      assert_selector "figcaption textarea[placeholder='#{caption}']"
     end
   end
 
@@ -41,5 +41,6 @@ module EditorHelper
 
   def wait_for_editor
     assert_css "lexxy-editor[connected]"
+    assert_css "lexxy-toolbar[connected]" if has_css?("lexxy-toolbar")
   end
 end

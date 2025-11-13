@@ -39,6 +39,8 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#monitorSelectionChanges()
     this.#monitorHistoryChanges()
     this.#refreshToolbarOverflow()
+
+    this.toggleAttribute("connected", true)
   }
 
   #bindButtons() {

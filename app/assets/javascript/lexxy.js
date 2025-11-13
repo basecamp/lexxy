@@ -5176,6 +5176,8 @@ class LexicalToolbarElement extends HTMLElement {
     this.#monitorSelectionChanges();
     this.#monitorHistoryChanges();
     this.#refreshToolbarOverflow();
+
+    this.toggleAttribute("connected", true);
   }
 
   #bindButtons() {
@@ -5802,11 +5804,10 @@ class ActionTextAttachmentNode extends ki {
 
   #createEditableCaption() {
     const caption = createElement("figcaption", { className: "attachment__caption" });
-    const input = createElement("input", {
-      type: "text",
-      class: "input",
+    const input = createElement("textarea", {
       value: this.caption,
-      placeholder: this.fileName
+      placeholder: this.fileName,
+      rows: "1"
     });
 
     input.addEventListener("focusin", () => input.placeholder = "Add caption...");
