@@ -41,5 +41,6 @@ module EditorHelper
 
   def wait_for_editor
     assert_css "lexxy-editor[connected]"
+    assert_css "lexxy-toolbar[connected]" if has_css?("lexxy-toolbar")
   end
 end
