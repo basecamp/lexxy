@@ -74,9 +74,17 @@ export default class LexicalPromptElement extends HTMLElement {
           const fullText = node.getTextContent()
           const charBeforeCursor = fullText[offset - 1]
 
+          // Check if trigger is at the start of the text node (new line case) or preceded by space or newline
           if (charBeforeCursor === this.trigger) {
-            unregister()
-            this.#showPopover()
+            const isAtStart = offset === 1
+
+            const charBeforeTrigger = offset > 1 ? fullText[offset - 2] : null
+            const isPrecededBySpaceOrNewline = charBeforeTrigger === ' ' || charBeforeTrigger === '\n'
+
+            if (isAtStart || isPrecededBySpaceOrNewline) {
+              unregister()
+              this.#showPopover()
+            }
           }
         }
       })
