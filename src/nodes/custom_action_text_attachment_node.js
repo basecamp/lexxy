@@ -47,12 +47,13 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     }
   }
 
-  constructor({ sgid, contentType, innerHtml }, key) {
+  constructor({ tagName, sgid, contentType, innerHtml, plainText }, key) {
     super(key)
 
     this.sgid = sgid
     this.contentType = contentType || "application/vnd.actiontext.unknown"
     this.innerHtml = innerHtml
+    this.plainText = plainText
   }
 
   createDOM() {
@@ -69,6 +70,10 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
   updateDOM() {
     return true
+  }
+
+  getTextContent() {
+    return this.plainText || this.createDOM().textContent.trim() || `[${this.contentType}]`
   }
 
   isInline() {
@@ -91,7 +96,8 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
       version: 1,
       sgid: this.sgid,
       contentType: this.contentType,
-      innerHtml: this.innerHtml
+      innerHtml: this.innerHtml,
+      plainText: this.plainText
     }
   }
 
