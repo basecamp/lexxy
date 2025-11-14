@@ -8606,6 +8606,10 @@ class LexicalEditorElement extends HTMLElement {
     return this.dataset.blobUrlTemplate
   }
 
+  get isEmpty() {
+    return ["<p><br></p>", "<p></p>", ""].includes(this.value.trim())
+  }
+
   get isSingleLineMode() {
     return this.hasAttribute("single-line")
   }
@@ -8750,7 +8754,7 @@ class LexicalEditorElement extends HTMLElement {
 
     this.internals.setFormValue(html);
     this._internalFormValue = html;
-    this.#validationTextArea.value = this.#isEmpty ? "" : html;
+    this.#validationTextArea.value = this.isEmpty ? "" : html;
 
     if (changed) {
       dispatch(this, "lexxy:change");
@@ -8889,11 +8893,7 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   #toggleEmptyStatus() {
-    this.classList.toggle("lexxy-editor--empty", this.#isEmpty);
-  }
-
-  get #isEmpty() {
-    return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
+    this.classList.toggle("lexxy-editor--empty", this.isEmpty);
   }
 
   #setValidity() {
