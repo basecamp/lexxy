@@ -2,7 +2,7 @@
 
 <%= form_with model: post, data: { controller: "events-logger file-acceptance unfurl-link",
   file_acceptance_type_value: params[:attachment_type],
-  action: "lexxy:change->events-logger#log lexxy:insert-link->events-logger#log lexxy:insert-link->unfurl-link#unfurl lexxy:file-accept->file-acceptance#acceptFile" } do |form| %>
+  action: "lexxy:focus->events-logger#log lexxy:blur->events-logger#log lexxy:change->events-logger#log lexxy:insert-link->events-logger#log lexxy:insert-link->unfurl-link#unfurl lexxy:file-accept->file-acceptance#acceptFile" } do |form| %>
   <div>
     <%= form.label :title, style: "display: block" %>
     <%= form.text_field :title %>

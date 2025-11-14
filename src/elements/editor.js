@@ -1,4 +1,4 @@
-import { $addUpdateTag, $getNodeByKey, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, createEditor } from "lexical"
+import { $addUpdateTag, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, createEditor } from "lexical"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
@@ -151,6 +151,7 @@ export default class LexicalEditorElement extends HTMLElement {
     this.#registerComponents()
     this.#listenForInvalidatedNodes()
     this.#handleEnter()
+    this.#handleFocus()
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#loadInitialValue()
@@ -327,6 +328,14 @@ export default class LexicalEditorElement extends HTMLElement {
       },
       COMMAND_PRIORITY_NORMAL
     )
+  }
+
+  #handleFocus() {
+    // Lexxy handles focus and blur as commands
+    // see https://github.com/facebook/lexical/blob/d1a8e84fe9063a4f817655b346b6ff373aa107f0/packages/lexical/src/LexicalEvents.ts#L35
+    // and https://stackoverflow.com/a/72212077
+    this.editor.registerCommand(BLUR_COMMAND, () => { dispatch(this, "lexxy:blur") }, COMMAND_PRIORITY_NORMAL)
+    this.editor.registerCommand(FOCUS_COMMAND, () => { dispatch(this, "lexxy:focus") }, COMMAND_PRIORITY_NORMAL)
   }
 
   #attachDebugHooks() {

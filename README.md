@@ -355,6 +355,11 @@ Each event is dispatched on the `<lexxy-editor>` element.
 Fired when the `<lexxy-editor>` element is attached to the DOM and ready for use.
 This is useful for one-time setup.
 
+### lexxy:focus and lexxy:blur
+
+Fired whenever the editor element gains or loses focus.
+Useful to show or hide accessory UI state.
+
 ### `lexxy:change`
 
 Fired whenever the editor content changes.
