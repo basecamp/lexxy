@@ -279,8 +279,33 @@
   min-inline-size: var(--lexxy-prompt-min-width);
   overflow: auto;
   padding: var(--lexxy-prompt-padding);
+  padding-inline-end: 0;
+  scrollbar-color: var(--lexxy-color-ink-lighter) transparent;
+  scrollbar-width: thin;
   visibility: hidden;
   z-index: var(--lexxy-z-popup);
+
+  @media (prefers-color-scheme: dark) {
+    scrollbar-color: oklch(40% 0 0) transparent;
+  }
+
+  /* Webkit browsers */
+  &::-webkit-scrollbar {
+    inline-size: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--lexxy-color-ink-lighter);
+    border-radius: 4px;
+
+    @media (prefers-color-scheme: dark) {
+      background-color: oklch(40% 0 0);
+    }
+  }
 }
 
 :where(.lexxy-prompt-menu--visible) {
