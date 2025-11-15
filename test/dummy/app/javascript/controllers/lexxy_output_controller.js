@@ -4,7 +4,7 @@ import prettier from "prettier"
 import htmlParser from "prettier/parser-html"
 
 export default class extends Controller {
-  static targets = [ "editor", "output" ]
+  static targets = [ "editor", "rendered", "output" ]
 
   connect() {
     this.refresh()
@@ -12,6 +12,13 @@ export default class extends Controller {
 
   async refresh(event) {
     const code = this.editorTarget.value.trim()
+
+    // Show rendered HTML
+    if (this.hasRenderedTarget) {
+      this.renderedTarget.innerHTML = code
+    }
+
+    // Show formatted source code
     let formattedCode = await prettier.format(code, {
       parser: "html",
       plugins: [ htmlParser ],
