@@ -9087,7 +9087,7 @@ class LexicalPromptElement extends HTMLElement {
   #selectOption(listItem) {
     this.#clearSelection();
     listItem.toggleAttribute("aria-selected", true);
-    listItem.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    this.#scrollToOption(listItem);
     listItem.focus();
 
     // Preserve selection to prevent cursor jump
@@ -9098,6 +9098,32 @@ class LexicalPromptElement extends HTMLElement {
     this.#editorContentElement.setAttribute("aria-controls", this.popoverElement.id);
     this.#editorContentElement.setAttribute("aria-activedescendant", listItem.id);
     this.#editorContentElement.setAttribute("aria-haspopup", "listbox");
+  }
+
+  #scrollToOption(listItem) {
+    const menu = this.popoverElement;
+    const menuRect = menu.getBoundingClientRect();
+    const itemRect = listItem.getBoundingClientRect();
+    
+    // Calculate the item's position relative to the menu
+    const itemTop = listItem.offsetTop;
+    const itemBottom = itemTop + itemRect.height;
+    const menuScrollTop = menu.scrollTop;
+    const menuHeight = menuRect.height;
+    
+    // Define padding: scroll when the item is within this distance from the edge
+    const scrollPadding = itemRect.height * 1.5;
+    
+    // Check if we need to scroll down
+    if (itemBottom > menuScrollTop + menuHeight - scrollPadding) {
+      // Scroll so the item is visible with padding below
+      menu.scrollTop = itemBottom - menuHeight + scrollPadding;
+    }
+    // Check if we need to scroll up
+    else if (itemTop < menuScrollTop + scrollPadding) {
+      // Scroll so the item is visible with padding above
+      menu.scrollTop = itemTop - scrollPadding;
+    }
   }
 
   #clearSelection() {
@@ -9208,13 +9234,21 @@ class LexicalPromptElement extends HTMLElement {
   }
 
   #moveSelectionDown() {
-    const nextIndex = this.#selectedIndex + 1;
-    if (nextIndex < this.#listItemElements.length) this.#selectOption(this.#listItemElements[nextIndex]);
+    const currentIndex = this.#selectedIndex;
+    const items = this.#listItemElements;
+    
+    // Wrap around to the first item if we're at the last item
+    const nextIndex = currentIndex + 1 >= items.length ? 0 : currentIndex + 1;
+    this.#selectOption(items[nextIndex]);
   }
 
   #moveSelectionUp() {
-    const previousIndex = this.#selectedIndex - 1;
-    if (previousIndex >= 0) this.#selectOption(this.#listItemElements[previousIndex]);
+    const currentIndex = this.#selectedIndex;
+    const items = this.#listItemElements;
+    
+    // Wrap around to the last item if we're at the first item
+    const previousIndex = currentIndex - 1 < 0 ? items.length - 1 : currentIndex - 1;
+    this.#selectOption(items[previousIndex]);
   }
 
   get #selectedIndex() {
