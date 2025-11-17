@@ -6514,42 +6514,12 @@ class Selection {
     return this.#findNextSiblingUp(anchorNode)
   }
 
-  get topLevelNodeAfterCursor() {
-    const { anchorNode, offset } = this.#getCollapsedSelectionData();
-    if (!anchorNode) return null
-
-    if (lr(anchorNode)) {
-      return this.#getNextNodeFromTextEnd(anchorNode)
-    }
-
-    if (Si(anchorNode)) {
-      return this.#getNodeAfterElementNode(anchorNode, offset)
-    }
-
-    return this.#findNextSiblingUp(anchorNode)
-  }
-
   get nodeBeforeCursor() {
     const { anchorNode, offset } = this.#getCollapsedSelectionData();
     if (!anchorNode) return null
 
     if (lr(anchorNode)) {
       return this.#getNodeBeforeTextNode(anchorNode, offset)
-    }
-
-    if (Si(anchorNode)) {
-      return this.#getNodeBeforeElementNode(anchorNode, offset)
-    }
-
-    return this.#findPreviousSiblingUp(anchorNode)
-  }
-
-  get topLevelNodeBeforeCursor() {
-    const { anchorNode, offset } = this.#getCollapsedSelectionData();
-    if (!anchorNode) return null
-
-    if (lr(anchorNode)) {
-      return this.#getPreviousNodeFromTextStart(anchorNode)
     }
 
     if (Si(anchorNode)) {
@@ -6580,8 +6550,6 @@ class Selection {
   #processSelectionChangeCommands() {
     this.editor.registerCommand(Se$1, this.#selectPreviousNode.bind(this), zi);
     this.editor.registerCommand(xe, this.#selectNextNode.bind(this), zi);
-    this.editor.registerCommand(ke$1, this.#selectPreviousTopLevelNode.bind(this), zi);
-    this.editor.registerCommand(Te$1, this.#selectNextTopLevelNode.bind(this), zi);
 
     this.editor.registerCommand(Oe$1, this.#deleteSelectedOrNext.bind(this), zi);
     this.editor.registerCommand(we$1, this.#deletePreviousOrNext.bind(this), zi);
@@ -6738,22 +6706,6 @@ class Selection {
       await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0));
     } else {
       this.#selectInLexical(this.nodeAfterCursor);
-    }
-  }
-
-  async #selectPreviousTopLevelNode() {
-    if (this.current) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectPrevious());
-    } else {
-      this.#selectInLexical(this.topLevelNodeBeforeCursor);
-    }
-  }
-
-  async #selectNextTopLevelNode() {
-    if (this.current) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0));
-    } else {
-      this.#selectInLexical(this.topLevelNodeAfterCursor);
     }
   }
 
