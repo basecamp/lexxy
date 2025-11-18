@@ -18,6 +18,7 @@ import LexicalToolbar from "./toolbar"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { ImportStyledTextNode } from "../nodes/import_styled_text_node"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -177,6 +178,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
   get #lexicalNodes() {
     const nodes = [
+      ImportStyledTextNode,
       QuoteNode,
       HeadingNode,
       ListNode,
