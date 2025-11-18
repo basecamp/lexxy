@@ -24,6 +24,41 @@ class ToolbarTest < ApplicationSystemTestCase
     assert_equal_html "<p>Hello <s>everyone</s></p>", find_editor.value
   end
 
+  test "color highlighting" do
+    find_editor.select("everyone")
+    apply_highlight_option("color")
+
+    assert_equal_html "<p>Hello <mark style=\"color: var(--highlight-1)\">everyone</mark></p>", find_editor.value
+  end
+
+  test "background color highlighting" do
+    find_editor.select("everyone")
+    apply_highlight_option("background-color")
+
+    assert_equal_html "<p>Hello <mark style=\"background-color: var(--highlight-bg-1)\">everyone</mark></p>", find_editor.value
+  end
+
+  # TODO: Why is this failing?
+  test "color and background highlighting" do
+    find_editor.select("everyone")
+    apply_highlight_option("color")
+
+    find_editor.select("everyone")
+    apply_highlight_option("background-color")
+
+    assert_equal_html "<p>Hello <mark style=\"color: var(--highlight-1); background-color: var(--highlight-bg-1)\">everyone</mark></p>", find_editor.value
+  end
+
+  test "bold and color highlighting" do
+    find_editor.select("everyone")
+    click_on "Bold"
+
+    find_editor.select("everyone")
+    apply_highlight_option("color")
+
+    assert_equal_html "<p>Hello <b><mark style=\"color: var(--highlight-1)\"><strong>everyone</strong></mark></b></p>", find_editor.value
+  end
+
   test "rotate headers" do
     find_editor.select("everyone")
 
@@ -165,4 +200,13 @@ class ToolbarTest < ApplicationSystemTestCase
     click_on "Redo"
     assert_equal_html "<p>Hello World</p>", find_editor.value
   end
+
+  private
+    def apply_highlight_option(attribute)
+      click_on "Color highlight"
+
+      within "lexxy-color-dialog dialog[open] [data-button-group='#{attribute}']" do
+        first(".lexxy-color-button").click
+      end
+    end
 end
