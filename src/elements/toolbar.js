@@ -299,8 +299,8 @@ export default class LexicalToolbarElement extends HTMLElement {
       <lexxy-color-dialog class="lexxy-color-dialog">
         <dialog class="color-dialog" closedby="any">
           <div class="lexxy-color-dialog-content">
-            <div data-button-group="color" data-values="rgb(136, 118, 38); rgb(185, 94, 6); rgb(207, 0, 0); rgb(216, 28, 170); rgb(144, 19, 254); rgb(5, 98, 185); rgb(17, 138, 15); rgb(148, 82, 22); rgb(102, 102, 102)"></div>
-            <div data-button-group="background-color" data-values="rgb(250, 247, 133); rgb(255, 240, 219); rgb(255, 229, 229); rgb(255, 228, 247); rgb(242, 237, 255); rgb(225, 239, 252); rgb(228, 248, 226); rgb(238, 226, 215); rgb(242, 242, 242)"></div>
+            <div data-button-group="color" data-values="var(--highlight-1); var(--highlight-2); var(--highlight-3); var(--highlight-4); var(--highlight-5); var(--highlight-6); var(--highlight-7); var(--highlight-8); var(--highlight-9)"></div>
+            <div data-button-group="background-color" data-values="var(--highlight-bg-1); var(--highlight-bg-2); var(--highlight-bg-3); var(--highlight-bg-4); var(--highlight-bg-5); var(--highlight-bg-6); var(--highlight-bg-7); var(--highlight-bg-8); var(--highlight-bg-9)"></div>
             <button data-command="removeHighlight" class="lexxy-color-dialog-reset">Remove all coloring</button>
           </div>
         </dialog>
