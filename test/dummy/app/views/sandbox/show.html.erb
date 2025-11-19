@@ -1,10 +1,30 @@
 <% content_for :title, "Lexxy Sandbox" %>
+<% sandbox_value = %(
+<h3>Lexxy</h3>
+<p>
+  Introducing <a href=\"https://github.com/basecamp/lexxy\">Lexxy</a>, a modern rich text editor for Rails
+</p>
+<pre data-language=\"html\" data-highlight-language=\"html\">
+&lt;lexxy-editor placeholder=\"It all starts here...\" &gt;<br>
+&lt;/lexxy-editor&gt;
+</pre>
+<h4>Features</h4>
+<ul>
+  <li>Built on top of Lexical, the powerful text editor framework from Meta.</li>
+  <li>Good HTML semantics. Paragraphs are real <code>&lt;p&gt;</code> tags, as they should be.</li>
+  <li>Markdown support: shortcuts, auto-formatting on paste.</li>
+  <li>Real-time code syntax highlighting.</li>
+  <li>Create links by pasting URLs on selected text.</li>
+  <li>Configurable prompts. Support for mentions and other interactive prompts with multiple loading and filtering strategies.</li>
+  <li>Preview attachments like PDFs and Videos in the editor.</li>
+  <li>Works seamlessly with Action Text, generating the same canonical HTML format it expects for attachments.</li>
+</ul>).squish %>
 
 <main data-controller="lexxy-output" data-action="lexxy:change->lexxy-output#refresh">
   <section>
     <h2>Editor</h2>
     <div>
-      <%= rich_text_area_tag :sandbox, nil, value: "<h3>Lexxy</h3><p>Introducing <a href=\"https://github.com/basecamp/lexxy\">Lexxy</a>, a modern rich text editor for Rails</p><pre data-language=\"html\" data-highlight-language=\"html\">&lt;lexxy-editor placeholder=\"It all starts here...\"&gt;\n&lt;/lexxy-editor&gt;</pre><h4>Features</h4><ul><li>Built on top of Lexical, the powerful text editor framework from Meta.</li><li>Good HTML semantics. Paragraphs are real <code>&lt;p&gt;</code> tags, as they should be.</li><li>Markdown support: shortcuts, auto-formatting on paste.</li><li>Real-time code syntax highlighting.</li><li>Create links by pasting URLs on selected text.</li><li>Configurable prompts. Support for mentions and other interactive prompts with multiple loading and filtering strategies.</li><li>Preview attachments like PDFs and Videos in the editor.</li><li>Works seamlessly with Action Text, generating the same canonical HTML format it expects for attachments.</li></ul>", placeholder: "Write something...", data: { lexxy_output_target: "editor" } do %>
+      <%= rich_text_area_tag :sandbox, nil, value: sandbox_value, placeholder: "Write something...", data: { lexxy_output_target: "editor" } do %>
         <lexxy-prompt trigger="@" src="<%= people_path %>" name="mention"></lexxy-prompt>
         <lexxy-prompt trigger=":" insert-editable-text>
           <lexxy-prompt-item search="joy laughing face">
