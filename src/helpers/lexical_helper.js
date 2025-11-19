@@ -33,22 +33,26 @@ export function isPrintableCharacter(event) {
 }
 
 export function extendTextNodeConversion(conversionName, callback = (textNode => textNode)) {
-  return (element) => {
-    const textConverter = TextNode.importDOM()?.[conversionName]?.(element)
-    if (!textConverter) return null
+  return extendConversion(TextNode, conversionName, (conversionOutput, element) => ({
+    ...conversionOutput,
+    forChild: (lexicalNode, parentNode) => {
+      const originalForChild = conversionOutput?.forChild ?? (x => x)
+      let childNode = originalForChild(lexicalNode, parentNode)
 
-    const conversionOutput = textConverter.conversion(element)
+      if ($isTextNode(childNode)) childNode = callback(childNode, element) ?? childNode
+      return childNode
+    }
+  }))
+}
+
+export function extendConversion(nodeKlass, conversionName, callback = (output => output)) {
+  return (element) => {
+    const converter = nodeKlass.importDOM()?.[conversionName]?.(element)
+    if (!converter) return null
+
+    const conversionOutput = converter.conversion(element)
     if (!conversionOutput) return conversionOutput
 
-    return {
-      ...conversionOutput,
-      forChild: (lexicalNode, parentNode) => {
-        const originalForChild = conversionOutput?.forChild ?? (x => x)
-        let childNode = originalForChild(lexicalNode, parentNode)
-
-        if ($isTextNode(childNode)) childNode = callback(childNode, element) ?? childNode
-        return childNode
-      }
-    }
+    return callback(conversionOutput, element) ?? conversionOutput
   }
 }
