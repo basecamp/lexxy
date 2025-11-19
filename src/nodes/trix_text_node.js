@@ -30,7 +30,7 @@ export class TrixTextNode extends TextNode {
         conversion: extendTextNodeConversion("s", applyStrikethrough),
         priority: 1
       }),
-      // read "language" attribute and normalizing the name
+      // read "language" attribute and normalize
       pre: (element) => onlyPreLanguageElements(element, {
         conversion: extendConversion(CodeNode, "pre", applyLanguage),
         priority: 1
@@ -44,13 +44,13 @@ function onlyStyledElements(element, conversion) {
   return elementHighlighted ? conversion : null
 }
 
-function onlyPreLanguageElements(element, conversion) {
-  return element.hasAttribute(TRIX_LANGUAGE_ATTR) ? conversion: null
-}
-
 function applyStrikethrough(textNode, element) {
   if (!textNode.hasFormat("strikethrough")) textNode.toggleFormat("strikethrough")
   return applyHighlightStyle(textNode, element)
+}
+
+function onlyPreLanguageElements(element, conversion) {
+  return element.hasAttribute(TRIX_LANGUAGE_ATTR) ? conversion: null
 }
 
 function applyLanguage(conversionOutput, element) {
