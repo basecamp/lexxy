@@ -13,18 +13,33 @@
   <li>Built on top of Lexical, the powerful text editor framework from Meta.</li>
   <li>Good HTML semantics. Paragraphs are real <code>&lt;p&gt;</code> tags, as they should be.</li>
   <li>Markdown support: shortcuts, auto-formatting on paste.</li>
+    <li>
+    The <b><strong>rich</strong></b>
+    <i><em>text</em></i>
+    <i><b><strong>styles</strong></b></i>
+    you <s>want</s> expect.
+  </li>
+  <li>
+    Text highlights <mark style="color: var(--highlight-1)">color</mark>,
+    <mark style="background-color: var(--highlight-bg-6)">background</mark>, or
+    <mark style="color: var(--highlight-3); background-color: var(--highlight-bg-3)">both</mark>; with
+    <b><mark style="color: var(--highlight-7)"><strong>other</strong></mark></b>
+    <s><mark style="background-color: var(--highlight-bg-3)">styles</mark></s>
+    <i><b><mark style="color: var(--highlight-5)"><strong>too</strong></mark></b></i>.
+  </li>
   <li>Real-time code syntax highlighting.</li>
   <li>Create links by pasting URLs on selected text.</li>
   <li>Configurable prompts. Support for mentions and other interactive prompts with multiple loading and filtering strategies.</li>
   <li>Preview attachments like PDFs and Videos in the editor.</li>
   <li>Works seamlessly with Action Text, generating the same canonical HTML format it expects for attachments.</li>
-</ul>).squish %>
+</ul>
+<hr>).squish %>
 
 <main data-controller="lexxy-output" data-action="lexxy:change->lexxy-output#refresh">
   <section>
     <h2>Editor</h2>
     <div>
-      <%= rich_text_area_tag :sandbox, nil, value: sandbox_value, placeholder: "Write something...", data: { lexxy_output_target: "editor" } do %>
+      <%= rich_text_area_tag :sandbox, sandbox_value, placeholder: "Write something...", data: { lexxy_output_target: "editor" } do %>
         <lexxy-prompt trigger="@" src="<%= people_path %>" name="mention"></lexxy-prompt>
         <lexxy-prompt trigger=":" insert-editable-text>
           <lexxy-prompt-item search="joy laughing face">
