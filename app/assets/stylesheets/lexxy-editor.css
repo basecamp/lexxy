@@ -259,6 +259,7 @@
 
     button {
       block-size: 3.2ch;
+      color: var(--lexxy-color-text);
       inline-size: 3.2ch;
       position: relative;
       outline: none;

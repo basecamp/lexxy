@@ -45,15 +45,15 @@
   --highlight-8: rgb(148, 82, 22);
   --highlight-9: rgb(102, 102, 102);
 
-  --highlight-bg-1: rgb(250, 247, 133);
-  --highlight-bg-2: rgb(255, 240, 219);
-  --highlight-bg-3: rgb(255, 229, 229); 
-  --highlight-bg-4: rgb(255, 228, 247);
-  --highlight-bg-5: rgb(242, 237, 255); 
-  --highlight-bg-6: rgb(225, 239, 252);
-  --highlight-bg-7: rgb(228, 248, 226); 
-  --highlight-bg-8: rgb(238, 226, 215);
-  --highlight-bg-9: rgb(242, 242, 242)
+  --highlight-bg-1: rgba(229, 223, 6, 0.3);
+  --highlight-bg-2: rgba(255, 185, 87, 0.3);
+  --highlight-bg-3: rgba(255, 118, 118, 0.3); 
+  --highlight-bg-4: rgba(248, 137, 216, 0.3);
+  --highlight-bg-5: rgba(190, 165, 255, 0.3); 
+  --highlight-bg-6: rgba(124, 192, 252, 0.3);
+  --highlight-bg-7: rgba(140, 255, 129, 0.3); 
+  --highlight-bg-8: rgba(221, 170, 123, 0.3);
+  --highlight-bg-9: rgba(200, 200, 200, 0.3);
 
   /* Typography */
   --lexxy-font-base: system-ui, sans-serif;
