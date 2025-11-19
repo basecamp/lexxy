@@ -5,13 +5,15 @@ class TrixHtmlTest < ApplicationSystemTestCase
     trix_html = <<~TRIX.split("\n")
       <h1>Title</h1>
       <h1><span style="color: purple;">Purple subtitle</span></h1>
-      <pre data-language="text"><span style="color: red;">def ruby</span></pre>
+      <pre language="text"><span style="color: red;">def ruby</span></pre>
+      <pre language="javascript">const language = "js"</pre>
     TRIX
 
     lexxy_html = <<~LEXXY.split("\n")
       <h1>Title</h1>
       <h1><mark style="color: purple">Purple subtitle</mark></h1>
       <pre data-language="plain" data-highlight-language="plain">def ruby</pre>
+      <pre data-language="js" data-highlight-language="js">const language = "js"</pre>
     LEXXY
 
     trix_html.zip(lexxy_html).each do |trix_html, lexxy_html|
