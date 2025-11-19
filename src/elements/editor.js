@@ -17,6 +17,7 @@ import { createElement, dispatch, generateDomId, parseHtml, sanitize } from "../
 import LexicalToolbar from "./toolbar"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
+import Highlighter from "../editor/highlighter"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { ImportStyledTextNode } from "../nodes/import_styled_text_node"
 
@@ -42,6 +43,7 @@ export default class LexicalEditorElement extends HTMLElement {
     this.contents = new Contents(this)
     this.selection = new Selection(this)
     this.clipboard = new Clipboard(this)
+    this.highlighter = new Highlighter(this)
 
     CommandDispatcher.configureFor(this)
     this.#initialize()
