@@ -2,8 +2,6 @@ import {
   $createTextNode,
   $getSelection,
   $isRangeSelection,
-  $isTextNode,
-  $setSelection,
   COMMAND_PRIORITY_LOW,
   FORMAT_TEXT_COMMAND,
   PASTE_COMMAND,
@@ -18,7 +16,6 @@ import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
-import { $getSelectionStyleValueForProperty, $patchStyleText } from "@lexical/selection"
 
 const COMMANDS = [
   "bold",
@@ -50,6 +47,7 @@ export class CommandDispatcher {
     this.selection = editorElement.selection
     this.contents = editorElement.contents
     this.clipboard = editorElement.clipboard
+    this.highlighter = editorElement.highlighter
 
     this.#registerCommands()
     this.#registerDragAndDropHandlers()
@@ -72,53 +70,11 @@ export class CommandDispatcher {
   }
 
   dispatchHighlight(color = {}) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      $patchStyleText(selection, color)
-
-      // Break down selection into nodes and apply highlight to each node if needed
-      // This is necessary so the user can highlight multiple different nodes types at once
-      // Selection is modified in the process, so we store the original selection and restore it after formatting is applied
-      const originalSelection = selection.clone()
-      const nodes = selection.getNodes()
-
-      nodes.forEach((node) => {
-        if ($isTextNode(node)) {
-
-          if (!node.hasFormat("highlight")) {
-            node.toggleFormat("highlight")
-          }
-
-          const textColor = $getSelectionStyleValueForProperty(node.select(), "color", "")
-          const backgroundColor = $getSelectionStyleValueForProperty(node.select(), "background-color", "")
-
-          if (textColor === "" && backgroundColor === "") {
-            node.toggleFormat("highlight")
-          }
-        }
-      })
-
-      $setSelection(originalSelection)
-    })
+    this.highlighter.apply(color)
   }
 
   dispatchRemoveHighlight() {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const nodes = selection.getNodes()
-
-      nodes.forEach((node) => {
-        if ($isTextNode(node) && node.hasFormat("highlight")) {
-          node.toggleFormat("highlight")
-        }
-      })
-
-      $patchStyleText(selection, { "color": null, "background-color": null })
-    })
+    this.highlighter.remove()
   }
 
   dispatchLink(url) {
