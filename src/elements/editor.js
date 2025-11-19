@@ -76,6 +76,10 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.internals.form
   }
 
+  get name() {
+    return this.getAttribute("name")
+  }
+
   get toolbarElement() {
     if (!this.#hasToolbar) return null
 
