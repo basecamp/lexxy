@@ -19,8 +19,8 @@ import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Highlighter from "../editor/highlighter"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { ImportStyledTextNode } from "../nodes/import_styled_text_node"
-import { ImportTrixTextNode } from "../nodes/import_trix_text_node"
+import { HighlightNode } from "../nodes/highlight_node"
+import { TrixTextNode } from "../nodes/trix_text_node"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -181,8 +181,8 @@ export default class LexicalEditorElement extends HTMLElement {
 
   get #lexicalNodes() {
     const nodes = [
-      ImportTrixTextNode,
-      ImportStyledTextNode,
+      TrixTextNode,
+      HighlightNode,
       QuoteNode,
       HeadingNode,
       ListNode,

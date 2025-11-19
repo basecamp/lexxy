@@ -1,10 +1,8 @@
-import { ImportStyledTextNode, applyHighlightStyle, extendTextNodeConversion } from "./import_styled_text_node"
+import { TextNode } from "lexical"
+import { extendTextNodeConversion } from "../helpers/lexical_helper"
+import { applyHighlightStyle } from "./highlight_node"
 
-export class TrixTextNode extends TextNode {  
-  $config() {
-    return this.config('import-trix', {extends: TextNode})
-  }
-  
+export class TrixTextNode extends TextNode {
   static importDOM() {
     return {
       em: (element) => onlyStyledElements(element, {

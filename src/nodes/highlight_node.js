@@ -1,6 +1,7 @@
-import { $isTextNode, TextNode } from "lexical"
+import { TextNode } from "lexical"
+import { extendTextNodeConversion } from "../helpers/lexical_helper"
 
-export class ImportStyledTextNode extends TextNode {
+export class HighlightNode extends TextNode {
   static importDOM() {
     return {
       mark: () => ({
@@ -24,4 +25,3 @@ export function applyHighlightStyle(textNode, element) {
     return textNode.setStyle(textNode.getStyle() + highlightStyle)
   }
 }
-
