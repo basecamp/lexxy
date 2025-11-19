@@ -2,6 +2,10 @@ import { TextNode } from "lexical"
 import { extendTextNodeConversion } from "../helpers/lexical_helper"
 
 export class HighlightNode extends TextNode {
+  $config() {
+    return this.config("highlight", { extends: TextNode })
+  }
+
   static importDOM() {
     return {
       mark: () => ({

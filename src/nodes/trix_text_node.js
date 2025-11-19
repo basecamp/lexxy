@@ -3,6 +3,10 @@ import { extendTextNodeConversion } from "../helpers/lexical_helper"
 import { applyHighlightStyle } from "./highlight_node"
 
 export class TrixTextNode extends TextNode {
+  $config() {
+    return this.config("trix-text", { extends: TextNode })
+  }
+
   static importDOM() {
     return {
       em: (element) => onlyStyledElements(element, {
