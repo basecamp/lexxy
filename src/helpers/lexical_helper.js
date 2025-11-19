@@ -1,3 +1,4 @@
+import { $isTextNode, TextNode } from "lexical"
 import { $isListItemNode, $isListNode } from "@lexical/list"
 
 export function getNearestListItemNode(node) {
@@ -29,4 +30,29 @@ export function isPrintableCharacter(event) {
 
   // Accept single character keys (letters, numbers, punctuation)
   return event.key.length === 1
+}
+
+export function extendTextNodeConversion(conversionName, callback = (textNode => textNode)) {
+  return extendConversion(TextNode, conversionName, (conversionOutput, element) => ({
+    ...conversionOutput,
+    forChild: (lexicalNode, parentNode) => {
+      const originalForChild = conversionOutput?.forChild ?? (x => x)
+      let childNode = originalForChild(lexicalNode, parentNode)
+
+      if ($isTextNode(childNode)) childNode = callback(childNode, element) ?? childNode
+      return childNode
+    }
+  }))
+}
+
+export function extendConversion(nodeKlass, conversionName, callback = (output => output)) {
+  return (element) => {
+    const converter = nodeKlass.importDOM()?.[conversionName]?.(element)
+    if (!converter) return null
+
+    const conversionOutput = converter.conversion(element)
+    if (!conversionOutput) return conversionOutput
+
+    return callback(conversionOutput, element) ?? conversionOutput
+  }
 }

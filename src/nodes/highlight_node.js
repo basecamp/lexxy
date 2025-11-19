@@ -11,25 +11,12 @@ export class HighlightNode extends TextNode {
       mark: () => ({
         conversion: extendTextNodeConversion("mark", applyHighlightStyle),
         priority: 1
-      }),
-      span: (element) => onlyStyledElements(element, {
-        conversion: extendTextNodeConversion("mark", applyHighlightStyle),
-        priority: 1
-      }),
-      del: () => ({
-        conversion: extendTextNodeConversion("s", applyStrikethrough),
-        priority: 1
       })
     }
   }
 }
 
-function onlyStyledElements(element, conversion) {
-  const elementHighlighted = element.style.color !== "" || element.style.backgroundColor !== ""
-  return elementHighlighted ? conversion : null
-}
-
-function applyHighlightStyle(textNode, element) {
+export function applyHighlightStyle(textNode, element) {
   const textColor = element.style?.color
   const backgroundColor = element.style?.backgroundColor
 
