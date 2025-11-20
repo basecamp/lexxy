@@ -25,12 +25,12 @@ export default class Highlighter {
   }
 
   #syncHighlightWithStyle(node) {
-    if (this.#hasColorStyles(node) !== node.hasFormat("highlight")) {
+    if (this.#hasHighlightStyles(node) !== node.hasFormat("highlight")) {
       node.toggleFormat("highlight")
     }
   }
 
-  #hasColorStyles(node) {
+  #hasHighlightStyles(node) {
     const style = getStyleObjectFromCSS(node.getStyle())
     return !!(style.color || style["background-color"])
   }
