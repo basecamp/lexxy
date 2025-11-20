@@ -57,7 +57,7 @@ export class ColorDialog extends HTMLElement {
   #handleColorButtonClick(event) {
     event.preventDefault()
 
-    const button = event.target.closest("button")
+    const button = event.target.closest(APPLY_HIGHLIGHT_SELECTOR)
     if (!button) return
 
     this.#toggleButtonState(button)
