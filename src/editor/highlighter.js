@@ -3,7 +3,7 @@ import {
   $isRangeSelection,
 } from "lexical"
 
-import { $forEachSelectedTextNode, $patchStyleText } from "@lexical/selection"
+import { $forEachSelectedTextNode, $patchStyleText, getStyleObjectFromCSS } from "@lexical/selection"
 
 export default class Highlighter {
   constructor(editorElement) {
@@ -31,21 +31,15 @@ export default class Highlighter {
     })
   }
 
-    const shouldHaveHighlight = !this.#hasNoColorStyles(node)
   #syncHighlightWithStyle(node) {
-    const hasHighlight = node.hasFormat("highlight")
-
-    if (shouldHaveHighlight !== hasHighlight) {
+    if (this.#hasColorStyles(node) !== node.hasFormat("highlight")) {
       node.toggleFormat("highlight")
     }
   }
 
-    const textColor = node.getStyle().color
-    const backgroundColor = node.getStyle().backgroundColor
-
-  #hasNoColorStyles(node) {
-
-    return textColor === "" && backgroundColor === ""
+  #hasColorStyles(node) {
+    const style = getStyleObjectFromCSS(node.getStyle())
+    return !!(style.color || style["background-color"])
   }
 }
 
