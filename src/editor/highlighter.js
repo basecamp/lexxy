@@ -1,23 +1,36 @@
-import { $getSelection, $isRangeSelection } from "lexical"
-import { $forEachSelectedTextNode, $patchStyleText, getStyleObjectFromCSS } from "@lexical/selection"
+import { $forEachSelectedTextNode, getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 
 export default class Highlighter {
   constructor(editorElement) {
     this.editor = editorElement.editor
   }
 
-  apply(color = {}) {
+  toggle(style) {
     this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection) || selection.isCollapsed()) return
-
-      $patchStyleText(selection, color)
-      $forEachSelectedTextNode(node => this.#syncHighlightWithStyle(node))
+      $forEachSelectedTextNode(node => {
+        this.#toggleNodeStyle(node, style)
+        this.#syncHighlightWithStyle(node)
+      })
     })
   }
 
   remove() {
-    this.apply({ "color": null, "background-color": null })
+    this.toggle({ "color": undefined, "background-color": undefined })
+  }
+
+  #toggleNodeStyle(node, styles) {
+    // clone the object otherwise we're editing the cached version!
+    const nodeStyles = { ...getStyleObjectFromCSS(node.getStyle()) }
+
+    for (const attribute in styles) {
+      if (nodeStyles[attribute] === styles[attribute]) {
+        delete nodeStyles[attribute]
+      } else {
+        nodeStyles[attribute] = styles[attribute]
+      }
+    }
+
+    node.setStyle(getCSSFromStyleObject(nodeStyles))
   }
 
   #syncHighlightWithStyle(node) {
@@ -27,7 +40,7 @@ export default class Highlighter {
   }
 
   #hasHighlightStyles(node) {
-    const style = getStyleObjectFromCSS(node.getStyle())
-    return !!(style.color || style["background-color"])
+    const styles = getStyleObjectFromCSS(node.getStyle())
+    return !!(styles.color || styles["background-color"])
   }
 }

@@ -1,4 +1,6 @@
-export const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-color-button"
+import { $getSelectionStyleValueForProperty } from "@lexical/selection"
+
+const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-color-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 
 export class ColorDialog extends HTMLElement {
@@ -20,7 +22,9 @@ export class ColorDialog extends HTMLElement {
   #registerHandlers() {
     this.addEventListener("keydown", this.#handleKeyDown.bind(this))
     this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this))
-    this.querySelectorAll(APPLY_HIGHLIGHT_SELECTOR).forEach(button => button.addEventListener("click", this.#handleColorButtonClick.bind(this)))
+    this.#colorButtons.forEach(button => button.addEventListener("click", this.#handleColorButtonClick.bind(this)))
+
+    this.#toolbar.registerUpdateButtonStatesCallback(this.#updateColorButtonStates.bind(this))
   }
 
   #handleKeyDown(event) {
@@ -37,7 +41,7 @@ export class ColorDialog extends HTMLElement {
   }
 
   #populateButtonGroup(buttonGroup) {
-    const values = buttonGroup.dataset.values?.split(";") || []
+    const values = buttonGroup.dataset.values?.split("; ") || []
     const attribute = buttonGroup.dataset.buttonGroup
     values.forEach((value, index) => {
       buttonGroup.appendChild(this.#createButton(attribute, value, index))
@@ -60,34 +64,11 @@ export class ColorDialog extends HTMLElement {
     const button = event.target.closest(APPLY_HIGHLIGHT_SELECTOR)
     if (!button) return
 
-    this.#toggleButtonState(button)
-
     const attribute = button.dataset.style
-    const value = this.#valueFromGroup(button)
+    const value = button.dataset.value
 
-    this.#editor.dispatchCommand("highlight", { [attribute]: value })
+    this.#editor.dispatchCommand("toggleHighlight", { [attribute]: value })
     this.close()
-  }
-
-  #valueFromGroup(button) {
-    return button.closest("[data-button-group]")?.querySelector("[aria-pressed='true']")?.dataset.value || ""
-  }
-
-  #toggleButtonState(button) {
-    const buttonGroup = button.closest("[data-button-group]")
-    if (!buttonGroup) return
-
-    if (button.getAttribute("aria-pressed") !== "true") {
-      this.#unsetAllGroupButtons(buttonGroup)
-      button.setAttribute("aria-pressed", "true")
-    } else {
-      button.setAttribute("aria-pressed", "false")
-    }
-  }
-
-  #unsetAllGroupButtons(buttonGroup) {
-    const groupButtons = buttonGroup.querySelectorAll("[aria-pressed]")
-    groupButtons.forEach(button => button.setAttribute("aria-pressed", "false"))
   }
 
   #handleRemoveHighlightClick(event) {
@@ -101,8 +82,26 @@ export class ColorDialog extends HTMLElement {
     return this.querySelectorAll("[data-button-group]")
   }
 
+  get #toolbar() {
+    return this.closest("lexxy-toolbar")
+  }
+
   get #editor() {
-    return this.closest("lexxy-toolbar").editor
+    return this.#toolbar.editor
+  }
+
+  get #colorButtons() {
+    return Array.from(this.querySelectorAll(APPLY_HIGHLIGHT_SELECTOR))
+  }
+
+  #updateColorButtonStates(selection) {
+    const textColor = $getSelectionStyleValueForProperty(selection, "color", "")
+    const backgroundColor = $getSelectionStyleValueForProperty(selection, "background-color", "")
+
+    this.#colorButtons.forEach(button => {
+      const matchesSelection = button.dataset.value === textColor || button.dataset.value === backgroundColor
+      button.setAttribute("aria-pressed", matchesSelection)
+    })
   }
 }
 
