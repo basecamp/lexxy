@@ -9,6 +9,7 @@ import { $isCodeNode } from "@lexical/code"
 import { $isLinkNode } from "@lexical/link"
 import { getListType } from "../helpers/lexical_helper"
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
+import { APPLY_HIGHLIGHT_SELECTOR } from "./color_dialog"
 
 export default class LexicalToolbarElement extends HTMLElement {
   constructor() {
@@ -147,7 +148,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    const colorButtons = Array.from(this.querySelectorAll(".lexxy-color-button"))
+    const colorButtons = Array.from(this.querySelectorAll(APPLY_HIGHLIGHT_SELECTOR))
     const textColor = $getSelectionStyleValueForProperty(selection, "color", "")
     const backgroundColor = $getSelectionStyleValueForProperty(selection, "background-color", "")
 

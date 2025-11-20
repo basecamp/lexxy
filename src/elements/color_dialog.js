@@ -1,4 +1,4 @@
-const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-color-button"
+export const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-color-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 
 export class ColorDialog extends HTMLElement {
