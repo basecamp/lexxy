@@ -1,8 +1,4 @@
-import {
-  $getSelection,
-  $isRangeSelection,
-} from "lexical"
-
+import { $getSelection, $isRangeSelection } from "lexical"
 import { $forEachSelectedTextNode, $patchStyleText, getStyleObjectFromCSS } from "@lexical/selection"
 
 export default class Highlighter {
@@ -35,4 +31,3 @@ export default class Highlighter {
     return !!(style.color || style["background-color"])
   }
 }
-
