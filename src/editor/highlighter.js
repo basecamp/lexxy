@@ -3,7 +3,7 @@ import {
   $isRangeSelection,
 } from "lexical"
 
-import { $forEachSelectedTextNode, $getSelectionStyleValueForProperty, $patchStyleText } from "@lexical/selection"
+import { $forEachSelectedTextNode, $patchStyleText } from "@lexical/selection"
 
 export default class Highlighter {
   constructor(editorElement) {
@@ -40,10 +40,10 @@ export default class Highlighter {
     }
   }
 
+    const textColor = node.getStyle().color
+    const backgroundColor = node.getStyle().backgroundColor
 
   #hasNoColorStyles(node) {
-    const textColor = $getSelectionStyleValueForProperty(node.select(), "color", "")
-    const backgroundColor = $getSelectionStyleValueForProperty(node.select(), "background-color", "")
 
     return textColor === "" && backgroundColor === ""
   }
