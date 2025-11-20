@@ -23,7 +23,7 @@ const COMMANDS = [
   "strikethrough",
   "link",
   "unlink",
-  "highlight",
+  "toggleHighlight",
   "removeHighlight",
   "rotateHeadingFormat",
   "insertUnorderedList",
@@ -69,8 +69,8 @@ export class CommandDispatcher {
     this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")
   }
 
-  dispatchHighlight(color) {
-    this.highlighter.apply(color)
+  dispatchToggleHighlight(styles) {
+    this.highlighter.toggle(styles)
   }
 
   dispatchRemoveHighlight() {

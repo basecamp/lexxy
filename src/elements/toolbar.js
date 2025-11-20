@@ -8,13 +8,14 @@ import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode } from "@lexical/code"
 import { $isLinkNode } from "@lexical/link"
 import { getListType } from "../helpers/lexical_helper"
-import { $getSelectionStyleValueForProperty } from "@lexical/selection"
 
 export default class LexicalToolbarElement extends HTMLElement {
   constructor() {
     super()
     this.internals = this.attachInternals()
     this.internals.role = "toolbar"
+
+    this.updateButtonStatesCallbacks = []
   }
 
   connectedCallback() {
@@ -42,6 +43,10 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#refreshToolbarOverflow()
 
     this.toggleAttribute("connected", true)
+  }
+
+  registerUpdateButtonStatesCallback(callback) {
+    this.updateButtonStatesCallbacks.push(callback)
   }
 
   #bindButtons() {
@@ -143,19 +148,6 @@ export default class LexicalToolbarElement extends HTMLElement {
     })
   }
 
-  #updateColorButtonStates() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return
-
-    const colorButtons = Array.from(this.querySelectorAll(".lexxy-color-button"))
-    const textColor = $getSelectionStyleValueForProperty(selection, "color", "")
-    const backgroundColor = $getSelectionStyleValueForProperty(selection, "background-color", "")
-
-    colorButtons.forEach(button => {
-      this.#setButtonPressed(button.name, button.dataset.value === textColor || button.dataset.value === backgroundColor)
-    })
-  }
-
   #updateButtonStates() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
@@ -188,7 +180,8 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("ordered-list", isInList && listType === "number")
 
     this.#updateUndoRedoButtonStates()
-    this.#updateColorButtonStates()
+
+    this.updateButtonStatesCallbacks.forEach(callback => callback(selection))
   }
 
   #isInList(node) {
