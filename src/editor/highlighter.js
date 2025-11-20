@@ -1,16 +1,15 @@
-import { $forEachSelectedTextNode, getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
+import { $getSelection } from "lexical"
+import { $forEachSelectedTextNode, $getSelectionStyleValueForProperty, $patchStyleText, getStyleObjectFromCSS } from "@lexical/selection"
 
 export default class Highlighter {
   constructor(editorElement) {
     this.editor = editorElement.editor
   }
 
-  toggle(style) {
+  toggle(styles) {
     this.editor.update(() => {
-      $forEachSelectedTextNode(node => {
-        this.#toggleNodeStyle(node, style)
-        this.#syncHighlightWithStyle(node)
-      })
+      this.#toggleSelectionStyles(styles)
+      $forEachSelectedTextNode(node => this.#syncHighlightWithStyle(node))
     })
   }
 
@@ -18,19 +17,18 @@ export default class Highlighter {
     this.toggle({ "color": undefined, "background-color": undefined })
   }
 
-  #toggleNodeStyle(node, styles) {
-    // clone the object otherwise we're editing the cached version!
-    const nodeStyles = { ...getStyleObjectFromCSS(node.getStyle()) }
+  #toggleSelectionStyles(styles) {
+    const selection = $getSelection()
 
-    for (const attribute in styles) {
-      if (nodeStyles[attribute] === styles[attribute]) {
-        delete nodeStyles[attribute]
-      } else {
-        nodeStyles[attribute] = styles[attribute]
-      }
+    for (const property in styles) {
+      const oldValue = $getSelectionStyleValueForProperty(selection, property)
+      const patch = { [property]: this.#toggleOrReplace(oldValue, styles[property]) }
+      $patchStyleText(selection, patch)
     }
+  }
 
-    node.setStyle(getCSSFromStyleObject(nodeStyles))
+  #toggleOrReplace(oldValue, newValue) {
+    return oldValue === newValue ? null : newValue
   }
 
   #syncHighlightWithStyle(node) {
