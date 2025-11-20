@@ -1,6 +1,6 @@
 import { TextNode } from "lexical"
 import { CodeNode, normalizeCodeLang } from "@lexical/code"
-import { extendTextNodeConversion, extendConversion } from "../helpers/lexical_helper"
+import { extendConversion, extendTextNodeConversion } from "../helpers/lexical_helper"
 import { applyHighlightStyle } from "./highlight_node"
 
 const TRIX_LANGUAGE_ATTR = "language"
