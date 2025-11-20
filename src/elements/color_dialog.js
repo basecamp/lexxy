@@ -74,14 +74,16 @@ export class ColorDialog extends HTMLElement {
     if (!buttonGroup) return
 
     if (button.getAttribute("aria-pressed") !== "true") {
-      buttonGroup.querySelectorAll("[aria-pressed]").forEach(button => {
-        button.setAttribute("aria-pressed", "false")
-      })
-
+      this.#unsetAllGroupButtons(buttonGroup)
       button.setAttribute("aria-pressed", "true")
     } else {
       button.setAttribute("aria-pressed", "false")
     }
+  }
+
+  #unsetAllGroupButtons(buttonGroup) {
+    const groupButtons = buttonGroup.querySelectorAll("[aria-pressed]")
+    groupButtons.forEach(button => button.setAttribute("aria-pressed", "false"))
   }
 
   #handleRemoveHighlightClick(event) {
