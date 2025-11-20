@@ -63,10 +63,14 @@ export class ColorDialog extends HTMLElement {
     this.#toggleButtonState(button)
 
     const attribute = button.dataset.style
-    const value = button.closest("[data-button-group]")?.querySelector("[aria-pressed='true']")?.dataset.value || ""
+    const value = this.#valueFromGroup(button)
 
     this.#editor.dispatchCommand("highlight", { [attribute]: value })
     this.close()
+  }
+
+  #valueFromGroup(button) {
+    return button.closest("[data-button-group]")?.querySelector("[aria-pressed='true']")?.dataset.value || ""
   }
 
   #toggleButtonState(button) {
