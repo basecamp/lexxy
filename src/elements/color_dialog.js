@@ -40,11 +40,11 @@ export class ColorDialog extends HTMLElement {
     const values = buttonGroup.dataset.values?.split(";") || []
     const attribute = buttonGroup.dataset.buttonGroup
     values.forEach((value, index) => {
-      buttonGroup.appendChild(this.#button(attribute, value, index))
+      buttonGroup.appendChild(this.#createButton(attribute, value, index))
     })
   }
 
-  #button(attribute, value, index) {
+  #createButton(attribute, value, index) {
     const button = document.createElement("button")
     button.dataset.style = attribute
     button.style.setProperty(attribute, value)
@@ -84,7 +84,7 @@ export class ColorDialog extends HTMLElement {
     }
   }
 
-  #handleRemoveHighlight(event) {
+  #handleRemoveHighlightClick(event) {
     event.preventDefault()
 
     this.#editor.dispatchCommand("removeHighlight")
