@@ -6234,7 +6234,7 @@ class CommandDispatcher {
     this.editor.dispatchCommand(_e$1, "strikethrough");
   }
 
-  dispatchHighlight(color = {}) {
+  dispatchHighlight(color) {
     this.highlighter.apply(color);
   }
 
@@ -8410,7 +8410,6 @@ class Clipboard {
 
 class Highlighter {
   constructor(editorElement) {
-    this.editorElement = editorElement;
     this.editor = editorElement.editor;
   }
 
@@ -8420,57 +8419,23 @@ class Highlighter {
       if (!yr(selection) || selection.isCollapsed()) return
 
       U$5(selection, color);
-
-      this.#formatTextNodes(selection, (node) => this.#applyHighlightToTextNode(node));
+      j$2(node => this.#syncHighlightWithStyle(node));
     });
   }
 
   remove() {
-    this.editor.update(() => {
-      const selection = Lr();
-      if (!yr(selection)) return
-
-      U$5(selection, { "color": null, "background-color": null });
-
-      this.#formatTextNodes(selection, (node) => this.#removeHighlightFromTextNode(node));
-    });
+    this.apply({ "color": null, "background-color": null });
   }
 
-  #formatTextNodes(selection, fn) {
-    const originalSelection = selection.clone();
-
-    const textNodes = this.#getTextNodes(selection);
-    textNodes.forEach((node) => {
-      fn(node);
-    });
-
-    wo(originalSelection);
-  }
-
-  #getTextNodes(selection) {
-    return selection.getNodes().filter((node) => lr(node))
-  }
-
-  #applyHighlightToTextNode(node) {
-    const shouldHaveHighlight = !this.#hasNoColorStyles(node);
-    const hasHighlight = node.hasFormat("highlight");
-
-    if (shouldHaveHighlight !== hasHighlight) {
+  #syncHighlightWithStyle(node) {
+    if (this.#hasHighlightStyles(node) !== node.hasFormat("highlight")) {
       node.toggleFormat("highlight");
     }
   }
 
-  #removeHighlightFromTextNode(node) {
-    if (node.hasFormat("highlight")) {
-      node.toggleFormat("highlight");
-    }
-  }
-
-  #hasNoColorStyles(node) {
-    const textColor = le$1(node.select(), "color", "");
-    const backgroundColor = le$1(node.select(), "background-color", "");
-
-    return textColor === "" && backgroundColor === ""
+  #hasHighlightStyles(node) {
+    const style = b$3(node.getStyle());
+    return !!(style.color || style["background-color"])
   }
 }
 
@@ -9023,13 +8988,15 @@ class LinkDialog extends HTMLElement {
 // supported by Safari yet: customElements.define("lexxy-link-dialog", LinkDialog, { extends: "dialog" })
 customElements.define("lexxy-link-dialog", LinkDialog);
 
+const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-color-button";
+const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']";
+
 class ColorDialog extends HTMLElement {
   connectedCallback() {
     this.dialog = this.querySelector("dialog");
-    this.addEventListener("keydown", this.#handleKeyDown.bind(this));
-    this.querySelector("[data-command='removeHighlight']").addEventListener("click", this.#handleRemoveHighlight.bind(this));
 
     this.#setUpButtons();
+    this.#registerHandlers();
   }
 
   show() {
@@ -9038,6 +9005,12 @@ class ColorDialog extends HTMLElement {
 
   close() {
     this.dialog.close();
+  }
+
+  #registerHandlers() {
+    this.addEventListener("keydown", this.#handleKeyDown.bind(this));
+    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this));
+    this.querySelectorAll(APPLY_HIGHLIGHT_SELECTOR).forEach(button => button.addEventListener("click", this.#handleColorButtonClick.bind(this)));
   }
 
   #handleKeyDown(event) {
@@ -9068,7 +9041,6 @@ class ColorDialog extends HTMLElement {
     button.dataset.value = value;
     button.classList.add("lexxy-color-button");
     button.name = attribute + "-" + index;
-    button.addEventListener("click", this.#handleColorButtonClick.bind(this));
     return button
   }
 

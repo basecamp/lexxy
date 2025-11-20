@@ -1,11 +1,12 @@
+const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-color-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 
 export class ColorDialog extends HTMLElement {
   connectedCallback() {
     this.dialog = this.querySelector("dialog")
-    this.#registerHandlers()
 
     this.#setUpButtons()
+    this.#registerHandlers()
   }
 
   show() {
@@ -18,7 +19,8 @@ export class ColorDialog extends HTMLElement {
 
   #registerHandlers() {
     this.addEventListener("keydown", this.#handleKeyDown.bind(this))
-    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlight.bind(this))
+    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this))
+    this.querySelectorAll(APPLY_HIGHLIGHT_SELECTOR).forEach(button => button.addEventListener("click", this.#handleColorButtonClick.bind(this)))
   }
 
   #handleKeyDown(event) {
@@ -49,7 +51,6 @@ export class ColorDialog extends HTMLElement {
     button.dataset.value = value
     button.classList.add("lexxy-color-button")
     button.name = attribute + "-" + index
-    button.addEventListener("click", this.#handleColorButtonClick.bind(this))
     return button
   }
 
