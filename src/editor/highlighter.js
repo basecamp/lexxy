@@ -22,13 +22,7 @@ export default class Highlighter {
   }
 
   remove() {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      $patchStyleText(selection, { "color": null, "background-color": null })
-      $forEachSelectedTextNode(node => this.#syncHighlightWithStyle(node))
-    })
+    this.apply({ "color": null, "background-color": null })
   }
 
   #syncHighlightWithStyle(node) {
