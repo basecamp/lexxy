@@ -69,7 +69,7 @@ export class CommandDispatcher {
     this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")
   }
 
-  dispatchHighlight(color = {}) {
+  dispatchHighlight(color) {
     this.highlighter.apply(color)
   }
 
