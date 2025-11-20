@@ -1,11 +1,9 @@
 import {
   $getSelection,
   $isRangeSelection,
-  $isTextNode,
-  $setSelection
 } from "lexical"
 
-import { $getSelectionStyleValueForProperty, $patchStyleText } from "@lexical/selection"
+import { $forEachSelectedTextNode, $getSelectionStyleValueForProperty, $patchStyleText } from "@lexical/selection"
 
 export default class Highlighter {
   constructor(editorElement) {
@@ -19,8 +17,7 @@ export default class Highlighter {
       if (!$isRangeSelection(selection) || selection.isCollapsed()) return
 
       $patchStyleText(selection, color)
-
-      this.#formatTextNodes(selection, (node) => this.#applyHighlightToTextNode(node))
+      $forEachSelectedTextNode(node => this.#applyHighlightToTextNode(node))
     })
   }
 
@@ -30,24 +27,8 @@ export default class Highlighter {
       if (!$isRangeSelection(selection)) return
 
       $patchStyleText(selection, { "color": null, "background-color": null })
-
-      this.#formatTextNodes(selection, (node) => this.#removeHighlightFromTextNode(node))
+      $forEachSelectedTextNode(node => this.#removeHighlightFromTextNode(node))
     })
-  }
-
-  #formatTextNodes(selection, fn) {
-    const originalSelection = selection.clone()
-
-    const textNodes = this.#getTextNodes(selection)
-    textNodes.forEach((node) => {
-      fn(node)
-    })
-
-    $setSelection(originalSelection)
-  }
-
-  #getTextNodes(selection) {
-    return selection.getNodes().filter((node) => $isTextNode(node))
   }
 
   #applyHighlightToTextNode(node) {
