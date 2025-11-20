@@ -1,8 +1,9 @@
+const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
+
 export class ColorDialog extends HTMLElement {
   connectedCallback() {
     this.dialog = this.querySelector("dialog")
-    this.addEventListener("keydown", this.#handleKeyDown.bind(this))
-    this.querySelector("[data-command='removeHighlight']").addEventListener("click", this.#handleRemoveHighlight.bind(this))
+    this.#registerHandlers()
 
     this.#setUpButtons()
   }
@@ -13,6 +14,11 @@ export class ColorDialog extends HTMLElement {
 
   close() {
     this.dialog.close()
+  }
+
+  #registerHandlers() {
+    this.addEventListener("keydown", this.#handleKeyDown.bind(this))
+    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlight.bind(this))
   }
 
   #handleKeyDown(event) {
