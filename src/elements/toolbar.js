@@ -68,16 +68,22 @@ export default class LexicalToolbarElement extends HTMLElement {
   // Not using popover because of CSS anchoring still not widely available.
   #toggleDialog(button) {
     const dialogTarget = button.dataset.dialogTarget
-    let dialog
-
-    dialog = this.querySelector("lexxy-" + dialogTarget)
+    const dialog = this.querySelector("lexxy-" + dialogTarget)
     if (!dialog) return
 
     if (dialog.dialog && dialog.dialog.open) {
       dialog.close()
     } else {
+      this.#closeOpenDialogs()
       dialog.show()
     }
+  }
+
+  #closeOpenDialogs() {
+    const openDialogs = this.querySelectorAll("dialog[open]")
+    openDialogs.forEach(openDialog => {
+      openDialog.closest(".lexxy-dialog").close()
+    })
   }
 
   #bindHotkeys() {
@@ -287,7 +293,7 @@ export default class LexicalToolbarElement extends HTMLElement {
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.65422 0.711575C7.1856 0.242951 6.42579 0.242951 5.95717 0.711575C5.48853 1.18021 5.48853 1.94 5.95717 2.40864L8.70864 5.16011L2.85422 11.0145C1.44834 12.4204 1.44833 14.6998 2.85422 16.1057L7.86011 21.1115C9.26599 22.5174 11.5454 22.5174 12.9513 21.1115L19.6542 14.4087C20.1228 13.94 20.1228 13.1802 19.6542 12.7115L11.8544 4.91171L11.2542 4.31158L7.65422 0.711575ZM4.55127 12.7115L10.4057 6.85716L17.1087 13.56H4.19981C4.19981 13.253 4.31696 12.9459 4.55127 12.7115ZM23.6057 20.76C23.6057 22.0856 22.5311 23.16 21.2057 23.16C19.8802 23.16 18.8057 22.0856 18.8057 20.76C18.8057 19.5408 19.8212 18.5339 20.918 17.4462C21.0135 17.3516 21.1096 17.2563 21.2057 17.16C21.3018 17.2563 21.398 17.3516 21.4935 17.4462C22.5903 18.5339 23.6057 19.5408 23.6057 20.76Z"/></svg>
       </button>
 
-      <lexxy-color-dialog class="lexxy-color-dialog">
+      <lexxy-color-dialog class="lexxy-dialog lexxy-color-dialog">
         <dialog class="color-dialog" closedby="any">
           <div class="lexxy-color-dialog-content">
             <div data-button-group="color" data-values="var(--highlight-1); var(--highlight-2); var(--highlight-3); var(--highlight-4); var(--highlight-5); var(--highlight-6); var(--highlight-7); var(--highlight-8); var(--highlight-9)"></div>
@@ -301,7 +307,7 @@ export default class LexicalToolbarElement extends HTMLElement {
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.111 9.546a1.5 1.5 0 012.121 0 5.5 5.5 0 010 7.778l-2.828 2.828a5.5 5.5 0 01-7.778 0 5.498 5.498 0 010-7.777l2.828-2.83a1.5 1.5 0 01.355-.262 6.52 6.52 0 00.351 3.799l-1.413 1.414a2.499 2.499 0 000 3.535 2.499 2.499 0 003.535 0l2.83-2.828a2.5 2.5 0 000-3.536 1.5 1.5 0 010-2.121z"/><path d="M12.111 3.89a5.5 5.5 0 117.778 7.777l-2.828 2.829a1.496 1.496 0 01-.355.262 6.522 6.522 0 00-.351-3.8l1.413-1.412a2.5 2.5 0 10-3.536-3.535l-2.828 2.828a2.5 2.5 0 000 3.536 1.5 1.5 0 01-2.122 2.12 5.5 5.5 0 010-7.777l2.83-2.829z"/></svg>
       </button>
 
-      <lexxy-link-dialog class="lexxy-link-dialog">
+      <lexxy-link-dialog class="lexxy-dialog lexxy-link-dialog">
         <dialog class="link-dialog" closedby="any">
           <form method="dialog">
             <input type="url" placeholder="Enter a URL…" class="input" required>
