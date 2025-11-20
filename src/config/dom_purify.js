@@ -1,4 +1,5 @@
 import DOMPurify from "dompurify"
+import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 
 const ALLOWED_HTML_TAGS = [ "a", "action-text-attachment", "b", "blockquote", "br", "code", "em",
   "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "ul" ]
@@ -7,18 +8,21 @@ const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content
   "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "presentation",
   "previewable", "sgid", "src", "style", "title", "url", "width" ]
 
-const ALLOWED_CSS_PROPERTIES = [ "color", "background-color" ]
+const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
 
-function styleFilterHook(currentNode, hookEvent) {
+function styleFilterHook(_currentNode, hookEvent) {
   if (hookEvent.attrName === "style" && hookEvent.attrValue) {
-    const styles = hookEvent.attrValue.split(";").map(style => style.trim()).filter(Boolean)
-    const sanitizedStyles = styles.filter(style => {
-      const [ property ] = style.split(":").map(part => part.trim())
-      return ALLOWED_CSS_PROPERTIES.includes(property)
-    })
-    const sanitizedValue = sanitizedStyles.join("; ").trim()
-    if (sanitizedValue) {
-      hookEvent.attrValue = sanitizedValue
+    const styles = { ...getStyleObjectFromCSS(hookEvent.attrValue) }
+    const sanitizedStyles = { }
+
+    for (const property in styles) {
+      if (ALLOWED_STYLE_PROPERTIES.includes(property)) {
+        sanitizedStyles[property] = styles[property]
+      }
+    }
+
+    if (Object.keys(sanitizedStyles).length) {
+      hookEvent.attrValue = getCSSFromStyleObject(sanitizedStyles)
     } else {
       hookEvent.keepAttr = false
     }
