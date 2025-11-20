@@ -12,7 +12,7 @@ export function createElement(name, properties) {
   for (const [ key, value ] of Object.entries(properties || {})) {
     if (key in element) {
       element[key] = value
-    } else if (value !== null && value !== undefined ) {
+    } else if (value !== null && value !== undefined) {
       element.setAttribute(key, value)
     }
   }
