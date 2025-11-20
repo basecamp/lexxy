@@ -70,12 +70,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     const dialogTarget = button.dataset.dialogTarget
     let dialog
 
-    if (dialogTarget === "link-dialog") {
-      dialog = this.querySelector("lexxy-link-dialog")
-    } else if (dialogTarget === "color-dialog") {
-      dialog = this.querySelector("lexxy-color-dialog")
-    }
-
+    dialog = this.querySelector("lexxy-" + dialogTarget)
     if (!dialog) return
 
     if (dialog.dialog && dialog.dialog.open) {
@@ -151,20 +146,8 @@ export default class LexicalToolbarElement extends HTMLElement {
     const backgroundColor = $getSelectionStyleValueForProperty(selection, "background-color", "")
 
     colorButtons.forEach(button => {
-      if (button.dataset.value === textColor || button.dataset.value === backgroundColor) {
-        button.setAttribute("aria-pressed", "true")
-      } else {
-        button.setAttribute("aria-pressed", "false")
-      }
+      this.#setButtonPressed(button.name, button.dataset.value === textColor || button.dataset.value === backgroundColor)
     })
-  }
-
-  #setButtonDisabled(name, isDisabled) {
-    const button = this.querySelector(`[name="${name}"]`)
-    if (button) {
-      button.disabled = isDisabled
-      button.setAttribute("aria-disabled", isDisabled.toString())
-    }
   }
 
   #updateButtonStates() {
@@ -224,6 +207,14 @@ export default class LexicalToolbarElement extends HTMLElement {
     const button = this.querySelector(`[name="${name}"]`)
     if (button) {
       button.setAttribute("aria-pressed", isPressed.toString())
+    }
+  }
+
+  #setButtonDisabled(name, isDisabled) {
+    const button = this.querySelector(`[name="${name}"]`)
+    if (button) {
+      button.disabled = isDisabled
+      button.setAttribute("aria-disabled", isDisabled.toString())
     }
   }
 
