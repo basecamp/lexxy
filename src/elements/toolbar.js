@@ -114,7 +114,7 @@ export default class LexicalToolbarElement extends HTMLElement {
       event.shiftKey ? "shift" : null,
     ].filter(Boolean)
 
-    return [...modifiers, pressedKey].join("+")
+    return [ ...modifiers, pressedKey ].join("+")
   }
 
   #assignButtonTabindex() {
