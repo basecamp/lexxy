@@ -11,7 +11,7 @@ class TrixHtmlTest < ApplicationSystemTestCase
 
     lexxy_html = <<~LEXXY.split("\n")
       <h1>Title</h1>
-      <h1><mark style="color: purple">Purple subtitle</mark></h1>
+      <h1><mark style="color: purple;">Purple subtitle</mark></h1>
       <pre data-language="plain" data-highlight-language="plain">def ruby</pre>
       <pre data-language="js" data-highlight-language="js">const language = "js"</pre>
     LEXXY
@@ -29,7 +29,7 @@ class TrixHtmlTest < ApplicationSystemTestCase
     trix_html = <<~TRIX.split("\n")
       <span style="color: red;">red color</span>
       <span style="background-color: blue;">blue background</span>
-      <span style="color: darkgreen; background-color: green">green everything</span>
+      <span style="color: darkgreen;background-color: green;">green everything</span>
       <del>corrected</del>
       <strong><del>wrong!</del></strong>
       <del style="color: red;">deleted</del>
@@ -38,14 +38,14 @@ class TrixHtmlTest < ApplicationSystemTestCase
     TRIX
 
     lexxy_html = <<~LEXXY.split("\n")
-      <mark style="color: red">red color</mark>
-      <mark style="background-color: blue">blue background</mark>
-      <mark style="color: darkgreen; background-color: green">green everything</mark>
+      <mark style="color: red;">red color</mark>
+      <mark style="background-color: blue;">blue background</mark>
+      <mark style="color: darkgreen;background-color: green;">green everything</mark>
       <s>corrected</s>
       <s><b><strong>wrong!</strong></b></s>
-      <s><mark style="color: red">deleted</mark></s>
-      <b><mark style="color: yellow"><strong>banana</strong></mark></b>
-      <i><mark style="color: blue"><em>wave</em></mark></i>
+      <s><mark style="color: red;">deleted</mark></s>
+      <b><mark style="color: yellow;"><strong>banana</strong></mark></b>
+      <i><mark style="color: blue;"><em>wave</em></mark></i>
     LEXXY
 
     trix_html.zip(lexxy_html).each do |trix_html, lexxy_html|
