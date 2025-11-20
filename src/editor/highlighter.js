@@ -7,7 +7,6 @@ import { $forEachSelectedTextNode, $patchStyleText, getStyleObjectFromCSS } from
 
 export default class Highlighter {
   constructor(editorElement) {
-    this.editorElement = editorElement
     this.editor = editorElement.editor
   }
 
