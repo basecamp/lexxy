@@ -28,7 +28,7 @@ export const TrixContentExtension = defineExtension({
       pre: (element) => onlyPreLanguageElements(element, {
         conversion: extendConversion(CodeNode, "pre", $applyLanguage),
         priority: 1
-      })
+      }),
     }
   }
 })
