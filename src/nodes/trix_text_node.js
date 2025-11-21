@@ -2,6 +2,7 @@ import { TextNode } from "lexical"
 import { CodeNode, normalizeCodeLang } from "@lexical/code"
 import { extendConversion, extendTextNodeConversion } from "../helpers/lexical_helper"
 import { applyHighlightStyle } from "./highlight_node"
+import { HorizontalDividerNode } from "./horizontal_divider_node"
 
 const TRIX_LANGUAGE_ATTR = "language"
 
@@ -34,6 +35,11 @@ export class TrixTextNode extends TextNode {
       pre: (element) => onlyPreLanguageElements(element, {
         conversion: extendConversion(CodeNode, "pre", applyLanguage),
         priority: 1
+      }),
+      // trix wraps hr as an attachment
+      "bc-attachment": onlyHorizontalDividerContentTypes({
+        conversion: () => extendConversion(HorizontalDividerNode, "hr"),
+        priority: 2
       })
     }
   }
@@ -56,4 +62,8 @@ function onlyPreLanguageElements(element, conversion) {
 function applyLanguage(conversionOutput, element) {
   const language = normalizeCodeLang(element.getAttribute(TRIX_LANGUAGE_ATTR))
   conversionOutput.node.setLanguage(language)
+}
+
+function onlyHorizontalDividerContentTypes(conversion) {
+  return element => element.getAttribute("content-type") === "application/vnd.basecamp.horizontal-rule.html" ? conversion : null
 }
