@@ -105,6 +105,10 @@
     }
   }
 
+  li:has(ul, ol) {
+    list-style-type: none;
+  }
+
   > :last-child {
     margin-block-end: 0;
   }
