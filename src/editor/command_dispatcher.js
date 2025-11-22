@@ -23,6 +23,8 @@ const COMMANDS = [
   "strikethrough",
   "link",
   "unlink",
+  "toggleHighlight",
+  "removeHighlight",
   "rotateHeadingFormat",
   "insertUnorderedList",
   "insertOrderedList",
@@ -45,6 +47,7 @@ export class CommandDispatcher {
     this.selection = editorElement.selection
     this.contents = editorElement.contents
     this.clipboard = editorElement.clipboard
+    this.highlighter = editorElement.highlighter
 
     this.#registerCommands()
     this.#registerDragAndDropHandlers()
@@ -64,6 +67,14 @@ export class CommandDispatcher {
 
   dispatchStrikethrough() {
     this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")
+  }
+
+  dispatchToggleHighlight(styles) {
+    this.highlighter.toggle(styles)
+  }
+
+  dispatchRemoveHighlight() {
+    this.highlighter.remove()
   }
 
   dispatchLink(url) {
