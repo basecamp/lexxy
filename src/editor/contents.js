@@ -1,22 +1,25 @@
 import {
-  $createParagraphNode, $getSelection, $setSelection, $insertNodes, $isElementNode, $isParagraphNode, $isTextNode,
-  $isRangeSelection, $createLineBreakNode, $createTextNode, HISTORY_MERGE_TAG, $isNodeSelection, $getNodeByKey, $getRoot
+  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { $toggleLink, $createLinkNode } from "@lexical/link"
+import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
-import { $isListItemNode, $isListNode } from "@lexical/list"
+import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
 import { nextFrame } from "../helpers/timing_helpers.js"
 import { $createAttachmentGalleryNode } from "../nodes/attachment_gallery_node"
+import { FormatEscaper } from "./format_escaper"
 
 export default class Contents {
   constructor(editorElement) {
     this.editorElement = editorElement
     this.editor = editorElement.editor
+
+    new FormatEscaper(editorElement).monitor()
   }
 
   insertHtml(html) {
@@ -45,6 +48,11 @@ export default class Contents {
         root.append(node)
       }
     })
+  }
+
+  insertAtCursorEnsuringLineBelow(node) {
+    this.insertAtCursor(node)
+    this.#insertLineBelowIfLastNode(node)
   }
 
   insertNodeWrappingEachSelectedLine(newNodeFn) {
@@ -77,20 +85,23 @@ export default class Contents {
       if (isFormatAppliedFn(topLevelElement)) {
         this.removeFormattingFromSelectedLines()
       } else {
-        this.insertNodeWrappingAllSelectedLines(newNodeFn)
+        this.#insertNodeWrappingAllSelectedLines(newNodeFn)
       }
     })
   }
 
-  insertNodeWrappingAllSelectedLines(newNodeFn) {
+  toggleNodeWrappingAllSelectedNodes(isFormatAppliedFn, newNodeFn) {
     this.editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
-      if (selection.isCollapsed()) {
-        this.#wrapCurrentLine(selection, newNodeFn)
+      const topLevelElement = selection.anchor.getNode().getTopLevelElement()
+
+      // Check if format is already applied
+      if (topLevelElement && isFormatAppliedFn(topLevelElement)) {
+        this.#unwrap(topLevelElement)
       } else {
-        this.#wrapMultipleSelectedLines(selection, newNodeFn)
+        this.#insertNodeWrappingAllSelectedNodes(newNodeFn)
       }
     })
   }
@@ -359,10 +370,7 @@ export default class Contents {
       const node = $getNodeByKey(nodeKey)
       if (!node) return
 
-      let previousNode = node
-      try {
-        previousNode = node.getTopLevelElementOrThrow()
-      } catch {}
+      const previousNode = node.getTopLevelElement() || node
 
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
       previousNode.insertAfter(newNode)
@@ -371,6 +379,106 @@ export default class Contents {
 
   get #selection() {
     return this.editorElement.selection
+  }
+
+  #insertLineBelowIfLastNode(node) {
+    this.editor.update(() => {
+      const nextSibling = node.getNextSibling()
+      if (!nextSibling) {
+        const newParagraph = $createParagraphNode()
+        node.insertAfter(newParagraph)
+        newParagraph.selectStart()
+      }
+    })
+  }
+
+  #unwrap(node) {
+    const children = node.getChildren()
+
+    children.forEach((child) => {
+      node.insertBefore(child)
+    })
+
+    node.remove()
+  }
+
+  #insertNodeWrappingAllSelectedNodes(newNodeFn) {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const selectedNodes = selection.extract()
+      if (selectedNodes.length === 0) {
+        return
+      }
+      const topLevelElements = new Set()
+      selectedNodes.forEach((node) => {
+        const topLevel = node.getTopLevelElementOrThrow()
+        topLevelElements.add(topLevel)
+      })
+
+      const elements = this.#withoutTrailingEmptyParagraphs(Array.from(topLevelElements))
+      if (elements.length === 0) {
+        this.#removeStandaloneEmptyParagraph()
+        this.insertAtCursor(newNodeFn())
+        return
+      }
+
+      const wrappingNode = newNodeFn()
+      elements[0].insertBefore(wrappingNode)
+      elements.forEach((element) => {
+        wrappingNode.append(element)
+      })
+
+      $setSelection(null)
+    })
+  }
+
+  #withoutTrailingEmptyParagraphs(elements) {
+    let lastNonEmptyIndex = elements.length - 1
+
+    // Find the last non-empty paragraph
+    while (lastNonEmptyIndex >= 0) {
+      const element = elements[lastNonEmptyIndex]
+      if (!$isParagraphNode(element) || !this.#isElementEmpty(element)) {
+        break
+      }
+      lastNonEmptyIndex--
+    }
+
+    return elements.slice(0, lastNonEmptyIndex + 1)
+  }
+
+  #isElementEmpty(element) {
+    // Check text content first
+    if (element.getTextContent().trim() !== "") return false
+
+    // Check if it only contains line breaks
+    const children = element.getChildren()
+    return children.length === 0 || children.every(child => $isLineBreakNode(child))
+  }
+
+  #removeStandaloneEmptyParagraph() {
+    const root = $getRoot()
+    if (root.getChildrenSize() === 1) {
+      const firstChild = root.getFirstChild()
+      if (firstChild && $isParagraphNode(firstChild) && this.#isElementEmpty(firstChild)) {
+        firstChild.remove()
+      }
+    }
+  }
+
+  #insertNodeWrappingAllSelectedLines(newNodeFn) {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      if (selection.isCollapsed()) {
+        this.#wrapCurrentLine(selection, newNodeFn)
+      } else {
+        this.#wrapMultipleSelectedLines(selection, newNodeFn)
+      }
+    })
   }
 
   #wrapCurrentLine(selection, newNodeFn) {
@@ -601,8 +709,8 @@ export default class Contents {
     firstParagraph.selectStart()
     const currentSelection = $getSelection()
     if (currentSelection && $isRangeSelection(currentSelection)) {
-      currentSelection.anchor.set(firstParagraph.getKey(), 0, 'element')
-      currentSelection.focus.set(lastParagraph.getKey(), lastParagraph.getChildrenSize(), 'element')
+      currentSelection.anchor.set(firstParagraph.getKey(), 0, "element")
+      currentSelection.focus.set(lastParagraph.getKey(), lastParagraph.getChildrenSize(), "element")
     }
   }
 
@@ -638,7 +746,8 @@ export default class Contents {
     lastInsertedNode.insertAfter(textNodeAfter)
 
     this.#appendLineBreakIfNeeded(textNodeAfter.getParentOrThrow())
-    textNodeAfter.select(0, 0)
+    const cursorOffset = textAfterCursor ? 0 : 1
+    textNodeAfter.select(cursorOffset, cursorOffset)
   }
 
   #insertReplacementNodes(startNode, replacementNodes) {
@@ -656,14 +765,14 @@ export default class Contents {
       const last = children[children.length - 1]
       const beforeLast = children[children.length - 2]
 
-      if (($isTextNode(last) && last.getTextContent() === "") && (beforeLast && !$isTextNode(beforeLast))) {
+      if ($isTextNode(last) && last.getTextContent() === "" && (beforeLast && !$isTextNode(beforeLast))) {
         paragraph.append($createLineBreakNode())
       }
     }
   }
 
   #createCustomAttachmentNodeWithHtml(html, options = {}) {
-    const attachmentConfig = typeof options === 'object' ? options : {}
+    const attachmentConfig = typeof options === "object" ? options : {}
 
     return new CustomActionTextAttachmentNode({
       sgid: attachmentConfig.sgid || null,
@@ -678,7 +787,7 @@ export default class Contents {
   }
 
   #shouldUploadFile(file) {
-    return dispatch(this.editorElement, 'lexxy:file-accept', { file }, true)
+    return dispatch(this.editorElement, "lexxy:file-accept", { file }, true)
   }
 
   #createGalleryWithNodes(uploadNodes) {

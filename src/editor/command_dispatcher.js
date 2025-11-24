@@ -1,17 +1,18 @@
 import {
+  $createTextNode,
   $getSelection,
   $isRangeSelection,
-  PASTE_COMMAND,
   COMMAND_PRIORITY_LOW,
   FORMAT_TEXT_COMMAND,
-  UNDO_COMMAND,
-  REDO_COMMAND
+  PASTE_COMMAND,
+  REDO_COMMAND,
+  UNDO_COMMAND
 } from "lexical"
 
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
-import { CodeNode, $isCodeNode } from "@lexical/code"
-import { $toggleLink } from "@lexical/link"
+import { $isCodeNode, CodeNode } from "@lexical/code"
+import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
@@ -22,6 +23,8 @@ const COMMANDS = [
   "strikethrough",
   "link",
   "unlink",
+  "toggleHighlight",
+  "removeHighlight",
   "rotateHeadingFormat",
   "insertUnorderedList",
   "insertOrderedList",
@@ -44,6 +47,7 @@ export class CommandDispatcher {
     this.selection = editorElement.selection
     this.contents = editorElement.contents
     this.clipboard = editorElement.clipboard
+    this.highlighter = editorElement.highlighter
 
     this.#registerCommands()
     this.#registerDragAndDropHandlers()
@@ -65,8 +69,28 @@ export class CommandDispatcher {
     this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")
   }
 
+  dispatchToggleHighlight(styles) {
+    this.highlighter.toggle(styles)
+  }
+
+  dispatchRemoveHighlight() {
+    this.highlighter.remove()
+  }
+
   dispatchLink(url) {
-    this.#toggleLink(url)
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      if (selection.isCollapsed()) {
+        const autoLinkNode = $createAutoLinkNode(url)
+        const textNode = $createTextNode(url)
+        autoLinkNode.append(textNode)
+        selection.insertNodes([ autoLinkNode ])
+      } else {
+        $toggleLink(url)
+      }
+    })
   }
 
   dispatchUnlink() {
@@ -75,7 +99,7 @@ export class CommandDispatcher {
 
   dispatchInsertUnorderedList() {
     const selection = $getSelection()
-    if (!selection) return;
+    if (!selection) return
 
     const anchorNode = selection.anchor.getNode()
 
@@ -88,7 +112,7 @@ export class CommandDispatcher {
 
   dispatchInsertOrderedList() {
     const selection = $getSelection()
-    if (!selection) return;
+    if (!selection) return
 
     const anchorNode = selection.anchor.getNode()
 
@@ -100,7 +124,7 @@ export class CommandDispatcher {
   }
 
   dispatchInsertQuoteBlock() {
-    this.contents.toggleNodeWrappingAllSelectedLines((node) => $isQuoteNode(node), () => $createQuoteNode())
+    this.contents.toggleNodeWrappingAllSelectedNodes((node) => $isQuoteNode(node), () => $createQuoteNode())
   }
 
   dispatchInsertCodeBlock() {
@@ -115,8 +139,10 @@ export class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.editor.update(() => {
-      this.contents.insertAtCursor(new HorizontalDividerNode())
+      this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
     })
+
+    this.editor.focus()
   }
 
   dispatchRotateHeadingFormat() {

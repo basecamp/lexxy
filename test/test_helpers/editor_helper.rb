@@ -1,10 +1,7 @@
 module EditorHelper
   def find_editor(selector = "lexxy-editor")
     @handlers_by_selector ||= {}
-    @handlers_by_selector[selector] = begin
-      editor_element = find(selector)
-      EditorHandler.new(page, editor_element)
-    end
+    @handlers_by_selector[selector] ||= EditorHandler.new(page, selector)
   end
 
   def assert_figure_attachment(content_type:, &block)
@@ -15,7 +12,7 @@ module EditorHelper
   def assert_image_figure_attachment(content_type: "image/png", caption:)
     assert_figure_attachment(content_type: content_type) do
       assert_selector("img[src*='/rails/active_storage']")
-      assert_selector "figcaption input[placeholder='#{caption}']"
+      assert_selector "figcaption textarea[placeholder='#{caption}']"
     end
   end
 
@@ -49,5 +46,10 @@ module EditorHelper
 
   def assert_no_gallery
     assert_no_selector ".attachment-gallery"
+  end
+
+  def wait_for_editor
+    assert_css "lexxy-editor[connected]"
+    assert_css "lexxy-toolbar[connected]" if has_css?("lexxy-toolbar")
   end
 end

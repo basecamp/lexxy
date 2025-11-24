@@ -1,5 +1,5 @@
 import BaseSource from "./base_source"
-import { debounceAsync } from "../../helpers/timing_helpers";
+import { debounceAsync } from "../../helpers/timing_helpers"
 
 const DEBOUNCE_INTERVAL = 200
 

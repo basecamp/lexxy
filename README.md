@@ -23,7 +23,7 @@ A modern rich text editor for Rails.
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'lexxy', '~> 0.1.4.beta' # Need to specify the version since it's a pre-release
+gem 'lexxy', '~> 0.1.20.beta' # Need to specify the version since it's a pre-release
 ```
 
 And then execute:
@@ -108,6 +108,8 @@ To apply syntax highlighting to rendered Action Text content, you need to call t
 ```javascript
 import { Controller } from "@hotwired/stimulus"
 import { highlightAll } from "lexxy"
+// Or if you installed via a javascript bundler:
+// import { highlightAll } from "@37signals/lexxy"
 
 export default class extends Controller {
   connect() {
@@ -352,6 +354,11 @@ Each event is dispatched on the `<lexxy-editor>` element.
 
 Fired when the `<lexxy-editor>` element is attached to the DOM and ready for use.
 This is useful for one-time setup.
+
+### lexxy:focus and lexxy:blur
+
+Fired whenever the editor element gains or loses focus.
+Useful to show or hide accessory UI state.
 
 ### `lexxy:change`
 

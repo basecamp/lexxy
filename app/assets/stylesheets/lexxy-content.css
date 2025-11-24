@@ -44,13 +44,19 @@
   .lexxy-content__bold {
     font-weight: bold;
   }
-  
+
   .lexxy-content__strikethrough {
     text-decoration: line-through;
   }
 
   .lexxy-content__underline {
     text-decoration: underline;
+  }
+
+  mark,
+  .lexxy-content__highlight {
+    background-color: transparent;
+    color: inherit;
   }
 
   blockquote {
@@ -103,6 +109,10 @@
       white-space: pre;
       word-break: break-word;
     }
+  }
+
+  li:has(ul, ol) {
+    list-style-type: none;
   }
 
   > :last-child {
@@ -211,12 +221,14 @@
   color: var(--lexxy-color-text-subtle);
   font-size: var(--lexxy-text-small);
 
-  input {
+  textarea {
     background: var(--lexxy-color-canvas);
-    color: var(--lexxy-color-text);
     border: none;
+    color: inherit;
+    font-family: inherit;
     inline-size: 100%;
     max-inline-size: 100%;
+    resize: none;
     text-align: center;
 
     &:focus {

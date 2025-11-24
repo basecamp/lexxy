@@ -3,6 +3,7 @@ require "application_system_test_case"
 class ToolbarTest < ApplicationSystemTestCase
   setup do
     visit edit_post_path(posts(:hello_world))
+    wait_for_editor
   end
 
   test "bold" do
@@ -23,6 +24,40 @@ class ToolbarTest < ApplicationSystemTestCase
     assert_equal_html "<p>Hello <s>everyone</s></p>", find_editor.value
   end
 
+  test "color highlighting" do
+    find_editor.select("everyone")
+    apply_highlight_option("color", 1)
+
+    assert_equal_html "<p>Hello <mark style=\"color: var(--highlight-1);\">everyone</mark></p>", find_editor.value
+  end
+
+  test "background color highlighting" do
+    find_editor.select("everyone")
+    apply_highlight_option("background-color", 1)
+
+    assert_equal_html "<p>Hello <mark style=\"background-color: var(--highlight-bg-1);\">everyone</mark></p>", find_editor.value
+  end
+
+  test "color and background highlighting" do
+    find_editor.select("everyone")
+    apply_highlight_option("color", 1)
+
+    find_editor.select("everyone")
+    apply_highlight_option("background-color", 1)
+
+    assert_equal_html "<p>Hello <mark style=\"color: var(--highlight-1);background-color: var(--highlight-bg-1);\">everyone</mark></p>", find_editor.value
+  end
+
+  test "bold and color highlighting" do
+    find_editor.select("everyone")
+    click_on "Bold"
+
+    find_editor.select("everyone")
+    apply_highlight_option("color", 1)
+
+    assert_equal_html "<p>Hello <b><mark style=\"color: var(--highlight-1);\"><strong>everyone</strong></mark></b></p>", find_editor.value
+  end
+
   test "rotate headers" do
     find_editor.select("everyone")
 
@@ -40,9 +75,6 @@ class ToolbarTest < ApplicationSystemTestCase
   end
 
   test "bullet list" do
-    # Cheeck for guard against empty selection
-    click_on "Bullet list"
-
     find_editor.select("everyone")
 
     click_on "Bullet list"
@@ -50,9 +82,6 @@ class ToolbarTest < ApplicationSystemTestCase
   end
 
   test "numbered list" do
-    # Cheeck for guard against empty selection
-    click_on "Numbered list"
-
     find_editor.select("everyone")
 
     click_on "Numbered list"
@@ -80,15 +109,27 @@ class ToolbarTest < ApplicationSystemTestCase
     assert_equal_html "<p>Hello everyone</p>", find_editor.value
   end
 
+  test "insert quote without selection" do
+    click_on "Quote"
+    assert_equal_html "<blockquote><p>Hello everyone</p></blockquote>", find_editor.value
+  end
+
   test "quote" do
     find_editor.select("everyone")
 
     click_on "Quote"
-    assert_equal_html "<blockquote>Hello everyone</blockquote>", find_editor.value
+    assert_equal_html "<blockquote><p>Hello everyone</p></blockquote>", find_editor.value
 
     find_editor.select("everyone")
     click_on "Quote"
     assert_equal_html "<p>Hello everyone</p>", find_editor.value
+  end
+
+  test "multi line quote" do
+    find_editor.value = "<p>Hello</p><p>Everyone</p>"
+    find_editor.select_all
+    click_on "Quote"
+    assert_equal_html "<blockquote><p>Hello</p><p>Everyone</p></blockquote>", find_editor.value
   end
 
   test "links" do
@@ -110,6 +151,26 @@ class ToolbarTest < ApplicationSystemTestCase
     visit edit_post_path(posts(:hello_world), toolbar_disabled: true)
 
     assert_no_selector "lexxy-toolbar"
+  end
+
+  test "attachments icon display" do
+    assert_selector "lexxy-toolbar button[name=upload]"
+
+    visit edit_post_path(posts(:empty), attachments_disabled: true)
+
+    assert_no_selector "lexxy-toolbar button[name=upload]"
+
+    visit edit_post_path(posts(:empty), attachments_disabled: false)
+
+    assert_selector "lexxy-toolbar button[name=upload]"
+
+    visit edit_post_path(posts(:empty), attachments_disabled: nil)
+
+    assert_selector "lexxy-toolbar button[name=upload]"
+
+    visit edit_post_path(posts(:empty), attachments_disabled: "invalid")
+
+    assert_selector "lexxy-toolbar button[name=upload]"
   end
 
   test "undo and redo commands" do
@@ -138,4 +199,13 @@ class ToolbarTest < ApplicationSystemTestCase
     click_on "Redo"
     assert_equal_html "<p>Hello World</p>", find_editor.value
   end
+
+  private
+    def apply_highlight_option(attribute, button_index)
+      click_on "Color highlight"
+
+      within "lexxy-color-dialog dialog[open] [data-button-group='#{attribute}']" do
+        all(".lexxy-color-button")[button_index - 1].click
+      end
+    end
 end

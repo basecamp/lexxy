@@ -1,11 +1,11 @@
-import { createEditor, $getRoot, $getNodeByKey, $addUpdateTag, SKIP_DOM_SELECTION_TAG, KEY_ENTER_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, CLEAR_HISTORY_COMMAND } from "lexical"
-import { ListNode, ListItemNode, registerList } from "@lexical/list"
-import { LinkNode, AutoLinkNode } from "@lexical/link"
-import { registerRichText, QuoteNode, HeadingNode } from "@lexical/rich-text"
-import { $generateNodesFromDOM, $generateHtmlFromNodes } from "@lexical/html"
+import { $addUpdateTag, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, createEditor } from "lexical"
+import { ListItemNode, ListNode, registerList } from "@lexical/list"
+import { AutoLinkNode, LinkNode } from "@lexical/link"
+import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
+import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
-import { registerHistory, createEmptyHistoryState } from '@lexical/history'
+import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
@@ -14,11 +14,14 @@ import { AttachmentGalleryNode } from "../nodes/attachment_gallery_node"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
-import { containsVisuallyRelevantChildren, createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
+import { createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
 import LexicalToolbar from "./toolbar"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
+import Highlighter from "../editor/highlighter"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { HighlightNode } from "../nodes/highlight_node"
+import { TrixTextNode } from "../nodes/trix_text_node"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -42,6 +45,7 @@ export default class LexicalEditorElement extends HTMLElement {
     this.contents = new Contents(this)
     this.selection = new Selection(this)
     this.clipboard = new Clipboard(this)
+    this.highlighter = new Highlighter(this)
 
     CommandDispatcher.configureFor(this)
     this.#initialize()
@@ -75,6 +79,10 @@ export default class LexicalEditorElement extends HTMLElement {
 
   get form() {
     return this.internals.form
+  }
+
+  get name() {
+    return this.getAttribute("name")
   }
 
   get toolbarElement() {
@@ -152,6 +160,7 @@ export default class LexicalEditorElement extends HTMLElement {
     this.#registerComponents()
     this.#listenForInvalidatedNodes()
     this.#handleEnter()
+    this.#handleFocus()
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#loadInitialValue()
@@ -177,6 +186,8 @@ export default class LexicalEditorElement extends HTMLElement {
 
   get #lexicalNodes() {
     const nodes = [
+      TrixTextNode,
+      HighlightNode,
       QuoteNode,
       HeadingNode,
       ListNode,
@@ -330,6 +341,14 @@ export default class LexicalEditorElement extends HTMLElement {
     )
   }
 
+  #handleFocus() {
+    // Lexxy handles focus and blur as commands
+    // see https://github.com/facebook/lexical/blob/d1a8e84fe9063a4f817655b346b6ff373aa107f0/packages/lexical/src/LexicalEvents.ts#L35
+    // and https://stackoverflow.com/a/72212077
+    this.editor.registerCommand(BLUR_COMMAND, () => { dispatch(this, "lexxy:blur") }, COMMAND_PRIORITY_NORMAL)
+    this.editor.registerCommand(FOCUS_COMMAND, () => { dispatch(this, "lexxy:focus") }, COMMAND_PRIORITY_NORMAL)
+  }
+
   #attachDebugHooks() {
     if (!LexicalEditorElement.debug) return
 
@@ -358,6 +377,7 @@ export default class LexicalEditorElement extends HTMLElement {
   #createDefaultToolbar() {
     const toolbar = createElement("lexxy-toolbar")
     toolbar.innerHTML = LexicalToolbar.defaultTemplate
+    toolbar.setAttribute("data-attachments", this.supportsAttachments) // Drives toolbar CSS styles
     this.prepend(toolbar)
     return toolbar
   }
@@ -367,7 +387,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #isEmpty() {
-    return !this.editorContentElement.textContent.trim() && !containsVisuallyRelevantChildren(this.editorContentElement)
+    return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
   }
 
   #setValidity() {

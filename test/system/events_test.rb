@@ -7,6 +7,15 @@ class EventsTest < ApplicationSystemTestCase
     assert_no_dispatched_event "lexxy:change"
   end
 
+  test "dispatch lexxy:focus and lexxy:blur events on focus gain and loss" do
+    visit edit_post_path(posts(:empty))
+    find_editor.focus
+    assert_dispatched_event "lexxy:focus"
+
+    page.find("input[name='post[title]']").click
+    assert_dispatched_event "lexxy:blur"
+  end
+
   test "dispatch lexxy:change event on edits" do
     visit edit_post_path(posts(:empty))
 

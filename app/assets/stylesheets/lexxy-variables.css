@@ -35,6 +35,26 @@
   --lexxy-color-selected-dark: var(--lexxy-color-blue);
   --lexxy-color-code-bg: var(--lexxy-color-ink-lightest);
 
+  --highlight-1: rgb(136, 118, 38);
+  --highlight-2: rgb(185, 94, 6);
+  --highlight-3: rgb(207, 0, 0);
+  --highlight-4: rgb(216, 28, 170);
+  --highlight-5: rgb(144, 19, 254);
+  --highlight-6: rgb(5, 98, 185);
+  --highlight-7: rgb(17, 138, 15);
+  --highlight-8: rgb(148, 82, 22);
+  --highlight-9: rgb(102, 102, 102);
+
+  --highlight-bg-1: rgba(229, 223, 6, 0.3);
+  --highlight-bg-2: rgba(255, 185, 87, 0.3);
+  --highlight-bg-3: rgba(255, 118, 118, 0.3); 
+  --highlight-bg-4: rgba(248, 137, 216, 0.3);
+  --highlight-bg-5: rgba(190, 165, 255, 0.3); 
+  --highlight-bg-6: rgba(124, 192, 252, 0.3);
+  --highlight-bg-7: rgba(140, 255, 129, 0.3); 
+  --highlight-bg-8: rgba(221, 170, 123, 0.3);
+  --highlight-bg-9: rgba(200, 200, 200, 0.3);
+
   /* Typography */
   --lexxy-font-base: system-ui, sans-serif;
   --lexxy-font-mono: ui-monospace, "Menlo", "Monaco", Consolas, monospace;

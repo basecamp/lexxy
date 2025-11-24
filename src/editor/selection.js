@@ -1,8 +1,8 @@
 import {
-  $createNodeSelection, $isElementNode, $isRangeSelection, $getNodeByKey, $getSelection, $isNodeSelection,
-  $setSelection, $getRoot, $isTextNode, $isLineBreakNode, COMMAND_PRIORITY_LOW, SELECTION_CHANGE_COMMAND, KEY_ARROW_LEFT_COMMAND,
-  KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_DELETE_COMMAND,
-  KEY_BACKSPACE_COMMAND, DecoratorNode, $createParagraphNode
+  $createNodeSelection, $createParagraphNode, $getNodeByKey, $getRoot, $getSelection, $isElementNode,
+  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, COMMAND_PRIORITY_LOW, DecoratorNode,
+  KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
+  KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, SELECTION_CHANGE_COMMAND
 } from "lexical"
 import { nextFrame } from "../helpers/timing_helpers"
 import { getNonce } from "../helpers/csp_helper"
@@ -27,8 +27,10 @@ export default class Selection {
 
   set current(selection) {
     if ($isNodeSelection(selection)) {
-      this._current = $getSelection()
-      this.#syncSelectedClasses()
+      this.editor.getEditorState().read(() => {
+        this._current = $getSelection()
+        this.#syncSelectedClasses()
+      })
     } else {
       this.editor.update(() => {
         this.#syncSelectedClasses()
@@ -61,6 +63,52 @@ export default class Selection {
     this.editor.update(() => {
       $getRoot().selectEnd()
     })
+  }
+
+  selectedNodeWithOffset() {
+    const selection = $getSelection()
+    if (!selection) return { node: null, offset: 0 }
+
+    if ($isRangeSelection(selection)) {
+      return {
+        node: selection.anchor.getNode(),
+        offset: selection.anchor.offset
+      }
+    } else if ($isNodeSelection(selection)) {
+      const [ node ] = selection.getNodes()
+      return {
+        node,
+        offset: 0
+      }
+    }
+
+    return { node: null, offset: 0 }
+  }
+
+  preservingSelection(fn) {
+    let selectionState = null
+
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (selection && $isRangeSelection(selection)) {
+        selectionState = {
+          anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
+          focus: { key: selection.focus.key, offset: selection.focus.offset }
+        }
+      }
+    })
+
+    fn()
+
+    if (selectionState) {
+      this.editor.update(() => {
+        const selection = $getSelection()
+        if (selection && $isRangeSelection(selection)) {
+          selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text")
+          selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text")
+        }
+      })
+    }
   }
 
   get hasSelectedWordsInSingleLine() {
@@ -166,8 +214,9 @@ export default class Selection {
 
     this._currentlySelectedKeys = new Set()
 
-    if (this.current) {
-      for (const node of this.current.getNodes()) {
+    const selection = $getSelection()
+    if (selection && $isNodeSelection(selection)) {
+      for (const node of selection.getNodes()) {
         this._currentlySelectedKeys.add(node.getKey())
       }
     }
@@ -266,11 +315,11 @@ export default class Selection {
     // above when navigating UP/DOWN when Lexical shows its fake cursor on custom decorator nodes.
     this.editorContentElement.addEventListener("keydown", (event) => {
       if (event.key === "ArrowUp") {
-        const lexicalCursor = this.editor.getRootElement().querySelector('[data-lexical-cursor]')
+        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
 
         if (lexicalCursor) {
           let currentElement = lexicalCursor.previousElementSibling
-          while (currentElement && currentElement.hasAttribute('data-lexical-cursor')) {
+          while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
             currentElement = currentElement.previousElementSibling
           }
 
@@ -281,11 +330,11 @@ export default class Selection {
       }
 
       if (event.key === "ArrowDown") {
-        const lexicalCursor = this.editor.getRootElement().querySelector('[data-lexical-cursor]')
+        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
 
         if (lexicalCursor) {
           let currentElement = lexicalCursor.nextElementSibling
-          while (currentElement && currentElement.hasAttribute('data-lexical-cursor')) {
+          while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
             currentElement = currentElement.nextElementSibling
           }
 
@@ -431,22 +480,24 @@ export default class Selection {
     const node = this.nodeAfterCursor
     if (node instanceof DecoratorNode) {
       this.#selectInLexical(node)
+      return true
     } else {
       this.#contents.deleteSelectedNodes()
     }
 
-    return true
+    return false
   }
 
   #deletePreviousOrNext() {
     const node = this.nodeBeforeCursor
     if (node instanceof DecoratorNode) {
       this.#selectInLexical(node)
+      return true
     } else {
       this.#contents.deleteSelectedNodes()
     }
 
-    return true
+    return false
   }
 
   #getValidSelectionRange() {
@@ -473,7 +524,7 @@ export default class Selection {
   }
 
   #isRectUnreliable(rect) {
-    return (rect.width === 0 && rect.height === 0) || (rect.top === 0 && rect.left === 0)
+    return rect.width === 0 && rect.height === 0 || rect.top === 0 && rect.left === 0
   }
 
   #createAndInsertMarker(range) {
@@ -504,7 +555,7 @@ export default class Selection {
 
   #calculateCursorPosition(rect, range) {
     const rootRect = this.editor.getRootElement().getBoundingClientRect()
-    let x = rect.left - rootRect.left
+    const x = rect.left - rootRect.left
     let y = rect.top - rootRect.top
 
     const fontSize = this.#getFontSizeForCursor(range)

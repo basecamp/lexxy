@@ -2,13 +2,13 @@ export function isUrl(string) {
   try {
     new URL(string)
     return true
-  } catch (_) {
+  } catch {
     return false
   }
 }
 
 export function isPath(string) {
-  return /^\/.*$/.test(string);
+  return /^\/.*$/.test(string)
 }
 
 export function normalizeFilteredText(string) {

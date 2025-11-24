@@ -1,30 +1,35 @@
 import {
   $getSelection,
-  $isRangeSelection,
-  FORMAT_TEXT_COMMAND,
-  $isTextNode
+  $isRangeSelection
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
-import { $isListNode, $isListItemNode } from "@lexical/list"
-import { $isQuoteNode, $isHeadingNode } from "@lexical/rich-text"
-import { $isCodeNode, $isCodeHighlightNode } from "@lexical/code"
+import { $isListItemNode, $isListNode } from "@lexical/list"
+import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
+import { $isCodeNode } from "@lexical/code"
 import { $isLinkNode } from "@lexical/link"
-import { getListType } from "../helpers/lexical_helper";
+import { getListType } from "../helpers/lexical_helper"
 
 export default class LexicalToolbarElement extends HTMLElement {
   constructor() {
     super()
     this.internals = this.attachInternals()
     this.internals.role = "toolbar"
+
+    this.updateButtonStatesCallbacks = []
   }
 
   connectedCallback() {
-    this.#refreshToolbarOverflow()
-    window.addEventListener("resize", this.#refreshToolbarOverflow)
+    requestAnimationFrame(() => this.#refreshToolbarOverflow())
+
+    this._resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
+    this._resizeObserver.observe(this)
   }
 
   disconnectedCallback() {
-    window.removeEventListener("resize", this.#refreshToolbarOverflow)
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect()
+      this._resizeObserver = null
+    }
   }
 
   setEditor(editorElement) {
@@ -36,6 +41,12 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#monitorSelectionChanges()
     this.#monitorHistoryChanges()
     this.#refreshToolbarOverflow()
+
+    this.toggleAttribute("connected", true)
+  }
+
+  registerUpdateButtonStatesCallback(callback) {
+    this.updateButtonStatesCallbacks.push(callback)
   }
 
   #bindButtons() {
@@ -61,17 +72,27 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   // Not using popover because of CSS anchoring still not widely available.
   #toggleDialog(button) {
-    const dialog = document.getElementById(button.dataset.dialogTarget).parentNode
+    const dialogTarget = button.dataset.dialogTarget
+    const dialog = this.querySelector("lexxy-" + dialogTarget)
+    if (!dialog) return
 
-    if (dialog.open) {
+    if (dialog.dialog && dialog.dialog.open) {
       dialog.close()
     } else {
+      this.#closeOpenDialogs()
       dialog.show()
     }
   }
 
+  #closeOpenDialogs() {
+    const openDialogs = this.querySelectorAll("dialog[open]")
+    openDialogs.forEach(openDialog => {
+      openDialog.closest(".lexxy-dialog").close()
+    })
+  }
+
   #bindHotkeys() {
-    this.editorElement.addEventListener('keydown', (event) => {
+    this.editorElement.addEventListener("keydown", (event) => {
       const buttons = this.querySelectorAll("[data-hotkey]")
       buttons.forEach((button) => {
         const hotkeys = button.dataset.hotkey.toLowerCase().split(/\s+/)
@@ -87,13 +108,13 @@ export default class LexicalToolbarElement extends HTMLElement {
   #keyCombinationFor(event) {
     const pressedKey = event.key.toLowerCase()
     const modifiers = [
-      event.ctrlKey ? 'ctrl' : null,
-      event.metaKey ? 'cmd' : null,
-      event.altKey ? 'alt' : null,
-      event.shiftKey ? 'shift' : null,
+      event.ctrlKey ? "ctrl" : null,
+      event.metaKey ? "cmd" : null,
+      event.altKey ? "alt" : null,
+      event.shiftKey ? "shift" : null,
     ].filter(Boolean)
 
-    return [ ...modifiers, pressedKey ].join('+')
+    return [ ...modifiers, pressedKey ].join("+")
   }
 
   #assignButtonTabindex() {
@@ -127,14 +148,6 @@ export default class LexicalToolbarElement extends HTMLElement {
     })
   }
 
-  #setButtonDisabled(name, isDisabled) {
-    const button = this.querySelector(`[name="${name}"]`)
-    if (button) {
-      button.disabled = isDisabled
-      button.setAttribute("aria-disabled", isDisabled.toString())
-    }
-  }
-
   #updateButtonStates() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
@@ -147,37 +160,28 @@ export default class LexicalToolbarElement extends HTMLElement {
     const isBold = selection.hasFormat("bold")
     const isItalic = selection.hasFormat("italic")
     const isStrikethrough = selection.hasFormat("strikethrough")
+    const isHighlight = selection.hasFormat("highlight")
+    const isInLink = this.#isInLink(anchorNode)
+    const isInQuote = $isQuoteNode(topLevelElement)
+    const isInHeading = $isHeadingNode(topLevelElement)
     const isInCode = $isCodeNode(topLevelElement) || selection.hasFormat("code")
     const isInList = this.#isInList(anchorNode)
     const listType = getListType(anchorNode)
-    const isInQuote = $isQuoteNode(topLevelElement)
-    const isInHeading = $isHeadingNode(topLevelElement)
-    const isInLink = this.#isInLink(anchorNode)
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
     this.#setButtonPressed("strikethrough", isStrikethrough)
+    this.#setButtonPressed("highlight", isHighlight)
+    this.#setButtonPressed("link", isInLink)
+    this.#setButtonPressed("quote", isInQuote)
+    this.#setButtonPressed("heading", isInHeading)
     this.#setButtonPressed("code", isInCode)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
     this.#setButtonPressed("ordered-list", isInList && listType === "number")
-    this.#setButtonPressed("quote", isInQuote)
-    this.#setButtonPressed("heading", isInHeading)
-    this.#setButtonPressed("link", isInLink)
 
     this.#updateUndoRedoButtonStates()
-  }
 
-  #isSelectionInInlineCode(selection) {
-    const nodes = selection.getNodes()
-    return nodes.some(node => {
-      if ($isCodeHighlightNode(node)) return true
-      // Check parent for text nodes inside code highlight
-      if ($isTextNode(node)) {
-        const parent = node.getParent()
-        if (parent && $isCodeHighlightNode(parent)) return true
-      }
-      return false
-    })
+    this.updateButtonStatesCallbacks.forEach(callback => callback(selection))
   }
 
   #isInList(node) {
@@ -205,6 +209,14 @@ export default class LexicalToolbarElement extends HTMLElement {
     }
   }
 
+  #setButtonDisabled(name, isDisabled) {
+    const button = this.querySelector(`[name="${name}"]`)
+    if (button) {
+      button.disabled = isDisabled
+      button.setAttribute("aria-disabled", isDisabled.toString())
+    }
+  }
+
   #toolbarIsOverflowing() {
     return this.scrollWidth > this.clientWidth
   }
@@ -227,12 +239,12 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   #resetToolbar() {
     while (this.#overflowMenu.children.length > 0) {
-      this.insertBefore(this.#overflowMenu.children[0], this.#overflow);
+      this.insertBefore(this.#overflowMenu.children[0], this.#overflow)
     }
   }
 
   #compactMenu() {
-    const buttons = this.#buttons.reverse()
+    const buttons = this.#buttonsWithSeparator.reverse()
     let movedToOverflow = false
 
     for (const button of buttons) {
@@ -247,6 +259,10 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   get #buttons() {
+    return Array.from(this.querySelectorAll(":scope > button"))
+  }
+
+  get #buttonsWithSeparator() {
     return Array.from(this.querySelectorAll(":scope > button, :scope > [role=separator]"))
   }
 
@@ -266,12 +282,26 @@ export default class LexicalToolbarElement extends HTMLElement {
         </svg>
       </button>
 
+      <button class="lexxy-editor__toolbar-button" type="button" name="highlight" title="Color highlight" data-dialog-target="color-dialog">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.65422 0.711575C7.1856 0.242951 6.42579 0.242951 5.95717 0.711575C5.48853 1.18021 5.48853 1.94 5.95717 2.40864L8.70864 5.16011L2.85422 11.0145C1.44834 12.4204 1.44833 14.6998 2.85422 16.1057L7.86011 21.1115C9.26599 22.5174 11.5454 22.5174 12.9513 21.1115L19.6542 14.4087C20.1228 13.94 20.1228 13.1802 19.6542 12.7115L11.8544 4.91171L11.2542 4.31158L7.65422 0.711575ZM4.55127 12.7115L10.4057 6.85716L17.1087 13.56H4.19981C4.19981 13.253 4.31696 12.9459 4.55127 12.7115ZM23.6057 20.76C23.6057 22.0856 22.5311 23.16 21.2057 23.16C19.8802 23.16 18.8057 22.0856 18.8057 20.76C18.8057 19.5408 19.8212 18.5339 20.918 17.4462C21.0135 17.3516 21.1096 17.2563 21.2057 17.16C21.3018 17.2563 21.398 17.3516 21.4935 17.4462C22.5903 18.5339 23.6057 19.5408 23.6057 20.76Z"/></svg>
+      </button>
+
+      <lexxy-color-dialog class="lexxy-dialog lexxy-color-dialog">
+        <dialog class="color-dialog" closedby="any">
+          <div class="lexxy-color-dialog-content">
+            <div data-button-group="color" data-values="var(--highlight-1); var(--highlight-2); var(--highlight-3); var(--highlight-4); var(--highlight-5); var(--highlight-6); var(--highlight-7); var(--highlight-8); var(--highlight-9)"></div>
+            <div data-button-group="background-color" data-values="var(--highlight-bg-1); var(--highlight-bg-2); var(--highlight-bg-3); var(--highlight-bg-4); var(--highlight-bg-5); var(--highlight-bg-6); var(--highlight-bg-7); var(--highlight-bg-8); var(--highlight-bg-9)"></div>
+            <button data-command="removeHighlight" class="lexxy-color-dialog-reset">Remove all coloring</button>
+          </div>
+        </dialog>
+      </lexxy-color-dialog>
+
       <button class="lexxy-editor__toolbar-button" type="button" name="link" title="Link" data-dialog-target="link-dialog" data-hotkey="cmd+k ctrl+k">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.111 9.546a1.5 1.5 0 012.121 0 5.5 5.5 0 010 7.778l-2.828 2.828a5.5 5.5 0 01-7.778 0 5.498 5.498 0 010-7.777l2.828-2.83a1.5 1.5 0 01.355-.262 6.52 6.52 0 00.351 3.799l-1.413 1.414a2.499 2.499 0 000 3.535 2.499 2.499 0 003.535 0l2.83-2.828a2.5 2.5 0 000-3.536 1.5 1.5 0 010-2.121z"/><path d="M12.111 3.89a5.5 5.5 0 117.778 7.777l-2.828 2.829a1.496 1.496 0 01-.355.262 6.522 6.522 0 00-.351-3.8l1.413-1.412a2.5 2.5 0 10-3.536-3.535l-2.828 2.828a2.5 2.5 0 000 3.536 1.5 1.5 0 01-2.122 2.12 5.5 5.5 0 010-7.777l2.83-2.829z"/></svg>
       </button>
 
-      <lexxy-link-dialog class="lexxy-link-dialog">
-        <dialog id="link-dialog" closedby="any">
+      <lexxy-link-dialog class="lexxy-dialog lexxy-link-dialog">
+        <dialog class="link-dialog" closedby="any">
           <form method="dialog">
             <input type="url" placeholder="Enter a URL…" class="input" required>
             <div class="lexxy-dialog-actions">
