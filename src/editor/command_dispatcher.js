@@ -13,9 +13,9 @@ import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lex
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
-import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import { UPLOAD_ATTACHMENTS_COMMAND, registerUploadCommand } from "./attachments"
 
 const COMMANDS = [
   "bold",
@@ -174,23 +174,7 @@ export class CommandDispatcher {
   }
 
   dispatchUploadAttachments() {
-    const input = createElement("input", {
-      type: "file",
-      multiple: true,
-      style: "display: none;",
-      onchange: ({ target }) => {
-        const files = Array.from(target.files)
-        if (!files.length) return
-
-        for (const file of files) {
-          this.contents.uploadFile(file)
-        }
-      }
-    })
-
-    this.editorElement.appendChild(input) // Append and remove just for the sake of making it testable
-    input.click()
-    setTimeout(() => input.remove(), 1000)
+    this.editor.dispatchCommand(UPLOAD_ATTACHMENTS_COMMAND, this.contents)
   }
 
   dispatchUndo() {
@@ -208,6 +192,8 @@ export class CommandDispatcher {
     }
 
     this.#registerCommandHandler(PASTE_COMMAND, COMMAND_PRIORITY_LOW, this.dispatchPaste.bind(this))
+
+    if (this.editorElement.supportsAttachments) { registerUploadCommand(this.editorElement) }
   }
 
   #registerCommandHandler(command, priority, handler) {
