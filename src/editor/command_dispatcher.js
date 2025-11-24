@@ -177,6 +177,7 @@ export class CommandDispatcher {
     const input = createElement("input", {
       type: "file",
       multiple: true,
+      style: "display: none;",
       onchange: ({ target }) => {
         const files = Array.from(target.files)
         if (!files.length) return
@@ -187,7 +188,7 @@ export class CommandDispatcher {
       }
     })
 
-    document.body.appendChild(input) // Append and remove just for the sake of making it testeable
+    this.editorElement.appendChild(input) // Append and remove just for the sake of making it testable
     input.click()
     setTimeout(() => input.remove(), 1000)
   }
