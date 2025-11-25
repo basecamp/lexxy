@@ -1,10 +1,10 @@
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
-import { ToolbarDialog } from "./dialog"
+import { ToolbarDialog } from "./toolbar_dialog"
 
-const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-color-button"
+const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 
-export class ColorDialog extends ToolbarDialog {
+export class HighlightDialog extends ToolbarDialog {
   connectedCallback() {
     super.connectedCallback()
 
@@ -38,7 +38,7 @@ export class ColorDialog extends ToolbarDialog {
     button.dataset.style = attribute
     button.style.setProperty(attribute, value)
     button.dataset.value = value
-    button.classList.add("lexxy-color-button")
+    button.classList.add("lexxy-highlight-button")
     button.name = attribute + "-" + index
     return button
   }
@@ -87,5 +87,5 @@ export class ColorDialog extends ToolbarDialog {
 }
 
 // We should extend the native dialog and avoid the intermediary <dialog> but not
-// supported by Safari yet: customElements.define("lexxy-color-dialog", ColorDialog, { extends: "dialog" })
-customElements.define("lexxy-color-dialog", ColorDialog)
+// supported by Safari yet: customElements.define("lexxy-hightlight-dialog", HighlightDialog, { extends: "dialog" })
+customElements.define("lexxy-highlight-dialog", HighlightDialog)

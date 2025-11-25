@@ -1,6 +1,6 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $isLinkNode } from "@lexical/link"
-import { ToolbarDialog } from "./dialog"
+import { ToolbarDialog } from "./toolbar_dialog"
 
 export class LinkDialog extends ToolbarDialog {
   connectedCallback() {
@@ -49,7 +49,6 @@ export class LinkDialog extends ToolbarDialog {
 
     return url
   }
-
 }
 
 // We should extend the native dialog and avoid the intermediary <dialog> but not

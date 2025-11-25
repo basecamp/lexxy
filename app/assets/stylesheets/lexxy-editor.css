@@ -254,8 +254,8 @@
 /* Color dialog
 /* -------------------------------------------------------------------------- */
 
-:where(.lexxy-color-dialog) {
-  .lexxy-color-dialog-content {
+:where(.lexxy-highlight-dialog) {
+  .lexxy-highlight-dialog-content {
     display: flex;
     flex-direction: column;
     gap: 0.5ch;
@@ -294,7 +294,7 @@
       }
     }
 
-    .lexxy-color-dialog-reset {
+    .lexxy-highlight-dialog-reset {
       inline-size: 100%;
 
       &[disabled] {
