@@ -16,7 +16,7 @@ export class ColorDialog extends ToolbarDialog {
     this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this))
     this.#colorButtons.forEach(button => button.addEventListener("click", this.#handleColorButtonClick.bind(this)))
 
-    this.toolbar?.registerUpdateButtonStatesCallback(this.#updateColorButtonStates.bind(this))
+    this.toolbar.registerUpdateButtonStatesCallback(this.#updateColorButtonStates.bind(this))
   }
 
   #setUpButtons() {
@@ -52,14 +52,14 @@ export class ColorDialog extends ToolbarDialog {
     const attribute = button.dataset.style
     const value = button.dataset.value
 
-    this.editor?.dispatchCommand("toggleHighlight", { [attribute]: value })
+    this.editor.dispatchCommand("toggleHighlight", { [attribute]: value })
     this.close()
   }
 
   #handleRemoveHighlightClick(event) {
     event.preventDefault()
 
-    this.editor?.dispatchCommand("removeHighlight")
+    this.editor.dispatchCommand("removeHighlight")
     this.close()
   }
 

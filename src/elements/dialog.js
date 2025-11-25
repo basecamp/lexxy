@@ -9,8 +9,6 @@ export class ToolbarDialog extends HTMLElement {
   }
 
   show(triggerButton) {
-    if (!this.dialog) return
-
     this.triggerButton = triggerButton
     this.#positionDialog()
     this.dialog.show()
@@ -18,13 +16,11 @@ export class ToolbarDialog extends HTMLElement {
   }
 
   close() {
-    if (!this.dialog) return
-
     this.dialog.close()
     this.#removeClickOutsideHandler()
     this.triggerButton = null
 
-    this.editor?.focus()
+    this.editor.focus()
   }
 
   get toolbar() {
@@ -32,12 +28,10 @@ export class ToolbarDialog extends HTMLElement {
   }
 
   get editor() {
-    return this.toolbar?.editor
+    return this.toolbar.editor
   }
 
   #positionDialog() {
-    if (!this.dialog || !this.triggerButton || !this.toolbar) return
-
     const left = this.triggerButton.offsetLeft
     this.dialog.style.insetInlineStart = `${left}px`
   }
@@ -46,11 +40,11 @@ export class ToolbarDialog extends HTMLElement {
     if (this.clickOutsideHandler) return
 
     this.clickOutsideHandler = (event) => {
-      if (!this.dialog?.open) return
+      if (!this.dialog.open) return
 
       const target = event.target
       const isClickInsideDialog = this.dialog.contains(target)
-      const isClickOnTrigger = this.triggerButton?.contains(target)
+      const isClickOnTrigger = this.triggerButton.contains(target)
 
       if (!isClickInsideDialog && !isClickOnTrigger) {
         this.close()

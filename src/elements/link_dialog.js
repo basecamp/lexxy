@@ -22,18 +22,18 @@ export class LinkDialog extends ToolbarDialog {
 
   #handleSubmit(event) {
     const command = event.submitter?.value
-    this.editor?.dispatchCommand(command, this.input.value)
+    this.editor.dispatchCommand(command, this.input.value)
   }
 
   #handleUnlink(event) {
-    this.editor?.dispatchCommand("unlink")
+    this.editor.dispatchCommand("unlink")
     this.close()
   }
 
   get #selectedLinkUrl() {
     let url = ""
 
-    this.editor?.getEditorState().read(() => {
+    this.editor.getEditorState().read(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
