@@ -11,6 +11,7 @@ import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
 import { nextFrame } from "../helpers/timing_helpers.js"
+import { $createAttachmentGalleryNode } from "../nodes/attachment_gallery_node"
 import { FormatEscaper } from "./format_escaper"
 
 export default class Contents {
@@ -256,31 +257,60 @@ export default class Contents {
   }
 
   uploadFile(file) {
+    this.uploadFiles([file])
+  }
+
+  uploadFiles(files) {
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
       return
     }
 
-    if (!this.#shouldUploadFile(file)) {
-      return
-    }
+    const validFiles = files.filter(file => this.#shouldUploadFile(file))
+    if (validFiles.length === 0) return
 
     const uploadUrl = this.editorElement.directUploadUrl
     const blobUrlTemplate = this.editorElement.blobUrlTemplate
 
     this.editor.update(() => {
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor })
-      this.insertAtCursor(uploadedImageNode)
+      const selection = $getSelection()
+      const anchorNode = selection?.anchor.getNode()
+      const currentParagraph = anchorNode?.getTopLevelElement()
+
+      const uploadNodes = validFiles.map(file =>
+        new ActionTextAttachmentUploadNode({
+          file: file,
+          uploadUrl: uploadUrl,
+          blobUrlTemplate: blobUrlTemplate,
+          editor: this.editor
+        })
+      )
+
+      // Wrap multiple files in a gallery, insert single files directly
+      const nodeToInsert = uploadNodes.length >= 2
+        ? this.#createGalleryWithNodes(uploadNodes)
+        : uploadNodes[0]
+
+      this.#insertNode(nodeToInsert, currentParagraph)
+
+      // If we inserted a gallery, move cursor outside of it
+      if (uploadNodes.length >= 2) {
+        this.#selectOutsideNode(nodeToInsert)
+      }
     }, { tag: HISTORY_MERGE_TAG })
   }
 
   async deleteSelectedNodes() {
     let focusNode = null
+    let parentWasGallery = false
 
     this.editor.update(() => {
       if ($isNodeSelection(this.#selection.current)) {
         const nodesToRemove = this.#selection.current.getNodes()
         if (nodesToRemove.length === 0) return
+
+        const parent = nodesToRemove[0]?.getParent()
+        parentWasGallery = parent?.getType() === 'attachment_gallery'
 
         focusNode = this.#findAdjacentNodeTo(nodesToRemove)
         this.#deleteNodes(nodesToRemove)
@@ -290,7 +320,20 @@ export default class Contents {
     await nextFrame()
 
     this.editor.update(() => {
-      this.#selectAfterDeletion(focusNode)
+      if (parentWasGallery) {
+        // Get the gallery node from the focus node
+        const galleryNode = focusNode?.getParent?.()?.getType?.() === 'attachment_gallery'
+          ? focusNode.getParent()
+          : focusNode
+
+        if (galleryNode?.getType?.() === 'attachment_gallery') {
+          this.#selectOutsideNode(galleryNode)
+        } else {
+          this.#selectAfterDeletion(focusNode)
+        }
+      } else {
+        this.#selectAfterDeletion(focusNode)
+      }
       this.#selection.clear()
       this.editor.focus()
     })
@@ -528,9 +571,16 @@ export default class Contents {
     // Use splice() instead of node.remove() for proper removal and
     // reconciliation. Would have issues with removing unintended decorator nodes
     // with node.remove()
+    const galleriesToUpdate = new Map()
+
     nodes.forEach((node) => {
       const parent = node.getParent()
       if (!$isElementNode(parent)) return
+
+      // Track gallery parents that need DOM updates
+      if (parent.getType() === 'attachment_gallery') {
+        galleriesToUpdate.set(parent.getKey(), parent)
+      }
 
       const children = parent.getChildren()
       const index = children.indexOf(node)
@@ -538,6 +588,11 @@ export default class Contents {
       if (index >= 0) {
         parent.splice(index, 1, [])
       }
+    })
+
+    // Update gallery DOM and remove if empty/single child
+    galleriesToUpdate.forEach((gallery, galleryKey) => {
+      this.#updateOrRemoveGallery(gallery, galleryKey)
     })
   }
 
@@ -733,5 +788,54 @@ export default class Contents {
 
   #shouldUploadFile(file) {
     return dispatch(this.editorElement, "lexxy:file-accept", { file }, true)
+  }
+
+  #createGalleryWithNodes(uploadNodes) {
+    const gallery = $createAttachmentGalleryNode()
+    uploadNodes.forEach(node => gallery.append(node))
+    return gallery
+  }
+
+  #insertNode(node, currentParagraph) {
+    if (currentParagraph && $isParagraphNode(currentParagraph) && currentParagraph.getChildrenSize() === 0) {
+      currentParagraph.replace(node)
+      // If we're replacing an empty paragraph with a gallery, ensure there's a paragraph after for cursor placement
+      if (node.getType() === 'attachment_gallery') {
+        const newParagraph = $createParagraphNode()
+        node.insertAfter(newParagraph)
+      }
+    } else if (currentParagraph && $isElementNode(currentParagraph)) {
+      currentParagraph.insertAfter(node)
+    } else {
+      $insertNodes([node])
+    }
+  }
+
+  #selectOutsideNode(node) {
+    const nextNode = node.getNextSibling()
+    if (nextNode && ($isTextNode(nextNode) || $isParagraphNode(nextNode))) {
+      nextNode.selectStart()
+    } else {
+      // If there's no suitable next node, create a new paragraph after the gallery
+      const newParagraph = $createParagraphNode()
+      node.insertAfter(newParagraph)
+      newParagraph.selectStart()
+    }
+  }
+
+  #updateOrRemoveGallery(gallery, galleryKey) {
+    const childCount = gallery.getChildrenSize()
+
+    // If gallery is empty or has only one child, unwrap it
+    if (childCount <= 1) {
+      gallery.getChildren().forEach(child => gallery.insertBefore(child))
+      gallery.remove()
+    } else {
+      // Update the gallery's className to reflect new child count
+      const dom = this.editor.getElementByKey(galleryKey)
+      if (dom) {
+        dom.className = `attachment-gallery attachment-gallery--${childCount}`
+      }
+    }
   }
 }

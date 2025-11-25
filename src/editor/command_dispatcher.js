@@ -182,9 +182,7 @@ export class CommandDispatcher {
         const files = Array.from(target.files)
         if (!files.length) return
 
-        for (const file of files) {
-          this.contents.uploadFile(file)
-        }
+        this.contents.uploadFiles(files)
       }
     })
 
@@ -265,10 +263,7 @@ export class CommandDispatcher {
     const files = Array.from(dataTransfer.files)
     if (!files.length) return
 
-    for (const file of files) {
-      this.contents.uploadFile(file)
-    }
-
+    this.contents.uploadFiles(files)
     this.editor.focus()
   }
 }

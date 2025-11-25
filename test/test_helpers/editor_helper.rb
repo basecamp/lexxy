@@ -39,6 +39,15 @@ module EditorHelper
     assert_no_css "action-text-attachment[content-type='application/vnd.actiontext.mention']"
   end
 
+  def assert_gallery(count:)
+    assert_selector ".attachment-gallery.attachment-gallery--#{count}", count: 1
+    assert_selector "figure.attachment", count: count
+  end
+
+  def assert_no_gallery
+    assert_no_selector ".attachment-gallery"
+  end
+
   def wait_for_editor
     assert_css "lexxy-editor[connected]"
     assert_css "lexxy-toolbar[connected]" if has_css?("lexxy-toolbar")

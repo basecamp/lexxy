@@ -392,3 +392,62 @@
     --lexxy-attachment-text-color: var(--lexxy-color-ink-inverted);
   }
 }
+
+/* Attachment galleries
+/* ------------------------------------------------------------------------ */
+
+:where(.attachment-gallery) {
+  display: grid;
+  column-gap: 1rem;
+  row-gap: 3rem;
+  margin-block: var(--lexxy-content-margin);
+  margin-inline: auto;
+  max-inline-size: 100%;
+
+  /* Make action-text-attachment elements proper grid items */
+  action-text-attachment {
+    display: block;
+  }
+
+  /* Two images: side by side */
+  &.attachment-gallery--2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Three images: all in a row */
+  &.attachment-gallery--3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Four images: 2x2 grid */
+  &.attachment-gallery--4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Five or more images: 3 column grid */
+  &.attachment-gallery--5,
+  &.attachment-gallery--6,
+  &.attachment-gallery--7,
+  &.attachment-gallery--8,
+  &.attachment-gallery--9 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Attachments in galleries have no individual margin */
+  .attachment {
+    margin-block: 0;
+  }
+
+  /* Images in galleries should fill their grid cell */
+  .attachment--preview img {
+    block-size: auto;
+    inline-size: 100%;
+    max-block-size: 32rem;
+    object-fit: contain;
+  }
+
+  /* Captions in galleries need proper spacing */
+  .attachment__caption {
+    margin-block-start: 1ch;
+  }
+}
