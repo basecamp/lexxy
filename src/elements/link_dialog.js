@@ -15,8 +15,13 @@ export class LinkDialog extends ToolbarDialog {
   }
 
   #registerHandlers() {
-    this.addEventListener("submit", this.#handleSubmit.bind(this))
+    this.dialog.addEventListener("beforetoggle", this.#handleBeforeToggle.bind(this))
+    this.dialog.addEventListener("submit", this.#handleSubmit.bind(this))
     this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this))
+  }
+
+  #handleBeforeToggle({ newState }) {
+    this.input.required = newState === "open"
   }
 
   #handleSubmit(event) {
@@ -24,7 +29,7 @@ export class LinkDialog extends ToolbarDialog {
     this.editor.dispatchCommand(command, this.input.value)
   }
 
-  #handleUnlink(event) {
+  #handleUnlink() {
     this.editor.dispatchCommand("unlink")
     this.close()
   }
