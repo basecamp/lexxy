@@ -8,6 +8,8 @@ export class ToolbarDialog extends HTMLElement {
     this.#removeClickOutsideHandler()
   }
 
+  updateStateCallback() { }
+
   show(triggerButton) {
     this.triggerButton = triggerButton
     this.#positionDialog()

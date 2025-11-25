@@ -10,14 +10,13 @@ export class LinkDialog extends ToolbarDialog {
     this.#registerHandlers()
   }
 
+  updateStateCallback() {
+    this.input.value = this.#selectedLinkUrl
+  }
+
   #registerHandlers() {
     this.addEventListener("submit", this.#handleSubmit.bind(this))
     this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this))
-  }
-
-  show(triggerButton) {
-    this.input.value = this.#selectedLinkUrl
-    super.show(triggerButton)
   }
 
   #handleSubmit(event) {

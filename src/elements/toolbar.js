@@ -14,8 +14,6 @@ export default class LexicalToolbarElement extends HTMLElement {
     super()
     this.internals = this.attachInternals()
     this.internals.role = "toolbar"
-
-    this.updateButtonStatesCallbacks = []
   }
 
   connectedCallback() {
@@ -45,8 +43,10 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.toggleAttribute("connected", true)
   }
 
-  registerUpdateButtonStatesCallback(callback) {
-    this.updateButtonStatesCallbacks.push(callback)
+  get #dialogs() {
+    const dialogButtons = this.querySelectorAll("[data-dialog-target]")
+    const dialogTags = Array.from(dialogButtons).map(button => `lexxy-${button.dataset.dialogTarget}`)
+    return Array.from(this.querySelectorAll(dialogTags))
   }
 
   #bindButtons() {
@@ -128,6 +128,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.editor.registerUpdateListener(() => {
       this.editor.getEditorState().read(() => {
         this.#updateButtonStates()
+        this.#updateDialogStates()
       })
     })
   }
@@ -180,8 +181,10 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("ordered-list", isInList && listType === "number")
 
     this.#updateUndoRedoButtonStates()
+  }
 
-    this.updateButtonStatesCallbacks.forEach(callback => callback(selection))
+  #updateDialogStates() {
+    this.#dialogs.forEach(dialog => dialog.updateStateCallback())
   }
 
   #isInList(node) {

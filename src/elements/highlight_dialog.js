@@ -1,3 +1,4 @@
+import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
 import { ToolbarDialog } from "./toolbar_dialog"
 
@@ -12,11 +13,13 @@ export class HighlightDialog extends ToolbarDialog {
     this.#registerHandlers()
   }
 
+  updateStateCallback() {
+    this.#updateColorButtonStates($getSelection())
+  }
+
   #registerHandlers() {
     this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this))
     this.#colorButtons.forEach(button => button.addEventListener("click", this.#handleColorButtonClick.bind(this)))
-
-    this.toolbar.registerUpdateButtonStatesCallback(this.#updateColorButtonStates.bind(this))
   }
 
   #setUpButtons() {
@@ -64,6 +67,8 @@ export class HighlightDialog extends ToolbarDialog {
   }
 
   #updateColorButtonStates(selection) {
+    if (!$isRangeSelection(selection)) { return }
+
     // Use null default, so "" indicates mixed highlighting
     const textColor = $getSelectionStyleValueForProperty(selection, "color", null)
     const backgroundColor = $getSelectionStyleValueForProperty(selection, "background-color", null)
