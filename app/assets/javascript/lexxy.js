@@ -6599,19 +6599,6 @@ class Selection {
     return getNearestListItemNode(anchorNode) !== null
   }
 
-  get hasHighlight() {
-    const selection = Lr();
-    if (!yr(selection)) return false
-
-    for (const node of selection.getNodes()) {
-      if (lr(node) && node.hasFormat("highlight")) {
-        return true
-      }
-    }
-
-    return false
-  }
-
   get nodeAfterCursor() {
     const { anchorNode, offset } = this.#getCollapsedSelectionData();
     if (!anchorNode) return null
@@ -8964,8 +8951,6 @@ class ToolbarDialog extends HTMLElement {
   }
 
   show(triggerButton) {
-    if (!this.dialog) return
-
     this.triggerButton = triggerButton;
     this.#positionDialog();
     this.dialog.show();
@@ -8973,13 +8958,11 @@ class ToolbarDialog extends HTMLElement {
   }
 
   close() {
-    if (!this.dialog) return
-
     this.dialog.close();
     this.#removeClickOutsideHandler();
     this.triggerButton = null;
 
-    this.editor?.focus();
+    this.editor.focus();
   }
 
   get toolbar() {
@@ -8987,12 +8970,10 @@ class ToolbarDialog extends HTMLElement {
   }
 
   get editor() {
-    return this.toolbar?.editor
+    return this.toolbar.editor
   }
 
   #positionDialog() {
-    if (!this.dialog || !this.triggerButton || !this.toolbar) return
-
     const left = this.triggerButton.offsetLeft;
     this.dialog.style.insetInlineStart = `${left}px`;
   }
@@ -9001,11 +8982,11 @@ class ToolbarDialog extends HTMLElement {
     if (this.clickOutsideHandler) return
 
     this.clickOutsideHandler = (event) => {
-      if (!this.dialog?.open) return
+      if (!this.dialog.open) return
 
       const target = event.target;
       const isClickInsideDialog = this.dialog.contains(target);
-      const isClickOnTrigger = this.triggerButton?.contains(target);
+      const isClickOnTrigger = this.triggerButton.contains(target);
 
       if (!isClickInsideDialog && !isClickOnTrigger) {
         this.close();
@@ -9050,18 +9031,18 @@ class LinkDialog extends ToolbarDialog {
 
   #handleSubmit(event) {
     const command = event.submitter?.value;
-    this.editor?.dispatchCommand(command, this.input.value);
+    this.editor.dispatchCommand(command, this.input.value);
   }
 
   #handleUnlink(event) {
-    this.editor?.dispatchCommand("unlink");
+    this.editor.dispatchCommand("unlink");
     this.close();
   }
 
   get #selectedLinkUrl() {
     let url = "";
 
-    this.editor?.getEditorState().read(() => {
+    this.editor.getEditorState().read(() => {
       const selection = Lr();
       if (!yr(selection)) return
 
@@ -9099,7 +9080,7 @@ class ColorDialog extends ToolbarDialog {
     this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this));
     this.#colorButtons.forEach(button => button.addEventListener("click", this.#handleColorButtonClick.bind(this)));
 
-    this.toolbar?.registerUpdateButtonStatesCallback(this.#updateColorButtonStates.bind(this));
+    this.toolbar.registerUpdateButtonStatesCallback(this.#updateColorButtonStates.bind(this));
   }
 
   #setUpButtons() {
@@ -9135,14 +9116,14 @@ class ColorDialog extends ToolbarDialog {
     const attribute = button.dataset.style;
     const value = button.dataset.value;
 
-    this.editor?.dispatchCommand("toggleHighlight", { [attribute]: value });
+    this.editor.dispatchCommand("toggleHighlight", { [attribute]: value });
     this.close();
   }
 
   #handleRemoveHighlightClick(event) {
     event.preventDefault();
 
-    this.editor?.dispatchCommand("removeHighlight");
+    this.editor.dispatchCommand("removeHighlight");
     this.close();
   }
 
