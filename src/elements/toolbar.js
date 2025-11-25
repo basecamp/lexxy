@@ -80,7 +80,7 @@ export default class LexicalToolbarElement extends HTMLElement {
       dialog.close()
     } else {
       this.#closeOpenDialogs()
-      dialog.show()
+      dialog.show(button)
     }
   }
 
@@ -227,6 +227,9 @@ export default class LexicalToolbarElement extends HTMLElement {
 
     this.#overflow.style.display = this.#overflowMenu.children.length ? "block" : "none"
     this.#overflow.setAttribute("nonce", getNonce())
+
+    const isOverflowing = this.#overflowMenu.children.length > 0
+    this.toggleAttribute("overflowing", isOverflowing)
   }
 
   get #overflow() {

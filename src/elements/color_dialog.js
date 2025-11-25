@@ -1,37 +1,22 @@
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
+import { ToolbarDialog } from "./dialog"
 
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-color-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 
-export class ColorDialog extends HTMLElement {
+export class ColorDialog extends ToolbarDialog {
   connectedCallback() {
-    this.dialog = this.querySelector("dialog")
+    super.connectedCallback()
 
     this.#setUpButtons()
     this.#registerHandlers()
   }
 
-  show() {
-    this.dialog.show()
-  }
-
-  close() {
-    this.dialog.close()
-  }
-
   #registerHandlers() {
-    this.addEventListener("keydown", this.#handleKeyDown.bind(this))
     this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this))
     this.#colorButtons.forEach(button => button.addEventListener("click", this.#handleColorButtonClick.bind(this)))
 
-    this.#toolbar.registerUpdateButtonStatesCallback(this.#updateColorButtonStates.bind(this))
-  }
-
-  #handleKeyDown(event) {
-    if (event.key === "Escape") {
-      event.stopPropagation()
-      this.close()
-    }
+    this.toolbar?.registerUpdateButtonStatesCallback(this.#updateColorButtonStates.bind(this))
   }
 
   #setUpButtons() {
@@ -67,14 +52,14 @@ export class ColorDialog extends HTMLElement {
     const attribute = button.dataset.style
     const value = button.dataset.value
 
-    this.#editor.dispatchCommand("toggleHighlight", { [attribute]: value })
+    this.editor?.dispatchCommand("toggleHighlight", { [attribute]: value })
     this.close()
   }
 
   #handleRemoveHighlightClick(event) {
     event.preventDefault()
 
-    this.#editor.dispatchCommand("removeHighlight")
+    this.editor?.dispatchCommand("removeHighlight")
     this.close()
   }
 
@@ -94,14 +79,6 @@ export class ColorDialog extends HTMLElement {
 
   get #buttonGroups() {
     return this.querySelectorAll("[data-button-group]")
-  }
-
-  get #toolbar() {
-    return this.closest("lexxy-toolbar")
-  }
-
-  get #editor() {
-    return this.#toolbar.editor
   }
 
   get #colorButtons() {
