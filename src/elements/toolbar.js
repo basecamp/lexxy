@@ -294,7 +294,7 @@ export default class LexicalToolbarElement extends HTMLElement {
       </button>
 
       <lexxy-highlight-dialog class="lexxy-dialog lexxy-highlight-dialog">
-        <dialog class="highlight-dialog" closedby="any">
+        <dialog class="highlight-dialog">
           <div class="lexxy-highlight-dialog-content">
             <div data-button-group="color" data-values="var(--highlight-1); var(--highlight-2); var(--highlight-3); var(--highlight-4); var(--highlight-5); var(--highlight-6); var(--highlight-7); var(--highlight-8); var(--highlight-9)"></div>
             <div data-button-group="background-color" data-values="var(--highlight-bg-1); var(--highlight-bg-2); var(--highlight-bg-3); var(--highlight-bg-4); var(--highlight-bg-5); var(--highlight-bg-6); var(--highlight-bg-7); var(--highlight-bg-8); var(--highlight-bg-9)"></div>
@@ -308,7 +308,7 @@ export default class LexicalToolbarElement extends HTMLElement {
       </button>
 
       <lexxy-link-dialog class="lexxy-dialog lexxy-link-dialog">
-        <dialog class="link-dialog" closedby="any">
+        <dialog class="link-dialog">
           <form method="dialog">
             <input type="url" placeholder="Enter a URL…" class="input" required>
             <div class="lexxy-dialog-actions">
