@@ -33,6 +33,8 @@ export class ToolbarDialog extends HTMLElement {
     return this.toolbar.editor
   }
 
+  get open() { return this.dialog.open }
+
   #positionDialog() {
     const left = this.triggerButton.offsetLeft
     this.dialog.style.insetInlineStart = `${left}px`

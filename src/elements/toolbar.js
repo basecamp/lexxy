@@ -76,10 +76,11 @@ export default class LexicalToolbarElement extends HTMLElement {
     const dialog = this.querySelector("lexxy-" + dialogTarget)
     if (!dialog) return
 
-    if (dialog.dialog && dialog.dialog.open) {
+    if (dialog.open) {
       dialog.close()
     } else {
       this.#closeOpenDialogs()
+      this.#setButtonPressed(button.name, true)
       dialog.show(button)
     }
   }
