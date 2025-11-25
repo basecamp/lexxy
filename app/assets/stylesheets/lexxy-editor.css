@@ -287,6 +287,10 @@
     .lexxy-color-dialog-reset {
       inline-size: 100%;
 
+      &[disabled] {
+        display: none;
+      }
+
       &:after { display: none; }
     }
   }

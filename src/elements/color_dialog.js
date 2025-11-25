@@ -78,6 +78,20 @@ export class ColorDialog extends HTMLElement {
     this.close()
   }
 
+  #updateColorButtonStates(selection) {
+    // Use null default, so "" indicates mixed highlighting
+    const textColor = $getSelectionStyleValueForProperty(selection, "color", null)
+    const backgroundColor = $getSelectionStyleValueForProperty(selection, "background-color", null)
+
+    this.#colorButtons.forEach(button => {
+      const matchesSelection = button.dataset.value === textColor || button.dataset.value === backgroundColor
+      button.setAttribute("aria-pressed", matchesSelection)
+    })
+
+    const hasHighlight = textColor !== null || backgroundColor !== null
+    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).disabled = !hasHighlight
+  }
+
   get #buttonGroups() {
     return this.querySelectorAll("[data-button-group]")
   }
@@ -92,16 +106,6 @@ export class ColorDialog extends HTMLElement {
 
   get #colorButtons() {
     return Array.from(this.querySelectorAll(APPLY_HIGHLIGHT_SELECTOR))
-  }
-
-  #updateColorButtonStates(selection) {
-    const textColor = $getSelectionStyleValueForProperty(selection, "color", "")
-    const backgroundColor = $getSelectionStyleValueForProperty(selection, "background-color", "")
-
-    this.#colorButtons.forEach(button => {
-      const matchesSelection = button.dataset.value === textColor || button.dataset.value === backgroundColor
-      button.setAttribute("aria-pressed", matchesSelection)
-    })
   }
 }
 

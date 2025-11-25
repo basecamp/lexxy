@@ -145,6 +145,19 @@ export default class Selection {
     return getNearestListItemNode(anchorNode) !== null
   }
 
+  get hasHighlight() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return false
+
+    for (const node of selection.getNodes()) {
+      if ($isTextNode(node) && node.hasFormat("highlight")) {
+        return true
+      }
+    }
+
+    return false
+  }
+
   get nodeAfterCursor() {
     const { anchorNode, offset } = this.#getCollapsedSelectionData()
     if (!anchorNode) return null
