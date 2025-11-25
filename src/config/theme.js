@@ -6,6 +6,11 @@ export default {
     underline: "lexxy-content__underline",
     highlight: "lexxy-content__highlight"
   },
+  list: {
+    nested: {
+      listitem: "lexxy-nested-listitem",
+    }
+  },
   codeHighlight: {
     atrule: "code-token__attr",
     attr: "code-token__attr",
