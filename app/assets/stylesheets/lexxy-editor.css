@@ -188,9 +188,9 @@
 
   dialog {
     background-color: var(--lexxy-color-canvas);
-    border: 1px solid var(--lexxy-color-ink-lighter);
+    border: 2px solid var(--lexxy-color-selected-hover);
     border-radius: var(--lexxy-radius);
-    box-shadow: var(--lexxy-shadow);
+    border-start-start-radius: 0;
     box-sizing: border-box;
     color: var(--lexxy-color-ink);
     inset-block-start: 2lh;
@@ -200,6 +200,12 @@
     padding: 1ch;
     position: absolute;
     z-index: 3;
+  }
+
+  &:has(dialog[open]) + .lexxy-editor__toolbar-button {
+    background-color: var(--lexxy-color-selected-hover);
+    border-end-end-radius: 0;
+    border-end-start-radius: 0;
   }
 }
 
