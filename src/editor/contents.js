@@ -386,8 +386,6 @@ export default class Contents {
       elements.forEach((element) => {
         wrappingNode.append(element)
       })
-
-      $setSelection(null)
     })
   }
 

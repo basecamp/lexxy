@@ -15,6 +15,7 @@ class EscapeFormatTest < ApplicationSystemTestCase
     click_on "Quote"
     assert_equal_html "<blockquote><ul><li>First line</li></ul></blockquote>", find_editor.value
 
+    find_editor.send :arrow_right # Move to end of selection
     find_editor.send :enter
     find_editor.send :enter
     find_editor.send :enter
@@ -75,6 +76,7 @@ class EscapeFormatTest < ApplicationSystemTestCase
     click_on "Quote"
     assert_equal_html "<blockquote><ul><li>Item one</li></ul></blockquote>", find_editor.value
 
+    find_editor.send :arrow_right # Move to end of selection
     find_editor.send :enter
     find_editor.send :enter
     find_editor.send :enter
