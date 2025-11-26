@@ -111,8 +111,12 @@
     }
   }
 
-  li:has(ul, ol) {
+  li.lexxy-nested-listitem {
     list-style-type: none;
+
+    ol, ul {
+      margin: 0;
+    }
   }
 
   > :last-child {
