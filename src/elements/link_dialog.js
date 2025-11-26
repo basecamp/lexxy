@@ -1,46 +1,39 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $isLinkNode } from "@lexical/link"
+import { ToolbarDialog } from "./dialog"
 
-export class LinkDialog extends HTMLElement {
+export class LinkDialog extends ToolbarDialog {
   connectedCallback() {
-    this.dialog = this.querySelector("dialog")
+    super.connectedCallback()
     this.input = this.querySelector("input")
 
+    this.#registerHandlers()
+  }
+
+  #registerHandlers() {
     this.addEventListener("submit", this.#handleSubmit.bind(this))
     this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this))
-    this.addEventListener("keydown", this.#handleKeyDown.bind(this))
   }
 
-  show(editor) {
+  show(triggerButton) {
     this.input.value = this.#selectedLinkUrl
-    this.dialog.show()
-  }
-
-  close() {
-    this.dialog.close()
+    super.show(triggerButton)
   }
 
   #handleSubmit(event) {
     const command = event.submitter?.value
-    this.#editor.dispatchCommand(command, this.input.value)
+    this.editor.dispatchCommand(command, this.input.value)
   }
 
   #handleUnlink(event) {
-    this.#editor.dispatchCommand("unlink")
+    this.editor.dispatchCommand("unlink")
     this.close()
-  }
-
-  #handleKeyDown(event) {
-    if (event.key === "Escape") {
-      event.stopPropagation()
-      this.close()
-    }
   }
 
   get #selectedLinkUrl() {
     let url = ""
 
-    this.#editor.getEditorState().read(() => {
+    this.editor.getEditorState().read(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
@@ -57,9 +50,6 @@ export class LinkDialog extends HTMLElement {
     return url
   }
 
-  get #editor() {
-    return this.closest("lexxy-toolbar").editor
-  }
 }
 
 // We should extend the native dialog and avoid the intermediary <dialog> but not

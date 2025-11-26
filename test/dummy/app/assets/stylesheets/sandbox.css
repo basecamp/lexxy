@@ -37,6 +37,16 @@
     --lexxy-color-code-token-variable: #ffa657;
 
     --lexxy-shadow: 0 0 0 1px rgba(100, 100, 100, 0.3);
+
+    --highlight-1: rgb(240, 200, 22);
+    --highlight-2: rgb(230, 118, 14);
+    --highlight-3: rgb(244, 5, 5);
+    --highlight-4: rgb(248, 21, 192);
+    --highlight-5: rgb(214, 80, 255);
+    --highlight-6: rgb(53, 157, 255);
+    --highlight-7: rgb(26, 231, 23);
+    --highlight-8: rgb(201, 135, 72);
+    --highlight-9: rgb(161, 161, 161);
   }
 }
 

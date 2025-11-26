@@ -179,24 +179,42 @@
   }
 }
 
-/* Link dialog
+/* Dialog
 /* -------------------------------------------------------------------------- */
 
-:where(.lexxy-link-dialog) {
+:where(.lexxy-dialog) {
   display: contents;
+  position: relative;
 
   dialog {
     background-color: var(--lexxy-color-canvas);
     border: 1px solid var(--lexxy-color-ink-lighter);
     border-radius: var(--lexxy-radius);
     box-shadow: var(--lexxy-shadow);
+    box-sizing: border-box;
     color: var(--lexxy-color-ink);
-    inset-block-start: 4ch;
+    inset-block-start: 2lh;
+    inline-size: 100%;
+    max-inline-size: 38ch;
+    margin: 0;
     padding: 1ch;
     position: absolute;
     z-index: 3;
   }
+}
 
+:where(lexxy-toolbar[overflowing]) .lexxy-dialog dialog {
+  --dialog-padding: 0.5ch;
+  inset-inline-end: var(--dialog-padding);
+  inset-inline-start: var(--dialog-padding) !important;
+  inline-size: calc(100% - 2 * var(--dialog-padding));
+  margin: auto;
+}
+
+/* Link dialog
+/* -------------------------------------------------------------------------- */
+
+:where(.lexxy-link-dialog) {
   .lexxy-dialog-actions {
     display: flex;
     font-size: var(--lexxy-text-small);
@@ -216,7 +234,8 @@
     border: 1px solid var(--lexxy-color-ink-lighter);
     border-radius: var(--lexxy-radius);
     color: var(--lexxy-color-text);
-    min-inline-size: 30ch;
+    box-sizing: border-box;
+    inline-size: 100%;
   }
 
   button {
@@ -232,35 +251,26 @@
   }
 }
 
+/* Color dialog
+/* -------------------------------------------------------------------------- */
+
 :where(.lexxy-color-dialog) {
-  display: contents;
+  .lexxy-color-dialog-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5ch;
 
-  dialog {
-    background-color: var(--lexxy-color-canvas);
-    border: 1px solid var(--lexxy-color-ink-lighter);
-    border-radius: var(--lexxy-radius);
-    box-shadow: var(--lexxy-shadow);
-    color: var(--lexxy-color-ink);
-    inset-block-start: 4ch;
-    padding: 0.5ch;
-    z-index: 3;
-
-    .lexxy-color-dialog-content {
+    [data-button-group] {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      flex-wrap: wrap;
       gap: 0.5ch;
-
-      [data-button-group] {
-        display: flex;
-        flex-direction: row;
-        gap: 0.5ch;
-      }
     }
-
+  
     button {
-      block-size: 3.2ch;
+      block-size: 3.5ch;
       color: var(--lexxy-color-text);
-      inline-size: 3.2ch;
+      inline-size: 3.5ch;
       position: relative;
       outline: none;
 
@@ -286,6 +296,10 @@
 
     .lexxy-color-dialog-reset {
       inline-size: 100%;
+
+      &[disabled] {
+        display: none;
+      }
 
       &:after { display: none; }
     }
