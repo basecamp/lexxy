@@ -264,7 +264,7 @@
   .lexxy-highlight-dialog-content {
     display: flex;
     flex-direction: column;
-    gap: 0.5ch;
+    gap: 0.75ch;
 
     [data-button-group] {
       display: flex;
@@ -284,6 +284,7 @@
         align-self: center;
         content: "Aa";
         display: inline-block;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         position: absolute;
         inset-block-start: 0;
         inset-block-end: 0;
@@ -296,7 +297,11 @@
       }
 
       &[aria-pressed="true"] {
-        box-shadow: 0 0 0 2px var(--lexxy-color-canvas), 0 0 0 4px var(--lexxy-color-accent-dark);
+        box-shadow: 0 0 0 1px var(--lexxy-color-canvas), 0 0 0 3px var(--lexxy-color-accent-dark);
+
+        &:after {
+          content: "✓";
+        }
       }
     }
 
