@@ -23,7 +23,7 @@ A modern rich text editor for Rails.
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'lexxy', '~> 0.1.20.beta' # Need to specify the version since it's a pre-release
+gem 'lexxy', '~> 0.1.21.beta' # Need to specify the version since it's a pre-release
 ```
 
 And then execute:
