@@ -135,7 +135,6 @@
   .code-token__property,
   .token.boolean,
   .token.constant,
-  .token.deleted,
   .token.number,
   .token.property,
   .token.symbol,
@@ -148,6 +147,7 @@
   .token.builtin,
   .token.char,
   .token.inserted,
+  .token.line,
   .token.selector,
   .token.string {
     color: var(--lexxy-color-code-token-selector);
@@ -165,9 +165,11 @@
 
   /* Operators and symbolic entities */
   .code-token__operator,
+  .token.deleted,
   .token.entity,
   .token.operator,
-  .token.url {
+  .token.url,
+  code[data-language="diff"] .code-token__operator + .code-token__selector {
     color: var(--lexxy-color-code-token-operator);
   }
 
