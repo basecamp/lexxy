@@ -1,6 +1,6 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $isLinkNode } from "@lexical/link"
-import { ToolbarDialog } from "./dialog"
+import { ToolbarDialog } from "./toolbar_dialog"
 
 export class LinkDialog extends ToolbarDialog {
   connectedCallback() {
@@ -10,14 +10,18 @@ export class LinkDialog extends ToolbarDialog {
     this.#registerHandlers()
   }
 
+  updateStateCallback() {
+    this.input.value = this.#selectedLinkUrl
+  }
+
   #registerHandlers() {
-    this.addEventListener("submit", this.#handleSubmit.bind(this))
+    this.dialog.addEventListener("beforetoggle", this.#handleBeforeToggle.bind(this))
+    this.dialog.addEventListener("submit", this.#handleSubmit.bind(this))
     this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this))
   }
 
-  show(triggerButton) {
-    this.input.value = this.#selectedLinkUrl
-    super.show(triggerButton)
+  #handleBeforeToggle({ newState }) {
+    this.input.required = newState === "open"
   }
 
   #handleSubmit(event) {
@@ -25,7 +29,7 @@ export class LinkDialog extends ToolbarDialog {
     this.editor.dispatchCommand(command, this.input.value)
   }
 
-  #handleUnlink(event) {
+  #handleUnlink() {
     this.editor.dispatchCommand("unlink")
     this.close()
   }
@@ -49,7 +53,6 @@ export class LinkDialog extends ToolbarDialog {
 
     return url
   }
-
 }
 
 // We should extend the native dialog and avoid the intermediary <dialog> but not
