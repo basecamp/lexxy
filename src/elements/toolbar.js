@@ -8,6 +8,7 @@ import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode } from "@lexical/code"
 import { $isLinkNode } from "@lexical/link"
 import { getListType } from "../helpers/lexical_helper"
+import { isSelectionHighlighted } from "../helpers/format_helper"
 
 export default class LexicalToolbarElement extends HTMLElement {
   constructor() {
@@ -161,7 +162,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     const isBold = selection.hasFormat("bold")
     const isItalic = selection.hasFormat("italic")
     const isStrikethrough = selection.hasFormat("strikethrough")
-    const isHighlight = selection.hasFormat("highlight")
+    const isHighlight = isSelectionHighlighted(selection)
     const isInLink = this.#isInLink(anchorNode)
     const isInQuote = $isQuoteNode(topLevelElement)
     const isInHeading = $isHeadingNode(topLevelElement)

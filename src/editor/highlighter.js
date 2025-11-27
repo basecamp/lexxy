@@ -1,5 +1,6 @@
 import { $getSelection, $isRangeSelection, TextNode } from "lexical"
-import { $getSelectionStyleValueForProperty, $patchStyleText, getStyleObjectFromCSS } from "@lexical/selection"
+import { $getSelectionStyleValueForProperty, $patchStyleText } from "@lexical/selection"
+import { hasHighlightStyles } from "../helpers/format_helper"
 
 export default class Highlighter {
   constructor(editorElement) {
@@ -15,7 +16,7 @@ export default class Highlighter {
   }
 
   remove() {
-    this.toggle({ "color": undefined, "background-color": undefined })
+    this.toggle({ "color": null, "background-color": null })
   }
 
   #registerHighlightTransform() {
@@ -42,13 +43,8 @@ export default class Highlighter {
   }
 
   #syncHighlightWithStyle(node) {
-    if (this.#hasHighlightStyles(node) !== node.hasFormat("highlight")) {
+    if (hasHighlightStyles(node.getStyle()) !== node.hasFormat("highlight")) {
       node.toggleFormat("highlight")
     }
-  }
-
-  #hasHighlightStyles(node) {
-    const styles = getStyleObjectFromCSS(node.getStyle())
-    return !!(styles.color || styles["background-color"])
   }
 }
