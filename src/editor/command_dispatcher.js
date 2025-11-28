@@ -3,7 +3,11 @@ import {
   $getSelection,
   $isRangeSelection,
   COMMAND_PRIORITY_LOW,
+  COMMAND_PRIORITY_NORMAL,
   FORMAT_TEXT_COMMAND,
+  INDENT_CONTENT_COMMAND,
+  KEY_TAB_COMMAND,
+  OUTDENT_CONTENT_COMMAND,
   PASTE_COMMAND,
   REDO_COMMAND,
   UNDO_COMMAND
@@ -50,6 +54,7 @@ export class CommandDispatcher {
     this.highlighter = editorElement.highlighter
 
     this.#registerCommands()
+    this.#registerKeyboardCommands()
     this.#registerDragAndDropHandlers()
   }
 
@@ -214,15 +219,8 @@ export class CommandDispatcher {
     this.editor.registerCommand(command, handler, priority)
   }
 
-  // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
-  #toggleLink(url) {
-    this.editor.update(() => {
-      if (url === null) {
-        $toggleLink(null)
-      } else {
-        $toggleLink(url)
-      }
-    })
+  #registerKeyboardCommands() {
+    this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleListIndentation.bind(this), COMMAND_PRIORITY_NORMAL)
   }
 
   #registerDragAndDropHandlers() {
@@ -270,6 +268,29 @@ export class CommandDispatcher {
     }
 
     this.editor.focus()
+  }
+
+  #handleListIndentation(event) {
+    if (this.selection.isInsideList) {
+      event.preventDefault()
+      if (event.shiftKey) {
+        return this.editor.dispatchCommand(OUTDENT_CONTENT_COMMAND, undefined)
+      } else {
+        return this.editor.dispatchCommand(INDENT_CONTENT_COMMAND, undefined)
+      }
+    }
+    return false
+  }
+
+  // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
+  #toggleLink(url) {
+    this.editor.update(() => {
+      if (url === null) {
+        $toggleLink(null)
+      } else {
+        $toggleLink(url)
+      }
+    })
   }
 }
 

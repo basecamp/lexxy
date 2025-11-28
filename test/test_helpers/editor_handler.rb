@@ -33,6 +33,23 @@ class EditorHandler
     JS
   end
 
+  def send_tab(shift: false)
+    simulate_first_interaction_if_needed
+
+    page.execute_script <<~JS, content_element
+      const event = new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'Tab',
+        code: 'Tab',
+        keyCode: 9,
+        shiftKey: #{shift}
+      });
+      arguments[0].dispatchEvent(event);
+    JS
+    sleep 0.1
+  end
+
   def select(text)
     simulate_first_interaction_if_needed
 
