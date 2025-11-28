@@ -5,6 +5,11 @@ import { ToolbarDialog } from "./toolbar_dialog"
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 
+// Use Symbol instead of null since $getSelectionStyleValueForProperty
+// responds differently for backward selections if null is the default
+// see https://github.com/facebook/lexical/issues/8013
+const NO_STYLE = Symbol("no_style")
+
 export class HighlightDialog extends ToolbarDialog {
   connectedCallback() {
     super.connectedCallback()
@@ -69,16 +74,16 @@ export class HighlightDialog extends ToolbarDialog {
   #updateColorButtonStates(selection) {
     if (!$isRangeSelection(selection)) { return }
 
-    // Use null default, so "" indicates mixed highlighting
-    const textColor = $getSelectionStyleValueForProperty(selection, "color", null)
-    const backgroundColor = $getSelectionStyleValueForProperty(selection, "background-color", null)
+    // Use non-"" default, so "" indicates mixed highlighting
+    const textColor = $getSelectionStyleValueForProperty(selection, "color", NO_STYLE)
+    const backgroundColor = $getSelectionStyleValueForProperty(selection, "background-color", NO_STYLE)
 
     this.#colorButtons.forEach(button => {
       const matchesSelection = button.dataset.value === textColor || button.dataset.value === backgroundColor
       button.setAttribute("aria-pressed", matchesSelection)
     })
 
-    const hasHighlight = textColor !== null || backgroundColor !== null
+    const hasHighlight = textColor !== NO_STYLE || backgroundColor !== NO_STYLE
     this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).disabled = !hasHighlight
   }
 
