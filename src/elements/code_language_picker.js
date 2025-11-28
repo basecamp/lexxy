@@ -41,6 +41,11 @@ export default class CodeLanguagePicker extends HTMLElement {
     const languages = { ...CODE_LANGUAGE_FRIENDLY_NAME_MAP }
 
     if (!languages.ruby) languages.ruby = "Ruby"
+    if (!languages.php) languages.php = "PHP"
+    if (!languages.go) languages.go = "Go"
+    if (!languages.bash) languages.bash = "Bash"
+    if (!languages.json) languages.json = "JSON"
+    if (!languages.diff) languages.diff = "Diff"
 
     const sortedEntries = Object.entries(languages)
       .sort(([ , a ], [ , b ]) => a.localeCompare(b))
