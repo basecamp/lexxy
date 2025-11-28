@@ -107,6 +107,10 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.getAttribute("attachments") !== "false"
   }
 
+  get contentTabIndex() {
+    return parseInt(this.editorContentElement?.getAttribute("tabindex") ?? "0")
+  }
+
   focus() {
     this.editor.focus()
   }

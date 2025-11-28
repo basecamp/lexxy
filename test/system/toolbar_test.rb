@@ -135,10 +135,10 @@ class ToolbarTest < ApplicationSystemTestCase
   test "links" do
     find_editor.select("everyone")
 
-    click_on "Link"
+    find("[name='link']").click
     fill_in "Enter a URL…", with: "https://37signals.com"
 
-    within ".lexxy-link-dialog" do
+    within "lexxy-dropdown-link" do
       click_on "Link"
     end
 

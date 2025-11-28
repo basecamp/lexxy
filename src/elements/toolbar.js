@@ -53,19 +53,12 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.toggleAttribute("connected", true)
   }
 
-  get #dialogs() {
-    const dialogButtons = this.querySelectorAll("[data-dialog-target]")
-    const dialogTags = Array.from(dialogButtons).map(button => `lexxy-${button.dataset.dialogTarget}`)
-    return Array.from(this.querySelectorAll(dialogTags))
-  }
-
   #bindButtons() {
     this.addEventListener("click", this.#handleButtonClicked.bind(this))
   }
 
   #handleButtonClicked({ target }) {
     this.#handleTargetClicked(target, "[data-command]", this.#dispatchButtonCommand.bind(this))
-    this.#handleTargetClicked(target, "[data-dialog-target]", this.#toggleDialog.bind(this))
   }
 
   #handleTargetClicked(target, selector, callback) {
@@ -78,27 +71,6 @@ export default class LexicalToolbarElement extends HTMLElement {
   #dispatchButtonCommand(button) {
     const { command, payload } = button.dataset
     this.editor.dispatchCommand(command, payload)
-  }
-
-  // Not using popover because of CSS anchoring still not widely available.
-  #toggleDialog(button) {
-    const dialogTarget = button.dataset.dialogTarget
-    const dialog = this.querySelector("lexxy-" + dialogTarget)
-    if (!dialog) return
-
-    if (dialog.open) {
-      dialog.close()
-    } else {
-      this.#closeOpenDialogs()
-      dialog.show(button)
-    }
-  }
-
-  #closeOpenDialogs() {
-    const openDialogs = this.querySelectorAll("dialog[open]")
-    openDialogs.forEach(openDialog => {
-      openDialog.closest(".lexxy-dialog").close()
-    })
   }
 
   #bindHotkeys() {
@@ -134,9 +106,8 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #assignButtonTabindex() {
-    const baseTabIndex = parseInt(this.editorElement.editorContentElement.getAttribute("tabindex") ?? "0")
-    this.#buttons.forEach((button, index) => {
-      button.setAttribute("tabindex", `${baseTabIndex + index + 1}`)
+    this.#buttons.forEach((button) => {
+      button.setAttribute("tabindex", 0)
     })
   }
 
@@ -280,17 +251,21 @@ export default class LexicalToolbarElement extends HTMLElement {
     }
   }
 
+  #reconnect() {
+    this.disconnectedCallback()
+    this.connectedCallback()
+  }
+
   get #buttons() {
-    return Array.from(this.querySelectorAll(":scope > button"))
+    return Array.from(this.querySelectorAll(":scope > button, :scope > details summary"))
   }
 
   get #buttonsWithSeparator() {
     return Array.from(this.querySelectorAll(":scope > button, :scope > [role=separator]"))
   }
 
-  #reconnect() {
-    this.disconnectedCallback()
-    this.connectedCallback()
+  get #dialogs() {
+    return Array.from(this.querySelectorAll(":scope > details .lexxy-editor__toolbar-dropdown-content"))
   }
 
   static get defaultTemplate() {
@@ -303,41 +278,37 @@ export default class LexicalToolbarElement extends HTMLElement {
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.1 4h-1.5l-3.2 16h1.5l-.4 2h-7l.4-2h1.5l3.2-16h-1.5l.4-2h7l-.4 2z"/></svg>
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
+      <button class="lexxy-editor__toolbar-button" role="button" type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path fill-rule="evenodd" clip-rule="evenodd" d="M4.70588 16.1591C4.81459 19.7901 7.48035 22 11.6668 22C15.9854 22 18.724 19.6296 18.724 15.8779C18.724 15.5007 18.6993 15.1427 18.6474 14.8066H14.3721C14.8637 15.2085 15.0799 15.7037 15.0799 16.3471C15.0799 17.7668 13.7532 18.7984 11.8113 18.7984C9.88053 18.7984 8.38582 17.7531 8.21659 16.1591H4.70588ZM5.23953 9.31962H9.88794C9.10723 8.88889 8.75888 8.33882 8.75888 7.57339C8.75888 6.13992 9.96576 5.18793 11.7631 5.18793C13.5852 5.18793 14.8761 6.1797 14.9959 7.81344H18.4102C18.3485 4.31824 15.8038 2 11.752 2C7.867 2 5.09129 4.35802 5.09129 7.92044C5.09129 8.41838 5.14071 8.88477 5.23953 9.31962ZM2.23529 10.6914C1.90767 10.6914 1.59347 10.8359 1.36181 11.0931C1.13015 11.3504 1 11.6993 1 12.0631C1 12.4269 1.13015 12.7758 1.36181 13.0331C1.59347 13.2903 1.90767 13.4348 2.23529 13.4348H20.7647C21.0923 13.4348 21.4065 13.2903 21.6382 13.0331C21.8699 12.7758 22 12.4269 22 12.0631C22 11.6993 21.8699 11.3504 21.6382 11.0931C21.4065 10.8359 21.0923 10.6914 20.7647 10.6914H2.23529Z"/>
         </svg>
       </button>
 
-      <lexxy-highlight-dialog class="lexxy-dialog lexxy-highlight-dialog">
-        <dialog class="highlight-dialog">
-          <div class="lexxy-highlight-dialog-content">
-            <div data-button-group="color" data-values="var(--highlight-1); var(--highlight-2); var(--highlight-3); var(--highlight-4); var(--highlight-5); var(--highlight-6); var(--highlight-7); var(--highlight-8); var(--highlight-9)"></div>
-            <div data-button-group="background-color" data-values="var(--highlight-bg-1); var(--highlight-bg-2); var(--highlight-bg-3); var(--highlight-bg-4); var(--highlight-bg-5); var(--highlight-bg-6); var(--highlight-bg-7); var(--highlight-bg-8); var(--highlight-bg-9)"></div>
-            <button data-command="removeHighlight" class="lexxy-highlight-dialog-reset">Remove all coloring</button>
-          </div>
-        </dialog>
-      </lexxy-highlight-dialog>
+      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
+        <summary role="button" class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.65422 0.711575C7.1856 0.242951 6.42579 0.242951 5.95717 0.711575C5.48853 1.18021 5.48853 1.94 5.95717 2.40864L8.70864 5.16011L2.85422 11.0145C1.44834 12.4204 1.44833 14.6998 2.85422 16.1057L7.86011 21.1115C9.26599 22.5174 11.5454 22.5174 12.9513 21.1115L19.6542 14.4087C20.1228 13.94 20.1228 13.1802 19.6542 12.7115L11.8544 4.91171L11.2542 4.31158L7.65422 0.711575ZM4.55127 12.7115L10.4057 6.85716L17.1087 13.56H4.19981C4.19981 13.253 4.31696 12.9459 4.55127 12.7115ZM23.6057 20.76C23.6057 22.0856 22.5311 23.16 21.2057 23.16C19.8802 23.16 18.8057 22.0856 18.8057 20.76C18.8057 19.5408 19.8212 18.5339 20.918 17.4462C21.0135 17.3516 21.1096 17.2563 21.2057 17.16C21.3018 17.2563 21.398 17.3516 21.4935 17.4462C22.5903 18.5339 23.6057 19.5408 23.6057 20.76Z"/></svg>
+        </summary>
+        <lexxy-dropdown-highlight class="lexxy-editor__toolbar-dropdown-content">
+          <div data-button-group="color" data-values="var(--highlight-1); var(--highlight-2); var(--highlight-3); var(--highlight-4); var(--highlight-5); var(--highlight-6); var(--highlight-7); var(--highlight-8); var(--highlight-9)"></div>
+          <div data-button-group="background-color" data-values="var(--highlight-bg-1); var(--highlight-bg-2); var(--highlight-bg-3); var(--highlight-bg-4); var(--highlight-bg-5); var(--highlight-bg-6); var(--highlight-bg-7); var(--highlight-bg-8); var(--highlight-bg-9)"></div>
+          <button data-command="removeHighlight" class="lexxy-editor__toolbar-dropdown-reset">Remove all coloring</button>
+        </lexxy-dropdown-highlight>
+      </details>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="highlight" title="Color highlight" data-dialog-target="highlight-dialog">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.65422 0.711575C7.1856 0.242951 6.42579 0.242951 5.95717 0.711575C5.48853 1.18021 5.48853 1.94 5.95717 2.40864L8.70864 5.16011L2.85422 11.0145C1.44834 12.4204 1.44833 14.6998 2.85422 16.1057L7.86011 21.1115C9.26599 22.5174 11.5454 22.5174 12.9513 21.1115L19.6542 14.4087C20.1228 13.94 20.1228 13.1802 19.6542 12.7115L11.8544 4.91171L11.2542 4.31158L7.65422 0.711575ZM4.55127 12.7115L10.4057 6.85716L17.1087 13.56H4.19981C4.19981 13.253 4.31696 12.9459 4.55127 12.7115ZM23.6057 20.76C23.6057 22.0856 22.5311 23.16 21.2057 23.16C19.8802 23.16 18.8057 22.0856 18.8057 20.76C18.8057 19.5408 19.8212 18.5339 20.918 17.4462C21.0135 17.3516 21.1096 17.2563 21.2057 17.16C21.3018 17.2563 21.398 17.3516 21.4935 17.4462C22.5903 18.5339 23.6057 19.5408 23.6057 20.76Z"/></svg>
-      </button>
-
-      <lexxy-link-dialog class="lexxy-dialog lexxy-link-dialog">
-        <dialog class="link-dialog">
+      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
+        <summary role="button" class="lexxy-editor__toolbar-button" name="link" title="Link" data-hotkey="cmd+k ctrl+k">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.111 9.546a1.5 1.5 0 012.121 0 5.5 5.5 0 010 7.778l-2.828 2.828a5.5 5.5 0 01-7.778 0 5.498 5.498 0 010-7.777l2.828-2.83a1.5 1.5 0 01.355-.262 6.52 6.52 0 00.351 3.799l-1.413 1.414a2.499 2.499 0 000 3.535 2.499 2.499 0 003.535 0l2.83-2.828a2.5 2.5 0 000-3.536 1.5 1.5 0 010-2.121z"/><path d="M12.111 3.89a5.5 5.5 0 117.778 7.777l-2.828 2.829a1.496 1.496 0 01-.355.262 6.522 6.522 0 00-.351-3.8l1.413-1.412a2.5 2.5 0 10-3.536-3.535l-2.828 2.828a2.5 2.5 0 000 3.536 1.5 1.5 0 01-2.122 2.12 5.5 5.5 0 010-7.777l2.83-2.829z"/></svg>
+        </summary>
+        <lexxy-dropdown-link class="lexxy-editor__toolbar-dropdown-content">
           <form method="dialog">
             <input type="url" placeholder="Enter a URL…" class="input" required>
-            <div class="lexxy-dialog-actions">
+            <div class="lexxy-editor__toolbar-dropdown-actions">
               <button type="submit" class="btn" value="link">Link</button>
               <button type="button" class="btn" value="unlink">Unlink</button>
             </div>
           </form>
-        </dialog>
-      </lexxy-link-dialog>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="link" title="Link" data-dialog-target="link-dialog" data-hotkey="cmd+k ctrl+k">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.111 9.546a1.5 1.5 0 012.121 0 5.5 5.5 0 010 7.778l-2.828 2.828a5.5 5.5 0 01-7.778 0 5.498 5.498 0 010-7.777l2.828-2.83a1.5 1.5 0 01.355-.262 6.52 6.52 0 00.351 3.799l-1.413 1.414a2.499 2.499 0 000 3.535 2.499 2.499 0 003.535 0l2.83-2.828a2.5 2.5 0 000-3.536 1.5 1.5 0 010-2.121z"/><path d="M12.111 3.89a5.5 5.5 0 117.778 7.777l-2.828 2.829a1.496 1.496 0 01-.355.262 6.522 6.522 0 00-.351-3.8l1.413-1.412a2.5 2.5 0 10-3.536-3.535l-2.828 2.828a2.5 2.5 0 000 3.536 1.5 1.5 0 01-2.122 2.12 5.5 5.5 0 010-7.777l2.83-2.829z"/></svg>
-      </button>
+        </lexxy-dropdown-link>
+      </details>
 
       <button class="lexxy-editor__toolbar-button" type="button" name="quote" data-command="insertQuoteBlock" title="Quote">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6.5 5C8.985 5 11 7.09 11 9.667c0 2.694-.962 5.005-2.187 6.644-.613.82-1.3 1.481-1.978 1.943-.668.454-1.375.746-2.022.746a.563.563 0 01-.52-.36.602.602 0 01.067-.57l.055-.066.009-.009.041-.048a4.25 4.25 0 00.168-.21c.143-.188.336-.47.53-.84a6.743 6.743 0 00.75-2.605C3.705 13.994 2 12.038 2 9.667 2 7.089 4.015 5 6.5 5zM17.5 5C19.985 5 22 7.09 22 9.667c0 2.694-.962 5.005-2.187 6.644-.613.82-1.3 1.481-1.978 1.943-.668.454-1.375.746-2.023.746a.563.563 0 01-.52-.36.602.602 0 01.068-.57l.055-.066.009-.009.041-.048c.039-.045.097-.115.168-.21a6.16 6.16 0 00.53-.84 6.745 6.745 0 00.75-2.605C14.705 13.994 13 12.038 13 9.667 13 7.089 15.015 5 17.5 5z"/></svg>

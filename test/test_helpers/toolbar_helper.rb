@@ -1,8 +1,8 @@
 module ToolbarHelper
   def apply_highlight_option(attribute, button_index)
-    click_on "Color highlight"
+    find("[name='highlight']").click
 
-    within "lexxy-highlight-dialog dialog[open] [data-button-group='#{attribute}']" do
+    within "lexxy-dropdown-highlight [data-button-group='#{attribute}']" do
       all(".lexxy-highlight-button")[button_index - 1].click
     end
   end

@@ -1,6 +1,6 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
-import { ToolbarDialog } from "./toolbar_dialog"
+import { ToolbarDropdown } from "./toolbar_dropdown"
 
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
@@ -10,7 +10,7 @@ const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 // see https://github.com/facebook/lexical/issues/8013
 const NO_STYLE = Symbol("no_style")
 
-export class HighlightDialog extends ToolbarDialog {
+export class HighlightDropdown extends ToolbarDropdown {
   connectedCallback() {
     super.connectedCallback()
 
@@ -96,6 +96,4 @@ export class HighlightDialog extends ToolbarDialog {
   }
 }
 
-// We should extend the native dialog and avoid the intermediary <dialog> but not
-// supported by Safari yet: customElements.define("lexxy-hightlight-dialog", HighlightDialog, { extends: "dialog" })
-customElements.define("lexxy-highlight-dialog", HighlightDialog)
+customElements.define("lexxy-dropdown-highlight", HighlightDropdown)

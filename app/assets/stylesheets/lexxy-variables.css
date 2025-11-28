@@ -63,7 +63,7 @@
 
   /* Focus ring */
   --lexxy-focus-ring-color: var(--lexxy-color-accent-dark);
-  --lexxy-focus-ring-offset: 2px;
+  --lexxy-focus-ring-offset: 0;
   --lexxy-focus-ring-size: 2px;
 
   /* Misc */
