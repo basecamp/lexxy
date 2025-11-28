@@ -5207,6 +5207,21 @@ function extendConversion(nodeKlass, conversionName, callback = (output => outpu
   }
 }
 
+function isSelectionHighlighted(selection) {
+  if (!yr(selection)) return false
+
+  if (selection.isCollapsed()) {
+    return hasHighlightStyles(selection.style)
+  } else {
+    return selection.hasFormat("highlight")
+  }
+}
+
+function hasHighlightStyles(cssOrStyles) {
+  const styles = typeof cssOrStyles === "string" ? b$3(cssOrStyles) : cssOrStyles;
+  return !!(styles.color || styles["background-color"])
+}
+
 class LexicalToolbarElement extends HTMLElement {
   constructor() {
     super();
@@ -5359,7 +5374,7 @@ class LexicalToolbarElement extends HTMLElement {
     const isBold = selection.hasFormat("bold");
     const isItalic = selection.hasFormat("italic");
     const isStrikethrough = selection.hasFormat("strikethrough");
-    const isHighlight = selection.hasFormat("highlight");
+    const isHighlight = isSelectionHighlighted(selection);
     const isInLink = this.#isInLink(anchorNode);
     const isInQuote = Ot$1(topLevelElement);
     const isInHeading = It$1(topLevelElement);
@@ -9317,27 +9332,37 @@ class Clipboard {
 class Highlighter {
   constructor(editorElement) {
     this.editor = editorElement.editor;
+
+    this.#registerHighlightTransform();
   }
 
   toggle(styles) {
     this.editor.update(() => {
       this.#toggleSelectionStyles(styles);
-      j$2(node => this.#syncHighlightWithStyle(node));
     });
   }
 
   remove() {
-    this.toggle({ "color": undefined, "background-color": undefined });
+    this.toggle({ "color": null, "background-color": null });
+  }
+
+  #registerHighlightTransform() {
+    return this.editor.registerNodeTransform(Xn, (textNode) => {
+      this.#syncHighlightWithStyle(textNode);
+    })
   }
 
   #toggleSelectionStyles(styles) {
     const selection = Lr();
+    if (!yr(selection)) return
 
+    const patch = {};
     for (const property in styles) {
       const oldValue = le$1(selection, property);
-      const patch = { [property]: this.#toggleOrReplace(oldValue, styles[property]) };
-      U$5(selection, patch);
+      patch[property] = this.#toggleOrReplace(oldValue, styles[property]);
     }
+
+    U$5(selection, patch);
   }
 
   #toggleOrReplace(oldValue, newValue) {
@@ -9345,14 +9370,9 @@ class Highlighter {
   }
 
   #syncHighlightWithStyle(node) {
-    if (this.#hasHighlightStyles(node) !== node.hasFormat("highlight")) {
+    if (hasHighlightStyles(node.getStyle()) !== node.hasFormat("highlight")) {
       node.toggleFormat("highlight");
     }
-  }
-
-  #hasHighlightStyles(node) {
-    const styles = b$3(node.getStyle());
-    return !!(styles.color || styles["background-color"])
   }
 }
 
@@ -10006,6 +10026,11 @@ customElements.define("lexxy-link-dialog", LinkDialog);
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button";
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']";
 
+// Use Symbol instead of null since $getSelectionStyleValueForProperty
+// responds differently for backward selections if null is the default
+// see https://github.com/facebook/lexical/issues/8013
+const NO_STYLE = Symbol("no_style");
+
 class HighlightDialog extends ToolbarDialog {
   connectedCallback() {
     super.connectedCallback();
@@ -10070,16 +10095,16 @@ class HighlightDialog extends ToolbarDialog {
   #updateColorButtonStates(selection) {
     if (!yr(selection)) { return }
 
-    // Use null default, so "" indicates mixed highlighting
-    const textColor = le$1(selection, "color", null);
-    const backgroundColor = le$1(selection, "background-color", null);
+    // Use non-"" default, so "" indicates mixed highlighting
+    const textColor = le$1(selection, "color", NO_STYLE);
+    const backgroundColor = le$1(selection, "background-color", NO_STYLE);
 
     this.#colorButtons.forEach(button => {
       const matchesSelection = button.dataset.value === textColor || button.dataset.value === backgroundColor;
       button.setAttribute("aria-pressed", matchesSelection);
     });
 
-    const hasHighlight = textColor !== null || backgroundColor !== null;
+    const hasHighlight = textColor !== NO_STYLE || backgroundColor !== NO_STYLE;
     this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).disabled = !hasHighlight;
   }
 
