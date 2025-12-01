@@ -33,7 +33,11 @@ class PostsController < ApplicationController
   # PATCH/PUT /posts/1
   def update
     if @post.update(post_params)
-      redirect_to @post, notice: "Post was successfully updated.", status: :see_other
+      if params[:refresh]
+        redirect_back_or_to @post
+      else
+        redirect_to @post, notice: "Post was successfully updated.", status: :see_other
+      end
     else
       render :edit, status: :unprocessable_entity
     end
