@@ -5223,6 +5223,8 @@ function hasHighlightStyles(cssOrStyles) {
 }
 
 class LexicalToolbarElement extends HTMLElement {
+  static observedAttributes = [ "connected" ]
+
   constructor() {
     super();
     this.internals = this.attachInternals();
@@ -5240,6 +5242,13 @@ class LexicalToolbarElement extends HTMLElement {
     if (this._resizeObserver) {
       this._resizeObserver.disconnect();
       this._resizeObserver = null;
+    }
+    this.#unbindHotkeys();
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
+      requestAnimationFrame(() => this.#reconnect());
     }
   }
 
@@ -5305,16 +5314,22 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #bindHotkeys() {
-    this.editorElement.addEventListener("keydown", (event) => {
-      const buttons = this.querySelectorAll("[data-hotkey]");
-      buttons.forEach((button) => {
-        const hotkeys = button.dataset.hotkey.toLowerCase().split(/\s+/);
-        if (hotkeys.includes(this.#keyCombinationFor(event))) {
-          event.preventDefault();
-          event.stopPropagation();
-          button.click();
-        }
-      });
+    this.editorElement.addEventListener("keydown", this.#handleHotkey);
+  }
+
+  #unbindHotkeys() {
+    this.editorElement?.removeEventListener("keydown", this.#handleHotkey);
+  }
+
+  #handleHotkey = (event) => {
+    const buttons = this.querySelectorAll("[data-hotkey]");
+    buttons.forEach((button) => {
+      const hotkeys = button.dataset.hotkey.toLowerCase().split(/\s+/);
+      if (hotkeys.includes(this.#keyCombinationFor(event))) {
+        event.preventDefault();
+        event.stopPropagation();
+        button.click();
+      }
     });
   }
 
@@ -5483,6 +5498,11 @@ class LexicalToolbarElement extends HTMLElement {
 
   get #buttonsWithSeparator() {
     return Array.from(this.querySelectorAll(":scope > button, :scope > [role=separator]"))
+  }
+
+  #reconnect() {
+    this.disconnectedCallback();
+    this.connectedCallback();
   }
 
   static get defaultTemplate() {
@@ -9858,6 +9878,7 @@ class LexicalEditorElement extends HTMLElement {
 
   #reconnect() {
     this.disconnectedCallback();
+    this.valueBeforeDisconnect = null;
     this.connectedCallback();
   }
 }
@@ -10264,15 +10285,25 @@ class LexicalPromptElement extends HTMLElement {
     this.keyListeners = [];
   }
 
+  static observedAttributes = [ "connected" ]
+
   connectedCallback() {
     this.source = this.#createSource();
 
     this.#addTriggerListener();
+    this.toggleAttribute("connected", true);
   }
 
   disconnectedCallback() {
     this.source = null;
     this.popoverElement = null;
+  }
+
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
+      requestAnimationFrame(() => this.#reconnect());
+    }
   }
 
   get name() {
@@ -10643,6 +10674,11 @@ class LexicalPromptElement extends HTMLElement {
       this.#selectOption(listItem);
       this.#optionWasSelected();
     }
+  }
+
+  #reconnect() {
+    this.disconnectedCallback();
+    this.connectedCallback();
   }
 }
 

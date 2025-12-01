@@ -23,6 +23,10 @@
       <lexxy-prompt trigger="3" src="<%= people_path %>" name="mention" remote-filtering insert-editable-text supports-space-in-searches>
       </lexxy-prompt>
     <% end %>
+
+    <% if params[:refresh].present? %>
+      <%= hidden_field_tag :refresh, params[:refresh] %>
+    <% end %>
   </div>
 
   <div>
