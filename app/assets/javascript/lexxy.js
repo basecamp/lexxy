@@ -9878,6 +9878,7 @@ class LexicalEditorElement extends HTMLElement {
 
   #reconnect() {
     this.disconnectedCallback();
+    this.valueBeforeDisconnect = null;
     this.connectedCallback();
   }
 }
