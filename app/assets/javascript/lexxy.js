@@ -10264,15 +10264,25 @@ class LexicalPromptElement extends HTMLElement {
     this.keyListeners = [];
   }
 
+  static observedAttributes = [ "connected" ]
+
   connectedCallback() {
     this.source = this.#createSource();
 
     this.#addTriggerListener();
+    this.toggleAttribute("connected", true);
   }
 
   disconnectedCallback() {
     this.source = null;
     this.popoverElement = null;
+  }
+
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
+      requestAnimationFrame(() => this.#reconnect());
+    }
   }
 
   get name() {
@@ -10643,6 +10653,11 @@ class LexicalPromptElement extends HTMLElement {
       this.#selectOption(listItem);
       this.#optionWasSelected();
     }
+  }
+
+  #reconnect() {
+    this.disconnectedCallback();
+    this.connectedCallback();
   }
 }
 
