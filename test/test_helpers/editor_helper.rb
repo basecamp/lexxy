@@ -39,6 +39,10 @@ module EditorHelper
     assert_no_css "action-text-attachment[content-type='application/vnd.actiontext.mention']"
   end
 
+  def click_on_prompt(name)
+    find(".lexxy-prompt-menu__item", text: name).click
+  end
+
   def wait_for_editor
     assert_css "lexxy-editor[connected]"
     assert_css "lexxy-toolbar[connected]" if has_css?("lexxy-toolbar")

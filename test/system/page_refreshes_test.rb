@@ -13,9 +13,4 @@ class PageRefreshesTest < ApplicationSystemTestCase
     click_on_prompt "Peter Johnson"
     assert_mention_attachment people(:peter)
   end
-
-  private
-    def click_on_prompt(name)
-      find(".lexxy-prompt-menu__item", text: name).click
-    end
 end
