@@ -22,7 +22,7 @@
   "scripts": {
     "build": "rollup -c",
     "build:npm": "rollup -c rollup.config.npm.mjs",
-    "watch": "rollup -wc",
+    "watch": "NODE_ENV=development rollup -wc --watch.onEnd=\"rails restart\"",
     "lint": "eslint",
     "prerelease": "yarn build:npm",
     "release": "yarn build:npm && yarn publish"
