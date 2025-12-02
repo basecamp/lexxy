@@ -5257,7 +5257,8 @@ class LexicalToolbarElement extends HTMLElement {
     this.editor = editorElement.editor;
     this.#bindButtons();
     this.#bindHotkeys();
-    this.#assignButtonTabindex();
+    this.#setTabIndexValues();
+    this.#setItemPositionValues();
     this.#monitorSelectionChanges();
     this.#monitorHistoryChanges();
     this.#refreshToolbarOverflow();
@@ -5265,10 +5266,9 @@ class LexicalToolbarElement extends HTMLElement {
     this.toggleAttribute("connected", true);
   }
 
-  get #dialogs() {
-    const dialogButtons = this.querySelectorAll("[data-dialog-target]");
-    const dialogTags = Array.from(dialogButtons).map(button => `lexxy-${button.dataset.dialogTarget}`);
-    return Array.from(this.querySelectorAll(dialogTags))
+  #reconnect() {
+    this.disconnectedCallback();
+    this.connectedCallback();
   }
 
   #bindButtons() {
@@ -5277,7 +5277,6 @@ class LexicalToolbarElement extends HTMLElement {
 
   #handleButtonClicked({ target }) {
     this.#handleTargetClicked(target, "[data-command]", this.#dispatchButtonCommand.bind(this));
-    this.#handleTargetClicked(target, "[data-dialog-target]", this.#toggleDialog.bind(this));
   }
 
   #handleTargetClicked(target, selector, callback) {
@@ -5290,27 +5289,6 @@ class LexicalToolbarElement extends HTMLElement {
   #dispatchButtonCommand(button) {
     const { command, payload } = button.dataset;
     this.editor.dispatchCommand(command, payload);
-  }
-
-  // Not using popover because of CSS anchoring still not widely available.
-  #toggleDialog(button) {
-    const dialogTarget = button.dataset.dialogTarget;
-    const dialog = this.querySelector("lexxy-" + dialogTarget);
-    if (!dialog) return
-
-    if (dialog.open) {
-      dialog.close();
-    } else {
-      this.#closeOpenDialogs();
-      dialog.show(button);
-    }
-  }
-
-  #closeOpenDialogs() {
-    const openDialogs = this.querySelectorAll("dialog[open]");
-    openDialogs.forEach(openDialog => {
-      openDialog.closest(".lexxy-dialog").close();
-    });
   }
 
   #bindHotkeys() {
@@ -5345,10 +5323,9 @@ class LexicalToolbarElement extends HTMLElement {
     return [ ...modifiers, pressedKey ].join("+")
   }
 
-  #assignButtonTabindex() {
-    const baseTabIndex = parseInt(this.editorElement.editorContentElement.getAttribute("tabindex") ?? "0");
-    this.#buttons.forEach((button, index) => {
-      button.setAttribute("tabindex", `${baseTabIndex + index + 1}`);
+  #setTabIndexValues() {
+    this.#buttons.forEach((button) => {
+      button.setAttribute("tabindex", 0);
     });
   }
 
@@ -5356,7 +5333,6 @@ class LexicalToolbarElement extends HTMLElement {
     this.editor.registerUpdateListener(() => {
       this.editor.getEditorState().read(() => {
         this.#updateButtonStates();
-        this.#updateDialogStates();
       });
     });
   }
@@ -5411,10 +5387,6 @@ class LexicalToolbarElement extends HTMLElement {
     this.#updateUndoRedoButtonStates();
   }
 
-  #updateDialogStates() {
-    this.#dialogs.forEach(dialog => dialog.updateStateCallback());
-  }
-
   #isInList(node) {
     let current = node;
     while (current) {
@@ -5463,22 +5435,8 @@ class LexicalToolbarElement extends HTMLElement {
     this.toggleAttribute("overflowing", isOverflowing);
   }
 
-  get #overflow() {
-    return this.querySelector(".lexxy-editor__toolbar-overflow")
-  }
-
-  get #overflowMenu() {
-    return this.querySelector(".lexxy-editor__toolbar-overflow-menu")
-  }
-
-  #resetToolbar() {
-    while (this.#overflowMenu.children.length > 0) {
-      this.insertBefore(this.#overflowMenu.children[0], this.#overflow);
-    }
-  }
-
   #compactMenu() {
-    const buttons = this.#buttonsWithSeparator.reverse();
+    const buttons = this.#buttons.reverse();
     let movedToOverflow = false;
 
     for (const button of buttons) {
@@ -5492,17 +5450,42 @@ class LexicalToolbarElement extends HTMLElement {
     }
   }
 
+  #resetToolbar() {
+    const items = Array.from(this.#overflowMenu.children);
+    items.sort((a, b) => this.#itemPosition(b) - this.#itemPosition(a));
+
+    items.forEach((item) => {
+      const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.#overflow;
+      this.insertBefore(item, nextItem);
+    });
+  }
+
+  #itemPosition(item) {
+    return parseInt(item.dataset.position ?? "999")
+  }
+
+  #setItemPositionValues() {
+    this.#toolbarItems.forEach((item, index) => {
+      if (item.dataset.position === undefined) {
+        item.dataset.position = index;
+      }
+    });
+  }
+
+  get #overflow() {
+    return this.querySelector(".lexxy-editor__toolbar-overflow")
+  }
+
+  get #overflowMenu() {
+    return this.querySelector(".lexxy-editor__toolbar-overflow-menu")
+  }
+
   get #buttons() {
     return Array.from(this.querySelectorAll(":scope > button"))
   }
 
-  get #buttonsWithSeparator() {
-    return Array.from(this.querySelectorAll(":scope > button, :scope > [role=separator]"))
-  }
-
-  #reconnect() {
-    this.disconnectedCallback();
-    this.connectedCallback();
+  get #toolbarItems() {
+    return Array.from(this.querySelectorAll(":scope > *:not(.lexxy-editor__toolbar-overflow)"))
   }
 
   static get defaultTemplate() {
@@ -5521,35 +5504,31 @@ class LexicalToolbarElement extends HTMLElement {
         </svg>
       </button>
 
-      <lexxy-highlight-dialog class="lexxy-dialog lexxy-highlight-dialog">
-        <dialog class="highlight-dialog">
-          <div class="lexxy-highlight-dialog-content">
-            <div data-button-group="color" data-values="var(--highlight-1); var(--highlight-2); var(--highlight-3); var(--highlight-4); var(--highlight-5); var(--highlight-6); var(--highlight-7); var(--highlight-8); var(--highlight-9)"></div>
-            <div data-button-group="background-color" data-values="var(--highlight-bg-1); var(--highlight-bg-2); var(--highlight-bg-3); var(--highlight-bg-4); var(--highlight-bg-5); var(--highlight-bg-6); var(--highlight-bg-7); var(--highlight-bg-8); var(--highlight-bg-9)"></div>
-            <button data-command="removeHighlight" class="lexxy-highlight-dialog-reset">Remove all coloring</button>
-          </div>
-        </dialog>
-      </lexxy-highlight-dialog>
+      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
+        <summary class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.65422 0.711575C7.1856 0.242951 6.42579 0.242951 5.95717 0.711575C5.48853 1.18021 5.48853 1.94 5.95717 2.40864L8.70864 5.16011L2.85422 11.0145C1.44834 12.4204 1.44833 14.6998 2.85422 16.1057L7.86011 21.1115C9.26599 22.5174 11.5454 22.5174 12.9513 21.1115L19.6542 14.4087C20.1228 13.94 20.1228 13.1802 19.6542 12.7115L11.8544 4.91171L11.2542 4.31158L7.65422 0.711575ZM4.55127 12.7115L10.4057 6.85716L17.1087 13.56H4.19981C4.19981 13.253 4.31696 12.9459 4.55127 12.7115ZM23.6057 20.76C23.6057 22.0856 22.5311 23.16 21.2057 23.16C19.8802 23.16 18.8057 22.0856 18.8057 20.76C18.8057 19.5408 19.8212 18.5339 20.918 17.4462C21.0135 17.3516 21.1096 17.2563 21.2057 17.16C21.3018 17.2563 21.398 17.3516 21.4935 17.4462C22.5903 18.5339 23.6057 19.5408 23.6057 20.76Z"/></svg>
+        </summary>
+        <lexxy-highlight-dropdown class="lexxy-editor__toolbar-dropdown-content">
+          <div data-button-group="color" data-values="var(--highlight-1); var(--highlight-2); var(--highlight-3); var(--highlight-4); var(--highlight-5); var(--highlight-6); var(--highlight-7); var(--highlight-8); var(--highlight-9)"></div>
+          <div data-button-group="background-color" data-values="var(--highlight-bg-1); var(--highlight-bg-2); var(--highlight-bg-3); var(--highlight-bg-4); var(--highlight-bg-5); var(--highlight-bg-6); var(--highlight-bg-7); var(--highlight-bg-8); var(--highlight-bg-9)"></div>
+          <button data-command="removeHighlight" class="lexxy-editor__toolbar-dropdown-reset">Remove all coloring</button>
+        </lexxy-highlight-dropdown>
+      </details>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="highlight" title="Color highlight" data-dialog-target="highlight-dialog">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.65422 0.711575C7.1856 0.242951 6.42579 0.242951 5.95717 0.711575C5.48853 1.18021 5.48853 1.94 5.95717 2.40864L8.70864 5.16011L2.85422 11.0145C1.44834 12.4204 1.44833 14.6998 2.85422 16.1057L7.86011 21.1115C9.26599 22.5174 11.5454 22.5174 12.9513 21.1115L19.6542 14.4087C20.1228 13.94 20.1228 13.1802 19.6542 12.7115L11.8544 4.91171L11.2542 4.31158L7.65422 0.711575ZM4.55127 12.7115L10.4057 6.85716L17.1087 13.56H4.19981C4.19981 13.253 4.31696 12.9459 4.55127 12.7115ZM23.6057 20.76C23.6057 22.0856 22.5311 23.16 21.2057 23.16C19.8802 23.16 18.8057 22.0856 18.8057 20.76C18.8057 19.5408 19.8212 18.5339 20.918 17.4462C21.0135 17.3516 21.1096 17.2563 21.2057 17.16C21.3018 17.2563 21.398 17.3516 21.4935 17.4462C22.5903 18.5339 23.6057 19.5408 23.6057 20.76Z"/></svg>
-      </button>
-
-      <lexxy-link-dialog class="lexxy-dialog lexxy-link-dialog">
-        <dialog class="link-dialog">
+      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
+        <summary class="lexxy-editor__toolbar-button" name="link" title="Link" data-hotkey="cmd+k ctrl+k">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.111 9.546a1.5 1.5 0 012.121 0 5.5 5.5 0 010 7.778l-2.828 2.828a5.5 5.5 0 01-7.778 0 5.498 5.498 0 010-7.777l2.828-2.83a1.5 1.5 0 01.355-.262 6.52 6.52 0 00.351 3.799l-1.413 1.414a2.499 2.499 0 000 3.535 2.499 2.499 0 003.535 0l2.83-2.828a2.5 2.5 0 000-3.536 1.5 1.5 0 010-2.121z"/><path d="M12.111 3.89a5.5 5.5 0 117.778 7.777l-2.828 2.829a1.496 1.496 0 01-.355.262 6.522 6.522 0 00-.351-3.8l1.413-1.412a2.5 2.5 0 10-3.536-3.535l-2.828 2.828a2.5 2.5 0 000 3.536 1.5 1.5 0 01-2.122 2.12 5.5 5.5 0 010-7.777l2.83-2.829z"/></svg>
+        </summary>
+        <lexxy-link-dropdown class="lexxy-editor__toolbar-dropdown-content">
           <form method="dialog">
-            <input type="url" placeholder="Enter a URL…" class="input" required>
-            <div class="lexxy-dialog-actions">
+            <input type="url" placeholder="Enter a URL…" class="input">
+            <div class="lexxy-editor__toolbar-dropdown-actions">
               <button type="submit" class="btn" value="link">Link</button>
               <button type="button" class="btn" value="unlink">Unlink</button>
             </div>
           </form>
-        </dialog>
-      </lexxy-link-dialog>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="link" title="Link" data-dialog-target="link-dialog" data-hotkey="cmd+k ctrl+k">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.111 9.546a1.5 1.5 0 012.121 0 5.5 5.5 0 010 7.778l-2.828 2.828a5.5 5.5 0 01-7.778 0 5.498 5.498 0 010-7.777l2.828-2.83a1.5 1.5 0 01.355-.262 6.52 6.52 0 00.351 3.799l-1.413 1.414a2.499 2.499 0 000 3.535 2.499 2.499 0 003.535 0l2.83-2.828a2.5 2.5 0 000-3.536 1.5 1.5 0 010-2.121z"/><path d="M12.111 3.89a5.5 5.5 0 117.778 7.777l-2.828 2.829a1.496 1.496 0 01-.355.262 6.522 6.522 0 00-.351-3.8l1.413-1.412a2.5 2.5 0 10-3.536-3.535l-2.828 2.828a2.5 2.5 0 000 3.536 1.5 1.5 0 01-2.122 2.12 5.5 5.5 0 010-7.777l2.83-2.829z"/></svg>
-      </button>
+        </lexxy-link-dropdown>
+      </details>
 
       <button class="lexxy-editor__toolbar-button" type="button" name="quote" data-command="insertQuoteBlock" title="Quote">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6.5 5C8.985 5 11 7.09 11 9.667c0 2.694-.962 5.005-2.187 6.644-.613.82-1.3 1.481-1.978 1.943-.668.454-1.375.746-2.022.746a.563.563 0 01-.52-.36.602.602 0 01.067-.57l.055-.066.009-.009.041-.048a4.25 4.25 0 00.168-.21c.143-.188.336-.47.53-.84a6.743 6.743 0 00.75-2.605C3.705 13.994 2 12.038 2 9.667 2 7.089 4.015 5 6.5 5zM17.5 5C19.985 5 22 7.09 22 9.667c0 2.694-.962 5.005-2.187 6.644-.613.82-1.3 1.481-1.978 1.943-.668.454-1.375.746-2.023.746a.563.563 0 01-.52-.36.602.602 0 01.068-.57l.055-.066.009-.009.041-.048c.039-.045.097-.115.168-.21a6.16 6.16 0 00.53-.84 6.745 6.745 0 00.75-2.605C14.705 13.994 13 12.038 13 9.667 13 7.089 15.015 5 17.5 5z"/></svg>
@@ -9582,6 +9561,10 @@ class LexicalEditorElement extends HTMLElement {
     return this.getAttribute("attachments") !== "false"
   }
 
+  get contentTabIndex() {
+    return parseInt(this.editorContentElement?.getAttribute("tabindex") ?? "0")
+  }
+
   focus() {
     this.editor.focus();
   }
@@ -9902,33 +9885,19 @@ class LexicalEditorElement extends HTMLElement {
 
 customElements.define("lexxy-editor", LexicalEditorElement);
 
-class ToolbarDialog extends HTMLElement {
+class ToolbarDropdown extends HTMLElement {
   connectedCallback() {
-    this.dialog = this.querySelector("dialog");
-    if ("closedBy" in this.dialog.constructor.prototype) {
-      this.dialog.closedBy = "any";
-    }
-    this.#registerHandlers();
+    this.container = this.closest("details");
+
+    this.container.addEventListener("toggle", this.#handleToggle.bind(this));
+    this.container.addEventListener("keydown", this.#handleKeyDown.bind(this));
+
+    this.#setTabIndexValues();
   }
 
   disconnectedCallback() {
     this.#removeClickOutsideHandler();
-  }
-
-  updateStateCallback() { }
-
-  show(triggerButton) {
-    if (this.preventImmediateReopen) { return }
-
-    this.triggerButton = triggerButton;
-    this.#positionDialog();
-    this.dialog.show();
-
-    this.#setupClickOutsideHandler();
-  }
-
-  close() {
-    this.dialog.close();
+    this.container.removeEventListener("keydown", this.#handleKeyDown.bind(this));
   }
 
   get toolbar() {
@@ -9939,32 +9908,32 @@ class ToolbarDialog extends HTMLElement {
     return this.toolbar.editor
   }
 
-  get open() { return this.dialog.open }
+  close() {
+    this.container.removeAttribute("open");
+  }
 
-  #registerHandlers() {
-    this.#setupKeydownHandler();
-    this.dialog.addEventListener("cancel", this.#handleCancel.bind(this));
-    this.dialog.addEventListener("close", this.#handleClose.bind(this));
+  #handleToggle(event) {
+    if (this.container.open) {
+      this.#handleOpen(event.target);
+    } else {
+      this.#handleClose();
+    }
+  }
+
+  #handleOpen(trigger) {
+    this.trigger = trigger;
+    this.#interactiveElements[0].focus();
+    this.#setupClickOutsideHandler();
   }
 
   #handleClose() {
+    this.trigger = null;
     this.#removeClickOutsideHandler();
-    this.triggerButton = null;
     this.editor.focus();
   }
 
-  #handleCancel() {
-    this.preventImmediateReopen = true;
-    requestAnimationFrame(() => this.preventImmediateReopen = undefined);
-  }
-
-  #positionDialog() {
-    const left = this.triggerButton.offsetLeft;
-    this.dialog.style.insetInlineStart = `${left}px`;
-  }
-
   #setupClickOutsideHandler() {
-    if (this.#browserHandlesClose || this.clickOutsideHandler) return
+    if (this.clickOutsideHandler) return
 
     this.clickOutsideHandler = this.#handleClickOutside.bind(this);
     document.addEventListener("click", this.clickOutsideHandler, true);
@@ -9978,22 +9947,7 @@ class ToolbarDialog extends HTMLElement {
   }
 
   #handleClickOutside({ target }) {
-    if (!this.dialog.open) return
-
-    const isClickInsideDialog = this.dialog.contains(target);
-    const isClickOnTrigger = this.triggerButton.contains(target);
-
-    if (!isClickInsideDialog && !isClickOnTrigger) {
-      this.close();
-    }
-  }
-
-  #setupKeydownHandler() {
-    if (!this.#browserHandlesClose) { this.addEventListener("keydown", this.#handleKeyDown.bind(this)); }
-  }
-
-  get #browserHandlesClose() {
-    return this.dialog.closedBy === "any"
+    if (this.container.open && !this.container.contains(target)) this.close();
   }
 
   #handleKeyDown(event) {
@@ -10002,9 +9956,20 @@ class ToolbarDialog extends HTMLElement {
       this.close();
     }
   }
+
+  async #setTabIndexValues() {
+    await nextFrame();
+    this.#interactiveElements.forEach((element) => {
+      element.setAttribute("tabindex", 0);
+    });
+  }
+
+  get #interactiveElements() {
+    return Array.from(this.querySelectorAll("button, input"))
+  }
 }
 
-class LinkDialog extends ToolbarDialog {
+class LinkDropdown extends ToolbarDropdown {
   connectedCallback() {
     super.connectedCallback();
     this.input = this.querySelector("input");
@@ -10012,23 +9977,21 @@ class LinkDialog extends ToolbarDialog {
     this.#registerHandlers();
   }
 
-  updateStateCallback() {
-    this.input.value = this.#selectedLinkUrl;
-  }
-
   #registerHandlers() {
-    this.dialog.addEventListener("beforetoggle", this.#handleBeforeToggle.bind(this));
-    this.dialog.addEventListener("submit", this.#handleSubmit.bind(this));
+    this.container.addEventListener("toggle", this.#handleToggle.bind(this));
+    this.addEventListener("submit", this.#handleSubmit.bind(this));
     this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this));
   }
 
-  #handleBeforeToggle({ newState }) {
+  #handleToggle({ newState }) {
+    this.input.value = this.#selectedLinkUrl;
     this.input.required = newState === "open";
   }
 
   #handleSubmit(event) {
     const command = event.submitter?.value;
     this.editor.dispatchCommand(command, this.input.value);
+    this.close();
   }
 
   #handleUnlink() {
@@ -10057,9 +10020,7 @@ class LinkDialog extends ToolbarDialog {
   }
 }
 
-// We should extend the native dialog and avoid the intermediary <dialog> but not
-// supported by Safari yet: customElements.define("lexxy-link-dialog", LinkDialog, { extends: "dialog" })
-customElements.define("lexxy-link-dialog", LinkDialog);
+customElements.define("lexxy-link-dropdown", LinkDropdown);
 
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button";
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']";
@@ -10069,7 +10030,7 @@ const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']";
 // see https://github.com/facebook/lexical/issues/8013
 const NO_STYLE = Symbol("no_style");
 
-class HighlightDialog extends ToolbarDialog {
+class HighlightDropdown extends ToolbarDropdown {
   connectedCallback() {
     super.connectedCallback();
 
@@ -10077,13 +10038,10 @@ class HighlightDialog extends ToolbarDialog {
     this.#registerHandlers();
   }
 
-  updateStateCallback() {
-    this.#updateColorButtonStates(Lr());
-  }
-
   #registerHandlers() {
-    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this));
+    this.container.addEventListener("toggle", this.#handleToggle.bind(this));
     this.#colorButtons.forEach(button => button.addEventListener("click", this.#handleColorButtonClick.bind(this)));
+    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this));
   }
 
   #setUpButtons() {
@@ -10108,6 +10066,14 @@ class HighlightDialog extends ToolbarDialog {
     button.classList.add("lexxy-highlight-button");
     button.name = attribute + "-" + index;
     return button
+  }
+
+  #handleToggle({ newState }) {
+    if (newState === "open") {
+      this.editor.getEditorState().read(() => {
+        this.#updateColorButtonStates(Lr());
+      });
+    }
   }
 
   #handleColorButtonClick(event) {
@@ -10155,9 +10121,7 @@ class HighlightDialog extends ToolbarDialog {
   }
 }
 
-// We should extend the native dialog and avoid the intermediary <dialog> but not
-// supported by Safari yet: customElements.define("lexxy-hightlight-dialog", HighlightDialog, { extends: "dialog" })
-customElements.define("lexxy-highlight-dialog", HighlightDialog);
+customElements.define("lexxy-highlight-dropdown", HighlightDropdown);
 
 class BaseSource {
   // Template method to override
