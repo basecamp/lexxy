@@ -27,8 +27,10 @@ module Lexxy
     end
 
     initializer "lexxy.assets" do |app|
-      app.config.assets.paths << root.join("app/assets/stylesheets")
-      app.config.assets.paths << root.join("app/javascript")
+      if Rails.application.config.respond_to?(:assets)
+        app.config.assets.paths << root.join("app/assets/stylesheets")
+        app.config.assets.paths << root.join("app/javascript")
+      end
     end
 
     initializer "lexxy.sanitization" do |app|
