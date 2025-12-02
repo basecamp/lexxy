@@ -131,7 +131,13 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   focus() {
-    this.editor.focus()
+    this.editor.focus(() => this.#onFocus())
+  }
+
+  #onFocus() {
+    if (this.isEmpty) {
+      this.selection.placeCursorAtTheEnd()
+    }
   }
 
   get value() {
