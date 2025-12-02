@@ -7154,6 +7154,7 @@ class CommandDispatcher {
     this.highlighter = editorElement.highlighter;
 
     this.#registerCommands();
+    this.#registerKeyboardCommands();
     this.#registerDragAndDropHandlers();
   }
 
@@ -7318,15 +7319,8 @@ class CommandDispatcher {
     this.editor.registerCommand(command, handler, priority);
   }
 
-  // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
-  #toggleLink(url) {
-    this.editor.update(() => {
-      if (url === null) {
-        J$1(null);
-      } else {
-        J$1(url);
-      }
-    });
+  #registerKeyboardCommands() {
+    this.editor.registerCommand(Me$1, this.#handleListIndentation.bind(this), Ri);
   }
 
   #registerDragAndDropHandlers() {
@@ -7374,6 +7368,29 @@ class CommandDispatcher {
     }
 
     this.editor.focus();
+  }
+
+  #handleListIndentation(event) {
+    if (this.selection.isInsideList) {
+      event.preventDefault();
+      if (event.shiftKey) {
+        return this.editor.dispatchCommand(De$1, undefined)
+      } else {
+        return this.editor.dispatchCommand(Pe$1, undefined)
+      }
+    }
+    return false
+  }
+
+  // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
+  #toggleLink(url) {
+    this.editor.update(() => {
+      if (url === null) {
+        J$1(null);
+      } else {
+        J$1(url);
+      }
+    });
   }
 }
 
