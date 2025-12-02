@@ -15,8 +15,6 @@ export class ToolbarDropdown extends HTMLElement {
     this.container.removeEventListener("keydown", this.#handleKeyDown.bind(this))
   }
 
-  updateStateCallback() { }
-
   get toolbar() {
     return this.closest("lexxy-toolbar")
   }

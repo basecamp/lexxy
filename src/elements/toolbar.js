@@ -115,7 +115,6 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.editor.registerUpdateListener(() => {
       this.editor.getEditorState().read(() => {
         this.#updateButtonStates()
-        this.#updateDialogStates()
       })
     })
   }
@@ -168,10 +167,6 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("ordered-list", isInList && listType === "number")
 
     this.#updateUndoRedoButtonStates()
-  }
-
-  #updateDialogStates() {
-    this.#dialogs.forEach(dialog => dialog.updateStateCallback())
   }
 
   #isInList(node) {
@@ -262,10 +257,6 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   get #buttonsWithSeparator() {
     return Array.from(this.querySelectorAll(":scope > button, :scope > [role=separator]"))
-  }
-
-  get #dialogs() {
-    return Array.from(this.querySelectorAll(":scope > details .lexxy-editor__toolbar-dropdown-content"))
   }
 
   static get defaultTemplate() {

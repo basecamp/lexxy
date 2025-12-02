@@ -18,13 +18,10 @@ export class HighlightDropdown extends ToolbarDropdown {
     this.#registerHandlers()
   }
 
-  updateStateCallback() {
-    this.#updateColorButtonStates($getSelection())
-  }
-
   #registerHandlers() {
-    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this))
+    this.container.addEventListener("toggle", this.#handleToggle.bind(this))
     this.#colorButtons.forEach(button => button.addEventListener("click", this.#handleColorButtonClick.bind(this)))
+    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this))
   }
 
   #setUpButtons() {
@@ -49,6 +46,14 @@ export class HighlightDropdown extends ToolbarDropdown {
     button.classList.add("lexxy-highlight-button")
     button.name = attribute + "-" + index
     return button
+  }
+
+  #handleToggle({ newState }) {
+    if (newState === "open") {
+      this.editor.getEditorState().read(() => {
+        this.#updateColorButtonStates($getSelection())
+      })
+    }
   }
 
   #handleColorButtonClick(event) {

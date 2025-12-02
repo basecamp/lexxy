@@ -10,17 +10,14 @@ export class LinkDropdown extends ToolbarDropdown {
     this.#registerHandlers()
   }
 
-  updateStateCallback() {
-    this.input.value = this.#selectedLinkUrl
-  }
-
   #registerHandlers() {
-    this.addEventListener("beforetoggle", this.#handleBeforeToggle.bind(this))
+    this.container.addEventListener("toggle", this.#handleToggle.bind(this))
     this.addEventListener("submit", this.#handleSubmit.bind(this))
     this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this))
   }
 
-  #handleBeforeToggle({ newState }) {
+  #handleToggle({ newState }) {
+    this.input.value = this.#selectedLinkUrl
     this.input.required = newState === "open"
   }
 
