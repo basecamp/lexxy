@@ -162,6 +162,16 @@ export default class LexicalEditorElement extends HTMLElement {
     return parseInt(this.editorContentElement?.getAttribute("tabindex") ?? "0")
   }
 
+  focus() {
+    this.editor.focus(() => this.#onFocus())
+  }
+
+  #onFocus() {
+    if (this.isEmpty) {
+      this.selection.placeCursorAtTheEnd()
+    }
+  }
+
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {

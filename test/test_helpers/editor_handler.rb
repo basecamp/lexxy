@@ -145,13 +145,13 @@ class EditorHandler
     content_element.native.attribute("innerHTML")
   end
 
+  def content_element
+    editor_element.find(".lexxy-editor__content")
+  end
+
   private
     def editor_element
       page.find(selector)
-    end
-
-    def content_element
-      editor_element.find(".lexxy-editor__content")
     end
 
     def simulate_first_interaction_if_needed
