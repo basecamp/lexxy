@@ -7,7 +7,6 @@ class FocusTest < ApplicationSystemTestCase
 
   test "focus the editor" do
     find_editor.focus
-
     assert_editor_has_focus
   end
 
@@ -16,6 +15,11 @@ class FocusTest < ApplicationSystemTestCase
     find_editor.send "Hello there"
 
     assert_editor_html "<p>Hello there</p>"
+  end
+
+  test "autofocus attribute" do
+    visit edit_post_path(posts(:empty), autofocus: true)
+    assert_editor_has_focus
   end
 
   private

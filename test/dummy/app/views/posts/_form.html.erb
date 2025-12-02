@@ -40,6 +40,7 @@
 
     <%= form.label :body, style: "display: block" %>
     <%= form.rich_text_area :body, placeholder: "Write something...",
+          autofocus: params[:autofocus] ? "true" : nil,
           attachments: (params[:attachments_disabled] != "true"),
           markdown: params[:markdown_disabled] ? "false" : nil,
           "single-line": params[:multi_line_disabled] ? "true" : nil,

@@ -60,6 +60,8 @@ export default class LexicalEditorElement extends HTMLElement {
     requestAnimationFrame(() => dispatch(this, "lexxy:initialize"))
     this.toggleAttribute("connected", true)
 
+    this.#handleAutofocus()
+
     this.valueBeforeDisconnect = null
   }
 
@@ -448,6 +450,14 @@ export default class LexicalEditorElement extends HTMLElement {
     // and https://stackoverflow.com/a/72212077
     this.editor.registerCommand(BLUR_COMMAND, () => { dispatch(this, "lexxy:blur") }, COMMAND_PRIORITY_NORMAL)
     this.editor.registerCommand(FOCUS_COMMAND, () => { dispatch(this, "lexxy:focus") }, COMMAND_PRIORITY_NORMAL)
+  }
+
+  #handleAutofocus() {
+    if (!document.querySelector(":focus")) {
+      if (this.hasAttribute("autofocus") && document.querySelector("[autofocus]") === this) {
+        this.focus()
+      }
+    }
   }
 
   #handleTables() {
