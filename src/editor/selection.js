@@ -61,7 +61,14 @@ export default class Selection {
 
   placeCursorAtTheEnd() {
     this.editor.update(() => {
-      $getRoot().selectEnd()
+      const root = $getRoot()
+      const lastDescendant = root.getLastDescendant()
+
+      if (lastDescendant && $isTextNode(lastDescendant)) {
+        lastDescendant.selectEnd()
+      } else {
+        root.selectEnd()
+      }
     })
   }
 
