@@ -64,6 +64,10 @@
     font-style: italic;
     margin: var(--lexxy-content-margin) 0;
     padding: 0.5lh 2ch;
+
+    p:last-child {
+      margin-block-end: 0;
+    }
   }
 
   p:empty {
