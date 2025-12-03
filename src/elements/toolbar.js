@@ -45,8 +45,8 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.editor = editorElement.editor
     this.#bindButtons()
     this.#bindHotkeys()
-    this.#assignButtonTabindex()
-    this.#assignItemPosition()
+    this.#setTabIndexValues()
+    this.#setItemPositionValues()
     this.#monitorSelectionChanges()
     this.#monitorHistoryChanges()
     this.#refreshToolbarOverflow()
@@ -111,7 +111,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     return [ ...modifiers, pressedKey ].join("+")
   }
 
-  #assignButtonTabindex() {
+  #setTabIndexValues() {
     this.#buttons.forEach((button) => {
       button.setAttribute("tabindex", 0)
     })
@@ -252,7 +252,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     return parseInt(item.dataset.position ?? "999")
   }
 
-  #assignItemPosition() {
+  #setItemPositionValues() {
     this.#toolbarItems.forEach((item, index) => {
       if (item.dataset.position === undefined) {
         item.dataset.position = index

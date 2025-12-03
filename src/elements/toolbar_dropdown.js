@@ -7,7 +7,7 @@ export class ToolbarDropdown extends HTMLElement {
     this.container.addEventListener("toggle", this.#handleToggle.bind(this))
     this.container.addEventListener("keydown", this.#handleKeyDown.bind(this))
 
-    this.#assignTabIndexes()
+    this.#setTabIndexValues()
   }
 
   disconnectedCallback() {
@@ -62,14 +62,7 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   #handleClickOutside({ target }) {
-    if (!this.container.open) return
-
-    const isClickInsideDropdown = this.contains(target)
-    const isClickOnTrigger = this.trigger.contains(target)
-
-    if (!isClickInsideDropdown && !isClickOnTrigger) {
-      this.close()
-    }
+    if (this.container.open && !this.container.contains(target)) this.close()
   }
 
   #handleKeyDown(event) {
@@ -79,7 +72,7 @@ export class ToolbarDropdown extends HTMLElement {
     }
   }
 
-  async #assignTabIndexes() {
+  async #setTabIndexValues() {
     await nextFrame()
     this.#interactiveElements.forEach((element) => {
       element.setAttribute("tabindex", 0)

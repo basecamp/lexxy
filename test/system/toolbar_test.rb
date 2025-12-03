@@ -138,7 +138,7 @@ class ToolbarTest < ApplicationSystemTestCase
     find("[name='link']").click
     fill_in "Enter a URL…", with: "https://37signals.com"
 
-    within "lexxy-dropdown-link" do
+    within "lexxy-link-dropdown" do
       click_on "Link"
     end
 
