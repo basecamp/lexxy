@@ -39,7 +39,7 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     click_on "Edit this post"
 
 
-    assert_equal_html "<p><br></p><p>That</p>", find_editor.value
+    assert_equal_html "<p>That</p>", find_editor.value
   end
 
   test "resets editor to initial state when form is reset" do
