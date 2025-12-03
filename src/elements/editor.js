@@ -1,4 +1,4 @@
-import { $addUpdateTag, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, createEditor } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, createEditor } from "lexical"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { registerPlainText } from "@lexical/plain-text"
@@ -79,6 +79,20 @@ export default class LexicalEditorElement extends HTMLElement {
     this.editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
   }
 
+  focus() {
+    this.editor.focus()
+  }
+
+  toString() {
+    if (!this.cachedStringValue) {
+      this.editor?.getEditorState().read(() => {
+        this.cachedStringValue = $getRoot().getTextContent()
+      })
+    }
+
+    return this.cachedStringValue
+  }
+
   get form() {
     return this.internals.form
   }
@@ -130,10 +144,6 @@ export default class LexicalEditorElement extends HTMLElement {
     return parseInt(this.editorContentElement?.getAttribute("tabindex") ?? "0")
   }
 
-  focus() {
-    this.editor.focus()
-  }
-
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
@@ -149,7 +159,7 @@ export default class LexicalEditorElement extends HTMLElement {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       const root = $getRoot()
       root.clear()
-      if (html !== "") root.append(...this.#parseHtmlIntoLexicalNodes(html))
+      root.append(...this.#parseHtmlIntoLexicalNodes(html))
       root.selectEnd()
 
       this.#toggleEmptyStatus()
@@ -161,19 +171,14 @@ export default class LexicalEditorElement extends HTMLElement {
     })
   }
 
-  toString() {
-    if (!this.cachedStringValue) {
-      this.editor?.getEditorState().read(() => {
-        this.cachedStringValue = $getRoot().getTextContent()
-      })
-    }
-
-    return this.cachedStringValue
-  }
-
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>"
     const nodes = $generateNodesFromDOM(this.editor, parseHtml(`<div>${html}</div>`))
+
+    if (nodes.length === 0) {
+      return [ $createParagraphNode() ]
+    }
+
     // Custom decorator block elements such action-text-attachments get wrapped into <p> automatically by Lexical.
     // We flatten those.
     return nodes.map(node => {

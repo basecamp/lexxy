@@ -377,6 +377,7 @@ export default class Contents {
       if (selectedNodes.length === 0) {
         return
       }
+
       const topLevelElements = new Set()
       selectedNodes.forEach((node) => {
         const topLevel = node.getTopLevelElementOrThrow()
@@ -447,6 +448,7 @@ export default class Contents {
 
   #wrapCurrentLine(selection, newNodeFn) {
     const anchorNode = selection.anchor.getNode()
+
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
 
     if (topLevelElement.getTextContent()) {
