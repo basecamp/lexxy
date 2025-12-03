@@ -5581,11 +5581,11 @@ class LexicalToolbarElement extends HTMLElement {
  
       <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
  
-      <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo" data-hotkey="cmd+z ctrl+z">
+      <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5.64648 8.26531C7.93911 6.56386 10.7827 5.77629 13.624 6.05535C16.4655 6.33452 19.1018 7.66079 21.0195 9.77605C22.5839 11.5016 23.5799 13.6516 23.8936 15.9352C24.0115 16.7939 23.2974 17.4997 22.4307 17.4997C21.5641 17.4997 20.8766 16.7915 20.7148 15.9401C20.4295 14.4379 19.7348 13.0321 18.6943 11.8844C17.3 10.3464 15.3835 9.38139 13.3174 9.17839C11.2514 8.97546 9.18359 9.54856 7.5166 10.7858C6.38259 11.6275 5.48981 12.7361 4.90723 13.9997H8.5C9.3283 13.9997 9.99979 14.6714 10 15.4997C10 16.3281 9.32843 16.9997 8.5 16.9997H1.5C0.671573 16.9997 0 16.3281 0 15.4997V8.49968C0.000213656 7.67144 0.671705 6.99968 1.5 6.99968C2.3283 6.99968 2.99979 7.67144 3 8.49968V11.0212C3.7166 9.9704 4.60793 9.03613 5.64648 8.26531Z"/></svg>
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo" data-hotkey="cmd+shift+z ctrl+shift+z ctrl+y">
+      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.2599 8.26531C15.9672 6.56386 13.1237 5.77629 10.2823 6.05535C7.4408 6.33452 4.80455 7.66079 2.88681 9.77605C1.32245 11.5016 0.326407 13.6516 0.0127834 15.9352C-0.105117 16.7939 0.608975 17.4997 1.47567 17.4997C2.34228 17.4997 3.02969 16.7915 3.19149 15.9401C3.47682 14.4379 4.17156 13.0321 5.212 11.8844C6.60637 10.3464 8.52287 9.38139 10.589 9.17839C12.655 8.97546 14.7227 9.54856 16.3897 10.7858C17.5237 11.6275 18.4165 12.7361 18.9991 13.9997H15.4063C14.578 13.9997 13.9066 14.6714 13.9063 15.4997C13.9063 16.3281 14.5779 16.9997 15.4063 16.9997H22.4063C23.2348 16.9997 23.9063 16.3281 23.9063 15.4997V8.49968C23.9061 7.67144 23.2346 6.99968 22.4063 6.99968C21.578 6.99968 20.9066 7.67144 20.9063 8.49968V11.0212C20.1897 9.9704 19.2984 9.03613 18.2599 8.26531Z"/></svg>
       </button>
 
@@ -8785,9 +8785,19 @@ class Contents {
   #unwrap(node) {
     const children = node.getChildren();
 
-    children.forEach((child) => {
-      node.insertBefore(child);
-    });
+    if (children.length == 0) {
+      node.insertBefore(Li());
+    } else {
+      children.forEach((child) => {
+        if (lr(child) && child.getTextContent().trim() !== "") {
+          const newParagraph = Li();
+          newParagraph.append(child);
+          node.insertBefore(newParagraph);
+        } else if (!jn(child)) {
+          node.insertBefore(child);
+        }
+      });
+    }
 
     node.remove();
   }
@@ -9602,7 +9612,7 @@ class LexicalEditorElement extends HTMLElement {
       const root = No();
       root.clear();
       if (html !== "") root.append(...this.#parseHtmlIntoLexicalNodes(html));
-      root.select();
+      root.selectEnd();
 
       this.#toggleEmptyStatus();
 
@@ -9614,8 +9624,14 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   #parseHtmlIntoLexicalNodes(html) {
-    if (!html) html = "<p></p>";
-    const nodes = m$1(this.editor, parseHtml(`<div>${html}</div>`));
+    const defaultHtml = "<p></p>";
+    if (!html) html = defaultHtml;
+    let nodes = m$1(this.editor, parseHtml(`<div>${html}</div>`));
+
+    if (nodes.length === 0) {
+      nodes = m$1(this.editor, parseHtml(defaultHtml));
+    }
+
     // Custom decorator block elements such action-text-attachments get wrapped into <p> automatically by Lexical.
     // We flatten those.
     return nodes.map(node => {
