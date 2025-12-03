@@ -16,8 +16,8 @@ import "prismjs/components/prism-json"
 import "prismjs/components/prism-diff"
 
 import "./elements/editor"
-import "./elements/link_dropdown"
-import "./elements/highlight_dropdown"
+import "./elements/dropdown/link"
+import "./elements/dropdown/highlight"
 import "./elements/prompt"
 import "./elements/code_language_picker"
 

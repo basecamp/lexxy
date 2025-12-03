@@ -1,6 +1,6 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $isLinkNode } from "@lexical/link"
-import { ToolbarDropdown } from "./toolbar_dropdown"
+import { ToolbarDropdown } from "../toolbar_dropdown"
 
 export class LinkDropdown extends ToolbarDropdown {
   connectedCallback() {
@@ -53,4 +53,4 @@ export class LinkDropdown extends ToolbarDropdown {
   }
 }
 
-customElements.define("lexxy-dropdown-link", LinkDropdown)
+customElements.define("lexxy-link-dropdown", LinkDropdown)

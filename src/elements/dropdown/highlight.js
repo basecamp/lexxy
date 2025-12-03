@@ -1,6 +1,6 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
-import { ToolbarDropdown } from "./toolbar_dropdown"
+import { ToolbarDropdown } from "../toolbar_dropdown"
 
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
@@ -101,4 +101,4 @@ export class HighlightDropdown extends ToolbarDropdown {
   }
 }
 
-customElements.define("lexxy-dropdown-highlight", HighlightDropdown)
+customElements.define("lexxy-highlight-dropdown", HighlightDropdown)

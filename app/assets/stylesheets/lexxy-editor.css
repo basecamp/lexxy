@@ -234,7 +234,7 @@
 /* Link dropdown
 /* -------------------------------------------------------------------------- */
 
-:where(lexxy-dropdown-link) {
+:where(lexxy-link-dropdown) {
 
   > * { flex: 1; }
 
@@ -286,7 +286,7 @@
 /* Color dropdown
 /* -------------------------------------------------------------------------- */
 
-:where(lexxy-dropdown-highlight) {
+:where(lexxy-highlight-dropdown) {
   display: flex;
   flex-direction: column;
 
