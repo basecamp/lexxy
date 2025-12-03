@@ -4,7 +4,10 @@
   "description": "Lexxy - A modern rich text editor for Rails.",
   "module": "dist/lexxy.esm.js",
   "type": "module",
-  "exports": "./dist/lexxy.esm.js",
+  "exports": {
+    "lexxy-src": "./src/index.js",
+    "default": "./dist/lexxy.esm.js"
+  },
   "files": [
     "dist"
   ],
