@@ -127,7 +127,7 @@ export default class LexicalEditorElement extends HTMLElement {
       const root = $getRoot()
       root.clear()
       if (html !== "") root.append(...this.#parseHtmlIntoLexicalNodes(html))
-      root.select()
+      root.selectEnd()
 
       this.#toggleEmptyStatus()
 
