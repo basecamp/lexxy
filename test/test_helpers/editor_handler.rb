@@ -31,6 +31,7 @@ class EditorHandler
       });
       arguments[0].dispatchEvent(event);
     JS
+    sleep 0.1
   end
 
   def send_tab(shift: false)

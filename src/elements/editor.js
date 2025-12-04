@@ -148,7 +148,7 @@ export default class LexicalEditorElement extends HTMLElement {
       const root = $getRoot()
       root.clear()
       if (html !== "") root.append(...this.#parseHtmlIntoLexicalNodes(html))
-      root.select()
+      root.selectEnd()
 
       this.#toggleEmptyStatus()
 
@@ -170,8 +170,14 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #parseHtmlIntoLexicalNodes(html) {
-    if (!html) html = "<p></p>"
-    const nodes = $generateNodesFromDOM(this.editor, parseHtml(`<div>${html}</div>`))
+    const defaultHtml = "<p></p>"
+    if (!html) html = defaultHtml
+    let nodes = $generateNodesFromDOM(this.editor, parseHtml(`<div>${html}</div>`))
+
+    if (nodes.length === 0) {
+      nodes = $generateNodesFromDOM(this.editor, parseHtml(defaultHtml))
+    }
+
     // Custom decorator block elements such action-text-attachments get wrapped into <p> automatically by Lexical.
     // We flatten those.
     return nodes.map(node => {
