@@ -9,6 +9,9 @@ class PageRefreshesTest < ApplicationSystemTestCase
 
     wait_for_editor
 
+    # Prompt is only opened if trigger follows a space or newline
+    find_editor.send "\n"
+
     find_editor.send "1"
     click_on_prompt "Peter Johnson"
     assert_mention_attachment people(:peter)
