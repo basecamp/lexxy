@@ -10,7 +10,6 @@ module ActionText
   class Editor::LexxyEditor::Tag < Editor::Tag
     def render_in(view_context, ...)
       options[:value] = "<div>#{options[:value]}</div>" if options[:value].present?
-      options[:name] = name
       super
     end
   end
