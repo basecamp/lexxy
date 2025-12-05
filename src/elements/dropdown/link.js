@@ -1,8 +1,8 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $isLinkNode } from "@lexical/link"
-import { ToolbarDialog } from "./toolbar_dialog"
+import { ToolbarDropdown } from "../toolbar_dropdown"
 
-export class LinkDialog extends ToolbarDialog {
+export class LinkDropdown extends ToolbarDropdown {
   connectedCallback() {
     super.connectedCallback()
     this.input = this.querySelector("input")
@@ -10,23 +10,21 @@ export class LinkDialog extends ToolbarDialog {
     this.#registerHandlers()
   }
 
-  updateStateCallback() {
-    this.input.value = this.#selectedLinkUrl
-  }
-
   #registerHandlers() {
-    this.dialog.addEventListener("beforetoggle", this.#handleBeforeToggle.bind(this))
-    this.dialog.addEventListener("submit", this.#handleSubmit.bind(this))
+    this.container.addEventListener("toggle", this.#handleToggle.bind(this))
+    this.addEventListener("submit", this.#handleSubmit.bind(this))
     this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this))
   }
 
-  #handleBeforeToggle({ newState }) {
+  #handleToggle({ newState }) {
+    this.input.value = this.#selectedLinkUrl
     this.input.required = newState === "open"
   }
 
   #handleSubmit(event) {
     const command = event.submitter?.value
     this.editor.dispatchCommand(command, this.input.value)
+    this.close()
   }
 
   #handleUnlink() {
@@ -55,6 +53,4 @@ export class LinkDialog extends ToolbarDialog {
   }
 }
 
-// We should extend the native dialog and avoid the intermediary <dialog> but not
-// supported by Safari yet: customElements.define("lexxy-link-dialog", LinkDialog, { extends: "dialog" })
-customElements.define("lexxy-link-dialog", LinkDialog)
+customElements.define("lexxy-link-dropdown", LinkDropdown)

@@ -1,6 +1,6 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
-import { ToolbarDialog } from "./toolbar_dialog"
+import { ToolbarDropdown } from "../toolbar_dropdown"
 
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
@@ -10,7 +10,7 @@ const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 // see https://github.com/facebook/lexical/issues/8013
 const NO_STYLE = Symbol("no_style")
 
-export class HighlightDialog extends ToolbarDialog {
+export class HighlightDropdown extends ToolbarDropdown {
   connectedCallback() {
     super.connectedCallback()
 
@@ -18,13 +18,10 @@ export class HighlightDialog extends ToolbarDialog {
     this.#registerHandlers()
   }
 
-  updateStateCallback() {
-    this.#updateColorButtonStates($getSelection())
-  }
-
   #registerHandlers() {
-    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this))
+    this.container.addEventListener("toggle", this.#handleToggle.bind(this))
     this.#colorButtons.forEach(button => button.addEventListener("click", this.#handleColorButtonClick.bind(this)))
+    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this))
   }
 
   #setUpButtons() {
@@ -49,6 +46,14 @@ export class HighlightDialog extends ToolbarDialog {
     button.classList.add("lexxy-highlight-button")
     button.name = attribute + "-" + index
     return button
+  }
+
+  #handleToggle({ newState }) {
+    if (newState === "open") {
+      this.editor.getEditorState().read(() => {
+        this.#updateColorButtonStates($getSelection())
+      })
+    }
   }
 
   #handleColorButtonClick(event) {
@@ -96,6 +101,4 @@ export class HighlightDialog extends ToolbarDialog {
   }
 }
 
-// We should extend the native dialog and avoid the intermediary <dialog> but not
-// supported by Safari yet: customElements.define("lexxy-hightlight-dialog", HighlightDialog, { extends: "dialog" })
-customElements.define("lexxy-highlight-dialog", HighlightDialog)
+customElements.define("lexxy-highlight-dropdown", HighlightDropdown)
