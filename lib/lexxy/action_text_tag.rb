@@ -1,5 +1,11 @@
 module Lexxy
   module ActionTextTag
+    extend ActiveSupport::Concern
+
+    prepended do
+      delegate :dom_id, to: ActionView::RecordIdentifier
+    end
+
     def initialize(object_name, method_name, template_object, options = {}, &block)
       super
 
