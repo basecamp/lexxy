@@ -17,7 +17,7 @@ export default class Clipboard {
 
     if (!clipboardData) return false
 
-    if (this.#isOnlyPlainTextPasted(clipboardData) && !this.#isPastingIntoCodeBlock()) {
+    if (this.#isPlainTextOrURLPasted(clipboardData) && !this.#isPastingIntoCodeBlock()) {
       this.#pastePlainText(clipboardData)
       event.preventDefault()
       return true
@@ -26,9 +26,19 @@ export default class Clipboard {
     this.#handlePastedFiles(clipboardData)
   }
 
+  #isPlainTextOrURLPasted(clipboardData) {
+    return this.#isOnlyPlainTextPasted(clipboardData) || this.#isOnlyURLPasted(clipboardData)
+  }
+
   #isOnlyPlainTextPasted(clipboardData) {
     const types = Array.from(clipboardData.types)
     return types.length === 1 && types[0] === "text/plain"
+  }
+
+  #isOnlyURLPasted(clipboardData) {
+    // Safari URLs are copied as a text/plain + text/uri-list object
+    const types = Array.from(clipboardData.types)
+    return types.length === 2 && types.includes("text/uri-list") && types.includes("text/plain")
   }
 
   #isPastingIntoCodeBlock() {
