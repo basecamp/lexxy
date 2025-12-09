@@ -1,6 +1,8 @@
 import {
+  $addUpdateTag,
   $getSelection,
-  $isRangeSelection
+  $isRangeSelection,
+  SKIP_DOM_SELECTION_TAG
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
 import { $isListItemNode, $isListNode } from "@lexical/list"
@@ -64,20 +66,28 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.addEventListener("click", this.#handleButtonClicked.bind(this))
   }
 
-  #handleButtonClicked({ target }) {
-    this.#handleTargetClicked(target, "[data-command]", this.#dispatchButtonCommand.bind(this))
+  #handleButtonClicked(event) {
+    this.#handleTargetClicked(event, "[data-command]", this.#dispatchButtonCommand.bind(this))
   }
 
-  #handleTargetClicked(target, selector, callback) {
-    const button = target.closest(selector)
+  #handleTargetClicked(event, selector, callback) {
+    const button = event.target.closest(selector)
     if (button) {
-      callback(button)
+      callback(event, button)
     }
   }
 
-  #dispatchButtonCommand(button) {
-    const { command, payload } = button.dataset
-    this.editor.dispatchCommand(command, payload)
+  #dispatchButtonCommand(event, button) {
+    this.editor.update(() => {
+      // Keep the focus on the toolbar when using a keyboard to trigger the command
+      const isKeyboard = event.detail === 0 || !event.isTrusted
+      if (isKeyboard) {
+        $addUpdateTag(SKIP_DOM_SELECTION_TAG);
+      }
+
+      const { command, payload } = button.dataset
+      this.editor.dispatchCommand(command, payload)
+    })
   }
 
   #bindHotkeys() {
