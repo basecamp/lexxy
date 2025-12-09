@@ -5,8 +5,11 @@
   "module": "dist/lexxy.esm.js",
   "type": "module",
   "exports": {
-    "lexxy-src": "./src/index.js",
-    "default": "./dist/lexxy.esm.js"
+    "." : {
+      "lexxy-src": "./src/index.js",
+      "default": "./dist/lexxy.esm.js"
+    },
+    "./helpers" : "./src/helpers.js"
   },
   "files": [
     "dist"

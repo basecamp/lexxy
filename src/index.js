@@ -1,4 +1,6 @@
-import "./config/prism"
+// Prism config must happen first
+import "./config/prism.js"
+
 import "./config/dom_purify"
 
 import "./elements/toolbar"
