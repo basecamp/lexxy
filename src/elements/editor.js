@@ -363,8 +363,24 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #attachToolbar() {
-    if (this.#hasToolbar) {
-      this.toolbarElement.setEditor(this)
+    if (!this.#hasToolbar) return;
+
+    const attach = () => {
+      const toolbar = this.toolbarElement;
+      if (toolbar && typeof toolbar.setEditor === "function") {
+        toolbar.setEditor(this);
+      }
+    };
+
+    attach();
+
+    if (!this.toolbar || typeof this.toolbar.setEditor !== "function") {
+      const toolbarId = this.getAttribute("toolbar");
+      if (toolbarId) {
+        customElements.whenDefined("lexxy-toolbar").then(() => {
+          requestAnimationFrame(attach);
+        });
+      }
     }
   }
 
