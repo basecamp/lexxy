@@ -5222,6 +5222,91 @@ function hasHighlightStyles(cssOrStyles) {
   return !!(styles.color || styles["background-color"])
 }
 
+function handleRollingTabIndex(elements, event) {
+  const previousActiveElement = document.activeElement;
+  if (!elements.includes(previousActiveElement)) return
+
+  const getNextActiveElement = getFinderFunctionForKey(event.key)?.bind(new ElementFinder(elements));
+
+  if (getNextActiveElement) {
+    event.preventDefault();
+    const nextActiveElement = getNextActiveElement(previousActiveElement);
+    const inactiveElements = elements.filter(element => element !== nextActiveElement);
+
+    unsetTabIndex(inactiveElements);
+    focusWithActiveTabIndex(nextActiveElement);
+  }
+}
+
+function getFinderFunctionForKey(key) {
+  switch (key) {
+    case "ArrowRight":
+    case "ArrowDown":
+      return ElementFinder.prototype.findNextSibling
+
+    case "ArrowLeft":
+    case "ArrowUp":
+      return ElementFinder.prototype.findPreviousSibling
+
+    case "Home":
+      return ElementFinder.prototype.findFirst
+
+    case "End":
+      return ElementFinder.prototype.findLast
+  }
+}
+
+class ElementFinder {
+  constructor(elements) {
+    this.elements = elements;
+  }
+
+  findFirst() {
+    return this.elements.find(isActiveAndVisible)
+  }
+
+  findLast() {
+    return this.elements.findLast(isActiveAndVisible)
+  }
+
+  findNextSibling(element) {
+    return this.#after(element).findFirst()
+  }
+
+  findPreviousSibling(element) {
+    return this.#before(element).findLast()
+  }
+
+  #after(element) {
+    const sliceAfter = this.elements.slice(this.#indexOf(element) + 1);
+    return new ElementFinder(sliceAfter)
+  }
+
+  #before(element) {
+    const sliceBefore = this.elements.slice(0, this.#indexOf(element));
+    return new ElementFinder(sliceBefore)
+  }
+
+  #indexOf(element) {
+    return this.elements.indexOf(element)
+  }
+}
+
+function isActiveAndVisible(element) {
+  return element && element.disabled !== true && element.checkVisibility() == true
+}
+
+function focusWithActiveTabIndex(element) {
+  if (!isActiveAndVisible(element)) return
+
+  element.tabIndex = 0;
+  element.focus();
+}
+
+function unsetTabIndex(elements) {
+  elements.forEach(element => element.tabIndex = -1);
+}
+
 class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
 
@@ -5233,6 +5318,7 @@ class LexicalToolbarElement extends HTMLElement {
 
   connectedCallback() {
     requestAnimationFrame(() => this.#refreshToolbarOverflow());
+    this.setAttribute("role", "toolbar");
 
     this._resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow());
     this._resizeObserver.observe(this);
@@ -5244,6 +5330,7 @@ class LexicalToolbarElement extends HTMLElement {
       this._resizeObserver = null;
     }
     this.#unbindHotkeys();
+    this.#unbindFocusListeners();
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -5257,11 +5344,12 @@ class LexicalToolbarElement extends HTMLElement {
     this.editor = editorElement.editor;
     this.#bindButtons();
     this.#bindHotkeys();
-    this.#setTabIndexValues();
+    this.#resetTabIndexValues();
     this.#setItemPositionValues();
     this.#monitorSelectionChanges();
     this.#monitorHistoryChanges();
     this.#refreshToolbarOverflow();
+    this.#bindFocusListeners();
 
     this.toggleAttribute("connected", true);
   }
@@ -5275,20 +5363,23 @@ class LexicalToolbarElement extends HTMLElement {
     this.addEventListener("click", this.#handleButtonClicked.bind(this));
   }
 
-  #handleButtonClicked({ target }) {
-    this.#handleTargetClicked(target, "[data-command]", this.#dispatchButtonCommand.bind(this));
+  #handleButtonClicked(event) {
+    this.#handleTargetClicked(event, "[data-command]", this.#dispatchButtonCommand.bind(this));
   }
 
-  #handleTargetClicked(target, selector, callback) {
-    const button = target.closest(selector);
+  #handleTargetClicked(event, selector, callback) {
+    const button = event.target.closest(selector);
     if (button) {
-      callback(button);
+      callback(event, button);
     }
   }
 
-  #dispatchButtonCommand(button) {
-    const { command, payload } = button.dataset;
-    this.editor.dispatchCommand(command, payload);
+  #dispatchButtonCommand(event, { dataset: { command, payload }}) {
+    const isKeyboard = event instanceof PointerEvent && event.pointerId === -1;
+
+    this.editor.update(() => {
+      this.editor.dispatchCommand(command, payload);
+    }, { tag: isKeyboard ? zn : undefined } );
   }
 
   #bindHotkeys() {
@@ -5323,9 +5414,36 @@ class LexicalToolbarElement extends HTMLElement {
     return [ ...modifiers, pressedKey ].join("+")
   }
 
-  #setTabIndexValues() {
-    this.#buttons.forEach((button) => {
-      button.setAttribute("tabindex", 0);
+  #bindFocusListeners() {
+    this.editorElement.addEventListener("lexxy:focus", this.#handleFocus.bind(this));
+    this.editorElement.addEventListener("lexxy:blur", this.#handleFocusOut.bind(this));
+    this.addEventListener("focusout", this.#handleFocusOut.bind(this));
+
+    this.addEventListener("keydown", (event) => handleRollingTabIndex(this.#focusableItems, event));
+  }
+
+  #unbindFocusListeners() {
+    this.editorElement.removeEventListener("lexxy:focus", this.#handleFocus.bind(this));
+    this.editorElement.removeEventListener("lexxy:blur", this.#handleFocusOut.bind(this));
+    this.removeEventListener("focusout", this.#handleFocusOut.bind(this));
+
+    this.removeEventListener("keydown", (event) => handleRollingTabIndex(this.#focusableItems, event));
+  }
+
+  #handleFocus() {
+    this.#resetTabIndexValues();
+    this.#focusableItems[0].tabIndex = 0;
+  }
+
+  #handleFocusOut() {
+    if (!this.contains(document.activeElement)) {
+      this.#resetTabIndexValues();
+    }
+  }
+
+  #resetTabIndexValues() {
+    this.#focusableItems.forEach((button) => {
+      button.tabIndex = -1;
     });
   }
 
@@ -5433,6 +5551,7 @@ class LexicalToolbarElement extends HTMLElement {
 
     const isOverflowing = this.#overflowMenu.children.length > 0;
     this.toggleAttribute("overflowing", isOverflowing);
+    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing);
   }
 
   #compactMenu() {
@@ -5482,6 +5601,10 @@ class LexicalToolbarElement extends HTMLElement {
 
   get #buttons() {
     return Array.from(this.querySelectorAll(":scope > button"))
+  }
+
+  get #focusableItems() {
+    return Array.from(this.querySelectorAll(":scope button, :scope > details > summary"))
   }
 
   get #toolbarItems() {
@@ -7299,7 +7422,7 @@ class CommandDispatcher {
   }
 
   #registerKeyboardCommands() {
-    this.editor.registerCommand(Me$1, this.#handleListIndentation.bind(this), Ri);
+    this.editor.registerCommand(Me$1, this.#handleTabKey.bind(this), Ri);
   }
 
   #registerDragAndDropHandlers() {
@@ -7349,16 +7472,26 @@ class CommandDispatcher {
     this.editor.focus();
   }
 
-  #handleListIndentation(event) {
+  #handleTabKey(event) {
     if (this.selection.isInsideList) {
-      event.preventDefault();
-      if (event.shiftKey) {
-        return this.editor.dispatchCommand(De$1, undefined)
-      } else {
-        return this.editor.dispatchCommand(Pe$1, undefined)
-      }
+      return this.#handleTabForList(event)
+    } else if (this.selection.isInsideCodeBlock) {
+      return this.#handleTabForCode()
     }
     return false
+  }
+
+  #handleTabForList(event) {
+    if (event.shiftKey && !this.selection.isIndentedList) return false
+
+    event.preventDefault();
+    const command = event.shiftKey? De$1 : Pe$1;
+    return this.editor.dispatchCommand(command, undefined)
+  }
+
+  #handleTabForCode() {
+    const selection = Lr();
+    return yr(selection) && selection.isCollapsed()
   }
 
   // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
@@ -7535,6 +7668,29 @@ class Selection {
 
     const anchorNode = selection.anchor.getNode();
     return getNearestListItemNode(anchorNode) !== null
+  }
+
+  get isIndentedList() {
+    const selection = Lr();
+    if (!yr(selection)) return false
+
+    const nodes = selection.getNodes();
+    for (const node of nodes) {
+      const closestListNode = wt$4(node, lt$2);
+      if (closestListNode && W$4(closestListNode) > 1) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  get isInsideCodeBlock() {
+    const selection = Lr();
+    if (!yr(selection)) return false
+
+    const anchorNode = selection.anchor.getNode();
+    return wt$4(anchorNode, q$1) !== null
   }
 
   get nodeAfterCursor() {
@@ -9901,8 +10057,6 @@ class ToolbarDropdown extends HTMLElement {
 
     this.container.addEventListener("toggle", this.#handleToggle.bind(this));
     this.container.addEventListener("keydown", this.#handleKeyDown.bind(this));
-
-    this.#setTabIndexValues();
   }
 
   disconnectedCallback() {
@@ -9930,14 +10084,14 @@ class ToolbarDropdown extends HTMLElement {
     }
   }
 
-  #handleOpen(trigger) {
-    this.trigger = trigger;
+  #handleOpen() {
     this.#interactiveElements[0].focus();
     this.#setupClickOutsideHandler();
+
+    this.#resetTabIndexValues();
   }
 
   #handleClose() {
-    this.trigger = null;
     this.#removeClickOutsideHandler();
     this.editor.focus();
   }
@@ -9967,15 +10121,19 @@ class ToolbarDropdown extends HTMLElement {
     }
   }
 
-  async #setTabIndexValues() {
+  async #resetTabIndexValues() {
     await nextFrame();
-    this.#interactiveElements.forEach((element) => {
-      element.setAttribute("tabindex", 0);
+    this.#buttons.forEach((element, index) => {
+      element.setAttribute("tabindex", index === 0 ? 0 : "-1");
     });
   }
 
   get #interactiveElements() {
     return Array.from(this.querySelectorAll("button, input"))
+  }
+
+  get #buttons() {
+    return Array.from(this.querySelectorAll("button"))
   }
 }
 
