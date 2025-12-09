@@ -356,28 +356,45 @@ export default class LexicalPromptElement extends HTMLElement {
 
     if (!promptItem) { return }
 
-    const template = promptItem.querySelector("template[type='editor']")
+    const templates = Array.from(promptItem.querySelectorAll("template[type='editor']"))
     const stringToReplace = `${this.trigger}${this.#editorContents.textBackUntil(this.trigger)}`
 
     if (this.hasAttribute("insert-editable-text")) {
-      this.#insertTemplateAsEditableText(template, stringToReplace)
+      this.#insertTemplatesAsEditableText(templates, stringToReplace)
     } else {
-      this.#insertTemplateAsAttachment(promptItem, template, stringToReplace)
+      this.#insertTemplatesAsAttachments(templates, stringToReplace, promptItem.getAttribute("sgid"))
     }
   }
 
-  #insertTemplateAsEditableText(template, stringToReplace) {
+  #insertTemplatesAsEditableText(templates, stringToReplace) {
     this.#editor.update(() => {
-      const nodes = $generateNodesFromDOM(this.#editor, parseHtml(`${template.innerHTML}`))
+      const nodes = templates.map(template => this.#buildEditableTextNode(template))
       this.#editorContents.replaceTextBackUntil(stringToReplace, nodes)
     })
   }
 
-  #insertTemplateAsAttachment(promptItem, template, stringToReplace) {
+  #buildEditableTextNode(template) {
+    return $generateNodesFromDOM(this.#editor, parseHtml(`${template.innerHTML}`))
+  }
+
+  #insertTemplatesAsAttachments(templates, stringToReplace, fallbackSgid = null) {
     this.#editor.update(() => {
-      const attachmentNode = new CustomActionTextAttachmentNode({ sgid: promptItem.getAttribute("sgid"), contentType: `${ATTACHMENT_CONTENT_TYPE_PREFIX}.${this.name}`, innerHtml: template.innerHTML })
-      this.#editorContents.replaceTextBackUntil(stringToReplace, attachmentNode)
+      const attachmentNodes = this.#buildAttachmentNodes(templates)
+      this.#editorContents.replaceTextBackUntil(stringToReplace, attachmentNodes)
     })
+  }
+
+  #buildAttachmentNodes(templates, fallbackSgid = null) {
+    return templates.map(
+      (template) => this.#buildAttachmentNode(
+        template.innerHTML,
+        template.getAttribute("content-type") || `${ATTACHMENT_CONTENT_TYPE_PREFIX}.${this.name}`,
+        template.getAttribute("sgid") || fallbackSgid
+      ))
+  }
+
+  #buildAttachmentNode(innerHtml, contentType, sgid) {
+    return new CustomActionTextAttachmentNode({ sgid, contentType, innerHtml })
   }
 
   get #editorContents() {
