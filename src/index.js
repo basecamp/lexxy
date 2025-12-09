@@ -8,6 +8,7 @@ import "./config/dom_purify"
 import "./elements/toolbar"
 
 // Additional Prism languages need to be imported before the editor is loaded, otherwise they are not highlighted on inital load
+import "prismjs/components/prism-markup-templating"
 import "prismjs/components/prism-ruby"
 import "prismjs/components/prism-php"
 import "prismjs/components/prism-go"
