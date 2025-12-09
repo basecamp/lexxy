@@ -5557,9 +5557,9 @@ class LexicalToolbarElement extends HTMLElement {
       <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 12C0 11.4477 0.447715 11 1 11H23C23.5523 11 24 11.4477 24 12C24 12.5523 23.5523 13 23 13H1C0.447716 13 0 12.5523 0 12Z"/><path d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5C20 6.10457 19.1046 7 18 7H6C4.89543 7 4 6.10457 4 5Z"/><path d="M4 19C4 17.8954 4.89543 17 6 17H18C19.1046 17 20 17.8954 20 19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19Z"/></svg>
       </button>
- 
+
       <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
- 
+
       <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo" data-hotkey="cmd+z ctrl+z">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5.64648 8.26531C7.93911 6.56386 10.7827 5.77629 13.624 6.05535C16.4655 6.33452 19.1018 7.66079 21.0195 9.77605C22.5839 11.5016 23.5799 13.6516 23.8936 15.9352C24.0115 16.7939 23.2974 17.4997 22.4307 17.4997C21.5641 17.4997 20.8766 16.7915 20.7148 15.9401C20.4295 14.4379 19.7348 13.0321 18.6943 11.8844C17.3 10.3464 15.3835 9.38139 13.3174 9.17839C11.2514 8.97546 9.18359 9.54856 7.5166 10.7858C6.38259 11.6275 5.48981 12.7361 4.90723 13.9997H8.5C9.3283 13.9997 9.99979 14.6714 10 15.4997C10 16.3281 9.32843 16.9997 8.5 16.9997H1.5C0.671573 16.9997 0 16.3281 0 15.4997V8.49968C0.000213656 7.67144 0.671705 6.99968 1.5 6.99968C2.3283 6.99968 2.99979 7.67144 3 8.49968V11.0212C3.7166 9.9704 4.60793 9.03613 5.64648 8.26531Z"/></svg>
       </button>
@@ -9827,8 +9827,24 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   #attachToolbar() {
-    if (this.#hasToolbar) {
-      this.toolbarElement.setEditor(this);
+    if (!this.#hasToolbar) return;
+
+    const attach = () => {
+      const toolbar = this.toolbarElement;
+      if (toolbar && typeof toolbar.setEditor === "function") {
+        toolbar.setEditor(this);
+      }
+    };
+
+    attach();
+
+    if (!this.toolbar || typeof this.toolbar.setEditor !== "function") {
+      const toolbarId = this.getAttribute("toolbar");
+      if (toolbarId) {
+        customElements.whenDefined("lexxy-toolbar").then(() => {
+          requestAnimationFrame(attach);
+        });
+      }
     }
   }
 
