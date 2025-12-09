@@ -11,6 +11,7 @@ import { $isCodeNode } from "@lexical/code"
 import { $isLinkNode } from "@lexical/link"
 import { getListType } from "../helpers/lexical_helper"
 import { isSelectionHighlighted } from "../helpers/format_helper"
+import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 
 export default class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
@@ -23,6 +24,7 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   connectedCallback() {
     requestAnimationFrame(() => this.#refreshToolbarOverflow())
+    this.setAttribute("role", "toolbar")
 
     this._resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
     this._resizeObserver.observe(this)
@@ -34,6 +36,7 @@ export default class LexicalToolbarElement extends HTMLElement {
       this._resizeObserver = null
     }
     this.#unbindHotkeys()
+    this.#unbindFocusListeners()
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -47,11 +50,12 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.editor = editorElement.editor
     this.#bindButtons()
     this.#bindHotkeys()
-    this.#setTabIndexValues()
+    this.#resetTabIndexValues()
     this.#setItemPositionValues()
     this.#monitorSelectionChanges()
     this.#monitorHistoryChanges()
     this.#refreshToolbarOverflow()
+    this.#bindFocusListeners()
 
     this.toggleAttribute("connected", true)
   }
@@ -81,7 +85,7 @@ export default class LexicalToolbarElement extends HTMLElement {
       // Keep the focus on the toolbar when using a keyboard to trigger the command
       const isKeyboard = event.detail === 0 || !event.isTrusted
       if (isKeyboard) {
-        $addUpdateTag(SKIP_DOM_SELECTION_TAG);
+        $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       }
 
       const { command, payload } = button.dataset
@@ -121,9 +125,36 @@ export default class LexicalToolbarElement extends HTMLElement {
     return [ ...modifiers, pressedKey ].join("+")
   }
 
-  #setTabIndexValues() {
-    this.#buttons.forEach((button) => {
-      button.setAttribute("tabindex", 0)
+  #bindFocusListeners() {
+    this.editorElement.addEventListener("lexxy:focus", this.#handleFocus.bind(this))
+    this.editorElement.addEventListener("lexxy:blur", this.#handleFocusOut.bind(this))
+    this.addEventListener("focusout", this.#handleFocusOut.bind(this))
+
+    this.addEventListener("keydown", (event) => handleRollingTabIndex(this.#focusableItems, event))
+  }
+
+  #unbindFocusListeners() {
+    this.editorElement.removeEventListener("lexxy:focus", this.#handleFocus.bind(this))
+    this.editorElement.removeEventListener("lexxy:blur", this.#handleFocusOut.bind(this))
+    this.removeEventListener("focusout", this.#handleFocusOut.bind(this))
+
+    this.removeEventListener("keydown", (event) => handleRollingTabIndex(this.#focusableItems, event))
+  }
+
+  #handleFocus() {
+    this.#resetTabIndexValues()
+    this.#focusableItems[0].tabIndex = 0
+  }
+
+  #handleFocusOut() {
+    if (this.contains(document.activeElement)) return
+
+    this.#resetTabIndexValues()
+  }
+
+  #resetTabIndexValues() {
+    this.#focusableItems.forEach((button) => {
+      button.tabIndex = -1
     })
   }
 
@@ -231,6 +262,7 @@ export default class LexicalToolbarElement extends HTMLElement {
 
     const isOverflowing = this.#overflowMenu.children.length > 0
     this.toggleAttribute("overflowing", isOverflowing)
+    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
   }
 
   #compactMenu() {
@@ -280,6 +312,10 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   get #buttons() {
     return Array.from(this.querySelectorAll(":scope > button"))
+  }
+
+  get #focusableItems() {
+    return Array.from(this.querySelectorAll(":scope button, :scope > details > summary"))
   }
 
   get #toolbarItems() {
