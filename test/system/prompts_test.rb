@@ -32,6 +32,18 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_mention_attachment people(:peter)
   end
 
+  test "hasOpenPrompt reports correct status" do
+    assert_not find_editor.open_prompt?
+
+    find_editor.send "1"
+
+    assert find_editor.open_prompt?
+
+    find_editor.send "peter "
+
+    assert_not find_editor.open_prompt?
+  end
+
   test "configure space support in searches" do
     find_editor.send "3"
     find_editor.send "peter johnson"

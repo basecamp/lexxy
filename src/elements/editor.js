@@ -107,6 +107,10 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.isEmpty || this.toString().match(/^\s*$/g) !== null
   }
 
+  get hasOpenPrompt() {
+    return this.querySelector(".lexxy-prompt-menu.lexxy-prompt-menu--visible") !== null
+  }
+
   get isSingleLineMode() {
     return this.hasAttribute("single-line")
   }
