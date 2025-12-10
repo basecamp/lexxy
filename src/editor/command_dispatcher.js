@@ -220,7 +220,7 @@ export class CommandDispatcher {
   }
 
   #registerKeyboardCommands() {
-    this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleListIndentation.bind(this), COMMAND_PRIORITY_NORMAL)
+    this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleTabKey.bind(this), COMMAND_PRIORITY_NORMAL)
   }
 
   #registerDragAndDropHandlers() {
@@ -270,13 +270,22 @@ export class CommandDispatcher {
     this.editor.focus()
   }
 
-  #handleListIndentation(event) {
+  #handleTabKey(event) {
     if (this.selection.isInsideList) {
-      event.preventDefault()
       if (event.shiftKey) {
-        return this.editor.dispatchCommand(OUTDENT_CONTENT_COMMAND, undefined)
+        if (this.selection.isIndentedList) {
+          event.preventDefault()
+          return this.editor.dispatchCommand(OUTDENT_CONTENT_COMMAND, undefined)
+        }
+        return false
       } else {
+        event.preventDefault()
         return this.editor.dispatchCommand(INDENT_CONTENT_COMMAND, undefined)
+      }
+    } else if (this.selection.isInsideCodeBlock) {
+      const selection = $getSelection()
+      if ($isRangeSelection(selection) && selection.isCollapsed()) {
+        return true
       }
     }
     return false
