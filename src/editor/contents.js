@@ -352,9 +352,19 @@ export default class Contents {
   #unwrap(node) {
     const children = node.getChildren()
 
-    children.forEach((child) => {
-      node.insertBefore(child)
-    })
+    if (children.length == 0) {
+      node.insertBefore($createParagraphNode())
+    } else {
+      children.forEach((child) => {
+        if ($isTextNode(child) && child.getTextContent().trim() !== "") {
+          const newParagraph = $createParagraphNode()
+          newParagraph.append(child)
+          node.insertBefore(newParagraph)
+        } else if (!$isLineBreakNode(child)) {
+          node.insertBefore(child)
+        }
+      })
+    }
 
     node.remove()
   }
