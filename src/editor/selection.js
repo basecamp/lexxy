@@ -4,6 +4,8 @@ import {
   KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
   KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, SELECTION_CHANGE_COMMAND
 } from "lexical"
+import { $isListItemNode } from "@lexical/list"
+import { $isCodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
 import { getNonce } from "../helpers/csp_helper"
 import { getNearestListItemNode, isPrintableCharacter } from "../helpers/lexical_helper"
@@ -143,6 +145,45 @@ export default class Selection {
 
     const anchorNode = selection.anchor.getNode()
     return getNearestListItemNode(anchorNode) !== null
+  }
+
+  get isIndentedList() {
+    let isIndented = false
+
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return false
+
+    const nodes = selection.getNodes()
+    for (const node of nodes) {
+      let current = node
+      while (current) {
+        if ($isListItemNode(current)) {
+          const parentList = current.getParent()
+          if (parentList) {
+            const grandparent = parentList.getParent()
+            if (grandparent && $isListItemNode(grandparent)) {
+              isIndented = true
+              break
+            }
+          }
+        }
+        current = current.getParent()
+      }
+      if (isIndented) break
+    }
+
+    return isIndented
+  }
+
+  get isInsideCodeBlock() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return false
+
+    const anchorNode = selection.anchor.getNode()
+    if (!anchorNode.getParent()) return false
+
+    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+    return $isCodeNode(topLevelElement) || selection.hasFormat("code")
   }
 
   get nodeAfterCursor() {
