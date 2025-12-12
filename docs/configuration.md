@@ -55,7 +55,7 @@ Lexxy also supports standard HTML attributes:
 
 ## Global options
 
-The following can only be configured using `Lexxy.configure({ global: ... })`:
+Global options apply to all editors in your app and are configured using `Lexxy.configure({ global: ... })`:
 
 - `attachmentTagName`: The tag name used for [Action Text custom attachments](https://guides.rubyonrails.org/action_text_overview.html#signed-globalid). By default, they will be rendered as `action-text-attachment` tags.
 - `attachmentContentTypeNamespace`: The default content_type namespace for prompts. The default is `actiontext` which will result in `application/vnd.actiontext.[type]`.

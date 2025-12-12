@@ -1,4 +1,5 @@
-import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, createEditor } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { registerPlainText } from "@lexical/plain-text"
@@ -24,8 +25,7 @@ import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Highlighter from "../editor/highlighter"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { HighlightNode } from "../nodes/highlight_node"
-import { TrixTextNode } from "../nodes/trix_text_node"
+import { TrixContentExtension } from "../extensions/trix_content_extension"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -46,11 +46,13 @@ export default class LexicalEditorElement extends HTMLElement {
   connectedCallback() {
     this.id ??= generateDomId("lexxy-editor")
     this.config = new Configuration(this)
+    this.highlighter = new Highlighter(this)
+
     this.editor = this.#createEditor()
+
     this.contents = new Contents(this)
     this.selection = new Selection(this)
     this.clipboard = new Clipboard(this)
-    this.highlighter = new Highlighter(this)
 
     CommandDispatcher.configureFor(this)
     this.#initialize()
@@ -222,20 +224,27 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #createEditor() {
-    this.editorContentElement = this.editorContentElement || this.#createEditorContentElement()
+    this.editorContentElement ||= this.#createEditorContentElement()
 
-    const editor = createEditor({
-      namespace: "LexicalEditor",
-      onError(error) {
-        throw error
+    const editor = buildEditorFromExtensions({
+        name: "lexxy/core",
+        namespace: "Lexxy",
+        theme: theme,
+        nodes: this.#lexicalNodes
       },
-      theme: theme,
-      nodes: this.#lexicalNodes
-    })
+      ...this.#lexicalExtensions
+    )
 
     editor.setRootElement(this.editorContentElement)
 
     return editor
+  }
+
+  get #lexicalExtensions() {
+    return this.supportsRichText ? [
+      this.highlighter.lexicalExtension,
+      TrixContentExtension
+    ] : [ ]
   }
 
   get #lexicalNodes() {
@@ -244,7 +253,6 @@ export default class LexicalEditorElement extends HTMLElement {
     if (this.supportsRichText) {
       nodes.push(
         TrixTextNode,
-        HighlightNode,
         QuoteNode,
         HeadingNode,
         ListNode,
