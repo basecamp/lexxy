@@ -1,11 +1,11 @@
 require "application_system_test_case"
 
-class CodeBlocksTest < ApplicationSystemTestCase
+class CodeHighlightingTest < ApplicationSystemTestCase
   setup do
     visit edit_post_path(posts(:empty))
   end
 
-  test "enter a code block and set a language" do
+  test "ruby code is highlighted in editor and after saving" do
     find_editor.send "def hello_world"
     find_editor.select("dev")
     click_on "Code"
@@ -13,5 +13,11 @@ class CodeBlocksTest < ApplicationSystemTestCase
 
     select "Ruby", from: "lexxy-code-language"
     assert_selector "span.code-token__attr", text: "def"
+
+    click_on "Update Post"
+
+    # Verify the rendered output has syntax highlighting
+    assert_selector "code[data-language='ruby']"
+    assert_selector "code span.token.keyword", text: "def"
   end
 end
