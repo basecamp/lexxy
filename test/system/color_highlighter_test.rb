@@ -1,6 +1,6 @@
 require "application_system_test_case"
 
-class FormatTest < ApplicationSystemTestCase
+class ColorHighlighterTest < ApplicationSystemTestCase
   setup do
     visit edit_post_path(posts(:hello_world))
   end
@@ -24,5 +24,14 @@ class FormatTest < ApplicationSystemTestCase
     find_editor.send " again!"
 
     assert_equal_html "<p>Hello everyone<mark style=\"color: var(--highlight-1);\"> again!</mark></p>", find_editor.value
+  end
+
+  test "color highlighting is preserved after saving" do
+    find_editor.select "everyone"
+    apply_highlight_option "background-color", 1
+
+    click_on "Update Post"
+
+    assert_selector "mark[style='background-color:var(--highlight-bg-1);']", text: "everyone"
   end
 end
