@@ -19,6 +19,11 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return new ActionTextAttachmentUploadNode({ ...serializedNode })
   }
 
+  // Should never run since this is a transient node. Defined to remove console warning.
+  static importDOM() {
+    return null
+  }
+
   constructor({ file, uploadUrl, blobUrlTemplate, editor, progress }, key) {
     super({ contentType: file.type }, key)
     this.file = file
