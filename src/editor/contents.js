@@ -1,6 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
-  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection, HISTORY_MERGE_TAG
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -77,6 +77,11 @@ export default class Contents {
     this.editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
+
+      if ($isRootOrShadowRoot(selection.anchor.getNode())) {
+        selection.insertNodes([ newNodeFn() ])
+        return
+      }
 
       const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
 
@@ -352,9 +357,19 @@ export default class Contents {
   #unwrap(node) {
     const children = node.getChildren()
 
-    children.forEach((child) => {
-      node.insertBefore(child)
-    })
+    if (children.length == 0) {
+      node.insertBefore($createParagraphNode())
+    } else {
+      children.forEach((child) => {
+        if ($isTextNode(child) && child.getTextContent().trim() !== "") {
+          const newParagraph = $createParagraphNode()
+          newParagraph.append(child)
+          node.insertBefore(newParagraph)
+        } else if (!$isLineBreakNode(child)) {
+          node.insertBefore(child)
+        }
+      })
+    }
 
     node.remove()
   }
@@ -368,6 +383,12 @@ export default class Contents {
       if (selectedNodes.length === 0) {
         return
       }
+
+      if ($isRootOrShadowRoot(selectedNodes[0])) {
+        selection.insertNodes([ newNodeFn() ])
+        return
+      }
+
       const topLevelElements = new Set()
       selectedNodes.forEach((node) => {
         const topLevel = node.getTopLevelElementOrThrow()
@@ -438,6 +459,12 @@ export default class Contents {
 
   #wrapCurrentLine(selection, newNodeFn) {
     const anchorNode = selection.anchor.getNode()
+
+    if ($isRootOrShadowRoot(anchorNode)) {
+      selection.insertNodes([ newNodeFn() ])
+      return
+    }
+
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
 
     if (topLevelElement.getTextContent()) {
