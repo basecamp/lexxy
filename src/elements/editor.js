@@ -6,6 +6,7 @@ import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
+import { TableCellNode, TableNode, TableRowNode, registerTablePlugin } from "@lexical/table"
 
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
@@ -222,6 +223,9 @@ export default class LexicalEditorElement extends HTMLElement {
       LinkNode,
       AutoLinkNode,
       HorizontalDividerNode,
+      TableNode,
+      TableCellNode,
+      TableRowNode,
 
       CustomActionTextAttachmentNode,
     ]
@@ -324,8 +328,14 @@ export default class LexicalEditorElement extends HTMLElement {
     this.historyState = createEmptyHistoryState()
     registerHistory(this.editor, this.historyState, 20)
     registerList(this.editor)
+    this.#registerTableComponents()
     this.#registerCodeHiglightingComponents()
     registerMarkdownShortcuts(this.editor, TRANSFORMERS)
+  }
+
+  #registerTableComponents() {
+    registerTablePlugin(this.editor)
+    this.append(createElement("lexxy-table-handle"))
   }
 
   #registerCodeHiglightingComponents() {

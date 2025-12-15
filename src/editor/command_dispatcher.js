@@ -12,11 +12,18 @@ import {
   REDO_COMMAND,
   UNDO_COMMAND
 } from "lexical"
-
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
+import { 
+  INSERT_TABLE_COMMAND,
+  $insertTableRowAtSelection,
+  $insertTableColumnAtSelection,
+  $deleteTableRowAtSelection,
+  $deleteTableColumnAtSelection
+} from "@lexical/table"
+
 import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
@@ -36,6 +43,15 @@ const COMMANDS = [
   "insertCodeBlock",
   "insertHorizontalDivider",
   "uploadAttachments",
+
+  "insertTable",
+  "insertTableRowAfter",
+  "insertTableRowBefore",
+  "insertTableColumnAfter",
+  "insertTableColumnBefore",
+  "deleteTableRow",
+  "deleteTableColumn",
+
   "undo",
   "redo"
 ]
@@ -196,6 +212,46 @@ export class CommandDispatcher {
     this.editorElement.appendChild(input) // Append and remove just for the sake of making it testable
     input.click()
     setTimeout(() => input.remove(), 1000)
+  }
+
+  dispatchInsertTable(payload) {
+    this.editor.dispatchCommand(INSERT_TABLE_COMMAND, payload)
+  }
+  
+  dispatchInsertTableRowAfter() {
+    this.editor.update(() => {
+      $insertTableRowAtSelection(true)
+    })
+  }
+  
+  dispatchInsertTableRowBefore() {
+    this.editor.update(() => {
+      $insertTableRowAtSelection(false)
+    })
+  }
+  
+  dispatchInsertTableColumnAfter() {
+    this.editor.update(() => {
+      $insertTableColumnAtSelection(true)
+    })
+  }
+  
+  dispatchInsertTableColumnBefore() {
+    this.editor.update(() => {
+      $insertTableColumnAtSelection(false)
+    })
+  }
+  
+  dispatchDeleteTableRow() {
+    this.editor.update(() => {
+      $deleteTableRowAtSelection()
+    })
+  }
+  
+  dispatchDeleteTableColumn() {
+    this.editor.update(() => {
+      $deleteTableColumnAtSelection()
+    })
   }
 
   dispatchUndo() {

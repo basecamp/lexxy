@@ -6,6 +6,7 @@ import "./elements/toolbar"
 import "./elements/editor"
 import "./elements/dropdown/link"
 import "./elements/dropdown/highlight"
+import "./elements/dropdown/table"
 import "./elements/prompt"
 import "./elements/code_language_picker"
 
