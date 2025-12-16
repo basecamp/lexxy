@@ -214,6 +214,12 @@
     }
 
     p:last-child { margin-block-end: 0; }
+
+    .lexxy-content__tableCellSelected,
+    .lexxy-content__tableSelection {
+      background-color: var(--lexxy-color-selected-hover);
+      caret-color: transparent;
+    }
   }
 }
 

@@ -462,19 +462,110 @@
   }
 }
 
-:where(.lexxy-table-handle) {
-  background-color: var(--lexxy-color-ink-lighter);
-  block-size: 4px;
-  border-radius: 2px;
-  margin-top: 2px;
-  opacity: 0.6;
-  pointer-events: auto;
-  transition: opacity 0.2s ease;
+:where(.lexxy-table-handle-buttons) {
+  background-color: var(--lexxy-color-ink);
+  border-radius: 1ch;
+  color: var(--lexxy-color-ink-inverted);
+  display: none;
+  flex-direction: row;
+  font-size: var(--lexxy-text-small);
+  gap: 0;
+  position: absolute;
+  transform: translate(-50%, -110%);
   z-index: 10;
-}
 
-:where(.lexxy-table-handle:hover) {
-  opacity: 1;
+  .lexxy-table-control {
+    align-items: center;
+    border-inline-end: 1px solid var(--lexxy-color-ink-medium);
+    display: flex;
+    flex-direction: row;
+    gap: 0.5ch;
+    padding: 0.5ch;
+    padding-inline-start: 2ch;
+
+    &:last-child {
+      border-inline-end: 0;
+      padding-inline-start: 0.5ch;
+    }
+
+    button {
+      aspect-ratio: 1 / 1;
+      align-items: center;
+      background-color: transparent;
+      border: 0;
+      color: var(--lexxy-color-ink-inverted);
+      cursor: pointer;
+      display: flex;
+      font-weight: bold;
+      justify-content: center;
+      line-height: 1;
+      min-block-size: 2lh;
+      min-inline-size: 2lh;
+      padding: 0;
+
+      &:hover {
+        background-color: var(--lexxy-color-ink-medium);
+      }
+
+      svg {
+        block-size: 1em;
+        inline-size: 1em;
+        fill: currentColor;
+      }
+    }
+  }
+
+  .lexxy-table-control__more-menu {
+    padding: 0.5ch;
+    position: relative;
+    
+    summary {
+      align-items: center;
+      background: transparent;
+      border: 0;
+      box-sizing: border-box;
+      display: flex;
+      justify-content: center;
+      list-style: none;
+      min-block-size: 2lh;
+      min-inline-size: 2lh;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+
+      &:hover {
+        background: var(--lexxy-color-ink-medium);
+      }
+    }
+
+    .lexxy-table-control__more-menu-details {
+      background: var(--lexxy-color-ink);
+      border-radius: var(--lexxy-radius);
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      inset-block-start: 100%;
+      inset-inline-start: 0;
+      padding: 0;
+      position: absolute;
+
+      button {
+        aspect-ratio: unset;
+        align-items: center;
+        display: flex;
+        flex-direction: row;
+        font-weight: normal;
+        gap: 0.5ch;
+        justify-content: flex-start;
+        padding: 0.5ch 2ch;
+        white-space: nowrap;
+      }
+    }
+  }
 }
 
 /* Prompt

@@ -6,7 +6,7 @@ import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
-import { TableCellNode, TableNode, TableRowNode, registerTablePlugin } from "@lexical/table"
+import { TableCellNode, TableNode, TableRowNode, registerTablePlugin, registerTableSelectionObserver } from "@lexical/table"
 
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
@@ -191,6 +191,9 @@ export default class LexicalEditorElement extends HTMLElement {
     this.#attachToolbar()
     this.#loadInitialValue()
     this.#resetBeforeTurboCaches()
+
+    this.removeTableSelectionObserver = registerTableSelectionObserver(this.editor, true);
+
   }
 
   #createEditor() {
@@ -335,7 +338,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #registerTableComponents() {
     registerTablePlugin(this.editor)
-    this.append(createElement("lexxy-table-handle"))
+    this.append(createElement("lexxy-table-handler"))
   }
 
   #registerCodeHiglightingComponents() {
