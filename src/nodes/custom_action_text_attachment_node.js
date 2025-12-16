@@ -71,6 +71,10 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     return true
   }
 
+  getTextContent() {
+    return this.createDOM().textContent.trim() || `[${this.contentType}]`
+  }
+
   isInline() {
     return true
   }

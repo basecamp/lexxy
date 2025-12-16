@@ -106,6 +106,10 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return true
   }
 
+  getTextContent() {
+    return `[${ this.caption || this.fileName }]\n\n`
+  }
+
   isInline() {
     return false
   }

@@ -8,10 +8,26 @@ class EditorHandler
     @selector = selector
   end
 
+  def value
+    evaluate_script "this.value"
+  end
+
   def value=(value)
     editor_element.set value
-    page.execute_script("arguments[0].value = '#{value}'", editor_element)
+    editor_element.execute_script "this.value = `#{value}`"
     sleep 0.1
+  end
+
+  def plain_text_value
+    evaluate_script "this.toString()"
+  end
+
+  def empty?
+    evaluate_script "this.isEmpty"
+  end
+
+  def blank?
+    evaluate_script "this.isBlank"
   end
 
   def send(*keys)

@@ -99,6 +99,14 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.dataset.blobUrlTemplate
   }
 
+  get isEmpty() {
+    return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
+  }
+
+  get isBlank() {
+    return this.isEmpty || this.toString().match(/^\s*$/g) !== null
+  }
+
   get isSingleLineMode() {
     return this.hasAttribute("single-line")
   }
@@ -140,6 +148,16 @@ export default class LexicalEditorElement extends HTMLElement {
       // fails because no root node detected. This is a workaround to deal with the issue.
       requestAnimationFrame(() => this.editor?.update(() => { }))
     })
+  }
+
+  toString() {
+    if (!this.cachedStringValue) {
+      this.editor?.getEditorState().read(() => {
+        this.cachedStringValue = $getRoot().getTextContent()
+      })
+    }
+
+    return this.cachedStringValue
   }
 
   #parseHtmlIntoLexicalNodes(html) {
@@ -247,7 +265,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
     this.internals.setFormValue(html)
     this._internalFormValue = html
-    this.#validationTextArea.value = this.#isEmpty ? "" : html
+    this.#validationTextArea.value = this.isEmpty ? "" : html
 
     if (changed) {
       dispatch(this, "lexxy:change")
@@ -273,11 +291,16 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #synchronizeWithChanges() {
     this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
-      this.cachedValue = null
+      this.#clearCachedValues()
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
       this.#setValidity()
     }))
+  }
+
+  #clearCachedValues() {
+    this.cachedValue = null
+    this.cachedStringValue = null
   }
 
   #addUnregisterHandler(handler) {
@@ -357,7 +380,8 @@ export default class LexicalEditorElement extends HTMLElement {
 
     this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
-        console.debug("HTML: ", this.value)
+        console.debug("HTML: ", this.value, "String:", this.toString())
+        console.debug("empty", this.isEmpty, "blank", this.isBlank)
       })
     }))
   }
@@ -386,11 +410,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #toggleEmptyStatus() {
-    this.classList.toggle("lexxy-editor--empty", this.#isEmpty)
-  }
-
-  get #isEmpty() {
-    return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
+    this.classList.toggle("lexxy-editor--empty", this.isEmpty)
   }
 
   #setValidity() {
