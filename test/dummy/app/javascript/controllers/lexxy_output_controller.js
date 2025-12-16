@@ -4,7 +4,7 @@ import prettier from "prettier"
 import htmlParser from "prettier/parser-html"
 
 export default class extends Controller {
-  static targets = [ "editor", "output" ]
+  static targets = [ "editor", "outputHtml", "outputText" ]
 
   connect() {
     this.refresh()
@@ -20,8 +20,14 @@ export default class extends Controller {
       useTabs: false
     })
 
+    const escaped = document.createElement("textarea")
+    escaped.innerText = this.editorTarget.toString().trim()
+    this.outputTextTarget.innerHTML = escaped.innerHTML
+    escaped.remove()
+
     formattedCode = formattedCode.replace(/<br\s*\/>/g, '<br/>') // Remove space before self-closing slash for br tags
     const highlightedCode = Prism.highlight(formattedCode, Prism.languages.html, 'html')
-    this.outputTarget.innerHTML = `<pre><code class="language-html">${highlightedCode}</code></pre>`
+
+    this.outputHtmlTarget.innerHTML = `<code class="language-html">${highlightedCode}</code>`
   }
 }
