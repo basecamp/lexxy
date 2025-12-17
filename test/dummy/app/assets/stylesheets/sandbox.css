@@ -66,6 +66,7 @@ main {
 
   display: grid;
   min-height: 100dvh;
+  grid-template-rows: auto 1fr;
 
   @media (min-width: 800px) {
     grid-template-columns: repeat(2, 1fr);
@@ -73,6 +74,10 @@ main {
 }
 
 section {
+  display: contents;
+}
+
+form, aside {
   min-inline-size: 0;
   padding: var(--sandbox-padding);
 

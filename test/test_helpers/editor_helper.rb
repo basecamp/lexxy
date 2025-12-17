@@ -1,5 +1,10 @@
 module EditorHelper
-  def find_editor(selector = "lexxy-editor")
+  def find_editor(selector = "lexxy-editor:not([plain-text])")
+    @handlers_by_selector ||= {}
+    @handlers_by_selector[selector] ||= EditorHandler.new(page, selector)
+  end
+
+  def find_plain_editor(selector = "lexxy-editor[plain-text]")
     @handlers_by_selector ||= {}
     @handlers_by_selector[selector] ||= EditorHandler.new(page, selector)
   end

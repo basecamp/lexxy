@@ -12,7 +12,7 @@ class EventsTest < ApplicationSystemTestCase
     find_editor.focus
     assert_dispatched_event "lexxy:focus"
 
-    page.find("input[name='post[title]']").click
+    page.find("h1").click
     assert_dispatched_event "lexxy:blur"
   end
 

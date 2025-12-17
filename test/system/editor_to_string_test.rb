@@ -41,7 +41,7 @@ class EditorValueMethodsTest < ApplicationSystemTestCase
     find_editor.send "1"
     click_on_prompt "Peter Johnson"
 
-    assert_editor_plain_text "Peter Johnson "
+    assert_editor_plain_text "@PJ "
   end
 
   test "toString with mixed content includes all text" do
@@ -51,7 +51,7 @@ class EditorValueMethodsTest < ApplicationSystemTestCase
     find_editor.send :backspace
     find_editor.send ". How are you?"
 
-    assert_editor_plain_text "Hello, Peter Johnson. How are you?"
+    assert_editor_plain_text "Hello, @PJ. How are you?"
   end
 
   test "toString demo value" do

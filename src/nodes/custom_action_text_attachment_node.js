@@ -34,7 +34,8 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
             nodes.push(new CustomActionTextAttachmentNode({
               sgid: attachment.getAttribute("sgid"),
               innerHtml: JSON.parse(content),
-              contentType: attachment.getAttribute("content-type")
+              contentType: attachment.getAttribute("content-type"),
+              textContent: attachment.getAttribute("text-content")
             }))
 
             nodes.push($createTextNode(" "))
@@ -47,16 +48,17 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     }
   }
 
-  constructor({ sgid, contentType, innerHtml }, key) {
+  constructor({ sgid, contentType, innerHtml, textContent }, key) {
     super(key)
 
     this.sgid = sgid
     this.contentType = contentType || "application/vnd.actiontext.unknown"
     this.innerHtml = innerHtml
+    this.textContent = textContent
   }
 
   createDOM() {
-    const figure = createElement("action-text-attachment", { "content-type": this.contentType, "data-lexxy-decorator": true })
+    const figure = createElement("action-text-attachment", { "content-type": this.contentType, "data-lexxy-decorator": true, "text-content": this.textContent })
 
     figure.addEventListener("click", (event) => {
       dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() })
@@ -83,7 +85,8 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     const attachment = createElement("action-text-attachment", {
       sgid: this.sgid,
       content: JSON.stringify(this.innerHtml),
-      "content-type": this.contentType
+      "content-type": this.contentType,
+      "text-content": this.textContent,
     })
 
     return { element: attachment }
@@ -95,11 +98,16 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
       version: 1,
       sgid: this.sgid,
       contentType: this.contentType,
-      innerHtml: this.innerHtml
+      innerHtml: this.innerHtml,
+      textContent: this.textContent
     }
   }
 
   decorate() {
     return null
+  }
+
+  getTextContent() {
+    return this.textContent
   }
 }

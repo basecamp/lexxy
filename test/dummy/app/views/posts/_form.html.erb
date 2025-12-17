@@ -5,7 +5,9 @@
   action: "lexxy:focus->events-logger#log lexxy:blur->events-logger#log lexxy:change->events-logger#log lexxy:insert-link->events-logger#log lexxy:insert-link->unfurl-link#unfurl lexxy:file-accept->file-acceptance#acceptFile" } do |form| %>
   <div>
     <%= form.label :title, style: "display: block" %>
-    <%= form.text_field :title %>
+    <%= form.rich_text_area :title, rows: 1, "plain-text": true, "single-line": true, required: true do %>
+      <%= render "prompts" %>
+    <% end %>
   </div>
 
   <div>
@@ -13,15 +15,7 @@
     <%= form.rich_text_area :body, placeholder: "Write something...",
           attachments: (params[:attachments_disabled] != "true"),
           toolbar: params[:toolbar_disabled] ? "false" : nil, required: true do %>
-      <lexxy-prompt trigger="1" empty-results="No results"  name="mention">
-        <%= render partial: "people/prompt_item", collection: Person.all, as: :person %>
-      </lexxy-prompt>
-
-      <lexxy-prompt trigger="2" src="<%= people_path %>" name="mention">
-      </lexxy-prompt>
-
-      <lexxy-prompt trigger="3" src="<%= people_path %>" name="mention" remote-filtering insert-editable-text supports-space-in-searches>
-      </lexxy-prompt>
+      <%= render "prompts" %>
     <% end %>
 
     <% if params[:refresh].present? %>

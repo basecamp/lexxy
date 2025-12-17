@@ -244,6 +244,17 @@
     "@lexical/utils" "0.38.2"
     lexical "0.38.2"
 
+"@lexical/plain-text@^0.38.2":
+  version "0.38.2"
+  resolved "https://registry.yarnpkg.com/@lexical/plain-text/-/plain-text-0.38.2.tgz#4fff8722a911b39470be8ad85646a0d519f25455"
+  integrity sha512-xRYNHJJFCbaQgr0uErW8Im2Phv1nWHIT4VSoAlBYqLuVGZBD4p61dqheBwqXWlGGJFk+MY5C5URLiMicgpol7A==
+  dependencies:
+    "@lexical/clipboard" "0.38.2"
+    "@lexical/dragon" "0.38.2"
+    "@lexical/selection" "0.38.2"
+    "@lexical/utils" "0.38.2"
+    lexical "0.38.2"
+
 "@lexical/rich-text@0.38.2", "@lexical/rich-text@^0.38.2":
   version "0.38.2"
   resolved "https://registry.yarnpkg.com/@lexical/rich-text/-/rich-text-0.38.2.tgz#a840012b4984fe0a021e2848943f257279d6c1a2"

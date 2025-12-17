@@ -1,6 +1,7 @@
 import { $addUpdateTag, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, createEditor } from "lexical"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
+import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
@@ -107,6 +108,10 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.isEmpty || this.toString().match(/^\s*$/g) !== null
   }
 
+  get isPlainTextMode() {
+    return this.hasAttribute("plain-text")
+  }
+
   get isSingleLineMode() {
     return this.hasAttribute("single-line")
   }
@@ -206,6 +211,10 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #lexicalNodes() {
+    if (this.isPlainTextMode) {
+      return [CustomActionTextAttachmentNode]
+    }
+
     const nodes = [
       TrixTextNode,
       HighlightNode,
@@ -316,12 +325,16 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #registerComponents() {
-    registerRichText(this.editor)
+    if (this.isPlainTextMode) {
+      registerPlainText(this.editor)
+    } else {
+      registerRichText(this.editor)
+      registerList(this.editor)
+      this.#registerCodeHiglightingComponents()
+      registerMarkdownShortcuts(this.editor, TRANSFORMERS)
+    }
     this.historyState = createEmptyHistoryState()
     registerHistory(this.editor, this.historyState, 20)
-    registerList(this.editor)
-    this.#registerCodeHiglightingComponents()
-    registerMarkdownShortcuts(this.editor, TRANSFORMERS)
   }
 
   #registerCodeHiglightingComponents() {
@@ -398,7 +411,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #hasToolbar() {
-    return this.getAttribute("toolbar") !== "false"
+    return !this.isPlainTextMode && this.getAttribute("toolbar") !== "false"
   }
 
   #createDefaultToolbar() {

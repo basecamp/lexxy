@@ -134,7 +134,7 @@ class EditorHandler
 
   private
     def editor_element
-      page.find(selector)
+      page.find(selector, match: :first)
     end
 
     def content_element

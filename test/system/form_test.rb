@@ -5,6 +5,8 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     visit posts_path
     click_on "New post"
 
+    find_plain_editor.send "Test"
+
     find_editor.send "Hello"
     find_editor.send :enter
     find_editor.send "there"
@@ -34,6 +36,8 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     find_editor.send "This"
     click_on "Reset"
     find_editor.send "That"
+
+    find_plain_editor.send "Test"
 
     click_on "Create Post"
     click_on "Edit this post"

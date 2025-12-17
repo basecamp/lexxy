@@ -1,0 +1,9 @@
+<lexxy-prompt trigger="1" empty-results="No results"  name="mention">
+  <%= render partial: "people/prompt_item", collection: Person.all, as: :person %>
+</lexxy-prompt>
+
+<lexxy-prompt trigger="2" src="<%= people_path %>" name="mention">
+</lexxy-prompt>
+
+<lexxy-prompt trigger="3" src="<%= people_path %>" name="mention" remote-filtering insert-editable-text supports-space-in-searches>
+</lexxy-prompt>

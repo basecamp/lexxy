@@ -55,6 +55,12 @@
   action-text-attachment {
     cursor: pointer;
   }
+
+  &[single-line] .lexxy-editor__content {
+    text-wrap: nowrap !important;
+    overflow-x: scroll;
+    scrollbar-width: none; 
+  }
 }
 
 /* Placeholder */
