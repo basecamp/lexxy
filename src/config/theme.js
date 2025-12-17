@@ -6,8 +6,10 @@ export default {
     underline: "lexxy-content__underline",
     highlight: "lexxy-content__highlight"
   },
-  tableCellSelected: 'lexxy-content__tableCellSelected',
-  tableSelection: 'lexxy-content__tableSelection',
+  tableCell: "lexxy-content__table-cell",
+  tableCellHeader: "lexxy-content__table-cell--header",
+  tableCellSelected: "lexxy-content__table-cell--selected",
+  tableSelection: "lexxy-content__table--selection",
   list: {
     nested: {
       listitem: "lexxy-nested-listitem",

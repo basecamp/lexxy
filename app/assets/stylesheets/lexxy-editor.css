@@ -438,30 +438,25 @@
 
 :where(.lexxy-table-handle-buttons) {
   --button-size: 2.5lh;
-
-  background-color: var(--lexxy-color-ink);
-  border-radius: 0.75ch;
   color: var(--lexxy-color-ink-inverted);
   display: none;
   flex-direction: row;
   font-size: var(--lexxy-text-small);
-  gap: 0;
+  gap: 0.25ch;
   line-height: 1;
   position: absolute;
-  transform: translate(-50%, -110%);
+  transform: translate(-50%, -120%);
   z-index: 10;
 
   .lexxy-table-control {
     align-items: center;
-    border-inline-end: 1px solid var(--lexxy-color-ink-medium);
+    background-color: var(--lexxy-color-ink);
+    border-radius: 0.75ch;
     display: flex;
     flex-direction: row;
-    gap: 0.5ch;
+    gap: 1ch;
     padding: 2px;
-
-    &:last-child {
-      border-inline-end: 0;
-    }
+    white-space: nowrap;
 
     button {
       aspect-ratio: 1 / 1;
@@ -527,15 +522,21 @@
     }
 
     .lexxy-table-control__more-menu-details {
-      background: var(--lexxy-color-ink);
-      border-radius: var(--lexxy-radius);
       display: flex;
       flex-direction: column;
-      gap: 0;
+      gap: 0.25ch;
       inset-block-start: 105%;
       inset-inline-start: 0;
       padding: 0;
       position: absolute;
+
+      .lexxy-table-control__more-menu-section {
+        background: var(--lexxy-color-ink);
+        border-radius: 0.75ch;
+        display: flex;
+        flex-direction: column;
+        padding: 2px;
+      }
 
       button {
         aspect-ratio: unset;
@@ -543,13 +544,20 @@
         display: flex;
         flex-direction: row;
         font-weight: normal;
-        gap: 0.5ch;
+        gap: 1ch;
         justify-content: flex-start;
         padding: 0.5ch 2ch;
+        padding-inline-start: 1ch;
         white-space: nowrap;
 
         span {
           display: inline-block;
+        }
+
+        svg {
+          block-size: 1.25lh;
+          inline-size: 1.25lh;
+          fill: currentColor;
         }
       }
     }

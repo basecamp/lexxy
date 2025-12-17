@@ -208,7 +208,7 @@
       outline-offset: var(--lexxy-focus-ring-offset);
     }
 
-    th, td {
+    .lexxy-content__table-cell {
       border: 1px solid var(--lexxy-color-ink-lighter);
       padding: 1ch;
       text-align: start;
@@ -219,17 +219,18 @@
       }
     }
 
-    th {
+    .lexxy-content__table-cell--header {
       background-color: var(--lexxy-color-ink-lightest);
+      font-weight: bold;
     }
 
-    &.lexxy-content__tableSelection {
+    &.lexxy-content__table--selection {
       ::selection {
         background: transparent;
       }
     }
 
-    .lexxy-content__tableCellSelected {
+    .lexxy-content__table-cell--selected {
       background-color: highlight;
       border-color: highlight;
     }

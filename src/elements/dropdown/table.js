@@ -11,12 +11,22 @@ export class TableDropdown extends ToolbarDropdown {
     this.#setUpButtons()
   }
 
-  #setUpButtons() {
-    this.#createTableButtons()
+  get #withHeaders() {
+    return this.querySelector("input[type='checkbox']").checked
   }
 
-  #createTableButtons() {
+  get #cells() {
+    return this.querySelectorAll("button")
+  }
+
+  get #activeCells() {
+    return this.querySelectorAll("button.active")
+  }
+
+  #setUpButtons() {
     const tableBlock = this.querySelector(".lexxy-editor__table-create .lexxy-editor__table-buttons")
+    if (!tableBlock) return
+    
     for (let i = 1; i <= DEFAULT_ROWS; i++) {
       const row = document.createElement("div")
       for (let j = 1; j <= DEFAULT_COLUMNS; j++) {
@@ -31,40 +41,28 @@ export class TableDropdown extends ToolbarDropdown {
     }
   }
 
-  get #withHeaders() {
-    return this.querySelector("input[type='checkbox']").checked
-  }
+  #buttonHover(button) {
+    const row = parseInt(button.dataset.rows)
+    const col = parseInt(button.dataset.columns)
 
-  get #buttons() {
-    return this.querySelectorAll("button")
-  }
+    this.#cells.forEach(cell => {
+      const cellRow = parseInt(cell.dataset.rows)
+      const cellCol = parseInt(cell.dataset.columns)
 
-  get #activeButtons() {
-    return this.querySelectorAll("button.active")
-  }
-
-  #buttonHover(btn) {
-    const row = parseInt(btn.dataset.rows);
-    const col = parseInt(btn.dataset.columns);
-    
-    this.#buttons.forEach(b => {
-      const bRow = parseInt(b.dataset.rows);
-      const bCol = parseInt(b.dataset.columns);
-      
-      if (bRow < row && bCol <= col || (bRow === row && bCol <= col)) {
-        b.classList.add("active")
+      if (cellRow < row && cellCol <= col || (cellRow === row && cellCol <= col)) {
+        cell.classList.add("active")
       }
     })
   }
 
-  #setupButtonHover(btn) {
-      btn.addEventListener("mouseenter", () => {
-        this.#buttonHover(btn)
+  #setupButtonHover(button) {
+      button.addEventListener("mouseenter", () => {
+        this.#buttonHover(button)
       })
       
-      btn.addEventListener("mouseleave", () => {
-        this.#activeButtons.forEach(b => 
-          b.classList.remove("active")
+      button.addEventListener("mouseleave", () => {
+        this.#activeCells.forEach(cell => 
+          cell.classList.remove("active")
         )
       })
   }
@@ -84,13 +82,3 @@ export class TableDropdown extends ToolbarDropdown {
 }
 
 customElements.define("lexxy-table-dropdown", TableDropdown)
-
-/*
-  <button data-command="insertTable">Insert a table</button>
-  <button data-command="insertTableRowAfter">Insert a row after</button>
-  <button data-command="insertTableRowBefore">Insert a row before</button>
-  <button data-command="insertTableColumnAfter">Insert a column after</button>
-  <button data-command="insertTableColumnBefore">Insert a column before</button>
-  <button data-command="deleteTableRow">Delete a row</button>
-  <button data-command="deleteTableColumn">Delete a column</button>
-*/

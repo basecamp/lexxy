@@ -7,7 +7,7 @@ import { $isListItemNode, $isListNode } from "@lexical/list"
 import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode } from "@lexical/code"
 import { $isLinkNode } from "@lexical/link"
-import { $isTableCellNode } from "@lexical/table"
+import { $getTableCellNodeFromLexicalNode } from "@lexical/table"
 import { getListType } from "../helpers/lexical_helper"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 
@@ -161,7 +161,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     const isInCode = $isCodeNode(topLevelElement) || selection.hasFormat("code")
     const isInList = this.#isInList(anchorNode)
     const listType = getListType(anchorNode)
-    const isInTable = $isTableCellNode(topLevelElement)
+    const isInTable = $getTableCellNodeFromLexicalNode(anchorNode) !== null
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
@@ -346,7 +346,7 @@ export default class LexicalToolbarElement extends HTMLElement {
       </button>
 
 
-      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown" open>
+      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" name="table" title="Table" title="Insert a table">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.2041 2.01074C21.2128 2.113 22 2.96435 22 4V20L21.9893 20.2041C21.8938 21.1457 21.1457 21.8938 20.2041 21.9893L20 22H4C2.96435 22 2.113 21.2128 2.01074 20.2041L2 20V4C2 2.89543 2.89543 2 4 2H20L20.2041 2.01074ZM4 13V20H11V13H4ZM13 13V20H20V13H13ZM4 11H11V4H4V11ZM13 11H20V4H13V11Z"/></svg>
         </summary>
