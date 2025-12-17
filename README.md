@@ -142,15 +142,56 @@ Under the hood, this will insert a `<lexxy-editor>` tag, that will be a first-cl
 <lexxy-editor name="post[body]"...>...</lexxy-editor>
 ```
 
+You can configure editors in two ways: using `Lexxy.configure` and element attributes.
+
+```js
+import * as Lexxy from "lexxy"
+
+// overriding default options will affect all editors
+Lexxy.configure({
+  default: {
+    toolbar: false
+  }
+})
+<lexxy-editor></lexxy-editor>
+
+// you can also create new presets, which will extend the default preset
+Lexxy.configure({
+  simple: {
+    attachments: false
+  }
+})
+<lexxy-editor preset="simple"></lexxy-editor>
+
+// you can override specific options with attributes on editor elements
+<lexxy-editor preset="simple" attachments="true"></lexxy-editor>
+
+// finally, some options can only be configured globally
+Lexxy.configure({
+  global: {
+    attachmentTagName: "bc-attachment"
+  }
+})
+```
+
 ## Options
 
-The `<lexxy-editor>` element supports these options:
+Editors support the following options, configurable using presets and element attributes:
 
+- `toolbar`: Pass `false` to disable the toolbar entirely. By default, the toolbar is bootstrapped and displayed above the editor. Use the `toolbartarget` element attribute to render in an external element.
+- `attachments`: Pass `false` to disable attachments completely. By default, attachments are supported, including paste and Drag & Drop support.
+- `markdown`: Pass `false` to disable Markdown support.
+- `multiline`: Pass `false` to force single line editing.
+
+In addition, the `<lexxy-editor>` element supports these attributes:
+
+- `toolbartarget`: Pass an element ID to render the toolbar in an external element. By default, the toolbar is bootstrapped and displayed above the editor.
 - `placeholder`: Text displayed when the editor is empty.
-- `toolbar`: Pass `"false"` to disable the toolbar entirely, or pass an element ID to render the toolbar in an external element. By default, the toolbar is bootstrapped and displayed above the editor.
-- `attachments`: Pass `"false"` to disable attachments completely. By default, attachments are supported, including paste and Drag & Drop support.
+- Lexxy uses the `ElementInternals` API to participate in HTML forms as any standard control. This means that you can use standard HTML attributes like `name`, `value`, `required`, `disabled`, etc.
 
-Lexxy uses the `ElementInternals` API to participate in HTML forms as any standard control. This means that you can use standard HTML attributes like `name`, `value`, `required`, `disabled`, etc.
+Finally, the following can only be configured using `Lexxy.configure({ global: ... })`:
+
+- `attachmentTagName`: The tag name used for [Action Text custom attachments](https://guides.rubyonrails.org/action_text_overview.html#signed-globalid). By default, they will be rendered as `action-text-attachment` tags.
 
 ## Prompts
 

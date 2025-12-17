@@ -1,4 +1,9 @@
-
+<% if tag_name = params[:attachment_tag_name] %>
+  <script type="module">
+    import * as Lexxy from "lexxy"
+    Lexxy.configure({ global: { attachmentTagName: "<%= tag_name %>" }})
+  </script>
+<% end %>
 
 <%= form_with model: post, data: { controller: "events-logger file-acceptance unfurl-link",
   file_acceptance_type_value: params[:attachment_type],
@@ -9,10 +14,15 @@
   </div>
 
   <div>
+    <div id="external_toolbar"></div>
+
     <%= form.label :body, style: "display: block" %>
     <%= form.rich_text_area :body, placeholder: "Write something...",
           attachments: (params[:attachments_disabled] != "true"),
-          toolbar: params[:toolbar_disabled] ? "false" : nil, required: true do %>
+          markdown: params[:markdown_disabled] ? "false" : nil,
+          multiline: params[:multiline_disabled] ? "false" : nil,
+          toolbar: params[:toolbar_disabled] ? "false" : nil,
+          toolbartarget: params[:toolbar_external] ? "external_toolbar" : nil, required: true do %>
       <lexxy-prompt trigger="1" empty-results="No results"  name="mention">
         <%= render partial: "people/prompt_item", collection: Person.all, as: :person %>
       </lexxy-prompt>
