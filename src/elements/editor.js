@@ -7,6 +7,7 @@ import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 
+import lexxyConfig from "../config/lexxy"
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
@@ -15,6 +16,7 @@ import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
 import LexicalToolbar from "./toolbar"
+import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Highlighter from "../editor/highlighter"
@@ -40,6 +42,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
   connectedCallback() {
     this.id ??= generateDomId("lexxy-editor")
+    this.config = new Configuration(this)
     this.editor = this.#createEditor()
     this.contents = new Contents(this)
     this.selection = new Selection(this)
@@ -108,11 +111,11 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get isSingleLineMode() {
-    return this.hasAttribute("single-line")
+    return this.config.get("singleLine")
   }
 
   get supportsAttachments() {
-    return this.getAttribute("attachments") !== "false"
+    return this.config.get("attachments")
   }
 
   get contentTabIndex() {
@@ -126,7 +129,7 @@ export default class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
+        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null), { additionalAllowedTags: [ lexxyConfig.get("global.attachmentTagName") ] })
       })
     }
 
@@ -321,7 +324,9 @@ export default class LexicalEditorElement extends HTMLElement {
     registerHistory(this.editor, this.historyState, 20)
     registerList(this.editor)
     this.#registerCodeHiglightingComponents()
-    registerMarkdownShortcuts(this.editor, TRANSFORMERS)
+    if (this.config.get("markdown")) {
+      registerMarkdownShortcuts(this.editor, TRANSFORMERS)
+    }
   }
 
   #registerCodeHiglightingComponents() {
@@ -398,7 +403,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #hasToolbar() {
-    return this.getAttribute("toolbar") !== "false"
+    return Boolean(this.config.get("toolbar"))
   }
 
   #createDefaultToolbar() {
