@@ -8,10 +8,26 @@ class EditorHandler
     @selector = selector
   end
 
+  def value
+    evaluate_script "this.value"
+  end
+
   def value=(value)
     editor_element.set value
-    page.execute_script("arguments[0].value = '#{value}'", editor_element)
+    editor_element.execute_script "this.value = `#{value}`"
     sleep 0.1
+  end
+
+  def plain_text_value
+    evaluate_script "this.toString()"
+  end
+
+  def empty?
+    evaluate_script "this.isEmpty"
+  end
+
+  def blank?
+    evaluate_script "this.isBlank"
   end
 
   def send(*keys)
@@ -22,21 +38,21 @@ class EditorHandler
   def send_key(key)
     simulate_first_interaction_if_needed
 
-    page.execute_script <<~JS, content_element
+    content_element.execute_script <<~JS
       const event = new KeyboardEvent('keydown', {
         bubbles: true,
         cancelable: true,
         key: "#{key}",
         keyCode: 46
       });
-      arguments[0].dispatchEvent(event);
+      this.dispatchEvent(event);
     JS
   end
 
   def send_tab(shift: false)
     simulate_first_interaction_if_needed
 
-    page.execute_script <<~JS, content_element
+    content_element.execute_script <<~JS
       const event = new KeyboardEvent('keydown', {
         bubbles: true,
         cancelable: true,
@@ -45,7 +61,7 @@ class EditorHandler
         keyCode: 9,
         shiftKey: #{shift}
       });
-      arguments[0].dispatchEvent(event);
+      this.dispatchEvent(event);
     JS
     sleep 0.1
   end
@@ -53,8 +69,8 @@ class EditorHandler
   def select(text)
     simulate_first_interaction_if_needed
 
-    page.execute_script <<~JS, editor_element
-      const editable = arguments[0]
+    execute_script <<~JS
+      const editable = this
       const walker = document.createTreeWalker(editable, NodeFilter.SHOW_TEXT)
       let node
 
@@ -76,8 +92,8 @@ class EditorHandler
 
   def select_all
     simulate_first_interaction_if_needed
-    page.execute_script <<~JS, content_element
-      const editable = arguments[0]
+    content_element.execute_script <<~JS
+      const editable = this
       const range = document.createRange()
       range.selectNodeContents(editable)
       const sel = window.getSelection()
@@ -88,21 +104,19 @@ class EditorHandler
   end
 
   def focus
-    page.execute_script <<~JS, editor_element
-      arguments[0].focus()
-    JS
+    execute_script "this.focus()"
   end
 
   def paste(text)
-    page.execute_script <<~JS, content_element
-      arguments[0].focus()
+    content_element.execute_script <<~JS
+      this.focus()
       const pasteEvent = new ClipboardEvent("paste", {
         bubbles: true,
         cancelable: true,
         clipboardData: new DataTransfer()
       })
       pasteEvent.clipboardData.setData("text/plain", "#{text}")
-      arguments[0].dispatchEvent(pasteEvent)
+      this.dispatchEvent(pasteEvent)
     JS
   end
 

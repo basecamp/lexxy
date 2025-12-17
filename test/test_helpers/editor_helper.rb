@@ -4,6 +4,10 @@ module EditorHelper
     @handlers_by_selector[selector] ||= EditorHandler.new(page, selector)
   end
 
+  def assert_editor_plain_text(value)
+    assert_equal value, find_editor.plain_text_value
+  end
+
   def assert_figure_attachment(content_type:, &block)
     figure = find("figure.attachment[data-content-type='#{content_type}']")
     within(figure, &block) if block_given?
