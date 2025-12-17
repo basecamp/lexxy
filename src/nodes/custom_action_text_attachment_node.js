@@ -1,3 +1,4 @@
+import Lexxy from "../config/lexxy"
 import { $createTextNode, DecoratorNode } from "lexical"
 import { createElement, dispatchCustomEvent } from "../helpers/html_helper"
 
@@ -16,7 +17,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
   static importDOM() {
     return {
-      "action-text-attachment": (attachment) => {
+      [Lexxy.global.get("attachmentTagName")]: (attachment) => {
         const content = attachment.getAttribute("content")
         if (!attachment.getAttribute("content")) {
           return null
@@ -56,7 +57,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   createDOM() {
-    const figure = createElement("action-text-attachment", { "content-type": this.contentType, "data-lexxy-decorator": true })
+    const figure = createElement(Lexxy.global.get("attachmentTagName"), { "content-type": this.contentType, "data-lexxy-decorator": true })
 
     figure.addEventListener("click", (event) => {
       dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() })
@@ -80,7 +81,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   exportDOM() {
-    const attachment = createElement("action-text-attachment", {
+    const attachment = createElement(Lexxy.global.get("attachmentTagName"), {
       sgid: this.sgid,
       content: JSON.stringify(this.innerHtml),
       "content-type": this.contentType

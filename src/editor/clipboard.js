@@ -4,6 +4,7 @@ import { nextFrame } from "../helpers/timing_helpers"
 import { dispatch } from "../helpers/html_helper"
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $isCodeNode } from "@lexical/code"
+import { $insertDataTransferForRichText } from "@lexical/clipboard"
 
 export default class Clipboard {
   constructor(editorElement) {
@@ -70,8 +71,10 @@ export default class Clipboard {
       } else if (isUrl(text)) {
         const nodeKey = this.contents.createLink(text)
         this.#dispatchLinkInsertEvent(nodeKey, { url: text })
-      } else {
+      } else if (this.editorElement.supportsMarkdown) {
         this.#pasteMarkdown(text)
+      } else {
+        this.#pasteRichText(clipboardData)
       }
     })
   }
@@ -91,6 +94,13 @@ export default class Clipboard {
   #pasteMarkdown(text) {
     const html = marked(text)
     this.contents.insertHtml(html)
+  }
+
+  #pasteRichText(clipboardData) {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      $insertDataTransferForRichText(clipboardData, selection, this.editor)
+    })
   }
 
   #handlePastedFiles(clipboardData) {
