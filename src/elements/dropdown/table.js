@@ -13,7 +13,6 @@ export class TableDropdown extends ToolbarDropdown {
 
   #setUpButtons() {
     this.#createTableButtons()
-    this.#createEditButtons()
   }
 
   #createTableButtons() {
@@ -30,49 +29,6 @@ export class TableDropdown extends ToolbarDropdown {
       }
       tableBlock.appendChild(row)
     }
-  }
-
-  #createEditButtons() {
-    const tableBlock = this.querySelector(".lexxy-editor__table-edit .lexxy-editor__table-buttons")
-    const buttons = [
-      {
-        label: "Insert a row before",
-        command: "insertTableRowBefore",
-        icon: ""
-      },
-      {
-        label: "Insert a row after",
-        command: "insertTableRowAfter",
-        icon: ""
-      },
-      {
-        label: "Insert a column before",
-        command: "insertTableColumnBefore",
-        icon: ""
-      },
-      {
-        label: "Insert a column after",
-        command: "insertTableColumnAfter",
-        icon: ""
-      },
-      {
-        label: "Delete row",
-        command: "deleteTableRow",
-        icon: ""
-      },
-      {
-        label: "Delete column",
-        command: "deleteTableColumn",
-        icon: ""
-      }
-    ]
-    buttons.forEach(button => {
-      const btn = document.createElement("button")
-      btn.textContent = button.label
-      btn.dataset.command = button.command
-      btn.addEventListener("click", this.#insertTable.bind(this))
-      tableBlock.appendChild(btn)
-    })
   }
 
   get #withHeaders() {

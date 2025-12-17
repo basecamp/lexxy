@@ -7,7 +7,7 @@ import { $isListItemNode, $isListNode } from "@lexical/list"
 import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode } from "@lexical/code"
 import { $isLinkNode } from "@lexical/link"
-import { $isTableNode } from "@lexical/table"
+import { $isTableCellNode } from "@lexical/table"
 import { getListType } from "../helpers/lexical_helper"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 
@@ -161,7 +161,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     const isInCode = $isCodeNode(topLevelElement) || selection.hasFormat("code")
     const isInList = this.#isInList(anchorNode)
     const listType = getListType(anchorNode)
-    const isInTable = $isTableNode(anchorNode)
+    const isInTable = $isTableCellNode(topLevelElement)
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
@@ -357,9 +357,6 @@ export default class LexicalToolbarElement extends HTMLElement {
               <input type="checkbox" name="table-headers" id="table-headers">
               Headers
             </label>
-          </div>
-          <div class="lexxy-editor__table-edit">
-            <div class="lexxy-editor__table-buttons"></div>
           </div>
         </lexxy-table-dropdown>
       </details>
