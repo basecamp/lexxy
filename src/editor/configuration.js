@@ -12,9 +12,21 @@ export default class EditorConfiguration {
   }
 
   get(path) {
+    return this.#getOverrideValue(path)
+      ?? this.#getPresetValue(path)
+      ?? this.#getDefaultValue(path)
+  }
+
+  #getOverrideValue(path) {
     return this.#config.get(path)
-      ?? lexxyConfig.get(`${this.#editorElement.preset}.${path}`)
-      ?? lexxyConfig.get(`default.${path}`)
+  }
+
+  #getPresetValue(path) {
+    return lexxyConfig.get(`${this.#editorElement.preset}.${path}`)
+  }
+
+  #getDefaultValue(path) {
+    return lexxyConfig.get(`default.${path}`)
   }
 
   get #overrides() {

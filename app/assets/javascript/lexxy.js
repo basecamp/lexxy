@@ -8439,9 +8439,21 @@ class EditorConfiguration {
   }
 
   get(path) {
+    return this.#getOverrideValue(path)
+      ?? this.#getPresetValue(path)
+      ?? this.#getDefaultValue(path)
+  }
+
+  #getOverrideValue(path) {
     return this.#config.get(path)
-      ?? config.get(`${this.#editorElement.preset}.${path}`)
-      ?? config.get(`default.${path}`)
+  }
+
+  #getPresetValue(path) {
+    return config.get(`${this.#editorElement.preset}.${path}`)
+  }
+
+  #getDefaultValue(path) {
+    return config.get(`default.${path}`)
   }
 
   get #overrides() {
