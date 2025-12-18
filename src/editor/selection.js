@@ -4,8 +4,9 @@ import {
   KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
   KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, SELECTION_CHANGE_COMMAND
 } from "lexical"
-import { $isListItemNode } from "@lexical/list"
-import { $isCodeNode } from "@lexical/code"
+import { $getNearestNodeOfType } from "@lexical/utils"
+import { ListNode, $getListDepth } from "@lexical/list"
+import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
 import { getNonce } from "../helpers/csp_helper"
 import { getNearestListItemNode, isPrintableCharacter } from "../helpers/lexical_helper"
@@ -148,31 +149,18 @@ export default class Selection {
   }
 
   get isIndentedList() {
-    let isIndented = false
-
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return false
 
     const nodes = selection.getNodes()
     for (const node of nodes) {
-      let current = node
-      while (current) {
-        if ($isListItemNode(current)) {
-          const parentList = current.getParent()
-          if (parentList) {
-            const grandparent = parentList.getParent()
-            if (grandparent && $isListItemNode(grandparent)) {
-              isIndented = true
-              break
-            }
-          }
-        }
-        current = current.getParent()
+      const closestListNode = $getNearestNodeOfType(node, ListNode)
+      if (closestListNode && $getListDepth(closestListNode) > 1) {
+        return true
       }
-      if (isIndented) break
     }
 
-    return isIndented
+    return false
   }
 
   get isInsideCodeBlock() {
@@ -180,10 +168,7 @@ export default class Selection {
     if (!$isRangeSelection(selection)) return false
 
     const anchorNode = selection.anchor.getNode()
-    if (!anchorNode.getParent()) return false
-
-    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
-    return $isCodeNode(topLevelElement) || selection.hasFormat("code")
+    return $getNearestNodeOfType(anchorNode, CodeNode) !== null
   }
 
   get nodeAfterCursor() {

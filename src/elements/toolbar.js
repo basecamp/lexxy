@@ -81,17 +81,12 @@ export default class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  #dispatchButtonCommand(event, button) {
-    this.editor.update(() => {
-      // Keep the focus on the toolbar when using a keyboard to trigger the command
-      const isKeyboard = event.detail === 0 || !event.isTrusted
-      if (isKeyboard) {
-        $addUpdateTag(SKIP_DOM_SELECTION_TAG)
-      }
+  #dispatchButtonCommand(event, { dataset: { command, payload }}) {
+    const isKeyboard = event instanceof PointerEvent && event.pointerId === -1
 
-      const { command, payload } = button.dataset
+    this.editor.update(() => {
       this.editor.dispatchCommand(command, payload)
-    })
+    }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined } )
   }
 
   #bindHotkeys() {
@@ -148,9 +143,9 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #handleFocusOut() {
-    if (this.contains(document.activeElement)) return
-
-    this.#resetTabIndexValues()
+    if (!this.contains(document.activeElement)) {
+      this.#resetTabIndexValues()
+    }
   }
 
   #resetTabIndexValues() {

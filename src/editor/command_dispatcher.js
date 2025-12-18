@@ -329,23 +329,24 @@ export class CommandDispatcher {
 
   #handleTabKey(event) {
     if (this.selection.isInsideList) {
-      if (event.shiftKey) {
-        if (this.selection.isIndentedList) {
-          event.preventDefault()
-          return this.editor.dispatchCommand(OUTDENT_CONTENT_COMMAND, undefined)
-        }
-        return false
-      } else {
-        event.preventDefault()
-        return this.editor.dispatchCommand(INDENT_CONTENT_COMMAND, undefined)
-      }
+      return this.#handleTabForList(event)
     } else if (this.selection.isInsideCodeBlock) {
-      const selection = $getSelection()
-      if ($isRangeSelection(selection) && selection.isCollapsed()) {
-        return true
-      }
+      return this.#handleTabForCode()
     }
     return false
+  }
+
+  #handleTabForList(event) {
+    if (event.shiftKey && !this.selection.isIndentedList) return false
+
+    event.preventDefault()
+    const command = event.shiftKey? OUTDENT_CONTENT_COMMAND : INDENT_CONTENT_COMMAND
+    return this.editor.dispatchCommand(command, undefined)
+  }
+
+  #handleTabForCode() {
+    const selection = $getSelection()
+    return $isRangeSelection(selection) && selection.isCollapsed()
   }
 
   // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
