@@ -115,6 +115,10 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.querySelector(".lexxy-prompt-menu.lexxy-prompt-menu--visible") !== null
   }
 
+  get preset() {
+    return this.getAttribute("config") || "default"
+  }
+
   get isSingleLineMode() {
     return this.config.get("singleLine")
   }

@@ -18755,7 +18755,7 @@ class Configuration {
   }
 
   // returns bools early, null if key is missing
-  get(path = "") {
+  get(path) {
     let node = this.#tree;
     const keys = path.split(".");
     for (const key of keys) {
@@ -32714,23 +32714,19 @@ function filterMatches(text, potentialMatch) {
   return normalizeFilteredText(text).includes(normalizeFilteredText(potentialMatch))
 }
 
-class EditorConfiguration extends Configuration {
+class EditorConfiguration {
   static attributes = [ "attachments", "markdown", "single-line", "toolbar" ]
 
   #editorElement
+  #config
 
   constructor(editorElement) {
-    super();
     this.#editorElement = editorElement;
-    this.merge(this.#overrides);
+    this.#config = new Configuration(this.#overrides);
   }
 
   get(path) {
-    if (this.#preset) {
-      return super.get(path) ?? config.get(`${this.#preset}.${path}`) ?? config.get(`default.${path}`)
-    } else {
-      return super.get(path) ?? config.get(`default.${path}`)
-    }
+    return this.#config.get(path) ?? config.get(`${this.#editorElement.preset}.${path}`) ?? config.get(`default.${path}`)
   }
 
   get #overrides() {
@@ -32742,10 +32738,6 @@ class EditorConfiguration extends Configuration {
       }
     }
     return overrides
-  }
-
-  get #preset() {
-    return this.#editorElement.getAttribute("config")
   }
 
   #parseAttribute(attribute) {
@@ -34269,6 +34261,10 @@ class LexicalEditorElement extends HTMLElement {
 
   get hasOpenPrompt() {
     return this.querySelector(".lexxy-prompt-menu.lexxy-prompt-menu--visible") !== null
+  }
+
+  get preset() {
+    return this.getAttribute("config") || "default"
   }
 
   get isSingleLineMode() {
