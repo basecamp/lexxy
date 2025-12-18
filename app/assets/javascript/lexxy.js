@@ -4617,7 +4617,7 @@ function deepMerge(target, source) {
 }
 
 function arePlainHashes(...values) {
-  return values.every(value => value.constructor == Object)
+  return values.every(value => value && value.constructor == Object)
 }
 
 class Configuration {
