@@ -18748,7 +18748,7 @@ function $getSelectionStyleValueForProperty(selection, styleProperty, defaultVal
 
 class Configuration {
   #tree
-  #listeners = {}
+  #listeners = []
 
   constructor(initial = {}) {
     this.#tree = initial;
@@ -18794,7 +18794,7 @@ class Configuration {
   }
 
   #notify() {
-    for (const [ listener, path ] of Object.entries(this.#listeners)){
+    for (const [ listener, path ] of this.#listeners){
       listener(this.get(path));
     }
   }
@@ -18815,7 +18815,7 @@ const config = new Configuration({
     toolbar: true,
   }
 });
-const configure = config.merge;
+const configure = config.merge.bind(config);
 
 const ALLOWED_HTML_TAGS = [ "a", "b", "blockquote", "br", "code", "em",
   "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "ul", "table", "tbody", "tr", "th", "td" ];
