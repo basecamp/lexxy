@@ -46,10 +46,27 @@
   }
 
   .node--selected {
-    &:has(> img) img,
-    &:not(:has(> img)) {
+    &:has(img) img,
+    &:not(:has(img)) {
       outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
       outline-offset: var(--lexxy-focus-ring-offset);
+    }
+  }
+
+  table {
+    .table-cell--selected {
+      background-color: var(--lexxy-color-table-cell-selected-bg) !important;
+    }
+
+    .lexxy-content__table-cell--selected {
+      background-color: var(--lexxy-color-table-cell-selected-bg) !important;
+      border-color: var(--lexxy-color-table-cell-selected-border) !important;
+    }
+  
+    &.lexxy-content__table--selection {
+      ::selection {
+        background: transparent;
+      }
     }
   }
 

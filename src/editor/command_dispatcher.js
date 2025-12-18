@@ -16,12 +16,12 @@ import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lex
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
-import { 
-  INSERT_TABLE_COMMAND,
-  $insertTableRowAtSelection,
-  $insertTableColumnAtSelection,
+import {
+  $deleteTableColumnAtSelection,
   $deleteTableRowAtSelection,
-  $deleteTableColumnAtSelection
+  $insertTableColumnAtSelection,
+  $insertTableRowAtSelection,
+  INSERT_TABLE_COMMAND,
 } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
@@ -217,37 +217,37 @@ export class CommandDispatcher {
   dispatchInsertTable(payload) {
     this.editor.dispatchCommand(INSERT_TABLE_COMMAND, payload)
   }
-  
+
   dispatchInsertTableRowAfter() {
     this.editor.update(() => {
       $insertTableRowAtSelection(true)
     })
   }
-  
+
   dispatchInsertTableRowBefore() {
     this.editor.update(() => {
       $insertTableRowAtSelection(false)
     })
   }
-  
+
   dispatchInsertTableColumnAfter() {
     this.editor.update(() => {
       $insertTableColumnAtSelection(true)
     })
   }
-  
+
   dispatchInsertTableColumnBefore() {
     this.editor.update(() => {
       $insertTableColumnAtSelection(false)
     })
   }
-  
+
   dispatchDeleteTableRow() {
     this.editor.update(() => {
       $deleteTableRowAtSelection()
     })
   }
-  
+
   dispatchDeleteTableColumn() {
     this.editor.update(() => {
       $deleteTableColumnAtSelection()
