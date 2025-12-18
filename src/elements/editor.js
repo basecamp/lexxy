@@ -110,6 +110,10 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.isEmpty || this.toString().match(/^\s*$/g) !== null
   }
 
+  get preset() {
+    return this.getAttribute("config") || "default"
+  }
+
   get isSingleLineMode() {
     return this.config.get("singleLine")
   }

@@ -2,23 +2,19 @@ import Configuration from "../config/configuration"
 import lexxyConfig from "../config/lexxy"
 import { camelize } from "../helpers/string_helper"
 
-export default class EditorConfiguration extends Configuration {
+export default class EditorConfiguration {
   static attributes = [ "attachments", "markdown", "single-line", "toolbar" ]
 
   #editorElement
+  #config
 
   constructor(editorElement) {
-    super()
     this.#editorElement = editorElement
-    this.merge(this.#overrides)
+    this.#config = new Configuration(this.#overrides)
   }
 
   get(path) {
-    if (this.#preset) {
-      return super.get(path) ?? lexxyConfig.get(`${this.#preset}.${path}`) ?? lexxyConfig.get(`default.${path}`)
-    } else {
-      return super.get(path) ?? lexxyConfig.get(`default.${path}`)
-    }
+    return this.#config.get(path) ?? lexxyConfig.get(`${this.#editorElement.preset}.${path}`) ?? lexxyConfig.get(`default.${path}`)
   }
 
   get #overrides() {
@@ -30,10 +26,6 @@ export default class EditorConfiguration extends Configuration {
       }
     }
     return overrides
-  }
-
-  get #preset() {
-    return this.#editorElement.getAttribute("config")
   }
 
   #parseAttribute(attribute) {
