@@ -46,8 +46,8 @@
   }
 
   .node--selected {
-    &:has(img) img,
-    &:not(:has(img)) {
+    &:has(> img) img,
+    &:not(:has(> img)) {
       outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
       outline-offset: var(--lexxy-focus-ring-offset);
     }
@@ -555,8 +555,8 @@
         }
 
         svg {
-          block-size: 1.25lh;
-          inline-size: 1.25lh;
+          block-size: 1.3lh;
+          inline-size: 1.3lh;
           fill: currentColor;
         }
       }

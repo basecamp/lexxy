@@ -26,7 +26,7 @@ export class TableDropdown extends ToolbarDropdown {
   #setUpButtons() {
     const tableBlock = this.querySelector(".lexxy-editor__table-create .lexxy-editor__table-buttons")
     if (!tableBlock) return
-    
+
     for (let i = 1; i <= DEFAULT_ROWS; i++) {
       const row = document.createElement("div")
       for (let j = 1; j <= DEFAULT_COLUMNS; j++) {
@@ -59,9 +59,9 @@ export class TableDropdown extends ToolbarDropdown {
       button.addEventListener("mouseenter", () => {
         this.#buttonHover(button)
       })
-      
+
       button.addEventListener("mouseleave", () => {
-        this.#activeCells.forEach(cell => 
+        this.#activeCells.forEach(cell =>
           cell.classList.remove("active")
         )
       })

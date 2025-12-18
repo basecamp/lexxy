@@ -6,7 +6,7 @@ import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
-import { TableCellNode, TableNode, TableRowNode, registerTablePlugin, registerTableSelectionObserver } from "@lexical/table"
+import { TableCellNode, TableNode, TableRowNode, registerTablePlugin, registerTableSelectionObserver, setScrollableTablesActive } from "@lexical/table"
 
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
@@ -187,13 +187,11 @@ export default class LexicalEditorElement extends HTMLElement {
     this.#listenForInvalidatedNodes()
     this.#handleEnter()
     this.#handleFocus()
+    this.#handleTables()
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#loadInitialValue()
     this.#resetBeforeTurboCaches()
-
-    this.removeTableSelectionObserver = registerTableSelectionObserver(this.editor, true);
-
   }
 
   #createEditor() {
@@ -390,6 +388,11 @@ export default class LexicalEditorElement extends HTMLElement {
     // and https://stackoverflow.com/a/72212077
     this.editor.registerCommand(BLUR_COMMAND, () => { dispatch(this, "lexxy:blur") }, COMMAND_PRIORITY_NORMAL)
     this.editor.registerCommand(FOCUS_COMMAND, () => { dispatch(this, "lexxy:focus") }, COMMAND_PRIORITY_NORMAL)
+  }
+
+  #handleTables() {
+    this.removeTableSelectionObserver = registerTableSelectionObserver(this.editor, true)
+    setScrollableTablesActive(this.editor, true)
   }
 
   #attachDebugHooks() {

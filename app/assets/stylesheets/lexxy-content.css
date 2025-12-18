@@ -197,16 +197,14 @@
   }
 
   /* Tables */
+  div:has(table) {
+    margin-block: 1ch;
+  }
+
   table {
     border-collapse: collapse;
     border-spacing: 0;
     inline-size: 100%;
-    margin-block: 1ch;
-
-    &.focused {
-      outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
-      outline-offset: var(--lexxy-focus-ring-offset);
-    }
 
     .lexxy-content__table-cell {
       border: 1px solid var(--lexxy-color-ink-lighter);
