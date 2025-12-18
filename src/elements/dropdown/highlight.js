@@ -1,3 +1,4 @@
+import lexxyConfig from "../../config/lexxy"
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
 import { ToolbarDropdown } from "../toolbar_dropdown"
@@ -31,8 +32,8 @@ export class HighlightDropdown extends ToolbarDropdown {
   }
 
   #populateButtonGroup(buttonGroup) {
-    const values = buttonGroup.dataset.values?.split("; ") || []
     const attribute = buttonGroup.dataset.buttonGroup
+    const values = lexxyConfig.global.get(`highlight.${attribute}.buttons`) || []
     values.forEach((value, index) => {
       buttonGroup.appendChild(this.#createButton(attribute, value, index))
     })
