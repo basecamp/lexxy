@@ -30,6 +30,10 @@ class EditorHandler
     evaluate_script "this.isBlank"
   end
 
+  def open_prompt?
+    evaluate_script "this.hasOpenPrompt"
+  end
+
   def send(*keys)
     simulate_first_interaction_if_needed
     content_element.send_keys *keys
