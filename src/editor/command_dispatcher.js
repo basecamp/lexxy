@@ -215,7 +215,7 @@ export class CommandDispatcher {
   }
 
   dispatchInsertTable(payload) {
-    this.editor.dispatchCommand(INSERT_TABLE_COMMAND, payload)
+    this.editor.dispatchCommand(INSERT_TABLE_COMMAND, { "rows": 3, "columns": 3, "includeHeaders": true })
   }
 
   dispatchInsertTableRowAfter() {
