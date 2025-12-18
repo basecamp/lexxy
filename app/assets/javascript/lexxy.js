@@ -4604,9 +4604,24 @@ function t(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSe
 
 function K$4(e,...t){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",e);for(const e of t)o.append("v",e);throw n.search=o.toString(),Error(`Minified Lexical error #${e}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const P$2=new Map;function F$4(e){const t={};if(!e)return t;const n=e.split(";");for(const e of n)if(""!==e){const[n,o]=e.split(/:([^]+)/);n&&o&&(t[n.trim()]=o.trim());}return t}function b$3(e){let t=P$2.get(e);return void 0===t&&(t=F$4(e),P$2.set(e,t)),t}function R$4(e){let t="";for(const n in e)n&&(t+=`${n}: ${e[n]};`);return t}function O$1(e){const n=bs().getElementByKey(e.getKey());if(null===n)return null;const o=n.ownerDocument.defaultView;return null===o?null:o.getComputedStyle(n)}function z$3(e){return O$1(bi(e)?e:e.getParentOrThrow())}function A$2(e){const t=z$3(e);return null!==t&&"rtl"===t.direction}function M$4(e,t,n="self"){const o=e.getStartEndPoints();if(t.isSelected(e)&&!lo(t)&&null!==o){const[l,r]=o,s=e.isBackward(),i=l.getNode(),c=r.getNode(),f=t.is(i),u=t.is(c);if(f||u){const[o,l]=Sr(e),r=i.is(c),f=t.is(s?c:i),u=t.is(s?i:c);let d,p=0;if(r)p=o>l?l:o,d=o>l?o:l;else if(f){p=s?l:o,d=void 0;}else if(u){p=0,d=s?o:l;}const h=t.__text.slice(p,d);h!==t.__text&&("clone"===n&&(t=As(t)),t.__text=h);}}return t}function $$3(e){const t=e.getStyle(),n=F$4(t);P$2.set(t,n);}function D$3(t,n){(yr(t)?t.isCollapsed():lr(t)||Si(t))||K$4(280);const l=b$3(yr(t)?t.style:lr(t)?t.getStyle():t.getTextStyle()),r=Object.entries(n).reduce((e,[n,o])=>("function"==typeof o?e[n]=o(l[n],t):null===o?delete e[n]:e[n]=o,e),{...l}),s=R$4(r);yr(t)||lr(t)?t.setStyle(s):t.setTextStyle(s),P$2.set(s,r);}function U$5(e,t){if(yr(e)&&e.isCollapsed()){D$3(e,t);const n=e.anchor.getNode();Si(n)&&n.isEmpty()&&D$3(n,t);}j$2(e=>{D$3(e,t);});}function j$2(t){const n=Lr();if(!n)return;const o=new Map,l=e=>o.get(e.getKey())||[0,e.getTextContentSize()];if(yr(n))for(const e of kl(n).getTextSlices())e&&o.set(e.caret.origin.getKey(),e.getSliceIndices());const r=n.getNodes();for(const n of r){if(!lr(n)||!n.canHaveFormat())continue;const[o,r]=l(n);if(r!==o)if(lo(n)||0===o&&r===n.getTextContentSize())t(n);else {t(n.splitText(o,r)[0===o?0:1]);}}yr(n)&&"text"===n.anchor.type&&"text"===n.focus.type&&n.anchor.key===n.focus.key&&H$2(n);}function H$2(e){if(e.isBackward()){const{anchor:t,focus:n}=e,{key:o,offset:l,type:r}=t;t.set(n.key,n.offset,n.type),n.set(o,l,r);}}function Q$4(e){const t=Y$3(e);return null!==t&&"vertical-rl"===t.writingMode}function Y$3(e){const t=e.anchor.getNode();return Si(t)?O$1(t):z$3(t)}function Z$3(e,t){let n=Q$4(e)?!t:t;te(e)&&(n=!n);const l=xl(e.focus,n?"previous":"next");if(Ol(l))return  false;for(const e of ul(l)){if(Gs(e))return !e.origin.isInline();if(!Si(e.origin)){if(Ti(e.origin))return  true;break}}return  false}function ee(e,t,n,o){e.modify(t?"extend":"move",n,o);}function te(e){const t=Y$3(e);return null!==t&&"rtl"===t.direction}function ne(e,t,n){const o=te(e);let l;l=Q$4(e)||o?!n:n,ee(e,t,l,"character");}function oe$1(e,t,n){const o=b$3(e.getStyle());return null!==o&&o[t]||n}function le$1(t,n,o=""){let l=null;const r=t.getNodes(),s=t.anchor,c=t.focus,f=t.isBackward(),u=f?c.offset:s.offset,g=f?c.getNode():s.getNode();if(yr(t)&&t.isCollapsed()&&""!==t.style){const e=b$3(t.style);if(null!==e&&n in e)return e[n]}for(let t=0;t<r.length;t++){const s=r[t];if((0===t||0!==u||!s.is(g))&&lr(s)){const e=oe$1(s,n,o);if(null===l)l=e;else if(l!==e){l="";break}}}return null===l?o:l}
 
+function deepMerge(target, source) {
+  for (const [ key, value ] of Object.entries(source)) {
+    if (arePlainObjects(target[key], value)) {
+      deepMerge(target[key], value);
+    } else {
+      target[key] = value;
+    }
+  }
+
+  return target
+}
+
+function arePlainObjects(...values) {
+  return values.every(value => value.constructor == Object)
+}
+
 class Configuration {
   #tree
-  #listeners = []
 
   constructor(initial = {}) {
     this.#tree = initial;
@@ -4630,35 +4645,8 @@ class Configuration {
     return node
   }
 
-  merge(config, into = this.#tree) {
-    for (const [ key, value ] of Object.entries(config)) {
-      if (this.#arePlainObjects(value, into[key])) {
-        this.merge(value, into[key]);
-      } else {
-        into[key] = value;
-      }
-    }
-
-    if (into === this.#tree) {
-      this.#notify();
-    }
-
-    return into
-  }
-
-  listen(path, listener) {
-    this.#listeners[listener] = path;
-    listener(this.get(path));
-  }
-
-  #notify() {
-    for (const [ listener, path ] of this.#listeners){
-      listener(this.get(path));
-    }
-  }
-
-  #arePlainObjects(...values) {
-    return values.every(value => value.constructor == Object)
+  merge(config) {
+    return deepMerge(this.#tree, config)
   }
 }
 
@@ -4711,13 +4699,13 @@ purify.addHook("uponSanitizeElement", (node, data) => {
   }
 });
 
-config.listen("global.attachmentTagName", (attachmentTagName) => {
-  purify.setConfig({
-    ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(attachmentTagName),
+function buildConfig() {
+  return {
+    ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(config.get("global.attachmentTagName")),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
-  });
-});
+  }
+}
 
 function getNonce() {
   const element = document.head.querySelector("meta[name=csp-nonce]");
@@ -6881,7 +6869,7 @@ function dispatchCustomEvent(element, name, detail) {
 }
 
 function sanitize(html) {
-  return purify.sanitize(html)
+  return purify.sanitize(html, buildConfig())
 }
 
 function dispatch(element, eventName, detail = null, cancelable = false) {
@@ -8346,8 +8334,8 @@ class Selection {
   }
 }
 
-function camelize(value) {
-  return value.replace(/(?:[_-])([a-z0-9])/g, (_, char) => char.toUpperCase())
+function dasherize(value) {
+  return value.replace(/([A-Z])/g, (_, char) => `-${char.toLowerCase()}`)
 }
 
 function isUrl(string) {
@@ -8370,8 +8358,6 @@ function filterMatches(text, potentialMatch) {
 }
 
 class EditorConfiguration {
-  static attributes = [ "attachments", "markdown", "single-line", "toolbar" ]
-
   #editorElement
   #config
 
@@ -8381,15 +8367,16 @@ class EditorConfiguration {
   }
 
   get(path) {
-    return this.#config.get(path) ?? config.get(`${this.#editorElement.preset}.${path}`) ?? config.get(`default.${path}`)
+    return this.#config.get(path)
+      ?? config.get(`${this.#editorElement.preset}.${path}`)
+      ?? config.get(`default.${path}`)
   }
 
   get #overrides() {
     const overrides = {};
-    for (const attribute of EditorConfiguration.attributes) {
-      if (this.#editorElement.hasAttribute(attribute)) {
-        const camelized = camelize(attribute);
-        overrides[camelized] = this.#parseAttribute(attribute);
+    for (const option of Object.keys(config.get("default"))) {
+      if (this.#editorElement.hasAttribute(option)) {
+        overrides[option] = this.#parseAttribute(dasherize(option));
       }
     }
     return overrides
