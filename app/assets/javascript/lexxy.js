@@ -4606,7 +4606,7 @@ function K$4(e,...t){const n=new URL("https://lexical.dev/docs/error"),o=new URL
 
 function deepMerge(target, source) {
   for (const [ key, value ] of Object.entries(source)) {
-    if (arePlainObjects(target[key], value)) {
+    if (arePlainHashes(target[key], value)) {
       deepMerge(target[key], value);
     } else {
       target[key] = value;
@@ -4616,7 +4616,7 @@ function deepMerge(target, source) {
   return target
 }
 
-function arePlainObjects(...values) {
+function arePlainHashes(...values) {
   return values.every(value => value.constructor == Object)
 }
 
@@ -8384,9 +8384,11 @@ class EditorConfiguration {
 
   #parseAttribute(attribute) {
     const value = this.#editorElement.getAttribute(attribute);
-    if (value == "true") return true
-    if (value == "false") return false
-    return value
+    try {
+      return JSON.parse(value)
+    } catch {
+      return value
+    }
   }
 }
 
