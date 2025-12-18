@@ -18773,7 +18773,7 @@ class Configuration {
   }
 
   merge(config, into = this.#tree) {
-    for (const [key, value] of Object.entries(config)) {
+    for (const [ key, value ] of Object.entries(config)) {
       if (this.#arePlainObjects(value, into[key])) {
         this.merge(value, into[key]);
       } else {
@@ -18794,7 +18794,7 @@ class Configuration {
   }
 
   #notify() {
-    for (const [listener, path] of Object.entries(this.#listeners)){
+    for (const [ listener, path ] of Object.entries(this.#listeners)){
       listener(this.get(path));
     }
   }
@@ -18806,7 +18806,7 @@ class Configuration {
 
 const config = new Configuration({
   global: {
-    attachmentTagName: "action-text-attachment" 
+    attachmentTagName: "action-text-attachment"
   },
   default: {
     attachments: true,
@@ -32715,7 +32715,7 @@ function filterMatches(text, potentialMatch) {
 }
 
 class EditorConfiguration extends Configuration {
-  static attributes = ["attachments", "markdown", "single-line", "toolbar" ]
+  static attributes = [ "attachments", "markdown", "single-line", "toolbar" ]
 
   #editorElement
 
@@ -32749,7 +32749,7 @@ class EditorConfiguration extends Configuration {
   }
 
   #parseAttribute(attribute) {
-    const value = this.#editorElement.getAttribute(attribute) != "false";
+    const value = this.#editorElement.getAttribute(attribute);
     if (value == "true") return true
     if (value == "false") return false
     return value

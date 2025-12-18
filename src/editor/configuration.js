@@ -37,7 +37,7 @@ export default class EditorConfiguration extends Configuration {
   }
 
   #parseAttribute(attribute) {
-    const value = this.#editorElement.getAttribute(attribute) != "false"
+    const value = this.#editorElement.getAttribute(attribute)
     if (value == "true") return true
     if (value == "false") return false
     return value
