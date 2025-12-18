@@ -1,10 +1,8 @@
 import Configuration from "../config/configuration"
 import lexxyConfig from "../config/lexxy"
-import { camelize } from "../helpers/string_helper"
+import { dasherize } from "../helpers/string_helper"
 
 export default class EditorConfiguration {
-  static attributes = [ "attachments", "markdown", "single-line", "toolbar" ]
-
   #editorElement
   #config
 
@@ -14,15 +12,16 @@ export default class EditorConfiguration {
   }
 
   get(path) {
-    return this.#config.get(path) ?? lexxyConfig.get(`${this.#editorElement.preset}.${path}`) ?? lexxyConfig.get(`default.${path}`)
+    return this.#config.get(path)
+      ?? lexxyConfig.get(`${this.#editorElement.preset}.${path}`)
+      ?? lexxyConfig.get(`default.${path}`)
   }
 
   get #overrides() {
     const overrides = {}
-    for (const attribute of EditorConfiguration.attributes) {
-      if (this.#editorElement.hasAttribute(attribute)) {
-        const camelized = camelize(attribute)
-        overrides[camelized] = this.#parseAttribute(attribute)
+    for (const option of Object.keys(lexxyConfig.get("default"))) {
+      if (this.#editorElement.hasAttribute(option)) {
+        overrides[option] = this.#parseAttribute(dasherize(option))
       }
     }
     return overrides

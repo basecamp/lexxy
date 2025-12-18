@@ -1,6 +1,7 @@
+import { deepMerge } from "../helpers/hash_helper"
+
 export default class Configuration {
   #tree
-  #listeners = []
 
   constructor(initial = {}) {
     this.#tree = initial
@@ -24,34 +25,7 @@ export default class Configuration {
     return node
   }
 
-  merge(config, into = this.#tree) {
-    for (const [ key, value ] of Object.entries(config)) {
-      if (this.#arePlainObjects(value, into[key])) {
-        this.merge(value, into[key])
-      } else {
-        into[key] = value
-      }
-    }
-
-    if (into === this.#tree) {
-      this.#notify()
-    }
-
-    return into
-  }
-
-  listen(path, listener) {
-    this.#listeners[listener] = path
-    listener(this.get(path))
-  }
-
-  #notify() {
-    for (const [ listener, path ] of this.#listeners){
-      listener(this.get(path))
-    }
-  }
-
-  #arePlainObjects(...values) {
-    return values.every(value => value.constructor == Object)
+  merge(config) {
+    return deepMerge(this.#tree, config)
   }
 }
