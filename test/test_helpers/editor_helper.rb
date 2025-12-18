@@ -51,4 +51,27 @@ module EditorHelper
     assert_css "lexxy-editor[connected]"
     assert_css "lexxy-toolbar[connected]" if has_css?("lexxy-toolbar")
   end
+
+  def click_table_handler_button(aria_label)
+    find(".lexxy-table-handle-buttons button[aria-label='#{aria_label}']").click
+  end
+
+  def open_table_more_menu
+    more_menu = find(".lexxy-table-handle-buttons details.lexxy-table-control__more-menu")
+    more_menu.click
+  end
+
+  def assert_table_structure(rows, cols)
+    html = find_editor.value
+    actual_rows = html.scan(/<tr>/).count
+    assert_equal rows, actual_rows, "Expected #{rows} rows, got #{actual_rows}"
+
+    first_row_match = html.match(/<tr>.*?<\/tr>/m)
+    if first_row_match
+      actual_cols = first_row_match.to_s.scan(/<(td|th)\b/).count
+      assert_equal cols, actual_cols, "Expected #{cols} columns, got #{actual_cols}"
+    else
+      flunk "Could not find first row in table"
+    end
+  end
 end
