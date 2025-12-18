@@ -24,7 +24,7 @@ import { TrixTextNode } from "../nodes/trix_text_node"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
-  static debug = true
+  static debug = false
   static commands = [ "bold", "italic", "strikethrough" ]
 
   static observedAttributes = [ "connected", "required" ]
