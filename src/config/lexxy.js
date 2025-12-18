@@ -13,4 +13,4 @@ const config = new Configuration({
 })
 
 export default config
-export const configure = config.merge
+export const configure = config.merge.bind(config)

@@ -1,6 +1,6 @@
 export default class Configuration {
   #tree
-  #listeners = {}
+  #listeners = []
 
   constructor(initial = {}) {
     this.#tree = initial
@@ -46,7 +46,7 @@ export default class Configuration {
   }
 
   #notify() {
-    for (const [ listener, path ] of Object.entries(this.#listeners)){
+    for (const [ listener, path ] of this.#listeners){
       listener(this.get(path))
     }
   }
