@@ -1,8 +1,8 @@
-import Configuration from './configuration'
+import Configuration from "./configuration"
 
 const config = new Configuration({
   global: {
-    attachmentTagName: "action-text-attachment" 
+    attachmentTagName: "action-text-attachment"
   },
   default: {
     attachments: true,
