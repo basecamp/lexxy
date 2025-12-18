@@ -33,8 +33,7 @@ export class ToolbarDropdown extends HTMLElement {
     }
   }
 
-  #handleOpen(trigger) {
-    this.trigger = trigger
+  #handleOpen() {
     this.#interactiveElements[0].focus()
     this.#setupClickOutsideHandler()
 
@@ -42,7 +41,6 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   #handleClose() {
-    this.trigger = null
     this.#removeClickOutsideHandler()
     this.editor.focus()
   }
