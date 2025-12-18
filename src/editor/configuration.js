@@ -29,8 +29,10 @@ export default class EditorConfiguration {
 
   #parseAttribute(attribute) {
     const value = this.#editorElement.getAttribute(attribute)
-    if (value == "true") return true
-    if (value == "false") return false
-    return value
+    try {
+      return JSON.parse(value)
+    } catch {
+      return value
+    }
   }
 }
