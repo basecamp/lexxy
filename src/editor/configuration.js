@@ -3,7 +3,7 @@ import lexxyConfig from "../config/lexxy"
 import { camelize } from "../helpers/string_helper"
 
 export default class EditorConfiguration extends Configuration {
-  static attributes = ["attachments", "markdown", "single-line", "toolbar" ]
+  static attributes = [ "attachments", "markdown", "single-line", "toolbar" ]
 
   #editorElement
 

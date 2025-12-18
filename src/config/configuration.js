@@ -25,7 +25,7 @@ export default class Configuration {
   }
 
   merge(config, into = this.#tree) {
-    for (const [key, value] of Object.entries(config)) {
+    for (const [ key, value ] of Object.entries(config)) {
       if (this.#arePlainObjects(value, into[key])) {
         this.merge(value, into[key])
       } else {
@@ -46,7 +46,7 @@ export default class Configuration {
   }
 
   #notify() {
-    for (const [listener, path] of Object.entries(this.#listeners)){
+    for (const [ listener, path ] of Object.entries(this.#listeners)){
       listener(this.get(path))
     }
   }
