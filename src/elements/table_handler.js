@@ -57,7 +57,6 @@ export class TableHandler extends HTMLElement {
 
   #registerKeyboardShortcuts() {
     this.unregisterKeyboardShortcuts = this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#handleKeyDown.bind(this), COMMAND_PRIORITY_HIGH)
-    this.buttonsContainer.addEventListener("keydown", this.#handleKeyDown.bind(this))
   }
 
   #unregisterKeyboardShortcuts() {
@@ -144,6 +143,7 @@ export class TableHandler extends HTMLElement {
       "aria-label": label,
       type: "button"
     })
+    button.tabIndex = -1
     button.innerHTML = `${icon} <span>${label}</span>`
     button.addEventListener("click", onClick.bind(this))
 
@@ -186,6 +186,8 @@ export class TableHandler extends HTMLElement {
     const container = createElement("details", {
       className: "lexxy-table-control lexxy-table-control__more-menu"
     })
+
+    container.tabIndex = -1
 
     const summary = createElement("summary", {}, "•••")
     container.appendChild(summary)
