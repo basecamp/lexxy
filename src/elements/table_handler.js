@@ -324,7 +324,7 @@ export class TableHandler extends HTMLElement {
   }
 
   #deleteTable() {
-    this.#editor.dispatchCommand("deleteTable", undefined)
+    this.#editor.dispatchCommand("deleteTable")
 
     this.#closeMoreMenu()
     this.#updateRowColumnCount()
@@ -372,16 +372,16 @@ export class TableHandler extends HTMLElement {
         switch (childType) {
           case "row":
             if (direction === "above") {
-              this.#editor.dispatchCommand("insertTableRowAbove", undefined)
+              this.#editor.dispatchCommand("insertTableRowAbove")
             } else {
-              this.#editor.dispatchCommand("insertTableRowBelow", undefined)
+              this.#editor.dispatchCommand("insertTableRowBelow")
             }
             break
           case "column":
             if (direction === "left") {
-              this.#editor.dispatchCommand("insertTableColumnBefore", undefined)
+              this.#editor.dispatchCommand("insertTableColumnBefore")
             } else {
-              this.#editor.dispatchCommand("insertTableColumnAfter", undefined)
+              this.#editor.dispatchCommand("insertTableColumnAfter")
             }
             break
         }
@@ -389,10 +389,10 @@ export class TableHandler extends HTMLElement {
       case "delete":
         switch (childType) {
           case "row":
-            this.#editor.dispatchCommand("deleteTableRow", undefined)
+            this.#editor.dispatchCommand("deleteTableRow")
             break
           case "column":
-            this.#editor.dispatchCommand("deleteTableColumn", undefined)
+            this.#editor.dispatchCommand("deleteTableColumn")
             break
         }
         break
