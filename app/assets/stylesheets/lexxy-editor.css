@@ -36,6 +36,7 @@
     cursor: pointer;
     font-size: inherit;
     inline-size: auto;
+    padding: 0;
 
     @media(any-hover: hover) {
       &:hover:not([aria-disabled="true"]) {
@@ -49,6 +50,23 @@
     &:not(:has(img)) {
       outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
       outline-offset: var(--lexxy-focus-ring-offset);
+    }
+  }
+
+  table {
+    .table-cell--selected {
+      background-color: var(--lexxy-color-table-cell-selected-bg) !important;
+    }
+
+    .lexxy-content__table-cell--selected {
+      background-color: var(--lexxy-color-table-cell-selected-bg) !important;
+      border-color: var(--lexxy-color-table-cell-selected-border) !important;
+    }
+  
+    &.lexxy-content__table--selection {
+      ::selection {
+        background: transparent;
+      }
     }
   }
 
@@ -189,7 +207,7 @@
   user-select: none;
   -webkit-user-select: none;
 
-  .lexxy-editor__toolbar-dropdown-content {
+  :where(.lexxy-editor__toolbar-dropdown-content) {
     --dropdown-padding: 1ch;
     --dropdown-gap: calc(var(--dropdown-padding) / 2);
 
@@ -352,6 +370,212 @@
 
         &:after {
           font-size: 0.9em;
+        }
+      }
+    }
+  }
+}
+
+/* Table dropdown
+/* -------------------------------------------------------------------------- */
+
+:where(lexxy-table-dropdown) {
+  display: flex;
+  flex-direction: column;
+  gap: 1ch;
+  
+  .lexxy-editor__table-create {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 0;
+
+    .lexxy-editor__table-buttons {
+      background-color: var(--lexxy-color-ink-lighter);
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      padding: 1px;
+
+      div {
+        display: flex;
+        flex-direction: row;
+        gap: 1px;
+      }
+
+      button {
+        aspect-ratio: 1.5 / 1;
+        border: 0;
+        border-radius: 0;
+        color: var(--lexxy-color-ink);
+        font-family: var(--lexxy-font-base);
+        font-size: var(--lexxy-text-small);
+        font-weight: normal;
+        inline-size: 4ch;
+        margin: 0;
+
+        &.active {
+          background-color: var(--lexxy-color-ink-lightest);
+        }
+      }
+    }
+
+    label {
+      align-items: center;
+      display: flex;
+      gap: 0.5ch;
+      padding: 0.5ch 0;
+      margin-block-start: 1ch;
+    }
+
+    &:has(input[type="checkbox"]:checked) {
+      .lexxy-editor__table-buttons {
+        div:first-child button,
+        button:first-child {
+          filter: brightness(0.95);
+        }
+      }
+    }
+  }
+
+  .lexxy-editor__table-edit {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 0;
+
+    button {
+
+    }
+  }
+}
+
+/* Table handle buttons
+/* -------------------------------------------------------------------------- */
+
+:where(.lexxy-table-handle-buttons) {
+  --button-size: 2.5lh;
+  color: var(--lexxy-color-ink-inverted);
+  display: none;
+  flex-direction: row;
+  font-size: var(--lexxy-text-small);
+  gap: 0.25ch;
+  line-height: 1;
+  position: absolute;
+  transform: translate(-50%, -120%);
+  z-index: 10;
+
+  .lexxy-table-control {
+    align-items: center;
+    background-color: var(--lexxy-color-ink);
+    border-radius: 0.75ch;
+    display: flex;
+    flex-direction: row;
+    gap: 1ch;
+    padding: 2px;
+    white-space: nowrap;
+
+    button {
+      aspect-ratio: 1 / 1;
+      align-items: center;
+      background-color: transparent;
+      border-radius: var(--lexxy-radius);
+      border: 0;
+      color: var(--lexxy-color-ink-inverted);
+      cursor: pointer;
+      display: flex;
+      font-weight: bold;
+      justify-content: center;
+      line-height: 1;
+      min-block-size: var(--button-size);
+      min-inline-size: var(--button-size);
+      padding: 0;
+
+      &:hover,
+      &:focus-visible {
+        background-color: var(--lexxy-color-ink-medium);
+      }
+
+      svg {
+        block-size: 1em;
+        inline-size: 1em;
+        fill: currentColor;
+      }
+
+      span {
+        display: none;
+      }
+    }
+  }
+
+  .lexxy-table-control__more-menu {
+    gap: 0;
+    padding: 2px;
+    position: relative;
+    
+    summary {
+      aspect-ratio: 1 / 1;
+      align-items: center;
+      background: transparent;
+      border-radius: var(--lexxy-radius);
+      border: 0;
+      box-sizing: border-box;
+      display: flex;
+      font-size: inherit;
+      justify-content: center;
+      list-style: none;
+      min-block-size: var(--button-size);
+      min-inline-size: var(--button-size);
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+
+      &:hover {
+        background: var(--lexxy-color-ink-medium);
+      }
+    }
+
+    .lexxy-table-control__more-menu-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25ch;
+      inset-block-start: 105%;
+      inset-inline-start: 0;
+      padding: 0;
+      position: absolute;
+
+      .lexxy-table-control__more-menu-section {
+        background: var(--lexxy-color-ink);
+        border-radius: 0.75ch;
+        display: flex;
+        flex-direction: column;
+        padding: 2px;
+      }
+
+      button {
+        aspect-ratio: unset;
+        align-items: center;
+        display: flex;
+        flex-direction: row;
+        font-weight: normal;
+        gap: 1ch;
+        justify-content: flex-start;
+        padding: 0.5ch 2ch;
+        padding-inline-start: 1ch;
+        white-space: nowrap;
+
+        span {
+          display: inline-block;
+        }
+
+        svg {
+          block-size: 1.3lh;
+          inline-size: 1.3lh;
+          fill: currentColor;
         }
       }
     }

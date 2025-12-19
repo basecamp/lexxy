@@ -6,6 +6,7 @@ import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
+import { TableCellNode, TableNode, TableRowNode, registerTablePlugin, registerTableSelectionObserver, setScrollableTablesActive } from "@lexical/table"
 
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
@@ -186,6 +187,7 @@ export default class LexicalEditorElement extends HTMLElement {
     this.#listenForInvalidatedNodes()
     this.#handleEnter()
     this.#handleFocus()
+    this.#handleTables()
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#loadInitialValue()
@@ -222,6 +224,9 @@ export default class LexicalEditorElement extends HTMLElement {
       LinkNode,
       AutoLinkNode,
       HorizontalDividerNode,
+      TableNode,
+      TableCellNode,
+      TableRowNode,
 
       CustomActionTextAttachmentNode,
     ]
@@ -324,13 +329,21 @@ export default class LexicalEditorElement extends HTMLElement {
     this.historyState = createEmptyHistoryState()
     registerHistory(this.editor, this.historyState, 20)
     registerList(this.editor)
+    this.#registerTableComponents()
     this.#registerCodeHiglightingComponents()
     registerMarkdownShortcuts(this.editor, TRANSFORMERS)
   }
 
+  #registerTableComponents() {
+    registerTablePlugin(this.editor)
+    this.tableHandler = createElement("lexxy-table-handler")
+    this.append(this.tableHandler)
+  }
+
   #registerCodeHiglightingComponents() {
     registerCodeHighlighting(this.editor)
-    this.append(createElement("lexxy-code-language-picker"))
+    this.codeLanguagePicker = createElement("lexxy-code-language-picker")
+    this.append(this.codeLanguagePicker)
   }
 
   #listenForInvalidatedNodes() {
@@ -377,6 +390,11 @@ export default class LexicalEditorElement extends HTMLElement {
     // and https://stackoverflow.com/a/72212077
     this.editor.registerCommand(BLUR_COMMAND, () => { dispatch(this, "lexxy:blur") }, COMMAND_PRIORITY_NORMAL)
     this.editor.registerCommand(FOCUS_COMMAND, () => { dispatch(this, "lexxy:focus") }, COMMAND_PRIORITY_NORMAL)
+  }
+
+  #handleTables() {
+    this.removeTableSelectionObserver = registerTableSelectionObserver(this.editor, true)
+    setScrollableTablesActive(this.editor, true)
   }
 
   #attachDebugHooks() {
@@ -439,6 +457,16 @@ export default class LexicalEditorElement extends HTMLElement {
     if (this.toolbar) {
       if (!this.getAttribute("toolbar")) { this.toolbar.remove() }
       this.toolbar = null
+    }
+
+    if (this.codeLanguagePicker) {
+      this.codeLanguagePicker.remove()
+      this.codeLanguagePicker = null
+    }
+
+    if (this.tableHandler) {
+      this.tableHandler.remove()
+      this.tableHandler = null
     }
 
     this.selection = null

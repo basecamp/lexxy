@@ -7,6 +7,7 @@ import { $isListItemNode, $isListNode } from "@lexical/list"
 import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode } from "@lexical/code"
 import { $isLinkNode } from "@lexical/link"
+import { $getTableCellNodeFromLexicalNode } from "@lexical/table"
 import { getListType } from "../helpers/lexical_helper"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 
@@ -160,6 +161,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     const isInCode = $isCodeNode(topLevelElement) || selection.hasFormat("code")
     const isInList = this.#isInList(anchorNode)
     const listType = getListType(anchorNode)
+    const isInTable = $getTableCellNodeFromLexicalNode(anchorNode) !== null
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
@@ -171,6 +173,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("code", isInCode)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
     this.#setButtonPressed("ordered-list", isInList && listType === "number")
+    this.#setButtonPressed("table", isInTable)
 
     this.#updateUndoRedoButtonStates()
   }
@@ -340,6 +343,10 @@ export default class LexicalToolbarElement extends HTMLElement {
 
       <button class="lexxy-editor__toolbar-button" type="button" name="upload" data-command="uploadAttachments" title="Upload file">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 8a2 2 0 110 4 2 2 0 010-4z""/><path d="M22 2a1 1 0 011 1v18a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1h20zM3 18.714L9 11l5.25 6.75L17 15l4 4V4H3v14.714z"/></svg>
+      </button>
+
+      <button class="lexxy-editor__toolbar-button" type="button" name="table" data-command="insertTable" title="Insert a table">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.2041 2.01074C21.2128 2.113 22 2.96435 22 4V20L21.9893 20.2041C21.8938 21.1457 21.1457 21.8938 20.2041 21.9893L20 22H4C2.96435 22 2.113 21.2128 2.01074 20.2041L2 20V4C2 2.89543 2.89543 2 4 2H20L20.2041 2.01074ZM4 13V20H11V13H4ZM13 13V20H20V13H13ZM4 11H11V4H4V11ZM13 11H20V4H13V11Z"/></svg>
       </button>
 
       <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">

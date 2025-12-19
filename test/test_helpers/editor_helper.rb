@@ -51,4 +51,26 @@ module EditorHelper
     assert_css "lexxy-editor[connected]"
     assert_css "lexxy-toolbar[connected]" if has_css?("lexxy-toolbar")
   end
+
+  def click_table_handler_button(aria_label)
+    find(".lexxy-table-handle-buttons button[aria-label='#{aria_label}']").click
+  end
+
+  def open_table_more_menu
+    more_menu = find(".lexxy-table-handle-buttons details.lexxy-table-control__more-menu")
+    more_menu.click
+  end
+
+  def assert_editor_table_structure(rows, cols)
+    within("lexxy-editor table") do
+      assert_table_structure(cols, rows)
+    end
+  end
+
+  def assert_table_structure(cols, rows)
+    assert_selector "tr", count: rows
+    within(first("tr")) do
+      assert_selector "td, th", count: cols
+    end
+  end
 end
