@@ -9,9 +9,9 @@ class TableTest < ApplicationSystemTestCase
   test "adding a table" do
     find_editor.toggle_command("insertTable")
 
-    html = find_editor.value
-    assert_match(/<table>/, html)
-    assert_table_structure(3, 3)
+    assert_selector Capybara.string(find_editor.value), :table do |table|
+      assert_selector table, :table_row, count: 3
+    end
   end
 
   test "writing in table fields" do
