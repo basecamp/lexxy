@@ -116,7 +116,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get preset() {
-    return this.getAttribute("config") || "default"
+    return this.getAttribute("preset") || "default"
   }
 
   get isSingleLineMode() {
@@ -138,7 +138,7 @@ export default class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null), { additionalAllowedTags: [ lexxyConfig.get("global.attachmentTagName") ] })
+        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null), { additionalAllowedTags: [ lexxyConfig.global.get("attachmentTagName") ] })
       })
     }
 

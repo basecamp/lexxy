@@ -1,10 +1,14 @@
 import { deepMerge } from "../helpers/hash_helper"
 
 export default class Configuration {
-  #tree
+  #tree = {}
 
-  constructor(initial = {}) {
-    this.#tree = initial
+  constructor(...configs) {
+    this.merge(...configs)
+  }
+
+  merge(...configs) {
+    return this.#tree = configs.reduce(deepMerge, this.#tree)
   }
 
   // returns bools early, null if key is missing
@@ -23,9 +27,5 @@ export default class Configuration {
     }
 
     return node
-  }
-
-  merge(config) {
-    return deepMerge(this.#tree, config)
   }
 }

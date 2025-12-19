@@ -1,13 +1,12 @@
 export function deepMerge(target, source) {
+  const result = { ...target, ...source }
   for (const [ key, value ] of Object.entries(source)) {
     if (arePlainHashes(target[key], value)) {
-      deepMerge(target[key], value)
-    } else {
-      target[key] = value
+      result[key] = deepMerge(target[key], value)
     }
   }
 
-  return target
+  return result
 }
 
 function arePlainHashes(...values) {
