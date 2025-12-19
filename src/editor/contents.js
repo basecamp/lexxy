@@ -278,8 +278,11 @@ export default class Contents {
     let focusNode = null
 
     this.editor.update(() => {
-      if ($isNodeSelection(this.#selection.current)) {
-        const nodesToRemove = this.#selection.current.getNodes()
+      // Use fresh selection - cached this.#selection.current may be frozen
+      // See: https://github.com/facebook/lexical/issues/6290
+      const selection = $getSelection()
+      if ($isNodeSelection(selection)) {
+        const nodesToRemove = selection.getNodes()
         if (nodesToRemove.length === 0) return
 
         focusNode = this.#findAdjacentNodeTo(nodesToRemove)
