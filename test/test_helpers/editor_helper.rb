@@ -62,16 +62,11 @@ module EditorHelper
   end
 
   def assert_table_structure(rows, cols)
-    html = find_editor.value
-    actual_rows = html.scan(/<tr>/).count
-    assert_equal rows, actual_rows, "Expected #{rows} rows, got #{actual_rows}"
-
-    first_row_match = html.match(/<tr>.*?<\/tr>/m)
-    if first_row_match
-      actual_cols = first_row_match.to_s.scan(/<(td|th)\b/).count
-      assert_equal cols, actual_cols, "Expected #{cols} columns, got #{actual_cols}"
-    else
-      flunk "Could not find first row in table"
+    within("lexxy-editor table") do
+      assert_selector "tr", count: rows
+      within(first("tr")) do
+        assert_selector "td, th", count: cols
+      end
     end
   end
 end
