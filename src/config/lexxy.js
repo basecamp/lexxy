@@ -1,18 +1,21 @@
 import Configuration from "./configuration"
 
-const config = {
+export const DEFAULT_PRESET = {
+  attachments: true,
+  markdown: true,
+  singleLine: false,
+  toolbar: true,
+}
+
+const configuration = {
   global: new Configuration({
     attachmentTagName: "action-text-attachment"
   }),
-  presets: new Configuration({
-    default: {
-      attachments: true,
-      markdown: true,
-      singleLine: false,
-      toolbar: true,
-    }
-  })
+  presets: new Configuration({ default: DEFAULT_PRESET })
 }
 
-export default config
-export const configure = config.presets.merge.bind(config)
+export function configure(changes) {
+  return configuration.presets.merge(changes)
+}
+
+export default configuration

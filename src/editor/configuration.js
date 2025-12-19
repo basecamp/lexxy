@@ -1,16 +1,16 @@
 import Configuration from "../config/configuration"
-import lexxyConfig from "../config/lexxy"
+import lexxyConfig, { DEFAULT_PRESET } from "../config/lexxy"
 import { dasherize } from "../helpers/string_helper"
 
 export default class EditorConfiguration {
   #editorElement
   #config
 
-  constructor(editorElement) {
+  constructor(editorElement, preset = "default") {
     this.#editorElement = editorElement
     this.#config = new Configuration(
       lexxyConfig.presets.get("default"),
-      lexxyConfig.presets.get(this.#editorElement.preset),
+      lexxyConfig.presets.get(preset),
       this.#overrides
     )
   }
@@ -21,7 +21,7 @@ export default class EditorConfiguration {
 
   get #overrides() {
     const overrides = {}
-    for (const option of Object.keys(lexxyConfig.presets.get("default"))) {
+    for (const option of Object.keys(DEFAULT_PRESET)) {
       if (this.#editorElement.hasAttribute(option)) {
         overrides[option] = this.#parseAttribute(dasherize(option))
       }

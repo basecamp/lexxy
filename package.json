@@ -18,6 +18,7 @@
     "@rollup/plugin-node-resolve": "^16.0.1",
     "@rollup/plugin-terser": "^0.4.4",
     "eslint": "^9.15.0",
+    "jsdom": "^27.3.0",
     "rollup": "^4.44.1",
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-gzip": "^4.1.1",
@@ -28,7 +29,7 @@
     "build:npm": "rollup -c rollup.config.npm.mjs",
     "watch": "NODE_ENV=development rollup -wc --watch.onEnd=\"rails restart\"",
     "lint": "eslint",
-    "test": "vitest",
+    "test": "vitest --environment=jsdom",
     "prerelease": "yarn build:npm",
     "release": "yarn build:npm && yarn publish"
   },

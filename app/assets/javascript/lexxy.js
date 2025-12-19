@@ -1,5 +1,3 @@
-import { DirectUpload } from '@rails/activestorage';
-
 var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
 function getDefaultExportFromCjs (x) {
@@ -4649,20 +4647,23 @@ class Configuration {
   }
 }
 
-const config = {
+const DEFAULT_PRESET = {
+  attachments: true,
+  markdown: true,
+  singleLine: false,
+  toolbar: true,
+};
+
+const configuration = {
   global: new Configuration({
     attachmentTagName: "action-text-attachment"
   }),
-  presets: new Configuration({
-    default: {
-      attachments: true,
-      markdown: true,
-      singleLine: false,
-      toolbar: true,
-    }
-  })
+  presets: new Configuration({ default: DEFAULT_PRESET })
 };
-const configure = config.presets.merge.bind(config);
+
+function configure(changes) {
+  return configuration.presets.merge(changes)
+}
 
 const ALLOWED_HTML_TAGS = [ "a", "b", "blockquote", "br", "code", "em",
   "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "ul", "table", "tbody", "tr", "th", "td" ];
@@ -4702,7 +4703,7 @@ purify.addHook("uponSanitizeElement", (node, data) => {
 
 function buildConfig() {
   return {
-    ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(config.global.get("attachmentTagName")),
+    ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(configuration.global.get("attachmentTagName")),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
   }
@@ -6928,7 +6929,7 @@ class ActionTextAttachmentNode extends ki {
 
   static importDOM() {
     return {
-      [config.global.get("attachmentTagName")]: (attachment) => {
+      [configuration.global.get("attachmentTagName")]: (attachment) => {
         return {
           conversion: () => ({
             node: new ActionTextAttachmentNode({
@@ -7026,7 +7027,7 @@ class ActionTextAttachmentNode extends ki {
   }
 
   exportDOM() {
-    const attachment = createElement(config.global.get("attachmentTagName"), {
+    const attachment = createElement(configuration.global.get("attachmentTagName"), {
       sgid: this.sgid,
       previewable: this.previewable || null,
       url: this.src,
@@ -7268,7 +7269,9 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }
   }
 
-  #startUpload(progressBar, figure) {
+  async #startUpload(progressBar, figure) {
+    const { DirectUpload } = await import('@rails/activestorage');
+
     const upload = new DirectUpload(this.file, this.uploadUrl, this);
 
     upload.delegate = {
@@ -8434,11 +8437,11 @@ class EditorConfiguration {
   #editorElement
   #config
 
-  constructor(editorElement) {
+  constructor(editorElement, preset = "default") {
     this.#editorElement = editorElement;
     this.#config = new Configuration(
-      config.presets.get("default"),
-      config.presets.get(this.#editorElement.preset),
+      configuration.presets.get("default"),
+      configuration.presets.get(preset),
       this.#overrides
     );
   }
@@ -8449,7 +8452,7 @@ class EditorConfiguration {
 
   get #overrides() {
     const overrides = {};
-    for (const option of Object.keys(config.presets.get("default"))) {
+    for (const option of Object.keys(DEFAULT_PRESET)) {
       if (this.#editorElement.hasAttribute(option)) {
         overrides[option] = this.#parseAttribute(dasherize(option));
       }
@@ -8482,7 +8485,7 @@ class CustomActionTextAttachmentNode extends ki {
 
   static importDOM() {
     return {
-      [config.global.get("attachmentTagName")]: (attachment) => {
+      [configuration.global.get("attachmentTagName")]: (attachment) => {
         const content = attachment.getAttribute("content");
         if (!attachment.getAttribute("content")) {
           return null
@@ -8522,7 +8525,7 @@ class CustomActionTextAttachmentNode extends ki {
   }
 
   createDOM() {
-    const figure = createElement(config.global.get("attachmentTagName"), { "content-type": this.contentType, "data-lexxy-decorator": true });
+    const figure = createElement(configuration.global.get("attachmentTagName"), { "content-type": this.contentType, "data-lexxy-decorator": true });
 
     figure.addEventListener("click", (event) => {
       dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
@@ -8546,7 +8549,7 @@ class CustomActionTextAttachmentNode extends ki {
   }
 
   exportDOM() {
-    const attachment = createElement(config.global.get("attachmentTagName"), {
+    const attachment = createElement(configuration.global.get("attachmentTagName"), {
       sgid: this.sgid,
       content: JSON.stringify(this.innerHtml),
       "content-type": this.contentType
@@ -9910,7 +9913,7 @@ class LexicalEditorElement extends HTMLElement {
 
   connectedCallback() {
     this.id ??= generateDomId("lexxy-editor");
-    this.config = new EditorConfiguration(this);
+    this.config = new EditorConfiguration(this, this.preset);
     this.editor = this.#createEditor();
     this.contents = new Contents(this);
     this.selection = new Selection(this);
@@ -10005,7 +10008,7 @@ class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize(g(this.editor, null), { additionalAllowedTags: [ config.global.get("attachmentTagName") ] });
+        this.cachedValue = sanitize(g(this.editor, null));
       });
     }
 
