@@ -18,7 +18,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   static importDOM() {
     return {
-      [lexxyConfig.get("global.attachmentTagName")]: (attachment) => {
+      [lexxyConfig.global.get("attachmentTagName")]: (attachment) => {
         return {
           conversion: () => ({
             node: new ActionTextAttachmentNode({
@@ -116,7 +116,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   exportDOM() {
-    const attachment = createElement(lexxyConfig.get("global.attachmentTagName"), {
+    const attachment = createElement(lexxyConfig.global.get("attachmentTagName"), {
       sgid: this.sgid,
       previewable: this.previewable || null,
       url: this.src,

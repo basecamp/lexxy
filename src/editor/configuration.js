@@ -8,30 +8,20 @@ export default class EditorConfiguration {
 
   constructor(editorElement) {
     this.#editorElement = editorElement
-    this.#config = new Configuration(this.#overrides)
+    this.#config = new Configuration(
+      lexxyConfig.presets.get("default"),
+      lexxyConfig.presets.get(this.#editorElement.preset),
+      this.#overrides
+    )
   }
 
   get(path) {
-    return this.#getOverrideValue(path)
-      ?? this.#getPresetValue(path)
-      ?? this.#getDefaultValue(path)
-  }
-
-  #getOverrideValue(path) {
     return this.#config.get(path)
-  }
-
-  #getPresetValue(path) {
-    return lexxyConfig.get(`${this.#editorElement.preset}.${path}`)
-  }
-
-  #getDefaultValue(path) {
-    return lexxyConfig.get(`default.${path}`)
   }
 
   get #overrides() {
     const overrides = {}
-    for (const option of Object.keys(lexxyConfig.get("default"))) {
+    for (const option of Object.keys(lexxyConfig.presets.get("default"))) {
       if (this.#editorElement.hasAttribute(option)) {
         overrides[option] = this.#parseAttribute(dasherize(option))
       }

@@ -17,7 +17,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
   static importDOM() {
     return {
-      [lexxyConfig.get("global.attachmentTagName")]: (attachment) => {
+      [lexxyConfig.global.get("attachmentTagName")]: (attachment) => {
         const content = attachment.getAttribute("content")
         if (!attachment.getAttribute("content")) {
           return null
@@ -57,7 +57,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   createDOM() {
-    const figure = createElement(lexxyConfig.get("global.attachmentTagName"), { "content-type": this.contentType, "data-lexxy-decorator": true })
+    const figure = createElement(lexxyConfig.global.get("attachmentTagName"), { "content-type": this.contentType, "data-lexxy-decorator": true })
 
     figure.addEventListener("click", (event) => {
       dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() })
@@ -81,7 +81,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   exportDOM() {
-    const attachment = createElement(lexxyConfig.get("global.attachmentTagName"), {
+    const attachment = createElement(lexxyConfig.global.get("attachmentTagName"), {
       sgid: this.sgid,
       content: JSON.stringify(this.innerHtml),
       "content-type": this.contentType

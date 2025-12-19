@@ -3,11 +3,12 @@ import EditorConfiguration from "../../editor/configuration"
 import lexxyConfig from "../../config/lexxy"
 
 test("uses defaults", () => {
-  lexxyConfig.merge({
+  lexxyConfig.presets.merge({
     default: { singleLine: true }
   })
 
   const c = new EditorConfiguration({
+    preset: "default",
     hasAttribute: () => false,
   })
   expect(c.get("singleLine")).toBe(true)
@@ -15,6 +16,7 @@ test("uses defaults", () => {
 
 test("overrides defaults", () => {
   const c = new EditorConfiguration({
+    preset: "default",
     hasAttribute: () => true,
     getAttribute: () => "false",
   })
@@ -22,7 +24,7 @@ test("overrides defaults", () => {
 })
 
 test("uses preset", () => {
-  lexxyConfig.merge({
+  lexxyConfig.presets.merge({
     simple: { toolbar: false }
   })
 
