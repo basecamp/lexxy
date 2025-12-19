@@ -1,36 +1,38 @@
-import { expect, test, vi } from "vitest"
+import { expect, test } from "vitest"
+import { createElement } from "../dom_helper"
 import EditorConfiguration from "../../editor/configuration"
-import lexxyConfig from "../../config/lexxy"
+import { configure } from "../../index"
 
-test("uses defaults", () => {
-  lexxyConfig.presets.merge({
-    default: { singleLine: true }
-  })
-
-  const c = new EditorConfiguration({
-    preset: "default",
-    hasAttribute: () => false,
-  })
-  expect(c.get("singleLine")).toBe(true)
+configure({
+  default: {
+    toolbar: true,
+    attachments: true
+  },
+  simple: {
+    toolbar: false
+  }
 })
 
-test("overrides defaults", () => {
-  const c = new EditorConfiguration({
-    preset: "default",
-    hasAttribute: () => true,
-    getAttribute: () => "false",
-  })
-  expect(c.get("toolbar")).toBe(false)
+test("uses defaults", () => {
+  const element = createElement("<lexxy-editor></lexxy-editor>")
+  const config = new EditorConfiguration(element, "default")
+  expect(config.get("attachments")).toBe(true)
 })
 
 test("uses preset", () => {
-  lexxyConfig.presets.merge({
-    simple: { toolbar: false }
-  })
+  const element = createElement("<lexxy-editor></lexxy-editor>")
+  const config = new EditorConfiguration(element, "simple")
+  expect(config.get("toolbar")).toBe(false)
+})
 
-  const c = new EditorConfiguration({
-    preset: "simple",
-    hasAttribute: () => false,
-  })
-  expect(c.get("toolbar")).toBe(false)
+test("preset fallbacks to default", () => {
+  const element = createElement("<lexxy-editor></lexxy-editor>")
+  const config = new EditorConfiguration(element, "simple")
+  expect(config.get("attachments")).toBe(true)
+})
+
+test("overrides defaults", () => {
+  const element = createElement("<lexxy-editor toolbar='false'></lexxy-editor>")
+  const config = new EditorConfiguration(element)
+  expect(config.get("toolbar")).toBe(false)
 })

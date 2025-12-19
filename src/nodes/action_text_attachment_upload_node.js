@@ -1,5 +1,4 @@
 import { $getNodeByKey } from "lexical"
-import { DirectUpload } from "@rails/activestorage"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { createElement } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
@@ -108,7 +107,9 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }
   }
 
-  #startUpload(progressBar, figure) {
+  async #startUpload(progressBar, figure) {
+    const { DirectUpload } = await import("@rails/activestorage")
+
     const upload = new DirectUpload(this.file, this.uploadUrl, this)
 
     upload.delegate = {
