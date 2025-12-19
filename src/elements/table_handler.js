@@ -1,6 +1,8 @@
 import {
   $getSelection,
   $isRangeSelection,
+  COMMAND_PRIORITY_HIGH,
+  KEY_DOWN_COMMAND,
 } from "lexical"
 import {
   $findTableNode,
@@ -18,6 +20,11 @@ export class TableHandler extends HTMLElement {
   connectedCallback() {
     this.#setUpButtons()
     this.#monitorForTableSelection()
+    this.#registerKeyboardShortcuts()
+  }
+
+  disconnectedCallback() {
+    this.#unregisterKeyboardShortcuts()
   }
 
   get #editor() {
@@ -37,13 +44,42 @@ export class TableHandler extends HTMLElement {
   }
 
   get #currentRow() {
-    if (!this.#currentCell) return 0
-    return $getTableRowIndexFromTableCellNode(this.#currentCell)
+    const currentCell = this.#currentCell
+    if (!currentCell) return 0
+    return $getTableRowIndexFromTableCellNode(currentCell)
   }
 
   get #currentColumn() {
-    if (!this.#currentCell) return 0
-    return $getTableColumnIndexFromTableCellNode(this.#currentCell)
+    const currentCell = this.#currentCell
+    if (!currentCell) return 0
+    return $getTableColumnIndexFromTableCellNode(currentCell)
+  }
+
+  #registerKeyboardShortcuts() {
+    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#handleKeyDown.bind(this), COMMAND_PRIORITY_HIGH)
+    this.buttonsContainer.addEventListener("keydown", this.#handleKeyDown.bind(this))
+  }
+
+  #unregisterKeyboardShortcuts() {
+    this.unregisterKeyboardShortcuts()
+  }
+
+  #handleKeyDown(event) {
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
+      const firstButton = this.buttonsContainer?.querySelector("button, [tabindex]:not([tabindex='-1'])")
+      this.#setFocusStateOnSelectedCell()
+      firstButton?.focus()
+    } else if (event.key === "Escape") {
+      this.#editor.getEditorState().read(() => {
+        const cell = this.#currentCell
+        if (!cell) return
+
+        this.#editor.update(() => {
+          cell.select()
+        })
+      })
+      this.#closeMoreMenu()
+    }
   }
 
   #setUpButtons() {
@@ -60,6 +96,35 @@ export class TableHandler extends HTMLElement {
     this.#editorElement.appendChild(this.buttonsContainer)
   }
 
+  #showTableHandlerButtons() {
+    this.buttonsContainer.style.display = "flex"
+    this.#closeMoreMenu()
+
+    this.#updateRowColumnCount()
+    this.#setTableFocusState(true)
+  }
+
+  #hideTableHandlerButtons() {
+    this.buttonsContainer.style.display = "none"
+    this.#closeMoreMenu()
+
+    this.#setTableFocusState(false)
+    this.currentTableNode = null
+  }
+
+  #updateButtonsPosition(tableNode) {
+    const tableElement = this.#editor.getElementByKey(tableNode.getKey())
+    if (!tableElement) return
+
+    const tableRect = tableElement.getBoundingClientRect()
+    const editorRect = this.#editorElement.getBoundingClientRect()
+
+    const relativeTop = tableRect.top - editorRect.top
+    const relativeCenter = (tableRect.left + tableRect.right) / 2 - editorRect.left
+    this.buttonsContainer.style.top = `${relativeTop}px`
+    this.buttonsContainer.style.left = `${relativeCenter}px`
+  }
+
   #updateRowColumnCount() {
     if (!this.currentTableNode) return
 
@@ -71,6 +136,18 @@ export class TableHandler extends HTMLElement {
 
     this.rowCount.textContent = `${rowCount} row${rowCount === 1 ? "" : "s"}`
     this.columnCount.textContent = `${columnCount} column${columnCount === 1 ? "" : "s"}`
+  }
+
+  #createButton(icon, label, onClick) {
+    const button = createElement("button", {
+      className: "lexxy-table-control__button",
+      "aria-label": label,
+      type: "button"
+    })
+    button.innerHTML = `${icon} <span>${label}</span>`
+    button.addEventListener("click", onClick.bind(this))
+
+    return button
   }
 
   #createRowButtonsContainer() {
@@ -173,43 +250,75 @@ export class TableHandler extends HTMLElement {
   }
 
   #handleMoreMenuToggle() {
-    this.#editor.getEditorState().read(() => {
-      if (this.moreMenu.open) {
-        this.#focusSelectedCell()
-      } else {
-        this.#blurSelectedCell()
-      }
-    })
+    if (this.moreMenu.open) {
+      this.#setFocusStateOnSelectedCell()
+    } else {
+      this.#removeFocusStateFromSelectedCell()
+    }
   }
 
   #closeMoreMenu() {
-    this.#blurSelectedCell()
+    this.#removeFocusStateFromSelectedCell()
     this.moreMenu.removeAttribute("open")
   }
 
-  #focusSelectedCell() {
-    if (!this.#currentCell) return
+  #monitorForTableSelection() {
+    this.#editor.registerUpdateListener(() => {
+      this.#editor.getEditorState().read(() => {
+        const selection = $getSelection()
+        if (!$isRangeSelection(selection)) return
 
-    const cellElement = this.#editor.getElementByKey(this.#currentCell.getKey())
-    if (!cellElement) return
+        const anchorNode = selection.anchor.getNode()
+        const tableNode = $findTableNode(anchorNode)
 
-    cellElement.classList.add("table-cell--selected")
+        if (tableNode) {
+          this.#tableCellWasSelected(tableNode)
+        } else {
+          this.#hideTableHandlerButtons()
+        }
+      })
+    })
   }
 
-  #blurSelectedCell() {
+  #setTableFocusState(focused) {
+    this.#editorElement.querySelector("div.node--selected:has(table)")?.classList.remove("node--selected")
+
+    if (focused && this.currentTableNode) {
+      const tableParent = this.#editor.getElementByKey(this.currentTableNode.getKey())
+      if (!tableParent) return
+      tableParent.classList.add("node--selected")
+    }
+  }
+
+  #tableCellWasSelected(tableNode) {
+    this.currentTableNode = tableNode
+    this.#updateButtonsPosition(tableNode)
+    this.#showTableHandlerButtons()
+  }
+
+  #setFocusStateOnSelectedCell() {
+    this.#editor.getEditorState().read(() => {
+      const currentCell = this.#currentCell
+      if (!currentCell) return
+
+      const cellElement = this.#editor.getElementByKey(currentCell.getKey())
+      if (!cellElement) return
+
+      cellElement.classList.add("table-cell--selected")
+    })
+  }
+
+  #removeFocusStateFromSelectedCell() {
     this.#editorElement.querySelector(".table-cell--selected")?.classList.remove("table-cell--selected")
   }
 
-  #createButton(icon, label, onClick) {
-    const button = createElement("button", {
-      className: "lexxy-table-control__button",
-      "aria-label": label,
-      type: "button"
-    })
-    button.innerHTML = `${icon} <span>${label}</span>`
-    button.addEventListener("click", onClick.bind(this))
+  #selectLastTableCell() {
+    if (!this.currentTableNode) return
 
-    return button
+    const last = this.currentTableNode.getLastChild().getLastChild()
+    if (!$isTableCellNode(last)) return
+
+    last.selectEnd()
   }
 
   #deleteTable() {
@@ -336,78 +445,6 @@ export class TableHandler extends HTMLElement {
     if (tableCellNode) {
       tableCellNode.setHeaderStyles(newStyle, headerState)
     }
-  }
-
-  #monitorForTableSelection() {
-    this.#editor.registerUpdateListener(() => {
-      this.#editor.getEditorState().read(() => {
-        const selection = $getSelection()
-        if (!$isRangeSelection(selection)) return
-
-        const anchorNode = selection.anchor.getNode()
-        const tableNode = $findTableNode(anchorNode)
-
-        if (tableNode) {
-          this.#tableCellWasSelected(tableNode)
-        } else {
-          this.#hideTableHandlerButtons()
-        }
-      })
-    })
-  }
-
-  #selectLastTableCell() {
-    if (!this.currentTableNode) return
-
-    const last = this.currentTableNode.getLastChild().getLastChild()
-    if (!$isTableCellNode(last)) return
-    
-    last.selectEnd()
-  }
-
-  #tableCellWasSelected(tableNode) {
-    this.currentTableNode = tableNode
-    this.#updateButtonsPosition(tableNode)
-    this.#showTableHandlerButtons()
-  }
-
-  #updateButtonsPosition(tableNode) {
-    const tableElement = this.#editor.getElementByKey(tableNode.getKey())
-    if (!tableElement) return
-
-    const tableRect = tableElement.getBoundingClientRect()
-    const editorRect = this.#editorElement.getBoundingClientRect()
-
-    const relativeTop = tableRect.top - editorRect.top
-    const relativeCenter = (tableRect.left + tableRect.right) / 2 - editorRect.left
-    this.buttonsContainer.style.top = `${relativeTop}px`
-    this.buttonsContainer.style.left = `${relativeCenter}px`
-  }
-
-  #setTableFocusState(focused) {
-    this.#editorElement.querySelector("div.node--selected:has(table)")?.classList.remove("node--selected")
-
-    if (focused && this.currentTableNode) {
-      const tableParent = this.#editor.getElementByKey(this.currentTableNode.getKey())
-      if (!tableParent) return
-      tableParent.classList.add("node--selected")
-    }
-  }
-
-  #showTableHandlerButtons() {
-    this.buttonsContainer.style.display = "flex"
-    this.#closeMoreMenu()
-
-    this.#updateRowColumnCount()
-    this.#setTableFocusState(true)
-  }
-
-  #hideTableHandlerButtons() {
-    this.buttonsContainer.style.display = "none"
-    this.#closeMoreMenu()
-
-    this.#setTableFocusState(false)
-    this.currentTableNode = null
   }
 
   #icon(name) {

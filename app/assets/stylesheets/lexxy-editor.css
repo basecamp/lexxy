@@ -491,7 +491,8 @@
       min-inline-size: var(--button-size);
       padding: 0;
 
-      &:hover {
+      &:hover,
+      &:focus-visible {
         background-color: var(--lexxy-color-ink-medium);
       }
 
