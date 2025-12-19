@@ -341,7 +341,11 @@ export class TableHandler extends HTMLElement {
   #monitorForTableSelection() {
     this.#editor.registerUpdateListener(() => {
       this.#editor.getEditorState().read(() => {
-        const tableNode = this.#getCurrentTableNode()
+        const selection = $getSelection()
+        if (!$isRangeSelection(selection)) return
+
+        const anchorNode = selection.anchor.getNode()
+        const tableNode = $findTableNode(anchorNode)
 
         if (tableNode) {
           this.#tableCellWasSelected(tableNode)
@@ -352,21 +356,12 @@ export class TableHandler extends HTMLElement {
     })
   }
 
-  #getCurrentTableNode() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return null
-
-    const anchorNode = selection.anchor.getNode()
-    return $findTableNode(anchorNode)
-  }
-
   #selectLastTableCell() {
-    const tableNode = this.#getCurrentTableNode()
-    if (!tableNode) return
+    if (!this.currentTableNode) return
 
-    const last = tableNode.getLastChild().getLastChild()
+    const last = this.currentTableNode.getLastChild().getLastChild()
     if (!$isTableCellNode(last)) return
-    console.log("selectLastTableCell")
+    
     last.selectEnd()
   }
 
