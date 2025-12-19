@@ -1,17 +1,17 @@
 import {
-  $deleteTableColumnAtSelection,
-  $deleteTableRowAtSelection,
+  $getSelection,
+  $isRangeSelection,
+} from "lexical"
+import {
   $findTableNode,
   $getElementForTableNode,
   $getTableCellNodeFromLexicalNode,
   $getTableColumnIndexFromTableCellNode,
   $getTableRowIndexFromTableCellNode,
-  $insertTableColumnAtSelection,
-  $insertTableRowAtSelection,
   $isTableCellNode,
   TableCellHeaderStates
 } from "@lexical/table"
-import { $getSelection, $isRangeSelection } from "lexical"
+
 import { createElement } from "../helpers/html_helper"
 
 export class TableHandler extends HTMLElement {
@@ -51,11 +51,8 @@ export class TableHandler extends HTMLElement {
       className: "lexxy-table-handle-buttons"
     })
 
-    const rowButtonsContainer = this.#createRowButtonsContainer()
-    this.buttonsContainer.appendChild(rowButtonsContainer)
-
-    const columnButtonsContainer = this.#createColumnButtonsContainer()
-    this.buttonsContainer.appendChild(columnButtonsContainer)
+    this.buttonsContainer.appendChild(this.#createRowButtonsContainer())
+    this.buttonsContainer.appendChild(this.#createColumnButtonsContainer())
 
     this.moreMenu = this.#createMoreMenu()
     this.buttonsContainer.appendChild(this.moreMenu)
@@ -119,14 +116,9 @@ export class TableHandler extends HTMLElement {
     const details = createElement("div", { className: "lexxy-table-control__more-menu-details" })
     container.appendChild(details)
 
-    const rowSection = this.#createRowSection()
-    details.appendChild(rowSection)
-
-    const columnSection = this.#createColumnSection()
-    details.appendChild(columnSection)
-
-    const deleteSection = this.#createDeleteTableSection()
-    details.appendChild(deleteSection)
+    details.appendChild(this.#createRowSection())
+    details.appendChild(this.#createColumnSection())
+    details.appendChild(this.#createDeleteTableSection())
 
     container.addEventListener("toggle", this.#handleMoreMenuToggle.bind(this))
 
@@ -190,6 +182,11 @@ export class TableHandler extends HTMLElement {
     })
   }
 
+  #closeMoreMenu() {
+    this.#blurSelectedCell()
+    this.moreMenu.removeAttribute("open")
+  }
+
   #focusSelectedCell() {
     if (!this.#currentCell) return
 
@@ -201,11 +198,6 @@ export class TableHandler extends HTMLElement {
 
   #blurSelectedCell() {
     this.#editorElement.querySelector(".table-cell--selected")?.classList.remove("table-cell--selected")
-  }
-
-  #closeMoreMenu() {
-    this.#blurSelectedCell()
-    this.moreMenu.removeAttribute("open")
   }
 
   #createButton(icon, label, onClick) {
@@ -220,23 +212,30 @@ export class TableHandler extends HTMLElement {
     return button
   }
 
+  #deleteTable() {
+    this.#editor.dispatchCommand("deleteTable", undefined)
+
+    this.#closeMoreMenu()
+    this.#updateRowColumnCount()
+  }
+
   #insertTableRow(direction) {
-    this.#manageTable("insert", "row", direction)
+    this.#executeTableCommand("insert", "row", direction)
   }
 
   #insertTableColumn(direction) {
-    this.#manageTable("insert", "column", direction)
+    this.#executeTableCommand("insert", "column", direction)
   }
 
   #deleteTableRow(direction) {
-    this.#manageTable("delete", "row", direction)
+    this.#executeTableCommand("delete", "row", direction)
   }
 
   #deleteTableColumn(direction) {
-    this.#manageTable("delete", "column", direction)
+    this.#executeTableCommand("delete", "column", direction)
   }
 
-  #manageTable(action = "insert", childType = "row", direction) {
+  #executeTableCommand(action = "insert", childType = "row", direction) {
     this.#editor.update(() => {
       const currentCell = this.#currentCell
       if (!currentCell) return
@@ -245,27 +244,7 @@ export class TableHandler extends HTMLElement {
         this.#selectLastTableCell()
       }
 
-      switch (action) {
-        case "insert":
-          switch (childType) {
-            case "row":
-              $insertTableRowAtSelection(direction !== "above")
-              break
-            case "column":
-              $insertTableColumnAtSelection(direction !== "left")
-              break
-          }
-          break
-        case "delete":
-          switch (childType) {
-            case "row":
-              $deleteTableRowAtSelection()
-              break
-            case "column":
-              $deleteTableColumnAtSelection()
-              break
-          }
-      }
+      this.#dispatchTableCommand(action, childType, direction)
 
       if (currentCell.isAttached()) {
         currentCell.selectEnd()
@@ -276,18 +255,37 @@ export class TableHandler extends HTMLElement {
     this.#updateRowColumnCount()
   }
 
-  #deleteTable() {
-    this.#editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const anchorNode = selection.anchor.getNode()
-      const tableNode = $findTableNode(anchorNode)
-      tableNode.remove()
-    })
-
-    this.#closeMoreMenu()
-    this.#updateRowColumnCount()
+  #dispatchTableCommand(action, childType, direction) {
+    switch (action) {
+      case "insert":
+        switch (childType) {
+          case "row":
+            if (direction === "above") {
+              this.#editor.dispatchCommand("insertTableRowAbove", undefined)
+            } else {
+              this.#editor.dispatchCommand("insertTableRowBelow", undefined)
+            }
+            break
+          case "column":
+            if (direction === "left") {
+              this.#editor.dispatchCommand("insertTableColumnBefore", undefined)
+            } else {
+              this.#editor.dispatchCommand("insertTableColumnAfter", undefined)
+            }
+            break
+        }
+        break
+      case "delete":
+        switch (childType) {
+          case "row":
+            this.#editor.dispatchCommand("deleteTableRow", undefined)
+            break
+          case "column":
+            this.#editor.dispatchCommand("deleteTableColumn", undefined)
+            break
+        }
+        break
+    }
   }
 
   #toggleRowHeaderStyle() {
@@ -305,11 +303,7 @@ export class TableHandler extends HTMLElement {
       const newStyle = currentStyle ^ TableCellHeaderStates.ROW
 
       cells.forEach(cell => {
-        const tableCellNode = $getTableCellNodeFromLexicalNode(cell)
-
-        if (tableCellNode) {
-          tableCellNode.setHeaderStyles(newStyle, TableCellHeaderStates.ROW)
-        }
+        this.#setHeaderStyle(cell, newStyle, TableCellHeaderStates.ROW)
       })
     })
   }
@@ -331,14 +325,17 @@ export class TableHandler extends HTMLElement {
       rows.forEach(row => {
         const cell = row.getChildren()[this.#currentColumn]
         if (!cell) return
-
-        const tableCellNode = $getTableCellNodeFromLexicalNode(cell)
-
-        if (tableCellNode) {
-          tableCellNode.setHeaderStyles(newStyle, TableCellHeaderStates.COLUMN)
-        }
+        this.#setHeaderStyle(cell, newStyle, TableCellHeaderStates.COLUMN)
       })
     })
+  }
+
+  #setHeaderStyle(cell, newStyle, headerState) {
+    const tableCellNode = $getTableCellNodeFromLexicalNode(cell)
+
+    if (tableCellNode) {
+      tableCellNode.setHeaderStyles(newStyle, headerState)
+    }
   }
 
   #monitorForTableSelection() {
@@ -349,7 +346,7 @@ export class TableHandler extends HTMLElement {
         if (tableNode) {
           this.#tableCellWasSelected(tableNode)
         } else {
-          this.#hideButtons()
+          this.#hideTableHandlerButtons()
         }
       })
     })
@@ -357,10 +354,7 @@ export class TableHandler extends HTMLElement {
 
   #getCurrentTableNode() {
     const selection = $getSelection()
-
-    if (!$isRangeSelection(selection)) {
-      return null
-    }
+    if (!$isRangeSelection(selection)) return null
 
     const anchorNode = selection.anchor.getNode()
     return $findTableNode(anchorNode)
@@ -372,14 +366,14 @@ export class TableHandler extends HTMLElement {
 
     const last = tableNode.getLastChild().getLastChild()
     if (!$isTableCellNode(last)) return
-
+    console.log("selectLastTableCell")
     last.selectEnd()
   }
 
   #tableCellWasSelected(tableNode) {
     this.currentTableNode = tableNode
     this.#updateButtonsPosition(tableNode)
-    this.#showButtons()
+    this.#showTableHandlerButtons()
   }
 
   #updateButtonsPosition(tableNode) {
@@ -398,16 +392,14 @@ export class TableHandler extends HTMLElement {
   #setTableFocusState(focused) {
     this.#editorElement.querySelector("div.node--selected:has(table)")?.classList.remove("node--selected")
 
-    if (focused) {
-      if (!this.currentTableNode) return
-
+    if (focused && this.currentTableNode) {
       const tableParent = this.#editor.getElementByKey(this.currentTableNode.getKey())
       if (!tableParent) return
       tableParent.classList.add("node--selected")
     }
   }
 
-  #showButtons() {
+  #showTableHandlerButtons() {
     this.buttonsContainer.style.display = "flex"
     this.#closeMoreMenu()
 
@@ -415,7 +407,7 @@ export class TableHandler extends HTMLElement {
     this.#setTableFocusState(true)
   }
 
-  #hideButtons() {
+  #hideTableHandlerButtons() {
     this.buttonsContainer.style.display = "none"
     this.#closeMoreMenu()
 

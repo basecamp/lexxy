@@ -19,6 +19,7 @@ import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import {
   $deleteTableColumnAtSelection,
   $deleteTableRowAtSelection,
+  $findTableNode,
   $insertTableColumnAtSelection,
   $insertTableRowAtSelection,
   INSERT_TABLE_COMMAND,
@@ -45,12 +46,13 @@ const COMMANDS = [
   "uploadAttachments",
 
   "insertTable",
-  "insertTableRowAfter",
-  "insertTableRowBefore",
+  "insertTableRowAbove",
+  "insertTableRowBelow",
   "insertTableColumnAfter",
   "insertTableColumnBefore",
   "deleteTableRow",
   "deleteTableColumn",
+  "deleteTable",
 
   "undo",
   "redo"
@@ -214,43 +216,42 @@ export class CommandDispatcher {
     setTimeout(() => input.remove(), 1000)
   }
 
-  dispatchInsertTable(payload) {
+  dispatchInsertTable() {
     this.editor.dispatchCommand(INSERT_TABLE_COMMAND, { "rows": 3, "columns": 3, "includeHeaders": true })
   }
 
-  dispatchInsertTableRowAfter() {
-    this.editor.update(() => {
-      $insertTableRowAtSelection(true)
-    })
+  dispatchInsertTableRowBelow() {
+    $insertTableRowAtSelection(true)
   }
 
-  dispatchInsertTableRowBefore() {
-    this.editor.update(() => {
-      $insertTableRowAtSelection(false)
-    })
+  dispatchInsertTableRowAbove() {
+    $insertTableRowAtSelection(false)
   }
 
   dispatchInsertTableColumnAfter() {
-    this.editor.update(() => {
-      $insertTableColumnAtSelection(true)
-    })
+    $insertTableColumnAtSelection(true)
   }
 
   dispatchInsertTableColumnBefore() {
-    this.editor.update(() => {
-      $insertTableColumnAtSelection(false)
-    })
+    $insertTableColumnAtSelection(false)
   }
 
   dispatchDeleteTableRow() {
-    this.editor.update(() => {
-      $deleteTableRowAtSelection()
-    })
+    $deleteTableRowAtSelection()
   }
 
   dispatchDeleteTableColumn() {
+    $deleteTableColumnAtSelection()
+  }
+
+  dispatchDeleteTable() {
     this.editor.update(() => {
-      $deleteTableColumnAtSelection()
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const anchorNode = selection.anchor.getNode()
+      const tableNode = $findTableNode(anchorNode)
+      tableNode.remove()
     })
   }
 

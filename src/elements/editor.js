@@ -336,12 +336,14 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #registerTableComponents() {
     registerTablePlugin(this.editor)
-    this.append(createElement("lexxy-table-handler"))
+    this.tableHandler = createElement("lexxy-table-handler")
+    this.append(this.tableHandler)
   }
 
   #registerCodeHiglightingComponents() {
     registerCodeHighlighting(this.editor)
-    this.append(createElement("lexxy-code-language-picker"))
+    this.codeLanguagePicker = createElement("lexxy-code-language-picker")
+    this.append(this.codeLanguagePicker)
   }
 
   #listenForInvalidatedNodes() {
@@ -455,6 +457,16 @@ export default class LexicalEditorElement extends HTMLElement {
     if (this.toolbar) {
       if (!this.getAttribute("toolbar")) { this.toolbar.remove() }
       this.toolbar = null
+    }
+
+    if (this.codeLanguagePicker) {
+      this.codeLanguagePicker.remove()
+      this.codeLanguagePicker = null
+    }
+
+    if (this.tableHandler) {
+      this.tableHandler.remove()
+      this.tableHandler = null
     }
 
     this.selection = null
