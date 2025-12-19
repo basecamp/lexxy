@@ -409,7 +409,12 @@ export default class Selection {
     if (this.current) {
       this.editor.update(() => {
         this.clear()
-        fn(this.current.getNodes()[0])
+        // Use fresh selection - cached this.current may be frozen
+        // See: https://github.com/facebook/lexical/issues/6290
+        const selection = $getSelection()
+        if ($isNodeSelection(selection)) {
+          fn(selection.getNodes()[0])
+        }
         this.editor.focus()
       })
     }
