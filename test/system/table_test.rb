@@ -8,10 +8,7 @@ class TableTest < ApplicationSystemTestCase
 
   test "adding a table" do
     find_editor.toggle_command("insertTable")
-
-    assert_selector Capybara.string(find_editor.value), :table do |table|
-      assert_selector table, :table_row, count: 3
-    end
+    assert_editor_table_structure(3, 3)
   end
 
   test "writing in table fields" do
@@ -28,7 +25,7 @@ class TableTest < ApplicationSystemTestCase
     find_editor.toggle_command("insertTable")
 
     click_table_handler_button("Add row")
-    assert_table_structure(4, 3)
+    assert_editor_table_structure(4, 3)
   end
 
   test "toggling header style on row" do
@@ -68,10 +65,10 @@ class TableTest < ApplicationSystemTestCase
   test "adding a new column" do
     find_editor.toggle_command("insertTable")
 
-    assert_table_structure(3, 3)
+    assert_editor_table_structure(3, 3)
 
     click_table_handler_button("Add column")
-    assert_table_structure(3, 4)
+    assert_editor_table_structure(3, 4)
   end
 
   test "toggling header style on column" do
@@ -99,10 +96,10 @@ class TableTest < ApplicationSystemTestCase
   test "deleting a column" do
     find_editor.toggle_command("insertTable")
 
-    assert_table_structure(3, 3)
+    assert_editor_table_structure(3, 3)
 
     click_table_handler_button("Remove column")
-    assert_table_structure(3, 2)
+    assert_editor_table_structure(3, 2)
   end
 
   test "deleting the table" do
@@ -116,5 +113,13 @@ class TableTest < ApplicationSystemTestCase
 
     html = find_editor.value
     assert_no_match(/<table>/, html, "Table should be removed")
+  end
+
+  test "tables render with action text" do
+    find_editor.toggle_command("insertTable")
+    click_on "Update Post"
+
+    assert_no_selector "lexxy-editor"
+    assert_table_structure(3, 3)
   end
 end

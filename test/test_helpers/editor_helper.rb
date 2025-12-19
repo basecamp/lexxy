@@ -61,12 +61,16 @@ module EditorHelper
     more_menu.click
   end
 
-  def assert_table_structure(rows, cols)
+  def assert_editor_table_structure(rows, cols)
     within("lexxy-editor table") do
-      assert_selector "tr", count: rows
-      within(first("tr")) do
-        assert_selector "td, th", count: cols
-      end
+      assert_table_structure(cols, rows)
+    end
+  end
+
+  def assert_table_structure(cols, rows)
+    assert_selector "tr", count: rows
+    within(first("tr")) do
+      assert_selector "td, th", count: cols
     end
   end
 end
