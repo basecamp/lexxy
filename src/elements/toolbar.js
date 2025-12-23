@@ -113,8 +113,10 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #setTabIndexValues() {
-    this.#buttons.forEach((button) => {
-      button.setAttribute("tabindex", 0)
+    // Get all focusable elements within toolbar (buttons, summary elements, etc.)
+    const focusableElements = this.querySelectorAll(":scope > button, :scope > details > summary")
+    focusableElements.forEach((element) => {
+      element.setAttribute("tabindex", -1)
     })
   }
 
