@@ -2,6 +2,7 @@ import {
   $createTextNode,
   $getSelection,
   $isRangeSelection,
+  $isRootOrShadowRoot,
   COMMAND_PRIORITY_LOW,
   COMMAND_PRIORITY_NORMAL,
   FORMAT_TEXT_COMMAND,
@@ -172,6 +173,11 @@ export class CommandDispatcher {
     this.editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
+
+      if ($isRootOrShadowRoot(selection.anchor.getNode())) {
+        selection.insertNodes([ $createHeadingNode("h2") ])
+        return
+      }
 
       const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
       let nextTag = "h2"
