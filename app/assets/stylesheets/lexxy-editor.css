@@ -221,7 +221,7 @@
     gap: var(--dropdown-gap);
     inset-block-start: 2lh;
     inset-inline-start: 0;
-    max-inline-size: 40ch;
+    max-inline-size: max-content;
     margin: 0;
     padding: var(--dropdown-padding);
     position: absolute;
@@ -246,6 +246,12 @@
       inset-inline-end: var(--dropdown-padding);
       inset-inline-start: var(--dropdown-padding);
     }
+  }
+
+  summary {
+    list-style: none;
+    align-content: center;
+    text-align: center;
   }
 }
 
