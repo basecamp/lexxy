@@ -8,7 +8,6 @@ import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 import { TableCellNode, TableNode, TableRowNode, registerTablePlugin, registerTableSelectionObserver, setScrollableTablesActive } from "@lexical/table"
 
-import lexxyConfig from "../config/lexxy"
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
@@ -43,7 +42,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
   connectedCallback() {
     this.id ??= generateDomId("lexxy-editor")
-    this.config = new Configuration(this)
+    this.config = new Configuration(this, this.preset)
     this.editor = this.#createEditor()
     this.contents = new Contents(this)
     this.selection = new Selection(this)
@@ -115,6 +114,10 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.querySelector(".lexxy-prompt-menu.lexxy-prompt-menu--visible") !== null
   }
 
+  get preset() {
+    return this.getAttribute("preset") || "default"
+  }
+
   get isSingleLineMode() {
     return this.config.get("singleLine")
   }
@@ -134,7 +137,7 @@ export default class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null), { additionalAllowedTags: [ lexxyConfig.get("global.attachmentTagName") ] })
+        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
       })
     }
 

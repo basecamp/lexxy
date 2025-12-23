@@ -1,45 +1,40 @@
 import Configuration from "../config/configuration"
-import lexxyConfig from "../config/lexxy"
-import { camelize } from "../helpers/string_helper"
+import lexxyConfig, { DEFAULT_PRESET } from "../config/lexxy"
+import { dasherize } from "../helpers/string_helper"
 
-export default class EditorConfiguration extends Configuration {
-  static attributes = [ "attachments", "markdown", "single-line", "toolbar" ]
-
+export default class EditorConfiguration {
   #editorElement
+  #config
 
-  constructor(editorElement) {
-    super()
+  constructor(editorElement, preset = "default") {
     this.#editorElement = editorElement
-    this.merge(this.#overrides)
+    this.#config = new Configuration(
+      lexxyConfig.presets.get("default"),
+      lexxyConfig.presets.get(preset),
+      this.#overrides
+    )
   }
 
   get(path) {
-    if (this.#preset) {
-      return super.get(path) ?? lexxyConfig.get(`${this.#preset}.${path}`) ?? lexxyConfig.get(`default.${path}`)
-    } else {
-      return super.get(path) ?? lexxyConfig.get(`default.${path}`)
-    }
+    return this.#config.get(path)
   }
 
   get #overrides() {
     const overrides = {}
-    for (const attribute of EditorConfiguration.attributes) {
-      if (this.#editorElement.hasAttribute(attribute)) {
-        const camelized = camelize(attribute)
-        overrides[camelized] = this.#parseAttribute(attribute)
+    for (const option of Object.keys(DEFAULT_PRESET)) {
+      if (this.#editorElement.hasAttribute(option)) {
+        overrides[option] = this.#parseAttribute(dasherize(option))
       }
     }
     return overrides
   }
 
-  get #preset() {
-    return this.#editorElement.getAttribute("config")
-  }
-
   #parseAttribute(attribute) {
     const value = this.#editorElement.getAttribute(attribute)
-    if (value == "true") return true
-    if (value == "false") return false
-    return value
+    try {
+      return JSON.parse(value)
+    } catch {
+      return value
+    }
   }
 }

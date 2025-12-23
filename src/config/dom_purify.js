@@ -38,10 +38,10 @@ DOMPurify.addHook("uponSanitizeElement", (node, data) => {
   }
 })
 
-lexxyConfig.listen("global.attachmentTagName", (attachmentTagName) => {
-  DOMPurify.setConfig({
-    ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(attachmentTagName),
+export function buildConfig() {
+  return {
+    ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(lexxyConfig.global.get("attachmentTagName")),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
-  })
-})
+  }
+}
