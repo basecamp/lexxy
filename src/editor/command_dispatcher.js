@@ -4,6 +4,7 @@ import {
   $isRangeSelection,
   COMMAND_PRIORITY_LOW,
   COMMAND_PRIORITY_NORMAL,
+  FORMAT_ELEMENT_COMMAND,
   FORMAT_TEXT_COMMAND,
   INDENT_CONTENT_COMMAND,
   KEY_TAB_COMMAND,
@@ -44,6 +45,11 @@ const COMMANDS = [
   "insertCodeBlock",
   "insertHorizontalDivider",
   "uploadAttachments",
+  
+  "leftAlign",
+  "centerAlign",
+  "rightAlign",
+  "justifyAlign",
 
   "insertTable",
   "insertTableRowAbove",
@@ -193,6 +199,30 @@ export class CommandDispatcher {
       } else {
         this.contents.removeFormattingFromSelectedLines()
       }
+    })
+  }
+
+  dispatchLeftAlign() {
+    this.editor.update(() => {
+      this.editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "left")
+    })
+  }
+
+  dispatchCenterAlign() {
+    this.editor.update(() => {
+      this.editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "center")
+    })
+  }
+
+  dispatchRightAlign() {
+    this.editor.update(() => {
+      this.editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "right")
+    })
+  }
+
+  dispatchJustifyAlign() {
+    this.editor.update(() => {
+      this.editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "justify")
     })
   }
 
