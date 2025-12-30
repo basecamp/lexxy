@@ -1,11 +1,3 @@
-export function camelize(value) {
-  return value.replace(/(?:[_-])([a-z0-9])/g, (_, char) => char.toUpperCase())
-}
-
-export function dasherize(value) {
-  return value.replace(/([A-Z])/g, (_, char) => `-${char.toLowerCase()}`)
-}
-
 export function isUrl(string) {
   try {
     new URL(string)

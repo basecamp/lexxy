@@ -21,7 +21,7 @@ module Lexxy
     alias_method :lexxy_rich_text_area_tag, :lexxy_rich_textarea_tag
 
     private
-      # Temporary: we need to *adaptarize* action text
+      # Tempoary: we need to *adaptarize* action text
       def render_custom_attachments_in(value)
         if value.respond_to?(:body)
           if html = value.body_before_type_cast.presence

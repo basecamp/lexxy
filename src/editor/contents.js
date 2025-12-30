@@ -1,6 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
-  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection, HISTORY_MERGE_TAG
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -38,7 +38,7 @@ export default class Contents {
       const selectedNodes = selection?.getNodes()
 
       if ($isRangeSelection(selection)) {
-        $insertNodes([ node ])
+        $insertNodes([node])
       } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
         const lastNode = selectedNodes[selectedNodes.length - 1]
         lastNode.insertAfter(node)
@@ -77,11 +77,6 @@ export default class Contents {
     this.editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
-
-      if ($isRootOrShadowRoot(selection.anchor.getNode())) {
-        selection.insertNodes([ newNodeFn() ])
-        return
-      }
 
       const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
 
@@ -157,7 +152,7 @@ export default class Contents {
 
       const selection = $getSelection()
       if ($isRangeSelection(selection)) {
-        selection.insertNodes([ linkNode ])
+        selection.insertNodes([linkNode])
         linkNodeKey = linkNode.getKey()
       }
     })
@@ -223,7 +218,7 @@ export default class Contents {
   }
 
   replaceTextBackUntil(stringToReplace, replacementNodes) {
-    replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ]
+    replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [replacementNodes]
 
     this.editor.update(() => {
       const { anchorNode, offset } = this.#getTextAnchorData()
@@ -383,12 +378,6 @@ export default class Contents {
       if (selectedNodes.length === 0) {
         return
       }
-
-      if ($isRootOrShadowRoot(selectedNodes[0])) {
-        selection.insertNodes([ newNodeFn() ])
-        return
-      }
-
       const topLevelElements = new Set()
       selectedNodes.forEach((node) => {
         const topLevel = node.getTopLevelElementOrThrow()
@@ -459,12 +448,6 @@ export default class Contents {
 
   #wrapCurrentLine(selection, newNodeFn) {
     const anchorNode = selection.anchor.getNode()
-
-    if ($isRootOrShadowRoot(anchorNode)) {
-      selection.insertNodes([ newNodeFn() ])
-      return
-    }
-
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
 
     if (topLevelElement.getTextContent()) {
@@ -472,7 +455,7 @@ export default class Contents {
       wrappingNode.append(...topLevelElement.getChildren())
       topLevelElement.replace(wrappingNode)
     } else {
-      $insertNodes([ newNodeFn() ])
+      $insertNodes([newNodeFn()])
     }
   }
 

@@ -1,3220 +1,5 @@
 import { DirectUpload } from '@rails/activestorage';
 
-var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
-
-function getDefaultExportFromCjs (x) {
-	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
-}
-
-var prism = {exports: {}};
-
-var hasRequiredPrism;
-
-function requirePrism () {
-	if (hasRequiredPrism) return prism.exports;
-	hasRequiredPrism = 1;
-	(function (module) {
-		/* **********************************************
-		     Begin prism-core.js
-		********************************************** */
-
-		/// <reference lib="WebWorker"/>
-
-		var _self = (typeof window !== 'undefined')
-			? window   // if in browser
-			: (
-				(typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope)
-					? self // if in worker
-					: {}   // if in node js
-			);
-
-		/**
-		 * Prism: Lightweight, robust, elegant syntax highlighting
-		 *
-		 * @license MIT <https://opensource.org/licenses/MIT>
-		 * @author Lea Verou <https://lea.verou.me>
-		 * @namespace
-		 * @public
-		 */
-		var Prism = (function (_self) {
-
-			// Private helper vars
-			var lang = /(?:^|\s)lang(?:uage)?-([\w-]+)(?=\s|$)/i;
-			var uniqueId = 0;
-
-			// The grammar object for plaintext
-			var plainTextGrammar = {};
-
-
-			var _ = {
-				/**
-				 * By default, Prism will attempt to highlight all code elements (by calling {@link Prism.highlightAll}) on the
-				 * current page after the page finished loading. This might be a problem if e.g. you wanted to asynchronously load
-				 * additional languages or plugins yourself.
-				 *
-				 * By setting this value to `true`, Prism will not automatically highlight all code elements on the page.
-				 *
-				 * You obviously have to change this value before the automatic highlighting started. To do this, you can add an
-				 * empty Prism object into the global scope before loading the Prism script like this:
-				 *
-				 * ```js
-				 * window.Prism = window.Prism || {};
-				 * Prism.manual = true;
-				 * // add a new <script> to load Prism's script
-				 * ```
-				 *
-				 * @default false
-				 * @type {boolean}
-				 * @memberof Prism
-				 * @public
-				 */
-				manual: _self.Prism && _self.Prism.manual,
-				/**
-				 * By default, if Prism is in a web worker, it assumes that it is in a worker it created itself, so it uses
-				 * `addEventListener` to communicate with its parent instance. However, if you're using Prism manually in your
-				 * own worker, you don't want it to do this.
-				 *
-				 * By setting this value to `true`, Prism will not add its own listeners to the worker.
-				 *
-				 * You obviously have to change this value before Prism executes. To do this, you can add an
-				 * empty Prism object into the global scope before loading the Prism script like this:
-				 *
-				 * ```js
-				 * window.Prism = window.Prism || {};
-				 * Prism.disableWorkerMessageHandler = true;
-				 * // Load Prism's script
-				 * ```
-				 *
-				 * @default false
-				 * @type {boolean}
-				 * @memberof Prism
-				 * @public
-				 */
-				disableWorkerMessageHandler: _self.Prism && _self.Prism.disableWorkerMessageHandler,
-
-				/**
-				 * A namespace for utility methods.
-				 *
-				 * All function in this namespace that are not explicitly marked as _public_ are for __internal use only__ and may
-				 * change or disappear at any time.
-				 *
-				 * @namespace
-				 * @memberof Prism
-				 */
-				util: {
-					encode: function encode(tokens) {
-						if (tokens instanceof Token) {
-							return new Token(tokens.type, encode(tokens.content), tokens.alias);
-						} else if (Array.isArray(tokens)) {
-							return tokens.map(encode);
-						} else {
-							return tokens.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\u00a0/g, ' ');
-						}
-					},
-
-					/**
-					 * Returns the name of the type of the given value.
-					 *
-					 * @param {any} o
-					 * @returns {string}
-					 * @example
-					 * type(null)      === 'Null'
-					 * type(undefined) === 'Undefined'
-					 * type(123)       === 'Number'
-					 * type('foo')     === 'String'
-					 * type(true)      === 'Boolean'
-					 * type([1, 2])    === 'Array'
-					 * type({})        === 'Object'
-					 * type(String)    === 'Function'
-					 * type(/abc+/)    === 'RegExp'
-					 */
-					type: function (o) {
-						return Object.prototype.toString.call(o).slice(8, -1);
-					},
-
-					/**
-					 * Returns a unique number for the given object. Later calls will still return the same number.
-					 *
-					 * @param {Object} obj
-					 * @returns {number}
-					 */
-					objId: function (obj) {
-						if (!obj['__id']) {
-							Object.defineProperty(obj, '__id', { value: ++uniqueId });
-						}
-						return obj['__id'];
-					},
-
-					/**
-					 * Creates a deep clone of the given object.
-					 *
-					 * The main intended use of this function is to clone language definitions.
-					 *
-					 * @param {T} o
-					 * @param {Record<number, any>} [visited]
-					 * @returns {T}
-					 * @template T
-					 */
-					clone: function deepClone(o, visited) {
-						visited = visited || {};
-
-						var clone; var id;
-						switch (_.util.type(o)) {
-							case 'Object':
-								id = _.util.objId(o);
-								if (visited[id]) {
-									return visited[id];
-								}
-								clone = /** @type {Record<string, any>} */ ({});
-								visited[id] = clone;
-
-								for (var key in o) {
-									if (o.hasOwnProperty(key)) {
-										clone[key] = deepClone(o[key], visited);
-									}
-								}
-
-								return /** @type {any} */ (clone);
-
-							case 'Array':
-								id = _.util.objId(o);
-								if (visited[id]) {
-									return visited[id];
-								}
-								clone = [];
-								visited[id] = clone;
-
-								(/** @type {Array} */(/** @type {any} */(o))).forEach(function (v, i) {
-									clone[i] = deepClone(v, visited);
-								});
-
-								return /** @type {any} */ (clone);
-
-							default:
-								return o;
-						}
-					},
-
-					/**
-					 * Returns the Prism language of the given element set by a `language-xxxx` or `lang-xxxx` class.
-					 *
-					 * If no language is set for the element or the element is `null` or `undefined`, `none` will be returned.
-					 *
-					 * @param {Element} element
-					 * @returns {string}
-					 */
-					getLanguage: function (element) {
-						while (element) {
-							var m = lang.exec(element.className);
-							if (m) {
-								return m[1].toLowerCase();
-							}
-							element = element.parentElement;
-						}
-						return 'none';
-					},
-
-					/**
-					 * Sets the Prism `language-xxxx` class of the given element.
-					 *
-					 * @param {Element} element
-					 * @param {string} language
-					 * @returns {void}
-					 */
-					setLanguage: function (element, language) {
-						// remove all `language-xxxx` classes
-						// (this might leave behind a leading space)
-						element.className = element.className.replace(RegExp(lang, 'gi'), '');
-
-						// add the new `language-xxxx` class
-						// (using `classList` will automatically clean up spaces for us)
-						element.classList.add('language-' + language);
-					},
-
-					/**
-					 * Returns the script element that is currently executing.
-					 *
-					 * This does __not__ work for line script element.
-					 *
-					 * @returns {HTMLScriptElement | null}
-					 */
-					currentScript: function () {
-						if (typeof document === 'undefined') {
-							return null;
-						}
-						if (document.currentScript && document.currentScript.tagName === 'SCRIPT' && 1 < 2 /* hack to trip TS' flow analysis */) {
-							return /** @type {any} */ (document.currentScript);
-						}
-
-						// IE11 workaround
-						// we'll get the src of the current script by parsing IE11's error stack trace
-						// this will not work for inline scripts
-
-						try {
-							throw new Error();
-						} catch (err) {
-							// Get file src url from stack. Specifically works with the format of stack traces in IE.
-							// A stack will look like this:
-							//
-							// Error
-							//    at _.util.currentScript (http://localhost/components/prism-core.js:119:5)
-							//    at Global code (http://localhost/components/prism-core.js:606:1)
-
-							var src = (/at [^(\r\n]*\((.*):[^:]+:[^:]+\)$/i.exec(err.stack) || [])[1];
-							if (src) {
-								var scripts = document.getElementsByTagName('script');
-								for (var i in scripts) {
-									if (scripts[i].src == src) {
-										return scripts[i];
-									}
-								}
-							}
-							return null;
-						}
-					},
-
-					/**
-					 * Returns whether a given class is active for `element`.
-					 *
-					 * The class can be activated if `element` or one of its ancestors has the given class and it can be deactivated
-					 * if `element` or one of its ancestors has the negated version of the given class. The _negated version_ of the
-					 * given class is just the given class with a `no-` prefix.
-					 *
-					 * Whether the class is active is determined by the closest ancestor of `element` (where `element` itself is
-					 * closest ancestor) that has the given class or the negated version of it. If neither `element` nor any of its
-					 * ancestors have the given class or the negated version of it, then the default activation will be returned.
-					 *
-					 * In the paradoxical situation where the closest ancestor contains __both__ the given class and the negated
-					 * version of it, the class is considered active.
-					 *
-					 * @param {Element} element
-					 * @param {string} className
-					 * @param {boolean} [defaultActivation=false]
-					 * @returns {boolean}
-					 */
-					isActive: function (element, className, defaultActivation) {
-						var no = 'no-' + className;
-
-						while (element) {
-							var classList = element.classList;
-							if (classList.contains(className)) {
-								return true;
-							}
-							if (classList.contains(no)) {
-								return false;
-							}
-							element = element.parentElement;
-						}
-						return !!defaultActivation;
-					}
-				},
-
-				/**
-				 * This namespace contains all currently loaded languages and the some helper functions to create and modify languages.
-				 *
-				 * @namespace
-				 * @memberof Prism
-				 * @public
-				 */
-				languages: {
-					/**
-					 * The grammar for plain, unformatted text.
-					 */
-					plain: plainTextGrammar,
-					plaintext: plainTextGrammar,
-					text: plainTextGrammar,
-					txt: plainTextGrammar,
-
-					/**
-					 * Creates a deep copy of the language with the given id and appends the given tokens.
-					 *
-					 * If a token in `redef` also appears in the copied language, then the existing token in the copied language
-					 * will be overwritten at its original position.
-					 *
-					 * ## Best practices
-					 *
-					 * Since the position of overwriting tokens (token in `redef` that overwrite tokens in the copied language)
-					 * doesn't matter, they can technically be in any order. However, this can be confusing to others that trying to
-					 * understand the language definition because, normally, the order of tokens matters in Prism grammars.
-					 *
-					 * Therefore, it is encouraged to order overwriting tokens according to the positions of the overwritten tokens.
-					 * Furthermore, all non-overwriting tokens should be placed after the overwriting ones.
-					 *
-					 * @param {string} id The id of the language to extend. This has to be a key in `Prism.languages`.
-					 * @param {Grammar} redef The new tokens to append.
-					 * @returns {Grammar} The new language created.
-					 * @public
-					 * @example
-					 * Prism.languages['css-with-colors'] = Prism.languages.extend('css', {
-					 *     // Prism.languages.css already has a 'comment' token, so this token will overwrite CSS' 'comment' token
-					 *     // at its original position
-					 *     'comment': { ... },
-					 *     // CSS doesn't have a 'color' token, so this token will be appended
-					 *     'color': /\b(?:red|green|blue)\b/
-					 * });
-					 */
-					extend: function (id, redef) {
-						var lang = _.util.clone(_.languages[id]);
-
-						for (var key in redef) {
-							lang[key] = redef[key];
-						}
-
-						return lang;
-					},
-
-					/**
-					 * Inserts tokens _before_ another token in a language definition or any other grammar.
-					 *
-					 * ## Usage
-					 *
-					 * This helper method makes it easy to modify existing languages. For example, the CSS language definition
-					 * not only defines CSS highlighting for CSS documents, but also needs to define highlighting for CSS embedded
-					 * in HTML through `<style>` elements. To do this, it needs to modify `Prism.languages.markup` and add the
-					 * appropriate tokens. However, `Prism.languages.markup` is a regular JavaScript object literal, so if you do
-					 * this:
-					 *
-					 * ```js
-					 * Prism.languages.markup.style = {
-					 *     // token
-					 * };
-					 * ```
-					 *
-					 * then the `style` token will be added (and processed) at the end. `insertBefore` allows you to insert tokens
-					 * before existing tokens. For the CSS example above, you would use it like this:
-					 *
-					 * ```js
-					 * Prism.languages.insertBefore('markup', 'cdata', {
-					 *     'style': {
-					 *         // token
-					 *     }
-					 * });
-					 * ```
-					 *
-					 * ## Special cases
-					 *
-					 * If the grammars of `inside` and `insert` have tokens with the same name, the tokens in `inside`'s grammar
-					 * will be ignored.
-					 *
-					 * This behavior can be used to insert tokens after `before`:
-					 *
-					 * ```js
-					 * Prism.languages.insertBefore('markup', 'comment', {
-					 *     'comment': Prism.languages.markup.comment,
-					 *     // tokens after 'comment'
-					 * });
-					 * ```
-					 *
-					 * ## Limitations
-					 *
-					 * The main problem `insertBefore` has to solve is iteration order. Since ES2015, the iteration order for object
-					 * properties is guaranteed to be the insertion order (except for integer keys) but some browsers behave
-					 * differently when keys are deleted and re-inserted. So `insertBefore` can't be implemented by temporarily
-					 * deleting properties which is necessary to insert at arbitrary positions.
-					 *
-					 * To solve this problem, `insertBefore` doesn't actually insert the given tokens into the target object.
-					 * Instead, it will create a new object and replace all references to the target object with the new one. This
-					 * can be done without temporarily deleting properties, so the iteration order is well-defined.
-					 *
-					 * However, only references that can be reached from `Prism.languages` or `insert` will be replaced. I.e. if
-					 * you hold the target object in a variable, then the value of the variable will not change.
-					 *
-					 * ```js
-					 * var oldMarkup = Prism.languages.markup;
-					 * var newMarkup = Prism.languages.insertBefore('markup', 'comment', { ... });
-					 *
-					 * assert(oldMarkup !== Prism.languages.markup);
-					 * assert(newMarkup === Prism.languages.markup);
-					 * ```
-					 *
-					 * @param {string} inside The property of `root` (e.g. a language id in `Prism.languages`) that contains the
-					 * object to be modified.
-					 * @param {string} before The key to insert before.
-					 * @param {Grammar} insert An object containing the key-value pairs to be inserted.
-					 * @param {Object<string, any>} [root] The object containing `inside`, i.e. the object that contains the
-					 * object to be modified.
-					 *
-					 * Defaults to `Prism.languages`.
-					 * @returns {Grammar} The new grammar object.
-					 * @public
-					 */
-					insertBefore: function (inside, before, insert, root) {
-						root = root || /** @type {any} */ (_.languages);
-						var grammar = root[inside];
-						/** @type {Grammar} */
-						var ret = {};
-
-						for (var token in grammar) {
-							if (grammar.hasOwnProperty(token)) {
-
-								if (token == before) {
-									for (var newToken in insert) {
-										if (insert.hasOwnProperty(newToken)) {
-											ret[newToken] = insert[newToken];
-										}
-									}
-								}
-
-								// Do not insert token which also occur in insert. See #1525
-								if (!insert.hasOwnProperty(token)) {
-									ret[token] = grammar[token];
-								}
-							}
-						}
-
-						var old = root[inside];
-						root[inside] = ret;
-
-						// Update references in other language definitions
-						_.languages.DFS(_.languages, function (key, value) {
-							if (value === old && key != inside) {
-								this[key] = ret;
-							}
-						});
-
-						return ret;
-					},
-
-					// Traverse a language definition with Depth First Search
-					DFS: function DFS(o, callback, type, visited) {
-						visited = visited || {};
-
-						var objId = _.util.objId;
-
-						for (var i in o) {
-							if (o.hasOwnProperty(i)) {
-								callback.call(o, i, o[i], type || i);
-
-								var property = o[i];
-								var propertyType = _.util.type(property);
-
-								if (propertyType === 'Object' && !visited[objId(property)]) {
-									visited[objId(property)] = true;
-									DFS(property, callback, null, visited);
-								} else if (propertyType === 'Array' && !visited[objId(property)]) {
-									visited[objId(property)] = true;
-									DFS(property, callback, i, visited);
-								}
-							}
-						}
-					}
-				},
-
-				plugins: {},
-
-				/**
-				 * This is the most high-level function in Prism’s API.
-				 * It fetches all the elements that have a `.language-xxxx` class and then calls {@link Prism.highlightElement} on
-				 * each one of them.
-				 *
-				 * This is equivalent to `Prism.highlightAllUnder(document, async, callback)`.
-				 *
-				 * @param {boolean} [async=false] Same as in {@link Prism.highlightAllUnder}.
-				 * @param {HighlightCallback} [callback] Same as in {@link Prism.highlightAllUnder}.
-				 * @memberof Prism
-				 * @public
-				 */
-				highlightAll: function (async, callback) {
-					_.highlightAllUnder(document, async, callback);
-				},
-
-				/**
-				 * Fetches all the descendants of `container` that have a `.language-xxxx` class and then calls
-				 * {@link Prism.highlightElement} on each one of them.
-				 *
-				 * The following hooks will be run:
-				 * 1. `before-highlightall`
-				 * 2. `before-all-elements-highlight`
-				 * 3. All hooks of {@link Prism.highlightElement} for each element.
-				 *
-				 * @param {ParentNode} container The root element, whose descendants that have a `.language-xxxx` class will be highlighted.
-				 * @param {boolean} [async=false] Whether each element is to be highlighted asynchronously using Web Workers.
-				 * @param {HighlightCallback} [callback] An optional callback to be invoked on each element after its highlighting is done.
-				 * @memberof Prism
-				 * @public
-				 */
-				highlightAllUnder: function (container, async, callback) {
-					var env = {
-						callback: callback,
-						container: container,
-						selector: 'code[class*="language-"], [class*="language-"] code, code[class*="lang-"], [class*="lang-"] code'
-					};
-
-					_.hooks.run('before-highlightall', env);
-
-					env.elements = Array.prototype.slice.apply(env.container.querySelectorAll(env.selector));
-
-					_.hooks.run('before-all-elements-highlight', env);
-
-					for (var i = 0, element; (element = env.elements[i++]);) {
-						_.highlightElement(element, async === true, env.callback);
-					}
-				},
-
-				/**
-				 * Highlights the code inside a single element.
-				 *
-				 * The following hooks will be run:
-				 * 1. `before-sanity-check`
-				 * 2. `before-highlight`
-				 * 3. All hooks of {@link Prism.highlight}. These hooks will be run by an asynchronous worker if `async` is `true`.
-				 * 4. `before-insert`
-				 * 5. `after-highlight`
-				 * 6. `complete`
-				 *
-				 * Some the above hooks will be skipped if the element doesn't contain any text or there is no grammar loaded for
-				 * the element's language.
-				 *
-				 * @param {Element} element The element containing the code.
-				 * It must have a class of `language-xxxx` to be processed, where `xxxx` is a valid language identifier.
-				 * @param {boolean} [async=false] Whether the element is to be highlighted asynchronously using Web Workers
-				 * to improve performance and avoid blocking the UI when highlighting very large chunks of code. This option is
-				 * [disabled by default](https://prismjs.com/faq.html#why-is-asynchronous-highlighting-disabled-by-default).
-				 *
-				 * Note: All language definitions required to highlight the code must be included in the main `prism.js` file for
-				 * asynchronous highlighting to work. You can build your own bundle on the
-				 * [Download page](https://prismjs.com/download.html).
-				 * @param {HighlightCallback} [callback] An optional callback to be invoked after the highlighting is done.
-				 * Mostly useful when `async` is `true`, since in that case, the highlighting is done asynchronously.
-				 * @memberof Prism
-				 * @public
-				 */
-				highlightElement: function (element, async, callback) {
-					// Find language
-					var language = _.util.getLanguage(element);
-					var grammar = _.languages[language];
-
-					// Set language on the element, if not present
-					_.util.setLanguage(element, language);
-
-					// Set language on the parent, for styling
-					var parent = element.parentElement;
-					if (parent && parent.nodeName.toLowerCase() === 'pre') {
-						_.util.setLanguage(parent, language);
-					}
-
-					var code = element.textContent;
-
-					var env = {
-						element: element,
-						language: language,
-						grammar: grammar,
-						code: code
-					};
-
-					function insertHighlightedCode(highlightedCode) {
-						env.highlightedCode = highlightedCode;
-
-						_.hooks.run('before-insert', env);
-
-						env.element.innerHTML = env.highlightedCode;
-
-						_.hooks.run('after-highlight', env);
-						_.hooks.run('complete', env);
-						callback && callback.call(env.element);
-					}
-
-					_.hooks.run('before-sanity-check', env);
-
-					// plugins may change/add the parent/element
-					parent = env.element.parentElement;
-					if (parent && parent.nodeName.toLowerCase() === 'pre' && !parent.hasAttribute('tabindex')) {
-						parent.setAttribute('tabindex', '0');
-					}
-
-					if (!env.code) {
-						_.hooks.run('complete', env);
-						callback && callback.call(env.element);
-						return;
-					}
-
-					_.hooks.run('before-highlight', env);
-
-					if (!env.grammar) {
-						insertHighlightedCode(_.util.encode(env.code));
-						return;
-					}
-
-					if (async && _self.Worker) {
-						var worker = new Worker(_.filename);
-
-						worker.onmessage = function (evt) {
-							insertHighlightedCode(evt.data);
-						};
-
-						worker.postMessage(JSON.stringify({
-							language: env.language,
-							code: env.code,
-							immediateClose: true
-						}));
-					} else {
-						insertHighlightedCode(_.highlight(env.code, env.grammar, env.language));
-					}
-				},
-
-				/**
-				 * Low-level function, only use if you know what you’re doing. It accepts a string of text as input
-				 * and the language definitions to use, and returns a string with the HTML produced.
-				 *
-				 * The following hooks will be run:
-				 * 1. `before-tokenize`
-				 * 2. `after-tokenize`
-				 * 3. `wrap`: On each {@link Token}.
-				 *
-				 * @param {string} text A string with the code to be highlighted.
-				 * @param {Grammar} grammar An object containing the tokens to use.
-				 *
-				 * Usually a language definition like `Prism.languages.markup`.
-				 * @param {string} language The name of the language definition passed to `grammar`.
-				 * @returns {string} The highlighted HTML.
-				 * @memberof Prism
-				 * @public
-				 * @example
-				 * Prism.highlight('var foo = true;', Prism.languages.javascript, 'javascript');
-				 */
-				highlight: function (text, grammar, language) {
-					var env = {
-						code: text,
-						grammar: grammar,
-						language: language
-					};
-					_.hooks.run('before-tokenize', env);
-					if (!env.grammar) {
-						throw new Error('The language "' + env.language + '" has no grammar.');
-					}
-					env.tokens = _.tokenize(env.code, env.grammar);
-					_.hooks.run('after-tokenize', env);
-					return Token.stringify(_.util.encode(env.tokens), env.language);
-				},
-
-				/**
-				 * This is the heart of Prism, and the most low-level function you can use. It accepts a string of text as input
-				 * and the language definitions to use, and returns an array with the tokenized code.
-				 *
-				 * When the language definition includes nested tokens, the function is called recursively on each of these tokens.
-				 *
-				 * This method could be useful in other contexts as well, as a very crude parser.
-				 *
-				 * @param {string} text A string with the code to be highlighted.
-				 * @param {Grammar} grammar An object containing the tokens to use.
-				 *
-				 * Usually a language definition like `Prism.languages.markup`.
-				 * @returns {TokenStream} An array of strings and tokens, a token stream.
-				 * @memberof Prism
-				 * @public
-				 * @example
-				 * let code = `var foo = 0;`;
-				 * let tokens = Prism.tokenize(code, Prism.languages.javascript);
-				 * tokens.forEach(token => {
-				 *     if (token instanceof Prism.Token && token.type === 'number') {
-				 *         console.log(`Found numeric literal: ${token.content}`);
-				 *     }
-				 * });
-				 */
-				tokenize: function (text, grammar) {
-					var rest = grammar.rest;
-					if (rest) {
-						for (var token in rest) {
-							grammar[token] = rest[token];
-						}
-
-						delete grammar.rest;
-					}
-
-					var tokenList = new LinkedList();
-					addAfter(tokenList, tokenList.head, text);
-
-					matchGrammar(text, tokenList, grammar, tokenList.head, 0);
-
-					return toArray(tokenList);
-				},
-
-				/**
-				 * @namespace
-				 * @memberof Prism
-				 * @public
-				 */
-				hooks: {
-					all: {},
-
-					/**
-					 * Adds the given callback to the list of callbacks for the given hook.
-					 *
-					 * The callback will be invoked when the hook it is registered for is run.
-					 * Hooks are usually directly run by a highlight function but you can also run hooks yourself.
-					 *
-					 * One callback function can be registered to multiple hooks and the same hook multiple times.
-					 *
-					 * @param {string} name The name of the hook.
-					 * @param {HookCallback} callback The callback function which is given environment variables.
-					 * @public
-					 */
-					add: function (name, callback) {
-						var hooks = _.hooks.all;
-
-						hooks[name] = hooks[name] || [];
-
-						hooks[name].push(callback);
-					},
-
-					/**
-					 * Runs a hook invoking all registered callbacks with the given environment variables.
-					 *
-					 * Callbacks will be invoked synchronously and in the order in which they were registered.
-					 *
-					 * @param {string} name The name of the hook.
-					 * @param {Object<string, any>} env The environment variables of the hook passed to all callbacks registered.
-					 * @public
-					 */
-					run: function (name, env) {
-						var callbacks = _.hooks.all[name];
-
-						if (!callbacks || !callbacks.length) {
-							return;
-						}
-
-						for (var i = 0, callback; (callback = callbacks[i++]);) {
-							callback(env);
-						}
-					}
-				},
-
-				Token: Token
-			};
-			_self.Prism = _;
-
-
-			// Typescript note:
-			// The following can be used to import the Token type in JSDoc:
-			//
-			//   @typedef {InstanceType<import("./prism-core")["Token"]>} Token
-
-			/**
-			 * Creates a new token.
-			 *
-			 * @param {string} type See {@link Token#type type}
-			 * @param {string | TokenStream} content See {@link Token#content content}
-			 * @param {string|string[]} [alias] The alias(es) of the token.
-			 * @param {string} [matchedStr=""] A copy of the full string this token was created from.
-			 * @class
-			 * @global
-			 * @public
-			 */
-			function Token(type, content, alias, matchedStr) {
-				/**
-				 * The type of the token.
-				 *
-				 * This is usually the key of a pattern in a {@link Grammar}.
-				 *
-				 * @type {string}
-				 * @see GrammarToken
-				 * @public
-				 */
-				this.type = type;
-				/**
-				 * The strings or tokens contained by this token.
-				 *
-				 * This will be a token stream if the pattern matched also defined an `inside` grammar.
-				 *
-				 * @type {string | TokenStream}
-				 * @public
-				 */
-				this.content = content;
-				/**
-				 * The alias(es) of the token.
-				 *
-				 * @type {string|string[]}
-				 * @see GrammarToken
-				 * @public
-				 */
-				this.alias = alias;
-				// Copy of the full string this token was created from
-				this.length = (matchedStr || '').length | 0;
-			}
-
-			/**
-			 * A token stream is an array of strings and {@link Token Token} objects.
-			 *
-			 * Token streams have to fulfill a few properties that are assumed by most functions (mostly internal ones) that process
-			 * them.
-			 *
-			 * 1. No adjacent strings.
-			 * 2. No empty strings.
-			 *
-			 *    The only exception here is the token stream that only contains the empty string and nothing else.
-			 *
-			 * @typedef {Array<string | Token>} TokenStream
-			 * @global
-			 * @public
-			 */
-
-			/**
-			 * Converts the given token or token stream to an HTML representation.
-			 *
-			 * The following hooks will be run:
-			 * 1. `wrap`: On each {@link Token}.
-			 *
-			 * @param {string | Token | TokenStream} o The token or token stream to be converted.
-			 * @param {string} language The name of current language.
-			 * @returns {string} The HTML representation of the token or token stream.
-			 * @memberof Token
-			 * @static
-			 */
-			Token.stringify = function stringify(o, language) {
-				if (typeof o == 'string') {
-					return o;
-				}
-				if (Array.isArray(o)) {
-					var s = '';
-					o.forEach(function (e) {
-						s += stringify(e, language);
-					});
-					return s;
-				}
-
-				var env = {
-					type: o.type,
-					content: stringify(o.content, language),
-					tag: 'span',
-					classes: ['token', o.type],
-					attributes: {},
-					language: language
-				};
-
-				var aliases = o.alias;
-				if (aliases) {
-					if (Array.isArray(aliases)) {
-						Array.prototype.push.apply(env.classes, aliases);
-					} else {
-						env.classes.push(aliases);
-					}
-				}
-
-				_.hooks.run('wrap', env);
-
-				var attributes = '';
-				for (var name in env.attributes) {
-					attributes += ' ' + name + '="' + (env.attributes[name] || '').replace(/"/g, '&quot;') + '"';
-				}
-
-				return '<' + env.tag + ' class="' + env.classes.join(' ') + '"' + attributes + '>' + env.content + '</' + env.tag + '>';
-			};
-
-			/**
-			 * @param {RegExp} pattern
-			 * @param {number} pos
-			 * @param {string} text
-			 * @param {boolean} lookbehind
-			 * @returns {RegExpExecArray | null}
-			 */
-			function matchPattern(pattern, pos, text, lookbehind) {
-				pattern.lastIndex = pos;
-				var match = pattern.exec(text);
-				if (match && lookbehind && match[1]) {
-					// change the match to remove the text matched by the Prism lookbehind group
-					var lookbehindLength = match[1].length;
-					match.index += lookbehindLength;
-					match[0] = match[0].slice(lookbehindLength);
-				}
-				return match;
-			}
-
-			/**
-			 * @param {string} text
-			 * @param {LinkedList<string | Token>} tokenList
-			 * @param {any} grammar
-			 * @param {LinkedListNode<string | Token>} startNode
-			 * @param {number} startPos
-			 * @param {RematchOptions} [rematch]
-			 * @returns {void}
-			 * @private
-			 *
-			 * @typedef RematchOptions
-			 * @property {string} cause
-			 * @property {number} reach
-			 */
-			function matchGrammar(text, tokenList, grammar, startNode, startPos, rematch) {
-				for (var token in grammar) {
-					if (!grammar.hasOwnProperty(token) || !grammar[token]) {
-						continue;
-					}
-
-					var patterns = grammar[token];
-					patterns = Array.isArray(patterns) ? patterns : [patterns];
-
-					for (var j = 0; j < patterns.length; ++j) {
-						if (rematch && rematch.cause == token + ',' + j) {
-							return;
-						}
-
-						var patternObj = patterns[j];
-						var inside = patternObj.inside;
-						var lookbehind = !!patternObj.lookbehind;
-						var greedy = !!patternObj.greedy;
-						var alias = patternObj.alias;
-
-						if (greedy && !patternObj.pattern.global) {
-							// Without the global flag, lastIndex won't work
-							var flags = patternObj.pattern.toString().match(/[imsuy]*$/)[0];
-							patternObj.pattern = RegExp(patternObj.pattern.source, flags + 'g');
-						}
-
-						/** @type {RegExp} */
-						var pattern = patternObj.pattern || patternObj;
-
-						for ( // iterate the token list and keep track of the current token/string position
-							var currentNode = startNode.next, pos = startPos;
-							currentNode !== tokenList.tail;
-							pos += currentNode.value.length, currentNode = currentNode.next
-						) {
-
-							if (rematch && pos >= rematch.reach) {
-								break;
-							}
-
-							var str = currentNode.value;
-
-							if (tokenList.length > text.length) {
-								// Something went terribly wrong, ABORT, ABORT!
-								return;
-							}
-
-							if (str instanceof Token) {
-								continue;
-							}
-
-							var removeCount = 1; // this is the to parameter of removeBetween
-							var match;
-
-							if (greedy) {
-								match = matchPattern(pattern, pos, text, lookbehind);
-								if (!match || match.index >= text.length) {
-									break;
-								}
-
-								var from = match.index;
-								var to = match.index + match[0].length;
-								var p = pos;
-
-								// find the node that contains the match
-								p += currentNode.value.length;
-								while (from >= p) {
-									currentNode = currentNode.next;
-									p += currentNode.value.length;
-								}
-								// adjust pos (and p)
-								p -= currentNode.value.length;
-								pos = p;
-
-								// the current node is a Token, then the match starts inside another Token, which is invalid
-								if (currentNode.value instanceof Token) {
-									continue;
-								}
-
-								// find the last node which is affected by this match
-								for (
-									var k = currentNode;
-									k !== tokenList.tail && (p < to || typeof k.value === 'string');
-									k = k.next
-								) {
-									removeCount++;
-									p += k.value.length;
-								}
-								removeCount--;
-
-								// replace with the new match
-								str = text.slice(pos, p);
-								match.index -= pos;
-							} else {
-								match = matchPattern(pattern, 0, str, lookbehind);
-								if (!match) {
-									continue;
-								}
-							}
-
-							// eslint-disable-next-line no-redeclare
-							var from = match.index;
-							var matchStr = match[0];
-							var before = str.slice(0, from);
-							var after = str.slice(from + matchStr.length);
-
-							var reach = pos + str.length;
-							if (rematch && reach > rematch.reach) {
-								rematch.reach = reach;
-							}
-
-							var removeFrom = currentNode.prev;
-
-							if (before) {
-								removeFrom = addAfter(tokenList, removeFrom, before);
-								pos += before.length;
-							}
-
-							removeRange(tokenList, removeFrom, removeCount);
-
-							var wrapped = new Token(token, inside ? _.tokenize(matchStr, inside) : matchStr, alias, matchStr);
-							currentNode = addAfter(tokenList, removeFrom, wrapped);
-
-							if (after) {
-								addAfter(tokenList, currentNode, after);
-							}
-
-							if (removeCount > 1) {
-								// at least one Token object was removed, so we have to do some rematching
-								// this can only happen if the current pattern is greedy
-
-								/** @type {RematchOptions} */
-								var nestedRematch = {
-									cause: token + ',' + j,
-									reach: reach
-								};
-								matchGrammar(text, tokenList, grammar, currentNode.prev, pos, nestedRematch);
-
-								// the reach might have been extended because of the rematching
-								if (rematch && nestedRematch.reach > rematch.reach) {
-									rematch.reach = nestedRematch.reach;
-								}
-							}
-						}
-					}
-				}
-			}
-
-			/**
-			 * @typedef LinkedListNode
-			 * @property {T} value
-			 * @property {LinkedListNode<T> | null} prev The previous node.
-			 * @property {LinkedListNode<T> | null} next The next node.
-			 * @template T
-			 * @private
-			 */
-
-			/**
-			 * @template T
-			 * @private
-			 */
-			function LinkedList() {
-				/** @type {LinkedListNode<T>} */
-				var head = { value: null, prev: null, next: null };
-				/** @type {LinkedListNode<T>} */
-				var tail = { value: null, prev: head, next: null };
-				head.next = tail;
-
-				/** @type {LinkedListNode<T>} */
-				this.head = head;
-				/** @type {LinkedListNode<T>} */
-				this.tail = tail;
-				this.length = 0;
-			}
-
-			/**
-			 * Adds a new node with the given value to the list.
-			 *
-			 * @param {LinkedList<T>} list
-			 * @param {LinkedListNode<T>} node
-			 * @param {T} value
-			 * @returns {LinkedListNode<T>} The added node.
-			 * @template T
-			 */
-			function addAfter(list, node, value) {
-				// assumes that node != list.tail && values.length >= 0
-				var next = node.next;
-
-				var newNode = { value: value, prev: node, next: next };
-				node.next = newNode;
-				next.prev = newNode;
-				list.length++;
-
-				return newNode;
-			}
-			/**
-			 * Removes `count` nodes after the given node. The given node will not be removed.
-			 *
-			 * @param {LinkedList<T>} list
-			 * @param {LinkedListNode<T>} node
-			 * @param {number} count
-			 * @template T
-			 */
-			function removeRange(list, node, count) {
-				var next = node.next;
-				for (var i = 0; i < count && next !== list.tail; i++) {
-					next = next.next;
-				}
-				node.next = next;
-				next.prev = node;
-				list.length -= i;
-			}
-			/**
-			 * @param {LinkedList<T>} list
-			 * @returns {T[]}
-			 * @template T
-			 */
-			function toArray(list) {
-				var array = [];
-				var node = list.head.next;
-				while (node !== list.tail) {
-					array.push(node.value);
-					node = node.next;
-				}
-				return array;
-			}
-
-
-			if (!_self.document) {
-				if (!_self.addEventListener) {
-					// in Node.js
-					return _;
-				}
-
-				if (!_.disableWorkerMessageHandler) {
-					// In worker
-					_self.addEventListener('message', function (evt) {
-						var message = JSON.parse(evt.data);
-						var lang = message.language;
-						var code = message.code;
-						var immediateClose = message.immediateClose;
-
-						_self.postMessage(_.highlight(code, _.languages[lang], lang));
-						if (immediateClose) {
-							_self.close();
-						}
-					}, false);
-				}
-
-				return _;
-			}
-
-			// Get current script and highlight
-			var script = _.util.currentScript();
-
-			if (script) {
-				_.filename = script.src;
-
-				if (script.hasAttribute('data-manual')) {
-					_.manual = true;
-				}
-			}
-
-			function highlightAutomaticallyCallback() {
-				if (!_.manual) {
-					_.highlightAll();
-				}
-			}
-
-			if (!_.manual) {
-				// If the document state is "loading", then we'll use DOMContentLoaded.
-				// If the document state is "interactive" and the prism.js script is deferred, then we'll also use the
-				// DOMContentLoaded event because there might be some plugins or languages which have also been deferred and they
-				// might take longer one animation frame to execute which can create a race condition where only some plugins have
-				// been loaded when Prism.highlightAll() is executed, depending on how fast resources are loaded.
-				// See https://github.com/PrismJS/prism/issues/2102
-				var readyState = document.readyState;
-				if (readyState === 'loading' || readyState === 'interactive' && script && script.defer) {
-					document.addEventListener('DOMContentLoaded', highlightAutomaticallyCallback);
-				} else {
-					if (window.requestAnimationFrame) {
-						window.requestAnimationFrame(highlightAutomaticallyCallback);
-					} else {
-						window.setTimeout(highlightAutomaticallyCallback, 16);
-					}
-				}
-			}
-
-			return _;
-
-		}(_self));
-
-		if (module.exports) {
-			module.exports = Prism;
-		}
-
-		// hack for components to work correctly in node.js
-		if (typeof commonjsGlobal !== 'undefined') {
-			commonjsGlobal.Prism = Prism;
-		}
-
-		// some additional documentation/types
-
-		/**
-		 * The expansion of a simple `RegExp` literal to support additional properties.
-		 *
-		 * @typedef GrammarToken
-		 * @property {RegExp} pattern The regular expression of the token.
-		 * @property {boolean} [lookbehind=false] If `true`, then the first capturing group of `pattern` will (effectively)
-		 * behave as a lookbehind group meaning that the captured text will not be part of the matched text of the new token.
-		 * @property {boolean} [greedy=false] Whether the token is greedy.
-		 * @property {string|string[]} [alias] An optional alias or list of aliases.
-		 * @property {Grammar} [inside] The nested grammar of this token.
-		 *
-		 * The `inside` grammar will be used to tokenize the text value of each token of this kind.
-		 *
-		 * This can be used to make nested and even recursive language definitions.
-		 *
-		 * Note: This can cause infinite recursion. Be careful when you embed different languages or even the same language into
-		 * each another.
-		 * @global
-		 * @public
-		 */
-
-		/**
-		 * @typedef Grammar
-		 * @type {Object<string, RegExp | GrammarToken | Array<RegExp | GrammarToken>>}
-		 * @property {Grammar} [rest] An optional grammar object that will be appended to this grammar.
-		 * @global
-		 * @public
-		 */
-
-		/**
-		 * A function which will invoked after an element was successfully highlighted.
-		 *
-		 * @callback HighlightCallback
-		 * @param {Element} element The element successfully highlighted.
-		 * @returns {void}
-		 * @global
-		 * @public
-		 */
-
-		/**
-		 * @callback HookCallback
-		 * @param {Object<string, any>} env The environment variables of the hook.
-		 * @returns {void}
-		 * @global
-		 * @public
-		 */
-
-
-		/* **********************************************
-		     Begin prism-markup.js
-		********************************************** */
-
-		Prism.languages.markup = {
-			'comment': {
-				pattern: /<!--(?:(?!<!--)[\s\S])*?-->/,
-				greedy: true
-			},
-			'prolog': {
-				pattern: /<\?[\s\S]+?\?>/,
-				greedy: true
-			},
-			'doctype': {
-				// https://www.w3.org/TR/xml/#NT-doctypedecl
-				pattern: /<!DOCTYPE(?:[^>"'[\]]|"[^"]*"|'[^']*')+(?:\[(?:[^<"'\]]|"[^"]*"|'[^']*'|<(?!!--)|<!--(?:[^-]|-(?!->))*-->)*\]\s*)?>/i,
-				greedy: true,
-				inside: {
-					'internal-subset': {
-						pattern: /(^[^\[]*\[)[\s\S]+(?=\]>$)/,
-						lookbehind: true,
-						greedy: true,
-						inside: null // see below
-					},
-					'string': {
-						pattern: /"[^"]*"|'[^']*'/,
-						greedy: true
-					},
-					'punctuation': /^<!|>$|[[\]]/,
-					'doctype-tag': /^DOCTYPE/i,
-					'name': /[^\s<>'"]+/
-				}
-			},
-			'cdata': {
-				pattern: /<!\[CDATA\[[\s\S]*?\]\]>/i,
-				greedy: true
-			},
-			'tag': {
-				pattern: /<\/?(?!\d)[^\s>\/=$<%]+(?:\s(?:\s*[^\s>\/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))|(?=[\s/>])))+)?\s*\/?>/,
-				greedy: true,
-				inside: {
-					'tag': {
-						pattern: /^<\/?[^\s>\/]+/,
-						inside: {
-							'punctuation': /^<\/?/,
-							'namespace': /^[^\s>\/:]+:/
-						}
-					},
-					'special-attr': [],
-					'attr-value': {
-						pattern: /=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+)/,
-						inside: {
-							'punctuation': [
-								{
-									pattern: /^=/,
-									alias: 'attr-equals'
-								},
-								{
-									pattern: /^(\s*)["']|["']$/,
-									lookbehind: true
-								}
-							]
-						}
-					},
-					'punctuation': /\/?>/,
-					'attr-name': {
-						pattern: /[^\s>\/]+/,
-						inside: {
-							'namespace': /^[^\s>\/:]+:/
-						}
-					}
-
-				}
-			},
-			'entity': [
-				{
-					pattern: /&[\da-z]{1,8};/i,
-					alias: 'named-entity'
-				},
-				/&#x?[\da-f]{1,8};/i
-			]
-		};
-
-		Prism.languages.markup['tag'].inside['attr-value'].inside['entity'] =
-			Prism.languages.markup['entity'];
-		Prism.languages.markup['doctype'].inside['internal-subset'].inside = Prism.languages.markup;
-
-		// Plugin to make entity title show the real entity, idea by Roman Komarov
-		Prism.hooks.add('wrap', function (env) {
-
-			if (env.type === 'entity') {
-				env.attributes['title'] = env.content.replace(/&amp;/, '&');
-			}
-		});
-
-		Object.defineProperty(Prism.languages.markup.tag, 'addInlined', {
-			/**
-			 * Adds an inlined language to markup.
-			 *
-			 * An example of an inlined language is CSS with `<style>` tags.
-			 *
-			 * @param {string} tagName The name of the tag that contains the inlined language. This name will be treated as
-			 * case insensitive.
-			 * @param {string} lang The language key.
-			 * @example
-			 * addInlined('style', 'css');
-			 */
-			value: function addInlined(tagName, lang) {
-				var includedCdataInside = {};
-				includedCdataInside['language-' + lang] = {
-					pattern: /(^<!\[CDATA\[)[\s\S]+?(?=\]\]>$)/i,
-					lookbehind: true,
-					inside: Prism.languages[lang]
-				};
-				includedCdataInside['cdata'] = /^<!\[CDATA\[|\]\]>$/i;
-
-				var inside = {
-					'included-cdata': {
-						pattern: /<!\[CDATA\[[\s\S]*?\]\]>/i,
-						inside: includedCdataInside
-					}
-				};
-				inside['language-' + lang] = {
-					pattern: /[\s\S]+/,
-					inside: Prism.languages[lang]
-				};
-
-				var def = {};
-				def[tagName] = {
-					pattern: RegExp(/(<__[^>]*>)(?:<!\[CDATA\[(?:[^\]]|\](?!\]>))*\]\]>|(?!<!\[CDATA\[)[\s\S])*?(?=<\/__>)/.source.replace(/__/g, function () { return tagName; }), 'i'),
-					lookbehind: true,
-					greedy: true,
-					inside: inside
-				};
-
-				Prism.languages.insertBefore('markup', 'cdata', def);
-			}
-		});
-		Object.defineProperty(Prism.languages.markup.tag, 'addAttribute', {
-			/**
-			 * Adds an pattern to highlight languages embedded in HTML attributes.
-			 *
-			 * An example of an inlined language is CSS with `style` attributes.
-			 *
-			 * @param {string} attrName The name of the tag that contains the inlined language. This name will be treated as
-			 * case insensitive.
-			 * @param {string} lang The language key.
-			 * @example
-			 * addAttribute('style', 'css');
-			 */
-			value: function (attrName, lang) {
-				Prism.languages.markup.tag.inside['special-attr'].push({
-					pattern: RegExp(
-						/(^|["'\s])/.source + '(?:' + attrName + ')' + /\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))/.source,
-						'i'
-					),
-					lookbehind: true,
-					inside: {
-						'attr-name': /^[^\s=]+/,
-						'attr-value': {
-							pattern: /=[\s\S]+/,
-							inside: {
-								'value': {
-									pattern: /(^=\s*(["']|(?!["'])))\S[\s\S]*(?=\2$)/,
-									lookbehind: true,
-									alias: [lang, 'language-' + lang],
-									inside: Prism.languages[lang]
-								},
-								'punctuation': [
-									{
-										pattern: /^=/,
-										alias: 'attr-equals'
-									},
-									/"|'/
-								]
-							}
-						}
-					}
-				});
-			}
-		});
-
-		Prism.languages.html = Prism.languages.markup;
-		Prism.languages.mathml = Prism.languages.markup;
-		Prism.languages.svg = Prism.languages.markup;
-
-		Prism.languages.xml = Prism.languages.extend('markup', {});
-		Prism.languages.ssml = Prism.languages.xml;
-		Prism.languages.atom = Prism.languages.xml;
-		Prism.languages.rss = Prism.languages.xml;
-
-
-		/* **********************************************
-		     Begin prism-css.js
-		********************************************** */
-
-		(function (Prism) {
-
-			var string = /(?:"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"|'(?:\\(?:\r\n|[\s\S])|[^'\\\r\n])*')/;
-
-			Prism.languages.css = {
-				'comment': /\/\*[\s\S]*?\*\//,
-				'atrule': {
-					pattern: RegExp('@[\\w-](?:' + /[^;{\s"']|\s+(?!\s)/.source + '|' + string.source + ')*?' + /(?:;|(?=\s*\{))/.source),
-					inside: {
-						'rule': /^@[\w-]+/,
-						'selector-function-argument': {
-							pattern: /(\bselector\s*\(\s*(?![\s)]))(?:[^()\s]|\s+(?![\s)])|\((?:[^()]|\([^()]*\))*\))+(?=\s*\))/,
-							lookbehind: true,
-							alias: 'selector'
-						},
-						'keyword': {
-							pattern: /(^|[^\w-])(?:and|not|only|or)(?![\w-])/,
-							lookbehind: true
-						}
-						// See rest below
-					}
-				},
-				'url': {
-					// https://drafts.csswg.org/css-values-3/#urls
-					pattern: RegExp('\\burl\\((?:' + string.source + '|' + /(?:[^\\\r\n()"']|\\[\s\S])*/.source + ')\\)', 'i'),
-					greedy: true,
-					inside: {
-						'function': /^url/i,
-						'punctuation': /^\(|\)$/,
-						'string': {
-							pattern: RegExp('^' + string.source + '$'),
-							alias: 'url'
-						}
-					}
-				},
-				'selector': {
-					pattern: RegExp('(^|[{}\\s])[^{}\\s](?:[^{};"\'\\s]|\\s+(?![\\s{])|' + string.source + ')*(?=\\s*\\{)'),
-					lookbehind: true
-				},
-				'string': {
-					pattern: string,
-					greedy: true
-				},
-				'property': {
-					pattern: /(^|[^-\w\xA0-\uFFFF])(?!\s)[-_a-z\xA0-\uFFFF](?:(?!\s)[-\w\xA0-\uFFFF])*(?=\s*:)/i,
-					lookbehind: true
-				},
-				'important': /!important\b/i,
-				'function': {
-					pattern: /(^|[^-a-z0-9])[-a-z0-9]+(?=\()/i,
-					lookbehind: true
-				},
-				'punctuation': /[(){};:,]/
-			};
-
-			Prism.languages.css['atrule'].inside.rest = Prism.languages.css;
-
-			var markup = Prism.languages.markup;
-			if (markup) {
-				markup.tag.addInlined('style', 'css');
-				markup.tag.addAttribute('style', 'css');
-			}
-
-		}(Prism));
-
-
-		/* **********************************************
-		     Begin prism-clike.js
-		********************************************** */
-
-		Prism.languages.clike = {
-			'comment': [
-				{
-					pattern: /(^|[^\\])\/\*[\s\S]*?(?:\*\/|$)/,
-					lookbehind: true,
-					greedy: true
-				},
-				{
-					pattern: /(^|[^\\:])\/\/.*/,
-					lookbehind: true,
-					greedy: true
-				}
-			],
-			'string': {
-				pattern: /(["'])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,
-				greedy: true
-			},
-			'class-name': {
-				pattern: /(\b(?:class|extends|implements|instanceof|interface|new|trait)\s+|\bcatch\s+\()[\w.\\]+/i,
-				lookbehind: true,
-				inside: {
-					'punctuation': /[.\\]/
-				}
-			},
-			'keyword': /\b(?:break|catch|continue|do|else|finally|for|function|if|in|instanceof|new|null|return|throw|try|while)\b/,
-			'boolean': /\b(?:false|true)\b/,
-			'function': /\b\w+(?=\()/,
-			'number': /\b0x[\da-f]+\b|(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:e[+-]?\d+)?/i,
-			'operator': /[<>]=?|[!=]=?=?|--?|\+\+?|&&?|\|\|?|[?*/~^%]/,
-			'punctuation': /[{}[\];(),.:]/
-		};
-
-
-		/* **********************************************
-		     Begin prism-javascript.js
-		********************************************** */
-
-		Prism.languages.javascript = Prism.languages.extend('clike', {
-			'class-name': [
-				Prism.languages.clike['class-name'],
-				{
-					pattern: /(^|[^$\w\xA0-\uFFFF])(?!\s)[_$A-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\.(?:constructor|prototype))/,
-					lookbehind: true
-				}
-			],
-			'keyword': [
-				{
-					pattern: /((?:^|\})\s*)catch\b/,
-					lookbehind: true
-				},
-				{
-					pattern: /(^|[^.]|\.\.\.\s*)\b(?:as|assert(?=\s*\{)|async(?=\s*(?:function\b|\(|[$\w\xA0-\uFFFF]|$))|await|break|case|class|const|continue|debugger|default|delete|do|else|enum|export|extends|finally(?=\s*(?:\{|$))|for|from(?=\s*(?:['"]|$))|function|(?:get|set)(?=\s*(?:[#\[$\w\xA0-\uFFFF]|$))|if|implements|import|in|instanceof|interface|let|new|null|of|package|private|protected|public|return|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield)\b/,
-					lookbehind: true
-				},
-			],
-			// Allow for all non-ASCII characters (See http://stackoverflow.com/a/2008444)
-			'function': /#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*(?:\.\s*(?:apply|bind|call)\s*)?\()/,
-			'number': {
-				pattern: RegExp(
-					/(^|[^\w$])/.source +
-					'(?:' +
-					(
-						// constant
-						/NaN|Infinity/.source +
-						'|' +
-						// binary integer
-						/0[bB][01]+(?:_[01]+)*n?/.source +
-						'|' +
-						// octal integer
-						/0[oO][0-7]+(?:_[0-7]+)*n?/.source +
-						'|' +
-						// hexadecimal integer
-						/0[xX][\dA-Fa-f]+(?:_[\dA-Fa-f]+)*n?/.source +
-						'|' +
-						// decimal bigint
-						/\d+(?:_\d+)*n/.source +
-						'|' +
-						// decimal number (integer or float) but no bigint
-						/(?:\d+(?:_\d+)*(?:\.(?:\d+(?:_\d+)*)?)?|\.\d+(?:_\d+)*)(?:[Ee][+-]?\d+(?:_\d+)*)?/.source
-					) +
-					')' +
-					/(?![\w$])/.source
-				),
-				lookbehind: true
-			},
-			'operator': /--|\+\+|\*\*=?|=>|&&=?|\|\|=?|[!=]==|<<=?|>>>?=?|[-+*/%&|^!=<>]=?|\.{3}|\?\?=?|\?\.?|[~:]/
-		});
-
-		Prism.languages.javascript['class-name'][0].pattern = /(\b(?:class|extends|implements|instanceof|interface|new)\s+)[\w.\\]+/;
-
-		Prism.languages.insertBefore('javascript', 'keyword', {
-			'regex': {
-				pattern: RegExp(
-					// lookbehind
-					// eslint-disable-next-line regexp/no-dupe-characters-character-class
-					/((?:^|[^$\w\xA0-\uFFFF."'\])\s]|\b(?:return|yield))\s*)/.source +
-					// Regex pattern:
-					// There are 2 regex patterns here. The RegExp set notation proposal added support for nested character
-					// classes if the `v` flag is present. Unfortunately, nested CCs are both context-free and incompatible
-					// with the only syntax, so we have to define 2 different regex patterns.
-					/\//.source +
-					'(?:' +
-					/(?:\[(?:[^\]\\\r\n]|\\.)*\]|\\.|[^/\\\[\r\n])+\/[dgimyus]{0,7}/.source +
-					'|' +
-					// `v` flag syntax. This supports 3 levels of nested character classes.
-					/(?:\[(?:[^[\]\\\r\n]|\\.|\[(?:[^[\]\\\r\n]|\\.|\[(?:[^[\]\\\r\n]|\\.)*\])*\])*\]|\\.|[^/\\\[\r\n])+\/[dgimyus]{0,7}v[dgimyus]{0,7}/.source +
-					')' +
-					// lookahead
-					/(?=(?:\s|\/\*(?:[^*]|\*(?!\/))*\*\/)*(?:$|[\r\n,.;:})\]]|\/\/))/.source
-				),
-				lookbehind: true,
-				greedy: true,
-				inside: {
-					'regex-source': {
-						pattern: /^(\/)[\s\S]+(?=\/[a-z]*$)/,
-						lookbehind: true,
-						alias: 'language-regex',
-						inside: Prism.languages.regex
-					},
-					'regex-delimiter': /^\/|\/$/,
-					'regex-flags': /^[a-z]+$/,
-				}
-			},
-			// This must be declared before keyword because we use "function" inside the look-forward
-			'function-variable': {
-				pattern: /#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*[=:]\s*(?:async\s*)?(?:\bfunction\b|(?:\((?:[^()]|\([^()]*\))*\)|(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*)\s*=>))/,
-				alias: 'function'
-			},
-			'parameter': [
-				{
-					pattern: /(function(?:\s+(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*)?\s*\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\))/,
-					lookbehind: true,
-					inside: Prism.languages.javascript
-				},
-				{
-					pattern: /(^|[^$\w\xA0-\uFFFF])(?!\s)[_$a-z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*=>)/i,
-					lookbehind: true,
-					inside: Prism.languages.javascript
-				},
-				{
-					pattern: /(\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\)\s*=>)/,
-					lookbehind: true,
-					inside: Prism.languages.javascript
-				},
-				{
-					pattern: /((?:\b|\s|^)(?!(?:as|async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|finally|for|from|function|get|if|implements|import|in|instanceof|interface|let|new|null|of|package|private|protected|public|return|set|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield)(?![$\w\xA0-\uFFFF]))(?:(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*\s*)\(\s*|\]\s*\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\)\s*\{)/,
-					lookbehind: true,
-					inside: Prism.languages.javascript
-				}
-			],
-			'constant': /\b[A-Z](?:[A-Z_]|\dx?)*\b/
-		});
-
-		Prism.languages.insertBefore('javascript', 'string', {
-			'hashbang': {
-				pattern: /^#!.*/,
-				greedy: true,
-				alias: 'comment'
-			},
-			'template-string': {
-				pattern: /`(?:\\[\s\S]|\$\{(?:[^{}]|\{(?:[^{}]|\{[^}]*\})*\})+\}|(?!\$\{)[^\\`])*`/,
-				greedy: true,
-				inside: {
-					'template-punctuation': {
-						pattern: /^`|`$/,
-						alias: 'string'
-					},
-					'interpolation': {
-						pattern: /((?:^|[^\\])(?:\\{2})*)\$\{(?:[^{}]|\{(?:[^{}]|\{[^}]*\})*\})+\}/,
-						lookbehind: true,
-						inside: {
-							'interpolation-punctuation': {
-								pattern: /^\$\{|\}$/,
-								alias: 'punctuation'
-							},
-							rest: Prism.languages.javascript
-						}
-					},
-					'string': /[\s\S]+/
-				}
-			},
-			'string-property': {
-				pattern: /((?:^|[,{])[ \t]*)(["'])(?:\\(?:\r\n|[\s\S])|(?!\2)[^\\\r\n])*\2(?=\s*:)/m,
-				lookbehind: true,
-				greedy: true,
-				alias: 'property'
-			}
-		});
-
-		Prism.languages.insertBefore('javascript', 'operator', {
-			'literal-property': {
-				pattern: /((?:^|[,{])[ \t]*)(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*:)/m,
-				lookbehind: true,
-				alias: 'property'
-			},
-		});
-
-		if (Prism.languages.markup) {
-			Prism.languages.markup.tag.addInlined('script', 'javascript');
-
-			// add attribute support for all DOM events.
-			// https://developer.mozilla.org/en-US/docs/Web/Events#Standard_events
-			Prism.languages.markup.tag.addAttribute(
-				/on(?:abort|blur|change|click|composition(?:end|start|update)|dblclick|error|focus(?:in|out)?|key(?:down|up)|load|mouse(?:down|enter|leave|move|out|over|up)|reset|resize|scroll|select|slotchange|submit|unload|wheel)/.source,
-				'javascript'
-			);
-		}
-
-		Prism.languages.js = Prism.languages.javascript;
-
-
-		/* **********************************************
-		     Begin prism-file-highlight.js
-		********************************************** */
-
-		(function () {
-
-			if (typeof Prism === 'undefined' || typeof document === 'undefined') {
-				return;
-			}
-
-			// https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
-			if (!Element.prototype.matches) {
-				Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
-			}
-
-			var LOADING_MESSAGE = 'Loading…';
-			var FAILURE_MESSAGE = function (status, message) {
-				return '✖ Error ' + status + ' while fetching file: ' + message;
-			};
-			var FAILURE_EMPTY_MESSAGE = '✖ Error: File does not exist or is empty';
-
-			var EXTENSIONS = {
-				'js': 'javascript',
-				'py': 'python',
-				'rb': 'ruby',
-				'ps1': 'powershell',
-				'psm1': 'powershell',
-				'sh': 'bash',
-				'bat': 'batch',
-				'h': 'c',
-				'tex': 'latex'
-			};
-
-			var STATUS_ATTR = 'data-src-status';
-			var STATUS_LOADING = 'loading';
-			var STATUS_LOADED = 'loaded';
-			var STATUS_FAILED = 'failed';
-
-			var SELECTOR = 'pre[data-src]:not([' + STATUS_ATTR + '="' + STATUS_LOADED + '"])'
-				+ ':not([' + STATUS_ATTR + '="' + STATUS_LOADING + '"])';
-
-			/**
-			 * Loads the given file.
-			 *
-			 * @param {string} src The URL or path of the source file to load.
-			 * @param {(result: string) => void} success
-			 * @param {(reason: string) => void} error
-			 */
-			function loadFile(src, success, error) {
-				var xhr = new XMLHttpRequest();
-				xhr.open('GET', src, true);
-				xhr.onreadystatechange = function () {
-					if (xhr.readyState == 4) {
-						if (xhr.status < 400 && xhr.responseText) {
-							success(xhr.responseText);
-						} else {
-							if (xhr.status >= 400) {
-								error(FAILURE_MESSAGE(xhr.status, xhr.statusText));
-							} else {
-								error(FAILURE_EMPTY_MESSAGE);
-							}
-						}
-					}
-				};
-				xhr.send(null);
-			}
-
-			/**
-			 * Parses the given range.
-			 *
-			 * This returns a range with inclusive ends.
-			 *
-			 * @param {string | null | undefined} range
-			 * @returns {[number, number | undefined] | undefined}
-			 */
-			function parseRange(range) {
-				var m = /^\s*(\d+)\s*(?:(,)\s*(?:(\d+)\s*)?)?$/.exec(range || '');
-				if (m) {
-					var start = Number(m[1]);
-					var comma = m[2];
-					var end = m[3];
-
-					if (!comma) {
-						return [start, start];
-					}
-					if (!end) {
-						return [start, undefined];
-					}
-					return [start, Number(end)];
-				}
-				return undefined;
-			}
-
-			Prism.hooks.add('before-highlightall', function (env) {
-				env.selector += ', ' + SELECTOR;
-			});
-
-			Prism.hooks.add('before-sanity-check', function (env) {
-				var pre = /** @type {HTMLPreElement} */ (env.element);
-				if (pre.matches(SELECTOR)) {
-					env.code = ''; // fast-path the whole thing and go to complete
-
-					pre.setAttribute(STATUS_ATTR, STATUS_LOADING); // mark as loading
-
-					// add code element with loading message
-					var code = pre.appendChild(document.createElement('CODE'));
-					code.textContent = LOADING_MESSAGE;
-
-					var src = pre.getAttribute('data-src');
-
-					var language = env.language;
-					if (language === 'none') {
-						// the language might be 'none' because there is no language set;
-						// in this case, we want to use the extension as the language
-						var extension = (/\.(\w+)$/.exec(src) || [, 'none'])[1];
-						language = EXTENSIONS[extension] || extension;
-					}
-
-					// set language classes
-					Prism.util.setLanguage(code, language);
-					Prism.util.setLanguage(pre, language);
-
-					// preload the language
-					var autoloader = Prism.plugins.autoloader;
-					if (autoloader) {
-						autoloader.loadLanguages(language);
-					}
-
-					// load file
-					loadFile(
-						src,
-						function (text) {
-							// mark as loaded
-							pre.setAttribute(STATUS_ATTR, STATUS_LOADED);
-
-							// handle data-range
-							var range = parseRange(pre.getAttribute('data-range'));
-							if (range) {
-								var lines = text.split(/\r\n?|\n/g);
-
-								// the range is one-based and inclusive on both ends
-								var start = range[0];
-								var end = range[1] == null ? lines.length : range[1];
-
-								if (start < 0) { start += lines.length; }
-								start = Math.max(0, Math.min(start - 1, lines.length));
-								if (end < 0) { end += lines.length; }
-								end = Math.max(0, Math.min(end, lines.length));
-
-								text = lines.slice(start, end).join('\n');
-
-								// add data-start for line numbers
-								if (!pre.hasAttribute('data-start')) {
-									pre.setAttribute('data-start', String(start + 1));
-								}
-							}
-
-							// highlight code
-							code.textContent = text;
-							Prism.highlightElement(code);
-						},
-						function (error) {
-							// mark as failed
-							pre.setAttribute(STATUS_ATTR, STATUS_FAILED);
-
-							code.textContent = error;
-						}
-					);
-				}
-			});
-
-			Prism.plugins.fileHighlight = {
-				/**
-				 * Executes the File Highlight plugin for all matching `pre` elements under the given container.
-				 *
-				 * Note: Elements which are already loaded or currently loading will not be touched by this method.
-				 *
-				 * @param {ParentNode} [container=document]
-				 */
-				highlight: function highlight(container) {
-					var elements = (container || document).querySelectorAll(SELECTOR);
-
-					for (var i = 0, element; (element = elements[i++]);) {
-						Prism.highlightElement(element);
-					}
-				}
-			};
-
-			var logged = false;
-			/** @deprecated Use `Prism.plugins.fileHighlight.highlight` instead. */
-			Prism.fileHighlight = function () {
-				if (!logged) {
-					console.warn('Prism.fileHighlight is deprecated. Use `Prism.plugins.fileHighlight.highlight` instead.');
-					logged = true;
-				}
-				Prism.plugins.fileHighlight.highlight.apply(this, arguments);
-			};
-
-		}()); 
-	} (prism));
-	return prism.exports;
-}
-
-var prismExports = requirePrism();
-var Prism$1 = /*@__PURE__*/getDefaultExportFromCjs(prismExports);
-
-Prism$1.languages.clike = {
-	'comment': [
-		{
-			pattern: /(^|[^\\])\/\*[\s\S]*?(?:\*\/|$)/,
-			lookbehind: true,
-			greedy: true
-		},
-		{
-			pattern: /(^|[^\\:])\/\/.*/,
-			lookbehind: true,
-			greedy: true
-		}
-	],
-	'string': {
-		pattern: /(["'])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,
-		greedy: true
-	},
-	'class-name': {
-		pattern: /(\b(?:class|extends|implements|instanceof|interface|new|trait)\s+|\bcatch\s+\()[\w.\\]+/i,
-		lookbehind: true,
-		inside: {
-			'punctuation': /[.\\]/
-		}
-	},
-	'keyword': /\b(?:break|catch|continue|do|else|finally|for|function|if|in|instanceof|new|null|return|throw|try|while)\b/,
-	'boolean': /\b(?:false|true)\b/,
-	'function': /\b\w+(?=\()/,
-	'number': /\b0x[\da-f]+\b|(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:e[+-]?\d+)?/i,
-	'operator': /[<>]=?|[!=]=?=?|--?|\+\+?|&&?|\|\|?|[?*/~^%]/,
-	'punctuation': /[{}[\];(),.:]/
-};
-
-Prism$1.languages.markup = {
-	'comment': {
-		pattern: /<!--(?:(?!<!--)[\s\S])*?-->/,
-		greedy: true
-	},
-	'prolog': {
-		pattern: /<\?[\s\S]+?\?>/,
-		greedy: true
-	},
-	'doctype': {
-		// https://www.w3.org/TR/xml/#NT-doctypedecl
-		pattern: /<!DOCTYPE(?:[^>"'[\]]|"[^"]*"|'[^']*')+(?:\[(?:[^<"'\]]|"[^"]*"|'[^']*'|<(?!!--)|<!--(?:[^-]|-(?!->))*-->)*\]\s*)?>/i,
-		greedy: true,
-		inside: {
-			'internal-subset': {
-				pattern: /(^[^\[]*\[)[\s\S]+(?=\]>$)/,
-				lookbehind: true,
-				greedy: true,
-				inside: null // see below
-			},
-			'string': {
-				pattern: /"[^"]*"|'[^']*'/,
-				greedy: true
-			},
-			'punctuation': /^<!|>$|[[\]]/,
-			'doctype-tag': /^DOCTYPE/i,
-			'name': /[^\s<>'"]+/
-		}
-	},
-	'cdata': {
-		pattern: /<!\[CDATA\[[\s\S]*?\]\]>/i,
-		greedy: true
-	},
-	'tag': {
-		pattern: /<\/?(?!\d)[^\s>\/=$<%]+(?:\s(?:\s*[^\s>\/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))|(?=[\s/>])))+)?\s*\/?>/,
-		greedy: true,
-		inside: {
-			'tag': {
-				pattern: /^<\/?[^\s>\/]+/,
-				inside: {
-					'punctuation': /^<\/?/,
-					'namespace': /^[^\s>\/:]+:/
-				}
-			},
-			'special-attr': [],
-			'attr-value': {
-				pattern: /=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+)/,
-				inside: {
-					'punctuation': [
-						{
-							pattern: /^=/,
-							alias: 'attr-equals'
-						},
-						{
-							pattern: /^(\s*)["']|["']$/,
-							lookbehind: true
-						}
-					]
-				}
-			},
-			'punctuation': /\/?>/,
-			'attr-name': {
-				pattern: /[^\s>\/]+/,
-				inside: {
-					'namespace': /^[^\s>\/:]+:/
-				}
-			}
-
-		}
-	},
-	'entity': [
-		{
-			pattern: /&[\da-z]{1,8};/i,
-			alias: 'named-entity'
-		},
-		/&#x?[\da-f]{1,8};/i
-	]
-};
-
-Prism$1.languages.markup['tag'].inside['attr-value'].inside['entity'] =
-	Prism$1.languages.markup['entity'];
-Prism$1.languages.markup['doctype'].inside['internal-subset'].inside = Prism$1.languages.markup;
-
-// Plugin to make entity title show the real entity, idea by Roman Komarov
-Prism$1.hooks.add('wrap', function (env) {
-
-	if (env.type === 'entity') {
-		env.attributes['title'] = env.content.replace(/&amp;/, '&');
-	}
-});
-
-Object.defineProperty(Prism$1.languages.markup.tag, 'addInlined', {
-	/**
-	 * Adds an inlined language to markup.
-	 *
-	 * An example of an inlined language is CSS with `<style>` tags.
-	 *
-	 * @param {string} tagName The name of the tag that contains the inlined language. This name will be treated as
-	 * case insensitive.
-	 * @param {string} lang The language key.
-	 * @example
-	 * addInlined('style', 'css');
-	 */
-	value: function addInlined(tagName, lang) {
-		var includedCdataInside = {};
-		includedCdataInside['language-' + lang] = {
-			pattern: /(^<!\[CDATA\[)[\s\S]+?(?=\]\]>$)/i,
-			lookbehind: true,
-			inside: Prism$1.languages[lang]
-		};
-		includedCdataInside['cdata'] = /^<!\[CDATA\[|\]\]>$/i;
-
-		var inside = {
-			'included-cdata': {
-				pattern: /<!\[CDATA\[[\s\S]*?\]\]>/i,
-				inside: includedCdataInside
-			}
-		};
-		inside['language-' + lang] = {
-			pattern: /[\s\S]+/,
-			inside: Prism$1.languages[lang]
-		};
-
-		var def = {};
-		def[tagName] = {
-			pattern: RegExp(/(<__[^>]*>)(?:<!\[CDATA\[(?:[^\]]|\](?!\]>))*\]\]>|(?!<!\[CDATA\[)[\s\S])*?(?=<\/__>)/.source.replace(/__/g, function () { return tagName; }), 'i'),
-			lookbehind: true,
-			greedy: true,
-			inside: inside
-		};
-
-		Prism$1.languages.insertBefore('markup', 'cdata', def);
-	}
-});
-Object.defineProperty(Prism$1.languages.markup.tag, 'addAttribute', {
-	/**
-	 * Adds an pattern to highlight languages embedded in HTML attributes.
-	 *
-	 * An example of an inlined language is CSS with `style` attributes.
-	 *
-	 * @param {string} attrName The name of the tag that contains the inlined language. This name will be treated as
-	 * case insensitive.
-	 * @param {string} lang The language key.
-	 * @example
-	 * addAttribute('style', 'css');
-	 */
-	value: function (attrName, lang) {
-		Prism$1.languages.markup.tag.inside['special-attr'].push({
-			pattern: RegExp(
-				/(^|["'\s])/.source + '(?:' + attrName + ')' + /\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))/.source,
-				'i'
-			),
-			lookbehind: true,
-			inside: {
-				'attr-name': /^[^\s=]+/,
-				'attr-value': {
-					pattern: /=[\s\S]+/,
-					inside: {
-						'value': {
-							pattern: /(^=\s*(["']|(?!["'])))\S[\s\S]*(?=\2$)/,
-							lookbehind: true,
-							alias: [lang, 'language-' + lang],
-							inside: Prism$1.languages[lang]
-						},
-						'punctuation': [
-							{
-								pattern: /^=/,
-								alias: 'attr-equals'
-							},
-							/"|'/
-						]
-					}
-				}
-			}
-		});
-	}
-});
-
-Prism$1.languages.html = Prism$1.languages.markup;
-Prism$1.languages.mathml = Prism$1.languages.markup;
-Prism$1.languages.svg = Prism$1.languages.markup;
-
-Prism$1.languages.xml = Prism$1.languages.extend('markup', {});
-Prism$1.languages.ssml = Prism$1.languages.xml;
-Prism$1.languages.atom = Prism$1.languages.xml;
-Prism$1.languages.rss = Prism$1.languages.xml;
-
-(function (Prism) {
-
-	/**
-	 * Returns the placeholder for the given language id and index.
-	 *
-	 * @param {string} language
-	 * @param {string|number} index
-	 * @returns {string}
-	 */
-	function getPlaceholder(language, index) {
-		return '___' + language.toUpperCase() + index + '___';
-	}
-
-	Object.defineProperties(Prism.languages['markup-templating'] = {}, {
-		buildPlaceholders: {
-			/**
-			 * Tokenize all inline templating expressions matching `placeholderPattern`.
-			 *
-			 * If `replaceFilter` is provided, only matches of `placeholderPattern` for which `replaceFilter` returns
-			 * `true` will be replaced.
-			 *
-			 * @param {object} env The environment of the `before-tokenize` hook.
-			 * @param {string} language The language id.
-			 * @param {RegExp} placeholderPattern The matches of this pattern will be replaced by placeholders.
-			 * @param {(match: string) => boolean} [replaceFilter]
-			 */
-			value: function (env, language, placeholderPattern, replaceFilter) {
-				if (env.language !== language) {
-					return;
-				}
-
-				var tokenStack = env.tokenStack = [];
-
-				env.code = env.code.replace(placeholderPattern, function (match) {
-					if (typeof replaceFilter === 'function' && !replaceFilter(match)) {
-						return match;
-					}
-					var i = tokenStack.length;
-					var placeholder;
-
-					// Check for existing strings
-					while (env.code.indexOf(placeholder = getPlaceholder(language, i)) !== -1) {
-						++i;
-					}
-
-					// Create a sparse array
-					tokenStack[i] = match;
-
-					return placeholder;
-				});
-
-				// Switch the grammar to markup
-				env.grammar = Prism.languages.markup;
-			}
-		},
-		tokenizePlaceholders: {
-			/**
-			 * Replace placeholders with proper tokens after tokenizing.
-			 *
-			 * @param {object} env The environment of the `after-tokenize` hook.
-			 * @param {string} language The language id.
-			 */
-			value: function (env, language) {
-				if (env.language !== language || !env.tokenStack) {
-					return;
-				}
-
-				// Switch the grammar back
-				env.grammar = Prism.languages[language];
-
-				var j = 0;
-				var keys = Object.keys(env.tokenStack);
-
-				function walkTokens(tokens) {
-					for (var i = 0; i < tokens.length; i++) {
-						// all placeholders are replaced already
-						if (j >= keys.length) {
-							break;
-						}
-
-						var token = tokens[i];
-						if (typeof token === 'string' || (token.content && typeof token.content === 'string')) {
-							var k = keys[j];
-							var t = env.tokenStack[k];
-							var s = typeof token === 'string' ? token : token.content;
-							var placeholder = getPlaceholder(language, k);
-
-							var index = s.indexOf(placeholder);
-							if (index > -1) {
-								++j;
-
-								var before = s.substring(0, index);
-								var middle = new Prism.Token(language, Prism.tokenize(t, env.grammar), 'language-' + language, t);
-								var after = s.substring(index + placeholder.length);
-
-								var replacement = [];
-								if (before) {
-									replacement.push.apply(replacement, walkTokens([before]));
-								}
-								replacement.push(middle);
-								if (after) {
-									replacement.push.apply(replacement, walkTokens([after]));
-								}
-
-								if (typeof token === 'string') {
-									tokens.splice.apply(tokens, [i, 1].concat(replacement));
-								} else {
-									token.content = replacement;
-								}
-							}
-						} else if (token.content /* && typeof token.content !== 'string' */) {
-							walkTokens(token.content);
-						}
-					}
-
-					return tokens;
-				}
-
-				walkTokens(env.tokens);
-			}
-		}
-	});
-
-}(Prism$1));
-
-var prismRuby = {};
-
-var hasRequiredPrismRuby;
-
-function requirePrismRuby () {
-	if (hasRequiredPrismRuby) return prismRuby;
-	hasRequiredPrismRuby = 1;
-	(function (Prism) {
-		Prism.languages.ruby = Prism.languages.extend('clike', {
-			'comment': {
-				pattern: /#.*|^=begin\s[\s\S]*?^=end/m,
-				greedy: true
-			},
-			'class-name': {
-				pattern: /(\b(?:class|module)\s+|\bcatch\s+\()[\w.\\]+|\b[A-Z_]\w*(?=\s*\.\s*new\b)/,
-				lookbehind: true,
-				inside: {
-					'punctuation': /[.\\]/
-				}
-			},
-			'keyword': /\b(?:BEGIN|END|alias|and|begin|break|case|class|def|define_method|defined|do|each|else|elsif|end|ensure|extend|for|if|in|include|module|new|next|nil|not|or|prepend|private|protected|public|raise|redo|require|rescue|retry|return|self|super|then|throw|undef|unless|until|when|while|yield)\b/,
-			'operator': /\.{2,3}|&\.|===|<?=>|[!=]?~|(?:&&|\|\||<<|>>|\*\*|[+\-*/%<>!^&|=])=?|[?:]/,
-			'punctuation': /[(){}[\].,;]/,
-		});
-
-		Prism.languages.insertBefore('ruby', 'operator', {
-			'double-colon': {
-				pattern: /::/,
-				alias: 'punctuation'
-			},
-		});
-
-		var interpolation = {
-			pattern: /((?:^|[^\\])(?:\\{2})*)#\{(?:[^{}]|\{[^{}]*\})*\}/,
-			lookbehind: true,
-			inside: {
-				'content': {
-					pattern: /^(#\{)[\s\S]+(?=\}$)/,
-					lookbehind: true,
-					inside: Prism.languages.ruby
-				},
-				'delimiter': {
-					pattern: /^#\{|\}$/,
-					alias: 'punctuation'
-				}
-			}
-		};
-
-		delete Prism.languages.ruby.function;
-
-		var percentExpression = '(?:' + [
-			/([^a-zA-Z0-9\s{(\[<=])(?:(?!\1)[^\\]|\\[\s\S])*\1/.source,
-			/\((?:[^()\\]|\\[\s\S]|\((?:[^()\\]|\\[\s\S])*\))*\)/.source,
-			/\{(?:[^{}\\]|\\[\s\S]|\{(?:[^{}\\]|\\[\s\S])*\})*\}/.source,
-			/\[(?:[^\[\]\\]|\\[\s\S]|\[(?:[^\[\]\\]|\\[\s\S])*\])*\]/.source,
-			/<(?:[^<>\\]|\\[\s\S]|<(?:[^<>\\]|\\[\s\S])*>)*>/.source
-		].join('|') + ')';
-
-		var symbolName = /(?:"(?:\\.|[^"\\\r\n])*"|(?:\b[a-zA-Z_]\w*|[^\s\0-\x7F]+)[?!]?|\$.)/.source;
-
-		Prism.languages.insertBefore('ruby', 'keyword', {
-			'regex-literal': [
-				{
-					pattern: RegExp(/%r/.source + percentExpression + /[egimnosux]{0,6}/.source),
-					greedy: true,
-					inside: {
-						'interpolation': interpolation,
-						'regex': /[\s\S]+/
-					}
-				},
-				{
-					pattern: /(^|[^/])\/(?!\/)(?:\[[^\r\n\]]+\]|\\.|[^[/\\\r\n])+\/[egimnosux]{0,6}(?=\s*(?:$|[\r\n,.;})#]))/,
-					lookbehind: true,
-					greedy: true,
-					inside: {
-						'interpolation': interpolation,
-						'regex': /[\s\S]+/
-					}
-				}
-			],
-			'variable': /[@$]+[a-zA-Z_]\w*(?:[?!]|\b)/,
-			'symbol': [
-				{
-					pattern: RegExp(/(^|[^:]):/.source + symbolName),
-					lookbehind: true,
-					greedy: true
-				},
-				{
-					pattern: RegExp(/([\r\n{(,][ \t]*)/.source + symbolName + /(?=:(?!:))/.source),
-					lookbehind: true,
-					greedy: true
-				},
-			],
-			'method-definition': {
-				pattern: /(\bdef\s+)\w+(?:\s*\.\s*\w+)?/,
-				lookbehind: true,
-				inside: {
-					'function': /\b\w+$/,
-					'keyword': /^self\b/,
-					'class-name': /^\w+/,
-					'punctuation': /\./
-				}
-			}
-		});
-
-		Prism.languages.insertBefore('ruby', 'string', {
-			'string-literal': [
-				{
-					pattern: RegExp(/%[qQiIwWs]?/.source + percentExpression),
-					greedy: true,
-					inside: {
-						'interpolation': interpolation,
-						'string': /[\s\S]+/
-					}
-				},
-				{
-					pattern: /("|')(?:#\{[^}]+\}|#(?!\{)|\\(?:\r\n|[\s\S])|(?!\1)[^\\#\r\n])*\1/,
-					greedy: true,
-					inside: {
-						'interpolation': interpolation,
-						'string': /[\s\S]+/
-					}
-				},
-				{
-					pattern: /<<[-~]?([a-z_]\w*)[\r\n](?:.*[\r\n])*?[\t ]*\1/i,
-					alias: 'heredoc-string',
-					greedy: true,
-					inside: {
-						'delimiter': {
-							pattern: /^<<[-~]?[a-z_]\w*|\b[a-z_]\w*$/i,
-							inside: {
-								'symbol': /\b\w+/,
-								'punctuation': /^<<[-~]?/
-							}
-						},
-						'interpolation': interpolation,
-						'string': /[\s\S]+/
-					}
-				},
-				{
-					pattern: /<<[-~]?'([a-z_]\w*)'[\r\n](?:.*[\r\n])*?[\t ]*\1/i,
-					alias: 'heredoc-string',
-					greedy: true,
-					inside: {
-						'delimiter': {
-							pattern: /^<<[-~]?'[a-z_]\w*'|\b[a-z_]\w*$/i,
-							inside: {
-								'symbol': /\b\w+/,
-								'punctuation': /^<<[-~]?'|'$/,
-							}
-						},
-						'string': /[\s\S]+/
-					}
-				}
-			],
-			'command-literal': [
-				{
-					pattern: RegExp(/%x/.source + percentExpression),
-					greedy: true,
-					inside: {
-						'interpolation': interpolation,
-						'command': {
-							pattern: /[\s\S]+/,
-							alias: 'string'
-						}
-					}
-				},
-				{
-					pattern: /`(?:#\{[^}]+\}|#(?!\{)|\\(?:\r\n|[\s\S])|[^\\`#\r\n])*`/,
-					greedy: true,
-					inside: {
-						'interpolation': interpolation,
-						'command': {
-							pattern: /[\s\S]+/,
-							alias: 'string'
-						}
-					}
-				}
-			]
-		});
-
-		delete Prism.languages.ruby.string;
-
-		Prism.languages.insertBefore('ruby', 'number', {
-			'builtin': /\b(?:Array|Bignum|Binding|Class|Continuation|Dir|Exception|FalseClass|File|Fixnum|Float|Hash|IO|Integer|MatchData|Method|Module|NilClass|Numeric|Object|Proc|Range|Regexp|Stat|String|Struct|Symbol|TMS|Thread|ThreadGroup|Time|TrueClass)\b/,
-			'constant': /\b[A-Z][A-Z0-9_]*(?:[?!]|\b)/
-		});
-
-		Prism.languages.rb = Prism.languages.ruby;
-	}(Prism$1));
-	return prismRuby;
-}
-
-requirePrismRuby();
-
-var prismPhp = {};
-
-var hasRequiredPrismPhp;
-
-function requirePrismPhp () {
-	if (hasRequiredPrismPhp) return prismPhp;
-	hasRequiredPrismPhp = 1;
-	(function (Prism) {
-		var comment = /\/\*[\s\S]*?\*\/|\/\/.*|#(?!\[).*/;
-		var constant = [
-			{
-				pattern: /\b(?:false|true)\b/i,
-				alias: 'boolean'
-			},
-			{
-				pattern: /(::\s*)\b[a-z_]\w*\b(?!\s*\()/i,
-				greedy: true,
-				lookbehind: true,
-			},
-			{
-				pattern: /(\b(?:case|const)\s+)\b[a-z_]\w*(?=\s*[;=])/i,
-				greedy: true,
-				lookbehind: true,
-			},
-			/\b(?:null)\b/i,
-			/\b[A-Z_][A-Z0-9_]*\b(?!\s*\()/,
-		];
-		var number = /\b0b[01]+(?:_[01]+)*\b|\b0o[0-7]+(?:_[0-7]+)*\b|\b0x[\da-f]+(?:_[\da-f]+)*\b|(?:\b\d+(?:_\d+)*\.?(?:\d+(?:_\d+)*)?|\B\.\d+)(?:e[+-]?\d+)?/i;
-		var operator = /<?=>|\?\?=?|\.{3}|\??->|[!=]=?=?|::|\*\*=?|--|\+\+|&&|\|\||<<|>>|[?~]|[/^|%*&<>.+-]=?/;
-		var punctuation = /[{}\[\](),:;]/;
-
-		Prism.languages.php = {
-			'delimiter': {
-				pattern: /\?>$|^<\?(?:php(?=\s)|=)?/i,
-				alias: 'important'
-			},
-			'comment': comment,
-			'variable': /\$+(?:\w+\b|(?=\{))/,
-			'package': {
-				pattern: /(namespace\s+|use\s+(?:function\s+)?)(?:\\?\b[a-z_]\w*)+\b(?!\\)/i,
-				lookbehind: true,
-				inside: {
-					'punctuation': /\\/
-				}
-			},
-			'class-name-definition': {
-				pattern: /(\b(?:class|enum|interface|trait)\s+)\b[a-z_]\w*(?!\\)\b/i,
-				lookbehind: true,
-				alias: 'class-name'
-			},
-			'function-definition': {
-				pattern: /(\bfunction\s+)[a-z_]\w*(?=\s*\()/i,
-				lookbehind: true,
-				alias: 'function'
-			},
-			'keyword': [
-				{
-					pattern: /(\(\s*)\b(?:array|bool|boolean|float|int|integer|object|string)\b(?=\s*\))/i,
-					alias: 'type-casting',
-					greedy: true,
-					lookbehind: true
-				},
-				{
-					pattern: /([(,?]\s*)\b(?:array(?!\s*\()|bool|callable|(?:false|null)(?=\s*\|)|float|int|iterable|mixed|object|self|static|string)\b(?=\s*\$)/i,
-					alias: 'type-hint',
-					greedy: true,
-					lookbehind: true
-				},
-				{
-					pattern: /(\)\s*:\s*(?:\?\s*)?)\b(?:array(?!\s*\()|bool|callable|(?:false|null)(?=\s*\|)|float|int|iterable|mixed|never|object|self|static|string|void)\b/i,
-					alias: 'return-type',
-					greedy: true,
-					lookbehind: true
-				},
-				{
-					pattern: /\b(?:array(?!\s*\()|bool|float|int|iterable|mixed|object|string|void)\b/i,
-					alias: 'type-declaration',
-					greedy: true
-				},
-				{
-					pattern: /(\|\s*)(?:false|null)\b|\b(?:false|null)(?=\s*\|)/i,
-					alias: 'type-declaration',
-					greedy: true,
-					lookbehind: true
-				},
-				{
-					pattern: /\b(?:parent|self|static)(?=\s*::)/i,
-					alias: 'static-context',
-					greedy: true
-				},
-				{
-					// yield from
-					pattern: /(\byield\s+)from\b/i,
-					lookbehind: true
-				},
-				// `class` is always a keyword unlike other keywords
-				/\bclass\b/i,
-				{
-					// https://www.php.net/manual/en/reserved.keywords.php
-					//
-					// keywords cannot be preceded by "->"
-					// the complex lookbehind means `(?<!(?:->|::)\s*)`
-					pattern: /((?:^|[^\s>:]|(?:^|[^-])>|(?:^|[^:]):)\s*)\b(?:abstract|and|array|as|break|callable|case|catch|clone|const|continue|declare|default|die|do|echo|else|elseif|empty|enddeclare|endfor|endforeach|endif|endswitch|endwhile|enum|eval|exit|extends|final|finally|fn|for|foreach|function|global|goto|if|implements|include|include_once|instanceof|insteadof|interface|isset|list|match|namespace|never|new|or|parent|print|private|protected|public|readonly|require|require_once|return|self|static|switch|throw|trait|try|unset|use|var|while|xor|yield|__halt_compiler)\b/i,
-					lookbehind: true
-				}
-			],
-			'argument-name': {
-				pattern: /([(,]\s*)\b[a-z_]\w*(?=\s*:(?!:))/i,
-				lookbehind: true
-			},
-			'class-name': [
-				{
-					pattern: /(\b(?:extends|implements|instanceof|new(?!\s+self|\s+static))\s+|\bcatch\s*\()\b[a-z_]\w*(?!\\)\b/i,
-					greedy: true,
-					lookbehind: true
-				},
-				{
-					pattern: /(\|\s*)\b[a-z_]\w*(?!\\)\b/i,
-					greedy: true,
-					lookbehind: true
-				},
-				{
-					pattern: /\b[a-z_]\w*(?!\\)\b(?=\s*\|)/i,
-					greedy: true
-				},
-				{
-					pattern: /(\|\s*)(?:\\?\b[a-z_]\w*)+\b/i,
-					alias: 'class-name-fully-qualified',
-					greedy: true,
-					lookbehind: true,
-					inside: {
-						'punctuation': /\\/
-					}
-				},
-				{
-					pattern: /(?:\\?\b[a-z_]\w*)+\b(?=\s*\|)/i,
-					alias: 'class-name-fully-qualified',
-					greedy: true,
-					inside: {
-						'punctuation': /\\/
-					}
-				},
-				{
-					pattern: /(\b(?:extends|implements|instanceof|new(?!\s+self\b|\s+static\b))\s+|\bcatch\s*\()(?:\\?\b[a-z_]\w*)+\b(?!\\)/i,
-					alias: 'class-name-fully-qualified',
-					greedy: true,
-					lookbehind: true,
-					inside: {
-						'punctuation': /\\/
-					}
-				},
-				{
-					pattern: /\b[a-z_]\w*(?=\s*\$)/i,
-					alias: 'type-declaration',
-					greedy: true
-				},
-				{
-					pattern: /(?:\\?\b[a-z_]\w*)+(?=\s*\$)/i,
-					alias: ['class-name-fully-qualified', 'type-declaration'],
-					greedy: true,
-					inside: {
-						'punctuation': /\\/
-					}
-				},
-				{
-					pattern: /\b[a-z_]\w*(?=\s*::)/i,
-					alias: 'static-context',
-					greedy: true
-				},
-				{
-					pattern: /(?:\\?\b[a-z_]\w*)+(?=\s*::)/i,
-					alias: ['class-name-fully-qualified', 'static-context'],
-					greedy: true,
-					inside: {
-						'punctuation': /\\/
-					}
-				},
-				{
-					pattern: /([(,?]\s*)[a-z_]\w*(?=\s*\$)/i,
-					alias: 'type-hint',
-					greedy: true,
-					lookbehind: true
-				},
-				{
-					pattern: /([(,?]\s*)(?:\\?\b[a-z_]\w*)+(?=\s*\$)/i,
-					alias: ['class-name-fully-qualified', 'type-hint'],
-					greedy: true,
-					lookbehind: true,
-					inside: {
-						'punctuation': /\\/
-					}
-				},
-				{
-					pattern: /(\)\s*:\s*(?:\?\s*)?)\b[a-z_]\w*(?!\\)\b/i,
-					alias: 'return-type',
-					greedy: true,
-					lookbehind: true
-				},
-				{
-					pattern: /(\)\s*:\s*(?:\?\s*)?)(?:\\?\b[a-z_]\w*)+\b(?!\\)/i,
-					alias: ['class-name-fully-qualified', 'return-type'],
-					greedy: true,
-					lookbehind: true,
-					inside: {
-						'punctuation': /\\/
-					}
-				}
-			],
-			'constant': constant,
-			'function': {
-				pattern: /(^|[^\\\w])\\?[a-z_](?:[\w\\]*\w)?(?=\s*\()/i,
-				lookbehind: true,
-				inside: {
-					'punctuation': /\\/
-				}
-			},
-			'property': {
-				pattern: /(->\s*)\w+/,
-				lookbehind: true
-			},
-			'number': number,
-			'operator': operator,
-			'punctuation': punctuation
-		};
-
-		var string_interpolation = {
-			pattern: /\{\$(?:\{(?:\{[^{}]+\}|[^{}]+)\}|[^{}])+\}|(^|[^\\{])\$+(?:\w+(?:\[[^\r\n\[\]]+\]|->\w+)?)/,
-			lookbehind: true,
-			inside: Prism.languages.php
-		};
-
-		var string = [
-			{
-				pattern: /<<<'([^']+)'[\r\n](?:.*[\r\n])*?\1;/,
-				alias: 'nowdoc-string',
-				greedy: true,
-				inside: {
-					'delimiter': {
-						pattern: /^<<<'[^']+'|[a-z_]\w*;$/i,
-						alias: 'symbol',
-						inside: {
-							'punctuation': /^<<<'?|[';]$/
-						}
-					}
-				}
-			},
-			{
-				pattern: /<<<(?:"([^"]+)"[\r\n](?:.*[\r\n])*?\1;|([a-z_]\w*)[\r\n](?:.*[\r\n])*?\2;)/i,
-				alias: 'heredoc-string',
-				greedy: true,
-				inside: {
-					'delimiter': {
-						pattern: /^<<<(?:"[^"]+"|[a-z_]\w*)|[a-z_]\w*;$/i,
-						alias: 'symbol',
-						inside: {
-							'punctuation': /^<<<"?|[";]$/
-						}
-					},
-					'interpolation': string_interpolation
-				}
-			},
-			{
-				pattern: /`(?:\\[\s\S]|[^\\`])*`/,
-				alias: 'backtick-quoted-string',
-				greedy: true
-			},
-			{
-				pattern: /'(?:\\[\s\S]|[^\\'])*'/,
-				alias: 'single-quoted-string',
-				greedy: true
-			},
-			{
-				pattern: /"(?:\\[\s\S]|[^\\"])*"/,
-				alias: 'double-quoted-string',
-				greedy: true,
-				inside: {
-					'interpolation': string_interpolation
-				}
-			}
-		];
-
-		Prism.languages.insertBefore('php', 'variable', {
-			'string': string,
-			'attribute': {
-				pattern: /#\[(?:[^"'\/#]|\/(?![*/])|\/\/.*$|#(?!\[).*$|\/\*(?:[^*]|\*(?!\/))*\*\/|"(?:\\[\s\S]|[^\\"])*"|'(?:\\[\s\S]|[^\\'])*')+\](?=\s*[a-z$#])/im,
-				greedy: true,
-				inside: {
-					'attribute-content': {
-						pattern: /^(#\[)[\s\S]+(?=\]$)/,
-						lookbehind: true,
-						// inside can appear subset of php
-						inside: {
-							'comment': comment,
-							'string': string,
-							'attribute-class-name': [
-								{
-									pattern: /([^:]|^)\b[a-z_]\w*(?!\\)\b/i,
-									alias: 'class-name',
-									greedy: true,
-									lookbehind: true
-								},
-								{
-									pattern: /([^:]|^)(?:\\?\b[a-z_]\w*)+/i,
-									alias: [
-										'class-name',
-										'class-name-fully-qualified'
-									],
-									greedy: true,
-									lookbehind: true,
-									inside: {
-										'punctuation': /\\/
-									}
-								}
-							],
-							'constant': constant,
-							'number': number,
-							'operator': operator,
-							'punctuation': punctuation
-						}
-					},
-					'delimiter': {
-						pattern: /^#\[|\]$/,
-						alias: 'punctuation'
-					}
-				}
-			},
-		});
-
-		Prism.hooks.add('before-tokenize', function (env) {
-			if (!/<\?/.test(env.code)) {
-				return;
-			}
-
-			var phpPattern = /<\?(?:[^"'/#]|\/(?![*/])|("|')(?:\\[\s\S]|(?!\1)[^\\])*\1|(?:\/\/|#(?!\[))(?:[^?\n\r]|\?(?!>))*(?=$|\?>|[\r\n])|#\[|\/\*(?:[^*]|\*(?!\/))*(?:\*\/|$))*?(?:\?>|$)/g;
-			Prism.languages['markup-templating'].buildPlaceholders(env, 'php', phpPattern);
-		});
-
-		Prism.hooks.add('after-tokenize', function (env) {
-			Prism.languages['markup-templating'].tokenizePlaceholders(env, 'php');
-		});
-
-	}(Prism$1));
-	return prismPhp;
-}
-
-requirePrismPhp();
-
-Prism$1.languages.go = Prism$1.languages.extend('clike', {
-	'string': {
-		pattern: /(^|[^\\])"(?:\\.|[^"\\\r\n])*"|`[^`]*`/,
-		lookbehind: true,
-		greedy: true
-	},
-	'keyword': /\b(?:break|case|chan|const|continue|default|defer|else|fallthrough|for|func|go(?:to)?|if|import|interface|map|package|range|return|select|struct|switch|type|var)\b/,
-	'boolean': /\b(?:_|false|iota|nil|true)\b/,
-	'number': [
-		// binary and octal integers
-		/\b0(?:b[01_]+|o[0-7_]+)i?\b/i,
-		// hexadecimal integers and floats
-		/\b0x(?:[a-f\d_]+(?:\.[a-f\d_]*)?|\.[a-f\d_]+)(?:p[+-]?\d+(?:_\d+)*)?i?(?!\w)/i,
-		// decimal integers and floats
-		/(?:\b\d[\d_]*(?:\.[\d_]*)?|\B\.\d[\d_]*)(?:e[+-]?[\d_]+)?i?(?!\w)/i
-	],
-	'operator': /[*\/%^!=]=?|\+[=+]?|-[=-]?|\|[=|]?|&(?:=|&|\^=?)?|>(?:>=?|=)?|<(?:<=?|=|-)?|:=|\.\.\./,
-	'builtin': /\b(?:append|bool|byte|cap|close|complex|complex(?:64|128)|copy|delete|error|float(?:32|64)|u?int(?:8|16|32|64)?|imag|len|make|new|panic|print(?:ln)?|real|recover|rune|string|uintptr)\b/
-});
-
-Prism$1.languages.insertBefore('go', 'string', {
-	'char': {
-		pattern: /'(?:\\.|[^'\\\r\n]){0,10}'/,
-		greedy: true
-	}
-});
-
-delete Prism$1.languages.go['class-name'];
-
-(function (Prism) {
-	// $ set | grep '^[A-Z][^[:space:]]*=' | cut -d= -f1 | tr '\n' '|'
-	// + LC_ALL, RANDOM, REPLY, SECONDS.
-	// + make sure PS1..4 are here as they are not always set,
-	// - some useless things.
-	var envVars = '\\b(?:BASH|BASHOPTS|BASH_ALIASES|BASH_ARGC|BASH_ARGV|BASH_CMDS|BASH_COMPLETION_COMPAT_DIR|BASH_LINENO|BASH_REMATCH|BASH_SOURCE|BASH_VERSINFO|BASH_VERSION|COLORTERM|COLUMNS|COMP_WORDBREAKS|DBUS_SESSION_BUS_ADDRESS|DEFAULTS_PATH|DESKTOP_SESSION|DIRSTACK|DISPLAY|EUID|GDMSESSION|GDM_LANG|GNOME_KEYRING_CONTROL|GNOME_KEYRING_PID|GPG_AGENT_INFO|GROUPS|HISTCONTROL|HISTFILE|HISTFILESIZE|HISTSIZE|HOME|HOSTNAME|HOSTTYPE|IFS|INSTANCE|JOB|LANG|LANGUAGE|LC_ADDRESS|LC_ALL|LC_IDENTIFICATION|LC_MEASUREMENT|LC_MONETARY|LC_NAME|LC_NUMERIC|LC_PAPER|LC_TELEPHONE|LC_TIME|LESSCLOSE|LESSOPEN|LINES|LOGNAME|LS_COLORS|MACHTYPE|MAILCHECK|MANDATORY_PATH|NO_AT_BRIDGE|OLDPWD|OPTERR|OPTIND|ORBIT_SOCKETDIR|OSTYPE|PAPERSIZE|PATH|PIPESTATUS|PPID|PS1|PS2|PS3|PS4|PWD|RANDOM|REPLY|SECONDS|SELINUX_INIT|SESSION|SESSIONTYPE|SESSION_MANAGER|SHELL|SHELLOPTS|SHLVL|SSH_AUTH_SOCK|TERM|UID|UPSTART_EVENTS|UPSTART_INSTANCE|UPSTART_JOB|UPSTART_SESSION|USER|WINDOWID|XAUTHORITY|XDG_CONFIG_DIRS|XDG_CURRENT_DESKTOP|XDG_DATA_DIRS|XDG_GREETER_DATA_DIR|XDG_MENU_PREFIX|XDG_RUNTIME_DIR|XDG_SEAT|XDG_SEAT_PATH|XDG_SESSION_DESKTOP|XDG_SESSION_ID|XDG_SESSION_PATH|XDG_SESSION_TYPE|XDG_VTNR|XMODIFIERS)\\b';
-
-	var commandAfterHeredoc = {
-		pattern: /(^(["']?)\w+\2)[ \t]+\S.*/,
-		lookbehind: true,
-		alias: 'punctuation', // this looks reasonably well in all themes
-		inside: null // see below
-	};
-
-	var insideString = {
-		'bash': commandAfterHeredoc,
-		'environment': {
-			pattern: RegExp('\\$' + envVars),
-			alias: 'constant'
-		},
-		'variable': [
-			// [0]: Arithmetic Environment
-			{
-				pattern: /\$?\(\([\s\S]+?\)\)/,
-				greedy: true,
-				inside: {
-					// If there is a $ sign at the beginning highlight $(( and )) as variable
-					'variable': [
-						{
-							pattern: /(^\$\(\([\s\S]+)\)\)/,
-							lookbehind: true
-						},
-						/^\$\(\(/
-					],
-					'number': /\b0x[\dA-Fa-f]+\b|(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:[Ee]-?\d+)?/,
-					// Operators according to https://www.gnu.org/software/bash/manual/bashref.html#Shell-Arithmetic
-					'operator': /--|\+\+|\*\*=?|<<=?|>>=?|&&|\|\||[=!+\-*/%<>^&|]=?|[?~:]/,
-					// If there is no $ sign at the beginning highlight (( and )) as punctuation
-					'punctuation': /\(\(?|\)\)?|,|;/
-				}
-			},
-			// [1]: Command Substitution
-			{
-				pattern: /\$\((?:\([^)]+\)|[^()])+\)|`[^`]+`/,
-				greedy: true,
-				inside: {
-					'variable': /^\$\(|^`|\)$|`$/
-				}
-			},
-			// [2]: Brace expansion
-			{
-				pattern: /\$\{[^}]+\}/,
-				greedy: true,
-				inside: {
-					'operator': /:[-=?+]?|[!\/]|##?|%%?|\^\^?|,,?/,
-					'punctuation': /[\[\]]/,
-					'environment': {
-						pattern: RegExp('(\\{)' + envVars),
-						lookbehind: true,
-						alias: 'constant'
-					}
-				}
-			},
-			/\$(?:\w+|[#?*!@$])/
-		],
-		// Escape sequences from echo and printf's manuals, and escaped quotes.
-		'entity': /\\(?:[abceEfnrtv\\"]|O?[0-7]{1,3}|U[0-9a-fA-F]{8}|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{1,2})/
-	};
-
-	Prism.languages.bash = {
-		'shebang': {
-			pattern: /^#!\s*\/.*/,
-			alias: 'important'
-		},
-		'comment': {
-			pattern: /(^|[^"{\\$])#.*/,
-			lookbehind: true
-		},
-		'function-name': [
-			// a) function foo {
-			// b) foo() {
-			// c) function foo() {
-			// but not “foo {”
-			{
-				// a) and c)
-				pattern: /(\bfunction\s+)[\w-]+(?=(?:\s*\(?:\s*\))?\s*\{)/,
-				lookbehind: true,
-				alias: 'function'
-			},
-			{
-				// b)
-				pattern: /\b[\w-]+(?=\s*\(\s*\)\s*\{)/,
-				alias: 'function'
-			}
-		],
-		// Highlight variable names as variables in for and select beginnings.
-		'for-or-select': {
-			pattern: /(\b(?:for|select)\s+)\w+(?=\s+in\s)/,
-			alias: 'variable',
-			lookbehind: true
-		},
-		// Highlight variable names as variables in the left-hand part
-		// of assignments (“=” and “+=”).
-		'assign-left': {
-			pattern: /(^|[\s;|&]|[<>]\()\w+(?:\.\w+)*(?=\+?=)/,
-			inside: {
-				'environment': {
-					pattern: RegExp('(^|[\\s;|&]|[<>]\\()' + envVars),
-					lookbehind: true,
-					alias: 'constant'
-				}
-			},
-			alias: 'variable',
-			lookbehind: true
-		},
-		// Highlight parameter names as variables
-		'parameter': {
-			pattern: /(^|\s)-{1,2}(?:\w+:[+-]?)?\w+(?:\.\w+)*(?=[=\s]|$)/,
-			alias: 'variable',
-			lookbehind: true
-		},
-		'string': [
-			// Support for Here-documents https://en.wikipedia.org/wiki/Here_document
-			{
-				pattern: /((?:^|[^<])<<-?\s*)(\w+)\s[\s\S]*?(?:\r?\n|\r)\2/,
-				lookbehind: true,
-				greedy: true,
-				inside: insideString
-			},
-			// Here-document with quotes around the tag
-			// → No expansion (so no “inside”).
-			{
-				pattern: /((?:^|[^<])<<-?\s*)(["'])(\w+)\2\s[\s\S]*?(?:\r?\n|\r)\3/,
-				lookbehind: true,
-				greedy: true,
-				inside: {
-					'bash': commandAfterHeredoc
-				}
-			},
-			// “Normal” string
-			{
-				// https://www.gnu.org/software/bash/manual/html_node/Double-Quotes.html
-				pattern: /(^|[^\\](?:\\\\)*)"(?:\\[\s\S]|\$\([^)]+\)|\$(?!\()|`[^`]+`|[^"\\`$])*"/,
-				lookbehind: true,
-				greedy: true,
-				inside: insideString
-			},
-			{
-				// https://www.gnu.org/software/bash/manual/html_node/Single-Quotes.html
-				pattern: /(^|[^$\\])'[^']*'/,
-				lookbehind: true,
-				greedy: true
-			},
-			{
-				// https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html
-				pattern: /\$'(?:[^'\\]|\\[\s\S])*'/,
-				greedy: true,
-				inside: {
-					'entity': insideString.entity
-				}
-			}
-		],
-		'environment': {
-			pattern: RegExp('\\$?' + envVars),
-			alias: 'constant'
-		},
-		'variable': insideString.variable,
-		'function': {
-			pattern: /(^|[\s;|&]|[<>]\()(?:add|apropos|apt|apt-cache|apt-get|aptitude|aspell|automysqlbackup|awk|basename|bash|bc|bconsole|bg|bzip2|cal|cargo|cat|cfdisk|chgrp|chkconfig|chmod|chown|chroot|cksum|clear|cmp|column|comm|composer|cp|cron|crontab|csplit|curl|cut|date|dc|dd|ddrescue|debootstrap|df|diff|diff3|dig|dir|dircolors|dirname|dirs|dmesg|docker|docker-compose|du|egrep|eject|env|ethtool|expand|expect|expr|fdformat|fdisk|fg|fgrep|file|find|fmt|fold|format|free|fsck|ftp|fuser|gawk|git|gparted|grep|groupadd|groupdel|groupmod|groups|grub-mkconfig|gzip|halt|head|hg|history|host|hostname|htop|iconv|id|ifconfig|ifdown|ifup|import|install|ip|java|jobs|join|kill|killall|less|link|ln|locate|logname|logrotate|look|lpc|lpr|lprint|lprintd|lprintq|lprm|ls|lsof|lynx|make|man|mc|mdadm|mkconfig|mkdir|mke2fs|mkfifo|mkfs|mkisofs|mknod|mkswap|mmv|more|most|mount|mtools|mtr|mutt|mv|nano|nc|netstat|nice|nl|node|nohup|notify-send|npm|nslookup|op|open|parted|passwd|paste|pathchk|ping|pkill|pnpm|podman|podman-compose|popd|pr|printcap|printenv|ps|pushd|pv|quota|quotacheck|quotactl|ram|rar|rcp|reboot|remsync|rename|renice|rev|rm|rmdir|rpm|rsync|scp|screen|sdiff|sed|sendmail|seq|service|sftp|sh|shellcheck|shuf|shutdown|sleep|slocate|sort|split|ssh|stat|strace|su|sudo|sum|suspend|swapon|sync|sysctl|tac|tail|tar|tee|time|timeout|top|touch|tr|traceroute|tsort|tty|umount|uname|unexpand|uniq|units|unrar|unshar|unzip|update-grub|uptime|useradd|userdel|usermod|users|uudecode|uuencode|v|vcpkg|vdir|vi|vim|virsh|vmstat|wait|watch|wc|wget|whereis|which|who|whoami|write|xargs|xdg-open|yarn|yes|zenity|zip|zsh|zypper)(?=$|[)\s;|&])/,
-			lookbehind: true
-		},
-		'keyword': {
-			pattern: /(^|[\s;|&]|[<>]\()(?:case|do|done|elif|else|esac|fi|for|function|if|in|select|then|until|while)(?=$|[)\s;|&])/,
-			lookbehind: true
-		},
-		// https://www.gnu.org/software/bash/manual/html_node/Shell-Builtin-Commands.html
-		'builtin': {
-			pattern: /(^|[\s;|&]|[<>]\()(?:\.|:|alias|bind|break|builtin|caller|cd|command|continue|declare|echo|enable|eval|exec|exit|export|getopts|hash|help|let|local|logout|mapfile|printf|pwd|read|readarray|readonly|return|set|shift|shopt|source|test|times|trap|type|typeset|ulimit|umask|unalias|unset)(?=$|[)\s;|&])/,
-			lookbehind: true,
-			// Alias added to make those easier to distinguish from strings.
-			alias: 'class-name'
-		},
-		'boolean': {
-			pattern: /(^|[\s;|&]|[<>]\()(?:false|true)(?=$|[)\s;|&])/,
-			lookbehind: true
-		},
-		'file-descriptor': {
-			pattern: /\B&\d\b/,
-			alias: 'important'
-		},
-		'operator': {
-			// Lots of redirections here, but not just that.
-			pattern: /\d?<>|>\||\+=|=[=~]?|!=?|<<[<-]?|[&\d]?>>|\d[<>]&?|[<>][&=]?|&[>&]?|\|[&|]?/,
-			inside: {
-				'file-descriptor': {
-					pattern: /^\d/,
-					alias: 'important'
-				}
-			}
-		},
-		'punctuation': /\$?\(\(?|\)\)?|\.\.|[{}[\];\\]/,
-		'number': {
-			pattern: /(^|\s)(?:[1-9]\d*|0)(?:[.,]\d+)?\b/,
-			lookbehind: true
-		}
-	};
-
-	commandAfterHeredoc.inside = Prism.languages.bash;
-
-	/* Patterns in command substitution. */
-	var toBeCopied = [
-		'comment',
-		'function-name',
-		'for-or-select',
-		'assign-left',
-		'parameter',
-		'string',
-		'environment',
-		'function',
-		'keyword',
-		'builtin',
-		'boolean',
-		'file-descriptor',
-		'operator',
-		'punctuation',
-		'number'
-	];
-	var inside = insideString.variable[1].inside;
-	for (var i = 0; i < toBeCopied.length; i++) {
-		inside[toBeCopied[i]] = Prism.languages.bash[toBeCopied[i]];
-	}
-
-	Prism.languages.sh = Prism.languages.bash;
-	Prism.languages.shell = Prism.languages.bash;
-}(Prism$1));
-
-// https://www.json.org/json-en.html
-Prism$1.languages.json = {
-	'property': {
-		pattern: /(^|[^\\])"(?:\\.|[^\\"\r\n])*"(?=\s*:)/,
-		lookbehind: true,
-		greedy: true
-	},
-	'string': {
-		pattern: /(^|[^\\])"(?:\\.|[^\\"\r\n])*"(?!\s*:)/,
-		lookbehind: true,
-		greedy: true
-	},
-	'comment': {
-		pattern: /\/\/.*|\/\*[\s\S]*?(?:\*\/|$)/,
-		greedy: true
-	},
-	'number': /-?\b\d+(?:\.\d+)?(?:e[+-]?\d+)?\b/i,
-	'punctuation': /[{}[\],]/,
-	'operator': /:/,
-	'boolean': /\b(?:false|true)\b/,
-	'null': {
-		pattern: /\bnull\b/,
-		alias: 'keyword'
-	}
-};
-
-Prism$1.languages.webmanifest = Prism$1.languages.json;
-
-(function (Prism) {
-
-	Prism.languages.diff = {
-		'coord': [
-			// Match all kinds of coord lines (prefixed by "+++", "---" or "***").
-			/^(?:\*{3}|-{3}|\+{3}).*$/m,
-			// Match "@@ ... @@" coord lines in unified diff.
-			/^@@.*@@$/m,
-			// Match coord lines in normal diff (starts with a number).
-			/^\d.*$/m
-		]
-
-		// deleted, inserted, unchanged, diff
-	};
-
-	/**
-	 * A map from the name of a block to its line prefix.
-	 *
-	 * @type {Object<string, string>}
-	 */
-	var PREFIXES = {
-		'deleted-sign': '-',
-		'deleted-arrow': '<',
-		'inserted-sign': '+',
-		'inserted-arrow': '>',
-		'unchanged': ' ',
-		'diff': '!',
-	};
-
-	// add a token for each prefix
-	Object.keys(PREFIXES).forEach(function (name) {
-		var prefix = PREFIXES[name];
-
-		var alias = [];
-		if (!/^\w+$/.test(name)) { // "deleted-sign" -> "deleted"
-			alias.push(/\w+/.exec(name)[0]);
-		}
-		if (name === 'diff') {
-			alias.push('bold');
-		}
-
-		Prism.languages.diff[name] = {
-			pattern: RegExp('^(?:[' + prefix + '].*(?:\r\n?|\n|(?![\\s\\S])))+', 'm'),
-			alias: alias,
-			inside: {
-				'line': {
-					pattern: /(.)(?=[\s\S]).*(?:\r\n?|\n)?/,
-					lookbehind: true
-				},
-				'prefix': {
-					pattern: /[\s\S]/,
-					alias: /\w+/.exec(name)[0]
-				}
-			}
-		};
-
-	});
-
-	// make prefixes available to Diff plugin
-	Object.defineProperty(Prism.languages.diff, 'PREFIXES', {
-		value: PREFIXES
-	});
-
-}(Prism$1));
-
-// Configure Prism for manual highlighting mode
-// This must be set before importing prismjs
-window.Prism = window.Prism || {};
-window.Prism.manual = true;
-
 /*! @license DOMPurify 3.3.0 | (c) Cure53 and other contributors | Released under the Apache license 2.0 and Mozilla Public License 2.0 | github.com/cure53/DOMPurify/blob/3.3.0/LICENSE */
 
 const {
@@ -4592,7 +1377,7 @@ var purify = createDOMPurify();
  *
  */
 
-function t(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSearchParams;r.append("code",t);for(const t of e)r.append("v",t);throw n.search=r.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}function e(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSearchParams;r.append("code",t);for(const t of e)r.append("v",t);n.search=r.toString(),console.warn(`Minified Lexical warning #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`);}const n="undefined"!=typeof window&&void 0!==window.document&&void 0!==window.document.createElement,r=n&&"documentMode"in document?document.documentMode:null,i=n&&/Mac|iPod|iPhone|iPad/.test(navigator.platform),o=n&&/^(?!.*Seamonkey)(?=.*Firefox).*/i.test(navigator.userAgent),s=!(!n||!("InputEvent"in window)||r)&&"getTargetRanges"in new window.InputEvent("input"),l=n&&/Version\/[\d.]+.*Safari/.test(navigator.userAgent),c=n&&/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream,a=n&&/Android/.test(navigator.userAgent),u=n&&/^(?=.*Chrome).*/i.test(navigator.userAgent),f=n&&a&&u,d=n&&/AppleWebKit\/[\d.]+/.test(navigator.userAgent)&&i&&!u;function h$1(...t){const e=[];for(const n of t)if(n&&"string"==typeof n)for(const[t]of n.matchAll(/\S+/g))e.push(t);return e}const g$1=0,_$2=1,p=2,T$3=128,b$4=1,w$4=2,E$4=3,O$2=4,M$5=5,A$3=6,P$3=l||c||d?" ":"​",D$4="\n\n",F$5=o?" ":P$3,L$2="֑-߿יִ-﷽ﹰ-ﻼ",I$3="A-Za-zÀ-ÖØ-öø-ʸ̀-֐ࠀ-῿‎Ⰰ-﬜︀-﹯﻽-￿",K$5=new RegExp("^[^"+I$3+"]*["+L$2+"]"),z$4=new RegExp("^[^"+L$2+"]*["+I$3+"]"),R$5={bold:1,capitalize:1024,code:16,highlight:T$3,italic:2,lowercase:256,strikethrough:4,subscript:32,superscript:64,underline:8,uppercase:512},B$3={directionless:1,unmergeable:2},W$6={center:2,end:6,justify:4,left:1,right:3,start:5},J$5={[w$4]:"center",[A$3]:"end",[O$2]:"justify",[b$4]:"left",[E$4]:"right",[M$5]:"start"},j$3={normal:0,segmented:2,token:1},$$4={[g$1]:"normal",[p]:"segmented",[_$2]:"token"},V$5="$config";function Y$4(t,e,n,r,i,o){let s=t.getFirstChild();for(;null!==s;){const t=s.__key;s.__parent===e&&(Si(s)&&Y$4(s,t,n,r,i,o),n.has(t)||o.delete(t),i.push(t)),s=s.getNextSibling();}}let q$4=false,H$3=0;function G$4(t){H$3=t.timeStamp;}function X$4(t,e,n){const r="BR"===t.nodeName,i=e.__lexicalLineBreak;return i&&(t===i||r&&t.previousSibling===i)||r&&void 0!==So(t,n)}function Q$5(t,e,n){const r=ps(ss(n));let i=null,o=null;null!==r&&r.anchorNode===t&&(i=r.anchorOffset,o=r.focusOffset);const s=t.nodeValue;null!==s&&Fo(e,s,i,o,false);}function Z$4(t,e,n){if(yr(t)){const e=t.anchor.getNode();if(e.is(n)&&t.format!==e.getFormat())return  false}return co(e)&&n.isAttached()}function tt$4(t,e,n,r){for(let i=t;i&&!Fs(i);i=Zo(i)){const t=So(i,e);if(void 0!==t){const e=xo(t,n);if(e)return Ti(e)||!Cs(i)?void 0:[i,e]}else if(i===r)return [r,bo(n)]}}function et$4(t,e,n){q$4=true;const r=performance.now()-H$3>100;try{yi(t,()=>{const i=Lr()||function(t){return t.getEditorState().read(()=>{const t=Lr();return null!==t?t.clone():null})}(t),s=new Map,l=t.getRootElement(),c=t._editorState,a=t._blockCursorElement;let u=!1,f="";for(let n=0;n<e.length;n++){const d=e[n],h=d.type,g=d.target,_=tt$4(g,t,c,l);if(!_)continue;const[p,y]=_;if("characterData"===h)r&&lr(y)&&co(g)&&Z$4(i,g,y)&&Q$5(g,y,t);else if("childList"===h){u=!0;const e=d.addedNodes;for(let n=0;n<e.length;n++){const r=e[n],i=Co(r),s=r.parentNode;if(null!=s&&r!==a&&null===i&&!X$4(r,s,t)){if(o){const t=(Cs(r)?r.innerText:null)||r.nodeValue;t&&(f+=t);}s.removeChild(r);}}const n=d.removedNodes,r=n.length;if(r>0){let e=0;for(let i=0;i<r;i++){const r=n[i];(X$4(r,g,t)||a===r)&&(g.appendChild(r),e++);}r!==e&&s.set(p,y);}}}if(s.size>0)for(const[e,n]of s)n.reconcileObservedMutation(e,t);const d=n.takeRecords();if(d.length>0){for(let e=0;e<d.length;e++){const n=d[e],r=n.addedNodes,i=n.target;for(let e=0;e<r.length;e++){const n=r[e],o=n.parentNode;null==o||"BR"!==n.nodeName||X$4(n,i,t)||o.removeChild(n);}}n.takeRecords();}null!==i&&(u&&wo(i),o&&Ho(t)&&i.insertRawText(f));});}finally{q$4=false;}}function nt$4(t){const e=t._observer;if(null!==e){et$4(t,e.takeRecords(),e);}}function rt$3(t){!function(t){0===H$3&&ss(t).addEventListener("textInput",G$4,true);}(t),t._observer=new MutationObserver((e,n)=>{et$4(t,e,n);});}let it$4 = class it{key;parse;unparse;isEqual;defaultValue;constructor(t,e){this.key=t,this.parse=e.parse.bind(e),this.unparse=(e.unparse||gt$4).bind(e),this.isEqual=(e.isEqual||Object.is).bind(e),this.defaultValue=this.parse(void 0);}};function ot$5(t,e){return new it$4(t,e)}function st$4(t,e,n="latest"){const r=("latest"===n?t.getLatest():t).__state;return r?r.getValue(e):e.defaultValue}function ct$5(t,e,n){let r;if(ei(),"function"==typeof n){const i=t.getLatest(),o=st$4(i,e);if(r=n(o),e.isEqual(o,r))return i}else r=n;const i=t.getWritable();return ft$3(i).updateFromKnown(e,r),i}function at$3(t){const e=new Map,n=new Set;for(let r="function"==typeof t?t:t.replace;r.prototype&&void 0!==r.prototype.getType;r=Object.getPrototypeOf(r)){const{ownNodeConfig:t}=Is(r);if(t&&t.stateConfigs)for(const r of t.stateConfigs){let t;"stateConfig"in r?(t=r.stateConfig,r.flat&&n.add(t.key)):t=r,e.set(t.key,t);}}return {flatKeys:n,sharedConfigMap:e}}let ut$4 = class ut{node;knownState;unknownState;sharedNodeState;size;constructor(t,e,n=void 0,r=new Map,i=void 0){this.node=t,this.sharedNodeState=e,this.unknownState=n,this.knownState=r;const{sharedConfigMap:o}=this.sharedNodeState,s=void 0!==i?i:function(t,e,n){let r=n.size;if(e)for(const i in e){const e=t.get(i);e&&n.has(e)||r++;}return r}(o,n,r);this.size=s;}getValue(t){const e=this.knownState.get(t);if(void 0!==e)return e;this.sharedNodeState.sharedConfigMap.set(t.key,t);let n=t.defaultValue;if(this.unknownState&&t.key in this.unknownState){const e=this.unknownState[t.key];void 0!==e&&(n=t.parse(e)),this.updateFromKnown(t,n);}return n}getInternalState(){return [this.unknownState,this.knownState]}toJSON(){const t={...this.unknownState},e={};for(const[e,n]of this.knownState)e.isEqual(n,e.defaultValue)?delete t[e.key]:t[e.key]=e.unparse(n);for(const n of this.sharedNodeState.flatKeys)n in t&&(e[n]=t[n],delete t[n]);return ht$4(t)&&(e.$=t),e}getWritable(t){if(this.node===t)return this;const{sharedNodeState:e,unknownState:n}=this,r=new Map(this.knownState);return new ut(t,e,function(t,e,n){let r;if(n)for(const[i,o]of Object.entries(n)){const n=t.get(i);n?e.has(n)||e.set(n,n.parse(o)):(r=r||{},r[i]=o);}return r}(e.sharedConfigMap,r,n),r,this.size)}updateFromKnown(t,e){const n=t.key;this.sharedNodeState.sharedConfigMap.set(n,t);const{knownState:r,unknownState:i}=this;r.has(t)||i&&n in i||(i&&(delete i[n],this.unknownState=ht$4(i)),this.size++),r.set(t,e);}updateFromUnknown(t,e){const n=this.sharedNodeState.sharedConfigMap.get(t);n?this.updateFromKnown(n,n.parse(e)):(this.unknownState=this.unknownState||{},t in this.unknownState||this.size++,this.unknownState[t]=e);}updateFromJSON(t){const{knownState:e}=this;for(const t of e.keys())e.set(t,t.defaultValue);if(this.size=e.size,this.unknownState=void 0,t)for(const[e,n]of Object.entries(t))this.updateFromUnknown(e,n);}};function ft$3(t){const e=t.getWritable(),n=e.__state?e.__state.getWritable(e):new ut$4(e,dt$4(e));return e.__state=n,n}function dt$4(t){return t.__state?t.__state.sharedNodeState:Gi(bs(),t.getType()).sharedNodeState}function ht$4(t){if(t)for(const e in t)return t}function gt$4(t){return t}function _t$5(t,e,n){for(const[r,i]of e.knownState){if(t.has(r.key))continue;t.add(r.key);const e=n?n.getValue(r):r.defaultValue;if(e!==i&&!r.isEqual(e,i))return  true}return  false}function pt$4(t,e,n){const{unknownState:r}=e,i=n?n.unknownState:void 0;if(r)for(const[e,n]of Object.entries(r)){if(t.has(e))continue;t.add(e);if(n!==(i?i[e]:void 0))return  true}return  false}function yt$4(t,e){const n=t.__state;return n&&n.node===t?n.getWritable(e):n}function mt$2(t,e){const n=t.__mode,r=t.__format,i=t.__style,o=e.__mode,s=e.__format,l=e.__style,c=t.__state,a=e.__state;return (null===n||n===o)&&(null===r||r===s)&&(null===i||i===l)&&(null===t.__state||c===a||function(t,e){if(t===e)return  true;if(t&&e&&t.size!==e.size)return  false;const n=new Set;return !(t&&_t$5(n,t,e)||e&&_t$5(n,e,t)||t&&pt$4(n,t,e)||e&&pt$4(n,e,t))}(c,a))}function xt$6(t,e){const n=t.mergeWithSibling(e),r=ii()._normalizedNodes;return r.add(t.__key),r.add(e.__key),n}function Ct$6(t){let e,n,r=t;if(""!==r.__text||!r.isSimpleText()||r.isUnmergeable()){for(;null!==(e=r.getPreviousSibling())&&lr(e)&&e.isSimpleText()&&!e.isUnmergeable();){if(""!==e.__text){if(mt$2(e,r)){r=xt$6(e,r);break}break}e.remove();}for(;null!==(n=r.getNextSibling())&&lr(n)&&n.isSimpleText()&&!n.isUnmergeable();){if(""!==n.__text){if(mt$2(r,n)){r=xt$6(r,n);break}break}n.remove();}}else r.remove();}function St$6(t){return vt$4(t.anchor),vt$4(t.focus),t}function vt$4(t){for(;"element"===t.type;){const e=t.getNode(),n=t.offset;let r,i;if(n===e.getChildrenSize()?(r=e.getChildAtIndex(n-1),i=true):(r=e.getChildAtIndex(n),i=false),lr(r)){t.set(r.__key,i?r.getTextContentSize():0,"text",true);break}if(!Si(r))break;t.set(r.__key,i?r.getChildrenSize():0,"element",true);}}let kt$7,Tt$5,Nt$5,bt$6,wt$6,Et$5,Ot$5,Mt$4,At$6,Pt$5,Dt$4="",Ft$3=null,Lt$5="",It$4="",Kt$4=false,zt$3=false;function Rt$3(t,e){const n=Ot$5.get(t);if(null!==e){const n=ne$1(t);n.parentNode===e&&e.removeChild(n);}if(Mt$4.has(t)||Tt$5._keyToDOMMap.delete(t),Si(n)){const t=Xt$1(n,Ot$5);Bt$4(t,0,t.length-1,null);} void 0!==n&&Uo(Pt$5,Nt$5,bt$6,n,"destroyed");}function Bt$4(t,e,n,r){let i=e;for(;i<=n;++i){const e=t[i];void 0!==e&&Rt$3(e,r);}}function Wt$2(t,e){t.setProperty("text-align",e);}const Jt$2="40px";function jt$4(t,e){const n=kt$7.theme.indent;if("string"==typeof n){const r=t.classList.contains(n);e>0&&!r?t.classList.add(n):e<1&&r&&t.classList.remove(n);}const r=getComputedStyle(t).getPropertyValue("--lexical-indent-base-value")||Jt$2;t.style.setProperty("padding-inline-start",0===e?"":`calc(${e} * ${r})`);}function $t$2(t,e){const n=t.style;0===e?Wt$2(n,""):1===e?Wt$2(n,"left"):2===e?Wt$2(n,"center"):3===e?Wt$2(n,"right"):4===e?Wt$2(n,"justify"):5===e?Wt$2(n,"start"):6===e&&Wt$2(n,"end");}function Ut$3(t,e){const n=function(t){const e=t.__dir;if(null!==e)return e;if(bi(t))return null;const n=t.getParentOrThrow();return bi(n)&&null===n.__dir?"auto":null}(e);null!==n?t.dir=n:t.removeAttribute("dir");}function Vt$1(e,n){const r=Mt$4.get(e);void 0===r&&t(60);const i=r.createDOM(kt$7,Tt$5);if(function(t,e,n){const r=n._keyToDOMMap;((function(t,e,n){const r=`__lexicalKey_${e._key}`;t[r]=n;}))(e,n,t),r.set(t,e);}(e,i,Tt$5),lr(r)?i.setAttribute("data-lexical-text","true"):Ti(r)&&i.setAttribute("data-lexical-decorator","true"),Si(r)){const t=r.__indent,e=r.__size;if(Ut$3(i,r),0!==t&&jt$4(i,t),0!==e){const t=e-1;Yt$1(Xt$1(r,Mt$4),r,0,t,r.getDOMSlot(i));}const n=r.__format;0!==n&&$t$2(i,n),r.isInline()||Ht$2(null,r,i),Xo(r)&&(Dt$4+=D$4,It$4+=D$4);}else {const t=r.getTextContent();if(Ti(r)){const t=r.decorate(Tt$5,kt$7);null!==t&&Zt$1(e,t),i.contentEditable="false";}Dt$4+=t,It$4+=t;}return null!==n&&n.insertChild(i),Uo(Pt$5,Nt$5,bt$6,r,"created"),i}function Yt$1(t,e,n,r,i){const o=Dt$4;Dt$4="";let s=n;for(;s<=r;++s){Vt$1(t[s],i);const e=Mt$4.get(t[s]);null!==e&&lr(e)&&(null===Ft$3&&(Ft$3=e.getFormat()),""===Lt$5&&(Lt$5=e.getStyle()));}Xo(e)&&(Dt$4+=D$4);i.element.__lexicalTextContent=Dt$4,Dt$4=o+Dt$4;}function qt$1(t,e){if(t){const n=t.__last;if(n){const t=e.get(n);if(t)return jn(t)?"line-break":Ti(t)&&t.isInline()?"decorator":null}return "empty"}return null}function Ht$2(t,e,n){const r=qt$1(t,Ot$5),i=qt$1(e,Mt$4);r!==i&&e.getDOMSlot(n).setManagedLineBreak(i);}function Gt$2(e,n,r){var i;Ft$3=null,Lt$5="",function(e,n,r){const i=Dt$4,o=e.__size,s=n.__size;Dt$4="";const l=r.element;if(1===o&&1===s){const t=e.__first,r=n.__first;if(t===r)Qt$1(t,l);else {const e=ne$1(t),n=Vt$1(r,null);try{l.replaceChild(n,e);}catch(i){if("object"==typeof i&&null!=i){const o=`${i.toString()} Parent: ${l.tagName}, new child: {tag: ${n.tagName} key: ${r}}, old child: {tag: ${e.tagName}, key: ${t}}.`;throw new Error(o)}throw i}Rt$3(t,null);}const i=Mt$4.get(r);lr(i)&&(null===Ft$3&&(Ft$3=i.getFormat()),""===Lt$5&&(Lt$5=i.getStyle()));}else {const i=Xt$1(e,Ot$5),c=Xt$1(n,Mt$4);if(i.length!==o&&t(227),c.length!==s&&t(228),0===o)0!==s&&Yt$1(c,n,0,s-1,r);else if(0===s){if(0!==o){const t=null==r.after&&null==r.before&&null==r.element.__lexicalLineBreak;Bt$4(i,0,o-1,t?null:l),t&&(l.textContent="");}}else !function(t,e,n,r,i,o){const s=r-1,l=i-1;let c,a,u=o.getFirstChild(),f=0,d=0;for(;f<=s&&d<=l;){const t=e[f],r=n[d];if(t===r)u=te$1(Qt$1(r,o.element)),f++,d++;else { void 0===c&&(c=new Set(e)),void 0===a&&(a=new Set(n));const i=a.has(t),s=c.has(r);if(i)if(s){const t=Qo(Tt$5,r);t===u?u=te$1(Qt$1(r,o.element)):(o.withBefore(u).insertChild(t),Qt$1(r,o.element)),f++,d++;}else Vt$1(r,o.withBefore(u)),d++;else u=te$1(ne$1(t)),Rt$3(t,o.element),f++;}const i=Mt$4.get(r);null!==i&&lr(i)&&(null===Ft$3&&(Ft$3=i.getFormat()),""===Lt$5&&(Lt$5=i.getStyle()));}const h=f>s,g=d>l;if(h&&!g){const e=n[l+1],r=void 0===e?null:Tt$5.getElementByKey(e);Yt$1(n,t,d,l,o.withBefore(r));}else g&&!h&&Bt$4(e,f,s,o.element);}(n,i,c,o,s,r);}Xo(n)&&(Dt$4+=D$4);l.__lexicalTextContent=Dt$4,Dt$4=i+Dt$4;}(e,n,n.getDOMSlot(r)),i=n,null==Ft$3||Ft$3===i.__textFormat||zt$3||i.setTextFormat(Ft$3),function(t){""===Lt$5||Lt$5===t.__textStyle||zt$3||t.setTextStyle(Lt$5);}(n);}function Xt$1(e,n){const r=[];let i=e.__first;for(;null!==i;){const e=n.get(i);void 0===e&&t(101),r.push(i),i=e.__next;}return r}function Qt$1(e,n){const r=Ot$5.get(e);let i=Mt$4.get(e);void 0!==r&&void 0!==i||t(61);const o=Kt$4||Et$5.has(e)||wt$6.has(e),s=Qo(Tt$5,e);if(r===i&&!o){if(Si(r)){const t=s.__lexicalTextContent;void 0!==t&&(Dt$4+=t,It$4+=t);}else {const t=r.getTextContent();It$4+=t,Dt$4+=t;}return s}if(r!==i&&o&&Uo(Pt$5,Nt$5,bt$6,i,"updated"),i.updateDOM(r,s,kt$7)){const r=Vt$1(e,null);return null===n&&t(62),n.replaceChild(r,s),Rt$3(e,null),r}if(Si(r)&&Si(i)){const t=i.__indent;(Kt$4||t!==r.__indent)&&jt$4(s,t);const e=i.__format;if((Kt$4||e!==r.__format)&&$t$2(s,e),o&&(Gt$2(r,i,s),bi(i)||i.isInline()||Ht$2(r,i,s)),Xo(i)&&(Dt$4+=D$4,It$4+=D$4),(Kt$4||i.__dir!==r.__dir)&&(Ut$3(s,i),bi(i)&&!Kt$4))for(const t of i.getChildren())if(Si(t)){Ut$3(Qo(Tt$5,t.getKey()),t);}}else {const t=i.getTextContent();if(Ti(i)){const t=i.decorate(Tt$5,kt$7);null!==t&&Zt$1(e,t);}Dt$4+=t,It$4+=t;}if(!zt$3&&bi(i)&&i.__cachedText!==It$4){const t=i.getWritable();t.__cachedText=It$4,i=t;}return s}function Zt$1(t,e){let n=Tt$5._pendingDecorators;const r=Tt$5._decorators;if(null===n){if(r[t]===e)return;n=ko(Tt$5);}n[t]=e;}function te$1(t){let e=t.nextSibling;return null!==e&&e===Tt$5._blockCursorElement&&(e=e.nextSibling),e}function ee$1(t,e,n,r,i,o){Dt$4="",It$4="",Kt$4=2===r,Tt$5=n,kt$7=n._config,Nt$5=n._nodes,bt$6=Tt$5._listeners.mutation,wt$6=i,Et$5=o,Ot$5=t._nodeMap,Mt$4=e._nodeMap,zt$3=e._readOnly,At$6=new Map(n._keyToDOMMap);const s=new Map;return Pt$5=s,Qt$1("root",null),Tt$5=void 0,Nt$5=void 0,wt$6=void 0,Et$5=void 0,Ot$5=void 0,Mt$4=void 0,kt$7=void 0,At$6=void 0,Pt$5=void 0,s}function ne$1(e){const n=At$6.get(e);return void 0===n&&t(75,e),n}function re$1(t){return {type:t}}const ie$1=re$1("SELECTION_CHANGE_COMMAND"),oe$2=re$1("SELECTION_INSERT_CLIPBOARD_NODES_COMMAND"),se$1=re$1("CLICK_COMMAND"),le$2=re$1("DELETE_CHARACTER_COMMAND"),ce$1=re$1("INSERT_LINE_BREAK_COMMAND"),ae$1=re$1("INSERT_PARAGRAPH_COMMAND"),ue$1=re$1("CONTROLLED_TEXT_INSERTION_COMMAND"),fe$1=re$1("PASTE_COMMAND"),de$1=re$1("REMOVE_TEXT_COMMAND"),he$1=re$1("DELETE_WORD_COMMAND"),ge$1=re$1("DELETE_LINE_COMMAND"),_e$1=re$1("FORMAT_TEXT_COMMAND"),pe$1=re$1("UNDO_COMMAND"),ye$1=re$1("REDO_COMMAND"),me$1=re$1("KEYDOWN_COMMAND"),xe$1=re$1("KEY_ARROW_RIGHT_COMMAND"),Ce$1=re$1("MOVE_TO_END"),Se$1=re$1("KEY_ARROW_LEFT_COMMAND"),ve$2=re$1("MOVE_TO_START"),ke$2=re$1("KEY_ARROW_UP_COMMAND"),Te$2=re$1("KEY_ARROW_DOWN_COMMAND"),Ne$2=re$1("KEY_ENTER_COMMAND"),be$1=re$1("KEY_SPACE_COMMAND"),we$1=re$1("KEY_BACKSPACE_COMMAND"),Ee$2=re$1("KEY_ESCAPE_COMMAND"),Oe$2=re$1("KEY_DELETE_COMMAND"),Me$2=re$1("KEY_TAB_COMMAND"),Ae$2=re$1("INSERT_TAB_COMMAND"),Pe$2=re$1("INDENT_CONTENT_COMMAND"),De$2=re$1("OUTDENT_CONTENT_COMMAND"),Fe$2=re$1("DROP_COMMAND"),Le$2=re$1("FORMAT_ELEMENT_COMMAND"),Ie$2=re$1("DRAGSTART_COMMAND"),Ke$2=re$1("DRAGOVER_COMMAND"),ze$2=re$1("DRAGEND_COMMAND"),Re$2=re$1("COPY_COMMAND"),Be$2=re$1("CUT_COMMAND"),We$2=re$1("SELECT_ALL_COMMAND"),Je$1=re$1("CLEAR_EDITOR_COMMAND"),je$2=re$1("CLEAR_HISTORY_COMMAND"),$e$2=re$1("CAN_REDO_COMMAND"),Ue$2=re$1("CAN_UNDO_COMMAND"),Ve$1=re$1("FOCUS_COMMAND"),Ye=re$1("BLUR_COMMAND"),qe$2=re$1("KEY_MODIFIER_COMMAND"),He$2=Object.freeze({}),Ge$2=[["keydown",function(t,e){if(Xe$1=t.timeStamp,Qe$1=t.key,e.isComposing())return;if(Go(e,me$1,t))return;if(null==t.key)return;if(cn$1&&Wo(t))return yi(e,()=>{mn$1(e,an$1);}),cn$1=false,void(an$1="");if(function(t){return zo(t,"ArrowRight",{shiftKey:"any"})}(t))Go(e,xe$1,t);else if(function(t){return zo(t,"ArrowRight",Ro)}(t))Go(e,Ce$1,t);else if(function(t){return zo(t,"ArrowLeft",{shiftKey:"any"})}(t))Go(e,Se$1,t);else if(function(t){return zo(t,"ArrowLeft",Ro)}(t))Go(e,ve$2,t);else if(function(t){return zo(t,"ArrowUp",{altKey:"any",shiftKey:"any"})}(t))Go(e,ke$2,t);else if(function(t){return zo(t,"ArrowDown",{altKey:"any",shiftKey:"any"})}(t))Go(e,Te$2,t);else if(function(t){return zo(t,"Enter",{altKey:"any",ctrlKey:"any",metaKey:"any",shiftKey:true})}(t))sn$1=true,Go(e,Ne$2,t);else if(function(t){return " "===t.key}(t))Go(e,be$1,t);else if(function(t){return i&&zo(t,"o",{ctrlKey:true})}(t))t.preventDefault(),sn$1=true,Go(e,ce$1,true);else if(function(t){return zo(t,"Enter",{altKey:"any",ctrlKey:"any",metaKey:"any"})}(t))sn$1=false,Go(e,Ne$2,t);else if(function(t){return zo(t,"Backspace",{shiftKey:"any"})||i&&zo(t,"h",{ctrlKey:true})}(t))Wo(t)?Go(e,we$1,t):(t.preventDefault(),Go(e,le$2,true));else if(function(t){return "Escape"===t.key}(t))Go(e,Ee$2,t);else if(function(t){return zo(t,"Delete",{})||i&&zo(t,"d",{ctrlKey:true})}(t))!function(t){return "Delete"===t.key}(t)?(t.preventDefault(),Go(e,le$2,false)):Go(e,Oe$2,t);else if(function(t){return zo(t,"Backspace",Bo)}(t))t.preventDefault(),Go(e,he$1,true);else if(function(t){return zo(t,"Delete",Bo)}(t))t.preventDefault(),Go(e,he$1,false);else if(function(t){return i&&zo(t,"Backspace",{metaKey:true})}(t))t.preventDefault(),Go(e,ge$1,true);else if(function(t){return i&&(zo(t,"Delete",{metaKey:true})||zo(t,"k",{ctrlKey:true}))}(t))t.preventDefault(),Go(e,ge$1,false);else if(function(t){return zo(t,"b",Ro)}(t))t.preventDefault(),Go(e,_e$1,"bold");else if(function(t){return zo(t,"u",Ro)}(t))t.preventDefault(),Go(e,_e$1,"underline");else if(function(t){return zo(t,"i",Ro)}(t))t.preventDefault(),Go(e,_e$1,"italic");else if(function(t){return zo(t,"Tab",{shiftKey:"any"})}(t))Go(e,Me$2,t);else if(function(t){return zo(t,"z",Ro)}(t))t.preventDefault(),Go(e,pe$1,void 0);else if(function(t){if(i)return zo(t,"z",{metaKey:true,shiftKey:true});return zo(t,"y",{ctrlKey:true})||zo(t,"z",{ctrlKey:true,shiftKey:true})}(t))t.preventDefault(),Go(e,ye$1,void 0);else {const n=e._editorState._selection;null===n||yr(n)?Jo(t)&&(t.preventDefault(),Go(e,We$2,t)):!function(t){return zo(t,"c",Ro)}(t)?!function(t){return zo(t,"x",Ro)}(t)?Jo(t)&&(t.preventDefault(),Go(e,We$2,t)):(t.preventDefault(),Go(e,Be$2,t)):(t.preventDefault(),Go(e,Re$2,t));}(function(t){return t.ctrlKey||t.shiftKey||t.altKey||t.metaKey})(t)&&Go(e,qe$2,t);}],["pointerdown",function(t,e){const n=t.target,r=t.pointerType;Ss(n)&&"touch"!==r&&"pen"!==r&&0===t.button&&yi(e,()=>{Zi(n)||(on$1=true);});}],["compositionstart",function(t,e){yi(e,()=>{const n=Lr();if(yr(n)&&!e.isComposing()){const r=n.anchor,i=n.anchor.getNode();yo(r.key),(t.timeStamp<Xe$1+30||"element"===r.type||!n.isCollapsed()||i.getFormat()!==n.format||lr(i)&&i.getStyle()!==n.style)&&Go(e,ue$1,F$5);}});}],["compositionend",function(t,e){o?ln$1=true:c||!l&&!d?yi(e,()=>{mn$1(e,t.data);}):(cn$1=true,an$1=t.data);}],["input",function(t,e){t.stopPropagation(),yi(e,()=>{if(Cs(t.target)&&Zi(t.target))return;const n=Lr(),r=t.data,i=yn$1(t);if(null!=r&&yr(n)&&dn$1(n,i,r,t.timeStamp,false)){ln$1&&(mn$1(e,r),ln$1=false);const i=n.anchor.getNode(),a=ps(ss(e));if(null===a)return;const u=n.isBackward(),f=u?n.anchor.offset:n.focus.offset,h=u?n.focus.offset:n.anchor.offset;s&&!n.isCollapsed()&&lr(i)&&null!==a.anchorNode&&i.getTextContent().slice(0,f)+r+i.getTextContent().slice(f+h)===Po(a.anchorNode)||Go(e,ue$1,r);const g=r.length;o&&g>1&&"insertCompositionText"===t.inputType&&!e.isComposing()&&(n.anchor.offset-=g),l||c||d||!e.isComposing()||(Xe$1=0,yo(null));}else {Do(false,e,null!==r?r:void 0),ln$1&&(mn$1(e,r||void 0),ln$1=false);}!function(){ei();const t=ii();nt$4(t);}();},{event:t}),tn$1=null;}],["click",function(t,e){yi(e,()=>{const n=Lr(),r=ps(ss(e)),i=Ir();if(r)if(yr(n)){const e=n.anchor,o=e.getNode();if("element"===e.type&&0===e.offset&&n.isCollapsed()&&!bi(o)&&1===No().getChildrenSize()&&o.getTopLevelElementOrThrow().isEmpty()&&null!==i&&n.is(i))r.removeAllRanges(),n.dirty=true;else if(3===t.detail&&!n.isCollapsed()){if(o!==n.focus.getNode()){const t=zs(o,t=>Si(t)&&!t.isInline());Si(t)&&t.select(0);}}}else if("touch"===t.pointerType||"pen"===t.pointerType){const n=r.anchorNode;if(Cs(n)||co(n)){wo(Fr(i,r,e,t));}}Go(e,se$1,t);});}],["cut",He$2],["copy",He$2],["dragstart",He$2],["dragover",He$2],["dragend",He$2],["paste",He$2],["focus",He$2],["blur",He$2],["drop",He$2]];s&&Ge$2.push(["beforeinput",(e,n)=>function(e,n){const r=e.inputType,i=yn$1(e);if("deleteCompositionText"===r||o&&Ho(n))return;if("insertCompositionText"===r)return;yi(n,()=>{const o=Lr();if("deleteContentBackward"===r){if(null===o){const t=Ir();if(!yr(t))return;wo(t.clone());}if(yr(o)){const r=o.anchor.key===o.focus.key;if(s=e.timeStamp,"MediaLast"===Qe$1&&s<Xe$1+30&&n.isComposing()&&r){if(yo(null),Xe$1=0,setTimeout(()=>{yi(n,()=>{yo(null);});},30),yr(o)){const e=o.anchor.getNode();e.markDirty(),lr(e)||t(142),pn$1(o,e);}}else {yo(null),e.preventDefault();const t=o.anchor.getNode(),i=t.getTextContent(),s=t.canInsertTextAfter(),l=0===o.anchor.offset&&o.focus.offset===i.length;let c=f&&r&&!l&&s;if(c&&o.isCollapsed()&&(c=!Ti(qo(o.anchor,true))),!c){Go(n,le$2,true);const t=Lr();f&&yr(t)&&t.isCollapsed()&&(un$1=t,setTimeout(()=>un$1=null));}}return}}var s;if(!yr(o))return;const l=e.data;null!==tn$1&&Do(false,n,tn$1),o.dirty&&null===tn$1||!o.isCollapsed()||bi(o.anchor.getNode())||null===i||o.applyDOMRange(i),tn$1=null;const a=o.anchor,u=o.focus,d=a.getNode(),h=u.getNode();if("insertText"!==r&&"insertTranspose"!==r)switch(e.preventDefault(),r){case "insertFromYank":case "insertFromDrop":case "insertReplacementText":Go(n,ue$1,e);break;case "insertFromComposition":yo(null),Go(n,ue$1,e);break;case "insertLineBreak":yo(null),Go(n,ce$1,false);break;case "insertParagraph":yo(null),sn$1&&!c?(sn$1=false,Go(n,ce$1,false)):Go(n,ae$1,void 0);break;case "insertFromPaste":case "insertFromPasteAsQuotation":Go(n,fe$1,e);break;case "deleteByComposition":(function(t,e){return t!==e||Si(t)||Si(e)||!so(t)||!so(e)})(d,h)&&Go(n,de$1,e);break;case "deleteByDrag":case "deleteByCut":Go(n,de$1,e);break;case "deleteContent":Go(n,le$2,false);break;case "deleteWordBackward":Go(n,he$1,true);break;case "deleteWordForward":Go(n,he$1,false);break;case "deleteHardLineBackward":case "deleteSoftLineBackward":Go(n,ge$1,true);break;case "deleteContentForward":case "deleteHardLineForward":case "deleteSoftLineForward":Go(n,ge$1,false);break;case "formatStrikeThrough":Go(n,_e$1,"strikethrough");break;case "formatBold":Go(n,_e$1,"bold");break;case "formatItalic":Go(n,_e$1,"italic");break;case "formatUnderline":Go(n,_e$1,"underline");break;case "historyUndo":Go(n,pe$1,void 0);break;case "historyRedo":Go(n,ye$1,void 0);}else {if("\n"===l)e.preventDefault(),Go(n,ce$1,false);else if(l===D$4)e.preventDefault(),Go(n,ae$1,void 0);else if(null==l&&e.dataTransfer){const t=e.dataTransfer.getData("text/plain");e.preventDefault(),o.insertRawText(t);}else null!=l&&dn$1(o,i,l,e.timeStamp,true)?(e.preventDefault(),Go(n,ue$1,l)):tn$1=l;Ze$2=e.timeStamp;}});}(e,n)]);let Xe$1=0,Qe$1=null,Ze$2=0,tn$1=null;const en$1=new WeakMap,nn$1=new WeakMap;let rn$1=false,on$1=false,sn$1=false,ln$1=false,cn$1=false,an$1="",un$1=null,fn$1=[0,"",0,"root",0];function dn$1(t,e,n,r,i){const o=t.anchor,l=t.focus,c=o.getNode(),a=ii(),u=ps(ss(a)),f=null!==u?u.anchorNode:null,d=o.key,h=a.getElementByKey(d),g=n.length;return d!==l.key||!lr(c)||(!i&&(!s||Ze$2<r+50)||c.isDirty()&&g<2||Oo(n))&&o.offset!==l.offset&&!c.isComposing()||lo(c)||c.isDirty()&&g>1||(i||!s)&&null!==h&&!c.isComposing()&&f!==uo(h)||null!==u&&null!==e&&(!e.collapsed||e.startContainer!==u.anchorNode||e.startOffset!==u.anchorOffset)||c.getFormat()!==t.format||c.getStyle()!==t.style||function(t,e){if(e.isSegmented())return  true;if(!t.isCollapsed())return  false;const n=t.anchor.offset,r=e.getParentOrThrow(),i=so(e);return 0===n?!e.canInsertTextBefore()||!r.canInsertTextBefore()&&!e.isComposing()||i||function(t){const e=t.getPreviousSibling();return (lr(e)||Si(e)&&e.isInline())&&!e.canInsertTextAfter()}(e):n===e.getTextContentSize()&&(!e.canInsertTextAfter()||!r.canInsertTextAfter()&&!e.isComposing()||i)}(t,c)}function hn$1(t,e){return co(t)&&null!==t.nodeValue&&0!==e&&e!==t.nodeValue.length}function gn$1(e,n,r){const{anchorNode:i,anchorOffset:o,focusNode:s,focusOffset:l}=e;rn$1&&(rn$1=false,hn$1(i,o)&&hn$1(s,l)&&!un$1)||yi(n,()=>{if(!r)return void wo(null);if(!eo(n,i,s))return;let c=Lr();if(un$1&&yr(c)&&c.isCollapsed()){const t=c.anchor,e=un$1.anchor;(t.key===e.key&&t.offset===e.offset+1||1===t.offset&&e.getNode().is(t.getNode().getPreviousSibling()))&&(c=un$1.clone(),wo(c));}if(un$1=null,yr(c)){const r=c.anchor,i=r.getNode();if(c.isCollapsed()){"Range"===e.type&&e.anchorNode===e.focusNode&&(c.dirty=true);const o=ss(n).event,s=o?o.timeStamp:performance.now(),[l,a,u,f,d]=fn$1,h=No(),g=false===n.isComposing()&&""===h.getTextContent();if(s<d+200&&r.offset===u&&r.key===f)_n$1(c,l,a);else if("text"===r.type)lr(i)||t(141),pn$1(c,i);else if("element"===r.type&&!g){Si(i)||t(259);const e=r.getNode();e.isEmpty()?function(t,e){const n=e.getTextFormat(),r=e.getTextStyle();_n$1(t,n,r);}(c,e):_n$1(c,0,"");}}else {const t=r.key,e=c.focus.key,n=c.getNodes(),i=n.length,s=c.isBackward(),a=s?l:o,u=s?o:l,f=s?e:t,d=s?t:e;let h=2047,g=false;for(let t=0;t<i;t++){const e=n[t],r=e.getTextContentSize();if(lr(e)&&0!==r&&!(0===t&&e.__key===f&&a===r||t===i-1&&e.__key===d&&0===u)&&(g=true,h&=e.getFormat(),0===h))break}c.format=g?h:0;}}Go(n,ie$1,void 0);});}function _n$1(t,e,n){t.format===e&&t.style===n||(t.format=e,t.style=n,t.dirty=true);}function pn$1(t,e){_n$1(t,e.getFormat(),e.getStyle());}function yn$1(t){if(!t.getTargetRanges)return null;const e=t.getTargetRanges();return 0===e.length?null:e[0]}function mn$1(t,e){const n=t._compositionKey;if(yo(null),null!==n&&null!=e){if(""===e){const e=xo(n),r=uo(t.getElementByKey(n));return void(null!==r&&null!==r.nodeValue&&lr(e)&&Fo(e,r.nodeValue,null,null,true))}if("\n"===e[e.length-1]){const e=Lr();if(yr(e)){const n=e.focus;return e.anchor.set(n.key,n.offset,n.type),void Go(t,Ne$2,null)}}}Do(true,t,e);}function xn(t){let e=t.__lexicalEventHandles;return void 0===e&&(e=[],t.__lexicalEventHandles=e),e}const Cn$1=new Map;function Sn$1(t){const e=ys(t.target);if(null===e)return;const n=ro(e.anchorNode);if(null===n)return;on$1&&(on$1=false,yi(n,()=>{const r=Ir(),i=e.anchorNode;if(Cs(i)||co(i)){wo(Fr(r,e,n,t));}}));const r=Mo(n),i=r[r.length-1],o=i._key,s=Cn$1.get(o),l=s||i;l!==n&&gn$1(e,l,false),gn$1(e,n,true),n!==i?Cn$1.set(o,n):s&&Cn$1.delete(o);}function vn(t){t._lexicalHandled=true;}function kn(t){return  true===t._lexicalHandled}function Nn$1(e){const n=en$1.get(e);if(void 0===n)return void 0;const r=nn$1.get(n);if(void 0===r)return void 0;const i=r-1;i>=0||t(164),en$1.delete(e),nn$1.set(n,i),0===i&&n.removeEventListener("selectionchange",Sn$1);const o=io(e);no(o)?(!function(t){if(null!==t._parentEditor){const e=Mo(t),n=e[e.length-1]._key;Cn$1.get(n)===t&&Cn$1.delete(n);}else Cn$1.delete(t._key);}(o),e.__lexicalEditor=null):o&&t(198);const s=xn(e);for(let t=0;t<s.length;t++)s[t]();e.__lexicalEventHandles=[];}function bn(t,e,n){ei();const r=t.__key,i=t.getParent();if(null===i)return;const o=function(t){const e=Lr();if(!yr(e)||!Si(t))return e;const{anchor:n,focus:r}=e,i=n.getNode(),o=r.getNode();is(i,t)&&n.set(t.__key,0,"element");is(o,t)&&r.set(t.__key,0,"element");return e}(t);let s=false;if(yr(o)&&e){const e=o.anchor,n=o.focus;e.key===r&&(Rr(e,t,i,t.getPreviousSibling(),t.getNextSibling()),s=true),n.key===r&&(Rr(n,t,i,t.getPreviousSibling(),t.getNextSibling()),s=true);}else xr(o)&&e&&t.isSelected()&&t.selectPrevious();if(yr(o)&&e&&!s){const e=t.getIndexWithinParent();_o(t),Kr(o,i,e,-1);}else _o(t);n||as(i)||i.canBeEmpty()||!i.isEmpty()||bn(i,e),e&&o&&bi(i)&&i.isEmpty()&&i.selectEnd();}function wn$1(t){return t}const En=Symbol.for("ephemeral");function On(t){return t[En]||false}class Mn{__type;__key;__parent;__prev;__next;__state;static getType(){const{ownNodeType:e}=Is(this);return void 0===e&&t(64,this.name),e}static clone(e){t(65,this.name);}$config(){return {}}config(t,e){const n=e.extends||Object.getPrototypeOf(this.constructor);return Object.assign(e,{extends:n,type:t}),{[t]:e}}afterCloneFrom(t){this.__key===t.__key?(this.__parent=t.__parent,this.__next=t.__next,this.__prev=t.__prev,this.__state=t.__state):t.__state&&(this.__state=t.__state.getWritable(this));}static importDOM;constructor(t){this.__type=this.constructor.getType(),this.__parent=null,this.__prev=null,this.__next=null,Object.defineProperty(this,"__state",{configurable:true,enumerable:false,value:void 0,writable:true}),go(this,t);}getType(){return this.__type}isInline(){t(137,this.constructor.name);}isAttached(){let t=this.__key;for(;null!==t;){if("root"===t)return  true;const e=xo(t);if(null===e)break;t=e.__parent;}return  false}isSelected(t){const e=t||Lr();if(null==e)return  false;const n=e.getNodes().some(t=>t.__key===this.__key);if(lr(this))return n;if(yr(e)&&"element"===e.anchor.type&&"element"===e.focus.type){if(e.isCollapsed())return  false;const t=this.getParent();if(Ti(this)&&this.isInline()&&t){const n=e.isBackward()?e.focus:e.anchor;if(t.is(n.getNode())&&n.offset===t.getChildrenSize()&&this.is(t.getLastChild()))return  false}}return n}getKey(){return this.__key}getIndexWithinParent(){const t=this.getParent();if(null===t)return  -1;let e=t.getFirstChild(),n=0;for(;null!==e;){if(this.is(e))return n;n++,e=e.getNextSibling();}return  -1}getParent(){const t=this.getLatest().__parent;return null===t?null:xo(t)}getParentOrThrow(){const e=this.getParent();return null===e&&t(66,this.__key),e}getTopLevelElement(){let e=this;for(;null!==e;){const n=e.getParent();if(as(n))return Si(e)||e===this&&Ti(e)||t(194),e;e=n;}return null}getTopLevelElementOrThrow(){const e=this.getTopLevelElement();return null===e&&t(67,this.__key),e}getParents(){const t=[];let e=this.getParent();for(;null!==e;)t.push(e),e=e.getParent();return t}getParentKeys(){const t=[];let e=this.getParent();for(;null!==e;)t.push(e.__key),e=e.getParent();return t}getPreviousSibling(){const t=this.getLatest().__prev;return null===t?null:xo(t)}getPreviousSiblings(){const t=[],e=this.getParent();if(null===e)return t;let n=e.getFirstChild();for(;null!==n&&!n.is(this);)t.push(n),n=n.getNextSibling();return t}getNextSibling(){const t=this.getLatest().__next;return null===t?null:xo(t)}getNextSiblings(){const t=[];let e=this.getNextSibling();for(;null!==e;)t.push(e),e=e.getNextSibling();return t}getCommonAncestor(t){const e=Si(this)?this:this.getParent(),n=Si(t)?t:t.getParent(),r=e&&n?ml(e,n):null;return r?r.commonAncestor:null}is(t){return null!=t&&this.__key===t.__key}isBefore(e){const n=ml(this,e);return null!==n&&("descendant"===n.type||("branch"===n.type?-1===_l(n):("same"!==n.type&&"ancestor"!==n.type&&t(279),false)))}isParentOf(t){const e=ml(this,t);return null!==e&&"ancestor"===e.type}getNodesBetween(e){const n=this.isBefore(e),r=[],i=new Set;let o=this;for(;null!==o;){const s=o.__key;if(i.has(s)||(i.add(s),r.push(o)),o===e)break;const l=Si(o)?n?o.getFirstChild():o.getLastChild():null;if(null!==l){o=l;continue}const c=n?o.getNextSibling():o.getPreviousSibling();if(null!==c){o=c;continue}const a=o.getParentOrThrow();if(i.has(a.__key)||r.push(a),a===e)break;let u=null,f=a;do{if(null===f&&t(68),u=n?f.getNextSibling():f.getPreviousSibling(),f=f.getParent(),null===f)break;null!==u||i.has(f.__key)||r.push(f);}while(null===u);o=u;}return n||r.reverse(),r}isDirty(){const t=ii()._dirtyLeaves;return null!==t&&t.has(this.__key)}getLatest(){if(On(this))return this;const e=xo(this.__key);return null===e&&t(113),e}getWritable(){if(On(this))return this;ei();const t=ri(),e=ii(),n=t._nodeMap,r=this.__key,i=this.getLatest(),o=e._cloneNotNeeded,s=Lr();if(null!==s&&s.setCachedNodes(null),o.has(r))return po(i),i;const l=Ms(i);return o.add(r),po(l),n.set(r,l),l}getTextContent(){return ""}getTextContentSize(){return this.getTextContent().length}createDOM(e,n){t(70);}updateDOM(e,n,r){t(71);}exportDOM(t){return {element:this.createDOM(t._config,t)}}exportJSON(){const t=this.__state?this.__state.toJSON():void 0;return {type:this.__type,version:1,...t}}static importJSON(e){t(18,this.name);}updateFromJSON(t){return function(t,e){const n=t.getWritable(),r=e.$;let i=r;for(const t of dt$4(n).flatKeys)t in e&&(void 0!==i&&i!==r||(i={...r}),i[t]=e[t]);return (n.__state||i)&&ft$3(t).updateFromJSON(i),n}(this,t)}static transform(){return null}remove(t){bn(this,true,t);}replace(e,n){ei();let r=Lr();null!==r&&(r=r.clone()),ds(this,e);const i=this.getLatest(),o=this.__key,s=e.__key,l=e.getWritable(),c=this.getParentOrThrow().getWritable(),a=c.__size;_o(l);const u=i.getPreviousSibling(),f=i.getNextSibling(),d=i.__prev,h=i.__next,g=i.__parent;if(bn(i,false,true),null===u)c.__first=s;else {u.getWritable().__next=s;}if(l.__prev=d,null===f)c.__last=s;else {f.getWritable().__prev=s;}if(l.__next=h,l.__parent=g,c.__size=a,n&&(Si(this)&&Si(l)||t(139),this.getChildren().forEach(t=>{l.append(t);})),yr(r)){wo(r);const t=r.anchor,e=r.focus;t.key===o&&_r(t,l),e.key===o&&_r(e,l);}return mo()===o&&yo(s),l}insertAfter(t,e=true){ei(),ds(this,t);const n=this.getWritable(),r=t.getWritable(),i=r.getParent(),o=Lr();let s=false,l=false;if(null!==i){const e=t.getIndexWithinParent();if(_o(r),yr(o)){const t=i.__key,n=o.anchor,r=o.focus;s="element"===n.type&&n.key===t&&n.offset===e+1,l="element"===r.type&&r.key===t&&r.offset===e+1;}}const c=this.getNextSibling(),a=this.getParentOrThrow().getWritable(),u=r.__key,f=n.__next;if(null===c)a.__last=u;else {c.getWritable().__prev=u;}if(a.__size++,n.__next=u,r.__next=f,r.__prev=n.__key,r.__parent=n.__parent,e&&yr(o)){const t=this.getIndexWithinParent();Kr(o,a,t+1);const e=a.__key;s&&o.anchor.set(e,t+2,"element"),l&&o.focus.set(e,t+2,"element");}return t}insertBefore(t,e=true){ei(),ds(this,t);const n=this.getWritable(),r=t.getWritable(),i=r.__key;_o(r);const o=this.getPreviousSibling(),s=this.getParentOrThrow().getWritable(),l=n.__prev,c=this.getIndexWithinParent();if(null===o)s.__first=i;else {o.getWritable().__next=i;}s.__size++,n.__prev=i,r.__prev=l,r.__next=n.__key,r.__parent=n.__parent;const a=Lr();if(e&&yr(a)){Kr(a,this.getParentOrThrow(),c);}return t}isParentRequired(){return  false}createParentElementNode(){return Li()}selectStart(){return this.selectPrevious()}selectEnd(){return this.selectNext(0,0)}selectPrevious(t,e){ei();const n=this.getPreviousSibling(),r=this.getParentOrThrow();if(null===n)return r.select(0,0);if(Si(n))return n.select();if(!lr(n)){const t=n.getIndexWithinParent()+1;return r.select(t,t)}return n.select(t,e)}selectNext(t,e){ei();const n=this.getNextSibling(),r=this.getParentOrThrow();if(null===n)return r.select();if(Si(n))return n.select(0,0);if(!lr(n)){const t=n.getIndexWithinParent();return r.select(t,t)}return n.select(t,e)}markDirty(){this.getWritable();}reconcileObservedMutation(t,e){this.markDirty();}}const An="historic",Pn="history-push",Dn="history-merge",Fn="paste",Ln="collaboration",Kn="skip-scroll-into-view",zn="skip-dom-selection",Rn="skip-selection-focus";class Bn extends Mn{static getType(){return "linebreak"}static clone(t){return new Bn(t.__key)}constructor(t){super(t);}getTextContent(){return "\n"}createDOM(){return document.createElement("br")}updateDOM(){return  false}isInline(){return  true}static importDOM(){return {br:t=>function(t){const e=t.parentElement;if(null!==e&&Ts(e)){const n=e.firstChild;if(n===t||n.nextSibling===t&&$n(n)){const n=e.lastChild;if(n===t||n.previousSibling===t&&$n(n))return  true}}return  false}(t)||function(t){const e=t.parentElement;if(null!==e&&Ts(e)){const n=e.firstChild;if(n===t||n.nextSibling===t&&$n(n))return  false;const r=e.lastChild;if(r===t||r.previousSibling===t&&$n(r))return  true}return  false}(t)?null:{conversion:Wn,priority:0}}}static importJSON(t){return Jn().updateFromJSON(t)}}function Wn(t){return {node:Jn()}}function Jn(){return fs(new Bn)}function jn(t){return t instanceof Bn}function $n(t){return co(t)&&/^( |\t|\r?\n)+$/.test(t.textContent||"")}function Un(t,e){return 16&e?"code":e&T$3?"mark":32&e?"sub":64&e?"sup":null}function Vn(t,e){return 1&e?"strong":2&e?"em":"span"}function Yn(t,e,n,r,i){const o=r.classList;let s=$o(i,"base");void 0!==s&&o.add(...s),s=$o(i,"underlineStrikethrough");let l=false;const c=8&e&&4&e;void 0!==s&&(8&n&&4&n?(l=true,c||o.add(...s)):c&&o.remove(...s));for(const t in R$5){const r=R$5[t];if(s=$o(i,t),void 0!==s)if(n&r){if(l&&("underline"===t||"strikethrough"===t)){e&r&&o.remove(...s);continue}(0===(e&r)||c&&"underline"===t||"strikethrough"===t)&&o.add(...s);}else e&r&&o.remove(...s);}}function qn(t,e,n){const r=e.firstChild,i=n.isComposing(),s=t+(i?P$3:"");if(null==r)e.textContent=s;else {const t=r.nodeValue;if(t!==s)if(i||o){const[e,n,i]=function(t,e){const n=t.length,r=e.length;let i=0,o=0;for(;i<n&&i<r&&t[i]===e[i];)i++;for(;o+i<n&&o+i<r&&t[n-o-1]===e[r-o-1];)o++;return [i,n-i-o,e.slice(i,r-o)]}(t,s);0!==n&&r.deleteData(e,n),r.insertData(e,i);}else r.nodeValue=s;}}function Hn(t,e,n,r,i,o){qn(i,t,e);const s=o.theme.text;void 0!==s&&Yn(0,0,r,t,s);}function Gn(t,e){const n=document.createElement(e);return n.appendChild(t),n}class Xn extends Mn{__text;__format;__style;__mode;__detail;static getType(){return "text"}static clone(t){return new Xn(t.__text,t.__key)}afterCloneFrom(t){super.afterCloneFrom(t),this.__text=t.__text,this.__format=t.__format,this.__style=t.__style,this.__mode=t.__mode,this.__detail=t.__detail;}constructor(t="",e){super(e),this.__text=t,this.__format=0,this.__style="",this.__mode=0,this.__detail=0;}getFormat(){return this.getLatest().__format}getDetail(){return this.getLatest().__detail}getMode(){const t=this.getLatest();return $$4[t.__mode]}getStyle(){return this.getLatest().__style}isToken(){return 1===this.getLatest().__mode}isComposing(){return this.__key===mo()}isSegmented(){return 2===this.getLatest().__mode}isDirectionless(){return !!(1&this.getLatest().__detail)}isUnmergeable(){return !!(2&this.getLatest().__detail)}hasFormat(t){const e=R$5[t];return 0!==(this.getFormat()&e)}isSimpleText(){return "text"===this.__type&&0===this.__mode}getTextContent(){return this.getLatest().__text}getFormatFlags(t,e){return fo(this.getLatest().__format,t,e)}canHaveFormat(){return  true}isInline(){return  true}createDOM(t,e){const n=this.__format,r=Un(0,n),i=Vn(0,n),o=null===r?i:r,s=document.createElement(o);let l=s;this.hasFormat("code")&&s.setAttribute("spellcheck","false"),null!==r&&(l=document.createElement(i),s.appendChild(l));Hn(l,this,0,n,this.__text,t);const c=this.__style;return ""!==c&&(s.style.cssText=c),s}updateDOM(e,n,r){const i=this.__text,o=e.__format,s=this.__format,l=Un(0,o),c=Un(0,s),a=Vn(0,o),u=Vn(0,s);if((null===l?a:l)!==(null===c?u:c))return  true;if(l===c&&a!==u){const e=n.firstChild;null==e&&t(48);const o=document.createElement(u);return Hn(o,this,0,s,i,r),n.replaceChild(o,e),false}let f=n;null!==c&&null!==l&&(f=n.firstChild,null==f&&t(49)),qn(i,f,this);const d=r.theme.text;void 0!==d&&o!==s&&Yn(0,o,s,f,d);const h=e.__style,g=this.__style;return h!==g&&(n.style.cssText=g),false}static importDOM(){return {"#text":()=>({conversion:nr,priority:0}),b:()=>({conversion:Zn,priority:0}),code:()=>({conversion:or,priority:0}),em:()=>({conversion:or,priority:0}),i:()=>({conversion:or,priority:0}),mark:()=>({conversion:or,priority:0}),s:()=>({conversion:or,priority:0}),span:()=>({conversion:Qn,priority:0}),strong:()=>({conversion:or,priority:0}),sub:()=>({conversion:or,priority:0}),sup:()=>({conversion:or,priority:0}),u:()=>({conversion:or,priority:0})}}static importJSON(t){return sr().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setTextContent(t.text).setFormat(t.format).setDetail(t.detail).setMode(t.mode).setStyle(t.style)}exportDOM(e){let{element:n}=super.exportDOM(e);return Cs(n)||t(132),n.style.whiteSpace="pre-wrap",this.hasFormat("lowercase")?n.style.textTransform="lowercase":this.hasFormat("uppercase")?n.style.textTransform="uppercase":this.hasFormat("capitalize")&&(n.style.textTransform="capitalize"),this.hasFormat("bold")&&(n=Gn(n,"b")),this.hasFormat("italic")&&(n=Gn(n,"i")),this.hasFormat("strikethrough")&&(n=Gn(n,"s")),this.hasFormat("underline")&&(n=Gn(n,"u")),{element:n}}exportJSON(){return {detail:this.getDetail(),format:this.getFormat(),mode:this.getMode(),style:this.getStyle(),text:this.getTextContent(),...super.exportJSON()}}selectionTransform(t,e){}setFormat(t){const e=this.getWritable();return e.__format="string"==typeof t?R$5[t]:t,e}setDetail(t){const e=this.getWritable();return e.__detail="string"==typeof t?B$3[t]:t,e}setStyle(t){const e=this.getWritable();return e.__style=t,e}toggleFormat(t){const e=fo(this.getFormat(),t,null);return this.setFormat(e)}toggleDirectionless(){const t=this.getWritable();return t.__detail^=1,t}toggleUnmergeable(){const t=this.getWritable();return t.__detail^=2,t}setMode(t){const e=j$3[t];if(this.__mode===e)return this;const n=this.getWritable();return n.__mode=e,n}setTextContent(t){if(this.__text===t)return this;const e=this.getWritable();return e.__text=t,e}select(t,e){ei();let n=t,r=e;const i=Lr(),o=this.getTextContent(),s=this.__key;if("string"==typeof o){const t=o.length;void 0===n&&(n=t),void 0===r&&(r=t);}else n=0,r=0;if(!yr(i))return Mr(s,n,s,r,"text","text");{const t=mo();t!==i.anchor.key&&t!==i.focus.key||yo(s),i.setTextNodeRange(this,n,this,r);}return i}selectStart(){return this.select(0,0)}selectEnd(){const t=this.getTextContentSize();return this.select(t,t)}spliceText(t,e,n,r){const i=this.getWritable(),o=i.__text,s=n.length;let l=t;l<0&&(l=s+l,l<0&&(l=0));const c=Lr();if(r&&yr(c)){const e=t+s;c.setTextNodeRange(i,e,i,e);}const a=o.slice(0,l)+n+o.slice(l+e);return i.__text=a,i}canInsertTextBefore(){return  true}canInsertTextAfter(){return  true}splitText(...t){ei();const e=this.getLatest(),n=e.getTextContent();if(""===n)return [];const r=e.__key,i=mo(),o=n.length;t.sort((t,e)=>t-e),t.push(o);const s=[],l=t.length;for(let e=0,r=0;e<o&&r<=l;r++){const i=t[r];i>e&&(s.push(n.slice(e,i)),e=i);}const c=s.length;if(1===c)return [e];const a=s[0],u=e.getParent();let f;const d=e.getFormat(),h=e.getStyle(),g=e.__detail;let _=false,p=null,y=null;const m=Lr();if(yr(m)){const[t,e]=m.isBackward()?[m.focus,m.anchor]:[m.anchor,m.focus];"text"===t.type&&t.key===r&&(p=t),"text"===e.type&&e.key===r&&(y=e);}e.isSegmented()?(f=sr(a),f.__format=d,f.__style=h,f.__detail=g,f.__state=yt$4(e,f),_=true):f=e.setTextContent(a);const x=[f];for(let t=1;t<c;t++){const n=sr(s[t]);n.__format=d,n.__style=h,n.__detail=g,n.__state=yt$4(e,n);const o=n.__key;i===r&&yo(o),x.push(n);}const C=p?p.offset:null,S=y?y.offset:null;let v=0;for(const t of x){if(!p&&!y)break;const e=v+t.getTextContentSize();if(null!==p&&null!==C&&C<=e&&C>=v&&(p.set(t.getKey(),C-v,"text"),C<e&&(p=null)),null!==y&&null!==S&&S<=e&&S>=v){y.set(t.getKey(),S-v,"text");break}v=e;}if(null!==u){!function(t){const e=t.getPreviousSibling(),n=t.getNextSibling();null!==e&&po(e);null!==n&&po(n);}(this);const t=u.getWritable(),e=this.getIndexWithinParent();_?(t.splice(e,0,x),this.remove()):t.splice(e,1,x),yr(m)&&Kr(m,u,e,c-1);}return x}mergeWithSibling(e){const n=e===this.getPreviousSibling();n||e===this.getNextSibling()||t(50);const r=this.__key,i=e.__key,o=this.__text,s=o.length;mo()===i&&yo(r);const l=Lr();if(yr(l)){const t=l.anchor,o=l.focus;null!==t&&t.key===i&&Br(t,n,r,e,s),null!==o&&o.key===i&&Br(o,n,r,e,s);}const c=e.__text,a=n?c+o:o+c;this.setTextContent(a);const u=this.getWritable();return e.remove(),u}isTextEntity(){return  false}}function Qn(t){return {forChild:cr(t.style),node:null}}function Zn(t){const e=t,n="normal"===e.style.fontWeight;return {forChild:cr(e.style,n?void 0:"bold"),node:null}}const tr=new WeakMap;function er(t){if(!Cs(t))return  false;if("PRE"===t.nodeName)return  true;const e=t.style.whiteSpace;return "string"==typeof e&&e.startsWith("pre")}function nr(e){const n=e;null===e.parentElement&&t(129);let r=n.textContent||"";if(null!==function(t){let e,n=t.parentNode;const r=[t];for(;null!==n&&void 0===(e=tr.get(n))&&!er(n);)r.push(n),n=n.parentNode;const i=void 0===e?n:e;for(let t=0;t<r.length;t++)tr.set(r[t],i);return i}(n)){const t=r.split(/(\r?\n|\t)/),e=[],n=t.length;for(let r=0;r<n;r++){const n=t[r];"\n"===n||"\r\n"===n?e.push(Jn()):"\t"===n?e.push(ur()):""!==n&&e.push(sr(n));}return {node:e}}if(r=r.replace(/\r/g,"").replace(/[ \t\n]+/g," "),""===r)return {node:null};if(" "===r[0]){let t=n,e=true;for(;null!==t&&null!==(t=rr(t,false));){const n=t.textContent||"";if(n.length>0){/[ \t\n]$/.test(n)&&(r=r.slice(1)),e=false;break}}e&&(r=r.slice(1));}if(" "===r[r.length-1]){let t=n,e=true;for(;null!==t&&null!==(t=rr(t,true));){if((t.textContent||"").replace(/^( |\t|\r?\n)+/,"").length>0){e=false;break}}e&&(r=r.slice(0,r.length-1));}return ""===r?{node:null}:{node:sr(r)}}function rr(t,e){let n=t;for(;;){let t;for(;null===(t=e?n.nextSibling:n.previousSibling);){const t=n.parentElement;if(null===t)return null;n=t;}if(n=t,Cs(n)){const t=n.style.display;if(""===t&&!ks(n)||""!==t&&!t.startsWith("inline"))return null}let r=n;for(;null!==(r=e?n.firstChild:n.lastChild);)n=r;if(co(n))return n;if("BR"===n.nodeName)return null}}const ir={code:"code",em:"italic",i:"italic",mark:"highlight",s:"strikethrough",strong:"bold",sub:"subscript",sup:"superscript",u:"underline"};function or(t){const e=ir[t.nodeName.toLowerCase()];return void 0===e?{node:null}:{forChild:cr(t.style,e),node:null}}function sr(t=""){return fs(new Xn(t))}function lr(t){return t instanceof Xn}function cr(t,e){const n=t.fontWeight,r=t.textDecoration.split(" "),i="700"===n||"bold"===n,o=r.includes("line-through"),s="italic"===t.fontStyle,l=r.includes("underline"),c=t.verticalAlign;return t=>lr(t)?(i&&!t.hasFormat("bold")&&t.toggleFormat("bold"),o&&!t.hasFormat("strikethrough")&&t.toggleFormat("strikethrough"),s&&!t.hasFormat("italic")&&t.toggleFormat("italic"),l&&!t.hasFormat("underline")&&t.toggleFormat("underline"),"sub"!==c||t.hasFormat("subscript")||t.toggleFormat("subscript"),"super"!==c||t.hasFormat("superscript")||t.toggleFormat("superscript"),e&&!t.hasFormat(e)&&t.toggleFormat(e),t):t}class ar extends Xn{static getType(){return "tab"}static clone(t){return new ar(t.__key)}constructor(t){super("\t",t),this.__detail=2;}static importDOM(){return null}createDOM(t){const e=super.createDOM(t),n=$o(t.theme,"tab");if(void 0!==n){e.classList.add(...n);}return e}static importJSON(t){return ur().updateFromJSON(t)}setTextContent(t){return "\t"!==t&&""!==t&&e(126),super.setTextContent("\t")}spliceText(e,n,r,i){return ""===r&&0===n||"\t"===r&&1===n||t(286),this}setDetail(e){return 2!==e&&t(127),this}setMode(e){return "normal"!==e&&t(128),this}canInsertTextBefore(){return  false}canInsertTextAfter(){return  false}}function ur(){return fs(new ar)}function fr(t){return t instanceof ar}class dr{key;offset;type;_selection;constructor(t,e,n){this._selection=null,this.key=t,this.offset=e,this.type=n;}is(t){return this.key===t.key&&this.offset===t.offset&&this.type===t.type}isBefore(t){if(this.key===t.key)return this.offset<t.offset;return gl(El(xl(this,"next")),El(xl(t,"next")))<0}getNode(){const e=xo(this.key);return null===e&&t(20),e}set(t,e,n,r){const i=this._selection,o=this.key;r&&this.key===t&&this.offset===e&&this.type===n||(this.key=t,this.offset=e,this.type=n,ti()||(mo()===o&&yo(t),null!==i&&(i.setCachedNodes(null),i.dirty=true)));}}function hr(t,e,n){return new dr(t,e,n)}function gr(t,e){let n=e.__key,r=t.offset,i="element";if(lr(e)){i="text";const t=e.getTextContentSize();r>t&&(r=t);}else if(!Si(e)){const t=e.getNextSibling();if(lr(t))n=t.__key,r=0,i="text";else {const t=e.getParent();t&&(n=t.__key,r=e.getIndexWithinParent()+1);}}t.set(n,r,i);}function _r(t,e){if(Si(e)){const n=e.getLastDescendant();Si(n)||lr(n)?gr(t,n):gr(t,e);}else gr(t,e);}class pr{_nodes;_cachedNodes;dirty;constructor(t){this._cachedNodes=null,this._nodes=t,this.dirty=false;}getCachedNodes(){return this._cachedNodes}setCachedNodes(t){this._cachedNodes=t;}is(t){if(!xr(t))return  false;const e=this._nodes,n=t._nodes;return e.size===n.size&&Array.from(e).every(t=>n.has(t))}isCollapsed(){return  false}isBackward(){return  false}getStartEndPoints(){return null}add(t){this.dirty=true,this._nodes.add(t),this._cachedNodes=null;}delete(t){this.dirty=true,this._nodes.delete(t),this._cachedNodes=null;}clear(){this.dirty=true,this._nodes.clear(),this._cachedNodes=null;}has(t){return this._nodes.has(t)}clone(){return new pr(new Set(this._nodes))}extract(){return this.getNodes()}insertRawText(t){}insertText(){}insertNodes(t){const e=this.getNodes(),n=e.length,r=e[n-1];let i;if(lr(r))i=r.select();else {const t=r.getIndexWithinParent()+1;i=r.getParentOrThrow().select(t,t);}i.insertNodes(t);for(let t=0;t<n;t++)e[t].remove();}getNodes(){const t=this._cachedNodes;if(null!==t)return t;const e=this._nodes,n=[];for(const t of e){const e=xo(t);null!==e&&n.push(e);}return ti()||(this._cachedNodes=n),n}getTextContent(){const t=this.getNodes();let e="";for(let n=0;n<t.length;n++)e+=t[n].getTextContent();return e}deleteNodes(){const t=this.getNodes();if((Lr()||Ir())===this&&t[0]){const e=tl(t[0],"next");Sl(dl(e,e));}for(const e of t)e.remove();}}function yr(t){return t instanceof mr}class mr{format;style;anchor;focus;_cachedNodes;dirty;constructor(t,e,n,r){this.anchor=t,this.focus=e,t._selection=this,e._selection=this,this._cachedNodes=null,this.format=n,this.style=r,this.dirty=false;}getCachedNodes(){return this._cachedNodes}setCachedNodes(t){this._cachedNodes=t;}is(t){return !!yr(t)&&(this.anchor.is(t.anchor)&&this.focus.is(t.focus)&&this.format===t.format&&this.style===t.style)}isCollapsed(){return this.anchor.is(this.focus)}getNodes(){const t=this._cachedNodes;if(null!==t)return t;const e=function(t){const e=[],[n,r]=t.getTextSlices();n&&e.push(n.caret.origin);const i=new Set,o=new Set;for(const n of t)if(Gs(n)){const{origin:t}=n;0===e.length?i.add(t):(o.add(t),e.push(t));}else {const{origin:t}=n;Si(t)&&o.has(t)||e.push(t);}r&&e.push(r.caret.origin);if(Hs(t.focus)&&Si(t.focus.origin)&&null===t.focus.getNodeAtCaret())for(let n=il(t.focus.origin,"previous");Gs(n)&&i.has(n.origin)&&!n.origin.isEmpty()&&n.origin.is(e[e.length-1]);n=sl(n))i.delete(n.origin),e.pop();for(;e.length>1;){const t=e[e.length-1];if(!Si(t)||o.has(t)||t.isEmpty()||i.has(t))break;e.pop();}if(0===e.length&&t.isCollapsed()){const n=El(t.anchor),r=El(t.anchor.getFlipped()),i=t=>Ys(t)?t.origin:t.getNodeAtCaret(),o=i(n)||i(r)||(t.anchor.getNodeAtCaret()?n.origin:r.origin);e.push(o);}return e}(Al(kl(this),"next"));return ti()||(this._cachedNodes=e),e}setTextNodeRange(t,e,n,r){this.anchor.set(t.__key,e,"text"),this.focus.set(n.__key,r,"text");}getTextContent(){const t=this.getNodes();if(0===t.length)return "";const e=t[0],n=t[t.length-1],r=this.anchor,i=this.focus,o=r.isBefore(i),[s,l]=Sr(this);let c="",a=true;for(let u=0;u<t.length;u++){const f=t[u];if(Si(f)&&!f.isInline())a||(c+="\n"),a=!f.isEmpty();else if(a=false,lr(f)){let t=f.getTextContent();f===e?f===n?"element"===r.type&&"element"===i.type&&i.offset!==r.offset||(t=s<l?t.slice(s,l):t.slice(l,s)):t=o?t.slice(s):t.slice(l):f===n&&(t=o?t.slice(0,l):t.slice(0,s)),c+=t;}else !Ti(f)&&!jn(f)||f===n&&this.isCollapsed()||(c+=f.getTextContent());}return c}applyDOMRange(t){const e=ii(),n=e.getEditorState()._selection,r=Er(t.startContainer,t.startOffset,t.endContainer,t.endOffset,e,n);if(null===r)return;const[i,o]=r;this.anchor.set(i.key,i.offset,i.type,true),this.focus.set(o.key,o.offset,o.type,true),St$6(this);}clone(){const t=this.anchor,e=this.focus;return new mr(hr(t.key,t.offset,t.type),hr(e.key,e.offset,e.type),this.format,this.style)}toggleFormat(t){this.format=fo(this.format,t,null),this.dirty=true;}setFormat(t){this.format=t,this.dirty=true;}setStyle(t){this.style=t,this.dirty=true;}hasFormat(t){const e=R$5[t];return 0!==(this.format&e)}insertRawText(t){const e=t.split(/(\r?\n|\t)/),n=[],r=e.length;for(let t=0;t<r;t++){const r=e[t];"\n"===r||"\r\n"===r?n.push(Jn()):"\t"===r?n.push(ur()):n.push(sr(r));}this.insertNodes(n);}insertText(e){const n=this.anchor,r=this.focus,i=this.format,o=this.style;let s=n,l=r;!this.isCollapsed()&&r.isBefore(n)&&(s=r,l=n),"element"===s.type&&function(t,e,n,r){const i=t.getNode(),o=i.getChildAtIndex(t.offset),s=sr();if(s.setFormat(n),s.setStyle(r),Ii(o))o.splice(0,0,[s]);else {const t=bi(i)?Li().append(s):s;null===o?i.append(t):o.insertBefore(t);}t.is(e)&&e.set(s.__key,0,"text"),t.set(s.__key,0,"text");}(s,l,i,o),"element"===l.type&&Cl(l,El(xl(l,"next")));const c=s.offset;let a=l.offset;const u=this.getNodes(),f=u.length;let d=u[0];lr(d)||t(26);const h=d.getTextContent().length,g=d.getParentOrThrow();let _=u[f-1];if(1===f&&"element"===l.type&&(a=h,l.set(s.key,a,"text")),this.isCollapsed()&&c===h&&(lo(d)||!d.canInsertTextAfter()||!g.canInsertTextAfter()&&null===d.getNextSibling())){let t=d.getNextSibling();if(lr(t)&&t.canInsertTextBefore()&&!lo(t)||(t=sr(),t.setFormat(i),t.setStyle(o),g.canInsertTextAfter()?d.insertAfter(t):g.insertAfter(t)),t.select(0,0),d=t,""!==e)return void this.insertText(e)}else if(this.isCollapsed()&&0===c&&(lo(d)||!d.canInsertTextBefore()||!g.canInsertTextBefore()&&null===d.getPreviousSibling())){let t=d.getPreviousSibling();if(lr(t)&&!lo(t)||(t=sr(),t.setFormat(i),g.canInsertTextBefore()?d.insertBefore(t):g.insertBefore(t)),t.select(),d=t,""!==e)return void this.insertText(e)}else if(d.isSegmented()&&c!==h){const t=sr(d.getTextContent());t.setFormat(i),d.replace(t),d=t;}else if(!this.isCollapsed()&&""!==e){const t=_.getParent();if(!g.canInsertTextBefore()||!g.canInsertTextAfter()||Si(t)&&(!t.canInsertTextBefore()||!t.canInsertTextAfter()))return this.insertText(""),wr(this.anchor,this.focus,null),void this.insertText(e)}if(1===f){if(so(d)){const t=sr(e);return t.select(),void d.replace(t)}const t=d.getFormat(),n=d.getStyle();if(c!==a||t===i&&n===o){if(fr(d)){const t=sr(e);return t.setFormat(i),t.setStyle(o),t.select(),void d.replace(t)}}else {if(""!==d.getTextContent()){const t=sr(e);if(t.setFormat(i),t.setStyle(o),t.select(),0===c)d.insertBefore(t,false);else {const[e]=d.splitText(c);e.insertAfter(t,false);}return void(t.isComposing()&&"text"===this.anchor.type&&(this.anchor.offset-=e.length))}d.setFormat(i),d.setStyle(o);}const r=a-c;d=d.spliceText(c,r,e,true),""===d.getTextContent()?d.remove():"text"===this.anchor.type&&(d.isComposing()?this.anchor.offset-=e.length:(this.format=t,this.style=n));}else {const t=new Set([...d.getParentKeys(),..._.getParentKeys()]),n=Si(d)?d:d.getParentOrThrow();let r=Si(_)?_:_.getParentOrThrow(),i=_;if(!n.is(r)&&r.isInline())do{i=r,r=r.getParentOrThrow();}while(r.isInline());if("text"===l.type&&(0!==a||""===_.getTextContent())||"element"===l.type&&_.getIndexWithinParent()<a)if(lr(_)&&!so(_)&&a!==_.getTextContentSize()){if(_.isSegmented()){const t=sr(_.getTextContent());_.replace(t),_=t;}bi(l.getNode())||"text"!==l.type||(_=_.spliceText(0,a,"")),t.add(_.__key);}else {const t=_.getParentOrThrow();t.canBeEmpty()||1!==t.getChildrenSize()?_.remove():t.remove();}else t.add(_.__key);const o=r.getChildren(),s=new Set(u),g=n.is(r),p=n.isInline()&&null===d.getNextSibling()?n:d;for(let t=o.length-1;t>=0;t--){const e=o[t];if(e.is(d)||Si(e)&&e.isParentOf(d))break;e.isAttached()&&(!s.has(e)||e.is(i)?g||p.insertAfter(e,false):e.remove());}if(!g){let e=r,n=null;for(;null!==e;){const r=e.getChildren(),i=r.length;(0===i||r[i-1].is(n))&&(t.delete(e.__key),n=e),e=e.getParent();}}if(so(d))if(c===h)d.select();else {const t=sr(e);t.select(),d.replace(t);}else d=d.spliceText(c,h-c,e,true),""===d.getTextContent()?d.remove():d.isComposing()&&"text"===this.anchor.type&&(this.anchor.offset-=e.length);for(let e=1;e<f;e++){const n=u[e],r=n.__key;t.has(r)||n.remove();}}}removeText(){const t=Lr()===this;vl(this,wl(kl(this))),t&&Lr()!==this&&wo(this);}formatText(t,e=null){if(this.isCollapsed())return this.toggleFormat(t),void yo(null);const n=this.getNodes(),r=[];for(const t of n)lr(t)&&r.push(t);const i=e=>{n.forEach(n=>{if(Si(n)){const r=n.getFormatFlags(t,e);n.setTextFormat(r);}});},o=r.length;if(0===o)return this.toggleFormat(t),yo(null),void i(e);const s=this.anchor,l=this.focus,c=this.isBackward(),a=c?l:s,u=c?s:l;let f=0,d=r[0],h="element"===a.type?0:a.offset;if("text"===a.type&&h===d.getTextContentSize()&&(f=1,d=r[1],h=0),null==d)return;const g=d.getFormatFlags(t,e);i(g);const _=o-1;let p=r[_];const y="text"===u.type?u.offset:p.getTextContentSize();if(d.is(p)){if(h===y)return;if(lo(d)||0===h&&y===d.getTextContentSize())d.setFormat(g);else {const t=d.splitText(h,y),e=0===h?t[0]:t[1];e.setFormat(g),"text"===a.type&&a.set(e.__key,0,"text"),"text"===u.type&&u.set(e.__key,y-h,"text");}return void(this.format=g)}0===h||lo(d)||([,d]=d.splitText(h),h=0),d.setFormat(g);const m=p.getFormatFlags(t,g);y>0&&(y===p.getTextContentSize()||lo(p)||([p]=p.splitText(y)),p.setFormat(m));for(let e=f+1;e<_;e++){const n=r[e],i=n.getFormatFlags(t,m);n.setFormat(i);}"text"===a.type&&a.set(d.__key,h,"text"),"text"===u.type&&u.set(p.__key,y,"text"),this.format=g|m;}insertNodes(e){if(0===e.length)return;if(this.isCollapsed()||this.removeText(),"root"===this.anchor.key){this.insertParagraph();const n=Lr();return yr(n)||t(134),n.insertNodes(e)}const n=(this.isBackward()?this.focus:this.anchor).getNode(),r=zs(n,Ns),i=e[e.length-1];if(Si(r)&&"__language"in r){if("__language"in e[0])this.insertText(e[0].getTextContent());else {const t=Ur(this);r.splice(t,0,e),i.selectEnd();}return}if(!e.some(t=>(Si(t)||Ti(t))&&!t.isInline())){Si(r)||t(211,n.constructor.name,n.getType());const o=Ur(this);return r.splice(o,0,e),void i.selectEnd()}const o=function(t){const e=Li();let n=null;for(let r=0;r<t.length;r++){const i=t[r],o=jn(i);if(o||Ti(i)&&i.isInline()||Si(i)&&i.isInline()||lr(i)||i.isParentRequired()){if(null===n&&(n=i.createParentElementNode(),e.append(n),o))continue;null!==n&&n.append(i);}else e.append(i),n=null;}return e}(e),s=o.getLastDescendant(),l=o.getChildren(),c=!Si(r)||!r.isEmpty()?this.insertParagraph():null,a=l[l.length-1];let u=l[0];var f;Si(f=u)&&Ns(f)&&!f.isEmpty()&&Si(r)&&(!r.isEmpty()||r.canMergeWhenEmpty())&&(Si(r)||t(211,n.constructor.name,n.getType()),r.append(...u.getChildren()),u=l[1]),u&&(null===r&&t(212,n.constructor.name,n.getType()),function(e,n){const r=n.getParentOrThrow().getLastChild();let i=n;const o=[n];for(;i!==r;)i.getNextSibling()||t(140),i=i.getNextSibling(),o.push(i);let s=e;for(const t of o)s=s.insertAfter(t);}(r,u));const d=zs(s,Ns);c&&Si(d)&&(c.canMergeWhenEmpty()||Ns(a))&&(d.append(...c.getChildren()),c.remove()),Si(r)&&r.isEmpty()&&r.remove(),s.selectEnd();const h=Si(r)?r.getLastChild():null;jn(h)&&d!==r&&h.remove();}insertParagraph(){if("root"===this.anchor.key){const t=Li();return No().splice(this.anchor.offset,0,[t]),t.select(),t}const e=Ur(this),n=zs(this.anchor.getNode(),Ns);Si(n)||t(213);const r=n.getChildAtIndex(e),i=r?[r,...r.getNextSiblings()]:[],o=n.insertNewAfter(this,false);return o?(o.append(...i),o.selectStart(),o):null}insertLineBreak(t){const e=Jn();if(this.insertNodes([e]),t){const t=e.getParentOrThrow(),n=e.getIndexWithinParent();t.select(n,n);}}extract(){const t=[...this.getNodes()],e=t.length;let n=t[0],r=t[e-1];const[i,o]=Sr(this),s=this.isBackward(),[l,c]=s?[this.focus,this.anchor]:[this.anchor,this.focus],[a,u]=s?[o,i]:[i,o];if(0===e)return [];if(1===e){if(lr(n)&&!this.isCollapsed()){const t=n.splitText(a,u),e=0===a?t[0]:t[1];return e?(l.set(e.getKey(),0,"text"),c.set(e.getKey(),e.getTextContentSize(),"text"),[e]):[]}return [n]}if(lr(n)&&(a===n.getTextContentSize()?t.shift():0!==a&&([,n]=n.splitText(a),t[0]=n,l.set(n.getKey(),0,"text"))),lr(r)){const e=r.getTextContent().length;0===u?t.pop():u!==e&&([r]=r.splitText(u),t[t.length-1]=r,c.set(r.getKey(),r.getTextContentSize(),"text"));}return t}modify(t,e,n){if(Yr(this,t,e,n))return;const r="move"===t,i=ii(),o=ps(ss(i));if(!o)return;const s=i._blockCursorElement,l=i._rootElement,c=this.focus.getNode();if(null===l||null===s||!Si(c)||c.isInline()||c.canBeEmpty()||_s(s,i,l),this.dirty){let t=Qo(i,this.anchor.key),e=Qo(i,this.focus.key);"text"===this.anchor.type&&(t=uo(t)),"text"===this.focus.type&&(e=uo(e)),t&&e&&Wr(o,t,this.anchor.offset,e,this.focus.offset);}if(function(t,e,n,r){t.modify(e,n,r);}(o,t,e?"backward":"forward",n),o.rangeCount>0){const t=o.getRangeAt(0),n=this.anchor.getNode(),i=bi(n)?n:cs(n);if(this.applyDOMRange(t),this.dirty=true,!r){const n=this.getNodes(),r=[];let s=false;for(let t=0;t<n.length;t++){const e=n[t];is(e,i)?r.push(e):s=true;}if(s&&r.length>0)if(e){const t=r[0];Si(t)?t.selectStart():t.getParentOrThrow().selectStart();}else {const t=r[r.length-1];Si(t)?t.selectEnd():t.getParentOrThrow().selectEnd();}o.anchorNode===t.startContainer&&o.anchorOffset===t.startOffset||function(t){const e=t.focus,n=t.anchor,r=n.key,i=n.offset,o=n.type;n.set(e.key,e.offset,e.type,true),e.set(r,i,o,true);}(this);}}"lineboundary"===n&&Yr(this,t,e,n,"decorators");}forwardDeletion(t,e,n){if(!n&&("element"===t.type&&Si(e)&&t.offset===e.getChildrenSize()||"text"===t.type&&t.offset===e.getTextContentSize())){const t=e.getParent(),n=e.getNextSibling()||(null===t?null:t.getNextSibling());if(Si(n)&&n.isShadowRoot())return  true}return  false}deleteCharacter(t){const e=this.isCollapsed();if(this.isCollapsed()){const e=this.anchor;let n=e.getNode();if(this.forwardDeletion(e,n,t))return;const r=ul(xl(e,t?"previous":"next"));if(r.getTextSlices().every(t=>null===t||0===t.distance)){let t={type:"initial"};for(const e of r.iterNodeCarets("shadowRoot"))if(Gs(e))if(e.origin.isInline());else {if(e.origin.isShadowRoot()){if("merge-block"===t.type)break;if(Si(r.anchor.origin)&&r.anchor.origin.isEmpty()){const t=El(e);vl(this,dl(t,t)),r.anchor.origin.remove();}return}"merge-next-block"!==t.type&&"merge-block"!==t.type||(t={block:t.block,caret:e,type:"merge-block"});}else {if("merge-block"===t.type)break;if(Hs(e)){if(Si(e.origin)){if(e.origin.isInline()){if(!e.origin.isParentOf(r.anchor.origin))break}else t={block:e.origin,type:"merge-next-block"};continue}if(Ti(e.origin)){if(e.origin.isIsolated());else if("merge-next-block"===t.type&&(e.origin.isKeyboardSelectable()||!e.origin.isInline())&&Si(r.anchor.origin)&&r.anchor.origin.isEmpty()){r.anchor.origin.remove();const t=Pr();t.add(e.origin.getKey()),wo(t);}else e.origin.remove();return}break}}if("merge-block"===t.type){const{caret:e,block:n}=t;return vl(this,dl(!e.origin.isEmpty()&&n.isEmpty()?Tl(tl(n,e.direction)):r.anchor,e)),this.removeText()}}const i=this.focus;if(this.modify("extend",t,"character"),this.isCollapsed()){if(t&&0===e.offset&&vr(this,e.getNode()))return}else {const r="text"===i.type?i.getNode():null;if(n="text"===e.type?e.getNode():null,null!==r&&r.isSegmented()){const e=i.offset,o=r.getTextContentSize();if(r.is(n)||t&&e!==o||!t&&0!==e)return void Tr(r,t,e)}else if(null!==n&&n.isSegmented()){const i=e.offset,o=n.getTextContentSize();if(n.is(r)||t&&0!==i||!t&&i!==o)return void Tr(n,t,i)}!function(t,e){const n=t.anchor,r=t.focus,i=n.getNode(),o=r.getNode();if(i===o&&"text"===n.type&&"text"===r.type){const t=n.offset,o=r.offset,s=t<o,l=s?t:o,c=s?o:t,a=c-1;if(l!==a){(function(t){return !(Oo(t)||kr(t))})(i.getTextContent().slice(l,c))&&(e?r.set(r.key,a,r.type):n.set(n.key,a,n.type));}}}(this,t);}}if(this.removeText(),t&&!e&&this.isCollapsed()&&"element"===this.anchor.type&&0===this.anchor.offset){const t=this.anchor.getNode();t.isEmpty()&&bi(t.getParent())&&null===t.getPreviousSibling()&&vr(this,t);}}deleteLine(t){this.isCollapsed()&&this.modify("extend",t,"lineboundary"),this.isCollapsed()?this.deleteCharacter(t):this.removeText();}deleteWord(t){if(this.isCollapsed()){const e=this.anchor,n=e.getNode();if(this.forwardDeletion(e,n,t))return;this.modify("extend",t,"word");}this.removeText();}isBackward(){return this.focus.isBefore(this.anchor)}getStartEndPoints(){return [this.anchor,this.focus]}}function xr(t){return t instanceof pr}function Cr(t){const e=t.offset;if("text"===t.type)return e;const n=t.getNode();return e===n.getChildrenSize()?n.getTextContent().length:0}function Sr(t){const e=t.getStartEndPoints();if(null===e)return [0,0];const[n,r]=e;return "element"===n.type&&"element"===r.type&&n.key===r.key&&n.offset===r.offset?[0,0]:[Cr(n),Cr(r)]}function vr(t,e){for(let n=e;n;n=n.getParent()){if(Si(n)){if(n.collapseAtStart(t))return  true;if(as(n))break}if(n.getPreviousSibling())break}return  false}const kr=(()=>{try{const t=new RegExp("\\p{Emoji}","u"),e=t.test.bind(t);if(e("❤️")&&e("#️⃣")&&e("👍"))return e}catch(t){}return ()=>false})();function Tr(t,e,n){const r=t,i=r.getTextContent().split(/(?=\s)/g),o=i.length;let s=0,l=0;for(let t=0;t<o;t++){const r=t===o-1;if(l=s,s+=i[t].length,e&&s===n||s>n||r){i.splice(t,1),r&&(l=void 0);break}}const c=i.join("").trim();""===c?r.remove():(r.setTextContent(c),r.select(l,l));}function Nr(e,n,r,i){let o,s=n;if(Cs(e)){let l=false;const c=e.childNodes,a=c.length,u=i._blockCursorElement;s===a&&(l=true,s=a-1);let f=c[s],d=false;if(f===u)f=c[s+1],d=true;else if(null!==u){const t=u.parentNode;if(e===t){n>Array.prototype.indexOf.call(t.children,u)&&s--;}}if(o=Eo(f),lr(o))s=nl(o,l?"next":"previous");else {let c=Eo(e);if(null===c)return null;if(Si(c)){const a=i.getElementByKey(c.getKey());null===a&&t(214);const u=c.getDOMSlot(a);[c,s]=u.resolveChildIndex(c,a,e,n),Si(c)||t(215),l&&s>=c.getChildrenSize()&&(s=Math.max(0,c.getChildrenSize()-1));let f=c.getChildAtIndex(s);if(Si(f)&&function(t,e,n){const r=t.getParent();return null===n||null===r||!r.canBeEmpty()||r!==n.getNode()}(f,0,r)){const t=l?f.getLastDescendant():f.getFirstDescendant();null===t?c=f:(f=t,c=Si(f)?f:f.getParentOrThrow()),s=0;}lr(f)?(o=f,c=null,s=nl(f,l?"next":"previous")):f!==c&&l&&!d&&(Si(c)||t(216),s=Math.min(c.getChildrenSize(),s+1));}else {const t=c.getIndexWithinParent();s=0===n&&Ti(c)&&Eo(e)===c?t:t+1,c=c.getParentOrThrow();}if(Si(c))return hr(c.__key,s,"element")}}else o=Eo(e);return lr(o)?hr(o.__key,nl(o,s,"clamp"),"text"):null}function br(t,e,n){const r=t.offset,i=t.getNode();if(0===r){const r=i.getPreviousSibling(),o=i.getParent();if(e){if((n||!e)&&null===r&&Si(o)&&o.isInline()){const e=o.getPreviousSibling();lr(e)&&t.set(e.__key,e.getTextContent().length,"text");}}else Si(r)&&!n&&r.isInline()?t.set(r.__key,r.getChildrenSize(),"element"):lr(r)&&t.set(r.__key,r.getTextContent().length,"text");}else if(r===i.getTextContent().length){const r=i.getNextSibling(),o=i.getParent();if(e&&Si(r)&&r.isInline())t.set(r.__key,0,"element");else if((n||e)&&null===r&&Si(o)&&o.isInline()&&!o.canInsertTextAfter()){const e=o.getNextSibling();lr(e)&&t.set(e.__key,0,"text");}}}function wr(t,e,n){if("text"===t.type&&"text"===e.type){const r=t.isBefore(e),i=t.is(e);br(t,r,i),br(e,!r,i),i&&e.set(t.key,t.offset,t.type);const o=ii();if(o.isComposing()&&o._compositionKey!==t.key&&yr(n)){const r=n.anchor,i=n.focus;t.set(r.key,r.offset,r.type,true),e.set(i.key,i.offset,i.type,true);}}}function Er(t,e,n,r,i,o){if(null===t||null===n||!eo(i,t,n))return null;const s=Nr(t,e,yr(o)?o.anchor:null,i);if(null===s)return null;const l=Nr(n,r,yr(o)?o.focus:null,i);if(null===l)return null;if("element"===s.type&&"element"===l.type){const e=Eo(t),r=Eo(n);if(Ti(e)&&Ti(r))return null}return wr(s,l,o),[s,l]}function Or(t){return Si(t)&&!t.isInline()}function Mr(t,e,n,r,i,o){const s=ri(),l=new mr(hr(t,e,i),hr(n,r,o),0,"");return l.dirty=true,s._selection=l,l}function Ar(){const t=hr("root",0,"element"),e=hr("root",0,"element");return new mr(t,e,0,"")}function Pr(){return new pr(new Set)}function Dr(t,e){return Fr(null,t,e,null)}function Fr(t,e,n,r){const i=n._window;if(null===i)return null;const o=r||i.event,s=o?o.type:void 0,l="selectionchange"===s,c=!q$4&&(l||"beforeinput"===s||"compositionstart"===s||"compositionend"===s||"click"===s&&o&&3===o.detail||"drop"===s||void 0===s);let a,u,f,d;if(yr(t)&&!c)return t.clone();if(null===e)return null;if(a=e.anchorNode,u=e.focusNode,f=e.anchorOffset,d=e.focusOffset,(l||void 0===s)&&yr(t)&&!eo(n,a,u))return t.clone();const h=Er(a,f,u,d,n,t);if(null===h)return null;const[g,_]=h;return new mr(g,_,yr(t)?t.format:0,yr(t)?t.style:"")}function Lr(){return ri()._selection}function Ir(){return ii()._editorState._selection}function Kr(t,e,n,r=1){const i=t.anchor,o=t.focus,s=i.getNode(),l=o.getNode();if(!e.is(s)&&!e.is(l))return;const c=e.__key;if(t.isCollapsed()){const e=i.offset;if(n<=e&&r>0||n<e&&r<0){const n=Math.max(0,e+r);i.set(c,n,"element"),o.set(c,n,"element"),zr(t);}}else {const s=t.isBackward(),l=s?o:i,a=l.getNode(),u=s?i:o,f=u.getNode();if(e.is(a)){const t=l.offset;(n<=t&&r>0||n<t&&r<0)&&l.set(c,Math.max(0,t+r),"element");}if(e.is(f)){const t=u.offset;(n<=t&&r>0||n<t&&r<0)&&u.set(c,Math.max(0,t+r),"element");}}zr(t);}function zr(t){const e=t.anchor,n=e.offset,r=t.focus,i=r.offset,o=e.getNode(),s=r.getNode();if(t.isCollapsed()){if(!Si(o))return;const t=o.getChildrenSize(),i=n>=t,s=i?o.getChildAtIndex(t-1):o.getChildAtIndex(n);if(lr(s)){let t=0;i&&(t=s.getTextContentSize()),e.set(s.__key,t,"text"),r.set(s.__key,t,"text");}return}if(Si(o)){const t=o.getChildrenSize(),r=n>=t,i=r?o.getChildAtIndex(t-1):o.getChildAtIndex(n);if(lr(i)){let t=0;r&&(t=i.getTextContentSize()),e.set(i.__key,t,"text");}}if(Si(s)){const t=s.getChildrenSize(),e=i>=t,n=e?s.getChildAtIndex(t-1):s.getChildAtIndex(i);if(lr(n)){let t=0;e&&(t=n.getTextContentSize()),r.set(n.__key,t,"text");}}}function Rr(t,e,n,r,i){let o=null,s=0,l=null;null!==r?(o=r.__key,lr(r)?(s=r.getTextContentSize(),l="text"):Si(r)&&(s=r.getChildrenSize(),l="element")):null!==i&&(o=i.__key,lr(i)?l="text":Si(i)&&(l="element")),null!==o&&null!==l?t.set(o,s,l):(s=e.getIndexWithinParent(),-1===s&&(s=n.getChildrenSize()),t.set(n.__key,s,"element"));}function Br(t,e,n,r,i){"text"===t.type?t.set(n,t.offset+(e?0:i),"text"):t.offset>r.getIndexWithinParent()&&t.set(t.key,t.offset-1,"element");}function Wr(t,e,n,r,i){try{t.setBaseAndExtent(e,n,r,i);}catch(t){}}function Jr(t,e,n,r,i,o,s){const l=r.anchorNode,c=r.focusNode,a=r.anchorOffset,u=r.focusOffset,f=document.activeElement;if(i.has(Ln)&&f!==o||null!==f&&to(f))return;if(!yr(e))return void(null!==t&&eo(n,l,c)&&r.removeAllRanges());const d=e.anchor,h=e.focus,g=d.key,_=h.key,p=Qo(n,g),y=Qo(n,_),m=d.offset,x=h.offset,C=e.format,S=e.style,v=e.isCollapsed();let k=p,T=y,N=false;if("text"===d.type){k=uo(p);const t=d.getNode();N=t.getFormat()!==C||t.getStyle()!==S;}else yr(t)&&"text"===t.anchor.type&&(N=true);var b,w,E,O,M;if(("text"===h.type&&(T=uo(y)),null!==k&&null!==T)&&(v&&(null===t||N||yr(t)&&(t.format!==C||t.style!==S))&&(b=C,w=S,E=m,O=g,M=performance.now(),fn$1=[b,w,E,O,M]),a!==m||u!==x||l!==k||c!==T||"Range"===r.type&&v||(null!==f&&o.contains(f)||i.has(Rn)||o.focus({preventScroll:true}),"element"===d.type))){if(Wr(r,k,m,T,x),!i.has(Kn)&&e.isCollapsed()&&null!==o&&o===document.activeElement){const t=yr(e)&&"element"===e.anchor.type?k.childNodes[m]||null:r.rangeCount>0?r.getRangeAt(0):null;if(null!==t){let e;if(t instanceof Text){const n=document.createRange();n.selectNode(t),e=n.getBoundingClientRect();}else e=t.getBoundingClientRect();!function(t,e,n){const r=ts(n),i=os(r);if(null===r||null===i)return;let{top:o,bottom:s}=e,l=0,c=0,a=n;for(;null!==a;){const e=a===r.body;if(e)l=0,c=ss(t).innerHeight;else {const t=a.getBoundingClientRect();l=t.top,c=t.bottom;}let n=0;if(o<l?n=-(l-o):s>c&&(n=s-c),0!==n)if(e)i.scrollBy(0,n);else {const t=a.scrollTop;a.scrollTop+=n;const e=a.scrollTop-t;o-=e,s-=e;}if(e)break;a=Zo(a);}}(n,e,o);}}rn$1=true;}}function jr(t){let e=Lr()||Ir();null===e&&(e=No().selectEnd()),e.insertNodes(t);}function Ur(e){let n=e;e.isCollapsed()||n.removeText();const r=Lr();yr(r)&&(n=r),yr(n)||t(161);const i=n.anchor;let o=i.getNode(),s=i.offset;for(;!Ns(o);){const t=o;if([o,s]=Vr(o,s),t.is(o))break}return s}function Vr(t,e){const n=t.getParent();if(!n){const t=Li();return No().append(t),t.select(),[No(),0]}if(lr(t)){const r=t.splitText(e);if(0===r.length)return [n,t.getIndexWithinParent()];const i=0===e?0:1;return [n,r[0].getIndexWithinParent()+i]}if(!Si(t)||0===e)return [n,t.getIndexWithinParent()];const r=t.getChildAtIndex(e);if(r){const n=new mr(hr(t.__key,e,"element"),hr(t.__key,e,"element"),0,""),i=t.insertNewAfter(n);i&&i.append(r,...r.getNextSiblings());}return [n,t.getIndexWithinParent()+1]}function Yr(t,e,n,r,i="decorators-and-blocks"){if("move"===e&&"character"===r&&!t.isCollapsed()){const[e,r]=n===t.isBackward()?[t.focus,t.anchor]:[t.anchor,t.focus];return r.set(e.key,e.offset,e.type),true}const o=xl(t.focus,n?"previous":"next"),s="lineboundary"===r,l="move"===e;let c=o,a="decorators-and-blocks"===i;if(!Ol(c)){for(const t of c){a=false;const{origin:e}=t;if(!Ti(e)||e.isIsolated()||(c=t,!s||!e.isInline()))break}if(a)for(const t of ul(o).iterNodeCarets("extend"===e?"shadowRoot":"root")){if(Gs(t))t.origin.isInline()||(c=t);else {if(Si(t.origin))continue;Ti(t.origin)&&!t.origin.isInline()&&(c=t);}break}}if(c===o)return  false;if(l&&!s&&Ti(c.origin)&&c.origin.isKeyboardSelectable()){const t=Pr();return t.add(c.origin.getKey()),wo(t),true}return c=El(c),l&&Cl(t.anchor,c),Cl(t.focus,c),a||!s}let qr=null,Hr=null,Gr=false,Xr=false,Qr=0;const Zr={characterData:true,childList:true,subtree:true};function ti(){return Gr||null!==qr&&qr._readOnly}function ei(){Gr&&t(13);}function ni(){Qr>99&&t(14);}function ri(){return null===qr&&t(195,oi()),qr}function ii(){return null===Hr&&t(196,oi()),Hr}function oi(){let t=0;const e=new Set,n=Ui.version;if("undefined"!=typeof window)for(const r of document.querySelectorAll("[contenteditable]")){const i=io(r);if(no(i))t++;else if(i){let t=String(i.constructor.version||"<0.17.1");t===n&&(t+=" (separately built, likely a bundler configuration issue)"),e.add(t);}}let r=` Detected on the page: ${t} compatible editor(s) with version ${n}`;return e.size&&(r+=` and incompatible editors with versions ${Array.from(e).join(", ")}`),r}function si(){return Hr}function li(t,e,n){const r=e.__type,i=Gi(t,r);let o=n.get(r);void 0===o&&(o=Array.from(i.transforms),n.set(r,o));const s=o.length;for(let t=0;t<s&&(o[t](e),e.isAttached());t++);}function ci(t,e){return void 0!==t&&t.__key!==e&&t.isAttached()}function ai(t,e){if(!e)return;const n=t._updateTags;let r=e;Array.isArray(e)||(r=[e]);for(const t of r)n.add(t);}function ui(t){return fi(t,ii()._nodes)}function fi(e,n){const r=e.type,i=n.get(r);void 0===i&&t(17,r);const o=i.klass;e.type!==o.getType()&&t(18,o.name);const s=o.importJSON(e),l=e.children;if(Si(s)&&Array.isArray(l))for(let t=0;t<l.length;t++){const e=fi(l[t],n);s.append(e);}return s}function di(t,e,n){const r=qr,i=Gr,o=Hr;qr=e,Gr=true,Hr=t;try{return n()}finally{qr=r,Gr=i,Hr=o;}}function hi(t,e){const n=t._pendingEditorState,r=t._rootElement,i=t._headless||null===r;if(null===n)return;const o=t._editorState,s=o._selection,l=n._selection,c=0!==t._dirtyType,a=qr,u=Gr,f=Hr,d=t._updating,g=t._observer;let _=null;if(t._pendingEditorState=null,t._editorState=n,!i&&c&&null!==g){Hr=t,qr=n,Gr=false,t._updating=true;try{const e=t._dirtyType,r=t._dirtyElements,i=t._dirtyLeaves;g.disconnect(),_=ee$1(o,n,t,e,r,i);}catch(e){if(e instanceof Error&&t._onError(e),Xr)throw e;return Ji(t,null,r,n),rt$3(t),t._dirtyType=2,Xr=true,hi(t,o),void(Xr=false)}finally{g.observe(r,Zr),t._updating=d,qr=a,Gr=u,Hr=f;}}n._readOnly||(n._readOnly=true);const p=t._dirtyLeaves,y=t._dirtyElements,m=t._normalizedNodes,x=t._updateTags,C=t._deferred;c&&(t._dirtyType=0,t._cloneNotNeeded.clear(),t._dirtyLeaves=new Set,t._dirtyElements=new Map,t._normalizedNodes=new Set,t._updateTags=new Set),function(t,e){const n=t._decorators;let r=t._pendingDecorators||n;const i=e._nodeMap;let o;for(o in r)i.has(o)||(r===n&&(r=ko(t)),delete r[o]);}(t,n);const S=i?null:ps(ss(t));if(t._editable&&null!==S&&(c||null===l||l.dirty||!l.is(s))&&null!==r&&!x.has(zn)){Hr=t,qr=n;try{if(null!==g&&g.disconnect(),c||null===l||l.dirty){const e=t._blockCursorElement;null!==e&&_s(e,t,r),Jr(s,l,t,S,x,r);}!function(t,e,n){let r=t._blockCursorElement;if(yr(n)&&n.isCollapsed()&&"element"===n.anchor.type&&e.contains(document.activeElement)){const i=n.anchor,o=i.getNode(),s=i.offset;let l=!1,c=null;if(s===o.getChildrenSize()){gs(o.getChildAtIndex(s-1))&&(l=!0);}else {const e=o.getChildAtIndex(s);if(null!==e&&gs(e)){const n=e.getPreviousSibling();(null===n||gs(n))&&(l=!0,c=t.getElementByKey(e.__key));}}if(l){const n=t.getElementByKey(o.__key);return null===r&&(t._blockCursorElement=r=function(t){const e=t.theme,n=document.createElement("div");n.contentEditable="false",n.setAttribute("data-lexical-cursor","true");let r=e.blockCursor;if(void 0!==r){if("string"==typeof r){const t=h$1(r);r=e.blockCursor=t;}void 0!==r&&n.classList.add(...r);}return n}(t._config)),e.style.caretColor="transparent",void(null===c?n.appendChild(r):n.insertBefore(r,c))}}null!==r&&_s(r,t,e);}(t,r,l);}finally{null!==g&&g.observe(r,Zr),Hr=f,qr=a;}}null!==_&&function(t,e,n,r,i){const o=Array.from(t._listeners.mutation),s=o.length;for(let t=0;t<s;t++){const[s,l]=o[t];for(const t of l){const o=e.get(t);void 0!==o&&s(o,{dirtyLeaves:r,prevEditorState:i,updateTags:n});}}}(t,_,x,p,o),yr(l)||null===l||null!==s&&s.is(l)||t.dispatchCommand(ie$1,void 0);const v=t._pendingDecorators;null!==v&&(t._decorators=v,t._pendingDecorators=null,gi("decorator",t,true,v)),function(t,e,n){const r=To(e),i=To(n);r!==i&&gi("textcontent",t,true,i);}(t,e||o,n),gi("update",t,true,{dirtyElements:y,dirtyLeaves:p,editorState:n,mutatedNodes:_,normalizedNodes:m,prevEditorState:e||o,tags:x}),function(t,e){if(t._deferred=[],0!==e.length){const n=t._updating;t._updating=true;try{for(let t=0;t<e.length;t++)e[t]();}finally{t._updating=n;}}}(t,C),function(t){const e=t._updates;if(0!==e.length){const n=e.shift();if(n){const[e,r]=n;pi(t,e,r);}}}(t);}function gi(t,e,n,...r){const i=e._updating;e._updating=n;try{const n=Array.from(e._listeners[t]);for(let t=0;t<n.length;t++)n[t].apply(null,r);}finally{e._updating=i;}}function _i(e,n){const r=e._updates;let i=n||false;for(;0!==r.length;){const n=r.shift();if(n){const[r,o]=n,s=e._pendingEditorState;let l;void 0!==o&&(l=o.onUpdate,o.skipTransforms&&(i=true),o.discrete&&(null===s&&t(191),s._flushSync=true),l&&e._deferred.push(l),ai(e,o.tag)),null==s?pi(e,r,o):r();}}return i}function pi(e,n,r){const i=e._updateTags;let o,s=false,l=false;void 0!==r&&(o=r.onUpdate,ai(e,r.tag),s=r.skipTransforms||false,l=r.discrete||false),o&&e._deferred.push(o);const c=e._editorState;let a=e._pendingEditorState,u=false;(null===a||a._readOnly)&&(a=e._pendingEditorState=wi(a||c),u=true),a._flushSync=l;const f=qr,d=Gr,h=Hr,g=e._updating;qr=a,Gr=false,e._updating=true,Hr=e;const _=e._headless||null===e.getRootElement();Yi(null);try{u&&(_?null!==c._selection&&(a._selection=c._selection.clone()):a._selection=function(t,e){const n=t.getEditorState()._selection,r=ps(ss(t));return yr(n)||null==n?Fr(n,r,t,e):n.clone()}(e,r&&r.event||null));const i=e._compositionKey;n(),s=_i(e,s),function(t,e){const n=e.getEditorState()._selection,r=t._selection;if(yr(r)){const t=r.anchor,e=r.focus;let i;if("text"===t.type&&(i=t.getNode(),i.selectionTransform(n,r)),"text"===e.type){const t=e.getNode();i!==t&&t.selectionTransform(n,r);}}}(a,e),0!==e._dirtyType&&(s?function(t,e){const n=e._dirtyLeaves,r=t._nodeMap;for(const t of n){const e=r.get(t);lr(e)&&e.isAttached()&&e.isSimpleText()&&!e.isUnmergeable()&&Ct$6(e);}}(a,e):function(t,e){const n=e._dirtyLeaves,r=e._dirtyElements,i=t._nodeMap,o=mo(),s=new Map;let l=n,c=l.size,a=r,u=a.size;for(;c>0||u>0;){if(c>0){e._dirtyLeaves=new Set;for(const t of l){const r=i.get(t);lr(r)&&r.isAttached()&&r.isSimpleText()&&!r.isUnmergeable()&&Ct$6(r),void 0!==r&&ci(r,o)&&li(e,r,s),n.add(t);}if(l=e._dirtyLeaves,c=l.size,c>0){Qr++;continue}}e._dirtyLeaves=new Set,e._dirtyElements=new Map,a.delete("root")&&a.set("root",!0);for(const t of a){const n=t[0],l=t[1];if(r.set(n,l),!l)continue;const c=i.get(n);void 0!==c&&ci(c,o)&&li(e,c,s);}l=e._dirtyLeaves,c=l.size,a=e._dirtyElements,u=a.size,Qr++;}e._dirtyLeaves=n,e._dirtyElements=r;}(a,e),_i(e),function(t,e,n,r){const i=t._nodeMap,o=e._nodeMap,s=[];for(const[t]of r){const e=o.get(t);void 0!==e&&(e.isAttached()||(Si(e)&&Y$4(e,t,i,o,s,r),i.has(t)||r.delete(t),s.push(t)));}for(const t of s)o.delete(t);for(const t of n){const e=o.get(t);void 0===e||e.isAttached()||(i.has(t)||n.delete(t),o.delete(t));}}(c,a,e._dirtyLeaves,e._dirtyElements));i!==e._compositionKey&&(a._flushSync=!0);const o=a._selection;if(yr(o)){const e=a._nodeMap,n=o.anchor.key,r=o.focus.key;void 0!==e.get(n)&&void 0!==e.get(r)||t(19);}else xr(o)&&0===o._nodes.size&&(a._selection=null);}catch(t){return t instanceof Error&&e._onError(t),e._pendingEditorState=c,e._dirtyType=2,e._cloneNotNeeded.clear(),e._dirtyLeaves=new Set,e._dirtyElements.clear(),void hi(e)}finally{qr=f,Gr=d,Hr=h,e._updating=g,Qr=0;}const p=0!==e._dirtyType||e._deferred.length>0||function(t,e){const n=e.getEditorState()._selection,r=t._selection;if(null!==r){if(r.dirty||!r.is(n))return  true}else if(null!==n)return  true;return  false}(a,e);p?a._flushSync?(a._flushSync=false,hi(e)):u&&Qi(()=>{hi(e);}):(a._flushSync=false,u&&(i.clear(),e._deferred=[],e._pendingEditorState=null));}function yi(t,e,n){Hr===t&&void 0===n?e():pi(t,e,n);}class mi{element;before;after;constructor(t,e,n){this.element=t,this.before=e||null,this.after=n||null;}withBefore(t){return new mi(this.element,t,this.after)}withAfter(t){return new mi(this.element,this.before,t)}withElement(t){return this.element===t?this:new mi(t,this.before,this.after)}insertChild(e){const n=this.before||this.getManagedLineBreak();return null!==n&&n.parentElement!==this.element&&t(222),this.element.insertBefore(e,n),this}removeChild(e){return e.parentElement!==this.element&&t(223),this.element.removeChild(e),this}replaceChild(e,n){return n.parentElement!==this.element&&t(224),this.element.replaceChild(e,n),this}getFirstChild(){const t=this.after?this.after.nextSibling:this.element.firstChild;return t===this.before||t===this.getManagedLineBreak()?null:t}getManagedLineBreak(){return this.element.__lexicalLineBreak||null}setManagedLineBreak(t){if(null===t)this.removeManagedLineBreak();else {const e="decorator"===t&&(d||c||l);this.insertManagedLineBreak(e);}}removeManagedLineBreak(){const t=this.getManagedLineBreak();if(t){const e=this.element,n="IMG"===t.nodeName?t.nextSibling:null;n&&e.removeChild(n),e.removeChild(t),e.__lexicalLineBreak=void 0;}}insertManagedLineBreak(t){const e=this.getManagedLineBreak();if(e){if(t===("IMG"===e.nodeName))return;this.removeManagedLineBreak();}const n=this.element,r=this.before,i=document.createElement("br");if(n.insertBefore(i,r),t){const t=document.createElement("img");t.setAttribute("data-lexical-linebreak","true"),t.style.cssText="display: inline !important; border: 0px !important; margin: 0px !important;",t.alt="",n.insertBefore(t,i),n.__lexicalLineBreak=t;}else n.__lexicalLineBreak=i;}getFirstChildOffset(){let t=0;for(let e=this.after;null!==e;e=e.previousSibling)t++;return t}resolveChildIndex(t,e,n,r){if(n===this.element){const e=this.getFirstChildOffset();return [t,Math.min(e+t.getChildrenSize(),Math.max(e,r))]}const i=xi(e,n);i.push(r);const o=xi(e,this.element);let s=t.getIndexWithinParent();for(let t=0;t<o.length;t++){const e=i[t],n=o[t];if(void 0===e||e<n)break;if(e>n){s+=1;break}}return [t.getParentOrThrow(),s]}}function xi(e,n){const r=[];let i=n;for(;i!==e&&null!==i;i=i.parentNode){let t=0;for(let e=i.previousSibling;null!==e;e=e.previousSibling)t++;r.push(t);}return i!==e&&t(225),r.reverse()}class Ci extends Mn{__first;__last;__size;__format;__style;__indent;__dir;__textFormat;__textStyle;constructor(t){super(t),this.__first=null,this.__last=null,this.__size=0,this.__format=0,this.__style="",this.__indent=0,this.__dir=null,this.__textFormat=0,this.__textStyle="";}afterCloneFrom(t){super.afterCloneFrom(t),this.__key===t.__key&&(this.__first=t.__first,this.__last=t.__last,this.__size=t.__size),this.__indent=t.__indent,this.__format=t.__format,this.__style=t.__style,this.__dir=t.__dir,this.__textFormat=t.__textFormat,this.__textStyle=t.__textStyle;}getFormat(){return this.getLatest().__format}getFormatType(){const t=this.getFormat();return J$5[t]||""}getStyle(){return this.getLatest().__style}getIndent(){return this.getLatest().__indent}getChildren(){const t=[];let e=this.getFirstChild();for(;null!==e;)t.push(e),e=e.getNextSibling();return t}getChildrenKeys(){const t=[];let e=this.getFirstChild();for(;null!==e;)t.push(e.__key),e=e.getNextSibling();return t}getChildrenSize(){return this.getLatest().__size}isEmpty(){return 0===this.getChildrenSize()}isDirty(){const t=ii()._dirtyElements;return null!==t&&t.has(this.__key)}isLastChild(){const t=this.getLatest(),e=this.getParentOrThrow().getLastChild();return null!==e&&e.is(t)}getAllTextNodes(){const t=[];let e=this.getFirstChild();for(;null!==e;){if(lr(e)&&t.push(e),Si(e)){const n=e.getAllTextNodes();t.push(...n);}e=e.getNextSibling();}return t}getFirstDescendant(){let t=this.getFirstChild();for(;Si(t);){const e=t.getFirstChild();if(null===e)break;t=e;}return t}getLastDescendant(){let t=this.getLastChild();for(;Si(t);){const e=t.getLastChild();if(null===e)break;t=e;}return t}getDescendantByIndex(t){const e=this.getChildren(),n=e.length;if(t>=n){const t=e[n-1];return Si(t)&&t.getLastDescendant()||t||null}const r=e[t];return Si(r)&&r.getFirstDescendant()||r||null}getFirstChild(){const t=this.getLatest().__first;return null===t?null:xo(t)}getFirstChildOrThrow(){const e=this.getFirstChild();return null===e&&t(45,this.__key),e}getLastChild(){const t=this.getLatest().__last;return null===t?null:xo(t)}getLastChildOrThrow(){const e=this.getLastChild();return null===e&&t(96,this.__key),e}getChildAtIndex(t){const e=this.getChildrenSize();let n,r;if(t<e/2){for(n=this.getFirstChild(),r=0;null!==n&&r<=t;){if(r===t)return n;n=n.getNextSibling(),r++;}return null}for(n=this.getLastChild(),r=e-1;null!==n&&r>=t;){if(r===t)return n;n=n.getPreviousSibling(),r--;}return null}getTextContent(){let t="";const e=this.getChildren(),n=e.length;for(let r=0;r<n;r++){const i=e[r];t+=i.getTextContent(),Si(i)&&r!==n-1&&!i.isInline()&&(t+=D$4);}return t}getTextContentSize(){let t=0;const e=this.getChildren(),n=e.length;for(let r=0;r<n;r++){const i=e[r];t+=i.getTextContentSize(),Si(i)&&r!==n-1&&!i.isInline()&&(t+=2);}return t}getDirection(){return this.getLatest().__dir}getTextFormat(){return this.getLatest().__textFormat}hasFormat(t){if(""!==t){const e=W$6[t];return 0!==(this.getFormat()&e)}return  false}hasTextFormat(t){const e=R$5[t];return 0!==(this.getTextFormat()&e)}getFormatFlags(t,e){return fo(this.getLatest().__textFormat,t,e)}getTextStyle(){return this.getLatest().__textStyle}select(t,e){ei();const n=Lr();let r=t,i=e;const o=this.getChildrenSize();if(!this.canBeEmpty())if(0===t&&0===e){const t=this.getFirstChild();if(lr(t)||Si(t))return t.select(0,0)}else if(!(void 0!==t&&t!==o||void 0!==e&&e!==o)){const t=this.getLastChild();if(lr(t)||Si(t))return t.select()} void 0===r&&(r=o),void 0===i&&(i=o);const s=this.__key;return yr(n)?(n.anchor.set(s,r,"element"),n.focus.set(s,i,"element"),n.dirty=true,n):Mr(s,r,s,i,"element","element")}selectStart(){const t=this.getFirstDescendant();return t?t.selectStart():this.select()}selectEnd(){const t=this.getLastDescendant();return t?t.selectEnd():this.select()}clear(){const t=this.getWritable();return this.getChildren().forEach(t=>t.remove()),t}append(...t){return this.splice(this.getChildrenSize(),0,t)}setDirection(t){const e=this.getWritable();return e.__dir=t,e}setFormat(t){return this.getWritable().__format=""!==t?W$6[t]:0,this}setStyle(t){return this.getWritable().__style=t||"",this}setTextFormat(t){const e=this.getWritable();return e.__textFormat=t,e}setTextStyle(t){const e=this.getWritable();return e.__textStyle=t,e}setIndent(t){return this.getWritable().__indent=t,this}splice(e,n,r){On(this)&&t(324,this.__key,this.__type);const i=this.getChildrenSize(),o=this.getWritable();e+n<=i||t(226,String(e),String(n),String(i));const s=o.__key,l=[],c=[],a=this.getChildAtIndex(e+n);let u=null,f=i-n+r.length;if(0!==e)if(e===i)u=this.getLastChild();else {const t=this.getChildAtIndex(e);null!==t&&(u=t.getPreviousSibling());}if(n>0){let e=null===u?this.getFirstChild():u.getNextSibling();for(let r=0;r<n;r++){null===e&&t(100);const n=e.getNextSibling(),r=e.__key;_o(e.getWritable()),c.push(r),e=n;}}let d=u;for(const e of r){null!==d&&e.is(d)&&(u=d=d.getPreviousSibling());const n=e.getWritable();n.__parent===s&&f--,_o(n);const r=e.__key;if(null===d)o.__first=r,n.__prev=null;else {const t=d.getWritable();t.__next=r,n.__prev=t.__key;}e.__key===s&&t(76),n.__parent=s,l.push(r),d=e;}if(e+n===i){if(null!==d){d.getWritable().__next=null,o.__last=d.__key;}}else if(null!==a){const t=a.getWritable();if(null!==d){const e=d.getWritable();t.__prev=d.__key,e.__next=a.__key;}else t.__prev=null;}if(o.__size=f,c.length){const t=Lr();if(yr(t)){const e=new Set(c),n=new Set(l),{anchor:r,focus:i}=t;vi(r,e,n)&&Rr(r,r.getNode(),this,u,a),vi(i,e,n)&&Rr(i,i.getNode(),this,u,a),0!==f||this.canBeEmpty()||as(this)||this.remove();}}return o}getDOMSlot(t){return new mi(t)}exportDOM(t){const{element:e}=super.exportDOM(t);if(Cs(e)){const t=this.getIndent();t>0&&(e.style.paddingInlineStart=40*t+"px");const n=this.getDirection();n&&(e.dir=n);}return {element:e}}exportJSON(){const t={children:[],direction:this.getDirection(),format:this.getFormatType(),indent:this.getIndent(),...super.exportJSON()},e=this.getTextFormat(),n=this.getTextStyle();return 0!==e&&(t.textFormat=e),""!==n&&(t.textStyle=n),t}updateFromJSON(t){return super.updateFromJSON(t).setFormat(t.format).setIndent(t.indent).setDirection(t.direction).setTextFormat(t.textFormat||0).setTextStyle(t.textStyle||"")}insertNewAfter(t,e){return null}canIndent(){return  true}collapseAtStart(t){return  false}excludeFromCopy(t){return  false}canReplaceWith(t){return  true}canInsertAfter(t){return  true}canBeEmpty(){return  true}canInsertTextBefore(){return  true}canInsertTextAfter(){return  true}isInline(){return  false}isShadowRoot(){return  false}canMergeWith(t){return  false}extractWithChild(t,e,n){return  false}canMergeWhenEmpty(){return  false}reconcileObservedMutation(t,e){const n=this.getDOMSlot(t);let r=n.getFirstChild();for(let t=this.getFirstChild();t;t=t.getNextSibling()){const i=e.getElementByKey(t.getKey());null!==i&&(null==r?(n.insertChild(i),r=i):r!==i&&n.replaceChild(i,r),r=r.nextSibling);}}}function Si(t){return t instanceof Ci}function vi(t,e,n){let r=t.getNode();for(;r;){const t=r.__key;if(e.has(t)&&!n.has(t))return  true;r=r.getParent();}return  false}class ki extends Mn{decorate(t,e){return null}isIsolated(){return  false}isInline(){return  true}isKeyboardSelectable(){return  true}}function Ti(t){return t instanceof ki}class Ni extends Ci{__cachedText;static getType(){return "root"}static clone(){return new Ni}constructor(){super("root"),this.__cachedText=null;}getTopLevelElementOrThrow(){t(51);}getTextContent(){const t=this.__cachedText;return !ti()&&0!==ii()._dirtyType||null===t?super.getTextContent():t}remove(){t(52);}replace(e){t(53);}insertBefore(e){t(54);}insertAfter(e){t(55);}updateDOM(t,e){return  false}splice(e,n,r){for(const e of r)Si(e)||Ti(e)||t(282);return super.splice(e,n,r)}static importJSON(t){return No().updateFromJSON(t)}collapseAtStart(){return  true}}function bi(t){return t instanceof Ni}function wi(t){return new Ai(new Map(t._nodeMap))}function Ei(){return new Ai(new Map([["root",new Ni]]))}function Oi(e){const n=e.exportJSON(),r=e.constructor;if(n.type!==r.getType()&&t(130,r.name),Si(e)){const i=n.children;Array.isArray(i)||t(59,r.name);const o=e.getChildren();for(let t=0;t<o.length;t++){const e=Oi(o[t]);i.push(e);}}return n}function Mi(t){return t instanceof Ai}class Ai{_nodeMap;_selection;_flushSync;_readOnly;constructor(t,e){this._nodeMap=t,this._selection=e||null,this._flushSync=false,this._readOnly=false;}isEmpty(){return 1===this._nodeMap.size&&null===this._selection}read(t,e){return di(e&&e.editor||null,this,t)}clone(t){const e=new Ai(this._nodeMap,void 0===t?this._selection:t);return e._readOnly=true,e}toJSON(){return di(null,this,()=>({root:Oi(No())}))}}class Pi extends Ci{static getType(){return "artificial"}createDOM(t){return document.createElement("div")}}class Di extends Ci{static getType(){return "paragraph"}static clone(t){return new Di(t.__key)}createDOM(t){const e=document.createElement("p"),n=$o(t.theme,"paragraph");if(void 0!==n){e.classList.add(...n);}return e}updateDOM(t,e,n){return  false}static importDOM(){return {p:t=>({conversion:Fi,priority:0})}}exportDOM(t){const{element:e}=super.exportDOM(t);if(Cs(e)){this.isEmpty()&&e.append(document.createElement("br"));const t=this.getFormatType();t&&(e.style.textAlign=t);}return {element:e}}static importJSON(t){return Li().updateFromJSON(t)}exportJSON(){return {...super.exportJSON(),textFormat:this.getTextFormat(),textStyle:this.getTextStyle()}}insertNewAfter(t,e){const n=Li();n.setTextFormat(t.format),n.setTextStyle(t.style);const r=this.getDirection();return n.setDirection(r),n.setFormat(this.getFormatType()),n.setStyle(this.getStyle()),this.insertAfter(n,e),n}collapseAtStart(){const t=this.getChildren();if(0===t.length||lr(t[0])&&""===t[0].getTextContent().trim()){if(null!==this.getNextSibling())return this.selectNext(),this.remove(),true;if(null!==this.getPreviousSibling())return this.selectPrevious(),this.remove(),true}return  false}}function Fi(t){const e=Li();return t.style&&(e.setFormat(t.style.textAlign),Ps(t,e)),{node:e}}function Li(){return fs(new Di)}function Ii(t){return t instanceof Di}const Ki=0,zi=1,Ri=2,Bi=3,Wi=4;function Ji(t,e,n,r){const i=t._keyToDOMMap;i.clear(),t._editorState=Ei(),t._pendingEditorState=r,t._compositionKey=null,t._dirtyType=0,t._cloneNotNeeded.clear(),t._dirtyLeaves=new Set,t._dirtyElements.clear(),t._normalizedNodes=new Set,t._updateTags=new Set,t._updates=[],t._blockCursorElement=null;const o=t._observer;null!==o&&(o.disconnect(),t._observer=null),null!==e&&(e.textContent=""),null!==n&&(n.textContent="",i.set("root",n));}function ji(t){const e=new Set,n=new Set;let r=t;for(;r;){const{ownNodeConfig:t}=Is(r),i=r.transform;if(!n.has(i)){n.add(i);const t=r.transform();t&&e.add(t);}if(t){const n=t.$transform;n&&e.add(n),r=t.extends;}else {const t=Object.getPrototypeOf(r);r=t.prototype instanceof Mn&&t!==Mn?t:void 0;}}return e}function $i(t){const e=t||{},n=si(),r=e.theme||{},i=void 0===t?n:e.parentEditor||null,o=e.disableEvents||false,s=Ei(),l=e.namespace||(null!==i?i._config.namespace:Ao()),c=e.editorState,a=[Ni,Xn,Bn,ar,Di,Pi,...e.nodes||[]],{onError:u,html:f}=e,d=void 0===e.editable||e.editable;let h;if(void 0===t&&null!==n)h=n._nodes;else {h=new Map;for(let t=0;t<a.length;t++){let e=a[t],n=null,r=null;if("function"!=typeof e){const t=e;e=t.replace,n=t.with,r=t.withKlass||null;}Is(e);const i=e.getType(),o=ji(e);h.set(i,{exportDOM:f&&f.export?f.export.get(e):void 0,klass:e,replace:n,replaceWithKlass:r,sharedNodeState:at$3(a[t]),transforms:o});}}const g=new Ui(s,i,h,{disableEvents:o,namespace:l,theme:r},u||console.error,function(t,e){const n=new Map,r=new Set,i=t=>{Object.keys(t).forEach(e=>{let r=n.get(e);void 0===r&&(r=[],n.set(e,r)),r.push(t[e]);});};return t.forEach(t=>{const e=t.klass.importDOM;if(null==e||r.has(e))return;r.add(e);const n=e.call(t.klass);null!==n&&i(n);}),e&&i(e),n}(h,f?f.import:void 0),d,t);return void 0!==c&&(g._pendingEditorState=c,g._dirtyType=2),g}class Ui{static version;_headless;_parentEditor;_rootElement;_editorState;_pendingEditorState;_compositionKey;_deferred;_keyToDOMMap;_updates;_updating;_listeners;_commands;_nodes;_decorators;_pendingDecorators;_config;_dirtyType;_cloneNotNeeded;_dirtyLeaves;_dirtyElements;_normalizedNodes;_updateTags;_observer;_key;_onError;_htmlConversions;_window;_editable;_blockCursorElement;_createEditorArgs;constructor(t,e,n,r,i,o,s,l){this._createEditorArgs=l,this._parentEditor=e,this._rootElement=null,this._editorState=t,this._pendingEditorState=null,this._compositionKey=null,this._deferred=[],this._keyToDOMMap=new Map,this._updates=[],this._updating=false,this._listeners={decorator:new Set,editable:new Set,mutation:new Map,root:new Set,textcontent:new Set,update:new Set},this._commands=new Map,this._config=r,this._nodes=n,this._decorators={},this._pendingDecorators=null,this._dirtyType=0,this._cloneNotNeeded=new Set,this._dirtyLeaves=new Set,this._dirtyElements=new Map,this._normalizedNodes=new Set,this._updateTags=new Set,this._observer=null,this._key=Ao(),this._onError=i,this._htmlConversions=o,this._editable=s,this._headless=null!==e&&e._headless,this._window=null,this._blockCursorElement=null;}isComposing(){return null!=this._compositionKey}registerUpdateListener(t){const e=this._listeners.update;return e.add(t),()=>{e.delete(t);}}registerEditableListener(t){const e=this._listeners.editable;return e.add(t),()=>{e.delete(t);}}registerDecoratorListener(t){const e=this._listeners.decorator;return e.add(t),()=>{e.delete(t);}}registerTextContentListener(t){const e=this._listeners.textcontent;return e.add(t),()=>{e.delete(t);}}registerRootListener(t){const e=this._listeners.root;return t(this._rootElement,null),e.add(t),()=>{t(null,this._rootElement),e.delete(t);}}registerCommand(e,n,r){ void 0===r&&t(35);const i=this._commands;i.has(e)||i.set(e,[new Set,new Set,new Set,new Set,new Set]);const o=i.get(e);void 0===o&&t(36,String(e));const s=o[r];return s.add(n),()=>{s.delete(n),o.every(t=>0===t.size)&&i.delete(e);}}registerMutationListener(t,e,n){const r=this.resolveRegisteredNodeAfterReplacements(this.getRegisteredNode(t)).klass,i=this._listeners.mutation;let o=i.get(e);void 0===o&&(o=new Set,i.set(e,o)),o.add(r);const s=n&&n.skipInitialization;return void 0!==s&&s||this.initializeMutationListener(e,r),()=>{o.delete(r),0===o.size&&i.delete(e);}}getRegisteredNode(e){const n=this._nodes.get(e.getType());return void 0===n&&t(37,e.name),n}resolveRegisteredNodeAfterReplacements(t){for(;t.replaceWithKlass;)t=this.getRegisteredNode(t.replaceWithKlass);return t}initializeMutationListener(t,e){const n=this._editorState,r=Os(n).get(e.getType());if(!r)return;const i=new Map;for(const t of r.keys())i.set(t,"created");i.size>0&&t(i,{dirtyLeaves:new Set,prevEditorState:n,updateTags:new Set(["registerMutationListener"])});}registerNodeTransformToKlass(t,e){const n=this.getRegisteredNode(t);return n.transforms.add(e),n}registerNodeTransform(t,e){const n=this.registerNodeTransformToKlass(t,e),r=[n],i=n.replaceWithKlass;if(null!=i){const t=this.registerNodeTransformToKlass(i,e);r.push(t);}return function(t,e){const n=Os(t.getEditorState()),r=[];for(const t of e){const e=n.get(t);e&&r.push(e);}if(0===r.length)return;t.update(()=>{for(const t of r)for(const e of t.keys()){const t=xo(e);t&&t.markDirty();}},null===t._pendingEditorState?{tag:Dn}:void 0);}(this,r.map(t=>t.klass.getType())),()=>{r.forEach(t=>t.transforms.delete(e));}}hasNode(t){return this._nodes.has(t.getType())}hasNodes(t){return t.every(this.hasNode.bind(this))}dispatchCommand(t,e){return Go(this,t,e)}getDecorators(){return this._decorators}getRootElement(){return this._rootElement}getKey(){return this._key}setRootElement(t){const e=this._rootElement;if(t!==e){const n=$o(this._config.theme,"root"),r=this._pendingEditorState||this._editorState;if(this._rootElement=t,Ji(this,e,t,r),null!==e&&(this._config.disableEvents||Nn$1(e),null!=n&&e.classList.remove(...n)),null!==t){const e=os(t),r=t.style;r.userSelect="text",r.whiteSpace="pre-wrap",r.wordBreak="break-word",t.setAttribute("data-lexical-editor","true"),this._window=e,this._dirtyType=2,rt$3(this),this._updateTags.add(Dn),hi(this),this._config.disableEvents||function(t,e){const n=t.ownerDocument;en$1.set(t,n);const r=nn$1.get(n)??0;r<1&&n.addEventListener("selectionchange",Sn$1),nn$1.set(n,r+1),t.__lexicalEditor=e;const i=xn(t);for(let n=0;n<Ge$2.length;n++){const[r,o]=Ge$2[n],s="function"==typeof o?t=>{kn(t)||(vn(t),(e.isEditable()||"click"===r)&&o(t,e));}:t=>{if(kn(t))return;vn(t);const n=e.isEditable();switch(r){case "cut":return n&&Go(e,Be$2,t);case "copy":return Go(e,Re$2,t);case "paste":return n&&Go(e,fe$1,t);case "dragstart":return n&&Go(e,Ie$2,t);case "dragover":return n&&Go(e,Ke$2,t);case "dragend":return n&&Go(e,ze$2,t);case "focus":return n&&Go(e,Ve$1,t);case "blur":return n&&Go(e,Ye,t);case "drop":return n&&Go(e,Fe$2,t)}};t.addEventListener(r,s),i.push(()=>{t.removeEventListener(r,s);});}}(t,this),null!=n&&t.classList.add(...n);}else this._window=null,this._updateTags.add(Dn),hi(this);gi("root",this,false,t,e);}}getElementByKey(t){return this._keyToDOMMap.get(t)||null}getEditorState(){return this._editorState}setEditorState(e,n){e.isEmpty()&&t(38);let r=e;r._readOnly&&(r=wi(e),r._selection=e._selection?e._selection.clone():null),nt$4(this);const i=this._pendingEditorState,o=this._updateTags,s=void 0!==n?n.tag:null;null===i||i.isEmpty()||(null!=s&&o.add(s),hi(this)),this._pendingEditorState=r,this._dirtyType=2,this._dirtyElements.set("root",false),this._compositionKey=null,null!=s&&o.add(s),this._updating||hi(this);}parseEditorState(t,e){return function(t,e,n){const r=Ei(),i=qr,o=Gr,s=Hr,l=e._dirtyElements,c=e._dirtyLeaves,a=e._cloneNotNeeded,u=e._dirtyType;e._dirtyElements=new Map,e._dirtyLeaves=new Set,e._cloneNotNeeded=new Set,e._dirtyType=0,qr=r,Gr=false,Hr=e,Yi(null);try{const i=e._nodes;fi(t.root,i),n&&n(),r._readOnly=!0;}catch(t){t instanceof Error&&e._onError(t);}finally{e._dirtyElements=l,e._dirtyLeaves=c,e._cloneNotNeeded=a,e._dirtyType=u,qr=i,Gr=o,Hr=s;}return r}("string"==typeof t?JSON.parse(t):t,this,e)}read(t){return hi(this),this.getEditorState().read(t,{editor:this})}update(t,e){!function(t,e,n){t._updating?t._updates.push([e,n]):pi(t,e,n);}(this,t,e);}focus(t,e={}){const n=this._rootElement;null!==n&&(n.setAttribute("autocapitalize","off"),yi(this,()=>{const r=Lr(),i=No();null!==r?r.dirty||wo(r.clone()):0!==i.getChildrenSize()&&("rootStart"===e.defaultSelection?i.selectStart():i.selectEnd()),ns("focus"),rs(()=>{n.removeAttribute("autocapitalize"),t&&t();});}),null===this._pendingEditorState&&n.removeAttribute("autocapitalize"));}blur(){const t=this._rootElement;null!==t&&t.blur();const e=ps(this._window);null!==e&&e.removeAllRanges();}isEditable(){return this._editable}setEditable(t){this._editable!==t&&(this._editable=t,gi("editable",this,true,t));}toJSON(){return {editorState:this._editorState.toJSON()}}}Ui.version="0.38.2+prod.esm";let Vi=null;function Yi(t){Vi=t;}let qi=1;function Gi(e,n){const r=Xi(e,n);return void 0===r&&t(30,n),r}function Xi(t,e){return t._nodes.get(e)}const Qi="function"==typeof queueMicrotask?queueMicrotask:t=>{Promise.resolve().then(t);};function Zi(t){return Ti(vo(t))}function to(t){const e=document.activeElement;if(!Cs(e))return  false;const n=e.nodeName;return Ti(vo(t))&&("INPUT"===n||"TEXTAREA"===n||"true"===e.contentEditable&&null==io(e))}function eo(t,e,n){const r=t.getRootElement();try{return null!==r&&r.contains(e)&&r.contains(n)&&null!==e&&!to(e)&&ro(e)===t}catch(t){return  false}}function no(t){return t instanceof Ui}function ro(t){let e=t;for(;null!=e;){const t=io(e);if(no(t))return t;e=Zo(e);}return null}function io(t){return t?t.__lexicalEditor:null}function oo(t){return K$5.test(t)?"rtl":z$4.test(t)?"ltr":null}function so(t){return fr(t)||t.isToken()}function lo(t){return so(t)||t.isSegmented()}function co(t){return Ss(t)&&3===t.nodeType}function ao(t){return Ss(t)&&9===t.nodeType}function uo(t){let e=t;for(;null!=e;){if(co(e))return e;e=e.firstChild;}return null}function fo(t,e,n){const r=R$5[e];if(null!==n&&(t&r)===(n&r))return t;let i=t^r;return "subscript"===e?i&=-65:"superscript"===e?i&=-33:"lowercase"===e?(i&=-513,i&=-1025):"uppercase"===e?(i&=-257,i&=-1025):"capitalize"===e&&(i&=-257,i&=-513),i}function ho(t){return lr(t)||jn(t)||Ti(t)}function go(t,e){const n=function(){const t=Vi;return Vi=null,t}();if(null!=(e=e||n&&n.__key))return void(t.__key=e);ei(),ni();const r=ii(),i=ri(),o=""+qi++;i._nodeMap.set(o,t),Si(t)?r._dirtyElements.set(o,true):r._dirtyLeaves.add(o),r._cloneNotNeeded.add(o),r._dirtyType=1,t.__key=o;}function _o(t){const e=t.getParent();if(null!==e){const n=t.getWritable(),r=e.getWritable(),i=t.getPreviousSibling(),o=t.getNextSibling(),s=null!==o?o.__key:null,l=null!==i?i.__key:null,c=null!==i?i.getWritable():null,a=null!==o?o.getWritable():null;null===i&&(r.__first=s),null===o&&(r.__last=l),null!==c&&(c.__next=s),null!==a&&(a.__prev=l),n.__prev=null,n.__next=null,n.__parent=null,r.__size--;}}function po(e){ni(),On(e)&&t(323,e.__key,e.__type);const n=e.getLatest(),r=n.__parent,i=ri(),o=ii(),s=i._nodeMap,l=o._dirtyElements;null!==r&&function(t,e,n){let r=t;for(;null!==r;){if(n.has(r))return;const t=e.get(r);if(void 0===t)break;n.set(r,false),r=t.__parent;}}(r,s,l);const c=n.__key;o._dirtyType=1,Si(e)?l.set(c,true):o._dirtyLeaves.add(c);}function yo(t){ei();const e=ii(),n=e._compositionKey;if(t!==n){if(e._compositionKey=t,null!==n){const t=xo(n);null!==t&&t.getWritable();}if(null!==t){const e=xo(t);null!==e&&e.getWritable();}}}function mo(){if(ti())return null;return ii()._compositionKey}function xo(t,e){const n=(e||ri())._nodeMap.get(t);return void 0===n?null:n}function Co(t,e){const n=So(t,ii());return void 0!==n?xo(n,e):null}function So(t,e){return t[`__lexicalKey_${e._key}`]}function vo(t,e){let n=t;for(;null!=n;){const t=Co(n,e);if(null!==t)return t;n=Zo(n);}return null}function ko(t){const e=t._decorators,n=Object.assign({},e);return t._pendingDecorators=n,n}function To(t){return t.read(()=>No().getTextContent())}function No(){return bo(ri())}function bo(t){return t._nodeMap.get("root")}function wo(t){ei();const e=ri();null!==t&&(t.dirty=true,t.setCachedNodes(null)),e._selection=t;}function Eo(t){const e=ii(),n=function(t,e){let n=t;for(;null!=n;){const t=So(n,e);if(void 0!==t)return t;n=Zo(n);}return null}(t,e);if(null===n){return t===e.getRootElement()?xo("root"):null}return xo(n)}function Oo(t){return /[\uD800-\uDBFF][\uDC00-\uDFFF]/g.test(t)}function Mo(t){const e=[];let n=t;for(;null!==n;)e.push(n),n=n._parentEditor;return e}function Ao(){return Math.random().toString(36).replace(/[^a-z]+/g,"").substring(0,5)}function Po(t){return co(t)?t.nodeValue:null}function Do(t,e,n){const r=ps(ss(e));if(null===r)return;const i=r.anchorNode;let{anchorOffset:o,focusOffset:s}=r;if(null!==i){let e=Po(i);const r=vo(i);if(null!==e&&lr(r)){if(e===P$3&&n){const t=n.length;e=n,o=t,s=t;}null!==e&&Fo(r,e,o,s,t);}}}function Fo(t,e,n,r,i){let o=t;if(o.isAttached()&&(i||!o.isDirty())){const s=o.isComposing();let a=e;(s||i)&&e[e.length-1]===P$3&&(a=e.slice(0,-1));const u=o.getTextContent();if(i||a!==u){if(""===a){if(yo(null),l||c||d)o.remove();else {const t=ii();setTimeout(()=>{t.update(()=>{o.isAttached()&&o.remove();});},20);}return}const e=o.getParent(),i=Ir(),u=o.getTextContentSize(),f=mo(),h=o.getKey();if(o.isToken()||null!==f&&h===f&&!s||yr(i)&&(null!==e&&!e.canInsertTextBefore()&&0===i.anchor.offset||i.anchor.key===t.__key&&0===i.anchor.offset&&!o.canInsertTextBefore()&&!s||i.focus.key===t.__key&&i.focus.offset===u&&!o.canInsertTextAfter()&&!s))return void o.markDirty();const g=Lr();if(!yr(g)||null===n||null===r)return void Lo(o,a,g);if(g.setTextNodeRange(o,n,o,r),o.isSegmented()){const t=sr(o.getTextContent());o.replace(t),o=t;}Lo(o,a,g);}}}function Lo(t,e,n){if(t.setTextContent(e),yr(n)){const e=t.getKey();for(const r of ["anchor","focus"]){const i=n[r];"text"===i.type&&i.key===e&&(i.offset=nl(t,i.offset,"clamp"));}}}function Io(t,e,n){const r=e[n]||false;return "any"===r||r===t[n]}function Ko(t,e){return Io(t,e,"altKey")&&Io(t,e,"ctrlKey")&&Io(t,e,"shiftKey")&&Io(t,e,"metaKey")}function zo(t,e,n){return Ko(t,n)&&t.key.toLowerCase()===e.toLowerCase()}const Ro={ctrlKey:!i,metaKey:i},Bo={altKey:i,ctrlKey:!i};function Wo(t){return "Backspace"===t.key}function Jo(t){return zo(t,"a",Ro)}function jo(t){const e=No();if(yr(t)){const e=t.anchor,n=t.focus,r=e.getNode().getTopLevelElementOrThrow().getParentOrThrow();return e.set(r.getKey(),0,"element"),n.set(r.getKey(),r.getChildrenSize(),"element"),St$6(t),t}{const t=e.select(0,e.getChildrenSize());return wo(St$6(t)),t}}function $o(t,e){ void 0===t.__lexicalClassNameCache&&(t.__lexicalClassNameCache={});const n=t.__lexicalClassNameCache,r=n[e];if(void 0!==r)return r;const i=t[e];if("string"==typeof i){const t=h$1(i);return n[e]=t,t}return i}function Uo(e,n,r,i,o){if(0===r.size)return;const s=i.__type,l=i.__key,c=n.get(s);void 0===c&&t(33,s);const a=c.klass;let u=e.get(a);void 0===u&&(u=new Map,e.set(a,u));const f=u.get(l),d="destroyed"===f&&"created"===o;(void 0===f||d)&&u.set(l,d?"updated":o);}function Yo(t,e,n){const r=t.getParent();let i=n,o=t;return null!==r&&(e&&0===n?(i=o.getIndexWithinParent(),o=r):e||n!==o.getChildrenSize()||(i=o.getIndexWithinParent()+1,o=r)),o.getChildAtIndex(e?i-1:i)}function qo(t,e){const n=t.offset;if("element"===t.type){return Yo(t.getNode(),e,n)}{const r=t.getNode();if(e&&0===n||!e&&n===r.getTextContentSize()){const t=e?r.getPreviousSibling():r.getNextSibling();return null===t?Yo(r.getParentOrThrow(),e,r.getIndexWithinParent()+(e?0:1)):t}}return null}function Ho(t){const e=ss(t).event,n=e&&e.inputType;return "insertFromPaste"===n||"insertFromPasteAsQuotation"===n}function Go(t,e,n){return function(t,e,n){const r=Mo(t);for(let i=4;i>=0;i--)for(let o=0;o<r.length;o++){const s=r[o],l=s._commands.get(e);if(void 0!==l){const e=l[i];if(void 0!==e){const r=Array.from(e),i=r.length;let o=false;if(yi(s,()=>{for(let e=0;e<i;e++)if(r[e](n,t))return void(o=true)}),o)return o}}}return  false}(t,e,n)}function Xo(t){return !bi(t)&&!t.isLastChild()&&!t.isInline()}function Qo(e,n){const r=e._keyToDOMMap.get(n);return void 0===r&&t(75,n),r}function Zo(t){const e=t.assignedSlot||t.parentElement;return vs(e)?e.host:e}function ts(t){return ao(t)?t:Cs(t)?t.ownerDocument:null}function ns(t){ei();ii()._updateTags.add(t);}function rs(t){ei();ii()._deferred.push(t);}function is(t,e){let n=t.getParent();for(;null!==n;){if(n.is(e))return  true;n=n.getParent();}return  false}function os(t){const e=ts(t);return e?e.defaultView:null}function ss(e){const n=e._window;return null===n&&t(78),n}function ls(t){return Si(t)&&t.isInline()||Ti(t)&&t.isInline()}function cs(t){let e=t.getParentOrThrow();for(;null!==e;){if(as(e))return e;e=e.getParentOrThrow();}return e}function as(t){return bi(t)||Si(t)&&t.isShadowRoot()}function us(t){const e=t.constructor.clone(t);return go(e,null),e.afterCloneFrom(t),e}function fs(e){const n=ii(),r=e.getType(),i=Xi(n,r);void 0===i&&t(200,e.constructor.name,r);const{replace:o,replaceWithKlass:s}=i;if(null!==o){const n=o(e),i=n.constructor;return null!==s?n instanceof s||t(201,s.name,s.getType(),i.name,i.getType(),e.constructor.name,r):n instanceof e.constructor&&i!==e.constructor||t(202,i.name,i.getType(),e.constructor.name,r),n.__key===e.__key&&t(203,e.constructor.name,r,i.name,i.getType()),n}return e}function ds(e,n){!bi(e.getParent())||Si(n)||Ti(n)||t(99);}function hs(e){const n=xo(e);return null===n&&t(63,e),n}function gs(t){return (Ti(t)||Si(t)&&!t.canBeEmpty())&&!t.isInline()}function _s(t,e,n){n.style.removeProperty("caret-color"),e._blockCursorElement=null;const r=t.parentElement;null!==r&&r.removeChild(t);}function ps(t){return n?(t||window).getSelection():null}function ys(t){const e=os(t);return e?e.getSelection():null}function xs(t){return Cs(t)&&"A"===t.tagName}function Cs(t){return Ss(t)&&1===t.nodeType}function Ss(t){return "object"==typeof t&&null!==t&&"nodeType"in t&&"number"==typeof t.nodeType}function vs(t){return Ss(t)&&11===t.nodeType}function ks(t){const e=new RegExp(/^(a|abbr|acronym|b|cite|code|del|em|i|ins|kbd|label|mark|output|q|ruby|s|samp|span|strong|sub|sup|time|u|tt|var|#text)$/,"i");return null!==t.nodeName.match(e)}function Ts(t){const e=new RegExp(/^(address|article|aside|blockquote|canvas|dd|div|dl|dt|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|header|hr|li|main|nav|noscript|ol|p|pre|section|table|td|tfoot|ul|video)$/,"i");return null!==t.nodeName.match(e)}function Ns(t){if(Ti(t)&&!t.isInline())return  true;if(!Si(t)||as(t))return  false;const e=t.getFirstChild(),n=null===e||jn(e)||lr(e)||e.isInline();return !t.isInline()&&false!==t.canBeEmpty()&&n}function bs(){return ii()}const ws=new WeakMap,Es=new Map;function Os(e){if(!e._readOnly&&e.isEmpty())return Es;e._readOnly||t(192);let n=ws.get(e);return n||(n=function(t){const e=new Map;for(const[n,r]of t._nodeMap){const t=r.__type;let i=e.get(t);i||(i=new Map,e.set(t,i)),i.set(n,r);}return e}(e),ws.set(e,n)),n}function Ms(t){const e=t.constructor.clone(t);return e.afterCloneFrom(t),e}function As(t){return (e=Ms(t))[En]=true,e;var e;}function Ps(t,e){const n=parseInt(t.style.paddingInlineStart,10)||0,r=Math.round(n/40);e.setIndent(r);}function Ds(t){t.__lexicalUnmanaged=true;}function Fs(t){return  true===t.__lexicalUnmanaged}function Ls(t,e){return function(t,e){return Object.prototype.hasOwnProperty.call(t,e)}(t,e)&&t[e]!==Mn[e]}function Is(e){const n=V$5 in e.prototype?e.prototype[V$5]():void 0,r=function(e){if(!(e===Mn||e.prototype instanceof Mn)){let n="<unknown>",r="<unknown>";try{n=e.getType();}catch(t){}try{Ui.version&&(r=JSON.parse(Ui.version));}catch(t){}t(290,e.name,n,r);}return e===ki||e===Ci||e===Mn}(e),i=!r&&Ls(e,"getType")?e.getType():void 0;let o,s=i;if(n)if(i)o=n[i];else for(const[t,e]of Object.entries(n))s=t,o=e;if(!r&&s&&(Ls(e,"getType")||(e.getType=()=>s),Ls(e,"clone")||(e.clone=t=>(Yi(t),new e)),Ls(e,"importJSON")||(e.importJSON=o&&o.$importJSON||(t=>(new e).updateFromJSON(t))),!Ls(e,"importDOM")&&o)){const{importDOM:t}=o;t&&(e.importDOM=()=>t);}return {ownNodeConfig:o,ownNodeType:s}}function Ks(t){const e=bs();ei();return new(e.resolveRegisteredNodeAfterReplacements(e.getRegisteredNode(t)).klass)}const zs=(t,e)=>{let n=t;for(;null!=n&&!bi(n);){if(e(n))return n;n=n.getParent();}return null},Rs={next:"previous",previous:"next"};class Bs{origin;constructor(t){this.origin=t;}[Symbol.iterator](){return hl({hasNext:Hs,initial:this.getAdjacentCaret(),map:t=>t,step:t=>t.getAdjacentCaret()})}getAdjacentCaret(){return tl(this.getNodeAtCaret(),this.direction)}getSiblingCaret(){return tl(this.origin,this.direction)}remove(){const t=this.getNodeAtCaret();return t&&t.remove(),this}replaceOrInsert(t,e){const n=this.getNodeAtCaret();return t.is(this.origin)||t.is(n)||(null===n?this.insert(t):n.replace(t,e)),this}splice(e,n,r="next"){const i=r===this.direction?n:Array.from(n).reverse();let o=this;const s=this.getParentAtCaret(),l=new Map;for(let t=o.getAdjacentCaret();null!==t&&l.size<e;t=t.getAdjacentCaret()){const e=t.origin.getWritable();l.set(e.getKey(),e);}for(const e of i){if(l.size>0){const n=o.getNodeAtCaret();if(n)if(l.delete(n.getKey()),l.delete(e.getKey()),n.is(e)||o.origin.is(e));else {const t=e.getParent();t&&t.is(s)&&e.remove(),n.replace(e);}else null===n&&t(263,Array.from(l).join(" "));}else o.insert(e);o=tl(e,this.direction);}for(const t of l.values())t.remove();return this}}class Ws extends Bs{type="child";getLatest(){const t=this.origin.getLatest();return t===this.origin?this:il(t,this.direction)}getParentCaret(t="root"){return tl($s(this.getParentAtCaret(),t),this.direction)}getFlipped(){const t=js(this.direction);return tl(this.getNodeAtCaret(),t)||il(this.origin,t)}getParentAtCaret(){return this.origin}getChildCaret(){return this}isSameNodeCaret(t){return t instanceof Ws&&this.direction===t.direction&&this.origin.is(t.origin)}isSamePointCaret(t){return this.isSameNodeCaret(t)}}const Js={root:bi,shadowRoot:as};function js(t){return Rs[t]}function $s(t,e="root"){return Js[e](t)?null:t}class Us extends Bs{type="sibling";getLatest(){const t=this.origin.getLatest();return t===this.origin?this:tl(t,this.direction)}getSiblingCaret(){return this}getParentAtCaret(){return this.origin.getParent()}getChildCaret(){return Si(this.origin)?il(this.origin,this.direction):null}getParentCaret(t="root"){return tl($s(this.getParentAtCaret(),t),this.direction)}getFlipped(){const t=js(this.direction);return tl(this.getNodeAtCaret(),t)||il(this.origin.getParentOrThrow(),t)}isSamePointCaret(t){return t instanceof Us&&this.direction===t.direction&&this.origin.is(t.origin)}isSameNodeCaret(t){return (t instanceof Us||t instanceof Vs)&&this.direction===t.direction&&this.origin.is(t.origin)}}class Vs extends Bs{type="text";offset;constructor(t,e){super(t),this.offset=e;}getLatest(){const t=this.origin.getLatest();return t===this.origin?this:el(t,this.direction,this.offset)}getParentAtCaret(){return this.origin.getParent()}getChildCaret(){return null}getParentCaret(t="root"){return tl($s(this.getParentAtCaret(),t),this.direction)}getFlipped(){return el(this.origin,js(this.direction),this.offset)}isSamePointCaret(t){return t instanceof Vs&&this.direction===t.direction&&this.origin.is(t.origin)&&this.offset===t.offset}isSameNodeCaret(t){return (t instanceof Us||t instanceof Vs)&&this.direction===t.direction&&this.origin.is(t.origin)}getSiblingCaret(){return tl(this.origin,this.direction)}}function Ys(t){return t instanceof Vs}function Hs(t){return t instanceof Us}function Gs(t){return t instanceof Ws}const Xs={next:class extends Vs{direction="next";getNodeAtCaret(){return this.origin.getNextSibling()}insert(t){return this.origin.insertAfter(t),this}},previous:class extends Vs{direction="previous";getNodeAtCaret(){return this.origin.getPreviousSibling()}insert(t){return this.origin.insertBefore(t),this}}},Qs={next:class extends Us{direction="next";getNodeAtCaret(){return this.origin.getNextSibling()}insert(t){return this.origin.insertAfter(t),this}},previous:class extends Us{direction="previous";getNodeAtCaret(){return this.origin.getPreviousSibling()}insert(t){return this.origin.insertBefore(t),this}}},Zs={next:class extends Ws{direction="next";getNodeAtCaret(){return this.origin.getFirstChild()}insert(t){return this.origin.splice(0,0,[t]),this}},previous:class extends Ws{direction="previous";getNodeAtCaret(){return this.origin.getLastChild()}insert(t){return this.origin.splice(this.origin.getChildrenSize(),0,[t]),this}}};function tl(t,e){return t?new Qs[e](t):null}function el(t,e,n){return t?new Xs[e](t,nl(t,n)):null}function nl(t,n,r="error"){const i=t.getTextContentSize();let o="next"===n?i:"previous"===n?0:n;return (o<0||o>i)&&("clamp"!==r&&e(284,String(n),String(i),t.getKey()),o=o<0?0:i),o}function rl(t,e){return new cl(t,e)}function il(t,e){return Si(t)?new Zs[e](t):null}function ol(t){return t&&t.getChildCaret()||t}function sl(t){return t&&ol(t.getAdjacentCaret())}class ll{type="node-caret-range";direction;anchor;focus;constructor(t,e,n){this.anchor=t,this.focus=e,this.direction=n;}getLatest(){const t=this.anchor.getLatest(),e=this.focus.getLatest();return t===this.anchor&&e===this.focus?this:new ll(t,e,this.direction)}isCollapsed(){return this.anchor.isSamePointCaret(this.focus)}getTextSlices(){const t=t=>{const e=this[t].getLatest();return Ys(e)?function(t,e){const{direction:n,origin:r}=t,i=nl(r,"focus"===e?js(n):n);return rl(t,i-t.offset)}(e,t):null},e=t("anchor"),n=t("focus");if(e&&n){const{caret:t}=e,{caret:r}=n;if(t.isSameNodeCaret(r))return [rl(t,r.offset-t.offset),null]}return [e,n]}iterNodeCarets(t="root"){const e=Ys(this.anchor)?this.anchor.getSiblingCaret():this.anchor.getLatest(),n=this.focus.getLatest(),r=Ys(n),i=e=>e.isSameNodeCaret(n)?null:sl(e)||e.getParentCaret(t);return hl({hasNext:t=>null!==t&&!(r&&n.isSameNodeCaret(t)),initial:e.isSameNodeCaret(n)?null:i(e),map:t=>t,step:i})}[Symbol.iterator](){return this.iterNodeCarets("root")}}class cl{type="slice";caret;distance;constructor(t,e){this.caret=t,this.distance=e;}getSliceIndices(){const{distance:t,caret:{offset:e}}=this,n=e+t;return n<e?[n,e]:[e,n]}getTextContent(){const[t,e]=this.getSliceIndices();return this.caret.origin.getTextContent().slice(t,e)}getTextContentSize(){return Math.abs(this.distance)}removeTextSlice(){const{caret:{origin:t,direction:e}}=this,[n,r]=this.getSliceIndices(),i=t.getTextContent();return el(t.setTextContent(i.slice(0,n)+i.slice(r)),e,n)}}function ul(t){return dl(t,tl(No(),t.direction))}function fl(t){return dl(t,t)}function dl(e,n){return e.direction!==n.direction&&t(265),new ll(e,n,e.direction)}function hl(t){const{initial:e,hasNext:n,step:r,map:i}=t;let o=e;return {[Symbol.iterator](){return this},next(){if(!n(o))return {done:true,value:void 0};const t={done:false,value:i(o)};return o=r(o),t}}}function gl(e,n){const r=ml(e.origin,n.origin);switch(null===r&&t(275,e.origin.getKey(),n.origin.getKey()),r.type){case "same":{const t="text"===e.type,r="text"===n.type;return t&&r?function(t,e){return Math.sign(t-e)}(e.offset,n.offset):e.type===n.type?0:t?-1:r?1:"child"===e.type?-1:1}case "ancestor":return "child"===e.type?-1:1;case "descendant":return "child"===n.type?1:-1;case "branch":return _l(r)}}function _l(t){const{a:e,b:n}=t,r=e.__key,i=n.__key;let o=e,s=n;for(;o&&s;o=o.getNextSibling(),s=s.getNextSibling()){if(o.__key===i)return  -1;if(s.__key===r)return 1}return null===o?1:-1}function pl(t,e){return e.is(t)}function yl(t){return Si(t)?[t.getLatest(),null]:[t.getParent(),t.getLatest()]}function ml(e,n){if(e.is(n))return {commonAncestor:e,type:"same"};const r=new Map;for(let[t,n]=yl(e);t;n=t,t=t.getParent())r.set(t,n);for(let[i,o]=yl(n);i;o=i,i=i.getParent()){const s=r.get(i);if(void 0!==s)return null===s?(pl(e,i)||t(276),{commonAncestor:i,type:"ancestor"}):null===o?(pl(n,i)||t(277),{commonAncestor:i,type:"descendant"}):((Si(s)||pl(e,s))&&(Si(o)||pl(n,o))&&i.is(s.getParent())&&i.is(o.getParent())||t(278),{a:s,b:o,commonAncestor:i,type:"branch"})}return null}function xl(e,n){const{type:r,key:i,offset:o}=e,s=hs(e.key);return "text"===r?(lr(s)||t(266,s.getType(),i),el(s,n,o)):(Si(s)||t(267,s.getType(),i),Pl(s,e.offset,n))}function Cl(e,n){const{origin:r,direction:i}=n,o="next"===i;Ys(n)?e.set(r.getKey(),n.offset,"text"):Hs(n)?lr(r)?e.set(r.getKey(),nl(r,i),"text"):e.set(r.getParentOrThrow().getKey(),r.getIndexWithinParent()+(o?1:0),"element"):(Gs(n)&&Si(r)||t(268),e.set(r.getKey(),o?0:r.getChildrenSize(),"element"));}function Sl(t){const e=Lr(),n=yr(e)?e:Ar();return vl(n,t),wo(n),n}function vl(t,e){Cl(t.anchor,e.anchor),Cl(t.focus,e.focus);}function kl(t){const{anchor:e,focus:n}=t,r=xl(e,"next"),i=xl(n,"next"),o=gl(r,i)<=0?"next":"previous";return dl(Ml(r,o),Ml(i,o))}function Tl(t){const{direction:e,origin:n}=t,r=tl(n,js(e)).getNodeAtCaret();return r?tl(r,e):il(n.getParentOrThrow(),e)}function Nl(t,e="root"){const n=[t];for(let r=Gs(t)?t.getParentCaret(e):t.getSiblingCaret();null!==r;r=r.getParentCaret(e))n.push(Tl(r));return n}function bl(t){return !!t&&t.origin.isAttached()}function wl(e,n="removeEmptySlices"){if(e.isCollapsed())return e;const r="root",i="next";let o=n;const s=Al(e,i),l=Nl(s.anchor,r),c=Nl(s.focus.getFlipped(),r),a=new Set,u=[];for(const t of s.iterNodeCarets(r))if(Gs(t))a.add(t.origin.getKey());else if(Hs(t)){const{origin:e}=t;Si(e)&&!a.has(e.getKey())||u.push(e);}for(const t of u)t.remove();for(const t of s.getTextSlices()){if(!t)continue;const{origin:e}=t.caret,n=e.getTextContentSize(),r=Tl(tl(e,i)),s=e.getMode();if(Math.abs(t.distance)===n&&"removeEmptySlices"===o||"token"===s&&0!==t.distance)r.remove();else if(0!==t.distance){o="removeEmptySlices";let e=t.removeTextSlice();const n=t.caret.origin;if("segmented"===s){const t=e.origin,n=sr(t.getTextContent()).setStyle(t.getStyle()).setFormat(t.getFormat());r.replaceOrInsert(n),e=el(n,i,e.offset);}n.is(l[0].origin)&&(l[0]=e),n.is(c[0].origin)&&(c[0]=e.getFlipped());}}let f,d;for(const t of l)if(bl(t)){f=El(t);break}for(const t of c)if(bl(t)){d=El(t);break}const h=function(t,e,n){if(!t||!e)return null;const r=t.getParentAtCaret(),i=e.getParentAtCaret();if(!r||!i)return null;const o=r.getParents().reverse();o.push(r);const s=i.getParents().reverse();s.push(i);const l=Math.min(o.length,s.length);let c;for(c=0;c<l&&o[c]===s[c];c++);const a=(t,e)=>{let n;for(let r=c;r<t.length;r++){const i=t[r];if(as(i))return;!n&&e(i)&&(n=i);}return n},u=a(o,Ns),f=u&&a(s,t=>n.has(t.getKey())&&Ns(t));return u&&f?[u,f]:null}(f,d,a);if(h){const[t,e]=h;il(t,"previous").splice(0,e.getChildren()),e.remove();}const g=[f,d,...l,...c].find(bl);if(g){return fl(Ml(El(g),e.direction))}t(269,JSON.stringify(l.map(t=>t.origin.__key)));}function El(t){const e=function(t){let e=t;for(;Gs(e);){const t=sl(e);if(!Gs(t))break;e=t;}return e}(t.getLatest()),{direction:n}=e;if(lr(e.origin))return Ys(e)?e:el(e.origin,n,n);const r=e.getAdjacentCaret();return Hs(r)&&lr(r.origin)?el(r.origin,n,js(n)):e}function Ol(t){return Ys(t)&&t.offset!==nl(t.origin,t.direction)}function Ml(t,e){return t.direction===e?t:t.getFlipped()}function Al(t,e){return t.direction===e?t:dl(Ml(t.focus,e),Ml(t.anchor,e))}function Pl(t,e,n){let r=il(t,"next");for(let t=0;t<e;t++){const t=r.getAdjacentCaret();if(null===t)break;r=t;}return Ml(r,n)}function Fl(e){const{origin:n,offset:r,direction:i}=e;if(r===nl(n,i))return e.getSiblingCaret();if(r===nl(n,js(i)))return Tl(e.getSiblingCaret());const[o]=n.splitText(r);return lr(o)||t(281),Ml(tl(o,"next"),i)}function Ll(t,e){return  true}function Il(t,{$copyElementNode:e=us,$splitTextPointCaretNext:n=Fl,rootMode:r="shadowRoot",$shouldSplit:i=Ll}={}){if(Ys(t))return n(t);const o=t.getParentCaret(r);if(o){const{origin:n}=o;if(Gs(t)&&(!n.canBeEmpty()||!i(n,"first")))return Tl(o);const r=function(t){const e=[];for(let n=t.getAdjacentCaret();n;n=n.getAdjacentCaret())e.push(n.origin);return e}(t);(r.length>0||n.canBeEmpty()&&i(n,"last"))&&o.insert(e(n).splice(0,0,r));}return o}function Kl(t){return t}function zl(...t){return t}function Bl(t){return t}function Wl(t,e){if(!e||t===e)return t;for(const n in e)if(t[n]!==e[n])return {...t,...e};return t}
+function t(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSearchParams;r.append("code",t);for(const t of e)r.append("v",t);throw n.search=r.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}function e(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSearchParams;r.append("code",t);for(const t of e)r.append("v",t);n.search=r.toString(),console.warn(`Minified Lexical warning #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`);}const n="undefined"!=typeof window&&void 0!==window.document&&void 0!==window.document.createElement,r=n&&"documentMode"in document?document.documentMode:null,i=n&&/Mac|iPod|iPhone|iPad/.test(navigator.platform),o=n&&/^(?!.*Seamonkey)(?=.*Firefox).*/i.test(navigator.userAgent),s=!(!n||!("InputEvent"in window)||r)&&"getTargetRanges"in new window.InputEvent("input"),l=n&&/Version\/[\d.]+.*Safari/.test(navigator.userAgent),c=n&&/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream,a=n&&/Android/.test(navigator.userAgent),u=n&&/^(?=.*Chrome).*/i.test(navigator.userAgent),f=n&&a&&u,d=n&&/AppleWebKit\/[\d.]+/.test(navigator.userAgent)&&i&&!u;function h$1(...t){const e=[];for(const n of t)if(n&&"string"==typeof n)for(const[t]of n.matchAll(/\S+/g))e.push(t);return e}const g$1=0,_$2=1,p=2,T$3=128,b$4=1,w$4=2,E$4=3,O$2=4,M$5=5,A$3=6,P$3=l||c||d?" ":"​",D$4="\n\n",F$5=o?" ":P$3,L$2="֑-߿יִ-﷽ﹰ-ﻼ",I$3="A-Za-zÀ-ÖØ-öø-ʸ̀-֐ࠀ-῿‎Ⰰ-﬜︀-﹯﻽-￿",K$5=new RegExp("^[^"+I$3+"]*["+L$2+"]"),z$4=new RegExp("^[^"+L$2+"]*["+I$3+"]"),R$5={bold:1,capitalize:1024,code:16,highlight:T$3,italic:2,lowercase:256,strikethrough:4,subscript:32,superscript:64,underline:8,uppercase:512},B$3={directionless:1,unmergeable:2},W$6={center:2,end:6,justify:4,left:1,right:3,start:5},J$5={[w$4]:"center",[A$3]:"end",[O$2]:"justify",[b$4]:"left",[E$4]:"right",[M$5]:"start"},j$3={normal:0,segmented:2,token:1},$$4={[g$1]:"normal",[p]:"segmented",[_$2]:"token"},V$5="$config";function Y$4(t,e,n,r,i,o){let s=t.getFirstChild();for(;null!==s;){const t=s.__key;s.__parent===e&&(Si(s)&&Y$4(s,t,n,r,i,o),n.has(t)||o.delete(t),i.push(t)),s=s.getNextSibling();}}let q$4=false,H$3=0;function G$4(t){H$3=t.timeStamp;}function X$4(t,e,n){const r="BR"===t.nodeName,i=e.__lexicalLineBreak;return i&&(t===i||r&&t.previousSibling===i)||r&&void 0!==So(t,n)}function Q$5(t,e,n){const r=ps(ss(n));let i=null,o=null;null!==r&&r.anchorNode===t&&(i=r.anchorOffset,o=r.focusOffset);const s=t.nodeValue;null!==s&&Fo(e,s,i,o,false);}function Z$4(t,e,n){if(yr(t)){const e=t.anchor.getNode();if(e.is(n)&&t.format!==e.getFormat())return  false}return co(e)&&n.isAttached()}function tt$3(t,e,n,r){for(let i=t;i&&!Fs(i);i=Zo(i)){const t=So(i,e);if(void 0!==t){const e=xo(t,n);if(e)return Ti(e)||!Cs(i)?void 0:[i,e]}else if(i===r)return [r,bo(n)]}}function et$4(t,e,n){q$4=true;const r=performance.now()-H$3>100;try{yi(t,()=>{const i=Lr()||function(t){return t.getEditorState().read(()=>{const t=Lr();return null!==t?t.clone():null})}(t),s=new Map,l=t.getRootElement(),c=t._editorState,a=t._blockCursorElement;let u=!1,f="";for(let n=0;n<e.length;n++){const d=e[n],h=d.type,g=d.target,_=tt$3(g,t,c,l);if(!_)continue;const[p,y]=_;if("characterData"===h)r&&lr(y)&&co(g)&&Z$4(i,g,y)&&Q$5(g,y,t);else if("childList"===h){u=!0;const e=d.addedNodes;for(let n=0;n<e.length;n++){const r=e[n],i=Co(r),s=r.parentNode;if(null!=s&&r!==a&&null===i&&!X$4(r,s,t)){if(o){const t=(Cs(r)?r.innerText:null)||r.nodeValue;t&&(f+=t);}s.removeChild(r);}}const n=d.removedNodes,r=n.length;if(r>0){let e=0;for(let i=0;i<r;i++){const r=n[i];(X$4(r,g,t)||a===r)&&(g.appendChild(r),e++);}r!==e&&s.set(p,y);}}}if(s.size>0)for(const[e,n]of s)n.reconcileObservedMutation(e,t);const d=n.takeRecords();if(d.length>0){for(let e=0;e<d.length;e++){const n=d[e],r=n.addedNodes,i=n.target;for(let e=0;e<r.length;e++){const n=r[e],o=n.parentNode;null==o||"BR"!==n.nodeName||X$4(n,i,t)||o.removeChild(n);}}n.takeRecords();}null!==i&&(u&&wo(i),o&&Ho(t)&&i.insertRawText(f));});}finally{q$4=false;}}function nt$4(t){const e=t._observer;if(null!==e){et$4(t,e.takeRecords(),e);}}function rt$3(t){!function(t){0===H$3&&ss(t).addEventListener("textInput",G$4,true);}(t),t._observer=new MutationObserver((e,n)=>{et$4(t,e,n);});}let it$3 = class it{key;parse;unparse;isEqual;defaultValue;constructor(t,e){this.key=t,this.parse=e.parse.bind(e),this.unparse=(e.unparse||gt$3).bind(e),this.isEqual=(e.isEqual||Object.is).bind(e),this.defaultValue=this.parse(void 0);}};function ot$4(t,e){return new it$3(t,e)}function st$4(t,e,n="latest"){const r=("latest"===n?t.getLatest():t).__state;return r?r.getValue(e):e.defaultValue}function ct$4(t,e,n){let r;if(ei(),"function"==typeof n){const i=t.getLatest(),o=st$4(i,e);if(r=n(o),e.isEqual(o,r))return i}else r=n;const i=t.getWritable();return ft$2(i).updateFromKnown(e,r),i}function at$2(t){const e=new Map,n=new Set;for(let r="function"==typeof t?t:t.replace;r.prototype&&void 0!==r.prototype.getType;r=Object.getPrototypeOf(r)){const{ownNodeConfig:t}=Is(r);if(t&&t.stateConfigs)for(const r of t.stateConfigs){let t;"stateConfig"in r?(t=r.stateConfig,r.flat&&n.add(t.key)):t=r,e.set(t.key,t);}}return {flatKeys:n,sharedConfigMap:e}}let ut$3 = class ut{node;knownState;unknownState;sharedNodeState;size;constructor(t,e,n=void 0,r=new Map,i=void 0){this.node=t,this.sharedNodeState=e,this.unknownState=n,this.knownState=r;const{sharedConfigMap:o}=this.sharedNodeState,s=void 0!==i?i:function(t,e,n){let r=n.size;if(e)for(const i in e){const e=t.get(i);e&&n.has(e)||r++;}return r}(o,n,r);this.size=s;}getValue(t){const e=this.knownState.get(t);if(void 0!==e)return e;this.sharedNodeState.sharedConfigMap.set(t.key,t);let n=t.defaultValue;if(this.unknownState&&t.key in this.unknownState){const e=this.unknownState[t.key];void 0!==e&&(n=t.parse(e)),this.updateFromKnown(t,n);}return n}getInternalState(){return [this.unknownState,this.knownState]}toJSON(){const t={...this.unknownState},e={};for(const[e,n]of this.knownState)e.isEqual(n,e.defaultValue)?delete t[e.key]:t[e.key]=e.unparse(n);for(const n of this.sharedNodeState.flatKeys)n in t&&(e[n]=t[n],delete t[n]);return ht$4(t)&&(e.$=t),e}getWritable(t){if(this.node===t)return this;const{sharedNodeState:e,unknownState:n}=this,r=new Map(this.knownState);return new ut(t,e,function(t,e,n){let r;if(n)for(const[i,o]of Object.entries(n)){const n=t.get(i);n?e.has(n)||e.set(n,n.parse(o)):(r=r||{},r[i]=o);}return r}(e.sharedConfigMap,r,n),r,this.size)}updateFromKnown(t,e){const n=t.key;this.sharedNodeState.sharedConfigMap.set(n,t);const{knownState:r,unknownState:i}=this;r.has(t)||i&&n in i||(i&&(delete i[n],this.unknownState=ht$4(i)),this.size++),r.set(t,e);}updateFromUnknown(t,e){const n=this.sharedNodeState.sharedConfigMap.get(t);n?this.updateFromKnown(n,n.parse(e)):(this.unknownState=this.unknownState||{},t in this.unknownState||this.size++,this.unknownState[t]=e);}updateFromJSON(t){const{knownState:e}=this;for(const t of e.keys())e.set(t,t.defaultValue);if(this.size=e.size,this.unknownState=void 0,t)for(const[e,n]of Object.entries(t))this.updateFromUnknown(e,n);}};function ft$2(t){const e=t.getWritable(),n=e.__state?e.__state.getWritable(e):new ut$3(e,dt$3(e));return e.__state=n,n}function dt$3(t){return t.__state?t.__state.sharedNodeState:Gi(bs(),t.getType()).sharedNodeState}function ht$4(t){if(t)for(const e in t)return t}function gt$3(t){return t}function _t$3(t,e,n){for(const[r,i]of e.knownState){if(t.has(r.key))continue;t.add(r.key);const e=n?n.getValue(r):r.defaultValue;if(e!==i&&!r.isEqual(e,i))return  true}return  false}function pt$3(t,e,n){const{unknownState:r}=e,i=n?n.unknownState:void 0;if(r)for(const[e,n]of Object.entries(r)){if(t.has(e))continue;t.add(e);if(n!==(i?i[e]:void 0))return  true}return  false}function yt$3(t,e){const n=t.__state;return n&&n.node===t?n.getWritable(e):n}function mt$1(t,e){const n=t.__mode,r=t.__format,i=t.__style,o=e.__mode,s=e.__format,l=e.__style,c=t.__state,a=e.__state;return (null===n||n===o)&&(null===r||r===s)&&(null===i||i===l)&&(null===t.__state||c===a||function(t,e){if(t===e)return  true;if(t&&e&&t.size!==e.size)return  false;const n=new Set;return !(t&&_t$3(n,t,e)||e&&_t$3(n,e,t)||t&&pt$3(n,t,e)||e&&pt$3(n,e,t))}(c,a))}function xt$5(t,e){const n=t.mergeWithSibling(e),r=ii()._normalizedNodes;return r.add(t.__key),r.add(e.__key),n}function Ct$4(t){let e,n,r=t;if(""!==r.__text||!r.isSimpleText()||r.isUnmergeable()){for(;null!==(e=r.getPreviousSibling())&&lr(e)&&e.isSimpleText()&&!e.isUnmergeable();){if(""!==e.__text){if(mt$1(e,r)){r=xt$5(e,r);break}break}e.remove();}for(;null!==(n=r.getNextSibling())&&lr(n)&&n.isSimpleText()&&!n.isUnmergeable();){if(""!==n.__text){if(mt$1(r,n)){r=xt$5(r,n);break}break}n.remove();}}else r.remove();}function St$5(t){return vt$3(t.anchor),vt$3(t.focus),t}function vt$3(t){for(;"element"===t.type;){const e=t.getNode(),n=t.offset;let r,i;if(n===e.getChildrenSize()?(r=e.getChildAtIndex(n-1),i=true):(r=e.getChildAtIndex(n),i=false),lr(r)){t.set(r.__key,i?r.getTextContentSize():0,"text",true);break}if(!Si(r))break;t.set(r.__key,i?r.getChildrenSize():0,"element",true);}}let kt$5,Tt$4,Nt$4,bt$5,wt$5,Et$4,Ot$3,Mt$3,At$4,Pt$4,Dt$3="",Ft$2=null,Lt$4="",It$3="",Kt$2=false,zt$2=false;function Rt$2(t,e){const n=Ot$3.get(t);if(null!==e){const n=ne$1(t);n.parentNode===e&&e.removeChild(n);}if(Mt$3.has(t)||Tt$4._keyToDOMMap.delete(t),Si(n)){const t=Xt(n,Ot$3);Bt$2(t,0,t.length-1,null);} void 0!==n&&Uo(Pt$4,Nt$4,bt$5,n,"destroyed");}function Bt$2(t,e,n,r){let i=e;for(;i<=n;++i){const e=t[i];void 0!==e&&Rt$2(e,r);}}function Wt$1(t,e){t.setProperty("text-align",e);}const Jt$1="40px";function jt$3(t,e){const n=kt$5.theme.indent;if("string"==typeof n){const r=t.classList.contains(n);e>0&&!r?t.classList.add(n):e<1&&r&&t.classList.remove(n);}const r=getComputedStyle(t).getPropertyValue("--lexical-indent-base-value")||Jt$1;t.style.setProperty("padding-inline-start",0===e?"":`calc(${e} * ${r})`);}function $t$1(t,e){const n=t.style;0===e?Wt$1(n,""):1===e?Wt$1(n,"left"):2===e?Wt$1(n,"center"):3===e?Wt$1(n,"right"):4===e?Wt$1(n,"justify"):5===e?Wt$1(n,"start"):6===e&&Wt$1(n,"end");}function Ut$2(t,e){const n=function(t){const e=t.__dir;if(null!==e)return e;if(bi(t))return null;const n=t.getParentOrThrow();return bi(n)&&null===n.__dir?"auto":null}(e);null!==n?t.dir=n:t.removeAttribute("dir");}function Vt(e,n){const r=Mt$3.get(e);void 0===r&&t(60);const i=r.createDOM(kt$5,Tt$4);if(function(t,e,n){const r=n._keyToDOMMap;((function(t,e,n){const r=`__lexicalKey_${e._key}`;t[r]=n;}))(e,n,t),r.set(t,e);}(e,i,Tt$4),lr(r)?i.setAttribute("data-lexical-text","true"):Ti(r)&&i.setAttribute("data-lexical-decorator","true"),Si(r)){const t=r.__indent,e=r.__size;if(Ut$2(i,r),0!==t&&jt$3(i,t),0!==e){const t=e-1;Yt(Xt(r,Mt$3),r,0,t,r.getDOMSlot(i));}const n=r.__format;0!==n&&$t$1(i,n),r.isInline()||Ht$1(null,r,i),Xo(r)&&(Dt$3+=D$4,It$3+=D$4);}else {const t=r.getTextContent();if(Ti(r)){const t=r.decorate(Tt$4,kt$5);null!==t&&Zt(e,t),i.contentEditable="false";}Dt$3+=t,It$3+=t;}return null!==n&&n.insertChild(i),Uo(Pt$4,Nt$4,bt$5,r,"created"),i}function Yt(t,e,n,r,i){const o=Dt$3;Dt$3="";let s=n;for(;s<=r;++s){Vt(t[s],i);const e=Mt$3.get(t[s]);null!==e&&lr(e)&&(null===Ft$2&&(Ft$2=e.getFormat()),""===Lt$4&&(Lt$4=e.getStyle()));}Xo(e)&&(Dt$3+=D$4);i.element.__lexicalTextContent=Dt$3,Dt$3=o+Dt$3;}function qt(t,e){if(t){const n=t.__last;if(n){const t=e.get(n);if(t)return jn(t)?"line-break":Ti(t)&&t.isInline()?"decorator":null}return "empty"}return null}function Ht$1(t,e,n){const r=qt(t,Ot$3),i=qt(e,Mt$3);r!==i&&e.getDOMSlot(n).setManagedLineBreak(i);}function Gt$1(e,n,r){var i;Ft$2=null,Lt$4="",function(e,n,r){const i=Dt$3,o=e.__size,s=n.__size;Dt$3="";const l=r.element;if(1===o&&1===s){const t=e.__first,r=n.__first;if(t===r)Qt(t,l);else {const e=ne$1(t),n=Vt(r,null);try{l.replaceChild(n,e);}catch(i){if("object"==typeof i&&null!=i){const o=`${i.toString()} Parent: ${l.tagName}, new child: {tag: ${n.tagName} key: ${r}}, old child: {tag: ${e.tagName}, key: ${t}}.`;throw new Error(o)}throw i}Rt$2(t,null);}const i=Mt$3.get(r);lr(i)&&(null===Ft$2&&(Ft$2=i.getFormat()),""===Lt$4&&(Lt$4=i.getStyle()));}else {const i=Xt(e,Ot$3),c=Xt(n,Mt$3);if(i.length!==o&&t(227),c.length!==s&&t(228),0===o)0!==s&&Yt(c,n,0,s-1,r);else if(0===s){if(0!==o){const t=null==r.after&&null==r.before&&null==r.element.__lexicalLineBreak;Bt$2(i,0,o-1,t?null:l),t&&(l.textContent="");}}else !function(t,e,n,r,i,o){const s=r-1,l=i-1;let c,a,u=o.getFirstChild(),f=0,d=0;for(;f<=s&&d<=l;){const t=e[f],r=n[d];if(t===r)u=te$1(Qt(r,o.element)),f++,d++;else { void 0===c&&(c=new Set(e)),void 0===a&&(a=new Set(n));const i=a.has(t),s=c.has(r);if(i)if(s){const t=Qo(Tt$4,r);t===u?u=te$1(Qt(r,o.element)):(o.withBefore(u).insertChild(t),Qt(r,o.element)),f++,d++;}else Vt(r,o.withBefore(u)),d++;else u=te$1(ne$1(t)),Rt$2(t,o.element),f++;}const i=Mt$3.get(r);null!==i&&lr(i)&&(null===Ft$2&&(Ft$2=i.getFormat()),""===Lt$4&&(Lt$4=i.getStyle()));}const h=f>s,g=d>l;if(h&&!g){const e=n[l+1],r=void 0===e?null:Tt$4.getElementByKey(e);Yt(n,t,d,l,o.withBefore(r));}else g&&!h&&Bt$2(e,f,s,o.element);}(n,i,c,o,s,r);}Xo(n)&&(Dt$3+=D$4);l.__lexicalTextContent=Dt$3,Dt$3=i+Dt$3;}(e,n,n.getDOMSlot(r)),i=n,null==Ft$2||Ft$2===i.__textFormat||zt$2||i.setTextFormat(Ft$2),function(t){""===Lt$4||Lt$4===t.__textStyle||zt$2||t.setTextStyle(Lt$4);}(n);}function Xt(e,n){const r=[];let i=e.__first;for(;null!==i;){const e=n.get(i);void 0===e&&t(101),r.push(i),i=e.__next;}return r}function Qt(e,n){const r=Ot$3.get(e);let i=Mt$3.get(e);void 0!==r&&void 0!==i||t(61);const o=Kt$2||Et$4.has(e)||wt$5.has(e),s=Qo(Tt$4,e);if(r===i&&!o){if(Si(r)){const t=s.__lexicalTextContent;void 0!==t&&(Dt$3+=t,It$3+=t);}else {const t=r.getTextContent();It$3+=t,Dt$3+=t;}return s}if(r!==i&&o&&Uo(Pt$4,Nt$4,bt$5,i,"updated"),i.updateDOM(r,s,kt$5)){const r=Vt(e,null);return null===n&&t(62),n.replaceChild(r,s),Rt$2(e,null),r}if(Si(r)&&Si(i)){const t=i.__indent;(Kt$2||t!==r.__indent)&&jt$3(s,t);const e=i.__format;if((Kt$2||e!==r.__format)&&$t$1(s,e),o&&(Gt$1(r,i,s),bi(i)||i.isInline()||Ht$1(r,i,s)),Xo(i)&&(Dt$3+=D$4,It$3+=D$4),(Kt$2||i.__dir!==r.__dir)&&(Ut$2(s,i),bi(i)&&!Kt$2))for(const t of i.getChildren())if(Si(t)){Ut$2(Qo(Tt$4,t.getKey()),t);}}else {const t=i.getTextContent();if(Ti(i)){const t=i.decorate(Tt$4,kt$5);null!==t&&Zt(e,t);}Dt$3+=t,It$3+=t;}if(!zt$2&&bi(i)&&i.__cachedText!==It$3){const t=i.getWritable();t.__cachedText=It$3,i=t;}return s}function Zt(t,e){let n=Tt$4._pendingDecorators;const r=Tt$4._decorators;if(null===n){if(r[t]===e)return;n=ko(Tt$4);}n[t]=e;}function te$1(t){let e=t.nextSibling;return null!==e&&e===Tt$4._blockCursorElement&&(e=e.nextSibling),e}function ee$1(t,e,n,r,i,o){Dt$3="",It$3="",Kt$2=2===r,Tt$4=n,kt$5=n._config,Nt$4=n._nodes,bt$5=Tt$4._listeners.mutation,wt$5=i,Et$4=o,Ot$3=t._nodeMap,Mt$3=e._nodeMap,zt$2=e._readOnly,At$4=new Map(n._keyToDOMMap);const s=new Map;return Pt$4=s,Qt("root",null),Tt$4=void 0,Nt$4=void 0,wt$5=void 0,Et$4=void 0,Ot$3=void 0,Mt$3=void 0,kt$5=void 0,At$4=void 0,Pt$4=void 0,s}function ne$1(e){const n=At$4.get(e);return void 0===n&&t(75,e),n}function re$1(t){return {type:t}}const ie$1=re$1("SELECTION_CHANGE_COMMAND"),oe$2=re$1("SELECTION_INSERT_CLIPBOARD_NODES_COMMAND"),se$1=re$1("CLICK_COMMAND"),le$2=re$1("DELETE_CHARACTER_COMMAND"),ce$1=re$1("INSERT_LINE_BREAK_COMMAND"),ae$1=re$1("INSERT_PARAGRAPH_COMMAND"),ue$1=re$1("CONTROLLED_TEXT_INSERTION_COMMAND"),fe$1=re$1("PASTE_COMMAND"),de$1=re$1("REMOVE_TEXT_COMMAND"),he$1=re$1("DELETE_WORD_COMMAND"),ge$1=re$1("DELETE_LINE_COMMAND"),_e$1=re$1("FORMAT_TEXT_COMMAND"),pe$1=re$1("UNDO_COMMAND"),ye$1=re$1("REDO_COMMAND"),me$1=re$1("KEYDOWN_COMMAND"),xe=re$1("KEY_ARROW_RIGHT_COMMAND"),Ce$1=re$1("MOVE_TO_END"),Se$1=re$1("KEY_ARROW_LEFT_COMMAND"),ve$1=re$1("MOVE_TO_START"),ke$1=re$1("KEY_ARROW_UP_COMMAND"),Te$1=re$1("KEY_ARROW_DOWN_COMMAND"),Ne$1=re$1("KEY_ENTER_COMMAND"),be$1=re$1("KEY_SPACE_COMMAND"),we$1=re$1("KEY_BACKSPACE_COMMAND"),Ee$1=re$1("KEY_ESCAPE_COMMAND"),Oe$1=re$1("KEY_DELETE_COMMAND"),Me$1=re$1("KEY_TAB_COMMAND"),Ae$1=re$1("INSERT_TAB_COMMAND"),Pe$1=re$1("INDENT_CONTENT_COMMAND"),De$1=re$1("OUTDENT_CONTENT_COMMAND"),Fe$1=re$1("DROP_COMMAND"),Le$1=re$1("FORMAT_ELEMENT_COMMAND"),Ie$1=re$1("DRAGSTART_COMMAND"),Ke$1=re$1("DRAGOVER_COMMAND"),ze$1=re$1("DRAGEND_COMMAND"),Re$1=re$1("COPY_COMMAND"),Be$1=re$1("CUT_COMMAND"),We$1=re$1("SELECT_ALL_COMMAND"),Je$1=re$1("CLEAR_EDITOR_COMMAND"),je$1=re$1("CLEAR_HISTORY_COMMAND"),$e$1=re$1("CAN_REDO_COMMAND"),Ue$1=re$1("CAN_UNDO_COMMAND"),Ve$1=re$1("FOCUS_COMMAND"),Ye=re$1("BLUR_COMMAND"),qe$1=re$1("KEY_MODIFIER_COMMAND"),He$1=Object.freeze({}),Ge$1=[["keydown",function(t,e){if(Xe$1=t.timeStamp,Qe$1=t.key,e.isComposing())return;if(Go(e,me$1,t))return;if(null==t.key)return;if(cn&&Wo(t))return yi(e,()=>{mn(e,an);}),cn=false,void(an="");if(function(t){return zo(t,"ArrowRight",{shiftKey:"any"})}(t))Go(e,xe,t);else if(function(t){return zo(t,"ArrowRight",Ro)}(t))Go(e,Ce$1,t);else if(function(t){return zo(t,"ArrowLeft",{shiftKey:"any"})}(t))Go(e,Se$1,t);else if(function(t){return zo(t,"ArrowLeft",Ro)}(t))Go(e,ve$1,t);else if(function(t){return zo(t,"ArrowUp",{altKey:"any",shiftKey:"any"})}(t))Go(e,ke$1,t);else if(function(t){return zo(t,"ArrowDown",{altKey:"any",shiftKey:"any"})}(t))Go(e,Te$1,t);else if(function(t){return zo(t,"Enter",{altKey:"any",ctrlKey:"any",metaKey:"any",shiftKey:true})}(t))sn=true,Go(e,Ne$1,t);else if(function(t){return " "===t.key}(t))Go(e,be$1,t);else if(function(t){return i&&zo(t,"o",{ctrlKey:true})}(t))t.preventDefault(),sn=true,Go(e,ce$1,true);else if(function(t){return zo(t,"Enter",{altKey:"any",ctrlKey:"any",metaKey:"any"})}(t))sn=false,Go(e,Ne$1,t);else if(function(t){return zo(t,"Backspace",{shiftKey:"any"})||i&&zo(t,"h",{ctrlKey:true})}(t))Wo(t)?Go(e,we$1,t):(t.preventDefault(),Go(e,le$2,true));else if(function(t){return "Escape"===t.key}(t))Go(e,Ee$1,t);else if(function(t){return zo(t,"Delete",{})||i&&zo(t,"d",{ctrlKey:true})}(t))!function(t){return "Delete"===t.key}(t)?(t.preventDefault(),Go(e,le$2,false)):Go(e,Oe$1,t);else if(function(t){return zo(t,"Backspace",Bo)}(t))t.preventDefault(),Go(e,he$1,true);else if(function(t){return zo(t,"Delete",Bo)}(t))t.preventDefault(),Go(e,he$1,false);else if(function(t){return i&&zo(t,"Backspace",{metaKey:true})}(t))t.preventDefault(),Go(e,ge$1,true);else if(function(t){return i&&(zo(t,"Delete",{metaKey:true})||zo(t,"k",{ctrlKey:true}))}(t))t.preventDefault(),Go(e,ge$1,false);else if(function(t){return zo(t,"b",Ro)}(t))t.preventDefault(),Go(e,_e$1,"bold");else if(function(t){return zo(t,"u",Ro)}(t))t.preventDefault(),Go(e,_e$1,"underline");else if(function(t){return zo(t,"i",Ro)}(t))t.preventDefault(),Go(e,_e$1,"italic");else if(function(t){return zo(t,"Tab",{shiftKey:"any"})}(t))Go(e,Me$1,t);else if(function(t){return zo(t,"z",Ro)}(t))t.preventDefault(),Go(e,pe$1,void 0);else if(function(t){if(i)return zo(t,"z",{metaKey:true,shiftKey:true});return zo(t,"y",{ctrlKey:true})||zo(t,"z",{ctrlKey:true,shiftKey:true})}(t))t.preventDefault(),Go(e,ye$1,void 0);else {const n=e._editorState._selection;null===n||yr(n)?Jo(t)&&(t.preventDefault(),Go(e,We$1,t)):!function(t){return zo(t,"c",Ro)}(t)?!function(t){return zo(t,"x",Ro)}(t)?Jo(t)&&(t.preventDefault(),Go(e,We$1,t)):(t.preventDefault(),Go(e,Be$1,t)):(t.preventDefault(),Go(e,Re$1,t));}(function(t){return t.ctrlKey||t.shiftKey||t.altKey||t.metaKey})(t)&&Go(e,qe$1,t);}],["pointerdown",function(t,e){const n=t.target,r=t.pointerType;Ss(n)&&"touch"!==r&&"pen"!==r&&0===t.button&&yi(e,()=>{Zi(n)||(on=true);});}],["compositionstart",function(t,e){yi(e,()=>{const n=Lr();if(yr(n)&&!e.isComposing()){const r=n.anchor,i=n.anchor.getNode();yo(r.key),(t.timeStamp<Xe$1+30||"element"===r.type||!n.isCollapsed()||i.getFormat()!==n.format||lr(i)&&i.getStyle()!==n.style)&&Go(e,ue$1,F$5);}});}],["compositionend",function(t,e){o?ln=true:c||!l&&!d?yi(e,()=>{mn(e,t.data);}):(cn=true,an=t.data);}],["input",function(t,e){t.stopPropagation(),yi(e,()=>{if(Cs(t.target)&&Zi(t.target))return;const n=Lr(),r=t.data,i=yn(t);if(null!=r&&yr(n)&&dn(n,i,r,t.timeStamp,false)){ln&&(mn(e,r),ln=false);const i=n.anchor.getNode(),a=ps(ss(e));if(null===a)return;const u=n.isBackward(),f=u?n.anchor.offset:n.focus.offset,h=u?n.focus.offset:n.anchor.offset;s&&!n.isCollapsed()&&lr(i)&&null!==a.anchorNode&&i.getTextContent().slice(0,f)+r+i.getTextContent().slice(f+h)===Po(a.anchorNode)||Go(e,ue$1,r);const g=r.length;o&&g>1&&"insertCompositionText"===t.inputType&&!e.isComposing()&&(n.anchor.offset-=g),l||c||d||!e.isComposing()||(Xe$1=0,yo(null));}else {Do(false,e,null!==r?r:void 0),ln&&(mn(e,r||void 0),ln=false);}!function(){ei();const t=ii();nt$4(t);}();},{event:t}),tn=null;}],["click",function(t,e){yi(e,()=>{const n=Lr(),r=ps(ss(e)),i=Ir();if(r)if(yr(n)){const e=n.anchor,o=e.getNode();if("element"===e.type&&0===e.offset&&n.isCollapsed()&&!bi(o)&&1===No().getChildrenSize()&&o.getTopLevelElementOrThrow().isEmpty()&&null!==i&&n.is(i))r.removeAllRanges(),n.dirty=true;else if(3===t.detail&&!n.isCollapsed()){if(o!==n.focus.getNode()){const t=zs(o,t=>Si(t)&&!t.isInline());Si(t)&&t.select(0);}}}else if("touch"===t.pointerType||"pen"===t.pointerType){const n=r.anchorNode;if(Cs(n)||co(n)){wo(Fr(i,r,e,t));}}Go(e,se$1,t);});}],["cut",He$1],["copy",He$1],["dragstart",He$1],["dragover",He$1],["dragend",He$1],["paste",He$1],["focus",He$1],["blur",He$1],["drop",He$1]];s&&Ge$1.push(["beforeinput",(e,n)=>function(e,n){const r=e.inputType,i=yn(e);if("deleteCompositionText"===r||o&&Ho(n))return;if("insertCompositionText"===r)return;yi(n,()=>{const o=Lr();if("deleteContentBackward"===r){if(null===o){const t=Ir();if(!yr(t))return;wo(t.clone());}if(yr(o)){const r=o.anchor.key===o.focus.key;if(s=e.timeStamp,"MediaLast"===Qe$1&&s<Xe$1+30&&n.isComposing()&&r){if(yo(null),Xe$1=0,setTimeout(()=>{yi(n,()=>{yo(null);});},30),yr(o)){const e=o.anchor.getNode();e.markDirty(),lr(e)||t(142),pn(o,e);}}else {yo(null),e.preventDefault();const t=o.anchor.getNode(),i=t.getTextContent(),s=t.canInsertTextAfter(),l=0===o.anchor.offset&&o.focus.offset===i.length;let c=f&&r&&!l&&s;if(c&&o.isCollapsed()&&(c=!Ti(qo(o.anchor,true))),!c){Go(n,le$2,true);const t=Lr();f&&yr(t)&&t.isCollapsed()&&(un=t,setTimeout(()=>un=null));}}return}}var s;if(!yr(o))return;const l=e.data;null!==tn&&Do(false,n,tn),o.dirty&&null===tn||!o.isCollapsed()||bi(o.anchor.getNode())||null===i||o.applyDOMRange(i),tn=null;const a=o.anchor,u=o.focus,d=a.getNode(),h=u.getNode();if("insertText"!==r&&"insertTranspose"!==r)switch(e.preventDefault(),r){case "insertFromYank":case "insertFromDrop":case "insertReplacementText":Go(n,ue$1,e);break;case "insertFromComposition":yo(null),Go(n,ue$1,e);break;case "insertLineBreak":yo(null),Go(n,ce$1,false);break;case "insertParagraph":yo(null),sn&&!c?(sn=false,Go(n,ce$1,false)):Go(n,ae$1,void 0);break;case "insertFromPaste":case "insertFromPasteAsQuotation":Go(n,fe$1,e);break;case "deleteByComposition":(function(t,e){return t!==e||Si(t)||Si(e)||!so(t)||!so(e)})(d,h)&&Go(n,de$1,e);break;case "deleteByDrag":case "deleteByCut":Go(n,de$1,e);break;case "deleteContent":Go(n,le$2,false);break;case "deleteWordBackward":Go(n,he$1,true);break;case "deleteWordForward":Go(n,he$1,false);break;case "deleteHardLineBackward":case "deleteSoftLineBackward":Go(n,ge$1,true);break;case "deleteContentForward":case "deleteHardLineForward":case "deleteSoftLineForward":Go(n,ge$1,false);break;case "formatStrikeThrough":Go(n,_e$1,"strikethrough");break;case "formatBold":Go(n,_e$1,"bold");break;case "formatItalic":Go(n,_e$1,"italic");break;case "formatUnderline":Go(n,_e$1,"underline");break;case "historyUndo":Go(n,pe$1,void 0);break;case "historyRedo":Go(n,ye$1,void 0);}else {if("\n"===l)e.preventDefault(),Go(n,ce$1,false);else if(l===D$4)e.preventDefault(),Go(n,ae$1,void 0);else if(null==l&&e.dataTransfer){const t=e.dataTransfer.getData("text/plain");e.preventDefault(),o.insertRawText(t);}else null!=l&&dn(o,i,l,e.timeStamp,true)?(e.preventDefault(),Go(n,ue$1,l)):tn=l;Ze$1=e.timeStamp;}});}(e,n)]);let Xe$1=0,Qe$1=null,Ze$1=0,tn=null;const en=new WeakMap,nn=new WeakMap;let rn=false,on=false,sn=false,ln=false,cn=false,an="",un=null,fn=[0,"",0,"root",0];function dn(t,e,n,r,i){const o=t.anchor,l=t.focus,c=o.getNode(),a=ii(),u=ps(ss(a)),f=null!==u?u.anchorNode:null,d=o.key,h=a.getElementByKey(d),g=n.length;return d!==l.key||!lr(c)||(!i&&(!s||Ze$1<r+50)||c.isDirty()&&g<2||Oo(n))&&o.offset!==l.offset&&!c.isComposing()||lo(c)||c.isDirty()&&g>1||(i||!s)&&null!==h&&!c.isComposing()&&f!==uo(h)||null!==u&&null!==e&&(!e.collapsed||e.startContainer!==u.anchorNode||e.startOffset!==u.anchorOffset)||c.getFormat()!==t.format||c.getStyle()!==t.style||function(t,e){if(e.isSegmented())return  true;if(!t.isCollapsed())return  false;const n=t.anchor.offset,r=e.getParentOrThrow(),i=so(e);return 0===n?!e.canInsertTextBefore()||!r.canInsertTextBefore()&&!e.isComposing()||i||function(t){const e=t.getPreviousSibling();return (lr(e)||Si(e)&&e.isInline())&&!e.canInsertTextAfter()}(e):n===e.getTextContentSize()&&(!e.canInsertTextAfter()||!r.canInsertTextAfter()&&!e.isComposing()||i)}(t,c)}function hn(t,e){return co(t)&&null!==t.nodeValue&&0!==e&&e!==t.nodeValue.length}function gn(e,n,r){const{anchorNode:i,anchorOffset:o,focusNode:s,focusOffset:l}=e;rn&&(rn=false,hn(i,o)&&hn(s,l)&&!un)||yi(n,()=>{if(!r)return void wo(null);if(!eo(n,i,s))return;let c=Lr();if(un&&yr(c)&&c.isCollapsed()){const t=c.anchor,e=un.anchor;(t.key===e.key&&t.offset===e.offset+1||1===t.offset&&e.getNode().is(t.getNode().getPreviousSibling()))&&(c=un.clone(),wo(c));}if(un=null,yr(c)){const r=c.anchor,i=r.getNode();if(c.isCollapsed()){"Range"===e.type&&e.anchorNode===e.focusNode&&(c.dirty=true);const o=ss(n).event,s=o?o.timeStamp:performance.now(),[l,a,u,f,d]=fn,h=No(),g=false===n.isComposing()&&""===h.getTextContent();if(s<d+200&&r.offset===u&&r.key===f)_n(c,l,a);else if("text"===r.type)lr(i)||t(141),pn(c,i);else if("element"===r.type&&!g){Si(i)||t(259);const e=r.getNode();e.isEmpty()?function(t,e){const n=e.getTextFormat(),r=e.getTextStyle();_n(t,n,r);}(c,e):_n(c,0,"");}}else {const t=r.key,e=c.focus.key,n=c.getNodes(),i=n.length,s=c.isBackward(),a=s?l:o,u=s?o:l,f=s?e:t,d=s?t:e;let h=2047,g=false;for(let t=0;t<i;t++){const e=n[t],r=e.getTextContentSize();if(lr(e)&&0!==r&&!(0===t&&e.__key===f&&a===r||t===i-1&&e.__key===d&&0===u)&&(g=true,h&=e.getFormat(),0===h))break}c.format=g?h:0;}}Go(n,ie$1,void 0);});}function _n(t,e,n){t.format===e&&t.style===n||(t.format=e,t.style=n,t.dirty=true);}function pn(t,e){_n(t,e.getFormat(),e.getStyle());}function yn(t){if(!t.getTargetRanges)return null;const e=t.getTargetRanges();return 0===e.length?null:e[0]}function mn(t,e){const n=t._compositionKey;if(yo(null),null!==n&&null!=e){if(""===e){const e=xo(n),r=uo(t.getElementByKey(n));return void(null!==r&&null!==r.nodeValue&&lr(e)&&Fo(e,r.nodeValue,null,null,true))}if("\n"===e[e.length-1]){const e=Lr();if(yr(e)){const n=e.focus;return e.anchor.set(n.key,n.offset,n.type),void Go(t,Ne$1,null)}}}Do(true,t,e);}function xn(t){let e=t.__lexicalEventHandles;return void 0===e&&(e=[],t.__lexicalEventHandles=e),e}const Cn=new Map;function Sn(t){const e=ys(t.target);if(null===e)return;const n=ro(e.anchorNode);if(null===n)return;on&&(on=false,yi(n,()=>{const r=Ir(),i=e.anchorNode;if(Cs(i)||co(i)){wo(Fr(r,e,n,t));}}));const r=Mo(n),i=r[r.length-1],o=i._key,s=Cn.get(o),l=s||i;l!==n&&gn(e,l,false),gn(e,n,true),n!==i?Cn.set(o,n):s&&Cn.delete(o);}function vn(t){t._lexicalHandled=true;}function kn(t){return  true===t._lexicalHandled}function Nn(e){const n=en.get(e);if(void 0===n)return void 0;const r=nn.get(n);if(void 0===r)return void 0;const i=r-1;i>=0||t(164),en.delete(e),nn.set(n,i),0===i&&n.removeEventListener("selectionchange",Sn);const o=io(e);no(o)?(!function(t){if(null!==t._parentEditor){const e=Mo(t),n=e[e.length-1]._key;Cn.get(n)===t&&Cn.delete(n);}else Cn.delete(t._key);}(o),e.__lexicalEditor=null):o&&t(198);const s=xn(e);for(let t=0;t<s.length;t++)s[t]();e.__lexicalEventHandles=[];}function bn(t,e,n){ei();const r=t.__key,i=t.getParent();if(null===i)return;const o=function(t){const e=Lr();if(!yr(e)||!Si(t))return e;const{anchor:n,focus:r}=e,i=n.getNode(),o=r.getNode();is(i,t)&&n.set(t.__key,0,"element");is(o,t)&&r.set(t.__key,0,"element");return e}(t);let s=false;if(yr(o)&&e){const e=o.anchor,n=o.focus;e.key===r&&(Rr(e,t,i,t.getPreviousSibling(),t.getNextSibling()),s=true),n.key===r&&(Rr(n,t,i,t.getPreviousSibling(),t.getNextSibling()),s=true);}else xr(o)&&e&&t.isSelected()&&t.selectPrevious();if(yr(o)&&e&&!s){const e=t.getIndexWithinParent();_o(t),Kr(o,i,e,-1);}else _o(t);n||as(i)||i.canBeEmpty()||!i.isEmpty()||bn(i,e),e&&o&&bi(i)&&i.isEmpty()&&i.selectEnd();}function wn(t){return t}const En=Symbol.for("ephemeral");function On(t){return t[En]||false}class Mn{__type;__key;__parent;__prev;__next;__state;static getType(){const{ownNodeType:e}=Is(this);return void 0===e&&t(64,this.name),e}static clone(e){t(65,this.name);}$config(){return {}}config(t,e){const n=e.extends||Object.getPrototypeOf(this.constructor);return Object.assign(e,{extends:n,type:t}),{[t]:e}}afterCloneFrom(t){this.__key===t.__key?(this.__parent=t.__parent,this.__next=t.__next,this.__prev=t.__prev,this.__state=t.__state):t.__state&&(this.__state=t.__state.getWritable(this));}static importDOM;constructor(t){this.__type=this.constructor.getType(),this.__parent=null,this.__prev=null,this.__next=null,Object.defineProperty(this,"__state",{configurable:true,enumerable:false,value:void 0,writable:true}),go(this,t);}getType(){return this.__type}isInline(){t(137,this.constructor.name);}isAttached(){let t=this.__key;for(;null!==t;){if("root"===t)return  true;const e=xo(t);if(null===e)break;t=e.__parent;}return  false}isSelected(t){const e=t||Lr();if(null==e)return  false;const n=e.getNodes().some(t=>t.__key===this.__key);if(lr(this))return n;if(yr(e)&&"element"===e.anchor.type&&"element"===e.focus.type){if(e.isCollapsed())return  false;const t=this.getParent();if(Ti(this)&&this.isInline()&&t){const n=e.isBackward()?e.focus:e.anchor;if(t.is(n.getNode())&&n.offset===t.getChildrenSize()&&this.is(t.getLastChild()))return  false}}return n}getKey(){return this.__key}getIndexWithinParent(){const t=this.getParent();if(null===t)return  -1;let e=t.getFirstChild(),n=0;for(;null!==e;){if(this.is(e))return n;n++,e=e.getNextSibling();}return  -1}getParent(){const t=this.getLatest().__parent;return null===t?null:xo(t)}getParentOrThrow(){const e=this.getParent();return null===e&&t(66,this.__key),e}getTopLevelElement(){let e=this;for(;null!==e;){const n=e.getParent();if(as(n))return Si(e)||e===this&&Ti(e)||t(194),e;e=n;}return null}getTopLevelElementOrThrow(){const e=this.getTopLevelElement();return null===e&&t(67,this.__key),e}getParents(){const t=[];let e=this.getParent();for(;null!==e;)t.push(e),e=e.getParent();return t}getParentKeys(){const t=[];let e=this.getParent();for(;null!==e;)t.push(e.__key),e=e.getParent();return t}getPreviousSibling(){const t=this.getLatest().__prev;return null===t?null:xo(t)}getPreviousSiblings(){const t=[],e=this.getParent();if(null===e)return t;let n=e.getFirstChild();for(;null!==n&&!n.is(this);)t.push(n),n=n.getNextSibling();return t}getNextSibling(){const t=this.getLatest().__next;return null===t?null:xo(t)}getNextSiblings(){const t=[];let e=this.getNextSibling();for(;null!==e;)t.push(e),e=e.getNextSibling();return t}getCommonAncestor(t){const e=Si(this)?this:this.getParent(),n=Si(t)?t:t.getParent(),r=e&&n?ml(e,n):null;return r?r.commonAncestor:null}is(t){return null!=t&&this.__key===t.__key}isBefore(e){const n=ml(this,e);return null!==n&&("descendant"===n.type||("branch"===n.type?-1===_l(n):("same"!==n.type&&"ancestor"!==n.type&&t(279),false)))}isParentOf(t){const e=ml(this,t);return null!==e&&"ancestor"===e.type}getNodesBetween(e){const n=this.isBefore(e),r=[],i=new Set;let o=this;for(;null!==o;){const s=o.__key;if(i.has(s)||(i.add(s),r.push(o)),o===e)break;const l=Si(o)?n?o.getFirstChild():o.getLastChild():null;if(null!==l){o=l;continue}const c=n?o.getNextSibling():o.getPreviousSibling();if(null!==c){o=c;continue}const a=o.getParentOrThrow();if(i.has(a.__key)||r.push(a),a===e)break;let u=null,f=a;do{if(null===f&&t(68),u=n?f.getNextSibling():f.getPreviousSibling(),f=f.getParent(),null===f)break;null!==u||i.has(f.__key)||r.push(f);}while(null===u);o=u;}return n||r.reverse(),r}isDirty(){const t=ii()._dirtyLeaves;return null!==t&&t.has(this.__key)}getLatest(){if(On(this))return this;const e=xo(this.__key);return null===e&&t(113),e}getWritable(){if(On(this))return this;ei();const t=ri(),e=ii(),n=t._nodeMap,r=this.__key,i=this.getLatest(),o=e._cloneNotNeeded,s=Lr();if(null!==s&&s.setCachedNodes(null),o.has(r))return po(i),i;const l=Ms(i);return o.add(r),po(l),n.set(r,l),l}getTextContent(){return ""}getTextContentSize(){return this.getTextContent().length}createDOM(e,n){t(70);}updateDOM(e,n,r){t(71);}exportDOM(t){return {element:this.createDOM(t._config,t)}}exportJSON(){const t=this.__state?this.__state.toJSON():void 0;return {type:this.__type,version:1,...t}}static importJSON(e){t(18,this.name);}updateFromJSON(t){return function(t,e){const n=t.getWritable(),r=e.$;let i=r;for(const t of dt$3(n).flatKeys)t in e&&(void 0!==i&&i!==r||(i={...r}),i[t]=e[t]);return (n.__state||i)&&ft$2(t).updateFromJSON(i),n}(this,t)}static transform(){return null}remove(t){bn(this,true,t);}replace(e,n){ei();let r=Lr();null!==r&&(r=r.clone()),ds(this,e);const i=this.getLatest(),o=this.__key,s=e.__key,l=e.getWritable(),c=this.getParentOrThrow().getWritable(),a=c.__size;_o(l);const u=i.getPreviousSibling(),f=i.getNextSibling(),d=i.__prev,h=i.__next,g=i.__parent;if(bn(i,false,true),null===u)c.__first=s;else {u.getWritable().__next=s;}if(l.__prev=d,null===f)c.__last=s;else {f.getWritable().__prev=s;}if(l.__next=h,l.__parent=g,c.__size=a,n&&(Si(this)&&Si(l)||t(139),this.getChildren().forEach(t=>{l.append(t);})),yr(r)){wo(r);const t=r.anchor,e=r.focus;t.key===o&&_r(t,l),e.key===o&&_r(e,l);}return mo()===o&&yo(s),l}insertAfter(t,e=true){ei(),ds(this,t);const n=this.getWritable(),r=t.getWritable(),i=r.getParent(),o=Lr();let s=false,l=false;if(null!==i){const e=t.getIndexWithinParent();if(_o(r),yr(o)){const t=i.__key,n=o.anchor,r=o.focus;s="element"===n.type&&n.key===t&&n.offset===e+1,l="element"===r.type&&r.key===t&&r.offset===e+1;}}const c=this.getNextSibling(),a=this.getParentOrThrow().getWritable(),u=r.__key,f=n.__next;if(null===c)a.__last=u;else {c.getWritable().__prev=u;}if(a.__size++,n.__next=u,r.__next=f,r.__prev=n.__key,r.__parent=n.__parent,e&&yr(o)){const t=this.getIndexWithinParent();Kr(o,a,t+1);const e=a.__key;s&&o.anchor.set(e,t+2,"element"),l&&o.focus.set(e,t+2,"element");}return t}insertBefore(t,e=true){ei(),ds(this,t);const n=this.getWritable(),r=t.getWritable(),i=r.__key;_o(r);const o=this.getPreviousSibling(),s=this.getParentOrThrow().getWritable(),l=n.__prev,c=this.getIndexWithinParent();if(null===o)s.__first=i;else {o.getWritable().__next=i;}s.__size++,n.__prev=i,r.__prev=l,r.__next=n.__key,r.__parent=n.__parent;const a=Lr();if(e&&yr(a)){Kr(a,this.getParentOrThrow(),c);}return t}isParentRequired(){return  false}createParentElementNode(){return Li()}selectStart(){return this.selectPrevious()}selectEnd(){return this.selectNext(0,0)}selectPrevious(t,e){ei();const n=this.getPreviousSibling(),r=this.getParentOrThrow();if(null===n)return r.select(0,0);if(Si(n))return n.select();if(!lr(n)){const t=n.getIndexWithinParent()+1;return r.select(t,t)}return n.select(t,e)}selectNext(t,e){ei();const n=this.getNextSibling(),r=this.getParentOrThrow();if(null===n)return r.select();if(Si(n))return n.select(0,0);if(!lr(n)){const t=n.getIndexWithinParent();return r.select(t,t)}return n.select(t,e)}markDirty(){this.getWritable();}reconcileObservedMutation(t,e){this.markDirty();}}const An="historic",Pn="history-push",Dn="history-merge",Fn="paste",Ln="collaboration",Kn="skip-scroll-into-view",zn="skip-dom-selection",Rn="skip-selection-focus";class Bn extends Mn{static getType(){return "linebreak"}static clone(t){return new Bn(t.__key)}constructor(t){super(t);}getTextContent(){return "\n"}createDOM(){return document.createElement("br")}updateDOM(){return  false}isInline(){return  true}static importDOM(){return {br:t=>function(t){const e=t.parentElement;if(null!==e&&Ts(e)){const n=e.firstChild;if(n===t||n.nextSibling===t&&$n(n)){const n=e.lastChild;if(n===t||n.previousSibling===t&&$n(n))return  true}}return  false}(t)||function(t){const e=t.parentElement;if(null!==e&&Ts(e)){const n=e.firstChild;if(n===t||n.nextSibling===t&&$n(n))return  false;const r=e.lastChild;if(r===t||r.previousSibling===t&&$n(r))return  true}return  false}(t)?null:{conversion:Wn,priority:0}}}static importJSON(t){return Jn().updateFromJSON(t)}}function Wn(t){return {node:Jn()}}function Jn(){return fs(new Bn)}function jn(t){return t instanceof Bn}function $n(t){return co(t)&&/^( |\t|\r?\n)+$/.test(t.textContent||"")}function Un(t,e){return 16&e?"code":e&T$3?"mark":32&e?"sub":64&e?"sup":null}function Vn(t,e){return 1&e?"strong":2&e?"em":"span"}function Yn(t,e,n,r,i){const o=r.classList;let s=$o(i,"base");void 0!==s&&o.add(...s),s=$o(i,"underlineStrikethrough");let l=false;const c=8&e&&4&e;void 0!==s&&(8&n&&4&n?(l=true,c||o.add(...s)):c&&o.remove(...s));for(const t in R$5){const r=R$5[t];if(s=$o(i,t),void 0!==s)if(n&r){if(l&&("underline"===t||"strikethrough"===t)){e&r&&o.remove(...s);continue}(0===(e&r)||c&&"underline"===t||"strikethrough"===t)&&o.add(...s);}else e&r&&o.remove(...s);}}function qn(t,e,n){const r=e.firstChild,i=n.isComposing(),s=t+(i?P$3:"");if(null==r)e.textContent=s;else {const t=r.nodeValue;if(t!==s)if(i||o){const[e,n,i]=function(t,e){const n=t.length,r=e.length;let i=0,o=0;for(;i<n&&i<r&&t[i]===e[i];)i++;for(;o+i<n&&o+i<r&&t[n-o-1]===e[r-o-1];)o++;return [i,n-i-o,e.slice(i,r-o)]}(t,s);0!==n&&r.deleteData(e,n),r.insertData(e,i);}else r.nodeValue=s;}}function Hn(t,e,n,r,i,o){qn(i,t,e);const s=o.theme.text;void 0!==s&&Yn(0,0,r,t,s);}function Gn(t,e){const n=document.createElement(e);return n.appendChild(t),n}class Xn extends Mn{__text;__format;__style;__mode;__detail;static getType(){return "text"}static clone(t){return new Xn(t.__text,t.__key)}afterCloneFrom(t){super.afterCloneFrom(t),this.__text=t.__text,this.__format=t.__format,this.__style=t.__style,this.__mode=t.__mode,this.__detail=t.__detail;}constructor(t="",e){super(e),this.__text=t,this.__format=0,this.__style="",this.__mode=0,this.__detail=0;}getFormat(){return this.getLatest().__format}getDetail(){return this.getLatest().__detail}getMode(){const t=this.getLatest();return $$4[t.__mode]}getStyle(){return this.getLatest().__style}isToken(){return 1===this.getLatest().__mode}isComposing(){return this.__key===mo()}isSegmented(){return 2===this.getLatest().__mode}isDirectionless(){return !!(1&this.getLatest().__detail)}isUnmergeable(){return !!(2&this.getLatest().__detail)}hasFormat(t){const e=R$5[t];return 0!==(this.getFormat()&e)}isSimpleText(){return "text"===this.__type&&0===this.__mode}getTextContent(){return this.getLatest().__text}getFormatFlags(t,e){return fo(this.getLatest().__format,t,e)}canHaveFormat(){return  true}isInline(){return  true}createDOM(t,e){const n=this.__format,r=Un(0,n),i=Vn(0,n),o=null===r?i:r,s=document.createElement(o);let l=s;this.hasFormat("code")&&s.setAttribute("spellcheck","false"),null!==r&&(l=document.createElement(i),s.appendChild(l));Hn(l,this,0,n,this.__text,t);const c=this.__style;return ""!==c&&(s.style.cssText=c),s}updateDOM(e,n,r){const i=this.__text,o=e.__format,s=this.__format,l=Un(0,o),c=Un(0,s),a=Vn(0,o),u=Vn(0,s);if((null===l?a:l)!==(null===c?u:c))return  true;if(l===c&&a!==u){const e=n.firstChild;null==e&&t(48);const o=document.createElement(u);return Hn(o,this,0,s,i,r),n.replaceChild(o,e),false}let f=n;null!==c&&null!==l&&(f=n.firstChild,null==f&&t(49)),qn(i,f,this);const d=r.theme.text;void 0!==d&&o!==s&&Yn(0,o,s,f,d);const h=e.__style,g=this.__style;return h!==g&&(n.style.cssText=g),false}static importDOM(){return {"#text":()=>({conversion:nr,priority:0}),b:()=>({conversion:Zn,priority:0}),code:()=>({conversion:or,priority:0}),em:()=>({conversion:or,priority:0}),i:()=>({conversion:or,priority:0}),mark:()=>({conversion:or,priority:0}),s:()=>({conversion:or,priority:0}),span:()=>({conversion:Qn,priority:0}),strong:()=>({conversion:or,priority:0}),sub:()=>({conversion:or,priority:0}),sup:()=>({conversion:or,priority:0}),u:()=>({conversion:or,priority:0})}}static importJSON(t){return sr().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setTextContent(t.text).setFormat(t.format).setDetail(t.detail).setMode(t.mode).setStyle(t.style)}exportDOM(e){let{element:n}=super.exportDOM(e);return Cs(n)||t(132),n.style.whiteSpace="pre-wrap",this.hasFormat("lowercase")?n.style.textTransform="lowercase":this.hasFormat("uppercase")?n.style.textTransform="uppercase":this.hasFormat("capitalize")&&(n.style.textTransform="capitalize"),this.hasFormat("bold")&&(n=Gn(n,"b")),this.hasFormat("italic")&&(n=Gn(n,"i")),this.hasFormat("strikethrough")&&(n=Gn(n,"s")),this.hasFormat("underline")&&(n=Gn(n,"u")),{element:n}}exportJSON(){return {detail:this.getDetail(),format:this.getFormat(),mode:this.getMode(),style:this.getStyle(),text:this.getTextContent(),...super.exportJSON()}}selectionTransform(t,e){}setFormat(t){const e=this.getWritable();return e.__format="string"==typeof t?R$5[t]:t,e}setDetail(t){const e=this.getWritable();return e.__detail="string"==typeof t?B$3[t]:t,e}setStyle(t){const e=this.getWritable();return e.__style=t,e}toggleFormat(t){const e=fo(this.getFormat(),t,null);return this.setFormat(e)}toggleDirectionless(){const t=this.getWritable();return t.__detail^=1,t}toggleUnmergeable(){const t=this.getWritable();return t.__detail^=2,t}setMode(t){const e=j$3[t];if(this.__mode===e)return this;const n=this.getWritable();return n.__mode=e,n}setTextContent(t){if(this.__text===t)return this;const e=this.getWritable();return e.__text=t,e}select(t,e){ei();let n=t,r=e;const i=Lr(),o=this.getTextContent(),s=this.__key;if("string"==typeof o){const t=o.length;void 0===n&&(n=t),void 0===r&&(r=t);}else n=0,r=0;if(!yr(i))return Mr(s,n,s,r,"text","text");{const t=mo();t!==i.anchor.key&&t!==i.focus.key||yo(s),i.setTextNodeRange(this,n,this,r);}return i}selectStart(){return this.select(0,0)}selectEnd(){const t=this.getTextContentSize();return this.select(t,t)}spliceText(t,e,n,r){const i=this.getWritable(),o=i.__text,s=n.length;let l=t;l<0&&(l=s+l,l<0&&(l=0));const c=Lr();if(r&&yr(c)){const e=t+s;c.setTextNodeRange(i,e,i,e);}const a=o.slice(0,l)+n+o.slice(l+e);return i.__text=a,i}canInsertTextBefore(){return  true}canInsertTextAfter(){return  true}splitText(...t){ei();const e=this.getLatest(),n=e.getTextContent();if(""===n)return [];const r=e.__key,i=mo(),o=n.length;t.sort((t,e)=>t-e),t.push(o);const s=[],l=t.length;for(let e=0,r=0;e<o&&r<=l;r++){const i=t[r];i>e&&(s.push(n.slice(e,i)),e=i);}const c=s.length;if(1===c)return [e];const a=s[0],u=e.getParent();let f;const d=e.getFormat(),h=e.getStyle(),g=e.__detail;let _=false,p=null,y=null;const m=Lr();if(yr(m)){const[t,e]=m.isBackward()?[m.focus,m.anchor]:[m.anchor,m.focus];"text"===t.type&&t.key===r&&(p=t),"text"===e.type&&e.key===r&&(y=e);}e.isSegmented()?(f=sr(a),f.__format=d,f.__style=h,f.__detail=g,f.__state=yt$3(e,f),_=true):f=e.setTextContent(a);const x=[f];for(let t=1;t<c;t++){const n=sr(s[t]);n.__format=d,n.__style=h,n.__detail=g,n.__state=yt$3(e,n);const o=n.__key;i===r&&yo(o),x.push(n);}const C=p?p.offset:null,S=y?y.offset:null;let v=0;for(const t of x){if(!p&&!y)break;const e=v+t.getTextContentSize();if(null!==p&&null!==C&&C<=e&&C>=v&&(p.set(t.getKey(),C-v,"text"),C<e&&(p=null)),null!==y&&null!==S&&S<=e&&S>=v){y.set(t.getKey(),S-v,"text");break}v=e;}if(null!==u){!function(t){const e=t.getPreviousSibling(),n=t.getNextSibling();null!==e&&po(e);null!==n&&po(n);}(this);const t=u.getWritable(),e=this.getIndexWithinParent();_?(t.splice(e,0,x),this.remove()):t.splice(e,1,x),yr(m)&&Kr(m,u,e,c-1);}return x}mergeWithSibling(e){const n=e===this.getPreviousSibling();n||e===this.getNextSibling()||t(50);const r=this.__key,i=e.__key,o=this.__text,s=o.length;mo()===i&&yo(r);const l=Lr();if(yr(l)){const t=l.anchor,o=l.focus;null!==t&&t.key===i&&Br(t,n,r,e,s),null!==o&&o.key===i&&Br(o,n,r,e,s);}const c=e.__text,a=n?c+o:o+c;this.setTextContent(a);const u=this.getWritable();return e.remove(),u}isTextEntity(){return  false}}function Qn(t){return {forChild:cr(t.style),node:null}}function Zn(t){const e=t,n="normal"===e.style.fontWeight;return {forChild:cr(e.style,n?void 0:"bold"),node:null}}const tr=new WeakMap;function er(t){if(!Cs(t))return  false;if("PRE"===t.nodeName)return  true;const e=t.style.whiteSpace;return "string"==typeof e&&e.startsWith("pre")}function nr(e){const n=e;null===e.parentElement&&t(129);let r=n.textContent||"";if(null!==function(t){let e,n=t.parentNode;const r=[t];for(;null!==n&&void 0===(e=tr.get(n))&&!er(n);)r.push(n),n=n.parentNode;const i=void 0===e?n:e;for(let t=0;t<r.length;t++)tr.set(r[t],i);return i}(n)){const t=r.split(/(\r?\n|\t)/),e=[],n=t.length;for(let r=0;r<n;r++){const n=t[r];"\n"===n||"\r\n"===n?e.push(Jn()):"\t"===n?e.push(ur()):""!==n&&e.push(sr(n));}return {node:e}}if(r=r.replace(/\r/g,"").replace(/[ \t\n]+/g," "),""===r)return {node:null};if(" "===r[0]){let t=n,e=true;for(;null!==t&&null!==(t=rr(t,false));){const n=t.textContent||"";if(n.length>0){/[ \t\n]$/.test(n)&&(r=r.slice(1)),e=false;break}}e&&(r=r.slice(1));}if(" "===r[r.length-1]){let t=n,e=true;for(;null!==t&&null!==(t=rr(t,true));){if((t.textContent||"").replace(/^( |\t|\r?\n)+/,"").length>0){e=false;break}}e&&(r=r.slice(0,r.length-1));}return ""===r?{node:null}:{node:sr(r)}}function rr(t,e){let n=t;for(;;){let t;for(;null===(t=e?n.nextSibling:n.previousSibling);){const t=n.parentElement;if(null===t)return null;n=t;}if(n=t,Cs(n)){const t=n.style.display;if(""===t&&!ks(n)||""!==t&&!t.startsWith("inline"))return null}let r=n;for(;null!==(r=e?n.firstChild:n.lastChild);)n=r;if(co(n))return n;if("BR"===n.nodeName)return null}}const ir={code:"code",em:"italic",i:"italic",mark:"highlight",s:"strikethrough",strong:"bold",sub:"subscript",sup:"superscript",u:"underline"};function or(t){const e=ir[t.nodeName.toLowerCase()];return void 0===e?{node:null}:{forChild:cr(t.style,e),node:null}}function sr(t=""){return fs(new Xn(t))}function lr(t){return t instanceof Xn}function cr(t,e){const n=t.fontWeight,r=t.textDecoration.split(" "),i="700"===n||"bold"===n,o=r.includes("line-through"),s="italic"===t.fontStyle,l=r.includes("underline"),c=t.verticalAlign;return t=>lr(t)?(i&&!t.hasFormat("bold")&&t.toggleFormat("bold"),o&&!t.hasFormat("strikethrough")&&t.toggleFormat("strikethrough"),s&&!t.hasFormat("italic")&&t.toggleFormat("italic"),l&&!t.hasFormat("underline")&&t.toggleFormat("underline"),"sub"!==c||t.hasFormat("subscript")||t.toggleFormat("subscript"),"super"!==c||t.hasFormat("superscript")||t.toggleFormat("superscript"),e&&!t.hasFormat(e)&&t.toggleFormat(e),t):t}class ar extends Xn{static getType(){return "tab"}static clone(t){return new ar(t.__key)}constructor(t){super("\t",t),this.__detail=2;}static importDOM(){return null}createDOM(t){const e=super.createDOM(t),n=$o(t.theme,"tab");if(void 0!==n){e.classList.add(...n);}return e}static importJSON(t){return ur().updateFromJSON(t)}setTextContent(t){return "\t"!==t&&""!==t&&e(126),super.setTextContent("\t")}spliceText(e,n,r,i){return ""===r&&0===n||"\t"===r&&1===n||t(286),this}setDetail(e){return 2!==e&&t(127),this}setMode(e){return "normal"!==e&&t(128),this}canInsertTextBefore(){return  false}canInsertTextAfter(){return  false}}function ur(){return fs(new ar)}function fr(t){return t instanceof ar}class dr{key;offset;type;_selection;constructor(t,e,n){this._selection=null,this.key=t,this.offset=e,this.type=n;}is(t){return this.key===t.key&&this.offset===t.offset&&this.type===t.type}isBefore(t){if(this.key===t.key)return this.offset<t.offset;return gl(El(xl(this,"next")),El(xl(t,"next")))<0}getNode(){const e=xo(this.key);return null===e&&t(20),e}set(t,e,n,r){const i=this._selection,o=this.key;r&&this.key===t&&this.offset===e&&this.type===n||(this.key=t,this.offset=e,this.type=n,ti()||(mo()===o&&yo(t),null!==i&&(i.setCachedNodes(null),i.dirty=true)));}}function hr(t,e,n){return new dr(t,e,n)}function gr(t,e){let n=e.__key,r=t.offset,i="element";if(lr(e)){i="text";const t=e.getTextContentSize();r>t&&(r=t);}else if(!Si(e)){const t=e.getNextSibling();if(lr(t))n=t.__key,r=0,i="text";else {const t=e.getParent();t&&(n=t.__key,r=e.getIndexWithinParent()+1);}}t.set(n,r,i);}function _r(t,e){if(Si(e)){const n=e.getLastDescendant();Si(n)||lr(n)?gr(t,n):gr(t,e);}else gr(t,e);}class pr{_nodes;_cachedNodes;dirty;constructor(t){this._cachedNodes=null,this._nodes=t,this.dirty=false;}getCachedNodes(){return this._cachedNodes}setCachedNodes(t){this._cachedNodes=t;}is(t){if(!xr(t))return  false;const e=this._nodes,n=t._nodes;return e.size===n.size&&Array.from(e).every(t=>n.has(t))}isCollapsed(){return  false}isBackward(){return  false}getStartEndPoints(){return null}add(t){this.dirty=true,this._nodes.add(t),this._cachedNodes=null;}delete(t){this.dirty=true,this._nodes.delete(t),this._cachedNodes=null;}clear(){this.dirty=true,this._nodes.clear(),this._cachedNodes=null;}has(t){return this._nodes.has(t)}clone(){return new pr(new Set(this._nodes))}extract(){return this.getNodes()}insertRawText(t){}insertText(){}insertNodes(t){const e=this.getNodes(),n=e.length,r=e[n-1];let i;if(lr(r))i=r.select();else {const t=r.getIndexWithinParent()+1;i=r.getParentOrThrow().select(t,t);}i.insertNodes(t);for(let t=0;t<n;t++)e[t].remove();}getNodes(){const t=this._cachedNodes;if(null!==t)return t;const e=this._nodes,n=[];for(const t of e){const e=xo(t);null!==e&&n.push(e);}return ti()||(this._cachedNodes=n),n}getTextContent(){const t=this.getNodes();let e="";for(let n=0;n<t.length;n++)e+=t[n].getTextContent();return e}deleteNodes(){const t=this.getNodes();if((Lr()||Ir())===this&&t[0]){const e=tl(t[0],"next");Sl(dl(e,e));}for(const e of t)e.remove();}}function yr(t){return t instanceof mr}class mr{format;style;anchor;focus;_cachedNodes;dirty;constructor(t,e,n,r){this.anchor=t,this.focus=e,t._selection=this,e._selection=this,this._cachedNodes=null,this.format=n,this.style=r,this.dirty=false;}getCachedNodes(){return this._cachedNodes}setCachedNodes(t){this._cachedNodes=t;}is(t){return !!yr(t)&&(this.anchor.is(t.anchor)&&this.focus.is(t.focus)&&this.format===t.format&&this.style===t.style)}isCollapsed(){return this.anchor.is(this.focus)}getNodes(){const t=this._cachedNodes;if(null!==t)return t;const e=function(t){const e=[],[n,r]=t.getTextSlices();n&&e.push(n.caret.origin);const i=new Set,o=new Set;for(const n of t)if(Gs(n)){const{origin:t}=n;0===e.length?i.add(t):(o.add(t),e.push(t));}else {const{origin:t}=n;Si(t)&&o.has(t)||e.push(t);}r&&e.push(r.caret.origin);if(Hs(t.focus)&&Si(t.focus.origin)&&null===t.focus.getNodeAtCaret())for(let n=il(t.focus.origin,"previous");Gs(n)&&i.has(n.origin)&&!n.origin.isEmpty()&&n.origin.is(e[e.length-1]);n=sl(n))i.delete(n.origin),e.pop();for(;e.length>1;){const t=e[e.length-1];if(!Si(t)||o.has(t)||t.isEmpty()||i.has(t))break;e.pop();}if(0===e.length&&t.isCollapsed()){const n=El(t.anchor),r=El(t.anchor.getFlipped()),i=t=>Ys(t)?t.origin:t.getNodeAtCaret(),o=i(n)||i(r)||(t.anchor.getNodeAtCaret()?n.origin:r.origin);e.push(o);}return e}(Al(kl(this),"next"));return ti()||(this._cachedNodes=e),e}setTextNodeRange(t,e,n,r){this.anchor.set(t.__key,e,"text"),this.focus.set(n.__key,r,"text");}getTextContent(){const t=this.getNodes();if(0===t.length)return "";const e=t[0],n=t[t.length-1],r=this.anchor,i=this.focus,o=r.isBefore(i),[s,l]=Sr(this);let c="",a=true;for(let u=0;u<t.length;u++){const f=t[u];if(Si(f)&&!f.isInline())a||(c+="\n"),a=!f.isEmpty();else if(a=false,lr(f)){let t=f.getTextContent();f===e?f===n?"element"===r.type&&"element"===i.type&&i.offset!==r.offset||(t=s<l?t.slice(s,l):t.slice(l,s)):t=o?t.slice(s):t.slice(l):f===n&&(t=o?t.slice(0,l):t.slice(0,s)),c+=t;}else !Ti(f)&&!jn(f)||f===n&&this.isCollapsed()||(c+=f.getTextContent());}return c}applyDOMRange(t){const e=ii(),n=e.getEditorState()._selection,r=Er(t.startContainer,t.startOffset,t.endContainer,t.endOffset,e,n);if(null===r)return;const[i,o]=r;this.anchor.set(i.key,i.offset,i.type,true),this.focus.set(o.key,o.offset,o.type,true),St$5(this);}clone(){const t=this.anchor,e=this.focus;return new mr(hr(t.key,t.offset,t.type),hr(e.key,e.offset,e.type),this.format,this.style)}toggleFormat(t){this.format=fo(this.format,t,null),this.dirty=true;}setFormat(t){this.format=t,this.dirty=true;}setStyle(t){this.style=t,this.dirty=true;}hasFormat(t){const e=R$5[t];return 0!==(this.format&e)}insertRawText(t){const e=t.split(/(\r?\n|\t)/),n=[],r=e.length;for(let t=0;t<r;t++){const r=e[t];"\n"===r||"\r\n"===r?n.push(Jn()):"\t"===r?n.push(ur()):n.push(sr(r));}this.insertNodes(n);}insertText(e){const n=this.anchor,r=this.focus,i=this.format,o=this.style;let s=n,l=r;!this.isCollapsed()&&r.isBefore(n)&&(s=r,l=n),"element"===s.type&&function(t,e,n,r){const i=t.getNode(),o=i.getChildAtIndex(t.offset),s=sr();if(s.setFormat(n),s.setStyle(r),Ii(o))o.splice(0,0,[s]);else {const t=bi(i)?Li().append(s):s;null===o?i.append(t):o.insertBefore(t);}t.is(e)&&e.set(s.__key,0,"text"),t.set(s.__key,0,"text");}(s,l,i,o),"element"===l.type&&Cl(l,El(xl(l,"next")));const c=s.offset;let a=l.offset;const u=this.getNodes(),f=u.length;let d=u[0];lr(d)||t(26);const h=d.getTextContent().length,g=d.getParentOrThrow();let _=u[f-1];if(1===f&&"element"===l.type&&(a=h,l.set(s.key,a,"text")),this.isCollapsed()&&c===h&&(lo(d)||!d.canInsertTextAfter()||!g.canInsertTextAfter()&&null===d.getNextSibling())){let t=d.getNextSibling();if(lr(t)&&t.canInsertTextBefore()&&!lo(t)||(t=sr(),t.setFormat(i),t.setStyle(o),g.canInsertTextAfter()?d.insertAfter(t):g.insertAfter(t)),t.select(0,0),d=t,""!==e)return void this.insertText(e)}else if(this.isCollapsed()&&0===c&&(lo(d)||!d.canInsertTextBefore()||!g.canInsertTextBefore()&&null===d.getPreviousSibling())){let t=d.getPreviousSibling();if(lr(t)&&!lo(t)||(t=sr(),t.setFormat(i),g.canInsertTextBefore()?d.insertBefore(t):g.insertBefore(t)),t.select(),d=t,""!==e)return void this.insertText(e)}else if(d.isSegmented()&&c!==h){const t=sr(d.getTextContent());t.setFormat(i),d.replace(t),d=t;}else if(!this.isCollapsed()&&""!==e){const t=_.getParent();if(!g.canInsertTextBefore()||!g.canInsertTextAfter()||Si(t)&&(!t.canInsertTextBefore()||!t.canInsertTextAfter()))return this.insertText(""),wr(this.anchor,this.focus,null),void this.insertText(e)}if(1===f){if(so(d)){const t=sr(e);return t.select(),void d.replace(t)}const t=d.getFormat(),n=d.getStyle();if(c!==a||t===i&&n===o){if(fr(d)){const t=sr(e);return t.setFormat(i),t.setStyle(o),t.select(),void d.replace(t)}}else {if(""!==d.getTextContent()){const t=sr(e);if(t.setFormat(i),t.setStyle(o),t.select(),0===c)d.insertBefore(t,false);else {const[e]=d.splitText(c);e.insertAfter(t,false);}return void(t.isComposing()&&"text"===this.anchor.type&&(this.anchor.offset-=e.length))}d.setFormat(i),d.setStyle(o);}const r=a-c;d=d.spliceText(c,r,e,true),""===d.getTextContent()?d.remove():"text"===this.anchor.type&&(d.isComposing()?this.anchor.offset-=e.length:(this.format=t,this.style=n));}else {const t=new Set([...d.getParentKeys(),..._.getParentKeys()]),n=Si(d)?d:d.getParentOrThrow();let r=Si(_)?_:_.getParentOrThrow(),i=_;if(!n.is(r)&&r.isInline())do{i=r,r=r.getParentOrThrow();}while(r.isInline());if("text"===l.type&&(0!==a||""===_.getTextContent())||"element"===l.type&&_.getIndexWithinParent()<a)if(lr(_)&&!so(_)&&a!==_.getTextContentSize()){if(_.isSegmented()){const t=sr(_.getTextContent());_.replace(t),_=t;}bi(l.getNode())||"text"!==l.type||(_=_.spliceText(0,a,"")),t.add(_.__key);}else {const t=_.getParentOrThrow();t.canBeEmpty()||1!==t.getChildrenSize()?_.remove():t.remove();}else t.add(_.__key);const o=r.getChildren(),s=new Set(u),g=n.is(r),p=n.isInline()&&null===d.getNextSibling()?n:d;for(let t=o.length-1;t>=0;t--){const e=o[t];if(e.is(d)||Si(e)&&e.isParentOf(d))break;e.isAttached()&&(!s.has(e)||e.is(i)?g||p.insertAfter(e,false):e.remove());}if(!g){let e=r,n=null;for(;null!==e;){const r=e.getChildren(),i=r.length;(0===i||r[i-1].is(n))&&(t.delete(e.__key),n=e),e=e.getParent();}}if(so(d))if(c===h)d.select();else {const t=sr(e);t.select(),d.replace(t);}else d=d.spliceText(c,h-c,e,true),""===d.getTextContent()?d.remove():d.isComposing()&&"text"===this.anchor.type&&(this.anchor.offset-=e.length);for(let e=1;e<f;e++){const n=u[e],r=n.__key;t.has(r)||n.remove();}}}removeText(){const t=Lr()===this;vl(this,wl(kl(this))),t&&Lr()!==this&&wo(this);}formatText(t,e=null){if(this.isCollapsed())return this.toggleFormat(t),void yo(null);const n=this.getNodes(),r=[];for(const t of n)lr(t)&&r.push(t);const i=e=>{n.forEach(n=>{if(Si(n)){const r=n.getFormatFlags(t,e);n.setTextFormat(r);}});},o=r.length;if(0===o)return this.toggleFormat(t),yo(null),void i(e);const s=this.anchor,l=this.focus,c=this.isBackward(),a=c?l:s,u=c?s:l;let f=0,d=r[0],h="element"===a.type?0:a.offset;if("text"===a.type&&h===d.getTextContentSize()&&(f=1,d=r[1],h=0),null==d)return;const g=d.getFormatFlags(t,e);i(g);const _=o-1;let p=r[_];const y="text"===u.type?u.offset:p.getTextContentSize();if(d.is(p)){if(h===y)return;if(lo(d)||0===h&&y===d.getTextContentSize())d.setFormat(g);else {const t=d.splitText(h,y),e=0===h?t[0]:t[1];e.setFormat(g),"text"===a.type&&a.set(e.__key,0,"text"),"text"===u.type&&u.set(e.__key,y-h,"text");}return void(this.format=g)}0===h||lo(d)||([,d]=d.splitText(h),h=0),d.setFormat(g);const m=p.getFormatFlags(t,g);y>0&&(y===p.getTextContentSize()||lo(p)||([p]=p.splitText(y)),p.setFormat(m));for(let e=f+1;e<_;e++){const n=r[e],i=n.getFormatFlags(t,m);n.setFormat(i);}"text"===a.type&&a.set(d.__key,h,"text"),"text"===u.type&&u.set(p.__key,y,"text"),this.format=g|m;}insertNodes(e){if(0===e.length)return;if(this.isCollapsed()||this.removeText(),"root"===this.anchor.key){this.insertParagraph();const n=Lr();return yr(n)||t(134),n.insertNodes(e)}const n=(this.isBackward()?this.focus:this.anchor).getNode(),r=zs(n,Ns),i=e[e.length-1];if(Si(r)&&"__language"in r){if("__language"in e[0])this.insertText(e[0].getTextContent());else {const t=Ur(this);r.splice(t,0,e),i.selectEnd();}return}if(!e.some(t=>(Si(t)||Ti(t))&&!t.isInline())){Si(r)||t(211,n.constructor.name,n.getType());const o=Ur(this);return r.splice(o,0,e),void i.selectEnd()}const o=function(t){const e=Li();let n=null;for(let r=0;r<t.length;r++){const i=t[r],o=jn(i);if(o||Ti(i)&&i.isInline()||Si(i)&&i.isInline()||lr(i)||i.isParentRequired()){if(null===n&&(n=i.createParentElementNode(),e.append(n),o))continue;null!==n&&n.append(i);}else e.append(i),n=null;}return e}(e),s=o.getLastDescendant(),l=o.getChildren(),c=!Si(r)||!r.isEmpty()?this.insertParagraph():null,a=l[l.length-1];let u=l[0];var f;Si(f=u)&&Ns(f)&&!f.isEmpty()&&Si(r)&&(!r.isEmpty()||r.canMergeWhenEmpty())&&(Si(r)||t(211,n.constructor.name,n.getType()),r.append(...u.getChildren()),u=l[1]),u&&(null===r&&t(212,n.constructor.name,n.getType()),function(e,n){const r=n.getParentOrThrow().getLastChild();let i=n;const o=[n];for(;i!==r;)i.getNextSibling()||t(140),i=i.getNextSibling(),o.push(i);let s=e;for(const t of o)s=s.insertAfter(t);}(r,u));const d=zs(s,Ns);c&&Si(d)&&(c.canMergeWhenEmpty()||Ns(a))&&(d.append(...c.getChildren()),c.remove()),Si(r)&&r.isEmpty()&&r.remove(),s.selectEnd();const h=Si(r)?r.getLastChild():null;jn(h)&&d!==r&&h.remove();}insertParagraph(){if("root"===this.anchor.key){const t=Li();return No().splice(this.anchor.offset,0,[t]),t.select(),t}const e=Ur(this),n=zs(this.anchor.getNode(),Ns);Si(n)||t(213);const r=n.getChildAtIndex(e),i=r?[r,...r.getNextSiblings()]:[],o=n.insertNewAfter(this,false);return o?(o.append(...i),o.selectStart(),o):null}insertLineBreak(t){const e=Jn();if(this.insertNodes([e]),t){const t=e.getParentOrThrow(),n=e.getIndexWithinParent();t.select(n,n);}}extract(){const t=[...this.getNodes()],e=t.length;let n=t[0],r=t[e-1];const[i,o]=Sr(this),s=this.isBackward(),[l,c]=s?[this.focus,this.anchor]:[this.anchor,this.focus],[a,u]=s?[o,i]:[i,o];if(0===e)return [];if(1===e){if(lr(n)&&!this.isCollapsed()){const t=n.splitText(a,u),e=0===a?t[0]:t[1];return e?(l.set(e.getKey(),0,"text"),c.set(e.getKey(),e.getTextContentSize(),"text"),[e]):[]}return [n]}if(lr(n)&&(a===n.getTextContentSize()?t.shift():0!==a&&([,n]=n.splitText(a),t[0]=n,l.set(n.getKey(),0,"text"))),lr(r)){const e=r.getTextContent().length;0===u?t.pop():u!==e&&([r]=r.splitText(u),t[t.length-1]=r,c.set(r.getKey(),r.getTextContentSize(),"text"));}return t}modify(t,e,n){if(Yr(this,t,e,n))return;const r="move"===t,i=ii(),o=ps(ss(i));if(!o)return;const s=i._blockCursorElement,l=i._rootElement,c=this.focus.getNode();if(null===l||null===s||!Si(c)||c.isInline()||c.canBeEmpty()||_s(s,i,l),this.dirty){let t=Qo(i,this.anchor.key),e=Qo(i,this.focus.key);"text"===this.anchor.type&&(t=uo(t)),"text"===this.focus.type&&(e=uo(e)),t&&e&&Wr(o,t,this.anchor.offset,e,this.focus.offset);}if(function(t,e,n,r){t.modify(e,n,r);}(o,t,e?"backward":"forward",n),o.rangeCount>0){const t=o.getRangeAt(0),n=this.anchor.getNode(),i=bi(n)?n:cs(n);if(this.applyDOMRange(t),this.dirty=true,!r){const n=this.getNodes(),r=[];let s=false;for(let t=0;t<n.length;t++){const e=n[t];is(e,i)?r.push(e):s=true;}if(s&&r.length>0)if(e){const t=r[0];Si(t)?t.selectStart():t.getParentOrThrow().selectStart();}else {const t=r[r.length-1];Si(t)?t.selectEnd():t.getParentOrThrow().selectEnd();}o.anchorNode===t.startContainer&&o.anchorOffset===t.startOffset||function(t){const e=t.focus,n=t.anchor,r=n.key,i=n.offset,o=n.type;n.set(e.key,e.offset,e.type,true),e.set(r,i,o,true);}(this);}}"lineboundary"===n&&Yr(this,t,e,n,"decorators");}forwardDeletion(t,e,n){if(!n&&("element"===t.type&&Si(e)&&t.offset===e.getChildrenSize()||"text"===t.type&&t.offset===e.getTextContentSize())){const t=e.getParent(),n=e.getNextSibling()||(null===t?null:t.getNextSibling());if(Si(n)&&n.isShadowRoot())return  true}return  false}deleteCharacter(t){const e=this.isCollapsed();if(this.isCollapsed()){const e=this.anchor;let n=e.getNode();if(this.forwardDeletion(e,n,t))return;const r=ul(xl(e,t?"previous":"next"));if(r.getTextSlices().every(t=>null===t||0===t.distance)){let t={type:"initial"};for(const e of r.iterNodeCarets("shadowRoot"))if(Gs(e))if(e.origin.isInline());else {if(e.origin.isShadowRoot()){if("merge-block"===t.type)break;if(Si(r.anchor.origin)&&r.anchor.origin.isEmpty()){const t=El(e);vl(this,dl(t,t)),r.anchor.origin.remove();}return}"merge-next-block"!==t.type&&"merge-block"!==t.type||(t={block:t.block,caret:e,type:"merge-block"});}else {if("merge-block"===t.type)break;if(Hs(e)){if(Si(e.origin)){if(e.origin.isInline()){if(!e.origin.isParentOf(r.anchor.origin))break}else t={block:e.origin,type:"merge-next-block"};continue}if(Ti(e.origin)){if(e.origin.isIsolated());else if("merge-next-block"===t.type&&(e.origin.isKeyboardSelectable()||!e.origin.isInline())&&Si(r.anchor.origin)&&r.anchor.origin.isEmpty()){r.anchor.origin.remove();const t=Pr();t.add(e.origin.getKey()),wo(t);}else e.origin.remove();return}break}}if("merge-block"===t.type){const{caret:e,block:n}=t;return vl(this,dl(!e.origin.isEmpty()&&n.isEmpty()?Tl(tl(n,e.direction)):r.anchor,e)),this.removeText()}}const i=this.focus;if(this.modify("extend",t,"character"),this.isCollapsed()){if(t&&0===e.offset&&vr(this,e.getNode()))return}else {const r="text"===i.type?i.getNode():null;if(n="text"===e.type?e.getNode():null,null!==r&&r.isSegmented()){const e=i.offset,o=r.getTextContentSize();if(r.is(n)||t&&e!==o||!t&&0!==e)return void Tr(r,t,e)}else if(null!==n&&n.isSegmented()){const i=e.offset,o=n.getTextContentSize();if(n.is(r)||t&&0!==i||!t&&i!==o)return void Tr(n,t,i)}!function(t,e){const n=t.anchor,r=t.focus,i=n.getNode(),o=r.getNode();if(i===o&&"text"===n.type&&"text"===r.type){const t=n.offset,o=r.offset,s=t<o,l=s?t:o,c=s?o:t,a=c-1;if(l!==a){(function(t){return !(Oo(t)||kr(t))})(i.getTextContent().slice(l,c))&&(e?r.set(r.key,a,r.type):n.set(n.key,a,n.type));}}}(this,t);}}if(this.removeText(),t&&!e&&this.isCollapsed()&&"element"===this.anchor.type&&0===this.anchor.offset){const t=this.anchor.getNode();t.isEmpty()&&bi(t.getParent())&&null===t.getPreviousSibling()&&vr(this,t);}}deleteLine(t){this.isCollapsed()&&this.modify("extend",t,"lineboundary"),this.isCollapsed()?this.deleteCharacter(t):this.removeText();}deleteWord(t){if(this.isCollapsed()){const e=this.anchor,n=e.getNode();if(this.forwardDeletion(e,n,t))return;this.modify("extend",t,"word");}this.removeText();}isBackward(){return this.focus.isBefore(this.anchor)}getStartEndPoints(){return [this.anchor,this.focus]}}function xr(t){return t instanceof pr}function Cr(t){const e=t.offset;if("text"===t.type)return e;const n=t.getNode();return e===n.getChildrenSize()?n.getTextContent().length:0}function Sr(t){const e=t.getStartEndPoints();if(null===e)return [0,0];const[n,r]=e;return "element"===n.type&&"element"===r.type&&n.key===r.key&&n.offset===r.offset?[0,0]:[Cr(n),Cr(r)]}function vr(t,e){for(let n=e;n;n=n.getParent()){if(Si(n)){if(n.collapseAtStart(t))return  true;if(as(n))break}if(n.getPreviousSibling())break}return  false}const kr=(()=>{try{const t=new RegExp("\\p{Emoji}","u"),e=t.test.bind(t);if(e("❤️")&&e("#️⃣")&&e("👍"))return e}catch(t){}return ()=>false})();function Tr(t,e,n){const r=t,i=r.getTextContent().split(/(?=\s)/g),o=i.length;let s=0,l=0;for(let t=0;t<o;t++){const r=t===o-1;if(l=s,s+=i[t].length,e&&s===n||s>n||r){i.splice(t,1),r&&(l=void 0);break}}const c=i.join("").trim();""===c?r.remove():(r.setTextContent(c),r.select(l,l));}function Nr(e,n,r,i){let o,s=n;if(Cs(e)){let l=false;const c=e.childNodes,a=c.length,u=i._blockCursorElement;s===a&&(l=true,s=a-1);let f=c[s],d=false;if(f===u)f=c[s+1],d=true;else if(null!==u){const t=u.parentNode;if(e===t){n>Array.prototype.indexOf.call(t.children,u)&&s--;}}if(o=Eo(f),lr(o))s=nl(o,l?"next":"previous");else {let c=Eo(e);if(null===c)return null;if(Si(c)){const a=i.getElementByKey(c.getKey());null===a&&t(214);const u=c.getDOMSlot(a);[c,s]=u.resolveChildIndex(c,a,e,n),Si(c)||t(215),l&&s>=c.getChildrenSize()&&(s=Math.max(0,c.getChildrenSize()-1));let f=c.getChildAtIndex(s);if(Si(f)&&function(t,e,n){const r=t.getParent();return null===n||null===r||!r.canBeEmpty()||r!==n.getNode()}(f,0,r)){const t=l?f.getLastDescendant():f.getFirstDescendant();null===t?c=f:(f=t,c=Si(f)?f:f.getParentOrThrow()),s=0;}lr(f)?(o=f,c=null,s=nl(f,l?"next":"previous")):f!==c&&l&&!d&&(Si(c)||t(216),s=Math.min(c.getChildrenSize(),s+1));}else {const t=c.getIndexWithinParent();s=0===n&&Ti(c)&&Eo(e)===c?t:t+1,c=c.getParentOrThrow();}if(Si(c))return hr(c.__key,s,"element")}}else o=Eo(e);return lr(o)?hr(o.__key,nl(o,s,"clamp"),"text"):null}function br(t,e,n){const r=t.offset,i=t.getNode();if(0===r){const r=i.getPreviousSibling(),o=i.getParent();if(e){if((n||!e)&&null===r&&Si(o)&&o.isInline()){const e=o.getPreviousSibling();lr(e)&&t.set(e.__key,e.getTextContent().length,"text");}}else Si(r)&&!n&&r.isInline()?t.set(r.__key,r.getChildrenSize(),"element"):lr(r)&&t.set(r.__key,r.getTextContent().length,"text");}else if(r===i.getTextContent().length){const r=i.getNextSibling(),o=i.getParent();if(e&&Si(r)&&r.isInline())t.set(r.__key,0,"element");else if((n||e)&&null===r&&Si(o)&&o.isInline()&&!o.canInsertTextAfter()){const e=o.getNextSibling();lr(e)&&t.set(e.__key,0,"text");}}}function wr(t,e,n){if("text"===t.type&&"text"===e.type){const r=t.isBefore(e),i=t.is(e);br(t,r,i),br(e,!r,i),i&&e.set(t.key,t.offset,t.type);const o=ii();if(o.isComposing()&&o._compositionKey!==t.key&&yr(n)){const r=n.anchor,i=n.focus;t.set(r.key,r.offset,r.type,true),e.set(i.key,i.offset,i.type,true);}}}function Er(t,e,n,r,i,o){if(null===t||null===n||!eo(i,t,n))return null;const s=Nr(t,e,yr(o)?o.anchor:null,i);if(null===s)return null;const l=Nr(n,r,yr(o)?o.focus:null,i);if(null===l)return null;if("element"===s.type&&"element"===l.type){const e=Eo(t),r=Eo(n);if(Ti(e)&&Ti(r))return null}return wr(s,l,o),[s,l]}function Or(t){return Si(t)&&!t.isInline()}function Mr(t,e,n,r,i,o){const s=ri(),l=new mr(hr(t,e,i),hr(n,r,o),0,"");return l.dirty=true,s._selection=l,l}function Ar(){const t=hr("root",0,"element"),e=hr("root",0,"element");return new mr(t,e,0,"")}function Pr(){return new pr(new Set)}function Fr(t,e,n,r){const i=n._window;if(null===i)return null;const o=r||i.event,s=o?o.type:void 0,l="selectionchange"===s,c=!q$4&&(l||"beforeinput"===s||"compositionstart"===s||"compositionend"===s||"click"===s&&o&&3===o.detail||"drop"===s||void 0===s);let a,u,f,d;if(yr(t)&&!c)return t.clone();if(null===e)return null;if(a=e.anchorNode,u=e.focusNode,f=e.anchorOffset,d=e.focusOffset,(l||void 0===s)&&yr(t)&&!eo(n,a,u))return t.clone();const h=Er(a,f,u,d,n,t);if(null===h)return null;const[g,_]=h;return new mr(g,_,yr(t)?t.format:0,yr(t)?t.style:"")}function Lr(){return ri()._selection}function Ir(){return ii()._editorState._selection}function Kr(t,e,n,r=1){const i=t.anchor,o=t.focus,s=i.getNode(),l=o.getNode();if(!e.is(s)&&!e.is(l))return;const c=e.__key;if(t.isCollapsed()){const e=i.offset;if(n<=e&&r>0||n<e&&r<0){const n=Math.max(0,e+r);i.set(c,n,"element"),o.set(c,n,"element"),zr(t);}}else {const s=t.isBackward(),l=s?o:i,a=l.getNode(),u=s?i:o,f=u.getNode();if(e.is(a)){const t=l.offset;(n<=t&&r>0||n<t&&r<0)&&l.set(c,Math.max(0,t+r),"element");}if(e.is(f)){const t=u.offset;(n<=t&&r>0||n<t&&r<0)&&u.set(c,Math.max(0,t+r),"element");}}zr(t);}function zr(t){const e=t.anchor,n=e.offset,r=t.focus,i=r.offset,o=e.getNode(),s=r.getNode();if(t.isCollapsed()){if(!Si(o))return;const t=o.getChildrenSize(),i=n>=t,s=i?o.getChildAtIndex(t-1):o.getChildAtIndex(n);if(lr(s)){let t=0;i&&(t=s.getTextContentSize()),e.set(s.__key,t,"text"),r.set(s.__key,t,"text");}return}if(Si(o)){const t=o.getChildrenSize(),r=n>=t,i=r?o.getChildAtIndex(t-1):o.getChildAtIndex(n);if(lr(i)){let t=0;r&&(t=i.getTextContentSize()),e.set(i.__key,t,"text");}}if(Si(s)){const t=s.getChildrenSize(),e=i>=t,n=e?s.getChildAtIndex(t-1):s.getChildAtIndex(i);if(lr(n)){let t=0;e&&(t=n.getTextContentSize()),r.set(n.__key,t,"text");}}}function Rr(t,e,n,r,i){let o=null,s=0,l=null;null!==r?(o=r.__key,lr(r)?(s=r.getTextContentSize(),l="text"):Si(r)&&(s=r.getChildrenSize(),l="element")):null!==i&&(o=i.__key,lr(i)?l="text":Si(i)&&(l="element")),null!==o&&null!==l?t.set(o,s,l):(s=e.getIndexWithinParent(),-1===s&&(s=n.getChildrenSize()),t.set(n.__key,s,"element"));}function Br(t,e,n,r,i){"text"===t.type?t.set(n,t.offset+(e?0:i),"text"):t.offset>r.getIndexWithinParent()&&t.set(t.key,t.offset-1,"element");}function Wr(t,e,n,r,i){try{t.setBaseAndExtent(e,n,r,i);}catch(t){}}function Jr(t,e,n,r,i,o,s){const l=r.anchorNode,c=r.focusNode,a=r.anchorOffset,u=r.focusOffset,f=document.activeElement;if(i.has(Ln)&&f!==o||null!==f&&to(f))return;if(!yr(e))return void(null!==t&&eo(n,l,c)&&r.removeAllRanges());const d=e.anchor,h=e.focus,g=d.key,_=h.key,p=Qo(n,g),y=Qo(n,_),m=d.offset,x=h.offset,C=e.format,S=e.style,v=e.isCollapsed();let k=p,T=y,N=false;if("text"===d.type){k=uo(p);const t=d.getNode();N=t.getFormat()!==C||t.getStyle()!==S;}else yr(t)&&"text"===t.anchor.type&&(N=true);var b,w,E,O,M;if(("text"===h.type&&(T=uo(y)),null!==k&&null!==T)&&(v&&(null===t||N||yr(t)&&(t.format!==C||t.style!==S))&&(b=C,w=S,E=m,O=g,M=performance.now(),fn=[b,w,E,O,M]),a!==m||u!==x||l!==k||c!==T||"Range"===r.type&&v||(null!==f&&o.contains(f)||i.has(Rn)||o.focus({preventScroll:true}),"element"===d.type))){if(Wr(r,k,m,T,x),!i.has(Kn)&&e.isCollapsed()&&null!==o&&o===document.activeElement){const t=yr(e)&&"element"===e.anchor.type?k.childNodes[m]||null:r.rangeCount>0?r.getRangeAt(0):null;if(null!==t){let e;if(t instanceof Text){const n=document.createRange();n.selectNode(t),e=n.getBoundingClientRect();}else e=t.getBoundingClientRect();!function(t,e,n){const r=ts(n),i=os(r);if(null===r||null===i)return;let{top:o,bottom:s}=e,l=0,c=0,a=n;for(;null!==a;){const e=a===r.body;if(e)l=0,c=ss(t).innerHeight;else {const t=a.getBoundingClientRect();l=t.top,c=t.bottom;}let n=0;if(o<l?n=-(l-o):s>c&&(n=s-c),0!==n)if(e)i.scrollBy(0,n);else {const t=a.scrollTop;a.scrollTop+=n;const e=a.scrollTop-t;o-=e,s-=e;}if(e)break;a=Zo(a);}}(n,e,o);}}rn=true;}}function jr(t){let e=Lr()||Ir();null===e&&(e=No().selectEnd()),e.insertNodes(t);}function Ur(e){let n=e;e.isCollapsed()||n.removeText();const r=Lr();yr(r)&&(n=r),yr(n)||t(161);const i=n.anchor;let o=i.getNode(),s=i.offset;for(;!Ns(o);){const t=o;if([o,s]=Vr(o,s),t.is(o))break}return s}function Vr(t,e){const n=t.getParent();if(!n){const t=Li();return No().append(t),t.select(),[No(),0]}if(lr(t)){const r=t.splitText(e);if(0===r.length)return [n,t.getIndexWithinParent()];const i=0===e?0:1;return [n,r[0].getIndexWithinParent()+i]}if(!Si(t)||0===e)return [n,t.getIndexWithinParent()];const r=t.getChildAtIndex(e);if(r){const n=new mr(hr(t.__key,e,"element"),hr(t.__key,e,"element"),0,""),i=t.insertNewAfter(n);i&&i.append(r,...r.getNextSiblings());}return [n,t.getIndexWithinParent()+1]}function Yr(t,e,n,r,i="decorators-and-blocks"){if("move"===e&&"character"===r&&!t.isCollapsed()){const[e,r]=n===t.isBackward()?[t.focus,t.anchor]:[t.anchor,t.focus];return r.set(e.key,e.offset,e.type),true}const o=xl(t.focus,n?"previous":"next"),s="lineboundary"===r,l="move"===e;let c=o,a="decorators-and-blocks"===i;if(!Ol(c)){for(const t of c){a=false;const{origin:e}=t;if(!Ti(e)||e.isIsolated()||(c=t,!s||!e.isInline()))break}if(a)for(const t of ul(o).iterNodeCarets("extend"===e?"shadowRoot":"root")){if(Gs(t))t.origin.isInline()||(c=t);else {if(Si(t.origin))continue;Ti(t.origin)&&!t.origin.isInline()&&(c=t);}break}}if(c===o)return  false;if(l&&!s&&Ti(c.origin)&&c.origin.isKeyboardSelectable()){const t=Pr();return t.add(c.origin.getKey()),wo(t),true}return c=El(c),l&&Cl(t.anchor,c),Cl(t.focus,c),a||!s}let qr=null,Hr=null,Gr=false,Xr=false,Qr=0;const Zr={characterData:true,childList:true,subtree:true};function ti(){return Gr||null!==qr&&qr._readOnly}function ei(){Gr&&t(13);}function ni(){Qr>99&&t(14);}function ri(){return null===qr&&t(195,oi()),qr}function ii(){return null===Hr&&t(196,oi()),Hr}function oi(){let t=0;const e=new Set,n=Ui.version;if("undefined"!=typeof window)for(const r of document.querySelectorAll("[contenteditable]")){const i=io(r);if(no(i))t++;else if(i){let t=String(i.constructor.version||"<0.17.1");t===n&&(t+=" (separately built, likely a bundler configuration issue)"),e.add(t);}}let r=` Detected on the page: ${t} compatible editor(s) with version ${n}`;return e.size&&(r+=` and incompatible editors with versions ${Array.from(e).join(", ")}`),r}function si(){return Hr}function li(t,e,n){const r=e.__type,i=Gi(t,r);let o=n.get(r);void 0===o&&(o=Array.from(i.transforms),n.set(r,o));const s=o.length;for(let t=0;t<s&&(o[t](e),e.isAttached());t++);}function ci(t,e){return void 0!==t&&t.__key!==e&&t.isAttached()}function ai(t,e){if(!e)return;const n=t._updateTags;let r=e;Array.isArray(e)||(r=[e]);for(const t of r)n.add(t);}function ui(t){return fi(t,ii()._nodes)}function fi(e,n){const r=e.type,i=n.get(r);void 0===i&&t(17,r);const o=i.klass;e.type!==o.getType()&&t(18,o.name);const s=o.importJSON(e),l=e.children;if(Si(s)&&Array.isArray(l))for(let t=0;t<l.length;t++){const e=fi(l[t],n);s.append(e);}return s}function di(t,e,n){const r=qr,i=Gr,o=Hr;qr=e,Gr=true,Hr=t;try{return n()}finally{qr=r,Gr=i,Hr=o;}}function hi(t,e){const n=t._pendingEditorState,r=t._rootElement,i=t._headless||null===r;if(null===n)return;const o=t._editorState,s=o._selection,l=n._selection,c=0!==t._dirtyType,a=qr,u=Gr,f=Hr,d=t._updating,g=t._observer;let _=null;if(t._pendingEditorState=null,t._editorState=n,!i&&c&&null!==g){Hr=t,qr=n,Gr=false,t._updating=true;try{const e=t._dirtyType,r=t._dirtyElements,i=t._dirtyLeaves;g.disconnect(),_=ee$1(o,n,t,e,r,i);}catch(e){if(e instanceof Error&&t._onError(e),Xr)throw e;return Ji(t,null,r,n),rt$3(t),t._dirtyType=2,Xr=true,hi(t,o),void(Xr=false)}finally{g.observe(r,Zr),t._updating=d,qr=a,Gr=u,Hr=f;}}n._readOnly||(n._readOnly=true);const p=t._dirtyLeaves,y=t._dirtyElements,m=t._normalizedNodes,x=t._updateTags,C=t._deferred;c&&(t._dirtyType=0,t._cloneNotNeeded.clear(),t._dirtyLeaves=new Set,t._dirtyElements=new Map,t._normalizedNodes=new Set,t._updateTags=new Set),function(t,e){const n=t._decorators;let r=t._pendingDecorators||n;const i=e._nodeMap;let o;for(o in r)i.has(o)||(r===n&&(r=ko(t)),delete r[o]);}(t,n);const S=i?null:ps(ss(t));if(t._editable&&null!==S&&(c||null===l||l.dirty||!l.is(s))&&null!==r&&!x.has(zn)){Hr=t,qr=n;try{if(null!==g&&g.disconnect(),c||null===l||l.dirty){const e=t._blockCursorElement;null!==e&&_s(e,t,r),Jr(s,l,t,S,x,r);}!function(t,e,n){let r=t._blockCursorElement;if(yr(n)&&n.isCollapsed()&&"element"===n.anchor.type&&e.contains(document.activeElement)){const i=n.anchor,o=i.getNode(),s=i.offset;let l=!1,c=null;if(s===o.getChildrenSize()){gs(o.getChildAtIndex(s-1))&&(l=!0);}else {const e=o.getChildAtIndex(s);if(null!==e&&gs(e)){const n=e.getPreviousSibling();(null===n||gs(n))&&(l=!0,c=t.getElementByKey(e.__key));}}if(l){const n=t.getElementByKey(o.__key);return null===r&&(t._blockCursorElement=r=function(t){const e=t.theme,n=document.createElement("div");n.contentEditable="false",n.setAttribute("data-lexical-cursor","true");let r=e.blockCursor;if(void 0!==r){if("string"==typeof r){const t=h$1(r);r=e.blockCursor=t;}void 0!==r&&n.classList.add(...r);}return n}(t._config)),e.style.caretColor="transparent",void(null===c?n.appendChild(r):n.insertBefore(r,c))}}null!==r&&_s(r,t,e);}(t,r,l);}finally{null!==g&&g.observe(r,Zr),Hr=f,qr=a;}}null!==_&&function(t,e,n,r,i){const o=Array.from(t._listeners.mutation),s=o.length;for(let t=0;t<s;t++){const[s,l]=o[t];for(const t of l){const o=e.get(t);void 0!==o&&s(o,{dirtyLeaves:r,prevEditorState:i,updateTags:n});}}}(t,_,x,p,o),yr(l)||null===l||null!==s&&s.is(l)||t.dispatchCommand(ie$1,void 0);const v=t._pendingDecorators;null!==v&&(t._decorators=v,t._pendingDecorators=null,gi("decorator",t,true,v)),function(t,e,n){const r=To(e),i=To(n);r!==i&&gi("textcontent",t,true,i);}(t,e||o,n),gi("update",t,true,{dirtyElements:y,dirtyLeaves:p,editorState:n,mutatedNodes:_,normalizedNodes:m,prevEditorState:e||o,tags:x}),function(t,e){if(t._deferred=[],0!==e.length){const n=t._updating;t._updating=true;try{for(let t=0;t<e.length;t++)e[t]();}finally{t._updating=n;}}}(t,C),function(t){const e=t._updates;if(0!==e.length){const n=e.shift();if(n){const[e,r]=n;pi(t,e,r);}}}(t);}function gi(t,e,n,...r){const i=e._updating;e._updating=n;try{const n=Array.from(e._listeners[t]);for(let t=0;t<n.length;t++)n[t].apply(null,r);}finally{e._updating=i;}}function _i(e,n){const r=e._updates;let i=n||false;for(;0!==r.length;){const n=r.shift();if(n){const[r,o]=n,s=e._pendingEditorState;let l;void 0!==o&&(l=o.onUpdate,o.skipTransforms&&(i=true),o.discrete&&(null===s&&t(191),s._flushSync=true),l&&e._deferred.push(l),ai(e,o.tag)),null==s?pi(e,r,o):r();}}return i}function pi(e,n,r){const i=e._updateTags;let o,s=false,l=false;void 0!==r&&(o=r.onUpdate,ai(e,r.tag),s=r.skipTransforms||false,l=r.discrete||false),o&&e._deferred.push(o);const c=e._editorState;let a=e._pendingEditorState,u=false;(null===a||a._readOnly)&&(a=e._pendingEditorState=wi(a||c),u=true),a._flushSync=l;const f=qr,d=Gr,h=Hr,g=e._updating;qr=a,Gr=false,e._updating=true,Hr=e;const _=e._headless||null===e.getRootElement();Yi(null);try{u&&(_?null!==c._selection&&(a._selection=c._selection.clone()):a._selection=function(t,e){const n=t.getEditorState()._selection,r=ps(ss(t));return yr(n)||null==n?Fr(n,r,t,e):n.clone()}(e,r&&r.event||null));const i=e._compositionKey;n(),s=_i(e,s),function(t,e){const n=e.getEditorState()._selection,r=t._selection;if(yr(r)){const t=r.anchor,e=r.focus;let i;if("text"===t.type&&(i=t.getNode(),i.selectionTransform(n,r)),"text"===e.type){const t=e.getNode();i!==t&&t.selectionTransform(n,r);}}}(a,e),0!==e._dirtyType&&(s?function(t,e){const n=e._dirtyLeaves,r=t._nodeMap;for(const t of n){const e=r.get(t);lr(e)&&e.isAttached()&&e.isSimpleText()&&!e.isUnmergeable()&&Ct$4(e);}}(a,e):function(t,e){const n=e._dirtyLeaves,r=e._dirtyElements,i=t._nodeMap,o=mo(),s=new Map;let l=n,c=l.size,a=r,u=a.size;for(;c>0||u>0;){if(c>0){e._dirtyLeaves=new Set;for(const t of l){const r=i.get(t);lr(r)&&r.isAttached()&&r.isSimpleText()&&!r.isUnmergeable()&&Ct$4(r),void 0!==r&&ci(r,o)&&li(e,r,s),n.add(t);}if(l=e._dirtyLeaves,c=l.size,c>0){Qr++;continue}}e._dirtyLeaves=new Set,e._dirtyElements=new Map,a.delete("root")&&a.set("root",!0);for(const t of a){const n=t[0],l=t[1];if(r.set(n,l),!l)continue;const c=i.get(n);void 0!==c&&ci(c,o)&&li(e,c,s);}l=e._dirtyLeaves,c=l.size,a=e._dirtyElements,u=a.size,Qr++;}e._dirtyLeaves=n,e._dirtyElements=r;}(a,e),_i(e),function(t,e,n,r){const i=t._nodeMap,o=e._nodeMap,s=[];for(const[t]of r){const e=o.get(t);void 0!==e&&(e.isAttached()||(Si(e)&&Y$4(e,t,i,o,s,r),i.has(t)||r.delete(t),s.push(t)));}for(const t of s)o.delete(t);for(const t of n){const e=o.get(t);void 0===e||e.isAttached()||(i.has(t)||n.delete(t),o.delete(t));}}(c,a,e._dirtyLeaves,e._dirtyElements));i!==e._compositionKey&&(a._flushSync=!0);const o=a._selection;if(yr(o)){const e=a._nodeMap,n=o.anchor.key,r=o.focus.key;void 0!==e.get(n)&&void 0!==e.get(r)||t(19);}else xr(o)&&0===o._nodes.size&&(a._selection=null);}catch(t){return t instanceof Error&&e._onError(t),e._pendingEditorState=c,e._dirtyType=2,e._cloneNotNeeded.clear(),e._dirtyLeaves=new Set,e._dirtyElements.clear(),void hi(e)}finally{qr=f,Gr=d,Hr=h,e._updating=g,Qr=0;}const p=0!==e._dirtyType||e._deferred.length>0||function(t,e){const n=e.getEditorState()._selection,r=t._selection;if(null!==r){if(r.dirty||!r.is(n))return  true}else if(null!==n)return  true;return  false}(a,e);p?a._flushSync?(a._flushSync=false,hi(e)):u&&Qi(()=>{hi(e);}):(a._flushSync=false,u&&(i.clear(),e._deferred=[],e._pendingEditorState=null));}function yi(t,e,n){Hr===t&&void 0===n?e():pi(t,e,n);}class mi{element;before;after;constructor(t,e,n){this.element=t,this.before=e||null,this.after=n||null;}withBefore(t){return new mi(this.element,t,this.after)}withAfter(t){return new mi(this.element,this.before,t)}withElement(t){return this.element===t?this:new mi(t,this.before,this.after)}insertChild(e){const n=this.before||this.getManagedLineBreak();return null!==n&&n.parentElement!==this.element&&t(222),this.element.insertBefore(e,n),this}removeChild(e){return e.parentElement!==this.element&&t(223),this.element.removeChild(e),this}replaceChild(e,n){return n.parentElement!==this.element&&t(224),this.element.replaceChild(e,n),this}getFirstChild(){const t=this.after?this.after.nextSibling:this.element.firstChild;return t===this.before||t===this.getManagedLineBreak()?null:t}getManagedLineBreak(){return this.element.__lexicalLineBreak||null}setManagedLineBreak(t){if(null===t)this.removeManagedLineBreak();else {const e="decorator"===t&&(d||c||l);this.insertManagedLineBreak(e);}}removeManagedLineBreak(){const t=this.getManagedLineBreak();if(t){const e=this.element,n="IMG"===t.nodeName?t.nextSibling:null;n&&e.removeChild(n),e.removeChild(t),e.__lexicalLineBreak=void 0;}}insertManagedLineBreak(t){const e=this.getManagedLineBreak();if(e){if(t===("IMG"===e.nodeName))return;this.removeManagedLineBreak();}const n=this.element,r=this.before,i=document.createElement("br");if(n.insertBefore(i,r),t){const t=document.createElement("img");t.setAttribute("data-lexical-linebreak","true"),t.style.cssText="display: inline !important; border: 0px !important; margin: 0px !important;",t.alt="",n.insertBefore(t,i),n.__lexicalLineBreak=t;}else n.__lexicalLineBreak=i;}getFirstChildOffset(){let t=0;for(let e=this.after;null!==e;e=e.previousSibling)t++;return t}resolveChildIndex(t,e,n,r){if(n===this.element){const e=this.getFirstChildOffset();return [t,Math.min(e+t.getChildrenSize(),Math.max(e,r))]}const i=xi(e,n);i.push(r);const o=xi(e,this.element);let s=t.getIndexWithinParent();for(let t=0;t<o.length;t++){const e=i[t],n=o[t];if(void 0===e||e<n)break;if(e>n){s+=1;break}}return [t.getParentOrThrow(),s]}}function xi(e,n){const r=[];let i=n;for(;i!==e&&null!==i;i=i.parentNode){let t=0;for(let e=i.previousSibling;null!==e;e=e.previousSibling)t++;r.push(t);}return i!==e&&t(225),r.reverse()}class Ci extends Mn{__first;__last;__size;__format;__style;__indent;__dir;__textFormat;__textStyle;constructor(t){super(t),this.__first=null,this.__last=null,this.__size=0,this.__format=0,this.__style="",this.__indent=0,this.__dir=null,this.__textFormat=0,this.__textStyle="";}afterCloneFrom(t){super.afterCloneFrom(t),this.__key===t.__key&&(this.__first=t.__first,this.__last=t.__last,this.__size=t.__size),this.__indent=t.__indent,this.__format=t.__format,this.__style=t.__style,this.__dir=t.__dir,this.__textFormat=t.__textFormat,this.__textStyle=t.__textStyle;}getFormat(){return this.getLatest().__format}getFormatType(){const t=this.getFormat();return J$5[t]||""}getStyle(){return this.getLatest().__style}getIndent(){return this.getLatest().__indent}getChildren(){const t=[];let e=this.getFirstChild();for(;null!==e;)t.push(e),e=e.getNextSibling();return t}getChildrenKeys(){const t=[];let e=this.getFirstChild();for(;null!==e;)t.push(e.__key),e=e.getNextSibling();return t}getChildrenSize(){return this.getLatest().__size}isEmpty(){return 0===this.getChildrenSize()}isDirty(){const t=ii()._dirtyElements;return null!==t&&t.has(this.__key)}isLastChild(){const t=this.getLatest(),e=this.getParentOrThrow().getLastChild();return null!==e&&e.is(t)}getAllTextNodes(){const t=[];let e=this.getFirstChild();for(;null!==e;){if(lr(e)&&t.push(e),Si(e)){const n=e.getAllTextNodes();t.push(...n);}e=e.getNextSibling();}return t}getFirstDescendant(){let t=this.getFirstChild();for(;Si(t);){const e=t.getFirstChild();if(null===e)break;t=e;}return t}getLastDescendant(){let t=this.getLastChild();for(;Si(t);){const e=t.getLastChild();if(null===e)break;t=e;}return t}getDescendantByIndex(t){const e=this.getChildren(),n=e.length;if(t>=n){const t=e[n-1];return Si(t)&&t.getLastDescendant()||t||null}const r=e[t];return Si(r)&&r.getFirstDescendant()||r||null}getFirstChild(){const t=this.getLatest().__first;return null===t?null:xo(t)}getFirstChildOrThrow(){const e=this.getFirstChild();return null===e&&t(45,this.__key),e}getLastChild(){const t=this.getLatest().__last;return null===t?null:xo(t)}getLastChildOrThrow(){const e=this.getLastChild();return null===e&&t(96,this.__key),e}getChildAtIndex(t){const e=this.getChildrenSize();let n,r;if(t<e/2){for(n=this.getFirstChild(),r=0;null!==n&&r<=t;){if(r===t)return n;n=n.getNextSibling(),r++;}return null}for(n=this.getLastChild(),r=e-1;null!==n&&r>=t;){if(r===t)return n;n=n.getPreviousSibling(),r--;}return null}getTextContent(){let t="";const e=this.getChildren(),n=e.length;for(let r=0;r<n;r++){const i=e[r];t+=i.getTextContent(),Si(i)&&r!==n-1&&!i.isInline()&&(t+=D$4);}return t}getTextContentSize(){let t=0;const e=this.getChildren(),n=e.length;for(let r=0;r<n;r++){const i=e[r];t+=i.getTextContentSize(),Si(i)&&r!==n-1&&!i.isInline()&&(t+=2);}return t}getDirection(){return this.getLatest().__dir}getTextFormat(){return this.getLatest().__textFormat}hasFormat(t){if(""!==t){const e=W$6[t];return 0!==(this.getFormat()&e)}return  false}hasTextFormat(t){const e=R$5[t];return 0!==(this.getTextFormat()&e)}getFormatFlags(t,e){return fo(this.getLatest().__textFormat,t,e)}getTextStyle(){return this.getLatest().__textStyle}select(t,e){ei();const n=Lr();let r=t,i=e;const o=this.getChildrenSize();if(!this.canBeEmpty())if(0===t&&0===e){const t=this.getFirstChild();if(lr(t)||Si(t))return t.select(0,0)}else if(!(void 0!==t&&t!==o||void 0!==e&&e!==o)){const t=this.getLastChild();if(lr(t)||Si(t))return t.select()} void 0===r&&(r=o),void 0===i&&(i=o);const s=this.__key;return yr(n)?(n.anchor.set(s,r,"element"),n.focus.set(s,i,"element"),n.dirty=true,n):Mr(s,r,s,i,"element","element")}selectStart(){const t=this.getFirstDescendant();return t?t.selectStart():this.select()}selectEnd(){const t=this.getLastDescendant();return t?t.selectEnd():this.select()}clear(){const t=this.getWritable();return this.getChildren().forEach(t=>t.remove()),t}append(...t){return this.splice(this.getChildrenSize(),0,t)}setDirection(t){const e=this.getWritable();return e.__dir=t,e}setFormat(t){return this.getWritable().__format=""!==t?W$6[t]:0,this}setStyle(t){return this.getWritable().__style=t||"",this}setTextFormat(t){const e=this.getWritable();return e.__textFormat=t,e}setTextStyle(t){const e=this.getWritable();return e.__textStyle=t,e}setIndent(t){return this.getWritable().__indent=t,this}splice(e,n,r){On(this)&&t(324,this.__key,this.__type);const i=this.getChildrenSize(),o=this.getWritable();e+n<=i||t(226,String(e),String(n),String(i));const s=o.__key,l=[],c=[],a=this.getChildAtIndex(e+n);let u=null,f=i-n+r.length;if(0!==e)if(e===i)u=this.getLastChild();else {const t=this.getChildAtIndex(e);null!==t&&(u=t.getPreviousSibling());}if(n>0){let e=null===u?this.getFirstChild():u.getNextSibling();for(let r=0;r<n;r++){null===e&&t(100);const n=e.getNextSibling(),r=e.__key;_o(e.getWritable()),c.push(r),e=n;}}let d=u;for(const e of r){null!==d&&e.is(d)&&(u=d=d.getPreviousSibling());const n=e.getWritable();n.__parent===s&&f--,_o(n);const r=e.__key;if(null===d)o.__first=r,n.__prev=null;else {const t=d.getWritable();t.__next=r,n.__prev=t.__key;}e.__key===s&&t(76),n.__parent=s,l.push(r),d=e;}if(e+n===i){if(null!==d){d.getWritable().__next=null,o.__last=d.__key;}}else if(null!==a){const t=a.getWritable();if(null!==d){const e=d.getWritable();t.__prev=d.__key,e.__next=a.__key;}else t.__prev=null;}if(o.__size=f,c.length){const t=Lr();if(yr(t)){const e=new Set(c),n=new Set(l),{anchor:r,focus:i}=t;vi(r,e,n)&&Rr(r,r.getNode(),this,u,a),vi(i,e,n)&&Rr(i,i.getNode(),this,u,a),0!==f||this.canBeEmpty()||as(this)||this.remove();}}return o}getDOMSlot(t){return new mi(t)}exportDOM(t){const{element:e}=super.exportDOM(t);if(Cs(e)){const t=this.getIndent();t>0&&(e.style.paddingInlineStart=40*t+"px");const n=this.getDirection();n&&(e.dir=n);}return {element:e}}exportJSON(){const t={children:[],direction:this.getDirection(),format:this.getFormatType(),indent:this.getIndent(),...super.exportJSON()},e=this.getTextFormat(),n=this.getTextStyle();return 0!==e&&(t.textFormat=e),""!==n&&(t.textStyle=n),t}updateFromJSON(t){return super.updateFromJSON(t).setFormat(t.format).setIndent(t.indent).setDirection(t.direction).setTextFormat(t.textFormat||0).setTextStyle(t.textStyle||"")}insertNewAfter(t,e){return null}canIndent(){return  true}collapseAtStart(t){return  false}excludeFromCopy(t){return  false}canReplaceWith(t){return  true}canInsertAfter(t){return  true}canBeEmpty(){return  true}canInsertTextBefore(){return  true}canInsertTextAfter(){return  true}isInline(){return  false}isShadowRoot(){return  false}canMergeWith(t){return  false}extractWithChild(t,e,n){return  false}canMergeWhenEmpty(){return  false}reconcileObservedMutation(t,e){const n=this.getDOMSlot(t);let r=n.getFirstChild();for(let t=this.getFirstChild();t;t=t.getNextSibling()){const i=e.getElementByKey(t.getKey());null!==i&&(null==r?(n.insertChild(i),r=i):r!==i&&n.replaceChild(i,r),r=r.nextSibling);}}}function Si(t){return t instanceof Ci}function vi(t,e,n){let r=t.getNode();for(;r;){const t=r.__key;if(e.has(t)&&!n.has(t))return  true;r=r.getParent();}return  false}class ki extends Mn{decorate(t,e){return null}isIsolated(){return  false}isInline(){return  true}isKeyboardSelectable(){return  true}}function Ti(t){return t instanceof ki}class Ni extends Ci{__cachedText;static getType(){return "root"}static clone(){return new Ni}constructor(){super("root"),this.__cachedText=null;}getTopLevelElementOrThrow(){t(51);}getTextContent(){const t=this.__cachedText;return !ti()&&0!==ii()._dirtyType||null===t?super.getTextContent():t}remove(){t(52);}replace(e){t(53);}insertBefore(e){t(54);}insertAfter(e){t(55);}updateDOM(t,e){return  false}splice(e,n,r){for(const e of r)Si(e)||Ti(e)||t(282);return super.splice(e,n,r)}static importJSON(t){return No().updateFromJSON(t)}collapseAtStart(){return  true}}function bi(t){return t instanceof Ni}function wi(t){return new Ai(new Map(t._nodeMap))}function Ei(){return new Ai(new Map([["root",new Ni]]))}function Oi(e){const n=e.exportJSON(),r=e.constructor;if(n.type!==r.getType()&&t(130,r.name),Si(e)){const i=n.children;Array.isArray(i)||t(59,r.name);const o=e.getChildren();for(let t=0;t<o.length;t++){const e=Oi(o[t]);i.push(e);}}return n}function Mi(t){return t instanceof Ai}class Ai{_nodeMap;_selection;_flushSync;_readOnly;constructor(t,e){this._nodeMap=t,this._selection=e||null,this._flushSync=false,this._readOnly=false;}isEmpty(){return 1===this._nodeMap.size&&null===this._selection}read(t,e){return di(e&&e.editor||null,this,t)}clone(t){const e=new Ai(this._nodeMap,void 0===t?this._selection:t);return e._readOnly=true,e}toJSON(){return di(null,this,()=>({root:Oi(No())}))}}class Pi extends Ci{static getType(){return "artificial"}createDOM(t){return document.createElement("div")}}class Di extends Ci{static getType(){return "paragraph"}static clone(t){return new Di(t.__key)}createDOM(t){const e=document.createElement("p"),n=$o(t.theme,"paragraph");if(void 0!==n){e.classList.add(...n);}return e}updateDOM(t,e,n){return  false}static importDOM(){return {p:t=>({conversion:Fi,priority:0})}}exportDOM(t){const{element:e}=super.exportDOM(t);if(Cs(e)){this.isEmpty()&&e.append(document.createElement("br"));const t=this.getFormatType();t&&(e.style.textAlign=t);}return {element:e}}static importJSON(t){return Li().updateFromJSON(t)}exportJSON(){return {...super.exportJSON(),textFormat:this.getTextFormat(),textStyle:this.getTextStyle()}}insertNewAfter(t,e){const n=Li();n.setTextFormat(t.format),n.setTextStyle(t.style);const r=this.getDirection();return n.setDirection(r),n.setFormat(this.getFormatType()),n.setStyle(this.getStyle()),this.insertAfter(n,e),n}collapseAtStart(){const t=this.getChildren();if(0===t.length||lr(t[0])&&""===t[0].getTextContent().trim()){if(null!==this.getNextSibling())return this.selectNext(),this.remove(),true;if(null!==this.getPreviousSibling())return this.selectPrevious(),this.remove(),true}return  false}}function Fi(t){const e=Li();return t.style&&(e.setFormat(t.style.textAlign),Ps(t,e)),{node:e}}function Li(){return fs(new Di)}function Ii(t){return t instanceof Di}const Ki=0,zi=1,Ri=2,Bi=3,Wi=4;function Ji(t,e,n,r){const i=t._keyToDOMMap;i.clear(),t._editorState=Ei(),t._pendingEditorState=r,t._compositionKey=null,t._dirtyType=0,t._cloneNotNeeded.clear(),t._dirtyLeaves=new Set,t._dirtyElements.clear(),t._normalizedNodes=new Set,t._updateTags=new Set,t._updates=[],t._blockCursorElement=null;const o=t._observer;null!==o&&(o.disconnect(),t._observer=null),null!==e&&(e.textContent=""),null!==n&&(n.textContent="",i.set("root",n));}function ji(t){const e=new Set,n=new Set;let r=t;for(;r;){const{ownNodeConfig:t}=Is(r),i=r.transform;if(!n.has(i)){n.add(i);const t=r.transform();t&&e.add(t);}if(t){const n=t.$transform;n&&e.add(n),r=t.extends;}else {const t=Object.getPrototypeOf(r);r=t.prototype instanceof Mn&&t!==Mn?t:void 0;}}return e}function $i(t){const e=t||{},n=si(),r=e.theme||{},i=void 0===t?n:e.parentEditor||null,o=e.disableEvents||false,s=Ei(),l=e.namespace||(null!==i?i._config.namespace:Ao()),c=e.editorState,a=[Ni,Xn,Bn,ar,Di,Pi,...e.nodes||[]],{onError:u,html:f}=e,d=void 0===e.editable||e.editable;let h;if(void 0===t&&null!==n)h=n._nodes;else {h=new Map;for(let t=0;t<a.length;t++){let e=a[t],n=null,r=null;if("function"!=typeof e){const t=e;e=t.replace,n=t.with,r=t.withKlass||null;}Is(e);const i=e.getType(),o=ji(e);h.set(i,{exportDOM:f&&f.export?f.export.get(e):void 0,klass:e,replace:n,replaceWithKlass:r,sharedNodeState:at$2(a[t]),transforms:o});}}const g=new Ui(s,i,h,{disableEvents:o,namespace:l,theme:r},u||console.error,function(t,e){const n=new Map,r=new Set,i=t=>{Object.keys(t).forEach(e=>{let r=n.get(e);void 0===r&&(r=[],n.set(e,r)),r.push(t[e]);});};return t.forEach(t=>{const e=t.klass.importDOM;if(null==e||r.has(e))return;r.add(e);const n=e.call(t.klass);null!==n&&i(n);}),e&&i(e),n}(h,f?f.import:void 0),d,t);return void 0!==c&&(g._pendingEditorState=c,g._dirtyType=2),g}class Ui{static version;_headless;_parentEditor;_rootElement;_editorState;_pendingEditorState;_compositionKey;_deferred;_keyToDOMMap;_updates;_updating;_listeners;_commands;_nodes;_decorators;_pendingDecorators;_config;_dirtyType;_cloneNotNeeded;_dirtyLeaves;_dirtyElements;_normalizedNodes;_updateTags;_observer;_key;_onError;_htmlConversions;_window;_editable;_blockCursorElement;_createEditorArgs;constructor(t,e,n,r,i,o,s,l){this._createEditorArgs=l,this._parentEditor=e,this._rootElement=null,this._editorState=t,this._pendingEditorState=null,this._compositionKey=null,this._deferred=[],this._keyToDOMMap=new Map,this._updates=[],this._updating=false,this._listeners={decorator:new Set,editable:new Set,mutation:new Map,root:new Set,textcontent:new Set,update:new Set},this._commands=new Map,this._config=r,this._nodes=n,this._decorators={},this._pendingDecorators=null,this._dirtyType=0,this._cloneNotNeeded=new Set,this._dirtyLeaves=new Set,this._dirtyElements=new Map,this._normalizedNodes=new Set,this._updateTags=new Set,this._observer=null,this._key=Ao(),this._onError=i,this._htmlConversions=o,this._editable=s,this._headless=null!==e&&e._headless,this._window=null,this._blockCursorElement=null;}isComposing(){return null!=this._compositionKey}registerUpdateListener(t){const e=this._listeners.update;return e.add(t),()=>{e.delete(t);}}registerEditableListener(t){const e=this._listeners.editable;return e.add(t),()=>{e.delete(t);}}registerDecoratorListener(t){const e=this._listeners.decorator;return e.add(t),()=>{e.delete(t);}}registerTextContentListener(t){const e=this._listeners.textcontent;return e.add(t),()=>{e.delete(t);}}registerRootListener(t){const e=this._listeners.root;return t(this._rootElement,null),e.add(t),()=>{t(null,this._rootElement),e.delete(t);}}registerCommand(e,n,r){ void 0===r&&t(35);const i=this._commands;i.has(e)||i.set(e,[new Set,new Set,new Set,new Set,new Set]);const o=i.get(e);void 0===o&&t(36,String(e));const s=o[r];return s.add(n),()=>{s.delete(n),o.every(t=>0===t.size)&&i.delete(e);}}registerMutationListener(t,e,n){const r=this.resolveRegisteredNodeAfterReplacements(this.getRegisteredNode(t)).klass,i=this._listeners.mutation;let o=i.get(e);void 0===o&&(o=new Set,i.set(e,o)),o.add(r);const s=n&&n.skipInitialization;return void 0!==s&&s||this.initializeMutationListener(e,r),()=>{o.delete(r),0===o.size&&i.delete(e);}}getRegisteredNode(e){const n=this._nodes.get(e.getType());return void 0===n&&t(37,e.name),n}resolveRegisteredNodeAfterReplacements(t){for(;t.replaceWithKlass;)t=this.getRegisteredNode(t.replaceWithKlass);return t}initializeMutationListener(t,e){const n=this._editorState,r=Os(n).get(e.getType());if(!r)return;const i=new Map;for(const t of r.keys())i.set(t,"created");i.size>0&&t(i,{dirtyLeaves:new Set,prevEditorState:n,updateTags:new Set(["registerMutationListener"])});}registerNodeTransformToKlass(t,e){const n=this.getRegisteredNode(t);return n.transforms.add(e),n}registerNodeTransform(t,e){const n=this.registerNodeTransformToKlass(t,e),r=[n],i=n.replaceWithKlass;if(null!=i){const t=this.registerNodeTransformToKlass(i,e);r.push(t);}return function(t,e){const n=Os(t.getEditorState()),r=[];for(const t of e){const e=n.get(t);e&&r.push(e);}if(0===r.length)return;t.update(()=>{for(const t of r)for(const e of t.keys()){const t=xo(e);t&&t.markDirty();}},null===t._pendingEditorState?{tag:Dn}:void 0);}(this,r.map(t=>t.klass.getType())),()=>{r.forEach(t=>t.transforms.delete(e));}}hasNode(t){return this._nodes.has(t.getType())}hasNodes(t){return t.every(this.hasNode.bind(this))}dispatchCommand(t,e){return Go(this,t,e)}getDecorators(){return this._decorators}getRootElement(){return this._rootElement}getKey(){return this._key}setRootElement(t){const e=this._rootElement;if(t!==e){const n=$o(this._config.theme,"root"),r=this._pendingEditorState||this._editorState;if(this._rootElement=t,Ji(this,e,t,r),null!==e&&(this._config.disableEvents||Nn(e),null!=n&&e.classList.remove(...n)),null!==t){const e=os(t),r=t.style;r.userSelect="text",r.whiteSpace="pre-wrap",r.wordBreak="break-word",t.setAttribute("data-lexical-editor","true"),this._window=e,this._dirtyType=2,rt$3(this),this._updateTags.add(Dn),hi(this),this._config.disableEvents||function(t,e){const n=t.ownerDocument;en.set(t,n);const r=nn.get(n)??0;r<1&&n.addEventListener("selectionchange",Sn),nn.set(n,r+1),t.__lexicalEditor=e;const i=xn(t);for(let n=0;n<Ge$1.length;n++){const[r,o]=Ge$1[n],s="function"==typeof o?t=>{kn(t)||(vn(t),(e.isEditable()||"click"===r)&&o(t,e));}:t=>{if(kn(t))return;vn(t);const n=e.isEditable();switch(r){case "cut":return n&&Go(e,Be$1,t);case "copy":return Go(e,Re$1,t);case "paste":return n&&Go(e,fe$1,t);case "dragstart":return n&&Go(e,Ie$1,t);case "dragover":return n&&Go(e,Ke$1,t);case "dragend":return n&&Go(e,ze$1,t);case "focus":return n&&Go(e,Ve$1,t);case "blur":return n&&Go(e,Ye,t);case "drop":return n&&Go(e,Fe$1,t)}};t.addEventListener(r,s),i.push(()=>{t.removeEventListener(r,s);});}}(t,this),null!=n&&t.classList.add(...n);}else this._window=null,this._updateTags.add(Dn),hi(this);gi("root",this,false,t,e);}}getElementByKey(t){return this._keyToDOMMap.get(t)||null}getEditorState(){return this._editorState}setEditorState(e,n){e.isEmpty()&&t(38);let r=e;r._readOnly&&(r=wi(e),r._selection=e._selection?e._selection.clone():null),nt$4(this);const i=this._pendingEditorState,o=this._updateTags,s=void 0!==n?n.tag:null;null===i||i.isEmpty()||(null!=s&&o.add(s),hi(this)),this._pendingEditorState=r,this._dirtyType=2,this._dirtyElements.set("root",false),this._compositionKey=null,null!=s&&o.add(s),this._updating||hi(this);}parseEditorState(t,e){return function(t,e,n){const r=Ei(),i=qr,o=Gr,s=Hr,l=e._dirtyElements,c=e._dirtyLeaves,a=e._cloneNotNeeded,u=e._dirtyType;e._dirtyElements=new Map,e._dirtyLeaves=new Set,e._cloneNotNeeded=new Set,e._dirtyType=0,qr=r,Gr=false,Hr=e,Yi(null);try{const i=e._nodes;fi(t.root,i),n&&n(),r._readOnly=!0;}catch(t){t instanceof Error&&e._onError(t);}finally{e._dirtyElements=l,e._dirtyLeaves=c,e._cloneNotNeeded=a,e._dirtyType=u,qr=i,Gr=o,Hr=s;}return r}("string"==typeof t?JSON.parse(t):t,this,e)}read(t){return hi(this),this.getEditorState().read(t,{editor:this})}update(t,e){!function(t,e,n){t._updating?t._updates.push([e,n]):pi(t,e,n);}(this,t,e);}focus(t,e={}){const n=this._rootElement;null!==n&&(n.setAttribute("autocapitalize","off"),yi(this,()=>{const r=Lr(),i=No();null!==r?r.dirty||wo(r.clone()):0!==i.getChildrenSize()&&("rootStart"===e.defaultSelection?i.selectStart():i.selectEnd()),ns("focus"),rs(()=>{n.removeAttribute("autocapitalize"),t&&t();});}),null===this._pendingEditorState&&n.removeAttribute("autocapitalize"));}blur(){const t=this._rootElement;null!==t&&t.blur();const e=ps(this._window);null!==e&&e.removeAllRanges();}isEditable(){return this._editable}setEditable(t){this._editable!==t&&(this._editable=t,gi("editable",this,true,t));}toJSON(){return {editorState:this._editorState.toJSON()}}}Ui.version="0.38.2+prod.esm";let Vi=null;function Yi(t){Vi=t;}let qi=1;function Gi(e,n){const r=Xi(e,n);return void 0===r&&t(30,n),r}function Xi(t,e){return t._nodes.get(e)}const Qi="function"==typeof queueMicrotask?queueMicrotask:t=>{Promise.resolve().then(t);};function Zi(t){return Ti(vo(t))}function to(t){const e=document.activeElement;if(!Cs(e))return  false;const n=e.nodeName;return Ti(vo(t))&&("INPUT"===n||"TEXTAREA"===n||"true"===e.contentEditable&&null==io(e))}function eo(t,e,n){const r=t.getRootElement();try{return null!==r&&r.contains(e)&&r.contains(n)&&null!==e&&!to(e)&&ro(e)===t}catch(t){return  false}}function no(t){return t instanceof Ui}function ro(t){let e=t;for(;null!=e;){const t=io(e);if(no(t))return t;e=Zo(e);}return null}function io(t){return t?t.__lexicalEditor:null}function oo(t){return K$5.test(t)?"rtl":z$4.test(t)?"ltr":null}function so(t){return fr(t)||t.isToken()}function lo(t){return so(t)||t.isSegmented()}function co(t){return Ss(t)&&3===t.nodeType}function ao(t){return Ss(t)&&9===t.nodeType}function uo(t){let e=t;for(;null!=e;){if(co(e))return e;e=e.firstChild;}return null}function fo(t,e,n){const r=R$5[e];if(null!==n&&(t&r)===(n&r))return t;let i=t^r;return "subscript"===e?i&=-65:"superscript"===e?i&=-33:"lowercase"===e?(i&=-513,i&=-1025):"uppercase"===e?(i&=-257,i&=-1025):"capitalize"===e&&(i&=-257,i&=-513),i}function ho(t){return lr(t)||jn(t)||Ti(t)}function go(t,e){const n=function(){const t=Vi;return Vi=null,t}();if(null!=(e=e||n&&n.__key))return void(t.__key=e);ei(),ni();const r=ii(),i=ri(),o=""+qi++;i._nodeMap.set(o,t),Si(t)?r._dirtyElements.set(o,true):r._dirtyLeaves.add(o),r._cloneNotNeeded.add(o),r._dirtyType=1,t.__key=o;}function _o(t){const e=t.getParent();if(null!==e){const n=t.getWritable(),r=e.getWritable(),i=t.getPreviousSibling(),o=t.getNextSibling(),s=null!==o?o.__key:null,l=null!==i?i.__key:null,c=null!==i?i.getWritable():null,a=null!==o?o.getWritable():null;null===i&&(r.__first=s),null===o&&(r.__last=l),null!==c&&(c.__next=s),null!==a&&(a.__prev=l),n.__prev=null,n.__next=null,n.__parent=null,r.__size--;}}function po(e){ni(),On(e)&&t(323,e.__key,e.__type);const n=e.getLatest(),r=n.__parent,i=ri(),o=ii(),s=i._nodeMap,l=o._dirtyElements;null!==r&&function(t,e,n){let r=t;for(;null!==r;){if(n.has(r))return;const t=e.get(r);if(void 0===t)break;n.set(r,false),r=t.__parent;}}(r,s,l);const c=n.__key;o._dirtyType=1,Si(e)?l.set(c,true):o._dirtyLeaves.add(c);}function yo(t){ei();const e=ii(),n=e._compositionKey;if(t!==n){if(e._compositionKey=t,null!==n){const t=xo(n);null!==t&&t.getWritable();}if(null!==t){const e=xo(t);null!==e&&e.getWritable();}}}function mo(){if(ti())return null;return ii()._compositionKey}function xo(t,e){const n=(e||ri())._nodeMap.get(t);return void 0===n?null:n}function Co(t,e){const n=So(t,ii());return void 0!==n?xo(n,e):null}function So(t,e){return t[`__lexicalKey_${e._key}`]}function vo(t,e){let n=t;for(;null!=n;){const t=Co(n,e);if(null!==t)return t;n=Zo(n);}return null}function ko(t){const e=t._decorators,n=Object.assign({},e);return t._pendingDecorators=n,n}function To(t){return t.read(()=>No().getTextContent())}function No(){return bo(ri())}function bo(t){return t._nodeMap.get("root")}function wo(t){ei();const e=ri();null!==t&&(t.dirty=true,t.setCachedNodes(null)),e._selection=t;}function Eo(t){const e=ii(),n=function(t,e){let n=t;for(;null!=n;){const t=So(n,e);if(void 0!==t)return t;n=Zo(n);}return null}(t,e);if(null===n){return t===e.getRootElement()?xo("root"):null}return xo(n)}function Oo(t){return /[\uD800-\uDBFF][\uDC00-\uDFFF]/g.test(t)}function Mo(t){const e=[];let n=t;for(;null!==n;)e.push(n),n=n._parentEditor;return e}function Ao(){return Math.random().toString(36).replace(/[^a-z]+/g,"").substring(0,5)}function Po(t){return co(t)?t.nodeValue:null}function Do(t,e,n){const r=ps(ss(e));if(null===r)return;const i=r.anchorNode;let{anchorOffset:o,focusOffset:s}=r;if(null!==i){let e=Po(i);const r=vo(i);if(null!==e&&lr(r)){if(e===P$3&&n){const t=n.length;e=n,o=t,s=t;}null!==e&&Fo(r,e,o,s,t);}}}function Fo(t,e,n,r,i){let o=t;if(o.isAttached()&&(i||!o.isDirty())){const s=o.isComposing();let a=e;(s||i)&&e[e.length-1]===P$3&&(a=e.slice(0,-1));const u=o.getTextContent();if(i||a!==u){if(""===a){if(yo(null),l||c||d)o.remove();else {const t=ii();setTimeout(()=>{t.update(()=>{o.isAttached()&&o.remove();});},20);}return}const e=o.getParent(),i=Ir(),u=o.getTextContentSize(),f=mo(),h=o.getKey();if(o.isToken()||null!==f&&h===f&&!s||yr(i)&&(null!==e&&!e.canInsertTextBefore()&&0===i.anchor.offset||i.anchor.key===t.__key&&0===i.anchor.offset&&!o.canInsertTextBefore()&&!s||i.focus.key===t.__key&&i.focus.offset===u&&!o.canInsertTextAfter()&&!s))return void o.markDirty();const g=Lr();if(!yr(g)||null===n||null===r)return void Lo(o,a,g);if(g.setTextNodeRange(o,n,o,r),o.isSegmented()){const t=sr(o.getTextContent());o.replace(t),o=t;}Lo(o,a,g);}}}function Lo(t,e,n){if(t.setTextContent(e),yr(n)){const e=t.getKey();for(const r of ["anchor","focus"]){const i=n[r];"text"===i.type&&i.key===e&&(i.offset=nl(t,i.offset,"clamp"));}}}function Io(t,e,n){const r=e[n]||false;return "any"===r||r===t[n]}function Ko(t,e){return Io(t,e,"altKey")&&Io(t,e,"ctrlKey")&&Io(t,e,"shiftKey")&&Io(t,e,"metaKey")}function zo(t,e,n){return Ko(t,n)&&t.key.toLowerCase()===e.toLowerCase()}const Ro={ctrlKey:!i,metaKey:i},Bo={altKey:i,ctrlKey:!i};function Wo(t){return "Backspace"===t.key}function Jo(t){return zo(t,"a",Ro)}function jo(t){const e=No();if(yr(t)){const e=t.anchor,n=t.focus,r=e.getNode().getTopLevelElementOrThrow().getParentOrThrow();return e.set(r.getKey(),0,"element"),n.set(r.getKey(),r.getChildrenSize(),"element"),St$5(t),t}{const t=e.select(0,e.getChildrenSize());return wo(St$5(t)),t}}function $o(t,e){ void 0===t.__lexicalClassNameCache&&(t.__lexicalClassNameCache={});const n=t.__lexicalClassNameCache,r=n[e];if(void 0!==r)return r;const i=t[e];if("string"==typeof i){const t=h$1(i);return n[e]=t,t}return i}function Uo(e,n,r,i,o){if(0===r.size)return;const s=i.__type,l=i.__key,c=n.get(s);void 0===c&&t(33,s);const a=c.klass;let u=e.get(a);void 0===u&&(u=new Map,e.set(a,u));const f=u.get(l),d="destroyed"===f&&"created"===o;(void 0===f||d)&&u.set(l,d?"updated":o);}function Yo(t,e,n){const r=t.getParent();let i=n,o=t;return null!==r&&(e&&0===n?(i=o.getIndexWithinParent(),o=r):e||n!==o.getChildrenSize()||(i=o.getIndexWithinParent()+1,o=r)),o.getChildAtIndex(e?i-1:i)}function qo(t,e){const n=t.offset;if("element"===t.type){return Yo(t.getNode(),e,n)}{const r=t.getNode();if(e&&0===n||!e&&n===r.getTextContentSize()){const t=e?r.getPreviousSibling():r.getNextSibling();return null===t?Yo(r.getParentOrThrow(),e,r.getIndexWithinParent()+(e?0:1)):t}}return null}function Ho(t){const e=ss(t).event,n=e&&e.inputType;return "insertFromPaste"===n||"insertFromPasteAsQuotation"===n}function Go(t,e,n){return function(t,e,n){const r=Mo(t);for(let i=4;i>=0;i--)for(let o=0;o<r.length;o++){const s=r[o],l=s._commands.get(e);if(void 0!==l){const e=l[i];if(void 0!==e){const r=Array.from(e),i=r.length;let o=false;if(yi(s,()=>{for(let e=0;e<i;e++)if(r[e](n,t))return void(o=true)}),o)return o}}}return  false}(t,e,n)}function Xo(t){return !bi(t)&&!t.isLastChild()&&!t.isInline()}function Qo(e,n){const r=e._keyToDOMMap.get(n);return void 0===r&&t(75,n),r}function Zo(t){const e=t.assignedSlot||t.parentElement;return vs(e)?e.host:e}function ts(t){return ao(t)?t:Cs(t)?t.ownerDocument:null}function ns(t){ei();ii()._updateTags.add(t);}function rs(t){ei();ii()._deferred.push(t);}function is(t,e){let n=t.getParent();for(;null!==n;){if(n.is(e))return  true;n=n.getParent();}return  false}function os(t){const e=ts(t);return e?e.defaultView:null}function ss(e){const n=e._window;return null===n&&t(78),n}function cs(t){let e=t.getParentOrThrow();for(;null!==e;){if(as(e))return e;e=e.getParentOrThrow();}return e}function as(t){return bi(t)||Si(t)&&t.isShadowRoot()}function fs(e){const n=ii(),r=e.getType(),i=Xi(n,r);void 0===i&&t(200,e.constructor.name,r);const{replace:o,replaceWithKlass:s}=i;if(null!==o){const n=o(e),i=n.constructor;return null!==s?n instanceof s||t(201,s.name,s.getType(),i.name,i.getType(),e.constructor.name,r):n instanceof e.constructor&&i!==e.constructor||t(202,i.name,i.getType(),e.constructor.name,r),n.__key===e.__key&&t(203,e.constructor.name,r,i.name,i.getType()),n}return e}function ds(e,n){!bi(e.getParent())||Si(n)||Ti(n)||t(99);}function hs(e){const n=xo(e);return null===n&&t(63,e),n}function gs(t){return (Ti(t)||Si(t)&&!t.canBeEmpty())&&!t.isInline()}function _s(t,e,n){n.style.removeProperty("caret-color"),e._blockCursorElement=null;const r=t.parentElement;null!==r&&r.removeChild(t);}function ps(t){return n?(t||window).getSelection():null}function ys(t){const e=os(t);return e?e.getSelection():null}function xs(t){return Cs(t)&&"A"===t.tagName}function Cs(t){return Ss(t)&&1===t.nodeType}function Ss(t){return "object"==typeof t&&null!==t&&"nodeType"in t&&"number"==typeof t.nodeType}function vs(t){return Ss(t)&&11===t.nodeType}function ks(t){const e=new RegExp(/^(a|abbr|acronym|b|cite|code|del|em|i|ins|kbd|label|mark|output|q|ruby|s|samp|span|strong|sub|sup|time|u|tt|var|#text)$/,"i");return null!==t.nodeName.match(e)}function Ts(t){const e=new RegExp(/^(address|article|aside|blockquote|canvas|dd|div|dl|dt|fieldset|figcaption|figure|footer|form|h1|h2|h3|h4|h5|h6|header|hr|li|main|nav|noscript|ol|p|pre|section|table|td|tfoot|ul|video)$/,"i");return null!==t.nodeName.match(e)}function Ns(t){if(Ti(t)&&!t.isInline())return  true;if(!Si(t)||as(t))return  false;const e=t.getFirstChild(),n=null===e||jn(e)||lr(e)||e.isInline();return !t.isInline()&&false!==t.canBeEmpty()&&n}function bs(){return ii()}const ws=new WeakMap,Es=new Map;function Os(e){if(!e._readOnly&&e.isEmpty())return Es;e._readOnly||t(192);let n=ws.get(e);return n||(n=function(t){const e=new Map;for(const[n,r]of t._nodeMap){const t=r.__type;let i=e.get(t);i||(i=new Map,e.set(t,i)),i.set(n,r);}return e}(e),ws.set(e,n)),n}function Ms(t){const e=t.constructor.clone(t);return e.afterCloneFrom(t),e}function As(t){return (e=Ms(t))[En]=true,e;var e;}function Ps(t,e){const n=parseInt(t.style.paddingInlineStart,10)||0,r=Math.round(n/40);e.setIndent(r);}function Fs(t){return  true===t.__lexicalUnmanaged}function Ls(t,e){return function(t,e){return Object.prototype.hasOwnProperty.call(t,e)}(t,e)&&t[e]!==Mn[e]}function Is(e){const n=V$5 in e.prototype?e.prototype[V$5]():void 0,r=function(e){if(!(e===Mn||e.prototype instanceof Mn)){let n="<unknown>",r="<unknown>";try{n=e.getType();}catch(t){}try{Ui.version&&(r=JSON.parse(Ui.version));}catch(t){}t(290,e.name,n,r);}return e===ki||e===Ci||e===Mn}(e),i=!r&&Ls(e,"getType")?e.getType():void 0;let o,s=i;if(n)if(i)o=n[i];else for(const[t,e]of Object.entries(n))s=t,o=e;if(!r&&s&&(Ls(e,"getType")||(e.getType=()=>s),Ls(e,"clone")||(e.clone=t=>(Yi(t),new e)),Ls(e,"importJSON")||(e.importJSON=o&&o.$importJSON||(t=>(new e).updateFromJSON(t))),!Ls(e,"importDOM")&&o)){const{importDOM:t}=o;t&&(e.importDOM=()=>t);}return {ownNodeConfig:o,ownNodeType:s}}function Ks(t){const e=bs();ei();return new(e.resolveRegisteredNodeAfterReplacements(e.getRegisteredNode(t)).klass)}const zs=(t,e)=>{let n=t;for(;null!=n&&!bi(n);){if(e(n))return n;n=n.getParent();}return null},Rs={next:"previous",previous:"next"};class Bs{origin;constructor(t){this.origin=t;}[Symbol.iterator](){return hl({hasNext:Hs,initial:this.getAdjacentCaret(),map:t=>t,step:t=>t.getAdjacentCaret()})}getAdjacentCaret(){return tl(this.getNodeAtCaret(),this.direction)}getSiblingCaret(){return tl(this.origin,this.direction)}remove(){const t=this.getNodeAtCaret();return t&&t.remove(),this}replaceOrInsert(t,e){const n=this.getNodeAtCaret();return t.is(this.origin)||t.is(n)||(null===n?this.insert(t):n.replace(t,e)),this}splice(e,n,r="next"){const i=r===this.direction?n:Array.from(n).reverse();let o=this;const s=this.getParentAtCaret(),l=new Map;for(let t=o.getAdjacentCaret();null!==t&&l.size<e;t=t.getAdjacentCaret()){const e=t.origin.getWritable();l.set(e.getKey(),e);}for(const e of i){if(l.size>0){const n=o.getNodeAtCaret();if(n)if(l.delete(n.getKey()),l.delete(e.getKey()),n.is(e)||o.origin.is(e));else {const t=e.getParent();t&&t.is(s)&&e.remove(),n.replace(e);}else null===n&&t(263,Array.from(l).join(" "));}else o.insert(e);o=tl(e,this.direction);}for(const t of l.values())t.remove();return this}}class Ws extends Bs{type="child";getLatest(){const t=this.origin.getLatest();return t===this.origin?this:il(t,this.direction)}getParentCaret(t="root"){return tl($s(this.getParentAtCaret(),t),this.direction)}getFlipped(){const t=js(this.direction);return tl(this.getNodeAtCaret(),t)||il(this.origin,t)}getParentAtCaret(){return this.origin}getChildCaret(){return this}isSameNodeCaret(t){return t instanceof Ws&&this.direction===t.direction&&this.origin.is(t.origin)}isSamePointCaret(t){return this.isSameNodeCaret(t)}}const Js={root:bi,shadowRoot:as};function js(t){return Rs[t]}function $s(t,e="root"){return Js[e](t)?null:t}class Us extends Bs{type="sibling";getLatest(){const t=this.origin.getLatest();return t===this.origin?this:tl(t,this.direction)}getSiblingCaret(){return this}getParentAtCaret(){return this.origin.getParent()}getChildCaret(){return Si(this.origin)?il(this.origin,this.direction):null}getParentCaret(t="root"){return tl($s(this.getParentAtCaret(),t),this.direction)}getFlipped(){const t=js(this.direction);return tl(this.getNodeAtCaret(),t)||il(this.origin.getParentOrThrow(),t)}isSamePointCaret(t){return t instanceof Us&&this.direction===t.direction&&this.origin.is(t.origin)}isSameNodeCaret(t){return (t instanceof Us||t instanceof Vs)&&this.direction===t.direction&&this.origin.is(t.origin)}}class Vs extends Bs{type="text";offset;constructor(t,e){super(t),this.offset=e;}getLatest(){const t=this.origin.getLatest();return t===this.origin?this:el(t,this.direction,this.offset)}getParentAtCaret(){return this.origin.getParent()}getChildCaret(){return null}getParentCaret(t="root"){return tl($s(this.getParentAtCaret(),t),this.direction)}getFlipped(){return el(this.origin,js(this.direction),this.offset)}isSamePointCaret(t){return t instanceof Vs&&this.direction===t.direction&&this.origin.is(t.origin)&&this.offset===t.offset}isSameNodeCaret(t){return (t instanceof Us||t instanceof Vs)&&this.direction===t.direction&&this.origin.is(t.origin)}getSiblingCaret(){return tl(this.origin,this.direction)}}function Ys(t){return t instanceof Vs}function Hs(t){return t instanceof Us}function Gs(t){return t instanceof Ws}const Xs={next:class extends Vs{direction="next";getNodeAtCaret(){return this.origin.getNextSibling()}insert(t){return this.origin.insertAfter(t),this}},previous:class extends Vs{direction="previous";getNodeAtCaret(){return this.origin.getPreviousSibling()}insert(t){return this.origin.insertBefore(t),this}}},Qs={next:class extends Us{direction="next";getNodeAtCaret(){return this.origin.getNextSibling()}insert(t){return this.origin.insertAfter(t),this}},previous:class extends Us{direction="previous";getNodeAtCaret(){return this.origin.getPreviousSibling()}insert(t){return this.origin.insertBefore(t),this}}},Zs={next:class extends Ws{direction="next";getNodeAtCaret(){return this.origin.getFirstChild()}insert(t){return this.origin.splice(0,0,[t]),this}},previous:class extends Ws{direction="previous";getNodeAtCaret(){return this.origin.getLastChild()}insert(t){return this.origin.splice(this.origin.getChildrenSize(),0,[t]),this}}};function tl(t,e){return t?new Qs[e](t):null}function el(t,e,n){return t?new Xs[e](t,nl(t,n)):null}function nl(t,n,r="error"){const i=t.getTextContentSize();let o="next"===n?i:"previous"===n?0:n;return (o<0||o>i)&&("clamp"!==r&&e(284,String(n),String(i),t.getKey()),o=o<0?0:i),o}function rl(t,e){return new cl(t,e)}function il(t,e){return Si(t)?new Zs[e](t):null}function ol(t){return t&&t.getChildCaret()||t}function sl(t){return t&&ol(t.getAdjacentCaret())}class ll{type="node-caret-range";direction;anchor;focus;constructor(t,e,n){this.anchor=t,this.focus=e,this.direction=n;}getLatest(){const t=this.anchor.getLatest(),e=this.focus.getLatest();return t===this.anchor&&e===this.focus?this:new ll(t,e,this.direction)}isCollapsed(){return this.anchor.isSamePointCaret(this.focus)}getTextSlices(){const t=t=>{const e=this[t].getLatest();return Ys(e)?function(t,e){const{direction:n,origin:r}=t,i=nl(r,"focus"===e?js(n):n);return rl(t,i-t.offset)}(e,t):null},e=t("anchor"),n=t("focus");if(e&&n){const{caret:t}=e,{caret:r}=n;if(t.isSameNodeCaret(r))return [rl(t,r.offset-t.offset),null]}return [e,n]}iterNodeCarets(t="root"){const e=Ys(this.anchor)?this.anchor.getSiblingCaret():this.anchor.getLatest(),n=this.focus.getLatest(),r=Ys(n),i=e=>e.isSameNodeCaret(n)?null:sl(e)||e.getParentCaret(t);return hl({hasNext:t=>null!==t&&!(r&&n.isSameNodeCaret(t)),initial:e.isSameNodeCaret(n)?null:i(e),map:t=>t,step:i})}[Symbol.iterator](){return this.iterNodeCarets("root")}}class cl{type="slice";caret;distance;constructor(t,e){this.caret=t,this.distance=e;}getSliceIndices(){const{distance:t,caret:{offset:e}}=this,n=e+t;return n<e?[n,e]:[e,n]}getTextContent(){const[t,e]=this.getSliceIndices();return this.caret.origin.getTextContent().slice(t,e)}getTextContentSize(){return Math.abs(this.distance)}removeTextSlice(){const{caret:{origin:t,direction:e}}=this,[n,r]=this.getSliceIndices(),i=t.getTextContent();return el(t.setTextContent(i.slice(0,n)+i.slice(r)),e,n)}}function ul(t){return dl(t,tl(No(),t.direction))}function fl(t){return dl(t,t)}function dl(e,n){return e.direction!==n.direction&&t(265),new ll(e,n,e.direction)}function hl(t){const{initial:e,hasNext:n,step:r,map:i}=t;let o=e;return {[Symbol.iterator](){return this},next(){if(!n(o))return {done:true,value:void 0};const t={done:false,value:i(o)};return o=r(o),t}}}function gl(e,n){const r=ml(e.origin,n.origin);switch(null===r&&t(275,e.origin.getKey(),n.origin.getKey()),r.type){case "same":{const t="text"===e.type,r="text"===n.type;return t&&r?function(t,e){return Math.sign(t-e)}(e.offset,n.offset):e.type===n.type?0:t?-1:r?1:"child"===e.type?-1:1}case "ancestor":return "child"===e.type?-1:1;case "descendant":return "child"===n.type?1:-1;case "branch":return _l(r)}}function _l(t){const{a:e,b:n}=t,r=e.__key,i=n.__key;let o=e,s=n;for(;o&&s;o=o.getNextSibling(),s=s.getNextSibling()){if(o.__key===i)return  -1;if(s.__key===r)return 1}return null===o?1:-1}function pl(t,e){return e.is(t)}function yl(t){return Si(t)?[t.getLatest(),null]:[t.getParent(),t.getLatest()]}function ml(e,n){if(e.is(n))return {commonAncestor:e,type:"same"};const r=new Map;for(let[t,n]=yl(e);t;n=t,t=t.getParent())r.set(t,n);for(let[i,o]=yl(n);i;o=i,i=i.getParent()){const s=r.get(i);if(void 0!==s)return null===s?(pl(e,i)||t(276),{commonAncestor:i,type:"ancestor"}):null===o?(pl(n,i)||t(277),{commonAncestor:i,type:"descendant"}):((Si(s)||pl(e,s))&&(Si(o)||pl(n,o))&&i.is(s.getParent())&&i.is(o.getParent())||t(278),{a:s,b:o,commonAncestor:i,type:"branch"})}return null}function xl(e,n){const{type:r,key:i,offset:o}=e,s=hs(e.key);return "text"===r?(lr(s)||t(266,s.getType(),i),el(s,n,o)):(Si(s)||t(267,s.getType(),i),Pl(s,e.offset,n))}function Cl(e,n){const{origin:r,direction:i}=n,o="next"===i;Ys(n)?e.set(r.getKey(),n.offset,"text"):Hs(n)?lr(r)?e.set(r.getKey(),nl(r,i),"text"):e.set(r.getParentOrThrow().getKey(),r.getIndexWithinParent()+(o?1:0),"element"):(Gs(n)&&Si(r)||t(268),e.set(r.getKey(),o?0:r.getChildrenSize(),"element"));}function Sl(t){const e=Lr(),n=yr(e)?e:Ar();return vl(n,t),wo(n),n}function vl(t,e){Cl(t.anchor,e.anchor),Cl(t.focus,e.focus);}function kl(t){const{anchor:e,focus:n}=t,r=xl(e,"next"),i=xl(n,"next"),o=gl(r,i)<=0?"next":"previous";return dl(Ml(r,o),Ml(i,o))}function Tl(t){const{direction:e,origin:n}=t,r=tl(n,js(e)).getNodeAtCaret();return r?tl(r,e):il(n.getParentOrThrow(),e)}function Nl(t,e="root"){const n=[t];for(let r=Gs(t)?t.getParentCaret(e):t.getSiblingCaret();null!==r;r=r.getParentCaret(e))n.push(Tl(r));return n}function bl(t){return !!t&&t.origin.isAttached()}function wl(e,n="removeEmptySlices"){if(e.isCollapsed())return e;const r="root",i="next";let o=n;const s=Al(e,i),l=Nl(s.anchor,r),c=Nl(s.focus.getFlipped(),r),a=new Set,u=[];for(const t of s.iterNodeCarets(r))if(Gs(t))a.add(t.origin.getKey());else if(Hs(t)){const{origin:e}=t;Si(e)&&!a.has(e.getKey())||u.push(e);}for(const t of u)t.remove();for(const t of s.getTextSlices()){if(!t)continue;const{origin:e}=t.caret,n=e.getTextContentSize(),r=Tl(tl(e,i)),s=e.getMode();if(Math.abs(t.distance)===n&&"removeEmptySlices"===o||"token"===s&&0!==t.distance)r.remove();else if(0!==t.distance){o="removeEmptySlices";let e=t.removeTextSlice();const n=t.caret.origin;if("segmented"===s){const t=e.origin,n=sr(t.getTextContent()).setStyle(t.getStyle()).setFormat(t.getFormat());r.replaceOrInsert(n),e=el(n,i,e.offset);}n.is(l[0].origin)&&(l[0]=e),n.is(c[0].origin)&&(c[0]=e.getFlipped());}}let f,d;for(const t of l)if(bl(t)){f=El(t);break}for(const t of c)if(bl(t)){d=El(t);break}const h=function(t,e,n){if(!t||!e)return null;const r=t.getParentAtCaret(),i=e.getParentAtCaret();if(!r||!i)return null;const o=r.getParents().reverse();o.push(r);const s=i.getParents().reverse();s.push(i);const l=Math.min(o.length,s.length);let c;for(c=0;c<l&&o[c]===s[c];c++);const a=(t,e)=>{let n;for(let r=c;r<t.length;r++){const i=t[r];if(as(i))return;!n&&e(i)&&(n=i);}return n},u=a(o,Ns),f=u&&a(s,t=>n.has(t.getKey())&&Ns(t));return u&&f?[u,f]:null}(f,d,a);if(h){const[t,e]=h;il(t,"previous").splice(0,e.getChildren()),e.remove();}const g=[f,d,...l,...c].find(bl);if(g){return fl(Ml(El(g),e.direction))}t(269,JSON.stringify(l.map(t=>t.origin.__key)));}function El(t){const e=function(t){let e=t;for(;Gs(e);){const t=sl(e);if(!Gs(t))break;e=t;}return e}(t.getLatest()),{direction:n}=e;if(lr(e.origin))return Ys(e)?e:el(e.origin,n,n);const r=e.getAdjacentCaret();return Hs(r)&&lr(r.origin)?el(r.origin,n,js(n)):e}function Ol(t){return Ys(t)&&t.offset!==nl(t.origin,t.direction)}function Ml(t,e){return t.direction===e?t:t.getFlipped()}function Al(t,e){return t.direction===e?t:dl(Ml(t.focus,e),Ml(t.anchor,e))}function Pl(t,e,n){let r=il(t,"next");for(let t=0;t<e;t++){const t=r.getAdjacentCaret();if(null===t)break;r=t;}return Ml(r,n)}function Kl(t){return t}function zl(...t){return t}function Bl(t){return t}function Wl(t,e){if(!e||t===e)return t;for(const n in e)if(t[n]!==e[n])return {...t,...e};return t}
 
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -4605,7 +1390,7 @@ function t(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSe
 function K$4(e,...t){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",e);for(const e of t)o.append("v",e);throw n.search=o.toString(),Error(`Minified Lexical error #${e}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const P$2=new Map;function F$4(e){const t={};if(!e)return t;const n=e.split(";");for(const e of n)if(""!==e){const[n,o]=e.split(/:([^]+)/);n&&o&&(t[n.trim()]=o.trim());}return t}function b$3(e){let t=P$2.get(e);return void 0===t&&(t=F$4(e),P$2.set(e,t)),t}function R$4(e){let t="";for(const n in e)n&&(t+=`${n}: ${e[n]};`);return t}function O$1(e){const n=bs().getElementByKey(e.getKey());if(null===n)return null;const o=n.ownerDocument.defaultView;return null===o?null:o.getComputedStyle(n)}function z$3(e){return O$1(bi(e)?e:e.getParentOrThrow())}function A$2(e){const t=z$3(e);return null!==t&&"rtl"===t.direction}function M$4(e,t,n="self"){const o=e.getStartEndPoints();if(t.isSelected(e)&&!lo(t)&&null!==o){const[l,r]=o,s=e.isBackward(),i=l.getNode(),c=r.getNode(),f=t.is(i),u=t.is(c);if(f||u){const[o,l]=Sr(e),r=i.is(c),f=t.is(s?c:i),u=t.is(s?i:c);let d,p=0;if(r)p=o>l?l:o,d=o>l?o:l;else if(f){p=s?l:o,d=void 0;}else if(u){p=0,d=s?o:l;}const h=t.__text.slice(p,d);h!==t.__text&&("clone"===n&&(t=As(t)),t.__text=h);}}return t}function $$3(e){const t=e.getStyle(),n=F$4(t);P$2.set(t,n);}function D$3(t,n){(yr(t)?t.isCollapsed():lr(t)||Si(t))||K$4(280);const l=b$3(yr(t)?t.style:lr(t)?t.getStyle():t.getTextStyle()),r=Object.entries(n).reduce((e,[n,o])=>("function"==typeof o?e[n]=o(l[n],t):null===o?delete e[n]:e[n]=o,e),{...l}),s=R$4(r);yr(t)||lr(t)?t.setStyle(s):t.setTextStyle(s),P$2.set(s,r);}function U$5(e,t){if(yr(e)&&e.isCollapsed()){D$3(e,t);const n=e.anchor.getNode();Si(n)&&n.isEmpty()&&D$3(n,t);}j$2(e=>{D$3(e,t);});}function j$2(t){const n=Lr();if(!n)return;const o=new Map,l=e=>o.get(e.getKey())||[0,e.getTextContentSize()];if(yr(n))for(const e of kl(n).getTextSlices())e&&o.set(e.caret.origin.getKey(),e.getSliceIndices());const r=n.getNodes();for(const n of r){if(!lr(n)||!n.canHaveFormat())continue;const[o,r]=l(n);if(r!==o)if(lo(n)||0===o&&r===n.getTextContentSize())t(n);else {t(n.splitText(o,r)[0===o?0:1]);}}yr(n)&&"text"===n.anchor.type&&"text"===n.focus.type&&n.anchor.key===n.focus.key&&H$2(n);}function H$2(e){if(e.isBackward()){const{anchor:t,focus:n}=e,{key:o,offset:l,type:r}=t;t.set(n.key,n.offset,n.type),n.set(o,l,r);}}function Q$4(e){const t=Y$3(e);return null!==t&&"vertical-rl"===t.writingMode}function Y$3(e){const t=e.anchor.getNode();return Si(t)?O$1(t):z$3(t)}function Z$3(e,t){let n=Q$4(e)?!t:t;te(e)&&(n=!n);const l=xl(e.focus,n?"previous":"next");if(Ol(l))return  false;for(const e of ul(l)){if(Gs(e))return !e.origin.isInline();if(!Si(e.origin)){if(Ti(e.origin))return  true;break}}return  false}function ee(e,t,n,o){e.modify(t?"extend":"move",n,o);}function te(e){const t=Y$3(e);return null!==t&&"rtl"===t.direction}function ne(e,t,n){const o=te(e);let l;l=Q$4(e)||o?!n:n,ee(e,t,l,"character");}function oe$1(e,t,n){const o=b$3(e.getStyle());return null!==o&&o[t]||n}function le$1(t,n,o=""){let l=null;const r=t.getNodes(),s=t.anchor,c=t.focus,f=t.isBackward(),u=f?c.offset:s.offset,g=f?c.getNode():s.getNode();if(yr(t)&&t.isCollapsed()&&""!==t.style){const e=b$3(t.style);if(null!==e&&n in e)return e[n]}for(let t=0;t<r.length;t++){const s=r[t];if((0===t||0!==u||!s.is(g))&&lr(s)){const e=oe$1(s,n,o);if(null===l)l=e;else if(l!==e){l="";break}}}return null===l?o:l}
 
 const ALLOWED_HTML_TAGS = [ "a", "action-text-attachment", "b", "blockquote", "br", "code", "em",
-  "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "ul", "table", "tbody", "tr", "th", "td" ];
+  "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "ul" ];
 
 const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",
   "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "presentation",
@@ -4659,7 +1444,7 @@ function getNonce() {
  *
  */
 
-function R$3(t,...e){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",t);for(const t of e)o.append("v",t);throw n.search=o.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const T$2="undefined"!=typeof window&&void 0!==window.document&&void 0!==window.document.createElement,B$2=T$2&&"documentMode"in document?document.documentMode:null;!(!T$2||!("InputEvent"in window)||B$2)&&"getTargetRanges"in new window.InputEvent("input");function F$3(...t){const e=[];for(const n of t)if(n&&"string"==typeof n)for(const[t]of n.matchAll(/\S+/g))e.push(t);return e}function U$4(...t){return ()=>{for(let e=t.length-1;e>=0;e--)t[e]();t.length=0;}}function lt$4(t,...e){const n=F$3(...e);n.length>0&&t.classList.add(...n);}function ut$3(t,...e){const n=F$3(...e);n.length>0&&t.classList.remove(...n);}function ft$2(t){return t?t.getAdjacentCaret():null}function wt$5(t,e){let n=t;for(;null!=n;){if(n instanceof e)return n;n=n.getParent();}return null}function xt$5(t){const e=zs(t,t=>Si(t)&&!t.isInline());return Si(e)||R$3(4,t.__key),e}function At$5(t){const o=Lr()||Ir();let r;if(yr(o))r=xl(o.focus,"next");else {if(null!=o){const t=o.getNodes(),e=t[t.length-1];e&&(r=tl(e,"next"));}r=r||il(No(),"previous").getFlipped().insert(Li());}const i=Ct$5(t,r),u=sl(i),s=Gs(u)?El(u):i;return Sl(fl(s)),t.getLatest()}function Ct$5(t,e,n){let o=Ml(e,"next");for(let t=o;t;t=Il(t,n))o=t;return Ys(o)&&R$3(283),o.insert(t.isInline()?Li().append(t):t),Ml(tl(t.getLatest(),"next"),e.direction)}function Lt$4(t,e){return null!==t&&Object.getPrototypeOf(t).constructor.name===e.name}function Bt$3(t,e){return _t$4(t,e,null)}function _t$4(t,e,n){let r=false;for(const i of Kt$3(t))e(i)?null!==n&&n(i):(r=true,Si(i)&&_t$4(i,e,n||(t=>i.insertAfter(t))),i.remove());return r}function kt$6(t,e){const n=[],r=Array.from(t).reverse();for(let t=r.pop();void 0!==t;t=r.pop())if(e(t))n.push(t);else if(Si(t))for(const e of Kt$3(t))r.push(e);return n}function Kt$3(t){return Ot$4(il(t,"previous"))}function Ot$4(t){return hl({hasNext:Hs,initial:t.getAdjacentCaret(),map:t=>t.origin.getLatest(),step:t=>t.getAdjacentCaret()})}
+function R$3(t,...e){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",t);for(const t of e)o.append("v",t);throw n.search=o.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const T$2="undefined"!=typeof window&&void 0!==window.document&&void 0!==window.document.createElement,B$2=T$2&&"documentMode"in document?document.documentMode:null;!(!T$2||!("InputEvent"in window)||B$2)&&"getTargetRanges"in new window.InputEvent("input");function F$3(...t){const e=[];for(const n of t)if(n&&"string"==typeof n)for(const[t]of n.matchAll(/\S+/g))e.push(t);return e}function U$4(...t){return ()=>{for(let e=t.length-1;e>=0;e--)t[e]();t.length=0;}}function lt$3(t,...e){const n=F$3(...e);n.length>0&&t.classList.add(...n);}function ut$2(t,...e){const n=F$3(...e);n.length>0&&t.classList.remove(...n);}function ft$1(t){return t?t.getAdjacentCaret():null}function wt$4(t,e){let n=t;for(;null!=n;){if(n instanceof e)return n;n=n.getParent();}return null}function xt$4(t){const e=zs(t,t=>Si(t)&&!t.isInline());return Si(e)||R$3(4,t.__key),e}function Lt$3(t,e){return null!==t&&Object.getPrototypeOf(t).constructor.name===e.name}
 
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -4669,7 +1454,7 @@ function R$3(t,...e){const n=new URL("https://lexical.dev/docs/error"),o=new URL
  *
  */
 
-const T$1=Symbol.for("preact-signals");function B$1(){if(Z$2>1)return void Z$2--;let t,e=false;for(;void 0!==V$4;){let n=V$4;for(V$4=void 0,J$4++;void 0!==n;){const i=n.o;if(n.o=void 0,n.f&=-3,!(8&n.f)&&Y$2(n))try{n.c();}catch(n){e||(t=n,e=true);}n=i;}}if(J$4=0,Z$2--,e)throw t}function F$2(t){if(Z$2>0)return t();Z$2++;try{return t()}finally{B$1();}}let G$3,V$4;function W$5(t){const e=G$3;G$3=void 0;try{return t()}finally{G$3=e;}}let Z$2=0,J$4=0,H$1=0;function q$3(t){if(void 0===G$3)return;let e=t.n;return void 0===e||e.t!==G$3?(e={i:0,S:t,p:G$3.s,n:void 0,t:G$3,e:void 0,x:void 0,r:e},void 0!==G$3.s&&(G$3.s.n=e),G$3.s=e,t.n=e,32&G$3.f&&t.S(e),e):-1===e.i?(e.i=0,void 0!==e.n&&(e.n.p=e.p,void 0!==e.p&&(e.p.n=e.n),e.p=G$3.s,e.n=void 0,G$3.s.n=e,G$3.s=e),e):void 0}function Q$3(t,e){this.v=t,this.i=0,this.n=void 0,this.t=void 0,this.W=null==e?void 0:e.watched,this.Z=null==e?void 0:e.unwatched,this.name=null==e?void 0:e.name;}function X$3(t,e){return new Q$3(t,e)}function Y$2(t){for(let e=t.s;void 0!==e;e=e.n)if(e.S.i!==e.i||!e.S.h()||e.S.i!==e.i)return  true;return  false}function tt$3(t){for(let e=t.s;void 0!==e;e=e.n){const n=e.S.n;if(void 0!==n&&(e.r=n),e.S.n=e,e.i=-1,void 0===e.n){t.s=e;break}}}function et$3(t){let e,n=t.s;for(;void 0!==n;){const t=n.p;-1===n.i?(n.S.U(n),void 0!==t&&(t.n=n.n),void 0!==n.n&&(n.n.p=t)):e=n,n.S.n=n.r,void 0!==n.r&&(n.r=void 0),n=t;}t.s=e;}function nt$3(t,e){Q$3.call(this,void 0),this.x=t,this.s=void 0,this.g=H$1-1,this.f=4,this.W=null==e?void 0:e.watched,this.Z=null==e?void 0:e.unwatched,this.name=null==e?void 0:e.name;}function ot$4(t){const e=t.u;if(t.u=void 0,"function"==typeof e){Z$2++;const n=G$3;G$3=void 0;try{e();}catch(e){throw t.f&=-2,t.f|=8,st$3(t),e}finally{G$3=n,B$1();}}}function st$3(t){for(let e=t.s;void 0!==e;e=e.n)e.S.U(e);t.x=void 0,t.s=void 0,ot$4(t);}function rt$2(t){if(G$3!==this)throw new Error("Out-of-order effect");et$3(this),G$3=t,this.f&=-2,8&this.f&&st$3(this),B$1();}function ct$4(t,e){this.x=t,this.u=void 0,this.s=void 0,this.o=void 0,this.f=32,this.name=null==e?void 0:e.name;}function dt$3(t,e){const n=new ct$4(t,e);try{n.c();}catch(t){throw n.d(),t}const i=n.d.bind(n);return i[Symbol.dispose]=i,i}function at$2(t,e={}){const n={};for(const i in t){const o=e[i],s=X$3(void 0===o?t[i]:o);n[i]=s;}return n}Q$3.prototype.brand=T$1,Q$3.prototype.h=function(){return  true},Q$3.prototype.S=function(t){const e=this.t;e!==t&&void 0===t.e&&(t.x=e,this.t=t,void 0!==e?e.e=t:W$5(()=>{var t;null==(t=this.W)||t.call(this);}));},Q$3.prototype.U=function(t){if(void 0!==this.t){const e=t.e,n=t.x;void 0!==e&&(e.x=n,t.e=void 0),void 0!==n&&(n.e=e,t.x=void 0),t===this.t&&(this.t=n,void 0===n&&W$5(()=>{var t;null==(t=this.Z)||t.call(this);}));}},Q$3.prototype.subscribe=function(t){return dt$3(()=>{const e=this.value,n=G$3;G$3=void 0;try{t(e);}finally{G$3=n;}},{name:"sub"})},Q$3.prototype.valueOf=function(){return this.value},Q$3.prototype.toString=function(){return this.value+""},Q$3.prototype.toJSON=function(){return this.value},Q$3.prototype.peek=function(){const t=G$3;G$3=void 0;try{return this.value}finally{G$3=t;}},Object.defineProperty(Q$3.prototype,"value",{get(){const t=q$3(this);return void 0!==t&&(t.i=this.i),this.v},set(t){if(t!==this.v){if(J$4>100)throw new Error("Cycle detected");this.v=t,this.i++,H$1++,Z$2++;try{for(let t=this.t;void 0!==t;t=t.x)t.t.N();}finally{B$1();}}}}),nt$3.prototype=new Q$3,nt$3.prototype.h=function(){if(this.f&=-3,1&this.f)return  false;if(32==(36&this.f))return  true;if(this.f&=-5,this.g===H$1)return  true;if(this.g=H$1,this.f|=1,this.i>0&&!Y$2(this))return this.f&=-2,true;const t=G$3;try{tt$3(this),G$3=this;const t=this.x();(16&this.f||this.v!==t||0===this.i)&&(this.v=t,this.f&=-17,this.i++);}catch(t){this.v=t,this.f|=16,this.i++;}return G$3=t,et$3(this),this.f&=-2,true},nt$3.prototype.S=function(t){if(void 0===this.t){this.f|=36;for(let t=this.s;void 0!==t;t=t.n)t.S.S(t);}Q$3.prototype.S.call(this,t);},nt$3.prototype.U=function(t){if(void 0!==this.t&&(Q$3.prototype.U.call(this,t),void 0===this.t)){this.f&=-33;for(let t=this.s;void 0!==t;t=t.n)t.S.U(t);}},nt$3.prototype.N=function(){if(!(2&this.f)){this.f|=6;for(let t=this.t;void 0!==t;t=t.x)t.t.N();}},Object.defineProperty(nt$3.prototype,"value",{get(){if(1&this.f)throw new Error("Cycle detected");const t=q$3(this);if(this.h(),void 0!==t&&(t.i=this.i),16&this.f)throw this.v;return this.v}}),ct$4.prototype.c=function(){const t=this.S();try{if(8&this.f)return;if(void 0===this.x)return;const t=this.x();"function"==typeof t&&(this.u=t);}finally{t();}},ct$4.prototype.S=function(){if(1&this.f)throw new Error("Cycle detected");this.f|=1,this.f&=-9,ot$4(this),tt$3(this),Z$2++;const t=G$3;return G$3=this,rt$2.bind(this,t)},ct$4.prototype.N=function(){2&this.f||(this.f|=2,this.o=V$4,V$4=this);},ct$4.prototype.d=function(){this.f|=8,1&this.f||st$3(this);},ct$4.prototype.dispose=function(){this.d();};function pt$3(t){return ("function"==typeof t.nodes?t.nodes():t.nodes)||[]}function xt$4(t,...e){const n=new URL("https://lexical.dev/docs/error"),i=new URLSearchParams;i.append("code",t);for(const t of e)i.append("v",t);throw n.search=i.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}function yt$3(t,e){if(t&&e&&!Array.isArray(e)&&"object"==typeof t&&"object"==typeof e){const n=t,i=e;for(const t in i)n[t]=yt$3(n[t],i[t]);return t}return e}const St$5=0,Et$4=1,bt$5=2,wt$4=3,Nt$4=4,Ot$3=5,Rt$2=6,Mt$3=7;function Ct$4(t){return t.id===St$5}function Dt$3(t){return t.id===bt$5}function _t$3(t){return function(t){return t.id===Et$4}(t)||xt$4(305,String(t.id),String(Et$4)),Object.assign(t,{id:bt$5})}const It$3=new Set;let jt$3 = class jt{builder;configs;_dependency;_peerNameSet;extension;state;_signal;constructor(t,e){this.builder=t,this.extension=e,this.configs=new Set,this.state={id:St$5};}mergeConfigs(){let t=this.extension.config||{};const e=this.extension.mergeConfig?this.extension.mergeConfig.bind(this.extension):Wl;for(const n of this.configs)t=e(t,n);return t}init(t){const e=this.state;Dt$3(e)||xt$4(306,String(e.id));const n={getDependency:this.getInitDependency.bind(this),getDirectDependentNames:this.getDirectDependentNames.bind(this),getPeer:this.getInitPeer.bind(this),getPeerNameSet:this.getPeerNameSet.bind(this)},i={...n,getDependency:this.getDependency.bind(this),getInitResult:this.getInitResult.bind(this),getPeer:this.getPeer.bind(this)},o=function(t,e,n){return Object.assign(t,{config:e,id:wt$4,registerState:n})}(e,this.mergeConfigs(),n);let s;this.state=o,this.extension.init&&(s=this.extension.init(t,o.config,n)),this.state=function(t,e,n){return Object.assign(t,{id:Nt$4,initResult:e,registerState:n})}(o,s,i);}build(t){const e=this.state;let n;e.id!==Nt$4&&xt$4(307,String(e.id),String(Ot$3)),this.extension.build&&(n=this.extension.build(t,e.config,e.registerState));const i={...e.registerState,getOutput:()=>n,getSignal:this.getSignal.bind(this)};this.state=function(t,e,n){return Object.assign(t,{id:Ot$3,output:e,registerState:n})}(e,n,i);}register(t,e){this._signal=e;const n=this.state;n.id!==Ot$3&&xt$4(308,String(n.id),String(Ot$3));const i=this.extension.register&&this.extension.register(t,n.config,n.registerState);return this.state=function(t){return Object.assign(t,{id:Rt$2})}(n),()=>{const t=this.state;t.id!==Mt$3&&xt$4(309,String(n.id),String(Mt$3)),this.state=function(t){return Object.assign(t,{id:Ot$3})}(t),i&&i();}}afterRegistration(t){const e=this.state;let n;return e.id!==Rt$2&&xt$4(310,String(e.id),String(Rt$2)),this.extension.afterRegistration&&(n=this.extension.afterRegistration(t,e.config,e.registerState)),this.state=function(t){return Object.assign(t,{id:Mt$3})}(e),n}getSignal(){return void 0===this._signal&&xt$4(311),this._signal}getInitResult(){ void 0===this.extension.init&&xt$4(312,this.extension.name);const t=this.state;return function(t){return t.id>=Nt$4}(t)||xt$4(313,String(t.id),String(Nt$4)),t.initResult}getInitPeer(t){const e=this.builder.extensionNameMap.get(t);return e?e.getExtensionInitDependency():void 0}getExtensionInitDependency(){const t=this.state;return function(t){return t.id>=wt$4}(t)||xt$4(314,String(t.id),String(wt$4)),{config:t.config}}getPeer(t){const e=this.builder.extensionNameMap.get(t);return e?e.getExtensionDependency():void 0}getInitDependency(t){const e=this.builder.getExtensionRep(t);return void 0===e&&xt$4(315,this.extension.name,t.name),e.getExtensionInitDependency()}getDependency(t){const e=this.builder.getExtensionRep(t);return void 0===e&&xt$4(315,this.extension.name,t.name),e.getExtensionDependency()}getState(){const t=this.state;return function(t){return t.id>=Mt$3}(t)||xt$4(316,String(t.id),String(Mt$3)),t}getDirectDependentNames(){return this.builder.incomingEdges.get(this.extension.name)||It$3}getPeerNameSet(){let t=this._peerNameSet;return t||(t=new Set((this.extension.peerDependencies||[]).map(([t])=>t)),this._peerNameSet=t),t}getExtensionDependency(){if(!this._dependency){const t=this.state;((function(t){return t.id>=Ot$3}))(t)||xt$4(317,this.extension.name),this._dependency={config:t.config,init:t.initResult,output:t.output};}return this._dependency}};const At$4={tag:Dn};function Pt$4(){const t=No();t.isEmpty()&&t.append(Li());}const Kt$2=Kl({config:Bl({setOptions:At$4,updateOptions:At$4}),init:({$initialEditorState:t=Pt$4})=>({$initialEditorState:t,initialized:false}),afterRegistration(t,{updateOptions:e,setOptions:n},i){const o=i.getInitResult();if(!o.initialized){o.initialized=true;const{$initialEditorState:i}=o;if(Mi(i))t.setEditorState(i,n);else if("function"==typeof i)t.update(()=>{i(t);},e);else if(i&&("string"==typeof i||"object"==typeof i)){const e=t.parseEditorState(i);t.setEditorState(e,n);}}return ()=>{}},name:"@lexical/extension/InitialState",nodes:[Ni,Xn,Bn,ar,Di]}),kt$5=Symbol.for("@lexical/extension/LexicalBuilder");function zt$2(){}function Ut$2(t){throw t}function Lt$3(t){return Array.isArray(t)?t:[t]}const Tt$4="0.38.2+prod.esm";let Bt$2 = class Bt{roots;extensionNameMap;outgoingConfigEdges;incomingEdges;conflicts;_sortedExtensionReps;PACKAGE_VERSION;constructor(t){this.outgoingConfigEdges=new Map,this.incomingEdges=new Map,this.extensionNameMap=new Map,this.conflicts=new Map,this.PACKAGE_VERSION=Tt$4,this.roots=t;for(const e of t)this.addExtension(e);}static fromExtensions(t){const e=[Lt$3(Kt$2)];for(const n of t)e.push(Lt$3(n));return new Bt(e)}static maybeFromEditor(t){const e=t[kt$5];return e&&(e.PACKAGE_VERSION!==Tt$4&&xt$4(292,e.PACKAGE_VERSION,Tt$4),e instanceof Bt||xt$4(293)),e}static fromEditor(t){const e=Bt.maybeFromEditor(t);return void 0===e&&xt$4(294),e}constructEditor(){const{$initialEditorState:t,onError:e,...n}=this.buildCreateEditorArgs(),i=Object.assign($i({...n,...e?{onError:t=>{e(t,i);}}:{}}),{[kt$5]:this});for(const t of this.sortedExtensionReps())t.build(i);return i}buildEditor(){let t=zt$2;function e(){try{t();}finally{t=zt$2;}}const n=Object.assign(this.constructEditor(),{dispose:e,[Symbol.dispose]:e});return t=U$4(this.registerEditor(n),()=>n.setRootElement(null)),n}hasExtensionByName(t){return this.extensionNameMap.has(t)}getExtensionRep(t){const e=this.extensionNameMap.get(t.name);if(e)return e.extension!==t&&xt$4(295,t.name),e}addEdge(t,e,n){const i=this.outgoingConfigEdges.get(t);i?i.set(e,n):this.outgoingConfigEdges.set(t,new Map([[e,n]]));const o=this.incomingEdges.get(e);o?o.add(t):this.incomingEdges.set(e,new Set([t]));}addExtension(t){ void 0!==this._sortedExtensionReps&&xt$4(296);const e=Lt$3(t),[n]=e;"string"!=typeof n.name&&xt$4(297,typeof n.name);let i=this.extensionNameMap.get(n.name);if(void 0!==i&&i.extension!==n&&xt$4(298,n.name),!i){i=new jt$3(this,n),this.extensionNameMap.set(n.name,i);const t=this.conflicts.get(n.name);"string"==typeof t&&xt$4(299,n.name,t);for(const t of n.conflictsWith||[])this.extensionNameMap.has(t)&&xt$4(299,n.name,t),this.conflicts.set(t,n.name);for(const t of n.dependencies||[]){const e=Lt$3(t);this.addEdge(n.name,e[0].name,e.slice(1)),this.addExtension(e);}for(const[t,e]of n.peerDependencies||[])this.addEdge(n.name,t,e?[e]:[]);}}sortedExtensionReps(){if(this._sortedExtensionReps)return this._sortedExtensionReps;const t=[],e=(n,i)=>{let o=n.state;if(Dt$3(o))return;const s=n.extension.name;var r;Ct$4(o)||xt$4(300,s,i||"[unknown]"),Ct$4(r=o)||xt$4(304,String(r.id),String(St$5)),o=Object.assign(r,{id:Et$4}),n.state=o;const c=this.outgoingConfigEdges.get(s);if(c)for(const t of c.keys()){const n=this.extensionNameMap.get(t);n&&e(n,s);}o=_t$3(o),n.state=o,t.push(n);};for(const t of this.extensionNameMap.values())Ct$4(t.state)&&e(t);for(const e of t)for(const[t,n]of this.outgoingConfigEdges.get(e.extension.name)||[])if(n.length>0){const e=this.extensionNameMap.get(t);if(e)for(const t of n)e.configs.add(t);}for(const[t,...e]of this.roots)if(e.length>0){const n=this.extensionNameMap.get(t.name);void 0===n&&xt$4(301,t.name);for(const t of e)n.configs.add(t);}return this._sortedExtensionReps=t,this._sortedExtensionReps}registerEditor(t){const e=this.sortedExtensionReps(),n=new AbortController,i=[()=>n.abort()],o=n.signal;for(const n of e){const e=n.register(t,o);e&&i.push(e);}for(const n of e){const e=n.afterRegistration(t);e&&i.push(e);}return U$4(...i)}buildCreateEditorArgs(){const t={},e=new Set,n=new Map,i=new Map,o={},s={},r=this.sortedExtensionReps();for(const c of r){const{extension:r}=c;if(void 0!==r.onError&&(t.onError=r.onError),void 0!==r.disableEvents&&(t.disableEvents=r.disableEvents),void 0!==r.parentEditor&&(t.parentEditor=r.parentEditor),void 0!==r.editable&&(t.editable=r.editable),void 0!==r.namespace&&(t.namespace=r.namespace),void 0!==r.$initialEditorState&&(t.$initialEditorState=r.$initialEditorState),r.nodes)for(const t of pt$3(r)){if("function"!=typeof t){const e=n.get(t.replace);e&&xt$4(302,r.name,t.replace.name,e.extension.name),n.set(t.replace,c);}e.add(t);}if(r.html){if(r.html.export)for(const[t,e]of r.html.export.entries())i.set(t,e);r.html.import&&Object.assign(o,r.html.import);}r.theme&&yt$3(s,r.theme);}Object.keys(s).length>0&&(t.theme=s),e.size&&(t.nodes=[...e]);const c=Object.keys(o).length>0,d=i.size>0;(c||d)&&(t.html={},c&&(t.html.import=o),d&&(t.html.export=i));for(const e of r)e.init(t);return t.onError||(t.onError=Ut$2),t}};function Gt$1(t,e){const n=Bt$2.fromEditor(t).extensionNameMap.get(e);return n?n.getExtensionDependency():void 0}
+const T$1=Symbol.for("preact-signals");function B$1(){if(Z$2>1)return void Z$2--;let t,e=false;for(;void 0!==V$4;){let n=V$4;for(V$4=void 0,J$4++;void 0!==n;){const i=n.o;if(n.o=void 0,n.f&=-3,!(8&n.f)&&Y$2(n))try{n.c();}catch(n){e||(t=n,e=true);}n=i;}}if(J$4=0,Z$2--,e)throw t}function F$2(t){if(Z$2>0)return t();Z$2++;try{return t()}finally{B$1();}}let G$3,V$4;function W$5(t){const e=G$3;G$3=void 0;try{return t()}finally{G$3=e;}}let Z$2=0,J$4=0,H$1=0;function q$3(t){if(void 0===G$3)return;let e=t.n;return void 0===e||e.t!==G$3?(e={i:0,S:t,p:G$3.s,n:void 0,t:G$3,e:void 0,x:void 0,r:e},void 0!==G$3.s&&(G$3.s.n=e),G$3.s=e,t.n=e,32&G$3.f&&t.S(e),e):-1===e.i?(e.i=0,void 0!==e.n&&(e.n.p=e.p,void 0!==e.p&&(e.p.n=e.n),e.p=G$3.s,e.n=void 0,G$3.s.n=e,G$3.s=e),e):void 0}function Q$3(t,e){this.v=t,this.i=0,this.n=void 0,this.t=void 0,this.W=null==e?void 0:e.watched,this.Z=null==e?void 0:e.unwatched,this.name=null==e?void 0:e.name;}function X$3(t,e){return new Q$3(t,e)}function Y$2(t){for(let e=t.s;void 0!==e;e=e.n)if(e.S.i!==e.i||!e.S.h()||e.S.i!==e.i)return  true;return  false}function tt$2(t){for(let e=t.s;void 0!==e;e=e.n){const n=e.S.n;if(void 0!==n&&(e.r=n),e.S.n=e,e.i=-1,void 0===e.n){t.s=e;break}}}function et$3(t){let e,n=t.s;for(;void 0!==n;){const t=n.p;-1===n.i?(n.S.U(n),void 0!==t&&(t.n=n.n),void 0!==n.n&&(n.n.p=t)):e=n,n.S.n=n.r,void 0!==n.r&&(n.r=void 0),n=t;}t.s=e;}function nt$3(t,e){Q$3.call(this,void 0),this.x=t,this.s=void 0,this.g=H$1-1,this.f=4,this.W=null==e?void 0:e.watched,this.Z=null==e?void 0:e.unwatched,this.name=null==e?void 0:e.name;}function ot$3(t){const e=t.u;if(t.u=void 0,"function"==typeof e){Z$2++;const n=G$3;G$3=void 0;try{e();}catch(e){throw t.f&=-2,t.f|=8,st$3(t),e}finally{G$3=n,B$1();}}}function st$3(t){for(let e=t.s;void 0!==e;e=e.n)e.S.U(e);t.x=void 0,t.s=void 0,ot$3(t);}function rt$2(t){if(G$3!==this)throw new Error("Out-of-order effect");et$3(this),G$3=t,this.f&=-2,8&this.f&&st$3(this),B$1();}function ct$3(t,e){this.x=t,this.u=void 0,this.s=void 0,this.o=void 0,this.f=32,this.name=null==e?void 0:e.name;}function dt$2(t,e){const n=new ct$3(t,e);try{n.c();}catch(t){throw n.d(),t}const i=n.d.bind(n);return i[Symbol.dispose]=i,i}function at$1(t,e={}){const n={};for(const i in t){const o=e[i],s=X$3(void 0===o?t[i]:o);n[i]=s;}return n}Q$3.prototype.brand=T$1,Q$3.prototype.h=function(){return  true},Q$3.prototype.S=function(t){const e=this.t;e!==t&&void 0===t.e&&(t.x=e,this.t=t,void 0!==e?e.e=t:W$5(()=>{var t;null==(t=this.W)||t.call(this);}));},Q$3.prototype.U=function(t){if(void 0!==this.t){const e=t.e,n=t.x;void 0!==e&&(e.x=n,t.e=void 0),void 0!==n&&(n.e=e,t.x=void 0),t===this.t&&(this.t=n,void 0===n&&W$5(()=>{var t;null==(t=this.Z)||t.call(this);}));}},Q$3.prototype.subscribe=function(t){return dt$2(()=>{const e=this.value,n=G$3;G$3=void 0;try{t(e);}finally{G$3=n;}},{name:"sub"})},Q$3.prototype.valueOf=function(){return this.value},Q$3.prototype.toString=function(){return this.value+""},Q$3.prototype.toJSON=function(){return this.value},Q$3.prototype.peek=function(){const t=G$3;G$3=void 0;try{return this.value}finally{G$3=t;}},Object.defineProperty(Q$3.prototype,"value",{get(){const t=q$3(this);return void 0!==t&&(t.i=this.i),this.v},set(t){if(t!==this.v){if(J$4>100)throw new Error("Cycle detected");this.v=t,this.i++,H$1++,Z$2++;try{for(let t=this.t;void 0!==t;t=t.x)t.t.N();}finally{B$1();}}}}),nt$3.prototype=new Q$3,nt$3.prototype.h=function(){if(this.f&=-3,1&this.f)return  false;if(32==(36&this.f))return  true;if(this.f&=-5,this.g===H$1)return  true;if(this.g=H$1,this.f|=1,this.i>0&&!Y$2(this))return this.f&=-2,true;const t=G$3;try{tt$2(this),G$3=this;const t=this.x();(16&this.f||this.v!==t||0===this.i)&&(this.v=t,this.f&=-17,this.i++);}catch(t){this.v=t,this.f|=16,this.i++;}return G$3=t,et$3(this),this.f&=-2,true},nt$3.prototype.S=function(t){if(void 0===this.t){this.f|=36;for(let t=this.s;void 0!==t;t=t.n)t.S.S(t);}Q$3.prototype.S.call(this,t);},nt$3.prototype.U=function(t){if(void 0!==this.t&&(Q$3.prototype.U.call(this,t),void 0===this.t)){this.f&=-33;for(let t=this.s;void 0!==t;t=t.n)t.S.U(t);}},nt$3.prototype.N=function(){if(!(2&this.f)){this.f|=6;for(let t=this.t;void 0!==t;t=t.x)t.t.N();}},Object.defineProperty(nt$3.prototype,"value",{get(){if(1&this.f)throw new Error("Cycle detected");const t=q$3(this);if(this.h(),void 0!==t&&(t.i=this.i),16&this.f)throw this.v;return this.v}}),ct$3.prototype.c=function(){const t=this.S();try{if(8&this.f)return;if(void 0===this.x)return;const t=this.x();"function"==typeof t&&(this.u=t);}finally{t();}},ct$3.prototype.S=function(){if(1&this.f)throw new Error("Cycle detected");this.f|=1,this.f&=-9,ot$3(this),tt$2(this),Z$2++;const t=G$3;return G$3=this,rt$2.bind(this,t)},ct$3.prototype.N=function(){2&this.f||(this.f|=2,this.o=V$4,V$4=this);},ct$3.prototype.d=function(){this.f|=8,1&this.f||st$3(this);},ct$3.prototype.dispose=function(){this.d();};function pt$2(t){return ("function"==typeof t.nodes?t.nodes():t.nodes)||[]}function xt$3(t,...e){const n=new URL("https://lexical.dev/docs/error"),i=new URLSearchParams;i.append("code",t);for(const t of e)i.append("v",t);throw n.search=i.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}function yt$2(t,e){if(t&&e&&!Array.isArray(e)&&"object"==typeof t&&"object"==typeof e){const n=t,i=e;for(const t in i)n[t]=yt$2(n[t],i[t]);return t}return e}const St$4=0,Et$3=1,bt$4=2,wt$3=3,Nt$3=4,Ot$2=5,Rt$1=6,Mt$2=7;function Ct$3(t){return t.id===St$4}function Dt$2(t){return t.id===bt$4}function _t$2(t){return function(t){return t.id===Et$3}(t)||xt$3(305,String(t.id),String(Et$3)),Object.assign(t,{id:bt$4})}const It$2=new Set;let jt$2 = class jt{builder;configs;_dependency;_peerNameSet;extension;state;_signal;constructor(t,e){this.builder=t,this.extension=e,this.configs=new Set,this.state={id:St$4};}mergeConfigs(){let t=this.extension.config||{};const e=this.extension.mergeConfig?this.extension.mergeConfig.bind(this.extension):Wl;for(const n of this.configs)t=e(t,n);return t}init(t){const e=this.state;Dt$2(e)||xt$3(306,String(e.id));const n={getDependency:this.getInitDependency.bind(this),getDirectDependentNames:this.getDirectDependentNames.bind(this),getPeer:this.getInitPeer.bind(this),getPeerNameSet:this.getPeerNameSet.bind(this)},i={...n,getDependency:this.getDependency.bind(this),getInitResult:this.getInitResult.bind(this),getPeer:this.getPeer.bind(this)},o=function(t,e,n){return Object.assign(t,{config:e,id:wt$3,registerState:n})}(e,this.mergeConfigs(),n);let s;this.state=o,this.extension.init&&(s=this.extension.init(t,o.config,n)),this.state=function(t,e,n){return Object.assign(t,{id:Nt$3,initResult:e,registerState:n})}(o,s,i);}build(t){const e=this.state;let n;e.id!==Nt$3&&xt$3(307,String(e.id),String(Ot$2)),this.extension.build&&(n=this.extension.build(t,e.config,e.registerState));const i={...e.registerState,getOutput:()=>n,getSignal:this.getSignal.bind(this)};this.state=function(t,e,n){return Object.assign(t,{id:Ot$2,output:e,registerState:n})}(e,n,i);}register(t,e){this._signal=e;const n=this.state;n.id!==Ot$2&&xt$3(308,String(n.id),String(Ot$2));const i=this.extension.register&&this.extension.register(t,n.config,n.registerState);return this.state=function(t){return Object.assign(t,{id:Rt$1})}(n),()=>{const t=this.state;t.id!==Mt$2&&xt$3(309,String(n.id),String(Mt$2)),this.state=function(t){return Object.assign(t,{id:Ot$2})}(t),i&&i();}}afterRegistration(t){const e=this.state;let n;return e.id!==Rt$1&&xt$3(310,String(e.id),String(Rt$1)),this.extension.afterRegistration&&(n=this.extension.afterRegistration(t,e.config,e.registerState)),this.state=function(t){return Object.assign(t,{id:Mt$2})}(e),n}getSignal(){return void 0===this._signal&&xt$3(311),this._signal}getInitResult(){ void 0===this.extension.init&&xt$3(312,this.extension.name);const t=this.state;return function(t){return t.id>=Nt$3}(t)||xt$3(313,String(t.id),String(Nt$3)),t.initResult}getInitPeer(t){const e=this.builder.extensionNameMap.get(t);return e?e.getExtensionInitDependency():void 0}getExtensionInitDependency(){const t=this.state;return function(t){return t.id>=wt$3}(t)||xt$3(314,String(t.id),String(wt$3)),{config:t.config}}getPeer(t){const e=this.builder.extensionNameMap.get(t);return e?e.getExtensionDependency():void 0}getInitDependency(t){const e=this.builder.getExtensionRep(t);return void 0===e&&xt$3(315,this.extension.name,t.name),e.getExtensionInitDependency()}getDependency(t){const e=this.builder.getExtensionRep(t);return void 0===e&&xt$3(315,this.extension.name,t.name),e.getExtensionDependency()}getState(){const t=this.state;return function(t){return t.id>=Mt$2}(t)||xt$3(316,String(t.id),String(Mt$2)),t}getDirectDependentNames(){return this.builder.incomingEdges.get(this.extension.name)||It$2}getPeerNameSet(){let t=this._peerNameSet;return t||(t=new Set((this.extension.peerDependencies||[]).map(([t])=>t)),this._peerNameSet=t),t}getExtensionDependency(){if(!this._dependency){const t=this.state;((function(t){return t.id>=Ot$2}))(t)||xt$3(317,this.extension.name),this._dependency={config:t.config,init:t.initResult,output:t.output};}return this._dependency}};const At$3={tag:Dn};function Pt$3(){const t=No();t.isEmpty()&&t.append(Li());}const Kt$1=Kl({config:Bl({setOptions:At$3,updateOptions:At$3}),init:({$initialEditorState:t=Pt$3})=>({$initialEditorState:t,initialized:false}),afterRegistration(t,{updateOptions:e,setOptions:n},i){const o=i.getInitResult();if(!o.initialized){o.initialized=true;const{$initialEditorState:i}=o;if(Mi(i))t.setEditorState(i,n);else if("function"==typeof i)t.update(()=>{i(t);},e);else if(i&&("string"==typeof i||"object"==typeof i)){const e=t.parseEditorState(i);t.setEditorState(e,n);}}return ()=>{}},name:"@lexical/extension/InitialState",nodes:[Ni,Xn,Bn,ar,Di]}),kt$4=Symbol.for("@lexical/extension/LexicalBuilder");function zt$1(){}function Ut$1(t){throw t}function Lt$2(t){return Array.isArray(t)?t:[t]}const Tt$3="0.38.2+prod.esm";let Bt$1 = class Bt{roots;extensionNameMap;outgoingConfigEdges;incomingEdges;conflicts;_sortedExtensionReps;PACKAGE_VERSION;constructor(t){this.outgoingConfigEdges=new Map,this.incomingEdges=new Map,this.extensionNameMap=new Map,this.conflicts=new Map,this.PACKAGE_VERSION=Tt$3,this.roots=t;for(const e of t)this.addExtension(e);}static fromExtensions(t){const e=[Lt$2(Kt$1)];for(const n of t)e.push(Lt$2(n));return new Bt(e)}static maybeFromEditor(t){const e=t[kt$4];return e&&(e.PACKAGE_VERSION!==Tt$3&&xt$3(292,e.PACKAGE_VERSION,Tt$3),e instanceof Bt||xt$3(293)),e}static fromEditor(t){const e=Bt.maybeFromEditor(t);return void 0===e&&xt$3(294),e}constructEditor(){const{$initialEditorState:t,onError:e,...n}=this.buildCreateEditorArgs(),i=Object.assign($i({...n,...e?{onError:t=>{e(t,i);}}:{}}),{[kt$4]:this});for(const t of this.sortedExtensionReps())t.build(i);return i}buildEditor(){let t=zt$1;function e(){try{t();}finally{t=zt$1;}}const n=Object.assign(this.constructEditor(),{dispose:e,[Symbol.dispose]:e});return t=U$4(this.registerEditor(n),()=>n.setRootElement(null)),n}hasExtensionByName(t){return this.extensionNameMap.has(t)}getExtensionRep(t){const e=this.extensionNameMap.get(t.name);if(e)return e.extension!==t&&xt$3(295,t.name),e}addEdge(t,e,n){const i=this.outgoingConfigEdges.get(t);i?i.set(e,n):this.outgoingConfigEdges.set(t,new Map([[e,n]]));const o=this.incomingEdges.get(e);o?o.add(t):this.incomingEdges.set(e,new Set([t]));}addExtension(t){ void 0!==this._sortedExtensionReps&&xt$3(296);const e=Lt$2(t),[n]=e;"string"!=typeof n.name&&xt$3(297,typeof n.name);let i=this.extensionNameMap.get(n.name);if(void 0!==i&&i.extension!==n&&xt$3(298,n.name),!i){i=new jt$2(this,n),this.extensionNameMap.set(n.name,i);const t=this.conflicts.get(n.name);"string"==typeof t&&xt$3(299,n.name,t);for(const t of n.conflictsWith||[])this.extensionNameMap.has(t)&&xt$3(299,n.name,t),this.conflicts.set(t,n.name);for(const t of n.dependencies||[]){const e=Lt$2(t);this.addEdge(n.name,e[0].name,e.slice(1)),this.addExtension(e);}for(const[t,e]of n.peerDependencies||[])this.addEdge(n.name,t,e?[e]:[]);}}sortedExtensionReps(){if(this._sortedExtensionReps)return this._sortedExtensionReps;const t=[],e=(n,i)=>{let o=n.state;if(Dt$2(o))return;const s=n.extension.name;var r;Ct$3(o)||xt$3(300,s,i||"[unknown]"),Ct$3(r=o)||xt$3(304,String(r.id),String(St$4)),o=Object.assign(r,{id:Et$3}),n.state=o;const c=this.outgoingConfigEdges.get(s);if(c)for(const t of c.keys()){const n=this.extensionNameMap.get(t);n&&e(n,s);}o=_t$2(o),n.state=o,t.push(n);};for(const t of this.extensionNameMap.values())Ct$3(t.state)&&e(t);for(const e of t)for(const[t,n]of this.outgoingConfigEdges.get(e.extension.name)||[])if(n.length>0){const e=this.extensionNameMap.get(t);if(e)for(const t of n)e.configs.add(t);}for(const[t,...e]of this.roots)if(e.length>0){const n=this.extensionNameMap.get(t.name);void 0===n&&xt$3(301,t.name);for(const t of e)n.configs.add(t);}return this._sortedExtensionReps=t,this._sortedExtensionReps}registerEditor(t){const e=this.sortedExtensionReps(),n=new AbortController,i=[()=>n.abort()],o=n.signal;for(const n of e){const e=n.register(t,o);e&&i.push(e);}for(const n of e){const e=n.afterRegistration(t);e&&i.push(e);}return U$4(...i)}buildCreateEditorArgs(){const t={},e=new Set,n=new Map,i=new Map,o={},s={},r=this.sortedExtensionReps();for(const c of r){const{extension:r}=c;if(void 0!==r.onError&&(t.onError=r.onError),void 0!==r.disableEvents&&(t.disableEvents=r.disableEvents),void 0!==r.parentEditor&&(t.parentEditor=r.parentEditor),void 0!==r.editable&&(t.editable=r.editable),void 0!==r.namespace&&(t.namespace=r.namespace),void 0!==r.$initialEditorState&&(t.$initialEditorState=r.$initialEditorState),r.nodes)for(const t of pt$2(r)){if("function"!=typeof t){const e=n.get(t.replace);e&&xt$3(302,r.name,t.replace.name,e.extension.name),n.set(t.replace,c);}e.add(t);}if(r.html){if(r.html.export)for(const[t,e]of r.html.export.entries())i.set(t,e);r.html.import&&Object.assign(o,r.html.import);}r.theme&&yt$2(s,r.theme);}Object.keys(s).length>0&&(t.theme=s),e.size&&(t.nodes=[...e]);const c=Object.keys(o).length>0,d=i.size>0;(c||d)&&(t.html={},c&&(t.html.import=o),d&&(t.html.export=i));for(const e of r)e.init(t);return t.onError||(t.onError=Ut$1),t}};function Gt(t,e){const n=Bt$1.fromEditor(t).extensionNameMap.get(e);return n?n.getExtensionDependency():void 0}
 
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -4679,7 +1464,7 @@ const T$1=Symbol.for("preact-signals");function B$1(){if(Z$2>1)return void Z$2--
  *
  */
 
-function K$3(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSearchParams;r.append("code",t);for(const t of e)r.append("v",t);throw n.search=r.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}function W$4(t){let e=1,n=t.getParent();for(;null!=n;){if(ot$3(n)){const t=n.getParent();if(dt$2(t)){e++,n=t.getParent();continue}K$3(40);}return e}return e}function J$3(t){let e=t.getParent();dt$2(e)||K$3(40);let n=e;for(;null!==n;)n=n.getParent(),dt$2(n)&&(e=n);return e}function U$3(t){let e=[];const n=t.getChildren().filter(ot$3);for(let t=0;t<n.length;t++){const r=n[t],i=r.getFirstChild();dt$2(i)?e=e.concat(U$3(i)):e.push(r);}return e}function $$2(t){return ot$3(t)&&dt$2(t.getFirstChild())}function V$3(t){return st$2().append(t)}function z$2(t,e){return ot$3(t)&&(0===e.length||1===e.length&&t.is(e[0])&&0===t.getChildrenSize())}function j$1(t){const e=Lr();if(null!==e){let n=e.getNodes();if(yr(e)){const r=e.getStartEndPoints();null===r&&K$3(143);const[i]=r,s=i.getNode(),o=s.getParent();if(as(s)){const t=s.getFirstChild();if(t)n=t.selectStart().getNodes();else {const t=Li();s.append(t),n=t.select().getNodes();}}else if(z$2(s,n)){const e=ht$3(t);if(as(o)){s.replace(e);const t=st$2();Si(s)&&(t.setFormat(s.getFormatType()),t.setIndent(s.getIndent())),e.append(t);}else if(ot$3(s)){const t=s.getParentOrThrow();q$2(e,t.getChildren()),t.replace(e);}return}}const r=new Set;for(let e=0;e<n.length;e++){const i=n[e];if(Si(i)&&i.isEmpty()&&!ot$3(i)&&!r.has(i.getKey())){H(i,t);continue}let s=ho(i)?i.getParent():ot$3(i)&&i.isEmpty()?i:null;for(;null!=s;){const e=s.getKey();if(dt$2(s)){if(!r.has(e)){const n=ht$3(t);q$2(n,s.getChildren()),s.replace(n),r.add(e);}break}{const n=s.getParent();if(as(n)&&!r.has(e)){r.add(e),H(s,t);break}s=n;}}}}}function q$2(t,e){t.splice(t.getChildrenSize(),0,e);}function H(t,e){if(dt$2(t))return t;const n=t.getPreviousSibling(),r=t.getNextSibling(),i=st$2();let s;if(q$2(i,t.getChildren()),dt$2(n)&&e===n.getListType())n.append(i),dt$2(r)&&e===r.getListType()&&(q$2(n,r.getChildren()),r.remove()),s=n;else if(dt$2(r)&&e===r.getListType())r.getFirstChildOrThrow().insertBefore(i),s=r;else {const n=ht$3(e);n.append(i),t.replace(n),s=n;}return i.setFormat(t.getFormatType()),i.setIndent(t.getIndent()),t.remove(),s}function X$2(t,e){const n=t.getLastChild(),r=e.getFirstChild();n&&r&&$$2(n)&&$$2(r)&&(X$2(n.getFirstChild(),r.getFirstChild()),r.remove());const i=e.getChildren();i.length>0&&t.append(...i),e.remove();}function G$2(){const t=Lr();if(yr(t)){const e=new Set,r=t.getNodes(),i=t.anchor.getNode();if(z$2(i,r))e.add(J$3(i));else for(let t=0;t<r.length;t++){const i=r[t];if(ho(i)){const t=wt$5(i,nt$2);null!=t&&e.add(J$3(t));}}for(const n of e){let e=n;const r=U$3(n);for(const n of r){const r=Li().setTextStyle(t.style).setTextFormat(t.format);q$2(r,n.getChildren()),e.insertAfter(r),e=r,n.__key===t.anchor.key&&Cl(t.anchor,El(il(r,"next"))),n.__key===t.focus.key&&Cl(t.focus,El(il(r,"next"))),n.remove();}n.remove();}}}function Q$2(t){const e="check"!==t.getListType();let n=t.getStart();for(const r of t.getChildren())ot$3(r)&&(r.getValue()!==n&&r.setValue(n),e&&null!=r.getLatest().__checked&&r.setChecked(void 0),dt$2(r.getFirstChild())||n++);}function Y$1(t){const e=new Set;if($$2(t)||e.has(t.getKey()))return;const n=t.getParent(),r=t.getNextSibling(),i=t.getPreviousSibling();if($$2(r)&&$$2(i)){const n=i.getFirstChild();if(dt$2(n)){n.append(t);const i=r.getFirstChild();if(dt$2(i)){q$2(n,i.getChildren()),r.remove(),e.add(r.getKey());}}}else if($$2(r)){const e=r.getFirstChild();if(dt$2(e)){const n=e.getFirstChild();null!==n&&n.insertBefore(t);}}else if($$2(i)){const e=i.getFirstChild();dt$2(e)&&e.append(t);}else if(dt$2(n)){const e=st$2().setTextFormat(t.getTextFormat()).setTextStyle(t.getTextStyle()),s=ht$3(n.getListType()).setTextFormat(n.getTextFormat()).setTextStyle(n.getTextStyle());e.append(s),s.append(t),i?i.insertAfter(e):r?r.insertBefore(e):n.append(e);}}function Z$1(t){if($$2(t))return;const e=t.getParent(),n=e?e.getParent():void 0;if(dt$2(n?n.getParent():void 0)&&ot$3(n)&&dt$2(e)){const r=e?e.getFirstChild():void 0,i=e?e.getLastChild():void 0;if(t.is(r))n.insertBefore(t),e.isEmpty()&&n.remove();else if(t.is(i))n.insertAfter(t),e.isEmpty()&&n.remove();else {const r=e.getListType(),i=st$2(),s=ht$3(r);i.append(s),t.getPreviousSiblings().forEach(t=>s.append(t));const o=st$2(),l=ht$3(r);o.append(l),q$2(l,t.getNextSiblings()),n.insertBefore(i),n.insertAfter(o),n.replace(t);}}}function tt$2(){const t=Lr();if(!yr(t)||!t.isCollapsed())return  false;const e=t.anchor.getNode();if(!ot$3(e)||0!==e.getChildrenSize())return  false;const n=J$3(e),r=e.getParent();dt$2(r)||K$3(40);const i=r.getParent();let s;if(as(i))s=Li(),n.insertAfter(s);else {if(!ot$3(i))return  false;s=st$2(),i.insertAfter(s);}s.setTextStyle(t.style).setTextFormat(t.format).select();const o=e.getNextSiblings();if(o.length>0){const t=ht$3(r.getListType());if(ot$3(s)){const e=st$2();e.append(t),s.insertAfter(e);}else s.insertAfter(t);t.append(...o);}return function(t){let e=t;for(;null==e.getNextSibling()&&null==e.getPreviousSibling();){const t=e.getParent();if(null==t||!ot$3(t)&&!dt$2(t))break;e=t;}e.remove();}(e),true}function et$2(...t){const e=[];for(const n of t)if(n&&"string"==typeof n)for(const[t]of n.matchAll(/\S+/g))e.push(t);return e}let nt$2 = class nt extends Ci{__value;__checked;$config(){return this.config("listitem",{$transform:t=>{if(null==t.__checked)return;const e=t.getParent();dt$2(e)&&"check"!==e.getListType()&&null!=t.getChecked()&&t.setChecked(void 0);},extends:Ci,importDOM:wn$1({li:()=>({conversion:rt$1,priority:0})})})}constructor(t=1,e=void 0,n){super(n),this.__value=void 0===t?1:t,this.__checked=e;}afterCloneFrom(t){super.afterCloneFrom(t),this.__value=t.__value,this.__checked=t.__checked;}createDOM(t){const e=document.createElement("li");return this.updateListItemDOM(null,e,t),e}updateListItemDOM(t,e,n){!function(t,e,n){const r=e.getParent();!dt$2(r)||"check"!==r.getListType()||dt$2(e.getFirstChild())?(t.removeAttribute("role"),t.removeAttribute("tabIndex"),t.removeAttribute("aria-checked")):(t.setAttribute("role","checkbox"),t.setAttribute("tabIndex","-1"),n&&e.__checked===n.__checked||t.setAttribute("aria-checked",e.getChecked()?"true":"false"));}(e,this,t),e.value=this.__value,function(t,e,n){const s=[],o=[],l=e.list,c=l?l.listitem:void 0;let a;l&&l.nested&&(a=l.nested.listitem);void 0!==c&&s.push(...et$2(c));if(l){const t=n.getParent(),e=dt$2(t)&&"check"===t.getListType(),r=n.getChecked();e&&!r||o.push(l.listitemUnchecked),e&&r||o.push(l.listitemChecked),e&&s.push(r?l.listitemChecked:l.listitemUnchecked);}if(void 0!==a){const t=et$2(a);n.getChildren().some(t=>dt$2(t))?s.push(...t):o.push(...t);}o.length>0&&ut$3(t,...o);s.length>0&&lt$4(t,...s);}(e,n.theme,this);const s=t?t.__style:"",o=this.__style;s!==o&&(""===o?e.removeAttribute("style"):e.style.cssText=o),function(t,e,n){const r=b$3(e.__textStyle);for(const e in r)t.style.setProperty(`--listitem-marker-${e}`,r[e]);if(n)for(const e in b$3(n.__textStyle))e in r||t.style.removeProperty(`--listitem-marker-${e}`);}(e,this,t);}updateDOM(t,e,n){const r=e;return this.updateListItemDOM(t,r,n),false}updateFromJSON(t){return super.updateFromJSON(t).setValue(t.value).setChecked(t.checked)}exportDOM(t){const e=this.createDOM(t._config),n=this.getFormatType();n&&(e.style.textAlign=n);const r=this.getDirection();return r&&(e.dir=r),{element:e}}exportJSON(){return {...super.exportJSON(),checked:this.getChecked(),value:this.getValue()}}append(...t){for(let e=0;e<t.length;e++){const n=t[e];if(Si(n)&&this.canMergeWith(n)){const t=n.getChildren();this.append(...t),n.remove();}else super.append(n);}return this}replace(t,e){if(ot$3(t))return super.replace(t);this.setIndent(0);const n=this.getParentOrThrow();if(!dt$2(n))return t;if(n.__first===this.getKey())n.insertBefore(t);else if(n.__last===this.getKey())n.insertAfter(t);else {const e=ht$3(n.getListType());let r=this.getNextSibling();for(;r;){const t=r;r=r.getNextSibling(),e.append(t);}n.insertAfter(t),t.insertAfter(e);}return e&&(Si(t)||K$3(139),this.getChildren().forEach(e=>{t.append(e);})),this.remove(),0===n.getChildrenSize()&&n.remove(),t}insertAfter(t,e=true){const n=this.getParentOrThrow();if(dt$2(n)||K$3(39),ot$3(t))return super.insertAfter(t,e);const r=this.getNextSiblings();if(n.insertAfter(t,e),0!==r.length){const i=ht$3(n.getListType());r.forEach(t=>i.append(t)),t.insertAfter(i,e);}return t}remove(t){const e=this.getPreviousSibling(),n=this.getNextSibling();super.remove(t),e&&n&&$$2(e)&&$$2(n)&&(X$2(e.getFirstChild(),n.getFirstChild()),n.remove());}insertNewAfter(t,e=true){const n=st$2().updateFromJSON(this.exportJSON()).setChecked(!this.getChecked()&&void 0);return this.insertAfter(n,e),n}collapseAtStart(t){const e=Li();this.getChildren().forEach(t=>e.append(t));const n=this.getParentOrThrow(),r=n.getParentOrThrow(),i=ot$3(r);if(1===n.getChildrenSize())if(i)n.remove(),r.select();else {n.insertBefore(e),n.remove();const r=t.anchor,i=t.focus,s=e.getKey();"element"===r.type&&r.getNode().is(this)&&r.set(s,r.offset,"element"),"element"===i.type&&i.getNode().is(this)&&i.set(s,i.offset,"element");}else n.insertBefore(e),this.remove();return  true}getValue(){return this.getLatest().__value}setValue(t){const e=this.getWritable();return e.__value=t,e}getChecked(){const t=this.getLatest();let e;const n=this.getParent();return dt$2(n)&&(e=n.getListType()),"check"===e?Boolean(t.__checked):void 0}setChecked(t){const e=this.getWritable();return e.__checked=t,e}toggleChecked(){const t=this.getWritable();return t.setChecked(!t.__checked)}getIndent(){const t=this.getParent();if(null===t||!this.isAttached())return this.getLatest().__indent;let e=t.getParentOrThrow(),n=0;for(;ot$3(e);)e=e.getParentOrThrow().getParentOrThrow(),n++;return n}setIndent(t){"number"!=typeof t&&K$3(117),(t=Math.floor(t))>=0||K$3(199);let e=this.getIndent();for(;e!==t;)e<t?(Y$1(this),e++):(Z$1(this),e--);return this}canInsertAfter(t){return ot$3(t)}canReplaceWith(t){return ot$3(t)}canMergeWith(t){return ot$3(t)||Ii(t)}extractWithChild(t,e){if(!yr(e))return  false;const n=e.anchor.getNode(),r=e.focus.getNode();return this.isParentOf(n)&&this.isParentOf(r)&&this.getTextContent().length===e.getTextContent().length}isParentRequired(){return  true}createParentElementNode(){return ht$3("bullet")}canMergeWhenEmpty(){return  true}};function rt$1(t){if(t.classList.contains("task-list-item"))for(const e of t.children)if("INPUT"===e.tagName)return it$3(e);if(t.classList.contains("joplin-checkbox"))for(const e of t.children)if(e.classList.contains("checkbox-wrapper")&&e.children.length>0&&"INPUT"===e.children[0].tagName)return it$3(e.children[0]);const e=t.getAttribute("aria-checked");return {node:st$2("true"===e||"false"!==e&&void 0)}}function it$3(t){if(!("checkbox"===t.getAttribute("type")))return {node:null};return {node:st$2(t.hasAttribute("checked"))}}function st$2(t){return fs(new nt$2(void 0,t))}function ot$3(t){return t instanceof nt$2}let lt$3 = class lt extends Ci{__tag;__start;__listType;$config(){return this.config("list",{$transform:t=>{!function(t){const e=t.getNextSibling();dt$2(e)&&t.getListType()===e.getListType()&&X$2(t,e);}(t),Q$2(t);},extends:Ci,importDOM:wn$1({ol:()=>({conversion:gt$3,priority:0}),ul:()=>({conversion:gt$3,priority:0})})})}constructor(t="number",e=1,n){super(n);const r=ut$2[t]||t;this.__listType=r,this.__tag="number"===r?"ol":"ul",this.__start=e;}afterCloneFrom(t){super.afterCloneFrom(t),this.__listType=t.__listType,this.__tag=t.__tag,this.__start=t.__start;}getTag(){return this.getLatest().__tag}setListType(t){const e=this.getWritable();return e.__listType=t,e.__tag="number"===t?"ol":"ul",e}getListType(){return this.getLatest().__listType}getStart(){return this.getLatest().__start}setStart(t){const e=this.getWritable();return e.__start=t,e}createDOM(t,e){const n=this.__tag,r=document.createElement(n);return 1!==this.__start&&r.setAttribute("start",String(this.__start)),r.__lexicalListType=this.__listType,ct$3(r,t.theme,this),r}updateDOM(t,e,n){return t.__tag!==this.__tag||t.__listType!==this.__listType||(ct$3(e,n.theme,this),false)}updateFromJSON(t){return super.updateFromJSON(t).setListType(t.listType).setStart(t.start)}exportDOM(t){const e=this.createDOM(t._config,t);return Cs(e)&&(1!==this.__start&&e.setAttribute("start",String(this.__start)),"check"===this.__listType&&e.setAttribute("__lexicalListType","check")),{element:e}}exportJSON(){return {...super.exportJSON(),listType:this.getListType(),start:this.getStart(),tag:this.getTag()}}canBeEmpty(){return  false}canIndent(){return  false}splice(t,e,n){let r=n;for(let t=0;t<n.length;t++){const e=n[t];ot$3(e)||(r===n&&(r=[...n]),r[t]=st$2().append(!Si(e)||dt$2(e)||e.isInline()?e:sr(e.getTextContent())));}return super.splice(t,e,r)}extractWithChild(t){return ot$3(t)}};function ct$3(t,e,n){const s=[],o=[],l=e.list;if(void 0!==l){const t=l[`${n.__tag}Depth`]||[],e=W$4(n)-1,r=e%t.length,i=t[r],c=l[n.__tag];let a;const g=l.nested,u=l.checklist;if(void 0!==g&&g.list&&(a=g.list),void 0!==c&&s.push(c),void 0!==u&&"check"===n.__listType&&s.push(u),void 0!==i){s.push(...et$2(i));for(let e=0;e<t.length;e++)e!==r&&o.push(n.__tag+e);}if(void 0!==a){const t=et$2(a);e>1?s.push(...t):o.push(...t);}}o.length>0&&ut$3(t,...o),s.length>0&&lt$4(t,...s);}function at$1(t){const e=[];for(let n=0;n<t.length;n++){const r=t[n];if(ot$3(r)){e.push(r);const t=r.getChildren();t.length>1&&t.forEach(t=>{dt$2(t)&&e.push(V$3(t));});}else e.push(V$3(r));}return e}function gt$3(t){const e=t.nodeName.toLowerCase();let n=null;if("ol"===e){n=ht$3("number",t.start);}else "ul"===e&&(n=function(t){if("check"===t.getAttribute("__lexicallisttype")||t.classList.contains("contains-task-list")||"1"===t.getAttribute("data-is-checklist"))return  true;for(const e of t.childNodes)if(Cs(e)&&e.hasAttribute("aria-checked"))return  true;return  false}(t)?ht$3("check"):ht$3("bullet"));return {after:at$1,node:n}}const ut$2={ol:"number",ul:"bullet"};function ht$3(t="number",e=1){return fs(new lt$3(t,e))}function dt$2(t){return t instanceof lt$3}const vt$3=re$1("UPDATE_LIST_START_COMMAND"),St$4=re$1("INSERT_UNORDERED_LIST_COMMAND"),xt$3=re$1("INSERT_ORDERED_LIST_COMMAND"),kt$4=re$1("REMOVE_LIST_COMMAND");function bt$4(t){return U$4(t.registerCommand(xt$3,()=>(j$1("number"),true),zi),t.registerCommand(vt$3,t=>{const{listNodeKey:e,newStart:n}=t,r=xo(e);return !!dt$2(r)&&("number"===r.getListType()&&(r.setStart(n),Q$2(r)),true)},zi),t.registerCommand(St$4,()=>(j$1("bullet"),true),zi),t.registerCommand(kt$4,()=>(G$2(),true),zi),t.registerCommand(ae$1,()=>tt$2(),zi),t.registerNodeTransform(nt$2,t=>{const e=t.getFirstChild();if(e){if(lr(e)){const n=e.getStyle(),r=e.getFormat();t.getTextStyle()!==n&&t.setTextStyle(n),t.getTextFormat()!==r&&t.setTextFormat(r);}}else {const e=Lr();yr(e)&&(e.style!==t.getTextStyle()||e.format!==t.getTextFormat())&&e.isCollapsed()&&t.is(e.anchor.getNode())&&t.setTextStyle(e.style).setTextFormat(e.format);}}),t.registerNodeTransform(Xn,t=>{const e=t.getParent();if(ot$3(e)&&t.is(e.getFirstChild())){const n=t.getStyle(),r=t.getFormat();n===e.getTextStyle()&&r===e.getTextFormat()||e.setTextStyle(n).setTextFormat(r);}}))}
+function K$3(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSearchParams;r.append("code",t);for(const t of e)r.append("v",t);throw n.search=r.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}function W$4(t){let e=1,n=t.getParent();for(;null!=n;){if(ot$2(n)){const t=n.getParent();if(dt$1(t)){e++,n=t.getParent();continue}K$3(40);}return e}return e}function J$3(t){let e=t.getParent();dt$1(e)||K$3(40);let n=e;for(;null!==n;)n=n.getParent(),dt$1(n)&&(e=n);return e}function U$3(t){let e=[];const n=t.getChildren().filter(ot$2);for(let t=0;t<n.length;t++){const r=n[t],i=r.getFirstChild();dt$1(i)?e=e.concat(U$3(i)):e.push(r);}return e}function $$2(t){return ot$2(t)&&dt$1(t.getFirstChild())}function V$3(t){return st$2().append(t)}function z$2(t,e){return ot$2(t)&&(0===e.length||1===e.length&&t.is(e[0])&&0===t.getChildrenSize())}function j$1(t){const e=Lr();if(null!==e){let n=e.getNodes();if(yr(e)){const r=e.getStartEndPoints();null===r&&K$3(143);const[i]=r,s=i.getNode(),o=s.getParent();if(as(s)){const t=s.getFirstChild();if(t)n=t.selectStart().getNodes();else {const t=Li();s.append(t),n=t.select().getNodes();}}else if(z$2(s,n)){const e=ht$3(t);if(as(o)){s.replace(e);const t=st$2();Si(s)&&(t.setFormat(s.getFormatType()),t.setIndent(s.getIndent())),e.append(t);}else if(ot$2(s)){const t=s.getParentOrThrow();q$2(e,t.getChildren()),t.replace(e);}return}}const r=new Set;for(let e=0;e<n.length;e++){const i=n[e];if(Si(i)&&i.isEmpty()&&!ot$2(i)&&!r.has(i.getKey())){H(i,t);continue}let s=ho(i)?i.getParent():ot$2(i)&&i.isEmpty()?i:null;for(;null!=s;){const e=s.getKey();if(dt$1(s)){if(!r.has(e)){const n=ht$3(t);q$2(n,s.getChildren()),s.replace(n),r.add(e);}break}{const n=s.getParent();if(as(n)&&!r.has(e)){r.add(e),H(s,t);break}s=n;}}}}}function q$2(t,e){t.splice(t.getChildrenSize(),0,e);}function H(t,e){if(dt$1(t))return t;const n=t.getPreviousSibling(),r=t.getNextSibling(),i=st$2();let s;if(q$2(i,t.getChildren()),dt$1(n)&&e===n.getListType())n.append(i),dt$1(r)&&e===r.getListType()&&(q$2(n,r.getChildren()),r.remove()),s=n;else if(dt$1(r)&&e===r.getListType())r.getFirstChildOrThrow().insertBefore(i),s=r;else {const n=ht$3(e);n.append(i),t.replace(n),s=n;}return i.setFormat(t.getFormatType()),i.setIndent(t.getIndent()),t.remove(),s}function X$2(t,e){const n=t.getLastChild(),r=e.getFirstChild();n&&r&&$$2(n)&&$$2(r)&&(X$2(n.getFirstChild(),r.getFirstChild()),r.remove());const i=e.getChildren();i.length>0&&t.append(...i),e.remove();}function G$2(){const t=Lr();if(yr(t)){const e=new Set,r=t.getNodes(),i=t.anchor.getNode();if(z$2(i,r))e.add(J$3(i));else for(let t=0;t<r.length;t++){const i=r[t];if(ho(i)){const t=wt$4(i,nt$2);null!=t&&e.add(J$3(t));}}for(const n of e){let e=n;const r=U$3(n);for(const n of r){const r=Li().setTextStyle(t.style).setTextFormat(t.format);q$2(r,n.getChildren()),e.insertAfter(r),e=r,n.__key===t.anchor.key&&Cl(t.anchor,El(il(r,"next"))),n.__key===t.focus.key&&Cl(t.focus,El(il(r,"next"))),n.remove();}n.remove();}}}function Q$2(t){const e="check"!==t.getListType();let n=t.getStart();for(const r of t.getChildren())ot$2(r)&&(r.getValue()!==n&&r.setValue(n),e&&null!=r.getLatest().__checked&&r.setChecked(void 0),dt$1(r.getFirstChild())||n++);}function Y$1(t){const e=new Set;if($$2(t)||e.has(t.getKey()))return;const n=t.getParent(),r=t.getNextSibling(),i=t.getPreviousSibling();if($$2(r)&&$$2(i)){const n=i.getFirstChild();if(dt$1(n)){n.append(t);const i=r.getFirstChild();if(dt$1(i)){q$2(n,i.getChildren()),r.remove(),e.add(r.getKey());}}}else if($$2(r)){const e=r.getFirstChild();if(dt$1(e)){const n=e.getFirstChild();null!==n&&n.insertBefore(t);}}else if($$2(i)){const e=i.getFirstChild();dt$1(e)&&e.append(t);}else if(dt$1(n)){const e=st$2().setTextFormat(t.getTextFormat()).setTextStyle(t.getTextStyle()),s=ht$3(n.getListType()).setTextFormat(n.getTextFormat()).setTextStyle(n.getTextStyle());e.append(s),s.append(t),i?i.insertAfter(e):r?r.insertBefore(e):n.append(e);}}function Z$1(t){if($$2(t))return;const e=t.getParent(),n=e?e.getParent():void 0;if(dt$1(n?n.getParent():void 0)&&ot$2(n)&&dt$1(e)){const r=e?e.getFirstChild():void 0,i=e?e.getLastChild():void 0;if(t.is(r))n.insertBefore(t),e.isEmpty()&&n.remove();else if(t.is(i))n.insertAfter(t),e.isEmpty()&&n.remove();else {const r=e.getListType(),i=st$2(),s=ht$3(r);i.append(s),t.getPreviousSiblings().forEach(t=>s.append(t));const o=st$2(),l=ht$3(r);o.append(l),q$2(l,t.getNextSiblings()),n.insertBefore(i),n.insertAfter(o),n.replace(t);}}}function tt$1(){const t=Lr();if(!yr(t)||!t.isCollapsed())return  false;const e=t.anchor.getNode();if(!ot$2(e)||0!==e.getChildrenSize())return  false;const n=J$3(e),r=e.getParent();dt$1(r)||K$3(40);const i=r.getParent();let s;if(as(i))s=Li(),n.insertAfter(s);else {if(!ot$2(i))return  false;s=st$2(),i.insertAfter(s);}s.setTextStyle(t.style).setTextFormat(t.format).select();const o=e.getNextSiblings();if(o.length>0){const t=ht$3(r.getListType());if(ot$2(s)){const e=st$2();e.append(t),s.insertAfter(e);}else s.insertAfter(t);t.append(...o);}return function(t){let e=t;for(;null==e.getNextSibling()&&null==e.getPreviousSibling();){const t=e.getParent();if(null==t||!ot$2(t)&&!dt$1(t))break;e=t;}e.remove();}(e),true}function et$2(...t){const e=[];for(const n of t)if(n&&"string"==typeof n)for(const[t]of n.matchAll(/\S+/g))e.push(t);return e}let nt$2 = class nt extends Ci{__value;__checked;$config(){return this.config("listitem",{$transform:t=>{if(null==t.__checked)return;const e=t.getParent();dt$1(e)&&"check"!==e.getListType()&&null!=t.getChecked()&&t.setChecked(void 0);},extends:Ci,importDOM:wn({li:()=>({conversion:rt$1,priority:0})})})}constructor(t=1,e=void 0,n){super(n),this.__value=void 0===t?1:t,this.__checked=e;}afterCloneFrom(t){super.afterCloneFrom(t),this.__value=t.__value,this.__checked=t.__checked;}createDOM(t){const e=document.createElement("li");return this.updateListItemDOM(null,e,t),e}updateListItemDOM(t,e,n){!function(t,e,n){const r=e.getParent();!dt$1(r)||"check"!==r.getListType()||dt$1(e.getFirstChild())?(t.removeAttribute("role"),t.removeAttribute("tabIndex"),t.removeAttribute("aria-checked")):(t.setAttribute("role","checkbox"),t.setAttribute("tabIndex","-1"),n&&e.__checked===n.__checked||t.setAttribute("aria-checked",e.getChecked()?"true":"false"));}(e,this,t),e.value=this.__value,function(t,e,n){const s=[],o=[],l=e.list,c=l?l.listitem:void 0;let a;l&&l.nested&&(a=l.nested.listitem);void 0!==c&&s.push(...et$2(c));if(l){const t=n.getParent(),e=dt$1(t)&&"check"===t.getListType(),r=n.getChecked();e&&!r||o.push(l.listitemUnchecked),e&&r||o.push(l.listitemChecked),e&&s.push(r?l.listitemChecked:l.listitemUnchecked);}if(void 0!==a){const t=et$2(a);n.getChildren().some(t=>dt$1(t))?s.push(...t):o.push(...t);}o.length>0&&ut$2(t,...o);s.length>0&&lt$3(t,...s);}(e,n.theme,this);const s=t?t.__style:"",o=this.__style;s!==o&&(""===o?e.removeAttribute("style"):e.style.cssText=o),function(t,e,n){const r=b$3(e.__textStyle);for(const e in r)t.style.setProperty(`--listitem-marker-${e}`,r[e]);if(n)for(const e in b$3(n.__textStyle))e in r||t.style.removeProperty(`--listitem-marker-${e}`);}(e,this,t);}updateDOM(t,e,n){const r=e;return this.updateListItemDOM(t,r,n),false}updateFromJSON(t){return super.updateFromJSON(t).setValue(t.value).setChecked(t.checked)}exportDOM(t){const e=this.createDOM(t._config),n=this.getFormatType();n&&(e.style.textAlign=n);const r=this.getDirection();return r&&(e.dir=r),{element:e}}exportJSON(){return {...super.exportJSON(),checked:this.getChecked(),value:this.getValue()}}append(...t){for(let e=0;e<t.length;e++){const n=t[e];if(Si(n)&&this.canMergeWith(n)){const t=n.getChildren();this.append(...t),n.remove();}else super.append(n);}return this}replace(t,e){if(ot$2(t))return super.replace(t);this.setIndent(0);const n=this.getParentOrThrow();if(!dt$1(n))return t;if(n.__first===this.getKey())n.insertBefore(t);else if(n.__last===this.getKey())n.insertAfter(t);else {const e=ht$3(n.getListType());let r=this.getNextSibling();for(;r;){const t=r;r=r.getNextSibling(),e.append(t);}n.insertAfter(t),t.insertAfter(e);}return e&&(Si(t)||K$3(139),this.getChildren().forEach(e=>{t.append(e);})),this.remove(),0===n.getChildrenSize()&&n.remove(),t}insertAfter(t,e=true){const n=this.getParentOrThrow();if(dt$1(n)||K$3(39),ot$2(t))return super.insertAfter(t,e);const r=this.getNextSiblings();if(n.insertAfter(t,e),0!==r.length){const i=ht$3(n.getListType());r.forEach(t=>i.append(t)),t.insertAfter(i,e);}return t}remove(t){const e=this.getPreviousSibling(),n=this.getNextSibling();super.remove(t),e&&n&&$$2(e)&&$$2(n)&&(X$2(e.getFirstChild(),n.getFirstChild()),n.remove());}insertNewAfter(t,e=true){const n=st$2().updateFromJSON(this.exportJSON()).setChecked(!this.getChecked()&&void 0);return this.insertAfter(n,e),n}collapseAtStart(t){const e=Li();this.getChildren().forEach(t=>e.append(t));const n=this.getParentOrThrow(),r=n.getParentOrThrow(),i=ot$2(r);if(1===n.getChildrenSize())if(i)n.remove(),r.select();else {n.insertBefore(e),n.remove();const r=t.anchor,i=t.focus,s=e.getKey();"element"===r.type&&r.getNode().is(this)&&r.set(s,r.offset,"element"),"element"===i.type&&i.getNode().is(this)&&i.set(s,i.offset,"element");}else n.insertBefore(e),this.remove();return  true}getValue(){return this.getLatest().__value}setValue(t){const e=this.getWritable();return e.__value=t,e}getChecked(){const t=this.getLatest();let e;const n=this.getParent();return dt$1(n)&&(e=n.getListType()),"check"===e?Boolean(t.__checked):void 0}setChecked(t){const e=this.getWritable();return e.__checked=t,e}toggleChecked(){const t=this.getWritable();return t.setChecked(!t.__checked)}getIndent(){const t=this.getParent();if(null===t||!this.isAttached())return this.getLatest().__indent;let e=t.getParentOrThrow(),n=0;for(;ot$2(e);)e=e.getParentOrThrow().getParentOrThrow(),n++;return n}setIndent(t){"number"!=typeof t&&K$3(117),(t=Math.floor(t))>=0||K$3(199);let e=this.getIndent();for(;e!==t;)e<t?(Y$1(this),e++):(Z$1(this),e--);return this}canInsertAfter(t){return ot$2(t)}canReplaceWith(t){return ot$2(t)}canMergeWith(t){return ot$2(t)||Ii(t)}extractWithChild(t,e){if(!yr(e))return  false;const n=e.anchor.getNode(),r=e.focus.getNode();return this.isParentOf(n)&&this.isParentOf(r)&&this.getTextContent().length===e.getTextContent().length}isParentRequired(){return  true}createParentElementNode(){return ht$3("bullet")}canMergeWhenEmpty(){return  true}};function rt$1(t){if(t.classList.contains("task-list-item"))for(const e of t.children)if("INPUT"===e.tagName)return it$2(e);if(t.classList.contains("joplin-checkbox"))for(const e of t.children)if(e.classList.contains("checkbox-wrapper")&&e.children.length>0&&"INPUT"===e.children[0].tagName)return it$2(e.children[0]);const e=t.getAttribute("aria-checked");return {node:st$2("true"===e||"false"!==e&&void 0)}}function it$2(t){if(!("checkbox"===t.getAttribute("type")))return {node:null};return {node:st$2(t.hasAttribute("checked"))}}function st$2(t){return fs(new nt$2(void 0,t))}function ot$2(t){return t instanceof nt$2}let lt$2 = class lt extends Ci{__tag;__start;__listType;$config(){return this.config("list",{$transform:t=>{!function(t){const e=t.getNextSibling();dt$1(e)&&t.getListType()===e.getListType()&&X$2(t,e);}(t),Q$2(t);},extends:Ci,importDOM:wn({ol:()=>({conversion:gt$2,priority:0}),ul:()=>({conversion:gt$2,priority:0})})})}constructor(t="number",e=1,n){super(n);const r=ut$1[t]||t;this.__listType=r,this.__tag="number"===r?"ol":"ul",this.__start=e;}afterCloneFrom(t){super.afterCloneFrom(t),this.__listType=t.__listType,this.__tag=t.__tag,this.__start=t.__start;}getTag(){return this.getLatest().__tag}setListType(t){const e=this.getWritable();return e.__listType=t,e.__tag="number"===t?"ol":"ul",e}getListType(){return this.getLatest().__listType}getStart(){return this.getLatest().__start}setStart(t){const e=this.getWritable();return e.__start=t,e}createDOM(t,e){const n=this.__tag,r=document.createElement(n);return 1!==this.__start&&r.setAttribute("start",String(this.__start)),r.__lexicalListType=this.__listType,ct$2(r,t.theme,this),r}updateDOM(t,e,n){return t.__tag!==this.__tag||t.__listType!==this.__listType||(ct$2(e,n.theme,this),false)}updateFromJSON(t){return super.updateFromJSON(t).setListType(t.listType).setStart(t.start)}exportDOM(t){const e=this.createDOM(t._config,t);return Cs(e)&&(1!==this.__start&&e.setAttribute("start",String(this.__start)),"check"===this.__listType&&e.setAttribute("__lexicalListType","check")),{element:e}}exportJSON(){return {...super.exportJSON(),listType:this.getListType(),start:this.getStart(),tag:this.getTag()}}canBeEmpty(){return  false}canIndent(){return  false}splice(t,e,n){let r=n;for(let t=0;t<n.length;t++){const e=n[t];ot$2(e)||(r===n&&(r=[...n]),r[t]=st$2().append(!Si(e)||dt$1(e)||e.isInline()?e:sr(e.getTextContent())));}return super.splice(t,e,r)}extractWithChild(t){return ot$2(t)}};function ct$2(t,e,n){const s=[],o=[],l=e.list;if(void 0!==l){const t=l[`${n.__tag}Depth`]||[],e=W$4(n)-1,r=e%t.length,i=t[r],c=l[n.__tag];let a;const g=l.nested,u=l.checklist;if(void 0!==g&&g.list&&(a=g.list),void 0!==c&&s.push(c),void 0!==u&&"check"===n.__listType&&s.push(u),void 0!==i){s.push(...et$2(i));for(let e=0;e<t.length;e++)e!==r&&o.push(n.__tag+e);}if(void 0!==a){const t=et$2(a);e>1?s.push(...t):o.push(...t);}}o.length>0&&ut$2(t,...o),s.length>0&&lt$3(t,...s);}function at(t){const e=[];for(let n=0;n<t.length;n++){const r=t[n];if(ot$2(r)){e.push(r);const t=r.getChildren();t.length>1&&t.forEach(t=>{dt$1(t)&&e.push(V$3(t));});}else e.push(V$3(r));}return e}function gt$2(t){const e=t.nodeName.toLowerCase();let n=null;if("ol"===e){n=ht$3("number",t.start);}else "ul"===e&&(n=function(t){if("check"===t.getAttribute("__lexicallisttype")||t.classList.contains("contains-task-list")||"1"===t.getAttribute("data-is-checklist"))return  true;for(const e of t.childNodes)if(Cs(e)&&e.hasAttribute("aria-checked"))return  true;return  false}(t)?ht$3("check"):ht$3("bullet"));return {after:at,node:n}}const ut$1={ol:"number",ul:"bullet"};function ht$3(t="number",e=1){return fs(new lt$2(t,e))}function dt$1(t){return t instanceof lt$2}const vt$2=re$1("UPDATE_LIST_START_COMMAND"),St$3=re$1("INSERT_UNORDERED_LIST_COMMAND"),xt$2=re$1("INSERT_ORDERED_LIST_COMMAND"),kt$3=re$1("REMOVE_LIST_COMMAND");function bt$3(t){return U$4(t.registerCommand(xt$2,()=>(j$1("number"),true),zi),t.registerCommand(vt$2,t=>{const{listNodeKey:e,newStart:n}=t,r=xo(e);return !!dt$1(r)&&("number"===r.getListType()&&(r.setStart(n),Q$2(r)),true)},zi),t.registerCommand(St$3,()=>(j$1("bullet"),true),zi),t.registerCommand(kt$3,()=>(G$2(),true),zi),t.registerCommand(ae$1,()=>tt$1(),zi),t.registerNodeTransform(nt$2,t=>{const e=t.getFirstChild();if(e){if(lr(e)){const n=e.getStyle(),r=e.getFormat();t.getTextStyle()!==n&&t.setTextStyle(n),t.getTextFormat()!==r&&t.setTextFormat(r);}}else {const e=Lr();yr(e)&&(e.style!==t.getTextStyle()||e.format!==t.getTextFormat())&&e.isCollapsed()&&t.is(e.anchor.getNode())&&t.setTextStyle(e.style).setTextFormat(e.format);}}),t.registerNodeTransform(Xn,t=>{const e=t.getParent();if(ot$2(e)&&t.is(e.getFirstChild())){const n=t.getStyle(),r=t.getFormat();n===e.getTextStyle()&&r===e.getTextFormat()||e.setTextStyle(n).setTextFormat(r);}}))}
 
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -4699,7 +1484,7 @@ function m$1(e,n){const t=ao(n)?n.body.childNodes:n.childNodes;let l=[];const r=
  *
  */
 
-function v$2(t,...e){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",t);for(const t of e)o.append("v",t);throw n.search=o.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}function D$2(e,n=Lr()){return null==n&&v$2(166),yr(n)&&n.isCollapsed()||0===n.getNodes().length?"":g(e,n)}function S$1(t,e=Lr()){return null==e&&v$2(166),yr(e)&&e.isCollapsed()||0===e.getNodes().length?null:JSON.stringify(E$3(t,e))}function R$2(t,n,o){const r=t.getData("application/x-lexical-editor");if(r)try{const t=JSON.parse(r);if(t.namespace===o._config.namespace&&Array.isArray(t.nodes)){return A$1(o,L$1(t.nodes),n)}}catch(t){console.error(t);}const c=t.getData("text/html"),a=t.getData("text/plain");if(c&&a!==c)try{const t=(new DOMParser).parseFromString(function(t){if(window.trustedTypes&&window.trustedTypes.createPolicy){return window.trustedTypes.createPolicy("lexical",{createHTML:t=>t}).createHTML(t)}return t}(c),"text/html");return A$1(o,m$1(o,t),n)}catch(t){console.error(t);}const u=a||t.getData("text/uri-list");if(null!=u)if(yr(n)){const t=u.split(/(\r?\n|\t)/);""===t[t.length-1]&&t.pop();for(let e=0;e<t.length;e++){const n=Lr();if(yr(n)){const o=t[e];"\n"===o||"\r\n"===o?n.insertParagraph():"\t"===o?n.insertNodes([ur()]):n.insertText(o);}}}else n.insertRawText(u);}function A$1(t,e,n){t.dispatchCommand(oe$2,{nodes:e,selection:n})||(n.insertNodes(e),function(t){if(yr(t)&&t.isCollapsed()){const e=t.anchor;let n=null;const o=xl(e,"previous");if(o)if(Ys(o))n=o.origin;else {const t=dl(o,il(No(),"next").getFlipped());for(const e of t){if(lr(e.origin)){n=e.origin;break}if(Si(e.origin)&&!e.origin.isInline())break}}if(n&&lr(n)){const e=n.getFormat(),o=n.getStyle();t.format===e&&t.style===o||(t.format=e,t.style=o,t.dirty=true);}}}(n));}function P$1(t,e,n,r=[]){let i=null===e||n.isSelected(e);const l=Si(n)&&n.excludeFromCopy("html");let s=n;null!==e&&lr(s)&&(s=M$4(e,s,"clone"));const c=Si(s)?s.getChildren():[],a=function(t){const e=t.exportJSON(),n=t.constructor;if(e.type!==n.getType()&&v$2(58,n.name),Si(t)){const t=e.children;Array.isArray(t)||v$2(59,n.name);}return e}(s);lr(s)&&0===s.getTextContentSize()&&(i=false);for(let o=0;o<c.length;o++){const r=c[o],l=P$1(t,e,r,a.children);!i&&Si(n)&&l&&n.extractWithChild(r,e,"clone")&&(i=true);}if(i&&!l)r.push(a);else if(Array.isArray(a.children))for(let t=0;t<a.children.length;t++){const e=a.children[t];r.push(e);}return i}function E$3(t,e){const n=[],o=No().getChildren();for(let r=0;r<o.length;r++){P$1(t,e,o[r],n);}return {namespace:t._config.namespace,nodes:n}}function L$1(t){const e=[];for(let o=0;o<t.length;o++){const r=t[o],i=ui(r);lr(i)&&$$3(i),e.push(i);}return e}let b$2=null;async function F$1(t,e,n){if(null!==b$2)return  false;if(null!==e)return new Promise((o,r)=>{t.update(()=>{o(M$3(t,e,n));});});const o=t.getRootElement(),i=t._window||window,l=i.document,s=ps(i);if(null===o||null===s)return  false;const c=l.createElement("span");c.style.cssText="position: fixed; top: -1000px;",c.append(l.createTextNode("#")),o.append(c);const a=new Range;return a.setStart(c,0),a.setEnd(c,1),s.removeAllRanges(),s.addRange(a),new Promise((e,o)=>{const s=t.registerCommand(Re$2,o=>(Lt$4(o,ClipboardEvent)&&(s(),null!==b$2&&(i.clearTimeout(b$2),b$2=null),e(M$3(t,o,n))),true),Wi);b$2=i.setTimeout(()=>{s(),b$2=null,e(false);},50),l.execCommand("copy"),c.remove();})}function M$3(t,e,n){if(void 0===n){const e=ps(t._window),o=Lr();if(!o||o.isCollapsed())return  false;if(!e)return  false;const r=e.anchorNode,l=e.focusNode;if(null!==r&&null!==l&&!eo(t,r,l))return  false;n=_$1(o);}e.preventDefault();const o=e.clipboardData;return null!==o&&(J$2(o,n),true)}const O=[["text/html",D$2],["application/x-lexical-editor",S$1]];function _$1(t=Lr()){const e={"text/plain":t?t.getTextContent():""};if(t){const n=bs();for(const[o,r]of O){const i=r(n,t);null!==i&&(e[o]=i);}}return e}function J$2(t,e){for(const[n]of O) void 0===e[n]&&t.setData(n,"");for(const n in e){const o=e[n];void 0!==o&&t.setData(n,o);}}
+function v$2(t,...e){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",t);for(const t of e)o.append("v",t);throw n.search=o.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}function D$2(e,n=Lr()){return null==n&&v$2(166),yr(n)&&n.isCollapsed()||0===n.getNodes().length?"":g(e,n)}function S$1(t,e=Lr()){return null==e&&v$2(166),yr(e)&&e.isCollapsed()||0===e.getNodes().length?null:JSON.stringify(E$3(t,e))}function R$2(t,n,o){const r=t.getData("application/x-lexical-editor");if(r)try{const t=JSON.parse(r);if(t.namespace===o._config.namespace&&Array.isArray(t.nodes)){return A$1(o,L$1(t.nodes),n)}}catch(t){console.error(t);}const c=t.getData("text/html"),a=t.getData("text/plain");if(c&&a!==c)try{const t=(new DOMParser).parseFromString(function(t){if(window.trustedTypes&&window.trustedTypes.createPolicy){return window.trustedTypes.createPolicy("lexical",{createHTML:t=>t}).createHTML(t)}return t}(c),"text/html");return A$1(o,m$1(o,t),n)}catch(t){console.error(t);}const u=a||t.getData("text/uri-list");if(null!=u)if(yr(n)){const t=u.split(/(\r?\n|\t)/);""===t[t.length-1]&&t.pop();for(let e=0;e<t.length;e++){const n=Lr();if(yr(n)){const o=t[e];"\n"===o||"\r\n"===o?n.insertParagraph():"\t"===o?n.insertNodes([ur()]):n.insertText(o);}}}else n.insertRawText(u);}function A$1(t,e,n){t.dispatchCommand(oe$2,{nodes:e,selection:n})||(n.insertNodes(e),function(t){if(yr(t)&&t.isCollapsed()){const e=t.anchor;let n=null;const o=xl(e,"previous");if(o)if(Ys(o))n=o.origin;else {const t=dl(o,il(No(),"next").getFlipped());for(const e of t){if(lr(e.origin)){n=e.origin;break}if(Si(e.origin)&&!e.origin.isInline())break}}if(n&&lr(n)){const e=n.getFormat(),o=n.getStyle();t.format===e&&t.style===o||(t.format=e,t.style=o,t.dirty=true);}}}(n));}function P$1(t,e,n,r=[]){let i=null===e||n.isSelected(e);const l=Si(n)&&n.excludeFromCopy("html");let s=n;null!==e&&lr(s)&&(s=M$4(e,s,"clone"));const c=Si(s)?s.getChildren():[],a=function(t){const e=t.exportJSON(),n=t.constructor;if(e.type!==n.getType()&&v$2(58,n.name),Si(t)){const t=e.children;Array.isArray(t)||v$2(59,n.name);}return e}(s);lr(s)&&0===s.getTextContentSize()&&(i=false);for(let o=0;o<c.length;o++){const r=c[o],l=P$1(t,e,r,a.children);!i&&Si(n)&&l&&n.extractWithChild(r,e,"clone")&&(i=true);}if(i&&!l)r.push(a);else if(Array.isArray(a.children))for(let t=0;t<a.children.length;t++){const e=a.children[t];r.push(e);}return i}function E$3(t,e){const n=[],o=No().getChildren();for(let r=0;r<o.length;r++){P$1(t,e,o[r],n);}return {namespace:t._config.namespace,nodes:n}}function L$1(t){const e=[];for(let o=0;o<t.length;o++){const r=t[o],i=ui(r);lr(i)&&$$3(i),e.push(i);}return e}let b$2=null;async function F$1(t,e,n){if(null!==b$2)return  false;if(null!==e)return new Promise((o,r)=>{t.update(()=>{o(M$3(t,e,n));});});const o=t.getRootElement(),i=t._window||window,l=i.document,s=ps(i);if(null===o||null===s)return  false;const c=l.createElement("span");c.style.cssText="position: fixed; top: -1000px;",c.append(l.createTextNode("#")),o.append(c);const a=new Range;return a.setStart(c,0),a.setEnd(c,1),s.removeAllRanges(),s.addRange(a),new Promise((e,o)=>{const s=t.registerCommand(Re$1,o=>(Lt$3(o,ClipboardEvent)&&(s(),null!==b$2&&(i.clearTimeout(b$2),b$2=null),e(M$3(t,o,n))),true),Wi);b$2=i.setTimeout(()=>{s(),b$2=null,e(false);},50),l.execCommand("copy"),c.remove();})}function M$3(t,e,n){if(void 0===n){const e=ps(t._window),o=Lr();if(!o||o.isCollapsed())return  false;if(!e)return  false;const r=e.anchorNode,l=e.focusNode;if(null!==r&&null!==l&&!eo(t,r,l))return  false;n=_$1(o);}e.preventDefault();const o=e.clipboardData;return null!==o&&(J$2(o,n),true)}const O=[["text/html",D$2],["application/x-lexical-editor",S$1]];function _$1(t=Lr()){const e={"text/plain":t?t.getTextContent():""};if(t){const n=bs();for(const[o,r]of O){const i=r(n,t);null!==i&&(e[o]=i);}}return e}function J$2(t,e){for(const[n]of O) void 0===e[n]&&t.setData(n,"");for(const n in e){const o=e[n];void 0!==o&&t.setData(n,o);}}
 
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -4709,7 +1494,1579 @@ function v$2(t,...e){const n=new URL("https://lexical.dev/docs/error"),o=new URL
  *
  */
 
-function gt$2(t,e){if(void 0!==document.caretRangeFromPoint){const n=document.caretRangeFromPoint(t,e);return null===n?null:{node:n.startContainer,offset:n.startOffset}}if("undefined"!==document.caretPositionFromPoint){const n=document.caretPositionFromPoint(t,e);return null===n?null:{node:n.offsetNode,offset:n.offset}}return null}const pt$2="undefined"!=typeof window&&void 0!==window.document&&void 0!==window.document.createElement,ht$2=pt$2&&"documentMode"in document?document.documentMode:null,vt$2=pt$2&&/Mac|iPod|iPhone|iPad/.test(navigator.platform),Ct$3=!(!pt$2||!("InputEvent"in window)||ht$2)&&"getTargetRanges"in new window.InputEvent("input"),yt$2=pt$2&&/Version\/[\d.]+.*Safari/.test(navigator.userAgent),xt$2=pt$2&&/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream,Dt$2=pt$2&&/^(?=.*Chrome).*/i.test(navigator.userAgent),Nt$3=pt$2&&/AppleWebKit\/[\d.]+/.test(navigator.userAgent)&&vt$2&&!Dt$2,wt$3=re$1("DRAG_DROP_PASTE_FILE");let Et$3 = class Et extends Ci{static getType(){return "quote"}static clone(t){return new Et(t.__key)}createDOM(t){const e=document.createElement("blockquote");return lt$4(e,t.theme.quote),e}updateDOM(t,e){return  false}static importDOM(){return {blockquote:t=>({conversion:Ft$2,priority:0})}}exportDOM(t){const{element:e}=super.exportDOM(t);if(Cs(e)){this.isEmpty()&&e.append(document.createElement("br"));const t=this.getFormatType();t&&(e.style.textAlign=t);const n=this.getDirection();n&&(e.dir=n);}return {element:e}}static importJSON(t){return _t$2().updateFromJSON(t)}insertNewAfter(t,e){const n=Li(),r=this.getDirection();return n.setDirection(r),this.insertAfter(n,e),n}collapseAtStart(){const t=Li();return this.getChildren().forEach(e=>t.append(e)),this.replace(t),true}canMergeWhenEmpty(){return  true}};function _t$2(){return fs(new Et$3)}function Ot$2(t){return t instanceof Et$3}let Pt$3 = class Pt extends Ci{__tag;static getType(){return "heading"}static clone(t){return new Pt(t.__tag,t.__key)}constructor(t,e){super(e),this.__tag=t;}getTag(){return this.__tag}setTag(t){const e=this.getWritable();return this.__tag=t,e}createDOM(t){const e=this.__tag,n=document.createElement(e),r=t.theme.heading;if(void 0!==r){const t=r[e];lt$4(n,t);}return n}updateDOM(t,e,n){return t.__tag!==this.__tag}static importDOM(){return {h1:t=>({conversion:At$3,priority:0}),h2:t=>({conversion:At$3,priority:0}),h3:t=>({conversion:At$3,priority:0}),h4:t=>({conversion:At$3,priority:0}),h5:t=>({conversion:At$3,priority:0}),h6:t=>({conversion:At$3,priority:0}),p:t=>{const e=t.firstChild;return null!==e&&Tt$3(e)?{conversion:()=>({node:null}),priority:3}:null},span:t=>Tt$3(t)?{conversion:t=>({node:St$3("h1")}),priority:3}:null}}exportDOM(t){const{element:e}=super.exportDOM(t);if(Cs(e)){this.isEmpty()&&e.append(document.createElement("br"));const t=this.getFormatType();t&&(e.style.textAlign=t);const n=this.getDirection();n&&(e.dir=n);}return {element:e}}static importJSON(t){return St$3(t.tag).updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setTag(t.tag)}exportJSON(){return {...super.exportJSON(),tag:this.getTag()}}insertNewAfter(t,e=true){const n=t?t.anchor.offset:0,r=this.getLastDescendant(),o=!r||t&&t.anchor.key===r.getKey()&&n===r.getTextContentSize()||!t?Li():St$3(this.getTag()),i=this.getDirection();if(o.setDirection(i),this.insertAfter(o,e),0===n&&!this.isEmpty()&&t){const t=Li();t.select(),this.replace(t,true);}return o}collapseAtStart(){const t=this.isEmpty()?Li():St$3(this.getTag());return this.getChildren().forEach(e=>t.append(e)),this.replace(t),true}extractWithChild(){return  true}};function Tt$3(t){return "span"===t.nodeName.toLowerCase()&&"26pt"===t.style.fontSize}function At$3(t){const e=t.nodeName.toLowerCase();let n=null;return "h1"!==e&&"h2"!==e&&"h3"!==e&&"h4"!==e&&"h5"!==e&&"h6"!==e||(n=St$3(e),null!==t.style&&(Ps(t,n),n.setFormat(t.style.textAlign))),{node:n}}function Ft$2(t){const e=_t$2();return null!==t.style&&(e.setFormat(t.style.textAlign),Ps(t,e)),{node:e}}function St$3(t="h1"){return fs(new Pt$3(t))}function It$2(t){return t instanceof Pt$3}function Mt$2(t){let e=null;if(Lt$4(t,DragEvent)?e=t.dataTransfer:Lt$4(t,ClipboardEvent)&&(e=t.clipboardData),null===e)return [false,[],false];const n=e.types,r=n.includes("Files"),o=n.includes("text/html")||n.includes("text/plain");return [r,Array.from(e.files),o]}function bt$3(t){const e=Lr();if(!yr(e))return  false;const n=new Set,r=e.getNodes();for(let e=0;e<r.length;e++){const o=r[e],i=o.getKey();if(n.has(i))continue;const s=zs(o,t=>Si(t)&&!t.isInline());if(null===s)continue;const c=s.getKey();s.canIndent()&&!n.has(c)&&(n.add(c),t(s));}return n.size>0}function Kt$1(t){const e=vo(t);return Ti(e)}function kt$3(t){for(const e of ["lowercase","uppercase","capitalize"])t.hasFormat(e)&&t.toggleFormat(e);}function Jt$1(n){return U$4(n.registerCommand(se$1,t=>{const e=Lr();return !!xr(e)&&(e.clear(),true)},Ki),n.registerCommand(le$2,t=>{const e=Lr();return yr(e)?(e.deleteCharacter(t),true):!!xr(e)&&(e.deleteNodes(),true)},Ki),n.registerCommand(he$1,t=>{const e=Lr();return !!yr(e)&&(e.deleteWord(t),true)},Ki),n.registerCommand(ge$1,t=>{const e=Lr();return !!yr(e)&&(e.deleteLine(t),true)},Ki),n.registerCommand(ue$1,e=>{const r=Lr();if("string"==typeof e)null!==r&&r.insertText(e);else {if(null===r)return  false;const o=e.dataTransfer;if(null!=o)R$2(o,r,n);else if(yr(r)){const t=e.data;return t&&r.insertText(t),true}}return  true},Ki),n.registerCommand(de$1,()=>{const t=Lr();return !!yr(t)&&(t.removeText(),true)},Ki),n.registerCommand(_e$1,t=>{const e=Lr();return !!yr(e)&&(e.formatText(t),true)},Ki),n.registerCommand(Le$2,t=>{const e=Lr();if(!yr(e)&&!xr(e))return  false;const n=e.getNodes();for(const e of n){const n=zs(e,t=>Si(t)&&!t.isInline());null!==n&&n.setFormat(t);}return  true},Ki),n.registerCommand(ce$1,t=>{const e=Lr();return !!yr(e)&&(e.insertLineBreak(t),true)},Ki),n.registerCommand(ae$1,()=>{const t=Lr();return !!yr(t)&&(t.insertParagraph(),true)},Ki),n.registerCommand(Ae$2,()=>(jr([ur()]),true),Ki),n.registerCommand(Pe$2,()=>bt$3(t=>{const e=t.getIndent();t.setIndent(e+1);}),Ki),n.registerCommand(De$2,()=>bt$3(t=>{const e=t.getIndent();e>0&&t.setIndent(Math.max(0,e-1));}),Ki),n.registerCommand(ke$2,t=>{const e=Lr();if(xr(e)){const n=e.getNodes();if(n.length>0)return t.preventDefault(),n[0].selectPrevious(),true}else if(yr(e)){const n=qo(e.focus,true);if(!t.shiftKey&&Ti(n)&&!n.isIsolated()&&!n.isInline())return n.selectPrevious(),t.preventDefault(),true}return  false},Ki),n.registerCommand(Te$2,t=>{const e=Lr();if(xr(e)){const n=e.getNodes();if(n.length>0)return t.preventDefault(),n[0].selectNext(0,0),true}else if(yr(e)){if(function(t){const e=t.focus;return "root"===e.key&&e.offset===No().getChildrenSize()}(e))return t.preventDefault(),true;const n=qo(e.focus,false);if(!t.shiftKey&&Ti(n)&&!n.isIsolated()&&!n.isInline())return n.selectNext(),t.preventDefault(),true}return  false},Ki),n.registerCommand(Se$1,t=>{const e=Lr();if(xr(e)){const n=e.getNodes();if(n.length>0)return t.preventDefault(),A$2(n[0])?n[0].selectNext(0,0):n[0].selectPrevious(),true}if(!yr(e))return  false;if(Z$3(e,true)){const n=t.shiftKey;return t.preventDefault(),ne(e,n,true),true}return  false},Ki),n.registerCommand(xe$1,t=>{const e=Lr();if(xr(e)){const n=e.getNodes();if(n.length>0)return t.preventDefault(),A$2(n[0])?n[0].selectPrevious():n[0].selectNext(0,0),true}if(!yr(e))return  false;const n=t.shiftKey;return !!Z$3(e,false)&&(t.preventDefault(),ne(e,n,false),true)},Ki),n.registerCommand(we$1,t=>{if(Kt$1(t.target))return  false;const e=Lr();if(yr(e)){if(function(t){if(!t.isCollapsed())return  false;const{anchor:e}=t;if(0!==e.offset)return  false;const n=e.getNode();if(bi(n))return  false;const r=xt$5(n);return r.getIndent()>0&&(r.is(n)||n.is(r.getFirstDescendant()))}(e))return t.preventDefault(),n.dispatchCommand(De$2,void 0);if(xt$2&&"ko-KR"===navigator.language)return  false}else if(!xr(e))return  false;return t.preventDefault(),n.dispatchCommand(le$2,true)},Ki),n.registerCommand(Oe$2,t=>{if(Kt$1(t.target))return  false;const e=Lr();return !(!yr(e)&&!xr(e))&&(t.preventDefault(),n.dispatchCommand(le$2,false))},Ki),n.registerCommand(Ne$2,t=>{const e=Lr();if(!yr(e))return  false;if(kt$3(e),null!==t){if((xt$2||yt$2||Nt$3)&&Ct$3)return  false;if(t.preventDefault(),t.shiftKey)return n.dispatchCommand(ce$1,false)}return n.dispatchCommand(ae$1,void 0)},Ki),n.registerCommand(Ee$2,()=>{const t=Lr();return !!yr(t)&&(n.blur(),true)},Ki),n.registerCommand(Fe$2,t=>{const[,e]=Mt$2(t);if(e.length>0){const r=gt$2(t.clientX,t.clientY);if(null!==r){const{offset:t,node:o}=r,i=vo(o);if(null!==i){const e=Ar();if(lr(i))e.anchor.set(i.getKey(),t,"text"),e.focus.set(i.getKey(),t,"text");else {const t=i.getParentOrThrow().getKey(),n=i.getIndexWithinParent()+1;e.anchor.set(t,n,"element"),e.focus.set(t,n,"element");}const n=St$6(e);wo(n);}n.dispatchCommand(wt$3,e);}return t.preventDefault(),true}const r=Lr();return !!yr(r)},Ki),n.registerCommand(Ie$2,t=>{const[e]=Mt$2(t),n=Lr();return !(e&&!yr(n))},Ki),n.registerCommand(Ke$2,t=>{const[e]=Mt$2(t),n=Lr();if(e&&!yr(n))return  false;const r=gt$2(t.clientX,t.clientY);if(null!==r){const e=vo(r.node);Ti(e)&&t.preventDefault();}return  true},Ki),n.registerCommand(We$2,()=>(jo(),true),Ki),n.registerCommand(Re$2,t=>(F$1(n,Lt$4(t,ClipboardEvent)?t:null),true),Ki),n.registerCommand(Be$2,t=>(async function(t,n){await F$1(n,Lt$4(t,ClipboardEvent)?t:null),n.update(()=>{const t=Lr();yr(t)?t.removeText():xr(t)&&t.getNodes().forEach(t=>t.remove());});}(t,n),true),Ki),n.registerCommand(fe$1,e=>{const[,r,o]=Mt$2(e);if(r.length>0&&!o)return n.dispatchCommand(wt$3,r),true;if(Ss(e.target)&&to(e.target))return  false;return null!==Lr()&&(function(e,n){e.preventDefault(),n.update(()=>{const r=Lr(),o=Lt$4(e,InputEvent)||Lt$4(e,KeyboardEvent)?null:e.clipboardData;null!=o&&null!==r&&R$2(o,r,n);},{tag:Fn});}(e,n),true)},Ki),n.registerCommand(be$1,t=>{const e=Lr();return yr(e)&&kt$3(e),false},Ki),n.registerCommand(Me$2,t=>{const e=Lr();return yr(e)&&kt$3(e),false},Ki))}
+function gt$1(t,e){if(void 0!==document.caretRangeFromPoint){const n=document.caretRangeFromPoint(t,e);return null===n?null:{node:n.startContainer,offset:n.startOffset}}if("undefined"!==document.caretPositionFromPoint){const n=document.caretPositionFromPoint(t,e);return null===n?null:{node:n.offsetNode,offset:n.offset}}return null}const pt$1="undefined"!=typeof window&&void 0!==window.document&&void 0!==window.document.createElement,ht$2=pt$1&&"documentMode"in document?document.documentMode:null,vt$1=pt$1&&/Mac|iPod|iPhone|iPad/.test(navigator.platform),Ct$2=!(!pt$1||!("InputEvent"in window)||ht$2)&&"getTargetRanges"in new window.InputEvent("input"),yt$1=pt$1&&/Version\/[\d.]+.*Safari/.test(navigator.userAgent),xt$1=pt$1&&/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream,Dt$1=pt$1&&/^(?=.*Chrome).*/i.test(navigator.userAgent),Nt$2=pt$1&&/AppleWebKit\/[\d.]+/.test(navigator.userAgent)&&vt$1&&!Dt$1,wt$2=re$1("DRAG_DROP_PASTE_FILE");let Et$2 = class Et extends Ci{static getType(){return "quote"}static clone(t){return new Et(t.__key)}createDOM(t){const e=document.createElement("blockquote");return lt$3(e,t.theme.quote),e}updateDOM(t,e){return  false}static importDOM(){return {blockquote:t=>({conversion:Ft$1,priority:0})}}exportDOM(t){const{element:e}=super.exportDOM(t);if(Cs(e)){this.isEmpty()&&e.append(document.createElement("br"));const t=this.getFormatType();t&&(e.style.textAlign=t);const n=this.getDirection();n&&(e.dir=n);}return {element:e}}static importJSON(t){return _t$1().updateFromJSON(t)}insertNewAfter(t,e){const n=Li(),r=this.getDirection();return n.setDirection(r),this.insertAfter(n,e),n}collapseAtStart(){const t=Li();return this.getChildren().forEach(e=>t.append(e)),this.replace(t),true}canMergeWhenEmpty(){return  true}};function _t$1(){return fs(new Et$2)}function Ot$1(t){return t instanceof Et$2}let Pt$2 = class Pt extends Ci{__tag;static getType(){return "heading"}static clone(t){return new Pt(t.__tag,t.__key)}constructor(t,e){super(e),this.__tag=t;}getTag(){return this.__tag}setTag(t){const e=this.getWritable();return this.__tag=t,e}createDOM(t){const e=this.__tag,n=document.createElement(e),r=t.theme.heading;if(void 0!==r){const t=r[e];lt$3(n,t);}return n}updateDOM(t,e,n){return t.__tag!==this.__tag}static importDOM(){return {h1:t=>({conversion:At$2,priority:0}),h2:t=>({conversion:At$2,priority:0}),h3:t=>({conversion:At$2,priority:0}),h4:t=>({conversion:At$2,priority:0}),h5:t=>({conversion:At$2,priority:0}),h6:t=>({conversion:At$2,priority:0}),p:t=>{const e=t.firstChild;return null!==e&&Tt$2(e)?{conversion:()=>({node:null}),priority:3}:null},span:t=>Tt$2(t)?{conversion:t=>({node:St$2("h1")}),priority:3}:null}}exportDOM(t){const{element:e}=super.exportDOM(t);if(Cs(e)){this.isEmpty()&&e.append(document.createElement("br"));const t=this.getFormatType();t&&(e.style.textAlign=t);const n=this.getDirection();n&&(e.dir=n);}return {element:e}}static importJSON(t){return St$2(t.tag).updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setTag(t.tag)}exportJSON(){return {...super.exportJSON(),tag:this.getTag()}}insertNewAfter(t,e=true){const n=t?t.anchor.offset:0,r=this.getLastDescendant(),o=!r||t&&t.anchor.key===r.getKey()&&n===r.getTextContentSize()||!t?Li():St$2(this.getTag()),i=this.getDirection();if(o.setDirection(i),this.insertAfter(o,e),0===n&&!this.isEmpty()&&t){const t=Li();t.select(),this.replace(t,true);}return o}collapseAtStart(){const t=this.isEmpty()?Li():St$2(this.getTag());return this.getChildren().forEach(e=>t.append(e)),this.replace(t),true}extractWithChild(){return  true}};function Tt$2(t){return "span"===t.nodeName.toLowerCase()&&"26pt"===t.style.fontSize}function At$2(t){const e=t.nodeName.toLowerCase();let n=null;return "h1"!==e&&"h2"!==e&&"h3"!==e&&"h4"!==e&&"h5"!==e&&"h6"!==e||(n=St$2(e),null!==t.style&&(Ps(t,n),n.setFormat(t.style.textAlign))),{node:n}}function Ft$1(t){const e=_t$1();return null!==t.style&&(e.setFormat(t.style.textAlign),Ps(t,e)),{node:e}}function St$2(t="h1"){return fs(new Pt$2(t))}function It$1(t){return t instanceof Pt$2}function Mt$1(t){let e=null;if(Lt$3(t,DragEvent)?e=t.dataTransfer:Lt$3(t,ClipboardEvent)&&(e=t.clipboardData),null===e)return [false,[],false];const n=e.types,r=n.includes("Files"),o=n.includes("text/html")||n.includes("text/plain");return [r,Array.from(e.files),o]}function bt$2(t){const e=Lr();if(!yr(e))return  false;const n=new Set,r=e.getNodes();for(let e=0;e<r.length;e++){const o=r[e],i=o.getKey();if(n.has(i))continue;const s=zs(o,t=>Si(t)&&!t.isInline());if(null===s)continue;const c=s.getKey();s.canIndent()&&!n.has(c)&&(n.add(c),t(s));}return n.size>0}function Kt(t){const e=vo(t);return Ti(e)}function kt$2(t){for(const e of ["lowercase","uppercase","capitalize"])t.hasFormat(e)&&t.toggleFormat(e);}function Jt(n){return U$4(n.registerCommand(se$1,t=>{const e=Lr();return !!xr(e)&&(e.clear(),true)},Ki),n.registerCommand(le$2,t=>{const e=Lr();return yr(e)?(e.deleteCharacter(t),true):!!xr(e)&&(e.deleteNodes(),true)},Ki),n.registerCommand(he$1,t=>{const e=Lr();return !!yr(e)&&(e.deleteWord(t),true)},Ki),n.registerCommand(ge$1,t=>{const e=Lr();return !!yr(e)&&(e.deleteLine(t),true)},Ki),n.registerCommand(ue$1,e=>{const r=Lr();if("string"==typeof e)null!==r&&r.insertText(e);else {if(null===r)return  false;const o=e.dataTransfer;if(null!=o)R$2(o,r,n);else if(yr(r)){const t=e.data;return t&&r.insertText(t),true}}return  true},Ki),n.registerCommand(de$1,()=>{const t=Lr();return !!yr(t)&&(t.removeText(),true)},Ki),n.registerCommand(_e$1,t=>{const e=Lr();return !!yr(e)&&(e.formatText(t),true)},Ki),n.registerCommand(Le$1,t=>{const e=Lr();if(!yr(e)&&!xr(e))return  false;const n=e.getNodes();for(const e of n){const n=zs(e,t=>Si(t)&&!t.isInline());null!==n&&n.setFormat(t);}return  true},Ki),n.registerCommand(ce$1,t=>{const e=Lr();return !!yr(e)&&(e.insertLineBreak(t),true)},Ki),n.registerCommand(ae$1,()=>{const t=Lr();return !!yr(t)&&(t.insertParagraph(),true)},Ki),n.registerCommand(Ae$1,()=>(jr([ur()]),true),Ki),n.registerCommand(Pe$1,()=>bt$2(t=>{const e=t.getIndent();t.setIndent(e+1);}),Ki),n.registerCommand(De$1,()=>bt$2(t=>{const e=t.getIndent();e>0&&t.setIndent(Math.max(0,e-1));}),Ki),n.registerCommand(ke$1,t=>{const e=Lr();if(xr(e)){const n=e.getNodes();if(n.length>0)return t.preventDefault(),n[0].selectPrevious(),true}else if(yr(e)){const n=qo(e.focus,true);if(!t.shiftKey&&Ti(n)&&!n.isIsolated()&&!n.isInline())return n.selectPrevious(),t.preventDefault(),true}return  false},Ki),n.registerCommand(Te$1,t=>{const e=Lr();if(xr(e)){const n=e.getNodes();if(n.length>0)return t.preventDefault(),n[0].selectNext(0,0),true}else if(yr(e)){if(function(t){const e=t.focus;return "root"===e.key&&e.offset===No().getChildrenSize()}(e))return t.preventDefault(),true;const n=qo(e.focus,false);if(!t.shiftKey&&Ti(n)&&!n.isIsolated()&&!n.isInline())return n.selectNext(),t.preventDefault(),true}return  false},Ki),n.registerCommand(Se$1,t=>{const e=Lr();if(xr(e)){const n=e.getNodes();if(n.length>0)return t.preventDefault(),A$2(n[0])?n[0].selectNext(0,0):n[0].selectPrevious(),true}if(!yr(e))return  false;if(Z$3(e,true)){const n=t.shiftKey;return t.preventDefault(),ne(e,n,true),true}return  false},Ki),n.registerCommand(xe,t=>{const e=Lr();if(xr(e)){const n=e.getNodes();if(n.length>0)return t.preventDefault(),A$2(n[0])?n[0].selectPrevious():n[0].selectNext(0,0),true}if(!yr(e))return  false;const n=t.shiftKey;return !!Z$3(e,false)&&(t.preventDefault(),ne(e,n,false),true)},Ki),n.registerCommand(we$1,t=>{if(Kt(t.target))return  false;const e=Lr();if(yr(e)){if(function(t){if(!t.isCollapsed())return  false;const{anchor:e}=t;if(0!==e.offset)return  false;const n=e.getNode();if(bi(n))return  false;const r=xt$4(n);return r.getIndent()>0&&(r.is(n)||n.is(r.getFirstDescendant()))}(e))return t.preventDefault(),n.dispatchCommand(De$1,void 0);if(xt$1&&"ko-KR"===navigator.language)return  false}else if(!xr(e))return  false;return t.preventDefault(),n.dispatchCommand(le$2,true)},Ki),n.registerCommand(Oe$1,t=>{if(Kt(t.target))return  false;const e=Lr();return !(!yr(e)&&!xr(e))&&(t.preventDefault(),n.dispatchCommand(le$2,false))},Ki),n.registerCommand(Ne$1,t=>{const e=Lr();if(!yr(e))return  false;if(kt$2(e),null!==t){if((xt$1||yt$1||Nt$2)&&Ct$2)return  false;if(t.preventDefault(),t.shiftKey)return n.dispatchCommand(ce$1,false)}return n.dispatchCommand(ae$1,void 0)},Ki),n.registerCommand(Ee$1,()=>{const t=Lr();return !!yr(t)&&(n.blur(),true)},Ki),n.registerCommand(Fe$1,t=>{const[,e]=Mt$1(t);if(e.length>0){const r=gt$1(t.clientX,t.clientY);if(null!==r){const{offset:t,node:o}=r,i=vo(o);if(null!==i){const e=Ar();if(lr(i))e.anchor.set(i.getKey(),t,"text"),e.focus.set(i.getKey(),t,"text");else {const t=i.getParentOrThrow().getKey(),n=i.getIndexWithinParent()+1;e.anchor.set(t,n,"element"),e.focus.set(t,n,"element");}const n=St$5(e);wo(n);}n.dispatchCommand(wt$2,e);}return t.preventDefault(),true}const r=Lr();return !!yr(r)},Ki),n.registerCommand(Ie$1,t=>{const[e]=Mt$1(t),n=Lr();return !(e&&!yr(n))},Ki),n.registerCommand(Ke$1,t=>{const[e]=Mt$1(t),n=Lr();if(e&&!yr(n))return  false;const r=gt$1(t.clientX,t.clientY);if(null!==r){const e=vo(r.node);Ti(e)&&t.preventDefault();}return  true},Ki),n.registerCommand(We$1,()=>(jo(),true),Ki),n.registerCommand(Re$1,t=>(F$1(n,Lt$3(t,ClipboardEvent)?t:null),true),Ki),n.registerCommand(Be$1,t=>(async function(t,n){await F$1(n,Lt$3(t,ClipboardEvent)?t:null),n.update(()=>{const t=Lr();yr(t)?t.removeText():xr(t)&&t.getNodes().forEach(t=>t.remove());});}(t,n),true),Ki),n.registerCommand(fe$1,e=>{const[,r,o]=Mt$1(e);if(r.length>0&&!o)return n.dispatchCommand(wt$2,r),true;if(Ss(e.target)&&to(e.target))return  false;return null!==Lr()&&(function(e,n){e.preventDefault(),n.update(()=>{const r=Lr(),o=Lt$3(e,InputEvent)||Lt$3(e,KeyboardEvent)?null:e.clipboardData;null!=o&&null!==r&&R$2(o,r,n);},{tag:Fn});}(e,n),true)},Ki),n.registerCommand(be$1,t=>{const e=Lr();return yr(e)&&kt$2(e),false},Ki),n.registerCommand(Me$1,t=>{const e=Lr();return yr(e)&&kt$2(e),false},Ki))}
+
+/* **********************************************
+     Begin prism-core.js
+********************************************** */
+
+/// <reference lib="WebWorker"/>
+
+var _self = (typeof window !== 'undefined')
+	? window   // if in browser
+	: (
+		(typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope)
+			? self // if in worker
+			: {}   // if in node js
+	);
+
+/**
+ * Prism: Lightweight, robust, elegant syntax highlighting
+ *
+ * @license MIT <https://opensource.org/licenses/MIT>
+ * @author Lea Verou <https://lea.verou.me>
+ * @namespace
+ * @public
+ */
+var Prism$1 = (function (_self) {
+
+	// Private helper vars
+	var lang = /(?:^|\s)lang(?:uage)?-([\w-]+)(?=\s|$)/i;
+	var uniqueId = 0;
+
+	// The grammar object for plaintext
+	var plainTextGrammar = {};
+
+
+	var _ = {
+		/**
+		 * By default, Prism will attempt to highlight all code elements (by calling {@link Prism.highlightAll}) on the
+		 * current page after the page finished loading. This might be a problem if e.g. you wanted to asynchronously load
+		 * additional languages or plugins yourself.
+		 *
+		 * By setting this value to `true`, Prism will not automatically highlight all code elements on the page.
+		 *
+		 * You obviously have to change this value before the automatic highlighting started. To do this, you can add an
+		 * empty Prism object into the global scope before loading the Prism script like this:
+		 *
+		 * ```js
+		 * window.Prism = window.Prism || {};
+		 * Prism.manual = true;
+		 * // add a new <script> to load Prism's script
+		 * ```
+		 *
+		 * @default false
+		 * @type {boolean}
+		 * @memberof Prism
+		 * @public
+		 */
+		manual: _self.Prism && _self.Prism.manual,
+		/**
+		 * By default, if Prism is in a web worker, it assumes that it is in a worker it created itself, so it uses
+		 * `addEventListener` to communicate with its parent instance. However, if you're using Prism manually in your
+		 * own worker, you don't want it to do this.
+		 *
+		 * By setting this value to `true`, Prism will not add its own listeners to the worker.
+		 *
+		 * You obviously have to change this value before Prism executes. To do this, you can add an
+		 * empty Prism object into the global scope before loading the Prism script like this:
+		 *
+		 * ```js
+		 * window.Prism = window.Prism || {};
+		 * Prism.disableWorkerMessageHandler = true;
+		 * // Load Prism's script
+		 * ```
+		 *
+		 * @default false
+		 * @type {boolean}
+		 * @memberof Prism
+		 * @public
+		 */
+		disableWorkerMessageHandler: _self.Prism && _self.Prism.disableWorkerMessageHandler,
+
+		/**
+		 * A namespace for utility methods.
+		 *
+		 * All function in this namespace that are not explicitly marked as _public_ are for __internal use only__ and may
+		 * change or disappear at any time.
+		 *
+		 * @namespace
+		 * @memberof Prism
+		 */
+		util: {
+			encode: function encode(tokens) {
+				if (tokens instanceof Token) {
+					return new Token(tokens.type, encode(tokens.content), tokens.alias);
+				} else if (Array.isArray(tokens)) {
+					return tokens.map(encode);
+				} else {
+					return tokens.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\u00a0/g, ' ');
+				}
+			},
+
+			/**
+			 * Returns the name of the type of the given value.
+			 *
+			 * @param {any} o
+			 * @returns {string}
+			 * @example
+			 * type(null)      === 'Null'
+			 * type(undefined) === 'Undefined'
+			 * type(123)       === 'Number'
+			 * type('foo')     === 'String'
+			 * type(true)      === 'Boolean'
+			 * type([1, 2])    === 'Array'
+			 * type({})        === 'Object'
+			 * type(String)    === 'Function'
+			 * type(/abc+/)    === 'RegExp'
+			 */
+			type: function (o) {
+				return Object.prototype.toString.call(o).slice(8, -1);
+			},
+
+			/**
+			 * Returns a unique number for the given object. Later calls will still return the same number.
+			 *
+			 * @param {Object} obj
+			 * @returns {number}
+			 */
+			objId: function (obj) {
+				if (!obj['__id']) {
+					Object.defineProperty(obj, '__id', { value: ++uniqueId });
+				}
+				return obj['__id'];
+			},
+
+			/**
+			 * Creates a deep clone of the given object.
+			 *
+			 * The main intended use of this function is to clone language definitions.
+			 *
+			 * @param {T} o
+			 * @param {Record<number, any>} [visited]
+			 * @returns {T}
+			 * @template T
+			 */
+			clone: function deepClone(o, visited) {
+				visited = visited || {};
+
+				var clone; var id;
+				switch (_.util.type(o)) {
+					case 'Object':
+						id = _.util.objId(o);
+						if (visited[id]) {
+							return visited[id];
+						}
+						clone = /** @type {Record<string, any>} */ ({});
+						visited[id] = clone;
+
+						for (var key in o) {
+							if (o.hasOwnProperty(key)) {
+								clone[key] = deepClone(o[key], visited);
+							}
+						}
+
+						return /** @type {any} */ (clone);
+
+					case 'Array':
+						id = _.util.objId(o);
+						if (visited[id]) {
+							return visited[id];
+						}
+						clone = [];
+						visited[id] = clone;
+
+						(/** @type {Array} */(/** @type {any} */(o))).forEach(function (v, i) {
+							clone[i] = deepClone(v, visited);
+						});
+
+						return /** @type {any} */ (clone);
+
+					default:
+						return o;
+				}
+			},
+
+			/**
+			 * Returns the Prism language of the given element set by a `language-xxxx` or `lang-xxxx` class.
+			 *
+			 * If no language is set for the element or the element is `null` or `undefined`, `none` will be returned.
+			 *
+			 * @param {Element} element
+			 * @returns {string}
+			 */
+			getLanguage: function (element) {
+				while (element) {
+					var m = lang.exec(element.className);
+					if (m) {
+						return m[1].toLowerCase();
+					}
+					element = element.parentElement;
+				}
+				return 'none';
+			},
+
+			/**
+			 * Sets the Prism `language-xxxx` class of the given element.
+			 *
+			 * @param {Element} element
+			 * @param {string} language
+			 * @returns {void}
+			 */
+			setLanguage: function (element, language) {
+				// remove all `language-xxxx` classes
+				// (this might leave behind a leading space)
+				element.className = element.className.replace(RegExp(lang, 'gi'), '');
+
+				// add the new `language-xxxx` class
+				// (using `classList` will automatically clean up spaces for us)
+				element.classList.add('language-' + language);
+			},
+
+			/**
+			 * Returns the script element that is currently executing.
+			 *
+			 * This does __not__ work for line script element.
+			 *
+			 * @returns {HTMLScriptElement | null}
+			 */
+			currentScript: function () {
+				if (typeof document === 'undefined') {
+					return null;
+				}
+				if (document.currentScript && document.currentScript.tagName === 'SCRIPT' && 1 < 2 /* hack to trip TS' flow analysis */) {
+					return /** @type {any} */ (document.currentScript);
+				}
+
+				// IE11 workaround
+				// we'll get the src of the current script by parsing IE11's error stack trace
+				// this will not work for inline scripts
+
+				try {
+					throw new Error();
+				} catch (err) {
+					// Get file src url from stack. Specifically works with the format of stack traces in IE.
+					// A stack will look like this:
+					//
+					// Error
+					//    at _.util.currentScript (http://localhost/components/prism-core.js:119:5)
+					//    at Global code (http://localhost/components/prism-core.js:606:1)
+
+					var src = (/at [^(\r\n]*\((.*):[^:]+:[^:]+\)$/i.exec(err.stack) || [])[1];
+					if (src) {
+						var scripts = document.getElementsByTagName('script');
+						for (var i in scripts) {
+							if (scripts[i].src == src) {
+								return scripts[i];
+							}
+						}
+					}
+					return null;
+				}
+			},
+
+			/**
+			 * Returns whether a given class is active for `element`.
+			 *
+			 * The class can be activated if `element` or one of its ancestors has the given class and it can be deactivated
+			 * if `element` or one of its ancestors has the negated version of the given class. The _negated version_ of the
+			 * given class is just the given class with a `no-` prefix.
+			 *
+			 * Whether the class is active is determined by the closest ancestor of `element` (where `element` itself is
+			 * closest ancestor) that has the given class or the negated version of it. If neither `element` nor any of its
+			 * ancestors have the given class or the negated version of it, then the default activation will be returned.
+			 *
+			 * In the paradoxical situation where the closest ancestor contains __both__ the given class and the negated
+			 * version of it, the class is considered active.
+			 *
+			 * @param {Element} element
+			 * @param {string} className
+			 * @param {boolean} [defaultActivation=false]
+			 * @returns {boolean}
+			 */
+			isActive: function (element, className, defaultActivation) {
+				var no = 'no-' + className;
+
+				while (element) {
+					var classList = element.classList;
+					if (classList.contains(className)) {
+						return true;
+					}
+					if (classList.contains(no)) {
+						return false;
+					}
+					element = element.parentElement;
+				}
+				return !!defaultActivation;
+			}
+		},
+
+		/**
+		 * This namespace contains all currently loaded languages and the some helper functions to create and modify languages.
+		 *
+		 * @namespace
+		 * @memberof Prism
+		 * @public
+		 */
+		languages: {
+			/**
+			 * The grammar for plain, unformatted text.
+			 */
+			plain: plainTextGrammar,
+			plaintext: plainTextGrammar,
+			text: plainTextGrammar,
+			txt: plainTextGrammar,
+
+			/**
+			 * Creates a deep copy of the language with the given id and appends the given tokens.
+			 *
+			 * If a token in `redef` also appears in the copied language, then the existing token in the copied language
+			 * will be overwritten at its original position.
+			 *
+			 * ## Best practices
+			 *
+			 * Since the position of overwriting tokens (token in `redef` that overwrite tokens in the copied language)
+			 * doesn't matter, they can technically be in any order. However, this can be confusing to others that trying to
+			 * understand the language definition because, normally, the order of tokens matters in Prism grammars.
+			 *
+			 * Therefore, it is encouraged to order overwriting tokens according to the positions of the overwritten tokens.
+			 * Furthermore, all non-overwriting tokens should be placed after the overwriting ones.
+			 *
+			 * @param {string} id The id of the language to extend. This has to be a key in `Prism.languages`.
+			 * @param {Grammar} redef The new tokens to append.
+			 * @returns {Grammar} The new language created.
+			 * @public
+			 * @example
+			 * Prism.languages['css-with-colors'] = Prism.languages.extend('css', {
+			 *     // Prism.languages.css already has a 'comment' token, so this token will overwrite CSS' 'comment' token
+			 *     // at its original position
+			 *     'comment': { ... },
+			 *     // CSS doesn't have a 'color' token, so this token will be appended
+			 *     'color': /\b(?:red|green|blue)\b/
+			 * });
+			 */
+			extend: function (id, redef) {
+				var lang = _.util.clone(_.languages[id]);
+
+				for (var key in redef) {
+					lang[key] = redef[key];
+				}
+
+				return lang;
+			},
+
+			/**
+			 * Inserts tokens _before_ another token in a language definition or any other grammar.
+			 *
+			 * ## Usage
+			 *
+			 * This helper method makes it easy to modify existing languages. For example, the CSS language definition
+			 * not only defines CSS highlighting for CSS documents, but also needs to define highlighting for CSS embedded
+			 * in HTML through `<style>` elements. To do this, it needs to modify `Prism.languages.markup` and add the
+			 * appropriate tokens. However, `Prism.languages.markup` is a regular JavaScript object literal, so if you do
+			 * this:
+			 *
+			 * ```js
+			 * Prism.languages.markup.style = {
+			 *     // token
+			 * };
+			 * ```
+			 *
+			 * then the `style` token will be added (and processed) at the end. `insertBefore` allows you to insert tokens
+			 * before existing tokens. For the CSS example above, you would use it like this:
+			 *
+			 * ```js
+			 * Prism.languages.insertBefore('markup', 'cdata', {
+			 *     'style': {
+			 *         // token
+			 *     }
+			 * });
+			 * ```
+			 *
+			 * ## Special cases
+			 *
+			 * If the grammars of `inside` and `insert` have tokens with the same name, the tokens in `inside`'s grammar
+			 * will be ignored.
+			 *
+			 * This behavior can be used to insert tokens after `before`:
+			 *
+			 * ```js
+			 * Prism.languages.insertBefore('markup', 'comment', {
+			 *     'comment': Prism.languages.markup.comment,
+			 *     // tokens after 'comment'
+			 * });
+			 * ```
+			 *
+			 * ## Limitations
+			 *
+			 * The main problem `insertBefore` has to solve is iteration order. Since ES2015, the iteration order for object
+			 * properties is guaranteed to be the insertion order (except for integer keys) but some browsers behave
+			 * differently when keys are deleted and re-inserted. So `insertBefore` can't be implemented by temporarily
+			 * deleting properties which is necessary to insert at arbitrary positions.
+			 *
+			 * To solve this problem, `insertBefore` doesn't actually insert the given tokens into the target object.
+			 * Instead, it will create a new object and replace all references to the target object with the new one. This
+			 * can be done without temporarily deleting properties, so the iteration order is well-defined.
+			 *
+			 * However, only references that can be reached from `Prism.languages` or `insert` will be replaced. I.e. if
+			 * you hold the target object in a variable, then the value of the variable will not change.
+			 *
+			 * ```js
+			 * var oldMarkup = Prism.languages.markup;
+			 * var newMarkup = Prism.languages.insertBefore('markup', 'comment', { ... });
+			 *
+			 * assert(oldMarkup !== Prism.languages.markup);
+			 * assert(newMarkup === Prism.languages.markup);
+			 * ```
+			 *
+			 * @param {string} inside The property of `root` (e.g. a language id in `Prism.languages`) that contains the
+			 * object to be modified.
+			 * @param {string} before The key to insert before.
+			 * @param {Grammar} insert An object containing the key-value pairs to be inserted.
+			 * @param {Object<string, any>} [root] The object containing `inside`, i.e. the object that contains the
+			 * object to be modified.
+			 *
+			 * Defaults to `Prism.languages`.
+			 * @returns {Grammar} The new grammar object.
+			 * @public
+			 */
+			insertBefore: function (inside, before, insert, root) {
+				root = root || /** @type {any} */ (_.languages);
+				var grammar = root[inside];
+				/** @type {Grammar} */
+				var ret = {};
+
+				for (var token in grammar) {
+					if (grammar.hasOwnProperty(token)) {
+
+						if (token == before) {
+							for (var newToken in insert) {
+								if (insert.hasOwnProperty(newToken)) {
+									ret[newToken] = insert[newToken];
+								}
+							}
+						}
+
+						// Do not insert token which also occur in insert. See #1525
+						if (!insert.hasOwnProperty(token)) {
+							ret[token] = grammar[token];
+						}
+					}
+				}
+
+				var old = root[inside];
+				root[inside] = ret;
+
+				// Update references in other language definitions
+				_.languages.DFS(_.languages, function (key, value) {
+					if (value === old && key != inside) {
+						this[key] = ret;
+					}
+				});
+
+				return ret;
+			},
+
+			// Traverse a language definition with Depth First Search
+			DFS: function DFS(o, callback, type, visited) {
+				visited = visited || {};
+
+				var objId = _.util.objId;
+
+				for (var i in o) {
+					if (o.hasOwnProperty(i)) {
+						callback.call(o, i, o[i], type || i);
+
+						var property = o[i];
+						var propertyType = _.util.type(property);
+
+						if (propertyType === 'Object' && !visited[objId(property)]) {
+							visited[objId(property)] = true;
+							DFS(property, callback, null, visited);
+						} else if (propertyType === 'Array' && !visited[objId(property)]) {
+							visited[objId(property)] = true;
+							DFS(property, callback, i, visited);
+						}
+					}
+				}
+			}
+		},
+
+		plugins: {},
+
+		/**
+		 * This is the most high-level function in Prism’s API.
+		 * It fetches all the elements that have a `.language-xxxx` class and then calls {@link Prism.highlightElement} on
+		 * each one of them.
+		 *
+		 * This is equivalent to `Prism.highlightAllUnder(document, async, callback)`.
+		 *
+		 * @param {boolean} [async=false] Same as in {@link Prism.highlightAllUnder}.
+		 * @param {HighlightCallback} [callback] Same as in {@link Prism.highlightAllUnder}.
+		 * @memberof Prism
+		 * @public
+		 */
+		highlightAll: function (async, callback) {
+			_.highlightAllUnder(document, async, callback);
+		},
+
+		/**
+		 * Fetches all the descendants of `container` that have a `.language-xxxx` class and then calls
+		 * {@link Prism.highlightElement} on each one of them.
+		 *
+		 * The following hooks will be run:
+		 * 1. `before-highlightall`
+		 * 2. `before-all-elements-highlight`
+		 * 3. All hooks of {@link Prism.highlightElement} for each element.
+		 *
+		 * @param {ParentNode} container The root element, whose descendants that have a `.language-xxxx` class will be highlighted.
+		 * @param {boolean} [async=false] Whether each element is to be highlighted asynchronously using Web Workers.
+		 * @param {HighlightCallback} [callback] An optional callback to be invoked on each element after its highlighting is done.
+		 * @memberof Prism
+		 * @public
+		 */
+		highlightAllUnder: function (container, async, callback) {
+			var env = {
+				callback: callback,
+				container: container,
+				selector: 'code[class*="language-"], [class*="language-"] code, code[class*="lang-"], [class*="lang-"] code'
+			};
+
+			_.hooks.run('before-highlightall', env);
+
+			env.elements = Array.prototype.slice.apply(env.container.querySelectorAll(env.selector));
+
+			_.hooks.run('before-all-elements-highlight', env);
+
+			for (var i = 0, element; (element = env.elements[i++]);) {
+				_.highlightElement(element, async === true, env.callback);
+			}
+		},
+
+		/**
+		 * Highlights the code inside a single element.
+		 *
+		 * The following hooks will be run:
+		 * 1. `before-sanity-check`
+		 * 2. `before-highlight`
+		 * 3. All hooks of {@link Prism.highlight}. These hooks will be run by an asynchronous worker if `async` is `true`.
+		 * 4. `before-insert`
+		 * 5. `after-highlight`
+		 * 6. `complete`
+		 *
+		 * Some the above hooks will be skipped if the element doesn't contain any text or there is no grammar loaded for
+		 * the element's language.
+		 *
+		 * @param {Element} element The element containing the code.
+		 * It must have a class of `language-xxxx` to be processed, where `xxxx` is a valid language identifier.
+		 * @param {boolean} [async=false] Whether the element is to be highlighted asynchronously using Web Workers
+		 * to improve performance and avoid blocking the UI when highlighting very large chunks of code. This option is
+		 * [disabled by default](https://prismjs.com/faq.html#why-is-asynchronous-highlighting-disabled-by-default).
+		 *
+		 * Note: All language definitions required to highlight the code must be included in the main `prism.js` file for
+		 * asynchronous highlighting to work. You can build your own bundle on the
+		 * [Download page](https://prismjs.com/download.html).
+		 * @param {HighlightCallback} [callback] An optional callback to be invoked after the highlighting is done.
+		 * Mostly useful when `async` is `true`, since in that case, the highlighting is done asynchronously.
+		 * @memberof Prism
+		 * @public
+		 */
+		highlightElement: function (element, async, callback) {
+			// Find language
+			var language = _.util.getLanguage(element);
+			var grammar = _.languages[language];
+
+			// Set language on the element, if not present
+			_.util.setLanguage(element, language);
+
+			// Set language on the parent, for styling
+			var parent = element.parentElement;
+			if (parent && parent.nodeName.toLowerCase() === 'pre') {
+				_.util.setLanguage(parent, language);
+			}
+
+			var code = element.textContent;
+
+			var env = {
+				element: element,
+				language: language,
+				grammar: grammar,
+				code: code
+			};
+
+			function insertHighlightedCode(highlightedCode) {
+				env.highlightedCode = highlightedCode;
+
+				_.hooks.run('before-insert', env);
+
+				env.element.innerHTML = env.highlightedCode;
+
+				_.hooks.run('after-highlight', env);
+				_.hooks.run('complete', env);
+				callback && callback.call(env.element);
+			}
+
+			_.hooks.run('before-sanity-check', env);
+
+			// plugins may change/add the parent/element
+			parent = env.element.parentElement;
+			if (parent && parent.nodeName.toLowerCase() === 'pre' && !parent.hasAttribute('tabindex')) {
+				parent.setAttribute('tabindex', '0');
+			}
+
+			if (!env.code) {
+				_.hooks.run('complete', env);
+				callback && callback.call(env.element);
+				return;
+			}
+
+			_.hooks.run('before-highlight', env);
+
+			if (!env.grammar) {
+				insertHighlightedCode(_.util.encode(env.code));
+				return;
+			}
+
+			if (async && _self.Worker) {
+				var worker = new Worker(_.filename);
+
+				worker.onmessage = function (evt) {
+					insertHighlightedCode(evt.data);
+				};
+
+				worker.postMessage(JSON.stringify({
+					language: env.language,
+					code: env.code,
+					immediateClose: true
+				}));
+			} else {
+				insertHighlightedCode(_.highlight(env.code, env.grammar, env.language));
+			}
+		},
+
+		/**
+		 * Low-level function, only use if you know what you’re doing. It accepts a string of text as input
+		 * and the language definitions to use, and returns a string with the HTML produced.
+		 *
+		 * The following hooks will be run:
+		 * 1. `before-tokenize`
+		 * 2. `after-tokenize`
+		 * 3. `wrap`: On each {@link Token}.
+		 *
+		 * @param {string} text A string with the code to be highlighted.
+		 * @param {Grammar} grammar An object containing the tokens to use.
+		 *
+		 * Usually a language definition like `Prism.languages.markup`.
+		 * @param {string} language The name of the language definition passed to `grammar`.
+		 * @returns {string} The highlighted HTML.
+		 * @memberof Prism
+		 * @public
+		 * @example
+		 * Prism.highlight('var foo = true;', Prism.languages.javascript, 'javascript');
+		 */
+		highlight: function (text, grammar, language) {
+			var env = {
+				code: text,
+				grammar: grammar,
+				language: language
+			};
+			_.hooks.run('before-tokenize', env);
+			if (!env.grammar) {
+				throw new Error('The language "' + env.language + '" has no grammar.');
+			}
+			env.tokens = _.tokenize(env.code, env.grammar);
+			_.hooks.run('after-tokenize', env);
+			return Token.stringify(_.util.encode(env.tokens), env.language);
+		},
+
+		/**
+		 * This is the heart of Prism, and the most low-level function you can use. It accepts a string of text as input
+		 * and the language definitions to use, and returns an array with the tokenized code.
+		 *
+		 * When the language definition includes nested tokens, the function is called recursively on each of these tokens.
+		 *
+		 * This method could be useful in other contexts as well, as a very crude parser.
+		 *
+		 * @param {string} text A string with the code to be highlighted.
+		 * @param {Grammar} grammar An object containing the tokens to use.
+		 *
+		 * Usually a language definition like `Prism.languages.markup`.
+		 * @returns {TokenStream} An array of strings and tokens, a token stream.
+		 * @memberof Prism
+		 * @public
+		 * @example
+		 * let code = `var foo = 0;`;
+		 * let tokens = Prism.tokenize(code, Prism.languages.javascript);
+		 * tokens.forEach(token => {
+		 *     if (token instanceof Prism.Token && token.type === 'number') {
+		 *         console.log(`Found numeric literal: ${token.content}`);
+		 *     }
+		 * });
+		 */
+		tokenize: function (text, grammar) {
+			var rest = grammar.rest;
+			if (rest) {
+				for (var token in rest) {
+					grammar[token] = rest[token];
+				}
+
+				delete grammar.rest;
+			}
+
+			var tokenList = new LinkedList();
+			addAfter(tokenList, tokenList.head, text);
+
+			matchGrammar(text, tokenList, grammar, tokenList.head, 0);
+
+			return toArray(tokenList);
+		},
+
+		/**
+		 * @namespace
+		 * @memberof Prism
+		 * @public
+		 */
+		hooks: {
+			all: {},
+
+			/**
+			 * Adds the given callback to the list of callbacks for the given hook.
+			 *
+			 * The callback will be invoked when the hook it is registered for is run.
+			 * Hooks are usually directly run by a highlight function but you can also run hooks yourself.
+			 *
+			 * One callback function can be registered to multiple hooks and the same hook multiple times.
+			 *
+			 * @param {string} name The name of the hook.
+			 * @param {HookCallback} callback The callback function which is given environment variables.
+			 * @public
+			 */
+			add: function (name, callback) {
+				var hooks = _.hooks.all;
+
+				hooks[name] = hooks[name] || [];
+
+				hooks[name].push(callback);
+			},
+
+			/**
+			 * Runs a hook invoking all registered callbacks with the given environment variables.
+			 *
+			 * Callbacks will be invoked synchronously and in the order in which they were registered.
+			 *
+			 * @param {string} name The name of the hook.
+			 * @param {Object<string, any>} env The environment variables of the hook passed to all callbacks registered.
+			 * @public
+			 */
+			run: function (name, env) {
+				var callbacks = _.hooks.all[name];
+
+				if (!callbacks || !callbacks.length) {
+					return;
+				}
+
+				for (var i = 0, callback; (callback = callbacks[i++]);) {
+					callback(env);
+				}
+			}
+		},
+
+		Token: Token
+	};
+	_self.Prism = _;
+
+
+	// Typescript note:
+	// The following can be used to import the Token type in JSDoc:
+	//
+	//   @typedef {InstanceType<import("./prism-core")["Token"]>} Token
+
+	/**
+	 * Creates a new token.
+	 *
+	 * @param {string} type See {@link Token#type type}
+	 * @param {string | TokenStream} content See {@link Token#content content}
+	 * @param {string|string[]} [alias] The alias(es) of the token.
+	 * @param {string} [matchedStr=""] A copy of the full string this token was created from.
+	 * @class
+	 * @global
+	 * @public
+	 */
+	function Token(type, content, alias, matchedStr) {
+		/**
+		 * The type of the token.
+		 *
+		 * This is usually the key of a pattern in a {@link Grammar}.
+		 *
+		 * @type {string}
+		 * @see GrammarToken
+		 * @public
+		 */
+		this.type = type;
+		/**
+		 * The strings or tokens contained by this token.
+		 *
+		 * This will be a token stream if the pattern matched also defined an `inside` grammar.
+		 *
+		 * @type {string | TokenStream}
+		 * @public
+		 */
+		this.content = content;
+		/**
+		 * The alias(es) of the token.
+		 *
+		 * @type {string|string[]}
+		 * @see GrammarToken
+		 * @public
+		 */
+		this.alias = alias;
+		// Copy of the full string this token was created from
+		this.length = (matchedStr || '').length | 0;
+	}
+
+	/**
+	 * A token stream is an array of strings and {@link Token Token} objects.
+	 *
+	 * Token streams have to fulfill a few properties that are assumed by most functions (mostly internal ones) that process
+	 * them.
+	 *
+	 * 1. No adjacent strings.
+	 * 2. No empty strings.
+	 *
+	 *    The only exception here is the token stream that only contains the empty string and nothing else.
+	 *
+	 * @typedef {Array<string | Token>} TokenStream
+	 * @global
+	 * @public
+	 */
+
+	/**
+	 * Converts the given token or token stream to an HTML representation.
+	 *
+	 * The following hooks will be run:
+	 * 1. `wrap`: On each {@link Token}.
+	 *
+	 * @param {string | Token | TokenStream} o The token or token stream to be converted.
+	 * @param {string} language The name of current language.
+	 * @returns {string} The HTML representation of the token or token stream.
+	 * @memberof Token
+	 * @static
+	 */
+	Token.stringify = function stringify(o, language) {
+		if (typeof o == 'string') {
+			return o;
+		}
+		if (Array.isArray(o)) {
+			var s = '';
+			o.forEach(function (e) {
+				s += stringify(e, language);
+			});
+			return s;
+		}
+
+		var env = {
+			type: o.type,
+			content: stringify(o.content, language),
+			tag: 'span',
+			classes: ['token', o.type],
+			attributes: {},
+			language: language
+		};
+
+		var aliases = o.alias;
+		if (aliases) {
+			if (Array.isArray(aliases)) {
+				Array.prototype.push.apply(env.classes, aliases);
+			} else {
+				env.classes.push(aliases);
+			}
+		}
+
+		_.hooks.run('wrap', env);
+
+		var attributes = '';
+		for (var name in env.attributes) {
+			attributes += ' ' + name + '="' + (env.attributes[name] || '').replace(/"/g, '&quot;') + '"';
+		}
+
+		return '<' + env.tag + ' class="' + env.classes.join(' ') + '"' + attributes + '>' + env.content + '</' + env.tag + '>';
+	};
+
+	/**
+	 * @param {RegExp} pattern
+	 * @param {number} pos
+	 * @param {string} text
+	 * @param {boolean} lookbehind
+	 * @returns {RegExpExecArray | null}
+	 */
+	function matchPattern(pattern, pos, text, lookbehind) {
+		pattern.lastIndex = pos;
+		var match = pattern.exec(text);
+		if (match && lookbehind && match[1]) {
+			// change the match to remove the text matched by the Prism lookbehind group
+			var lookbehindLength = match[1].length;
+			match.index += lookbehindLength;
+			match[0] = match[0].slice(lookbehindLength);
+		}
+		return match;
+	}
+
+	/**
+	 * @param {string} text
+	 * @param {LinkedList<string | Token>} tokenList
+	 * @param {any} grammar
+	 * @param {LinkedListNode<string | Token>} startNode
+	 * @param {number} startPos
+	 * @param {RematchOptions} [rematch]
+	 * @returns {void}
+	 * @private
+	 *
+	 * @typedef RematchOptions
+	 * @property {string} cause
+	 * @property {number} reach
+	 */
+	function matchGrammar(text, tokenList, grammar, startNode, startPos, rematch) {
+		for (var token in grammar) {
+			if (!grammar.hasOwnProperty(token) || !grammar[token]) {
+				continue;
+			}
+
+			var patterns = grammar[token];
+			patterns = Array.isArray(patterns) ? patterns : [patterns];
+
+			for (var j = 0; j < patterns.length; ++j) {
+				if (rematch && rematch.cause == token + ',' + j) {
+					return;
+				}
+
+				var patternObj = patterns[j];
+				var inside = patternObj.inside;
+				var lookbehind = !!patternObj.lookbehind;
+				var greedy = !!patternObj.greedy;
+				var alias = patternObj.alias;
+
+				if (greedy && !patternObj.pattern.global) {
+					// Without the global flag, lastIndex won't work
+					var flags = patternObj.pattern.toString().match(/[imsuy]*$/)[0];
+					patternObj.pattern = RegExp(patternObj.pattern.source, flags + 'g');
+				}
+
+				/** @type {RegExp} */
+				var pattern = patternObj.pattern || patternObj;
+
+				for ( // iterate the token list and keep track of the current token/string position
+					var currentNode = startNode.next, pos = startPos;
+					currentNode !== tokenList.tail;
+					pos += currentNode.value.length, currentNode = currentNode.next
+				) {
+
+					if (rematch && pos >= rematch.reach) {
+						break;
+					}
+
+					var str = currentNode.value;
+
+					if (tokenList.length > text.length) {
+						// Something went terribly wrong, ABORT, ABORT!
+						return;
+					}
+
+					if (str instanceof Token) {
+						continue;
+					}
+
+					var removeCount = 1; // this is the to parameter of removeBetween
+					var match;
+
+					if (greedy) {
+						match = matchPattern(pattern, pos, text, lookbehind);
+						if (!match || match.index >= text.length) {
+							break;
+						}
+
+						var from = match.index;
+						var to = match.index + match[0].length;
+						var p = pos;
+
+						// find the node that contains the match
+						p += currentNode.value.length;
+						while (from >= p) {
+							currentNode = currentNode.next;
+							p += currentNode.value.length;
+						}
+						// adjust pos (and p)
+						p -= currentNode.value.length;
+						pos = p;
+
+						// the current node is a Token, then the match starts inside another Token, which is invalid
+						if (currentNode.value instanceof Token) {
+							continue;
+						}
+
+						// find the last node which is affected by this match
+						for (
+							var k = currentNode;
+							k !== tokenList.tail && (p < to || typeof k.value === 'string');
+							k = k.next
+						) {
+							removeCount++;
+							p += k.value.length;
+						}
+						removeCount--;
+
+						// replace with the new match
+						str = text.slice(pos, p);
+						match.index -= pos;
+					} else {
+						match = matchPattern(pattern, 0, str, lookbehind);
+						if (!match) {
+							continue;
+						}
+					}
+
+					// eslint-disable-next-line no-redeclare
+					var from = match.index;
+					var matchStr = match[0];
+					var before = str.slice(0, from);
+					var after = str.slice(from + matchStr.length);
+
+					var reach = pos + str.length;
+					if (rematch && reach > rematch.reach) {
+						rematch.reach = reach;
+					}
+
+					var removeFrom = currentNode.prev;
+
+					if (before) {
+						removeFrom = addAfter(tokenList, removeFrom, before);
+						pos += before.length;
+					}
+
+					removeRange(tokenList, removeFrom, removeCount);
+
+					var wrapped = new Token(token, inside ? _.tokenize(matchStr, inside) : matchStr, alias, matchStr);
+					currentNode = addAfter(tokenList, removeFrom, wrapped);
+
+					if (after) {
+						addAfter(tokenList, currentNode, after);
+					}
+
+					if (removeCount > 1) {
+						// at least one Token object was removed, so we have to do some rematching
+						// this can only happen if the current pattern is greedy
+
+						/** @type {RematchOptions} */
+						var nestedRematch = {
+							cause: token + ',' + j,
+							reach: reach
+						};
+						matchGrammar(text, tokenList, grammar, currentNode.prev, pos, nestedRematch);
+
+						// the reach might have been extended because of the rematching
+						if (rematch && nestedRematch.reach > rematch.reach) {
+							rematch.reach = nestedRematch.reach;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * @typedef LinkedListNode
+	 * @property {T} value
+	 * @property {LinkedListNode<T> | null} prev The previous node.
+	 * @property {LinkedListNode<T> | null} next The next node.
+	 * @template T
+	 * @private
+	 */
+
+	/**
+	 * @template T
+	 * @private
+	 */
+	function LinkedList() {
+		/** @type {LinkedListNode<T>} */
+		var head = { value: null, prev: null, next: null };
+		/** @type {LinkedListNode<T>} */
+		var tail = { value: null, prev: head, next: null };
+		head.next = tail;
+
+		/** @type {LinkedListNode<T>} */
+		this.head = head;
+		/** @type {LinkedListNode<T>} */
+		this.tail = tail;
+		this.length = 0;
+	}
+
+	/**
+	 * Adds a new node with the given value to the list.
+	 *
+	 * @param {LinkedList<T>} list
+	 * @param {LinkedListNode<T>} node
+	 * @param {T} value
+	 * @returns {LinkedListNode<T>} The added node.
+	 * @template T
+	 */
+	function addAfter(list, node, value) {
+		// assumes that node != list.tail && values.length >= 0
+		var next = node.next;
+
+		var newNode = { value: value, prev: node, next: next };
+		node.next = newNode;
+		next.prev = newNode;
+		list.length++;
+
+		return newNode;
+	}
+	/**
+	 * Removes `count` nodes after the given node. The given node will not be removed.
+	 *
+	 * @param {LinkedList<T>} list
+	 * @param {LinkedListNode<T>} node
+	 * @param {number} count
+	 * @template T
+	 */
+	function removeRange(list, node, count) {
+		var next = node.next;
+		for (var i = 0; i < count && next !== list.tail; i++) {
+			next = next.next;
+		}
+		node.next = next;
+		next.prev = node;
+		list.length -= i;
+	}
+	/**
+	 * @param {LinkedList<T>} list
+	 * @returns {T[]}
+	 * @template T
+	 */
+	function toArray(list) {
+		var array = [];
+		var node = list.head.next;
+		while (node !== list.tail) {
+			array.push(node.value);
+			node = node.next;
+		}
+		return array;
+	}
+
+
+	if (!_self.document) {
+		if (!_self.addEventListener) {
+			// in Node.js
+			return _;
+		}
+
+		if (!_.disableWorkerMessageHandler) {
+			// In worker
+			_self.addEventListener('message', function (evt) {
+				var message = JSON.parse(evt.data);
+				var lang = message.language;
+				var code = message.code;
+				var immediateClose = message.immediateClose;
+
+				_self.postMessage(_.highlight(code, _.languages[lang], lang));
+				if (immediateClose) {
+					_self.close();
+				}
+			}, false);
+		}
+
+		return _;
+	}
+
+	// Get current script and highlight
+	var script = _.util.currentScript();
+
+	if (script) {
+		_.filename = script.src;
+
+		if (script.hasAttribute('data-manual')) {
+			_.manual = true;
+		}
+	}
+
+	function highlightAutomaticallyCallback() {
+		if (!_.manual) {
+			_.highlightAll();
+		}
+	}
+
+	if (!_.manual) {
+		// If the document state is "loading", then we'll use DOMContentLoaded.
+		// If the document state is "interactive" and the prism.js script is deferred, then we'll also use the
+		// DOMContentLoaded event because there might be some plugins or languages which have also been deferred and they
+		// might take longer one animation frame to execute which can create a race condition where only some plugins have
+		// been loaded when Prism.highlightAll() is executed, depending on how fast resources are loaded.
+		// See https://github.com/PrismJS/prism/issues/2102
+		var readyState = document.readyState;
+		if (readyState === 'loading' || readyState === 'interactive' && script && script.defer) {
+			document.addEventListener('DOMContentLoaded', highlightAutomaticallyCallback);
+		} else {
+			if (window.requestAnimationFrame) {
+				window.requestAnimationFrame(highlightAutomaticallyCallback);
+			} else {
+				window.setTimeout(highlightAutomaticallyCallback, 16);
+			}
+		}
+	}
+
+	return _;
+
+}(_self));
+
+if (typeof module !== 'undefined' && module.exports) {
+	module.exports = Prism$1;
+}
+
+// hack for components to work correctly in node.js
+if (typeof global !== 'undefined') {
+	global.Prism = Prism$1;
+}
+
+// some additional documentation/types
+
+/**
+ * The expansion of a simple `RegExp` literal to support additional properties.
+ *
+ * @typedef GrammarToken
+ * @property {RegExp} pattern The regular expression of the token.
+ * @property {boolean} [lookbehind=false] If `true`, then the first capturing group of `pattern` will (effectively)
+ * behave as a lookbehind group meaning that the captured text will not be part of the matched text of the new token.
+ * @property {boolean} [greedy=false] Whether the token is greedy.
+ * @property {string|string[]} [alias] An optional alias or list of aliases.
+ * @property {Grammar} [inside] The nested grammar of this token.
+ *
+ * The `inside` grammar will be used to tokenize the text value of each token of this kind.
+ *
+ * This can be used to make nested and even recursive language definitions.
+ *
+ * Note: This can cause infinite recursion. Be careful when you embed different languages or even the same language into
+ * each another.
+ * @global
+ * @public
+ */
+
+/**
+ * @typedef Grammar
+ * @type {Object<string, RegExp | GrammarToken | Array<RegExp | GrammarToken>>}
+ * @property {Grammar} [rest] An optional grammar object that will be appended to this grammar.
+ * @global
+ * @public
+ */
+
+/**
+ * A function which will invoked after an element was successfully highlighted.
+ *
+ * @callback HighlightCallback
+ * @param {Element} element The element successfully highlighted.
+ * @returns {void}
+ * @global
+ * @public
+ */
+
+/**
+ * @callback HookCallback
+ * @param {Object<string, any>} env The environment variables of the hook.
+ * @returns {void}
+ * @global
+ * @public
+ */
+
+
+/* **********************************************
+     Begin prism-markup.js
+********************************************** */
+
+Prism$1.languages.markup = {
+	'comment': {
+		pattern: /<!--(?:(?!<!--)[\s\S])*?-->/,
+		greedy: true
+	},
+	'prolog': {
+		pattern: /<\?[\s\S]+?\?>/,
+		greedy: true
+	},
+	'doctype': {
+		// https://www.w3.org/TR/xml/#NT-doctypedecl
+		pattern: /<!DOCTYPE(?:[^>"'[\]]|"[^"]*"|'[^']*')+(?:\[(?:[^<"'\]]|"[^"]*"|'[^']*'|<(?!!--)|<!--(?:[^-]|-(?!->))*-->)*\]\s*)?>/i,
+		greedy: true,
+		inside: {
+			'internal-subset': {
+				pattern: /(^[^\[]*\[)[\s\S]+(?=\]>$)/,
+				lookbehind: true,
+				greedy: true,
+				inside: null // see below
+			},
+			'string': {
+				pattern: /"[^"]*"|'[^']*'/,
+				greedy: true
+			},
+			'punctuation': /^<!|>$|[[\]]/,
+			'doctype-tag': /^DOCTYPE/i,
+			'name': /[^\s<>'"]+/
+		}
+	},
+	'cdata': {
+		pattern: /<!\[CDATA\[[\s\S]*?\]\]>/i,
+		greedy: true
+	},
+	'tag': {
+		pattern: /<\/?(?!\d)[^\s>\/=$<%]+(?:\s(?:\s*[^\s>\/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))|(?=[\s/>])))+)?\s*\/?>/,
+		greedy: true,
+		inside: {
+			'tag': {
+				pattern: /^<\/?[^\s>\/]+/,
+				inside: {
+					'punctuation': /^<\/?/,
+					'namespace': /^[^\s>\/:]+:/
+				}
+			},
+			'special-attr': [],
+			'attr-value': {
+				pattern: /=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+)/,
+				inside: {
+					'punctuation': [
+						{
+							pattern: /^=/,
+							alias: 'attr-equals'
+						},
+						{
+							pattern: /^(\s*)["']|["']$/,
+							lookbehind: true
+						}
+					]
+				}
+			},
+			'punctuation': /\/?>/,
+			'attr-name': {
+				pattern: /[^\s>\/]+/,
+				inside: {
+					'namespace': /^[^\s>\/:]+:/
+				}
+			}
+
+		}
+	},
+	'entity': [
+		{
+			pattern: /&[\da-z]{1,8};/i,
+			alias: 'named-entity'
+		},
+		/&#x?[\da-f]{1,8};/i
+	]
+};
+
+Prism$1.languages.markup['tag'].inside['attr-value'].inside['entity'] =
+	Prism$1.languages.markup['entity'];
+Prism$1.languages.markup['doctype'].inside['internal-subset'].inside = Prism$1.languages.markup;
+
+// Plugin to make entity title show the real entity, idea by Roman Komarov
+Prism$1.hooks.add('wrap', function (env) {
+
+	if (env.type === 'entity') {
+		env.attributes['title'] = env.content.replace(/&amp;/, '&');
+	}
+});
+
+Object.defineProperty(Prism$1.languages.markup.tag, 'addInlined', {
+	/**
+	 * Adds an inlined language to markup.
+	 *
+	 * An example of an inlined language is CSS with `<style>` tags.
+	 *
+	 * @param {string} tagName The name of the tag that contains the inlined language. This name will be treated as
+	 * case insensitive.
+	 * @param {string} lang The language key.
+	 * @example
+	 * addInlined('style', 'css');
+	 */
+	value: function addInlined(tagName, lang) {
+		var includedCdataInside = {};
+		includedCdataInside['language-' + lang] = {
+			pattern: /(^<!\[CDATA\[)[\s\S]+?(?=\]\]>$)/i,
+			lookbehind: true,
+			inside: Prism$1.languages[lang]
+		};
+		includedCdataInside['cdata'] = /^<!\[CDATA\[|\]\]>$/i;
+
+		var inside = {
+			'included-cdata': {
+				pattern: /<!\[CDATA\[[\s\S]*?\]\]>/i,
+				inside: includedCdataInside
+			}
+		};
+		inside['language-' + lang] = {
+			pattern: /[\s\S]+/,
+			inside: Prism$1.languages[lang]
+		};
+
+		var def = {};
+		def[tagName] = {
+			pattern: RegExp(/(<__[^>]*>)(?:<!\[CDATA\[(?:[^\]]|\](?!\]>))*\]\]>|(?!<!\[CDATA\[)[\s\S])*?(?=<\/__>)/.source.replace(/__/g, function () { return tagName; }), 'i'),
+			lookbehind: true,
+			greedy: true,
+			inside: inside
+		};
+
+		Prism$1.languages.insertBefore('markup', 'cdata', def);
+	}
+});
+Object.defineProperty(Prism$1.languages.markup.tag, 'addAttribute', {
+	/**
+	 * Adds an pattern to highlight languages embedded in HTML attributes.
+	 *
+	 * An example of an inlined language is CSS with `style` attributes.
+	 *
+	 * @param {string} attrName The name of the tag that contains the inlined language. This name will be treated as
+	 * case insensitive.
+	 * @param {string} lang The language key.
+	 * @example
+	 * addAttribute('style', 'css');
+	 */
+	value: function (attrName, lang) {
+		Prism$1.languages.markup.tag.inside['special-attr'].push({
+			pattern: RegExp(
+				/(^|["'\s])/.source + '(?:' + attrName + ')' + /\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))/.source,
+				'i'
+			),
+			lookbehind: true,
+			inside: {
+				'attr-name': /^[^\s=]+/,
+				'attr-value': {
+					pattern: /=[\s\S]+/,
+					inside: {
+						'value': {
+							pattern: /(^=\s*(["']|(?!["'])))\S[\s\S]*(?=\2$)/,
+							lookbehind: true,
+							alias: [lang, 'language-' + lang],
+							inside: Prism$1.languages[lang]
+						},
+						'punctuation': [
+							{
+								pattern: /^=/,
+								alias: 'attr-equals'
+							},
+							/"|'/
+						]
+					}
+				}
+			}
+		});
+	}
+});
+
+Prism$1.languages.html = Prism$1.languages.markup;
+Prism$1.languages.mathml = Prism$1.languages.markup;
+Prism$1.languages.svg = Prism$1.languages.markup;
+
+Prism$1.languages.xml = Prism$1.languages.extend('markup', {});
+Prism$1.languages.ssml = Prism$1.languages.xml;
+Prism$1.languages.atom = Prism$1.languages.xml;
+Prism$1.languages.rss = Prism$1.languages.xml;
+
+
+/* **********************************************
+     Begin prism-css.js
+********************************************** */
+
+(function (Prism) {
+
+	var string = /(?:"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"|'(?:\\(?:\r\n|[\s\S])|[^'\\\r\n])*')/;
+
+	Prism.languages.css = {
+		'comment': /\/\*[\s\S]*?\*\//,
+		'atrule': {
+			pattern: RegExp('@[\\w-](?:' + /[^;{\s"']|\s+(?!\s)/.source + '|' + string.source + ')*?' + /(?:;|(?=\s*\{))/.source),
+			inside: {
+				'rule': /^@[\w-]+/,
+				'selector-function-argument': {
+					pattern: /(\bselector\s*\(\s*(?![\s)]))(?:[^()\s]|\s+(?![\s)])|\((?:[^()]|\([^()]*\))*\))+(?=\s*\))/,
+					lookbehind: true,
+					alias: 'selector'
+				},
+				'keyword': {
+					pattern: /(^|[^\w-])(?:and|not|only|or)(?![\w-])/,
+					lookbehind: true
+				}
+				// See rest below
+			}
+		},
+		'url': {
+			// https://drafts.csswg.org/css-values-3/#urls
+			pattern: RegExp('\\burl\\((?:' + string.source + '|' + /(?:[^\\\r\n()"']|\\[\s\S])*/.source + ')\\)', 'i'),
+			greedy: true,
+			inside: {
+				'function': /^url/i,
+				'punctuation': /^\(|\)$/,
+				'string': {
+					pattern: RegExp('^' + string.source + '$'),
+					alias: 'url'
+				}
+			}
+		},
+		'selector': {
+			pattern: RegExp('(^|[{}\\s])[^{}\\s](?:[^{};"\'\\s]|\\s+(?![\\s{])|' + string.source + ')*(?=\\s*\\{)'),
+			lookbehind: true
+		},
+		'string': {
+			pattern: string,
+			greedy: true
+		},
+		'property': {
+			pattern: /(^|[^-\w\xA0-\uFFFF])(?!\s)[-_a-z\xA0-\uFFFF](?:(?!\s)[-\w\xA0-\uFFFF])*(?=\s*:)/i,
+			lookbehind: true
+		},
+		'important': /!important\b/i,
+		'function': {
+			pattern: /(^|[^-a-z0-9])[-a-z0-9]+(?=\()/i,
+			lookbehind: true
+		},
+		'punctuation': /[(){};:,]/
+	};
+
+	Prism.languages.css['atrule'].inside.rest = Prism.languages.css;
+
+	var markup = Prism.languages.markup;
+	if (markup) {
+		markup.tag.addInlined('style', 'css');
+		markup.tag.addAttribute('style', 'css');
+	}
+
+}(Prism$1));
+
+
+/* **********************************************
+     Begin prism-clike.js
+********************************************** */
+
+Prism$1.languages.clike = {
+	'comment': [
+		{
+			pattern: /(^|[^\\])\/\*[\s\S]*?(?:\*\/|$)/,
+			lookbehind: true,
+			greedy: true
+		},
+		{
+			pattern: /(^|[^\\:])\/\/.*/,
+			lookbehind: true,
+			greedy: true
+		}
+	],
+	'string': {
+		pattern: /(["'])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,
+		greedy: true
+	},
+	'class-name': {
+		pattern: /(\b(?:class|extends|implements|instanceof|interface|new|trait)\s+|\bcatch\s+\()[\w.\\]+/i,
+		lookbehind: true,
+		inside: {
+			'punctuation': /[.\\]/
+		}
+	},
+	'keyword': /\b(?:break|catch|continue|do|else|finally|for|function|if|in|instanceof|new|null|return|throw|try|while)\b/,
+	'boolean': /\b(?:false|true)\b/,
+	'function': /\b\w+(?=\()/,
+	'number': /\b0x[\da-f]+\b|(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:e[+-]?\d+)?/i,
+	'operator': /[<>]=?|[!=]=?=?|--?|\+\+?|&&?|\|\|?|[?*/~^%]/,
+	'punctuation': /[{}[\];(),.:]/
+};
+
+
+/* **********************************************
+     Begin prism-javascript.js
+********************************************** */
 
 Prism$1.languages.javascript = Prism$1.languages.extend('clike', {
 	'class-name': [
@@ -4883,6 +3240,599 @@ if (Prism$1.languages.markup) {
 }
 
 Prism$1.languages.js = Prism$1.languages.javascript;
+
+
+/* **********************************************
+     Begin prism-file-highlight.js
+********************************************** */
+
+(function () {
+
+	if (typeof Prism$1 === 'undefined' || typeof document === 'undefined') {
+		return;
+	}
+
+	// https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
+	if (!Element.prototype.matches) {
+		Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
+	}
+
+	var LOADING_MESSAGE = 'Loading…';
+	var FAILURE_MESSAGE = function (status, message) {
+		return '✖ Error ' + status + ' while fetching file: ' + message;
+	};
+	var FAILURE_EMPTY_MESSAGE = '✖ Error: File does not exist or is empty';
+
+	var EXTENSIONS = {
+		'js': 'javascript',
+		'py': 'python',
+		'rb': 'ruby',
+		'ps1': 'powershell',
+		'psm1': 'powershell',
+		'sh': 'bash',
+		'bat': 'batch',
+		'h': 'c',
+		'tex': 'latex'
+	};
+
+	var STATUS_ATTR = 'data-src-status';
+	var STATUS_LOADING = 'loading';
+	var STATUS_LOADED = 'loaded';
+	var STATUS_FAILED = 'failed';
+
+	var SELECTOR = 'pre[data-src]:not([' + STATUS_ATTR + '="' + STATUS_LOADED + '"])'
+		+ ':not([' + STATUS_ATTR + '="' + STATUS_LOADING + '"])';
+
+	/**
+	 * Loads the given file.
+	 *
+	 * @param {string} src The URL or path of the source file to load.
+	 * @param {(result: string) => void} success
+	 * @param {(reason: string) => void} error
+	 */
+	function loadFile(src, success, error) {
+		var xhr = new XMLHttpRequest();
+		xhr.open('GET', src, true);
+		xhr.onreadystatechange = function () {
+			if (xhr.readyState == 4) {
+				if (xhr.status < 400 && xhr.responseText) {
+					success(xhr.responseText);
+				} else {
+					if (xhr.status >= 400) {
+						error(FAILURE_MESSAGE(xhr.status, xhr.statusText));
+					} else {
+						error(FAILURE_EMPTY_MESSAGE);
+					}
+				}
+			}
+		};
+		xhr.send(null);
+	}
+
+	/**
+	 * Parses the given range.
+	 *
+	 * This returns a range with inclusive ends.
+	 *
+	 * @param {string | null | undefined} range
+	 * @returns {[number, number | undefined] | undefined}
+	 */
+	function parseRange(range) {
+		var m = /^\s*(\d+)\s*(?:(,)\s*(?:(\d+)\s*)?)?$/.exec(range || '');
+		if (m) {
+			var start = Number(m[1]);
+			var comma = m[2];
+			var end = m[3];
+
+			if (!comma) {
+				return [start, start];
+			}
+			if (!end) {
+				return [start, undefined];
+			}
+			return [start, Number(end)];
+		}
+		return undefined;
+	}
+
+	Prism$1.hooks.add('before-highlightall', function (env) {
+		env.selector += ', ' + SELECTOR;
+	});
+
+	Prism$1.hooks.add('before-sanity-check', function (env) {
+		var pre = /** @type {HTMLPreElement} */ (env.element);
+		if (pre.matches(SELECTOR)) {
+			env.code = ''; // fast-path the whole thing and go to complete
+
+			pre.setAttribute(STATUS_ATTR, STATUS_LOADING); // mark as loading
+
+			// add code element with loading message
+			var code = pre.appendChild(document.createElement('CODE'));
+			code.textContent = LOADING_MESSAGE;
+
+			var src = pre.getAttribute('data-src');
+
+			var language = env.language;
+			if (language === 'none') {
+				// the language might be 'none' because there is no language set;
+				// in this case, we want to use the extension as the language
+				var extension = (/\.(\w+)$/.exec(src) || [, 'none'])[1];
+				language = EXTENSIONS[extension] || extension;
+			}
+
+			// set language classes
+			Prism$1.util.setLanguage(code, language);
+			Prism$1.util.setLanguage(pre, language);
+
+			// preload the language
+			var autoloader = Prism$1.plugins.autoloader;
+			if (autoloader) {
+				autoloader.loadLanguages(language);
+			}
+
+			// load file
+			loadFile(
+				src,
+				function (text) {
+					// mark as loaded
+					pre.setAttribute(STATUS_ATTR, STATUS_LOADED);
+
+					// handle data-range
+					var range = parseRange(pre.getAttribute('data-range'));
+					if (range) {
+						var lines = text.split(/\r\n?|\n/g);
+
+						// the range is one-based and inclusive on both ends
+						var start = range[0];
+						var end = range[1] == null ? lines.length : range[1];
+
+						if (start < 0) { start += lines.length; }
+						start = Math.max(0, Math.min(start - 1, lines.length));
+						if (end < 0) { end += lines.length; }
+						end = Math.max(0, Math.min(end, lines.length));
+
+						text = lines.slice(start, end).join('\n');
+
+						// add data-start for line numbers
+						if (!pre.hasAttribute('data-start')) {
+							pre.setAttribute('data-start', String(start + 1));
+						}
+					}
+
+					// highlight code
+					code.textContent = text;
+					Prism$1.highlightElement(code);
+				},
+				function (error) {
+					// mark as failed
+					pre.setAttribute(STATUS_ATTR, STATUS_FAILED);
+
+					code.textContent = error;
+				}
+			);
+		}
+	});
+
+	Prism$1.plugins.fileHighlight = {
+		/**
+		 * Executes the File Highlight plugin for all matching `pre` elements under the given container.
+		 *
+		 * Note: Elements which are already loaded or currently loading will not be touched by this method.
+		 *
+		 * @param {ParentNode} [container=document]
+		 */
+		highlight: function highlight(container) {
+			var elements = (container || document).querySelectorAll(SELECTOR);
+
+			for (var i = 0, element; (element = elements[i++]);) {
+				Prism$1.highlightElement(element);
+			}
+		}
+	};
+
+	var logged = false;
+	/** @deprecated Use `Prism.plugins.fileHighlight.highlight` instead. */
+	Prism$1.fileHighlight = function () {
+		if (!logged) {
+			console.warn('Prism.fileHighlight is deprecated. Use `Prism.plugins.fileHighlight.highlight` instead.');
+			logged = true;
+		}
+		Prism$1.plugins.fileHighlight.highlight.apply(this, arguments);
+	};
+
+}());
+
+Prism.languages.clike = {
+	'comment': [
+		{
+			pattern: /(^|[^\\])\/\*[\s\S]*?(?:\*\/|$)/,
+			lookbehind: true,
+			greedy: true
+		},
+		{
+			pattern: /(^|[^\\:])\/\/.*/,
+			lookbehind: true,
+			greedy: true
+		}
+	],
+	'string': {
+		pattern: /(["'])(?:\\(?:\r\n|[\s\S])|(?!\1)[^\\\r\n])*\1/,
+		greedy: true
+	},
+	'class-name': {
+		pattern: /(\b(?:class|extends|implements|instanceof|interface|new|trait)\s+|\bcatch\s+\()[\w.\\]+/i,
+		lookbehind: true,
+		inside: {
+			'punctuation': /[.\\]/
+		}
+	},
+	'keyword': /\b(?:break|catch|continue|do|else|finally|for|function|if|in|instanceof|new|null|return|throw|try|while)\b/,
+	'boolean': /\b(?:false|true)\b/,
+	'function': /\b\w+(?=\()/,
+	'number': /\b0x[\da-f]+\b|(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:e[+-]?\d+)?/i,
+	'operator': /[<>]=?|[!=]=?=?|--?|\+\+?|&&?|\|\|?|[?*/~^%]/,
+	'punctuation': /[{}[\];(),.:]/
+};
+
+Prism.languages.javascript = Prism.languages.extend('clike', {
+	'class-name': [
+		Prism.languages.clike['class-name'],
+		{
+			pattern: /(^|[^$\w\xA0-\uFFFF])(?!\s)[_$A-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\.(?:constructor|prototype))/,
+			lookbehind: true
+		}
+	],
+	'keyword': [
+		{
+			pattern: /((?:^|\})\s*)catch\b/,
+			lookbehind: true
+		},
+		{
+			pattern: /(^|[^.]|\.\.\.\s*)\b(?:as|assert(?=\s*\{)|async(?=\s*(?:function\b|\(|[$\w\xA0-\uFFFF]|$))|await|break|case|class|const|continue|debugger|default|delete|do|else|enum|export|extends|finally(?=\s*(?:\{|$))|for|from(?=\s*(?:['"]|$))|function|(?:get|set)(?=\s*(?:[#\[$\w\xA0-\uFFFF]|$))|if|implements|import|in|instanceof|interface|let|new|null|of|package|private|protected|public|return|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield)\b/,
+			lookbehind: true
+		},
+	],
+	// Allow for all non-ASCII characters (See http://stackoverflow.com/a/2008444)
+	'function': /#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*(?:\.\s*(?:apply|bind|call)\s*)?\()/,
+	'number': {
+		pattern: RegExp(
+			/(^|[^\w$])/.source +
+			'(?:' +
+			(
+				// constant
+				/NaN|Infinity/.source +
+				'|' +
+				// binary integer
+				/0[bB][01]+(?:_[01]+)*n?/.source +
+				'|' +
+				// octal integer
+				/0[oO][0-7]+(?:_[0-7]+)*n?/.source +
+				'|' +
+				// hexadecimal integer
+				/0[xX][\dA-Fa-f]+(?:_[\dA-Fa-f]+)*n?/.source +
+				'|' +
+				// decimal bigint
+				/\d+(?:_\d+)*n/.source +
+				'|' +
+				// decimal number (integer or float) but no bigint
+				/(?:\d+(?:_\d+)*(?:\.(?:\d+(?:_\d+)*)?)?|\.\d+(?:_\d+)*)(?:[Ee][+-]?\d+(?:_\d+)*)?/.source
+			) +
+			')' +
+			/(?![\w$])/.source
+		),
+		lookbehind: true
+	},
+	'operator': /--|\+\+|\*\*=?|=>|&&=?|\|\|=?|[!=]==|<<=?|>>>?=?|[-+*/%&|^!=<>]=?|\.{3}|\?\?=?|\?\.?|[~:]/
+});
+
+Prism.languages.javascript['class-name'][0].pattern = /(\b(?:class|extends|implements|instanceof|interface|new)\s+)[\w.\\]+/;
+
+Prism.languages.insertBefore('javascript', 'keyword', {
+	'regex': {
+		pattern: RegExp(
+			// lookbehind
+			// eslint-disable-next-line regexp/no-dupe-characters-character-class
+			/((?:^|[^$\w\xA0-\uFFFF."'\])\s]|\b(?:return|yield))\s*)/.source +
+			// Regex pattern:
+			// There are 2 regex patterns here. The RegExp set notation proposal added support for nested character
+			// classes if the `v` flag is present. Unfortunately, nested CCs are both context-free and incompatible
+			// with the only syntax, so we have to define 2 different regex patterns.
+			/\//.source +
+			'(?:' +
+			/(?:\[(?:[^\]\\\r\n]|\\.)*\]|\\.|[^/\\\[\r\n])+\/[dgimyus]{0,7}/.source +
+			'|' +
+			// `v` flag syntax. This supports 3 levels of nested character classes.
+			/(?:\[(?:[^[\]\\\r\n]|\\.|\[(?:[^[\]\\\r\n]|\\.|\[(?:[^[\]\\\r\n]|\\.)*\])*\])*\]|\\.|[^/\\\[\r\n])+\/[dgimyus]{0,7}v[dgimyus]{0,7}/.source +
+			')' +
+			// lookahead
+			/(?=(?:\s|\/\*(?:[^*]|\*(?!\/))*\*\/)*(?:$|[\r\n,.;:})\]]|\/\/))/.source
+		),
+		lookbehind: true,
+		greedy: true,
+		inside: {
+			'regex-source': {
+				pattern: /^(\/)[\s\S]+(?=\/[a-z]*$)/,
+				lookbehind: true,
+				alias: 'language-regex',
+				inside: Prism.languages.regex
+			},
+			'regex-delimiter': /^\/|\/$/,
+			'regex-flags': /^[a-z]+$/,
+		}
+	},
+	// This must be declared before keyword because we use "function" inside the look-forward
+	'function-variable': {
+		pattern: /#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*[=:]\s*(?:async\s*)?(?:\bfunction\b|(?:\((?:[^()]|\([^()]*\))*\)|(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*)\s*=>))/,
+		alias: 'function'
+	},
+	'parameter': [
+		{
+			pattern: /(function(?:\s+(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*)?\s*\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\))/,
+			lookbehind: true,
+			inside: Prism.languages.javascript
+		},
+		{
+			pattern: /(^|[^$\w\xA0-\uFFFF])(?!\s)[_$a-z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*=>)/i,
+			lookbehind: true,
+			inside: Prism.languages.javascript
+		},
+		{
+			pattern: /(\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\)\s*=>)/,
+			lookbehind: true,
+			inside: Prism.languages.javascript
+		},
+		{
+			pattern: /((?:\b|\s|^)(?!(?:as|async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|enum|export|extends|finally|for|from|function|get|if|implements|import|in|instanceof|interface|let|new|null|of|package|private|protected|public|return|set|static|super|switch|this|throw|try|typeof|undefined|var|void|while|with|yield)(?![$\w\xA0-\uFFFF]))(?:(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*\s*)\(\s*|\]\s*\(\s*)(?!\s)(?:[^()\s]|\s+(?![\s)])|\([^()]*\))+(?=\s*\)\s*\{)/,
+			lookbehind: true,
+			inside: Prism.languages.javascript
+		}
+	],
+	'constant': /\b[A-Z](?:[A-Z_]|\dx?)*\b/
+});
+
+Prism.languages.insertBefore('javascript', 'string', {
+	'hashbang': {
+		pattern: /^#!.*/,
+		greedy: true,
+		alias: 'comment'
+	},
+	'template-string': {
+		pattern: /`(?:\\[\s\S]|\$\{(?:[^{}]|\{(?:[^{}]|\{[^}]*\})*\})+\}|(?!\$\{)[^\\`])*`/,
+		greedy: true,
+		inside: {
+			'template-punctuation': {
+				pattern: /^`|`$/,
+				alias: 'string'
+			},
+			'interpolation': {
+				pattern: /((?:^|[^\\])(?:\\{2})*)\$\{(?:[^{}]|\{(?:[^{}]|\{[^}]*\})*\})+\}/,
+				lookbehind: true,
+				inside: {
+					'interpolation-punctuation': {
+						pattern: /^\$\{|\}$/,
+						alias: 'punctuation'
+					},
+					rest: Prism.languages.javascript
+				}
+			},
+			'string': /[\s\S]+/
+		}
+	},
+	'string-property': {
+		pattern: /((?:^|[,{])[ \t]*)(["'])(?:\\(?:\r\n|[\s\S])|(?!\2)[^\\\r\n])*\2(?=\s*:)/m,
+		lookbehind: true,
+		greedy: true,
+		alias: 'property'
+	}
+});
+
+Prism.languages.insertBefore('javascript', 'operator', {
+	'literal-property': {
+		pattern: /((?:^|[,{])[ \t]*)(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?=\s*:)/m,
+		lookbehind: true,
+		alias: 'property'
+	},
+});
+
+if (Prism.languages.markup) {
+	Prism.languages.markup.tag.addInlined('script', 'javascript');
+
+	// add attribute support for all DOM events.
+	// https://developer.mozilla.org/en-US/docs/Web/Events#Standard_events
+	Prism.languages.markup.tag.addAttribute(
+		/on(?:abort|blur|change|click|composition(?:end|start|update)|dblclick|error|focus(?:in|out)?|key(?:down|up)|load|mouse(?:down|enter|leave|move|out|over|up)|reset|resize|scroll|select|slotchange|submit|unload|wheel)/.source,
+		'javascript'
+	);
+}
+
+Prism.languages.js = Prism.languages.javascript;
+
+Prism.languages.markup = {
+	'comment': {
+		pattern: /<!--(?:(?!<!--)[\s\S])*?-->/,
+		greedy: true
+	},
+	'prolog': {
+		pattern: /<\?[\s\S]+?\?>/,
+		greedy: true
+	},
+	'doctype': {
+		// https://www.w3.org/TR/xml/#NT-doctypedecl
+		pattern: /<!DOCTYPE(?:[^>"'[\]]|"[^"]*"|'[^']*')+(?:\[(?:[^<"'\]]|"[^"]*"|'[^']*'|<(?!!--)|<!--(?:[^-]|-(?!->))*-->)*\]\s*)?>/i,
+		greedy: true,
+		inside: {
+			'internal-subset': {
+				pattern: /(^[^\[]*\[)[\s\S]+(?=\]>$)/,
+				lookbehind: true,
+				greedy: true,
+				inside: null // see below
+			},
+			'string': {
+				pattern: /"[^"]*"|'[^']*'/,
+				greedy: true
+			},
+			'punctuation': /^<!|>$|[[\]]/,
+			'doctype-tag': /^DOCTYPE/i,
+			'name': /[^\s<>'"]+/
+		}
+	},
+	'cdata': {
+		pattern: /<!\[CDATA\[[\s\S]*?\]\]>/i,
+		greedy: true
+	},
+	'tag': {
+		pattern: /<\/?(?!\d)[^\s>\/=$<%]+(?:\s(?:\s*[^\s>\/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))|(?=[\s/>])))+)?\s*\/?>/,
+		greedy: true,
+		inside: {
+			'tag': {
+				pattern: /^<\/?[^\s>\/]+/,
+				inside: {
+					'punctuation': /^<\/?/,
+					'namespace': /^[^\s>\/:]+:/
+				}
+			},
+			'special-attr': [],
+			'attr-value': {
+				pattern: /=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+)/,
+				inside: {
+					'punctuation': [
+						{
+							pattern: /^=/,
+							alias: 'attr-equals'
+						},
+						{
+							pattern: /^(\s*)["']|["']$/,
+							lookbehind: true
+						}
+					]
+				}
+			},
+			'punctuation': /\/?>/,
+			'attr-name': {
+				pattern: /[^\s>\/]+/,
+				inside: {
+					'namespace': /^[^\s>\/:]+:/
+				}
+			}
+
+		}
+	},
+	'entity': [
+		{
+			pattern: /&[\da-z]{1,8};/i,
+			alias: 'named-entity'
+		},
+		/&#x?[\da-f]{1,8};/i
+	]
+};
+
+Prism.languages.markup['tag'].inside['attr-value'].inside['entity'] =
+	Prism.languages.markup['entity'];
+Prism.languages.markup['doctype'].inside['internal-subset'].inside = Prism.languages.markup;
+
+// Plugin to make entity title show the real entity, idea by Roman Komarov
+Prism.hooks.add('wrap', function (env) {
+
+	if (env.type === 'entity') {
+		env.attributes['title'] = env.content.replace(/&amp;/, '&');
+	}
+});
+
+Object.defineProperty(Prism.languages.markup.tag, 'addInlined', {
+	/**
+	 * Adds an inlined language to markup.
+	 *
+	 * An example of an inlined language is CSS with `<style>` tags.
+	 *
+	 * @param {string} tagName The name of the tag that contains the inlined language. This name will be treated as
+	 * case insensitive.
+	 * @param {string} lang The language key.
+	 * @example
+	 * addInlined('style', 'css');
+	 */
+	value: function addInlined(tagName, lang) {
+		var includedCdataInside = {};
+		includedCdataInside['language-' + lang] = {
+			pattern: /(^<!\[CDATA\[)[\s\S]+?(?=\]\]>$)/i,
+			lookbehind: true,
+			inside: Prism.languages[lang]
+		};
+		includedCdataInside['cdata'] = /^<!\[CDATA\[|\]\]>$/i;
+
+		var inside = {
+			'included-cdata': {
+				pattern: /<!\[CDATA\[[\s\S]*?\]\]>/i,
+				inside: includedCdataInside
+			}
+		};
+		inside['language-' + lang] = {
+			pattern: /[\s\S]+/,
+			inside: Prism.languages[lang]
+		};
+
+		var def = {};
+		def[tagName] = {
+			pattern: RegExp(/(<__[^>]*>)(?:<!\[CDATA\[(?:[^\]]|\](?!\]>))*\]\]>|(?!<!\[CDATA\[)[\s\S])*?(?=<\/__>)/.source.replace(/__/g, function () { return tagName; }), 'i'),
+			lookbehind: true,
+			greedy: true,
+			inside: inside
+		};
+
+		Prism.languages.insertBefore('markup', 'cdata', def);
+	}
+});
+Object.defineProperty(Prism.languages.markup.tag, 'addAttribute', {
+	/**
+	 * Adds an pattern to highlight languages embedded in HTML attributes.
+	 *
+	 * An example of an inlined language is CSS with `style` attributes.
+	 *
+	 * @param {string} attrName The name of the tag that contains the inlined language. This name will be treated as
+	 * case insensitive.
+	 * @param {string} lang The language key.
+	 * @example
+	 * addAttribute('style', 'css');
+	 */
+	value: function (attrName, lang) {
+		Prism.languages.markup.tag.inside['special-attr'].push({
+			pattern: RegExp(
+				/(^|["'\s])/.source + '(?:' + attrName + ')' + /\s*=\s*(?:"[^"]*"|'[^']*'|[^\s'">=]+(?=[\s>]))/.source,
+				'i'
+			),
+			lookbehind: true,
+			inside: {
+				'attr-name': /^[^\s=]+/,
+				'attr-value': {
+					pattern: /=[\s\S]+/,
+					inside: {
+						'value': {
+							pattern: /(^=\s*(["']|(?!["'])))\S[\s\S]*(?=\2$)/,
+							lookbehind: true,
+							alias: [lang, 'language-' + lang],
+							inside: Prism.languages[lang]
+						},
+						'punctuation': [
+							{
+								pattern: /^=/,
+								alias: 'attr-equals'
+							},
+							/"|'/
+						]
+					}
+				}
+			}
+		});
+	}
+});
+
+Prism.languages.html = Prism.languages.markup;
+Prism.languages.mathml = Prism.languages.markup;
+Prism.languages.svg = Prism.languages.markup;
+
+Prism.languages.xml = Prism.languages.extend('markup', {});
+Prism.languages.ssml = Prism.languages.xml;
+Prism.languages.atom = Prism.languages.xml;
+Prism.languages.rss = Prism.languages.xml;
 
 (function (Prism) {
 
@@ -5298,9 +4248,9 @@ Prism$1.languages.js = Prism$1.languages.javascript;
 
 	Prism.languages.md = Prism.languages.markdown;
 
-}(Prism$1));
+}(Prism));
 
-Prism$1.languages.c = Prism$1.languages.extend('clike', {
+Prism.languages.c = Prism.languages.extend('clike', {
 	'comment': {
 		pattern: /\/\/(?:[^\r\n\\]|\\(?:\r\n?|\n|(?![\r\n])))*|\/\*[\s\S]*?(?:\*\/|$)/,
 		greedy: true
@@ -5320,7 +4270,7 @@ Prism$1.languages.c = Prism$1.languages.extend('clike', {
 	'operator': />>=?|<<=?|->|([-+&|:])\1|[?:~]|[-+*/%&|^!=<>]=?/
 });
 
-Prism$1.languages.insertBefore('c', 'string', {
+Prism.languages.insertBefore('c', 'string', {
 	'char': {
 		// https://en.cppreference.com/w/c/language/character_constant
 		pattern: /'(?:\\(?:\r\n|[\s\S])|[^'\\\r\n]){0,32}'/,
@@ -5328,7 +4278,7 @@ Prism$1.languages.insertBefore('c', 'string', {
 	}
 });
 
-Prism$1.languages.insertBefore('c', 'string', {
+Prism.languages.insertBefore('c', 'string', {
 	'macro': {
 		// allow for multiline macro definitions
 		// spaces after the # character compile fine with gcc
@@ -5343,10 +4293,10 @@ Prism$1.languages.insertBefore('c', 'string', {
 					pattern: /^(#\s*include\s*)<[^>]+>/,
 					lookbehind: true
 				},
-				Prism$1.languages.c['string']
+				Prism.languages.c['string']
 			],
-			'char': Prism$1.languages.c['char'],
-			'comment': Prism$1.languages.c['comment'],
+			'char': Prism.languages.c['char'],
+			'comment': Prism.languages.c['comment'],
 			'macro-name': [
 				{
 					pattern: /(^#\s*define\s+)\w+\b(?!\()/i,
@@ -5368,18 +4318,18 @@ Prism$1.languages.insertBefore('c', 'string', {
 			'punctuation': /##|\\(?=[\r\n])/,
 			'expression': {
 				pattern: /\S[\s\S]*/,
-				inside: Prism$1.languages.c
+				inside: Prism.languages.c
 			}
 		}
 	}
 });
 
-Prism$1.languages.insertBefore('c', 'function', {
+Prism.languages.insertBefore('c', 'function', {
 	// highlight predefined macros as constants
 	'constant': /\b(?:EOF|NULL|SEEK_CUR|SEEK_END|SEEK_SET|__DATE__|__FILE__|__LINE__|__TIMESTAMP__|__TIME__|__func__|stderr|stdin|stdout)\b/
 });
 
-delete Prism$1.languages.c['boolean'];
+delete Prism.languages.c['boolean'];
 
 (function (Prism) {
 
@@ -5444,9 +4394,9 @@ delete Prism$1.languages.c['boolean'];
 		markup.tag.addAttribute('style', 'css');
 	}
 
-}(Prism$1));
+}(Prism));
 
-Prism$1.languages.objectivec = Prism$1.languages.extend('c', {
+Prism.languages.objectivec = Prism.languages.extend('c', {
 	'string': {
 		pattern: /@?"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"/,
 		greedy: true
@@ -5455,11 +4405,11 @@ Prism$1.languages.objectivec = Prism$1.languages.extend('c', {
 	'operator': /-[->]?|\+\+?|!=?|<<?=?|>>?=?|==?|&&?|\|\|?|[~^%?*\/@]/
 });
 
-delete Prism$1.languages.objectivec['class-name'];
+delete Prism.languages.objectivec['class-name'];
 
-Prism$1.languages.objc = Prism$1.languages.objectivec;
+Prism.languages.objc = Prism.languages.objectivec;
 
-Prism$1.languages.sql = {
+Prism.languages.sql = {
 	'comment': {
 		pattern: /(^|[^\\])(?:\/\*[\s\S]*?\*\/|(?:--|\/\/|#).*)/,
 		lookbehind: true
@@ -5549,226 +4499,204 @@ Prism$1.languages.sql = {
 		'variable': powershell.variable,
 	};
 
-}(Prism$1));
+}(Prism));
 
-var prismPython = {};
-
-var hasRequiredPrismPython;
-
-function requirePrismPython () {
-	if (hasRequiredPrismPython) return prismPython;
-	hasRequiredPrismPython = 1;
-	Prism$1.languages.python = {
-		'comment': {
-			pattern: /(^|[^\\])#.*/,
-			lookbehind: true,
-			greedy: true
-		},
-		'string-interpolation': {
-			pattern: /(?:f|fr|rf)(?:("""|''')[\s\S]*?\1|("|')(?:\\.|(?!\2)[^\\\r\n])*\2)/i,
-			greedy: true,
-			inside: {
-				'interpolation': {
-					// "{" <expression> <optional "!s", "!r", or "!a"> <optional ":" format specifier> "}"
-					pattern: /((?:^|[^{])(?:\{\{)*)\{(?!\{)(?:[^{}]|\{(?!\{)(?:[^{}]|\{(?!\{)(?:[^{}])+\})+\})+\}/,
-					lookbehind: true,
-					inside: {
-						'format-spec': {
-							pattern: /(:)[^:(){}]+(?=\}$)/,
-							lookbehind: true
-						},
-						'conversion-option': {
-							pattern: /![sra](?=[:}]$)/,
-							alias: 'punctuation'
-						},
-						rest: null
-					}
-				},
-				'string': /[\s\S]+/
-			}
-		},
-		'triple-quoted-string': {
-			pattern: /(?:[rub]|br|rb)?("""|''')[\s\S]*?\1/i,
-			greedy: true,
-			alias: 'string'
-		},
-		'string': {
-			pattern: /(?:[rub]|br|rb)?("|')(?:\\.|(?!\1)[^\\\r\n])*\1/i,
-			greedy: true
-		},
-		'function': {
-			pattern: /((?:^|\s)def[ \t]+)[a-zA-Z_]\w*(?=\s*\()/g,
-			lookbehind: true
-		},
-		'class-name': {
-			pattern: /(\bclass\s+)\w+/i,
-			lookbehind: true
-		},
-		'decorator': {
-			pattern: /(^[\t ]*)@\w+(?:\.\w+)*/m,
-			lookbehind: true,
-			alias: ['annotation', 'punctuation'],
-			inside: {
-				'punctuation': /\./
-			}
-		},
-		'keyword': /\b(?:_(?=\s*:)|and|as|assert|async|await|break|case|class|continue|def|del|elif|else|except|exec|finally|for|from|global|if|import|in|is|lambda|match|nonlocal|not|or|pass|print|raise|return|try|while|with|yield)\b/,
-		'builtin': /\b(?:__import__|abs|all|any|apply|ascii|basestring|bin|bool|buffer|bytearray|bytes|callable|chr|classmethod|cmp|coerce|compile|complex|delattr|dict|dir|divmod|enumerate|eval|execfile|file|filter|float|format|frozenset|getattr|globals|hasattr|hash|help|hex|id|input|int|intern|isinstance|issubclass|iter|len|list|locals|long|map|max|memoryview|min|next|object|oct|open|ord|pow|property|range|raw_input|reduce|reload|repr|reversed|round|set|setattr|slice|sorted|staticmethod|str|sum|super|tuple|type|unichr|unicode|vars|xrange|zip)\b/,
-		'boolean': /\b(?:False|None|True)\b/,
-		'number': /\b0(?:b(?:_?[01])+|o(?:_?[0-7])+|x(?:_?[a-f0-9])+)\b|(?:\b\d+(?:_\d+)*(?:\.(?:\d+(?:_\d+)*)?)?|\B\.\d+(?:_\d+)*)(?:e[+-]?\d+(?:_\d+)*)?j?(?!\w)/i,
-		'operator': /[-+%=]=?|!=|:=|\*\*?=?|\/\/?=?|<[<=>]?|>[=>]?|[&|^~]/,
-		'punctuation': /[{}[\];(),.:]/
-	};
-
-	Prism$1.languages.python['string-interpolation'].inside['interpolation'].inside.rest = Prism$1.languages.python;
-
-	Prism$1.languages.py = Prism$1.languages.python;
-	return prismPython;
-}
-
-requirePrismPython();
-
-var prismRust = {};
-
-var hasRequiredPrismRust;
-
-function requirePrismRust () {
-	if (hasRequiredPrismRust) return prismRust;
-	hasRequiredPrismRust = 1;
-	(function (Prism) {
-
-		var multilineComment = /\/\*(?:[^*/]|\*(?!\/)|\/(?!\*)|<self>)*\*\//.source;
-		for (var i = 0; i < 2; i++) {
-			// support 4 levels of nested comments
-			multilineComment = multilineComment.replace(/<self>/g, function () { return multilineComment; });
-		}
-		multilineComment = multilineComment.replace(/<self>/g, function () { return /[^\s\S]/.source; });
-
-
-		Prism.languages.rust = {
-			'comment': [
-				{
-					pattern: RegExp(/(^|[^\\])/.source + multilineComment),
-					lookbehind: true,
-					greedy: true
-				},
-				{
-					pattern: /(^|[^\\:])\/\/.*/,
-					lookbehind: true,
-					greedy: true
-				}
-			],
-			'string': {
-				pattern: /b?"(?:\\[\s\S]|[^\\"])*"|b?r(#*)"(?:[^"]|"(?!\1))*"\1/,
-				greedy: true
-			},
-			'char': {
-				pattern: /b?'(?:\\(?:x[0-7][\da-fA-F]|u\{(?:[\da-fA-F]_*){1,6}\}|.)|[^\\\r\n\t'])'/,
-				greedy: true
-			},
-			'attribute': {
-				pattern: /#!?\[(?:[^\[\]"]|"(?:\\[\s\S]|[^\\"])*")*\]/,
-				greedy: true,
-				alias: 'attr-name',
-				inside: {
-					'string': null // see below
-				}
-			},
-
-			// Closure params should not be confused with bitwise OR |
-			'closure-params': {
-				pattern: /([=(,:]\s*|\bmove\s*)\|[^|]*\||\|[^|]*\|(?=\s*(?:\{|->))/,
+Prism.languages.python = {
+	'comment': {
+		pattern: /(^|[^\\])#.*/,
+		lookbehind: true,
+		greedy: true
+	},
+	'string-interpolation': {
+		pattern: /(?:f|fr|rf)(?:("""|''')[\s\S]*?\1|("|')(?:\\.|(?!\2)[^\\\r\n])*\2)/i,
+		greedy: true,
+		inside: {
+			'interpolation': {
+				// "{" <expression> <optional "!s", "!r", or "!a"> <optional ":" format specifier> "}"
+				pattern: /((?:^|[^{])(?:\{\{)*)\{(?!\{)(?:[^{}]|\{(?!\{)(?:[^{}]|\{(?!\{)(?:[^{}])+\})+\})+\}/,
 				lookbehind: true,
-				greedy: true,
 				inside: {
-					'closure-punctuation': {
-						pattern: /^\||\|$/,
+					'format-spec': {
+						pattern: /(:)[^:(){}]+(?=\}$)/,
+						lookbehind: true
+					},
+					'conversion-option': {
+						pattern: /![sra](?=[:}]$)/,
 						alias: 'punctuation'
 					},
-					rest: null // see below
+					rest: null
 				}
 			},
+			'string': /[\s\S]+/
+		}
+	},
+	'triple-quoted-string': {
+		pattern: /(?:[rub]|br|rb)?("""|''')[\s\S]*?\1/i,
+		greedy: true,
+		alias: 'string'
+	},
+	'string': {
+		pattern: /(?:[rub]|br|rb)?("|')(?:\\.|(?!\1)[^\\\r\n])*\1/i,
+		greedy: true
+	},
+	'function': {
+		pattern: /((?:^|\s)def[ \t]+)[a-zA-Z_]\w*(?=\s*\()/g,
+		lookbehind: true
+	},
+	'class-name': {
+		pattern: /(\bclass\s+)\w+/i,
+		lookbehind: true
+	},
+	'decorator': {
+		pattern: /(^[\t ]*)@\w+(?:\.\w+)*/m,
+		lookbehind: true,
+		alias: ['annotation', 'punctuation'],
+		inside: {
+			'punctuation': /\./
+		}
+	},
+	'keyword': /\b(?:_(?=\s*:)|and|as|assert|async|await|break|case|class|continue|def|del|elif|else|except|exec|finally|for|from|global|if|import|in|is|lambda|match|nonlocal|not|or|pass|print|raise|return|try|while|with|yield)\b/,
+	'builtin': /\b(?:__import__|abs|all|any|apply|ascii|basestring|bin|bool|buffer|bytearray|bytes|callable|chr|classmethod|cmp|coerce|compile|complex|delattr|dict|dir|divmod|enumerate|eval|execfile|file|filter|float|format|frozenset|getattr|globals|hasattr|hash|help|hex|id|input|int|intern|isinstance|issubclass|iter|len|list|locals|long|map|max|memoryview|min|next|object|oct|open|ord|pow|property|range|raw_input|reduce|reload|repr|reversed|round|set|setattr|slice|sorted|staticmethod|str|sum|super|tuple|type|unichr|unicode|vars|xrange|zip)\b/,
+	'boolean': /\b(?:False|None|True)\b/,
+	'number': /\b0(?:b(?:_?[01])+|o(?:_?[0-7])+|x(?:_?[a-f0-9])+)\b|(?:\b\d+(?:_\d+)*(?:\.(?:\d+(?:_\d+)*)?)?|\B\.\d+(?:_\d+)*)(?:e[+-]?\d+(?:_\d+)*)?j?(?!\w)/i,
+	'operator': /[-+%=]=?|!=|:=|\*\*?=?|\/\/?=?|<[<=>]?|>[=>]?|[&|^~]/,
+	'punctuation': /[{}[\];(),.:]/
+};
 
-			'lifetime-annotation': {
-				pattern: /'\w+/,
-				alias: 'symbol'
-			},
+Prism.languages.python['string-interpolation'].inside['interpolation'].inside.rest = Prism.languages.python;
 
-			'fragment-specifier': {
-				pattern: /(\$\w+:)[a-z]+/,
-				lookbehind: true,
-				alias: 'punctuation'
-			},
-			'variable': /\$\w+/,
+Prism.languages.py = Prism.languages.python;
 
-			'function-definition': {
-				pattern: /(\bfn\s+)\w+/,
+(function (Prism) {
+
+	var multilineComment = /\/\*(?:[^*/]|\*(?!\/)|\/(?!\*)|<self>)*\*\//.source;
+	for (var i = 0; i < 2; i++) {
+		// support 4 levels of nested comments
+		multilineComment = multilineComment.replace(/<self>/g, function () { return multilineComment; });
+	}
+	multilineComment = multilineComment.replace(/<self>/g, function () { return /[^\s\S]/.source; });
+
+
+	Prism.languages.rust = {
+		'comment': [
+			{
+				pattern: RegExp(/(^|[^\\])/.source + multilineComment),
 				lookbehind: true,
-				alias: 'function'
+				greedy: true
 			},
-			'type-definition': {
-				pattern: /(\b(?:enum|struct|trait|type|union)\s+)\w+/,
+			{
+				pattern: /(^|[^\\:])\/\/.*/,
 				lookbehind: true,
-				alias: 'class-name'
-			},
-			'module-declaration': [
-				{
-					pattern: /(\b(?:crate|mod)\s+)[a-z][a-z_\d]*/,
-					lookbehind: true,
-					alias: 'namespace'
+				greedy: true
+			}
+		],
+		'string': {
+			pattern: /b?"(?:\\[\s\S]|[^\\"])*"|b?r(#*)"(?:[^"]|"(?!\1))*"\1/,
+			greedy: true
+		},
+		'char': {
+			pattern: /b?'(?:\\(?:x[0-7][\da-fA-F]|u\{(?:[\da-fA-F]_*){1,6}\}|.)|[^\\\r\n\t'])'/,
+			greedy: true
+		},
+		'attribute': {
+			pattern: /#!?\[(?:[^\[\]"]|"(?:\\[\s\S]|[^\\"])*")*\]/,
+			greedy: true,
+			alias: 'attr-name',
+			inside: {
+				'string': null // see below
+			}
+		},
+
+		// Closure params should not be confused with bitwise OR |
+		'closure-params': {
+			pattern: /([=(,:]\s*|\bmove\s*)\|[^|]*\||\|[^|]*\|(?=\s*(?:\{|->))/,
+			lookbehind: true,
+			greedy: true,
+			inside: {
+				'closure-punctuation': {
+					pattern: /^\||\|$/,
+					alias: 'punctuation'
 				},
-				{
-					pattern: /(\b(?:crate|self|super)\s*)::\s*[a-z][a-z_\d]*\b(?:\s*::(?:\s*[a-z][a-z_\d]*\s*::)*)?/,
-					lookbehind: true,
-					alias: 'namespace',
-					inside: {
-						'punctuation': /::/
-					}
-				}
-			],
-			'keyword': [
-				// https://github.com/rust-lang/reference/blob/master/src/keywords.md
-				/\b(?:Self|abstract|as|async|await|become|box|break|const|continue|crate|do|dyn|else|enum|extern|final|fn|for|if|impl|in|let|loop|macro|match|mod|move|mut|override|priv|pub|ref|return|self|static|struct|super|trait|try|type|typeof|union|unsafe|unsized|use|virtual|where|while|yield)\b/,
-				// primitives and str
-				// https://doc.rust-lang.org/stable/rust-by-example/primitives.html
-				/\b(?:bool|char|f(?:32|64)|[ui](?:8|16|32|64|128|size)|str)\b/
-			],
+				rest: null // see below
+			}
+		},
 
-			// functions can technically start with an upper-case letter, but this will introduce a lot of false positives
-			// and Rust's naming conventions recommend snake_case anyway.
-			// https://doc.rust-lang.org/1.0.0/style/style/naming/README.html
-			'function': /\b[a-z_]\w*(?=\s*(?:::\s*<|\())/,
-			'macro': {
-				pattern: /\b\w+!/,
-				alias: 'property'
+		'lifetime-annotation': {
+			pattern: /'\w+/,
+			alias: 'symbol'
+		},
+
+		'fragment-specifier': {
+			pattern: /(\$\w+:)[a-z]+/,
+			lookbehind: true,
+			alias: 'punctuation'
+		},
+		'variable': /\$\w+/,
+
+		'function-definition': {
+			pattern: /(\bfn\s+)\w+/,
+			lookbehind: true,
+			alias: 'function'
+		},
+		'type-definition': {
+			pattern: /(\b(?:enum|struct|trait|type|union)\s+)\w+/,
+			lookbehind: true,
+			alias: 'class-name'
+		},
+		'module-declaration': [
+			{
+				pattern: /(\b(?:crate|mod)\s+)[a-z][a-z_\d]*/,
+				lookbehind: true,
+				alias: 'namespace'
 			},
-			'constant': /\b[A-Z_][A-Z_\d]+\b/,
-			'class-name': /\b[A-Z]\w*\b/,
-
-			'namespace': {
-				pattern: /(?:\b[a-z][a-z_\d]*\s*::\s*)*\b[a-z][a-z_\d]*\s*::(?!\s*<)/,
+			{
+				pattern: /(\b(?:crate|self|super)\s*)::\s*[a-z][a-z_\d]*\b(?:\s*::(?:\s*[a-z][a-z_\d]*\s*::)*)?/,
+				lookbehind: true,
+				alias: 'namespace',
 				inside: {
 					'punctuation': /::/
 				}
-			},
+			}
+		],
+		'keyword': [
+			// https://github.com/rust-lang/reference/blob/master/src/keywords.md
+			/\b(?:Self|abstract|as|async|await|become|box|break|const|continue|crate|do|dyn|else|enum|extern|final|fn|for|if|impl|in|let|loop|macro|match|mod|move|mut|override|priv|pub|ref|return|self|static|struct|super|trait|try|type|typeof|union|unsafe|unsized|use|virtual|where|while|yield)\b/,
+			// primitives and str
+			// https://doc.rust-lang.org/stable/rust-by-example/primitives.html
+			/\b(?:bool|char|f(?:32|64)|[ui](?:8|16|32|64|128|size)|str)\b/
+		],
 
-			// Hex, oct, bin, dec numbers with visual separators and type suffix
-			'number': /\b(?:0x[\dA-Fa-f](?:_?[\dA-Fa-f])*|0o[0-7](?:_?[0-7])*|0b[01](?:_?[01])*|(?:(?:\d(?:_?\d)*)?\.)?\d(?:_?\d)*(?:[Ee][+-]?\d+)?)(?:_?(?:f32|f64|[iu](?:8|16|32|64|size)?))?\b/,
-			'boolean': /\b(?:false|true)\b/,
-			'punctuation': /->|\.\.=|\.{1,3}|::|[{}[\];(),:]/,
-			'operator': /[-+*\/%!^]=?|=[=>]?|&[&=]?|\|[|=]?|<<?=?|>>?=?|[@?]/
-		};
+		// functions can technically start with an upper-case letter, but this will introduce a lot of false positives
+		// and Rust's naming conventions recommend snake_case anyway.
+		// https://doc.rust-lang.org/1.0.0/style/style/naming/README.html
+		'function': /\b[a-z_]\w*(?=\s*(?:::\s*<|\())/,
+		'macro': {
+			pattern: /\b\w+!/,
+			alias: 'property'
+		},
+		'constant': /\b[A-Z_][A-Z_\d]+\b/,
+		'class-name': /\b[A-Z]\w*\b/,
 
-		Prism.languages.rust['closure-params'].inside.rest = Prism.languages.rust;
-		Prism.languages.rust['attribute'].inside['string'] = Prism.languages.rust['string'];
+		'namespace': {
+			pattern: /(?:\b[a-z][a-z_\d]*\s*::\s*)*\b[a-z][a-z_\d]*\s*::(?!\s*<)/,
+			inside: {
+				'punctuation': /::/
+			}
+		},
 
-	}(Prism$1));
-	return prismRust;
-}
+		// Hex, oct, bin, dec numbers with visual separators and type suffix
+		'number': /\b(?:0x[\dA-Fa-f](?:_?[\dA-Fa-f])*|0o[0-7](?:_?[0-7])*|0b[01](?:_?[01])*|(?:(?:\d(?:_?\d)*)?\.)?\d(?:_?\d)*(?:[Ee][+-]?\d+)?)(?:_?(?:f32|f64|[iu](?:8|16|32|64|size)?))?\b/,
+		'boolean': /\b(?:false|true)\b/,
+		'punctuation': /->|\.\.=|\.{1,3}|::|[{}[\];(),:]/,
+		'operator': /[-+*\/%!^]=?|=[=>]?|&[&=]?|\|[|=]?|<<?=?|>>?=?|[@?]/
+	};
 
-requirePrismRust();
+	Prism.languages.rust['closure-params'].inside.rest = Prism.languages.rust;
+	Prism.languages.rust['attribute'].inside['string'] = Prism.languages.rust['string'];
 
-Prism$1.languages.swift = {
+}(Prism));
+
+Prism.languages.swift = {
 	'comment': {
 		// Nested comments are supported up to 2 levels
 		pattern: /(^|[^\\:])(?:\/\/.*|\/\*(?:[^/*]|\/(?!\*)|\*(?!\/)|\/\*(?:[^*]|\*(?!\/))*\*\/)*\*\/)/,
@@ -5913,328 +4841,295 @@ Prism$1.languages.swift = {
 	'punctuation': /[{}[\]();,.:\\]/
 };
 
-Prism$1.languages.swift['string-literal'].forEach(function (rule) {
-	rule.inside['interpolation'].inside = Prism$1.languages.swift;
+Prism.languages.swift['string-literal'].forEach(function (rule) {
+	rule.inside['interpolation'].inside = Prism.languages.swift;
 });
 
-var prismTypescript = {};
+(function (Prism) {
 
-var hasRequiredPrismTypescript;
-
-function requirePrismTypescript () {
-	if (hasRequiredPrismTypescript) return prismTypescript;
-	hasRequiredPrismTypescript = 1;
-	(function (Prism) {
-
-		Prism.languages.typescript = Prism.languages.extend('javascript', {
-			'class-name': {
-				pattern: /(\b(?:class|extends|implements|instanceof|interface|new|type)\s+)(?!keyof\b)(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?:\s*<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>)?/,
-				lookbehind: true,
-				greedy: true,
-				inside: null // see below
-			},
-			'builtin': /\b(?:Array|Function|Promise|any|boolean|console|never|number|string|symbol|unknown)\b/,
-		});
-
-		// The keywords TypeScript adds to JavaScript
-		Prism.languages.typescript.keyword.push(
-			/\b(?:abstract|declare|is|keyof|readonly|require)\b/,
-			// keywords that have to be followed by an identifier
-			/\b(?:asserts|infer|interface|module|namespace|type)\b(?=\s*(?:[{_$a-zA-Z\xA0-\uFFFF]|$))/,
-			// This is for `import type *, {}`
-			/\btype\b(?=\s*(?:[\{*]|$))/
-		);
-
-		// doesn't work with TS because TS is too complex
-		delete Prism.languages.typescript['parameter'];
-		delete Prism.languages.typescript['literal-property'];
-
-		// a version of typescript specifically for highlighting types
-		var typeInside = Prism.languages.extend('typescript', {});
-		delete typeInside['class-name'];
-
-		Prism.languages.typescript['class-name'].inside = typeInside;
-
-		Prism.languages.insertBefore('typescript', 'function', {
-			'decorator': {
-				pattern: /@[$\w\xA0-\uFFFF]+/,
-				inside: {
-					'at': {
-						pattern: /^@/,
-						alias: 'operator'
-					},
-					'function': /^[\s\S]+/
-				}
-			},
-			'generic-function': {
-				// e.g. foo<T extends "bar" | "baz">( ...
-				pattern: /#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*\s*<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>(?=\s*\()/,
-				greedy: true,
-				inside: {
-					'function': /^#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*/,
-					'generic': {
-						pattern: /<[\s\S]+/, // everything after the first <
-						alias: 'class-name',
-						inside: typeInside
-					}
-				}
-			}
-		});
-
-		Prism.languages.ts = Prism.languages.typescript;
-
-	}(Prism$1));
-	return prismTypescript;
-}
-
-requirePrismTypescript();
-
-var prismJava = {};
-
-var hasRequiredPrismJava;
-
-function requirePrismJava () {
-	if (hasRequiredPrismJava) return prismJava;
-	hasRequiredPrismJava = 1;
-	(function (Prism) {
-
-		var keywords = /\b(?:abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|exports|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|module|native|new|non-sealed|null|open|opens|package|permits|private|protected|provides|public|record(?!\s*[(){}[\]<>=%~.:,;?+\-*/&|^])|requires|return|sealed|short|static|strictfp|super|switch|synchronized|this|throw|throws|to|transient|transitive|try|uses|var|void|volatile|while|with|yield)\b/;
-
-		// full package (optional) + parent classes (optional)
-		var classNamePrefix = /(?:[a-z]\w*\s*\.\s*)*(?:[A-Z]\w*\s*\.\s*)*/.source;
-
-		// based on the java naming conventions
-		var className = {
-			pattern: RegExp(/(^|[^\w.])/.source + classNamePrefix + /[A-Z](?:[\d_A-Z]*[a-z]\w*)?\b/.source),
+	Prism.languages.typescript = Prism.languages.extend('javascript', {
+		'class-name': {
+			pattern: /(\b(?:class|extends|implements|instanceof|interface|new|type)\s+)(?!keyof\b)(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*(?:\s*<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>)?/,
 			lookbehind: true,
+			greedy: true,
+			inside: null // see below
+		},
+		'builtin': /\b(?:Array|Function|Promise|any|boolean|console|never|number|string|symbol|unknown)\b/,
+	});
+
+	// The keywords TypeScript adds to JavaScript
+	Prism.languages.typescript.keyword.push(
+		/\b(?:abstract|declare|is|keyof|readonly|require)\b/,
+		// keywords that have to be followed by an identifier
+		/\b(?:asserts|infer|interface|module|namespace|type)\b(?=\s*(?:[{_$a-zA-Z\xA0-\uFFFF]|$))/,
+		// This is for `import type *, {}`
+		/\btype\b(?=\s*(?:[\{*]|$))/
+	);
+
+	// doesn't work with TS because TS is too complex
+	delete Prism.languages.typescript['parameter'];
+	delete Prism.languages.typescript['literal-property'];
+
+	// a version of typescript specifically for highlighting types
+	var typeInside = Prism.languages.extend('typescript', {});
+	delete typeInside['class-name'];
+
+	Prism.languages.typescript['class-name'].inside = typeInside;
+
+	Prism.languages.insertBefore('typescript', 'function', {
+		'decorator': {
+			pattern: /@[$\w\xA0-\uFFFF]+/,
 			inside: {
-				'namespace': {
-					pattern: /^[a-z]\w*(?:\s*\.\s*[a-z]\w*)*(?:\s*\.)?/,
-					inside: {
-						'punctuation': /\./
-					}
+				'at': {
+					pattern: /^@/,
+					alias: 'operator'
 				},
-				'punctuation': /\./
+				'function': /^[\s\S]+/
 			}
-		};
-
-		Prism.languages.java = Prism.languages.extend('clike', {
-			'string': {
-				pattern: /(^|[^\\])"(?:\\.|[^"\\\r\n])*"/,
-				lookbehind: true,
-				greedy: true
-			},
-			'class-name': [
-				className,
-				{
-					// variables, parameters, and constructor references
-					// this to support class names (or generic parameters) which do not contain a lower case letter (also works for methods)
-					pattern: RegExp(/(^|[^\w.])/.source + classNamePrefix + /[A-Z]\w*(?=\s+\w+\s*[;,=()]|\s*(?:\[[\s,]*\]\s*)?::\s*new\b)/.source),
-					lookbehind: true,
-					inside: className.inside
-				},
-				{
-					// class names based on keyword
-					// this to support class names (or generic parameters) which do not contain a lower case letter (also works for methods)
-					pattern: RegExp(/(\b(?:class|enum|extends|implements|instanceof|interface|new|record|throws)\s+)/.source + classNamePrefix + /[A-Z]\w*\b/.source),
-					lookbehind: true,
-					inside: className.inside
+		},
+		'generic-function': {
+			// e.g. foo<T extends "bar" | "baz">( ...
+			pattern: /#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*\s*<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>(?=\s*\()/,
+			greedy: true,
+			inside: {
+				'function': /^#?(?!\s)[_$a-zA-Z\xA0-\uFFFF](?:(?!\s)[$\w\xA0-\uFFFF])*/,
+				'generic': {
+					pattern: /<[\s\S]+/, // everything after the first <
+					alias: 'class-name',
+					inside: typeInside
 				}
-			],
-			'keyword': keywords,
-			'function': [
-				Prism.languages.clike.function,
-				{
-					pattern: /(::\s*)[a-z_]\w*/,
-					lookbehind: true
-				}
-			],
-			'number': /\b0b[01][01_]*L?\b|\b0x(?:\.[\da-f_p+-]+|[\da-f_]+(?:\.[\da-f_p+-]+)?)\b|(?:\b\d[\d_]*(?:\.[\d_]*)?|\B\.\d[\d_]*)(?:e[+-]?\d[\d_]*)?[dfl]?/i,
-			'operator': {
-				pattern: /(^|[^.])(?:<<=?|>>>?=?|->|--|\+\+|&&|\|\||::|[?:~]|[-+*/%&|^!=<>]=?)/m,
-				lookbehind: true
-			},
-			'constant': /\b[A-Z][A-Z_\d]+\b/
-		});
-
-		Prism.languages.insertBefore('java', 'string', {
-			'triple-quoted-string': {
-				// http://openjdk.java.net/jeps/355#Description
-				pattern: /"""[ \t]*[\r\n](?:(?:"|"")?(?:\\.|[^"\\]))*"""/,
-				greedy: true,
-				alias: 'string'
-			},
-			'char': {
-				pattern: /'(?:\\.|[^'\\\r\n]){1,6}'/,
-				greedy: true
 			}
-		});
+		}
+	});
 
-		Prism.languages.insertBefore('java', 'class-name', {
-			'annotation': {
-				pattern: /(^|[^.])@\w+(?:\s*\.\s*\w+)*/,
-				lookbehind: true,
-				alias: 'punctuation'
-			},
-			'generics': {
-				pattern: /<(?:[\w\s,.?]|&(?!&)|<(?:[\w\s,.?]|&(?!&)|<(?:[\w\s,.?]|&(?!&)|<(?:[\w\s,.?]|&(?!&))*>)*>)*>)*>/,
-				inside: {
-					'class-name': className,
-					'keyword': keywords,
-					'punctuation': /[<>(),.:]/,
-					'operator': /[?&|]/
-				}
-			},
-			'import': [
-				{
-					pattern: RegExp(/(\bimport\s+)/.source + classNamePrefix + /(?:[A-Z]\w*|\*)(?=\s*;)/.source),
-					lookbehind: true,
-					inside: {
-						'namespace': className.inside.namespace,
-						'punctuation': /\./,
-						'operator': /\*/,
-						'class-name': /\w+/
-					}
-				},
-				{
-					pattern: RegExp(/(\bimport\s+static\s+)/.source + classNamePrefix + /(?:\w+|\*)(?=\s*;)/.source),
-					lookbehind: true,
-					alias: 'static',
-					inside: {
-						'namespace': className.inside.namespace,
-						'static': /\b\w+$/,
-						'punctuation': /\./,
-						'operator': /\*/,
-						'class-name': /\w+/
-					}
-				}
-			],
+	Prism.languages.ts = Prism.languages.typescript;
+
+}(Prism));
+
+(function (Prism) {
+
+	var keywords = /\b(?:abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|exports|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|module|native|new|non-sealed|null|open|opens|package|permits|private|protected|provides|public|record(?!\s*[(){}[\]<>=%~.:,;?+\-*/&|^])|requires|return|sealed|short|static|strictfp|super|switch|synchronized|this|throw|throws|to|transient|transitive|try|uses|var|void|volatile|while|with|yield)\b/;
+
+	// full package (optional) + parent classes (optional)
+	var classNamePrefix = /(?:[a-z]\w*\s*\.\s*)*(?:[A-Z]\w*\s*\.\s*)*/.source;
+
+	// based on the java naming conventions
+	var className = {
+		pattern: RegExp(/(^|[^\w.])/.source + classNamePrefix + /[A-Z](?:[\d_A-Z]*[a-z]\w*)?\b/.source),
+		lookbehind: true,
+		inside: {
 			'namespace': {
-				pattern: RegExp(
-					/(\b(?:exports|import(?:\s+static)?|module|open|opens|package|provides|requires|to|transitive|uses|with)\s+)(?!<keyword>)[a-z]\w*(?:\.[a-z]\w*)*\.?/
-						.source.replace(/<keyword>/g, function () { return keywords.source; })),
-				lookbehind: true,
+				pattern: /^[a-z]\w*(?:\s*\.\s*[a-z]\w*)*(?:\s*\.)?/,
 				inside: {
-					'punctuation': /\./,
-				}
-			}
-		});
-	}(Prism$1));
-	return prismJava;
-}
-
-requirePrismJava();
-
-var prismCpp = {};
-
-var hasRequiredPrismCpp;
-
-function requirePrismCpp () {
-	if (hasRequiredPrismCpp) return prismCpp;
-	hasRequiredPrismCpp = 1;
-	(function (Prism) {
-
-		var keyword = /\b(?:alignas|alignof|asm|auto|bool|break|case|catch|char|char16_t|char32_t|char8_t|class|co_await|co_return|co_yield|compl|concept|const|const_cast|consteval|constexpr|constinit|continue|decltype|default|delete|do|double|dynamic_cast|else|enum|explicit|export|extern|final|float|for|friend|goto|if|import|inline|int|int16_t|int32_t|int64_t|int8_t|long|module|mutable|namespace|new|noexcept|nullptr|operator|override|private|protected|public|register|reinterpret_cast|requires|return|short|signed|sizeof|static|static_assert|static_cast|struct|switch|template|this|thread_local|throw|try|typedef|typeid|typename|uint16_t|uint32_t|uint64_t|uint8_t|union|unsigned|using|virtual|void|volatile|wchar_t|while)\b/;
-		var modName = /\b(?!<keyword>)\w+(?:\s*\.\s*\w+)*\b/.source.replace(/<keyword>/g, function () { return keyword.source; });
-
-		Prism.languages.cpp = Prism.languages.extend('c', {
-			'class-name': [
-				{
-					pattern: RegExp(/(\b(?:class|concept|enum|struct|typename)\s+)(?!<keyword>)\w+/.source
-						.replace(/<keyword>/g, function () { return keyword.source; })),
-					lookbehind: true
-				},
-				// This is intended to capture the class name of method implementations like:
-				//   void foo::bar() const {}
-				// However! The `foo` in the above example could also be a namespace, so we only capture the class name if
-				// it starts with an uppercase letter. This approximation should give decent results.
-				/\b[A-Z]\w*(?=\s*::\s*\w+\s*\()/,
-				// This will capture the class name before destructors like:
-				//   Foo::~Foo() {}
-				/\b[A-Z_]\w*(?=\s*::\s*~\w+\s*\()/i,
-				// This also intends to capture the class name of method implementations but here the class has template
-				// parameters, so it can't be a namespace (until C++ adds generic namespaces).
-				/\b\w+(?=\s*<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>\s*::\s*\w+\s*\()/
-			],
-			'keyword': keyword,
-			'number': {
-				pattern: /(?:\b0b[01']+|\b0x(?:[\da-f']+(?:\.[\da-f']*)?|\.[\da-f']+)(?:p[+-]?[\d']+)?|(?:\b[\d']+(?:\.[\d']*)?|\B\.[\d']+)(?:e[+-]?[\d']+)?)[ful]{0,4}/i,
-				greedy: true
-			},
-			'operator': />>=?|<<=?|->|--|\+\+|&&|\|\||[?:~]|<=>|[-+*/%&|^!=<>]=?|\b(?:and|and_eq|bitand|bitor|not|not_eq|or|or_eq|xor|xor_eq)\b/,
-			'boolean': /\b(?:false|true)\b/
-		});
-
-		Prism.languages.insertBefore('cpp', 'string', {
-			'module': {
-				// https://en.cppreference.com/w/cpp/language/modules
-				pattern: RegExp(
-					/(\b(?:import|module)\s+)/.source +
-					'(?:' +
-					// header-name
-					/"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"|<[^<>\r\n]*>/.source +
-					'|' +
-					// module name or partition or both
-					/<mod-name>(?:\s*:\s*<mod-name>)?|:\s*<mod-name>/.source.replace(/<mod-name>/g, function () { return modName; }) +
-					')'
-				),
-				lookbehind: true,
-				greedy: true,
-				inside: {
-					'string': /^[<"][\s\S]+/,
-					'operator': /:/,
 					'punctuation': /\./
 				}
 			},
-			'raw-string': {
-				pattern: /R"([^()\\ ]{0,16})\([\s\S]*?\)\1"/,
-				alias: 'string',
-				greedy: true
-			}
-		});
+			'punctuation': /\./
+		}
+	};
 
-		Prism.languages.insertBefore('cpp', 'keyword', {
-			'generic-function': {
-				pattern: /\b(?!operator\b)[a-z_]\w*\s*<(?:[^<>]|<[^<>]*>)*>(?=\s*\()/i,
+	Prism.languages.java = Prism.languages.extend('clike', {
+		'string': {
+			pattern: /(^|[^\\])"(?:\\.|[^"\\\r\n])*"/,
+			lookbehind: true,
+			greedy: true
+		},
+		'class-name': [
+			className,
+			{
+				// variables, parameters, and constructor references
+				// this to support class names (or generic parameters) which do not contain a lower case letter (also works for methods)
+				pattern: RegExp(/(^|[^\w.])/.source + classNamePrefix + /[A-Z]\w*(?=\s+\w+\s*[;,=()]|\s*(?:\[[\s,]*\]\s*)?::\s*new\b)/.source),
+				lookbehind: true,
+				inside: className.inside
+			},
+			{
+				// class names based on keyword
+				// this to support class names (or generic parameters) which do not contain a lower case letter (also works for methods)
+				pattern: RegExp(/(\b(?:class|enum|extends|implements|instanceof|interface|new|record|throws)\s+)/.source + classNamePrefix + /[A-Z]\w*\b/.source),
+				lookbehind: true,
+				inside: className.inside
+			}
+		],
+		'keyword': keywords,
+		'function': [
+			Prism.languages.clike.function,
+			{
+				pattern: /(::\s*)[a-z_]\w*/,
+				lookbehind: true
+			}
+		],
+		'number': /\b0b[01][01_]*L?\b|\b0x(?:\.[\da-f_p+-]+|[\da-f_]+(?:\.[\da-f_p+-]+)?)\b|(?:\b\d[\d_]*(?:\.[\d_]*)?|\B\.\d[\d_]*)(?:e[+-]?\d[\d_]*)?[dfl]?/i,
+		'operator': {
+			pattern: /(^|[^.])(?:<<=?|>>>?=?|->|--|\+\+|&&|\|\||::|[?:~]|[-+*/%&|^!=<>]=?)/m,
+			lookbehind: true
+		},
+		'constant': /\b[A-Z][A-Z_\d]+\b/
+	});
+
+	Prism.languages.insertBefore('java', 'string', {
+		'triple-quoted-string': {
+			// http://openjdk.java.net/jeps/355#Description
+			pattern: /"""[ \t]*[\r\n](?:(?:"|"")?(?:\\.|[^"\\]))*"""/,
+			greedy: true,
+			alias: 'string'
+		},
+		'char': {
+			pattern: /'(?:\\.|[^'\\\r\n]){1,6}'/,
+			greedy: true
+		}
+	});
+
+	Prism.languages.insertBefore('java', 'class-name', {
+		'annotation': {
+			pattern: /(^|[^.])@\w+(?:\s*\.\s*\w+)*/,
+			lookbehind: true,
+			alias: 'punctuation'
+		},
+		'generics': {
+			pattern: /<(?:[\w\s,.?]|&(?!&)|<(?:[\w\s,.?]|&(?!&)|<(?:[\w\s,.?]|&(?!&)|<(?:[\w\s,.?]|&(?!&))*>)*>)*>)*>/,
+			inside: {
+				'class-name': className,
+				'keyword': keywords,
+				'punctuation': /[<>(),.:]/,
+				'operator': /[?&|]/
+			}
+		},
+		'import': [
+			{
+				pattern: RegExp(/(\bimport\s+)/.source + classNamePrefix + /(?:[A-Z]\w*|\*)(?=\s*;)/.source),
+				lookbehind: true,
 				inside: {
-					'function': /^\w+/,
-					'generic': {
-						pattern: /<[\s\S]+/,
-						alias: 'class-name',
-						inside: Prism.languages.cpp
-					}
+					'namespace': className.inside.namespace,
+					'punctuation': /\./,
+					'operator': /\*/,
+					'class-name': /\w+/
+				}
+			},
+			{
+				pattern: RegExp(/(\bimport\s+static\s+)/.source + classNamePrefix + /(?:\w+|\*)(?=\s*;)/.source),
+				lookbehind: true,
+				alias: 'static',
+				inside: {
+					'namespace': className.inside.namespace,
+					'static': /\b\w+$/,
+					'punctuation': /\./,
+					'operator': /\*/,
+					'class-name': /\w+/
 				}
 			}
-		});
-
-		Prism.languages.insertBefore('cpp', 'operator', {
-			'double-colon': {
-				pattern: /::/,
-				alias: 'punctuation'
+		],
+		'namespace': {
+			pattern: RegExp(
+				/(\b(?:exports|import(?:\s+static)?|module|open|opens|package|provides|requires|to|transitive|uses|with)\s+)(?!<keyword>)[a-z]\w*(?:\.[a-z]\w*)*\.?/
+					.source.replace(/<keyword>/g, function () { return keywords.source; })),
+			lookbehind: true,
+			inside: {
+				'punctuation': /\./,
 			}
-		});
+		}
+	});
+}(Prism));
 
-		Prism.languages.insertBefore('cpp', 'class-name', {
-			// the base clause is an optional list of parent classes
-			// https://en.cppreference.com/w/cpp/language/class
-			'base-clause': {
-				pattern: /(\b(?:class|struct)\s+\w+\s*:\s*)[^;{}"'\s]+(?:\s+[^;{}"'\s]+)*(?=\s*[;{])/,
-				lookbehind: true,
-				greedy: true,
-				inside: Prism.languages.extend('cpp', {})
+(function (Prism) {
+
+	var keyword = /\b(?:alignas|alignof|asm|auto|bool|break|case|catch|char|char16_t|char32_t|char8_t|class|co_await|co_return|co_yield|compl|concept|const|const_cast|consteval|constexpr|constinit|continue|decltype|default|delete|do|double|dynamic_cast|else|enum|explicit|export|extern|final|float|for|friend|goto|if|import|inline|int|int16_t|int32_t|int64_t|int8_t|long|module|mutable|namespace|new|noexcept|nullptr|operator|override|private|protected|public|register|reinterpret_cast|requires|return|short|signed|sizeof|static|static_assert|static_cast|struct|switch|template|this|thread_local|throw|try|typedef|typeid|typename|uint16_t|uint32_t|uint64_t|uint8_t|union|unsigned|using|virtual|void|volatile|wchar_t|while)\b/;
+	var modName = /\b(?!<keyword>)\w+(?:\s*\.\s*\w+)*\b/.source.replace(/<keyword>/g, function () { return keyword.source; });
+
+	Prism.languages.cpp = Prism.languages.extend('c', {
+		'class-name': [
+			{
+				pattern: RegExp(/(\b(?:class|concept|enum|struct|typename)\s+)(?!<keyword>)\w+/.source
+					.replace(/<keyword>/g, function () { return keyword.source; })),
+				lookbehind: true
+			},
+			// This is intended to capture the class name of method implementations like:
+			//   void foo::bar() const {}
+			// However! The `foo` in the above example could also be a namespace, so we only capture the class name if
+			// it starts with an uppercase letter. This approximation should give decent results.
+			/\b[A-Z]\w*(?=\s*::\s*\w+\s*\()/,
+			// This will capture the class name before destructors like:
+			//   Foo::~Foo() {}
+			/\b[A-Z_]\w*(?=\s*::\s*~\w+\s*\()/i,
+			// This also intends to capture the class name of method implementations but here the class has template
+			// parameters, so it can't be a namespace (until C++ adds generic namespaces).
+			/\b\w+(?=\s*<(?:[^<>]|<(?:[^<>]|<[^<>]*>)*>)*>\s*::\s*\w+\s*\()/
+		],
+		'keyword': keyword,
+		'number': {
+			pattern: /(?:\b0b[01']+|\b0x(?:[\da-f']+(?:\.[\da-f']*)?|\.[\da-f']+)(?:p[+-]?[\d']+)?|(?:\b[\d']+(?:\.[\d']*)?|\B\.[\d']+)(?:e[+-]?[\d']+)?)[ful]{0,4}/i,
+			greedy: true
+		},
+		'operator': />>=?|<<=?|->|--|\+\+|&&|\|\||[?:~]|<=>|[-+*/%&|^!=<>]=?|\b(?:and|and_eq|bitand|bitor|not|not_eq|or|or_eq|xor|xor_eq)\b/,
+		'boolean': /\b(?:false|true)\b/
+	});
+
+	Prism.languages.insertBefore('cpp', 'string', {
+		'module': {
+			// https://en.cppreference.com/w/cpp/language/modules
+			pattern: RegExp(
+				/(\b(?:import|module)\s+)/.source +
+				'(?:' +
+				// header-name
+				/"(?:\\(?:\r\n|[\s\S])|[^"\\\r\n])*"|<[^<>\r\n]*>/.source +
+				'|' +
+				// module name or partition or both
+				/<mod-name>(?:\s*:\s*<mod-name>)?|:\s*<mod-name>/.source.replace(/<mod-name>/g, function () { return modName; }) +
+				')'
+			),
+			lookbehind: true,
+			greedy: true,
+			inside: {
+				'string': /^[<"][\s\S]+/,
+				'operator': /:/,
+				'punctuation': /\./
 			}
-		});
+		},
+		'raw-string': {
+			pattern: /R"([^()\\ ]{0,16})\([\s\S]*?\)\1"/,
+			alias: 'string',
+			greedy: true
+		}
+	});
 
-		Prism.languages.insertBefore('inside', 'double-colon', {
-			// All untokenized words that are not namespaces should be class names
-			'class-name': /\b[a-z_]\w*\b(?!\s*::)/i
-		}, Prism.languages.cpp['base-clause']);
+	Prism.languages.insertBefore('cpp', 'keyword', {
+		'generic-function': {
+			pattern: /\b(?!operator\b)[a-z_]\w*\s*<(?:[^<>]|<[^<>]*>)*>(?=\s*\()/i,
+			inside: {
+				'function': /^\w+/,
+				'generic': {
+					pattern: /<[\s\S]+/,
+					alias: 'class-name',
+					inside: Prism.languages.cpp
+				}
+			}
+		}
+	});
 
-	}(Prism$1));
-	return prismCpp;
-}
+	Prism.languages.insertBefore('cpp', 'operator', {
+		'double-colon': {
+			pattern: /::/,
+			alias: 'punctuation'
+		}
+	});
 
-requirePrismCpp();
+	Prism.languages.insertBefore('cpp', 'class-name', {
+		// the base clause is an optional list of parent classes
+		// https://en.cppreference.com/w/cpp/language/class
+		'base-clause': {
+			pattern: /(\b(?:class|struct)\s+\w+\s*:\s*)[^;{}"'\s]+(?:\s+[^;{}"'\s]+)*(?=\s*[;{])/,
+			lookbehind: true,
+			greedy: true,
+			inside: Prism.languages.extend('cpp', {})
+		}
+	});
+
+	Prism.languages.insertBefore('inside', 'double-colon', {
+		// All untokenized words that are not namespaces should be class names
+		'class-name': /\b[a-z_]\w*\b(?!\s*::)/i
+	}, Prism.languages.cpp['base-clause']);
+
+}(Prism));
 
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -6244,7 +5139,7 @@ requirePrismCpp();
  *
  */
 
-function I$2(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSearchParams;r.append("code",t);for(const t of e)r.append("v",t);throw n.search=r.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const M$2="javascript";function R$1(e,n){for(const r of e.childNodes){if(Cs(r)&&r.tagName===n)return  true;R$1(r,n);}return  false}const K$2="data-language",$$1="data-highlight-language",W$3="data-theme";let q$1 = class q extends Ci{__language;__theme;__isSyntaxHighlightSupported;static getType(){return "code"}static clone(t){return new q(t.__language,t.__key)}constructor(t,e){super(e),this.__language=t||void 0,this.__isSyntaxHighlightSupported=false,this.__theme=void 0;}afterCloneFrom(t){super.afterCloneFrom(t),this.__language=t.__language,this.__theme=t.__theme,this.__isSyntaxHighlightSupported=t.__isSyntaxHighlightSupported;}createDOM(t){const n=document.createElement("code");lt$4(n,t.theme.code),n.setAttribute("spellcheck","false");const r=this.getLanguage();r&&(n.setAttribute(K$2,r),this.getIsSyntaxHighlightSupported()&&n.setAttribute($$1,r));const i=this.getTheme();i&&n.setAttribute(W$3,i);const o=this.getStyle();return o&&n.setAttribute("style",o),n}updateDOM(t,e,n){const r=this.__language,i=t.__language;r?r!==i&&e.setAttribute(K$2,r):i&&e.removeAttribute(K$2);const o=this.__isSyntaxHighlightSupported;t.__isSyntaxHighlightSupported&&i?o&&r?r!==i&&e.setAttribute($$1,r):e.removeAttribute($$1):o&&r&&e.setAttribute($$1,r);const s=this.__theme,l=t.__theme;s?s!==l&&e.setAttribute(W$3,s):l&&e.removeAttribute(W$3);const u=this.__style,c=t.__style;return u?u!==c&&e.setAttribute("style",u):c&&e.removeAttribute("style"),false}exportDOM(t){const n=document.createElement("pre");lt$4(n,t._config.theme.code),n.setAttribute("spellcheck","false");const r=this.getLanguage();r&&(n.setAttribute(K$2,r),this.getIsSyntaxHighlightSupported()&&n.setAttribute($$1,r));const i=this.getTheme();i&&n.setAttribute(W$3,i);const o=this.getStyle();return o&&n.setAttribute("style",o),{element:n}}static importDOM(){return {code:t=>null!=t.textContent&&(/\r?\n/.test(t.textContent)||R$1(t,"BR"))?{conversion:Q$1,priority:1}:null,div:()=>({conversion:G$1,priority:1}),pre:()=>({conversion:Q$1,priority:0}),table:t=>tt$1(t)?{conversion:V$2,priority:3}:null,td:t=>{const e=t,n=e.closest("table");return e.classList.contains("js-file-line")||n&&tt$1(n)?{conversion:Y,priority:3}:null},tr:t=>{const e=t.closest("table");return e&&tt$1(e)?{conversion:Y,priority:3}:null}}}static importJSON(t){return U$2().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setLanguage(t.language).setTheme(t.theme)}exportJSON(){return {...super.exportJSON(),language:this.getLanguage(),theme:this.getTheme()}}insertNewAfter(t,e=true){const n=this.getChildren(),r=n.length;if(r>=2&&"\n"===n[r-1].getTextContent()&&"\n"===n[r-2].getTextContent()&&t.isCollapsed()&&t.anchor.key===this.__key&&t.anchor.offset===r){n[r-1].remove(),n[r-2].remove();const t=Li();return this.insertAfter(t,e),t}const{anchor:i,focus:o}=t,a=(i.isBefore(o)?i:o).getNode();if(lr(a)){let t=st$1(a);const e=[];for(;;)if(fr(t))e.push(ur()),t=t.getNextSibling();else {if(!it$2(t))break;{let n=0;const r=t.getTextContent(),i=t.getTextContentSize();for(;n<i&&" "===r[n];)n++;if(0!==n&&e.push(rt(" ".repeat(n))),n!==i)break;t=t.getNextSibling();}}const n=a.splitText(i.offset)[0],r=0===i.offset?0:1,o=n.getIndexWithinParent()+r,s=a.getParentOrThrow(),l=[Jn(),...e];s.splice(o,0,l);const f=e[e.length-1];f?f.select():0===i.offset?n.selectPrevious():n.getNextSibling().selectNext(0,0);}if(X$1(a)){const{offset:e}=t.anchor;a.splice(e,0,[Jn()]),a.select(e+1,e+1);}return null}canIndent(){return  false}collapseAtStart(){const t=Li();return this.getChildren().forEach(e=>t.append(e)),this.replace(t),true}setLanguage(t){const e=this.getWritable();return e.__language=t||void 0,e}getLanguage(){return this.getLatest().__language}setIsSyntaxHighlightSupported(t){const e=this.getWritable();return e.__isSyntaxHighlightSupported=t,e}getIsSyntaxHighlightSupported(){return this.getLatest().__isSyntaxHighlightSupported}setTheme(t){const e=this.getWritable();return e.__theme=t||void 0,e}getTheme(){return this.getLatest().__theme}};function U$2(t,e){return Ks(q$1).setLanguage(t).setTheme(e)}function X$1(t){return t instanceof q$1}function Q$1(t){return {node:U$2(t.getAttribute(K$2))}}function G$1(t){const e=t,n=Z(e);return n||function(t){let e=t.parentElement;for(;null!==e;){if(Z(e))return  true;e=e.parentElement;}return  false}(e)?{node:n?U$2():null}:{node:null}}function V$2(){return {node:U$2()}}function Y(){return {node:null}}function Z(t){return null!==t.style.fontFamily.match("monospace")}function tt$1(t){return t.classList.contains("js-file-line-container")}let et$1 = class et extends Xn{__highlightType;constructor(t="",e,n){super(t,n),this.__highlightType=e;}static getType(){return "code-highlight"}static clone(t){return new et(t.__text,t.__highlightType||void 0,t.__key)}getHighlightType(){return this.getLatest().__highlightType}setHighlightType(t){const e=this.getWritable();return e.__highlightType=t||void 0,e}canHaveFormat(){return  false}createDOM(t){const n=super.createDOM(t),r=nt$1(t.theme,this.__highlightType);return lt$4(n,r),n}updateDOM(t,r,i){const o=super.updateDOM(t,r,i),s=nt$1(i.theme,t.__highlightType),l=nt$1(i.theme,this.__highlightType);return s!==l&&(s&&ut$3(r,s),l&&lt$4(r,l)),o}static importJSON(t){return rt().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setHighlightType(t.highlightType)}exportJSON(){return {...super.exportJSON(),highlightType:this.getHighlightType()}}setFormat(t){return this}isParentRequired(){return  true}createParentElementNode(){return U$2()}};function nt$1(t,e){return e&&t&&t.codeHighlight&&t.codeHighlight[e]}function rt(t="",e){return fs(new et$1(t,e))}function it$2(t){return t instanceof et$1}function ot$2(t,e){let n=t;for(let i=tl(t,e);i&&(it$2(i.origin)||fr(i.origin));i=ft$2(i))n=i.origin;return n}function st$1(t){return ot$2(t,"previous")}function lt$2(t){return ot$2(t,"next")}function ut$1(t){const e=st$1(t),n=lt$2(t);let r=e;for(;null!==r;){if(it$2(r)){const t=oo(r.getTextContent());if(null!==t)return t}if(r===n)break;r=r.getNextSibling();}const i=e.getParent();if(Si(i)){const t=i.getDirection();if("ltr"===t||"rtl"===t)return t}return null}function ct$2(t,e){let n=null,r=null,i=t,o=e,s=t.getTextContent();for(;;){if(0===o){if(i=i.getPreviousSibling(),null===i)break;if(it$2(i)||fr(i)||jn(i)||I$2(167),jn(i)){n={node:i,offset:1};break}o=Math.max(0,i.getTextContentSize()-1),s=i.getTextContent();}else o--;const t=s[o];it$2(i)&&" "!==t&&(r={node:i,offset:o});}if(null!==r)return r;let l=null;if(e<t.getTextContentSize())it$2(t)&&(l=t.getTextContent()[e]);else {const e=t.getNextSibling();it$2(e)&&(l=e.getTextContent()[0]);}if(null!==l&&" "!==l)return n;{const r=function(t,e){let n=t,r=e,i=t.getTextContent(),o=t.getTextContentSize();for(;;){if(!it$2(n)||r===o){if(n=n.getNextSibling(),null===n||jn(n))return null;it$2(n)&&(r=0,i=n.getTextContent(),o=n.getTextContentSize());}if(it$2(n)){if(" "!==i[r])return {node:n,offset:r};r++;}}}(t,e);return null!==r?r:n}}function gt$1(t){const e=lt$2(t);return jn(e)&&I$2(168),e}!function(t){t.languages.diff={coord:[/^(?:\*{3}|-{3}|\+{3}).*$/m,/^@@.*@@$/m,/^\d.*$/m]};var e={"deleted-sign":"-","deleted-arrow":"<","inserted-sign":"+","inserted-arrow":">",unchanged:" ",diff:"!"};Object.keys(e).forEach(function(n){var r=e[n],i=[];/^\w+$/.test(n)||i.push(/\w+/.exec(n)[0]),"diff"===n&&i.push("bold"),t.languages.diff[n]={pattern:RegExp("^(?:["+r+"].*(?:\r\n?|\n|(?![\\s\\S])))+","m"),alias:i,inside:{line:{pattern:/(.)(?=[\s\S]).*(?:\r\n?|\n)?/,lookbehind:true},prefix:{pattern:/[\s\S]/,alias:/\w+/.exec(n)[0]}}};}),Object.defineProperty(t.languages.diff,"PREFIXES",{value:e});}(Prism);const ft$1=globalThis.Prism||window.Prism,pt$1={c:"C",clike:"C-like",cpp:"C++",css:"CSS",html:"HTML",java:"Java",js:"JavaScript",markdown:"Markdown",objc:"Objective-C",plain:"Plain Text",powershell:"PowerShell",py:"Python",rust:"Rust",sql:"SQL",swift:"Swift",typescript:"TypeScript",xml:"XML"},ht$1={cpp:"cpp",java:"java",javascript:"js",md:"markdown",plaintext:"plain",python:"py",text:"plain",ts:"typescript"};function dt$1(t){return ht$1[t]||t}function St$2(t){return "string"==typeof t?t:Array.isArray(t)?t.map(St$2).join(""):St$2(t.content)}function vt$1(t,e){const n=/^diff-([\w-]+)/i.exec(e),r=t.getTextContent();let i=ft$1.tokenize(r,ft$1.languages[n?"diff":e]);return n&&(i=function(t,e){const n=e,r=ft$1.languages[n],i={tokens:t},o=ft$1.languages.diff.PREFIXES;for(const t of i.tokens){if("string"==typeof t||!(t.type in o)||!Array.isArray(t.content))continue;const e=t.type;let n=0;const i=()=>(n++,new ft$1.Token("prefix",o[e],e.replace(/^(\w+).*/,"$1"))),s=t.content.filter(t=>"string"==typeof t||"prefix"!==t.type),l=t.content.length-s.length,u=ft$1.tokenize(St$2(s),r);u.unshift(i());const c=/\r\n|\n/g,g=t=>{const e=[];c.lastIndex=0;let r,o=0;for(;n<l&&(r=c.exec(t));){const n=r.index+r[0].length;e.push(t.slice(o,n)),o=n,e.push(i());}if(0!==e.length)return o<t.length&&e.push(t.slice(o)),e},a=t=>{for(let e=0;e<t.length&&n<l;e++){const n=t[e];if("string"==typeof n){const r=g(n);r&&(t.splice(e,1,...r),e+=r.length-1);}else if("string"==typeof n.content){const t=g(n.content);t&&(n.content=t);}else Array.isArray(n.content)?a(n.content):a([n.content]);}};a(u),n<l&&u.push(i()),t.content=u;}return i.tokens}(i,n[1])),Tt$2(i)}function Tt$2(t,e){const n=[];for(const r of t)if("string"==typeof r){const t=r.split(/(\n|\t)/),i=t.length;for(let r=0;r<i;r++){const i=t[r];"\n"===i||"\r\n"===i?n.push(Jn()):"\t"===i?n.push(ur()):i.length>0&&n.push(rt(i,e));}}else {const{content:t,alias:e}=r;"string"==typeof t?n.push(...Tt$2([t],"prefix"===r.type&&"string"==typeof e?e:r.type)):Array.isArray(t)&&n.push(...Tt$2(t,"unchanged"===r.type?void 0:r.type));}return n}const bt$2={$tokenize(t,e){return vt$1(t,e||this.defaultLanguage)},defaultLanguage:M$2,tokenize(t,e){return ft$1.tokenize(t,ft$1.languages[e||""]||ft$1.languages[this.defaultLanguage])}};function Ct$2(t,e,n){const r=t.getParent();X$1(r)?wt$2(r,e,n):it$2(t)&&t.replace(sr(t.__text));}function Nt$2(t,e){const n=e.getElementByKey(t.getKey());if(null===n)return;const r=t.getChildren(),i=r.length;if(i===n.__cachedChildrenLength)return;n.__cachedChildrenLength=i;let o="1",s=1;for(let t=0;t<i;t++)jn(r[t])&&(o+="\n"+ ++s);n.setAttribute("data-gutter",o);}const jt$2=new Set;function wt$2(t,e,n){const r=t.getKey();void 0===t.getLanguage()&&t.setLanguage(n.defaultLanguage);const i=t.getLanguage()||n.defaultLanguage;if(!function(t){const e=function(t){const e=/^diff-([\w-]+)/i.exec(t);return e?e[1]:null}(t),n=e||t;try{return !!n&&ft$1.languages.hasOwnProperty(n)}catch(t){return  false}}(i))return t.getIsSyntaxHighlightSupported()&&t.setIsSyntaxHighlightSupported(false),void async function(){}();t.getIsSyntaxHighlightSupported()||t.setIsSyntaxHighlightSupported(true),jt$2.has(r)||(jt$2.add(r),e.update(()=>{!function(t,e){const n=xo(t);if(!X$1(n)||!n.isAttached())return;const r=Lr();if(!yr(r))return void e();const i=r.anchor,o=i.offset,s="element"===i.type&&jn(n.getChildAtIndex(i.offset-1));let u=0;if(!s){const t=i.getNode();u=o+t.getPreviousSiblings().reduce((t,e)=>t+e.getTextContentSize(),0);}if(!e())return;if(s)return void i.getNode().select(o,o);n.getChildren().some(t=>{const e=lr(t);if(e||jn(t)){const n=t.getTextContentSize();if(e&&n>=u)return t.select(u,u),true;u-=n;}return  false});}(r,()=>{const e=xo(r);if(!X$1(e)||!e.isAttached())return  false;const i=e.getLanguage()||n.defaultLanguage,o=n.$tokenize(e,i),s=function(t,e){let n=0;for(;n<t.length&&kt$2(t[n],e[n]);)n++;const r=t.length,i=e.length,o=Math.min(r,i)-n;let s=0;for(;s<o;)if(s++,!kt$2(t[r-s],e[i-s])){s--;break}const l=n,u=r-s,c=e.slice(n,i-s);return {from:l,nodesForReplacement:c,to:u}}(e.getChildren(),o),{from:l,to:u,nodesForReplacement:c}=s;return !(l===u&&!c.length)&&(t.splice(l,u-l,c),true)});},{onUpdate:()=>{jt$2.delete(r);},skipTransforms:true}));}function kt$2(t,e){return it$2(t)&&it$2(e)&&t.__text===e.__text&&t.__highlightType===e.__highlightType||fr(t)&&fr(e)||jn(t)&&jn(e)}function At$2(t){if(!yr(t))return  false;const e=t.anchor.getNode(),n=X$1(e)?e:e.getParent(),r=t.focus.getNode(),i=X$1(r)?r:r.getParent();return X$1(n)&&n.is(i)}function Pt$2(t){const e=t.getNodes(),n=[];if(1===e.length&&X$1(e[0]))return n;let r=[];for(let t=0;t<e.length;t++){const i=e[t];it$2(i)||fr(i)||jn(i)||I$2(169),jn(i)?r.length>0&&(n.push(r),r=[]):r.push(i);}if(r.length>0){const e=t.isBackward()?t.anchor:t.focus,i=hr(r[0].getKey(),0,"text");e.is(i)||n.push(r);}return n}function Lt$2(t){const e=Lr();if(!yr(e)||!At$2(e))return  false;const n=Pt$2(e),r=n.length;if(0===r&&e.isCollapsed())return t===Pe$2&&e.insertNodes([ur()]),true;if(0===r&&t===Pe$2&&"\n"===e.getTextContent()){const t=ur(),n=Jn(),r=e.isBackward()?"previous":"next";return e.insertNodes([t,n]),Sl(Al(dl(el(t,"next",0),El(tl(n,"next"))),r)),true}for(let i=0;i<r;i++){const r=n[i];if(r.length>0){let n=r[0];if(0===i&&(n=st$1(n)),t===Pe$2){const t=ur();if(n.insertBefore(t),0===i){const r=e.isBackward()?"focus":"anchor",i=hr(n.getKey(),0,"text");e[r].is(i)&&e[r].set(t.getKey(),0,"text");}}else fr(n)&&n.remove();}}return  true}function Ot$1(t,e){const n=Lr();if(!yr(n))return  false;const{anchor:r,focus:i}=n,o=r.offset,s=i.offset,l=r.getNode(),c=i.getNode(),g=t===ke$2;if(!At$2(n)||!it$2(l)&&!fr(l)||!it$2(c)&&!fr(c))return  false;if(!e.altKey){if(n.isCollapsed()){const t=l.getParentOrThrow();if(g&&0===o&&null===l.getPreviousSibling()){if(null===t.getPreviousSibling())return t.selectPrevious(),e.preventDefault(),true}else if(!g&&o===l.getTextContentSize()&&null===l.getNextSibling()){if(null===t.getNextSibling())return t.selectNext(),e.preventDefault(),true}}return  false}let a,f;if(l.isBefore(c)?(a=st$1(l),f=lt$2(c)):(a=st$1(c),f=lt$2(l)),null==a||null==f)return  false;const p=a.getNodesBetween(f);for(let t=0;t<p.length;t++){const e=p[t];if(!it$2(e)&&!fr(e)&&!jn(e))return  false}e.preventDefault(),e.stopPropagation();const h=g?a.getPreviousSibling():f.getNextSibling();if(!jn(h))return  true;const d=g?h.getPreviousSibling():h.getNextSibling();if(null==d)return  true;const m=it$2(d)||fr(d)||jn(d)?g?st$1(d):lt$2(d):null;let x=null!=m?m:d;return h.remove(),p.forEach(t=>t.remove()),t===ke$2?(p.forEach(t=>x.insertBefore(t)),x.insertBefore(h)):(x.insertAfter(h),x=h,p.forEach(t=>{x.insertAfter(t),x=t;})),n.setTextNodeRange(l,o,c,s),true}function Ht$1(t,e){const n=Lr();if(!yr(n))return  false;const{anchor:r,focus:i}=n,o=r.getNode(),s=i.getNode(),l=t===ve$2;if(!At$2(n)||!it$2(o)&&!fr(o)||!it$2(s)&&!fr(s))return  false;const c=s;if("rtl"===ut$1(c)?!l:l){const t=ct$2(c,i.offset);if(null!==t){const{node:e,offset:r}=t;jn(e)?e.selectNext(0,0):n.setTextNodeRange(e,r,e,r);}else c.getParentOrThrow().selectStart();}else {gt$1(c).select();}return e.preventDefault(),e.stopPropagation(),true}function Et$2(t,e){if(!t.hasNodes([q$1,et$1]))throw new Error("CodeHighlightPlugin: CodeNode or CodeHighlightNode not registered on editor");null==e&&(e=bt$2);const n=[];return  true!==t._headless&&n.push(t.registerMutationListener(q$1,e=>{t.getEditorState().read(()=>{for(const[n,r]of e)if("destroyed"!==r){const e=xo(n);null!==e&&Nt$2(e,t);}});},{skipInitialization:false})),n.push(t.registerNodeTransform(q$1,n=>wt$2(n,t,e)),t.registerNodeTransform(Xn,n=>Ct$2(n,t,e)),t.registerNodeTransform(et$1,n=>Ct$2(n,t,e)),t.registerCommand(Me$2,e=>{const n=function(t){const e=Lr();if(!yr(e)||!At$2(e))return null;const n=t?De$2:Pe$2,r=t?De$2:Ae$2,i=e.anchor,o=e.focus;if(i.is(o))return r;const s=Pt$2(e);if(1!==s.length)return n;const l=s[0];let u,c;0===l.length&&I$2(285),e.isBackward()?(u=o,c=i):(u=i,c=o);const g=st$1(l[0]),a=lt$2(l[0]),f=hr(g.getKey(),0,"text"),p=hr(a.getKey(),a.getTextContentSize(),"text");return u.isBefore(f)||p.isBefore(c)?n:f.isBefore(u)||c.isBefore(p)?r:n}(e.shiftKey);return null!==n&&(e.preventDefault(),t.dispatchCommand(n,void 0),true)},zi),t.registerCommand(Ae$2,()=>!!At$2(Lr())&&(jr([ur()]),true),zi),t.registerCommand(Pe$2,t=>Lt$2(Pe$2),zi),t.registerCommand(De$2,t=>Lt$2(De$2),zi),t.registerCommand(ke$2,t=>{const e=Lr();if(!yr(e))return  false;const{anchor:n}=e,r=n.getNode();return !!At$2(e)&&(e.isCollapsed()&&0===n.offset&&null===r.getPreviousSibling()&&X$1(r.getParentOrThrow())?(t.preventDefault(),true):Ot$1(ke$2,t))},zi),t.registerCommand(Te$2,t=>{const e=Lr();if(!yr(e))return  false;const{anchor:n}=e,r=n.getNode();return !!At$2(e)&&(e.isCollapsed()&&n.offset===r.getTextContentSize()&&null===r.getNextSibling()&&X$1(r.getParentOrThrow())?(t.preventDefault(),true):Ot$1(Te$2,t))},zi),t.registerCommand(ve$2,t=>Ht$1(ve$2,t),zi),t.registerCommand(Ce$1,t=>Ht$1(Ce$1,t),zi)),U$4(...n)}
+function I$2(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSearchParams;r.append("code",t);for(const t of e)r.append("v",t);throw n.search=r.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const M$2="javascript";function R$1(e,n){for(const r of e.childNodes){if(Cs(r)&&r.tagName===n)return  true;R$1(r,n);}return  false}const K$2="data-language",$$1="data-highlight-language",W$3="data-theme";let q$1 = class q extends Ci{__language;__theme;__isSyntaxHighlightSupported;static getType(){return "code"}static clone(t){return new q(t.__language,t.__key)}constructor(t,e){super(e),this.__language=t||void 0,this.__isSyntaxHighlightSupported=false,this.__theme=void 0;}afterCloneFrom(t){super.afterCloneFrom(t),this.__language=t.__language,this.__theme=t.__theme,this.__isSyntaxHighlightSupported=t.__isSyntaxHighlightSupported;}createDOM(t){const n=document.createElement("code");lt$3(n,t.theme.code),n.setAttribute("spellcheck","false");const r=this.getLanguage();r&&(n.setAttribute(K$2,r),this.getIsSyntaxHighlightSupported()&&n.setAttribute($$1,r));const i=this.getTheme();i&&n.setAttribute(W$3,i);const o=this.getStyle();return o&&n.setAttribute("style",o),n}updateDOM(t,e,n){const r=this.__language,i=t.__language;r?r!==i&&e.setAttribute(K$2,r):i&&e.removeAttribute(K$2);const o=this.__isSyntaxHighlightSupported;t.__isSyntaxHighlightSupported&&i?o&&r?r!==i&&e.setAttribute($$1,r):e.removeAttribute($$1):o&&r&&e.setAttribute($$1,r);const s=this.__theme,l=t.__theme;s?s!==l&&e.setAttribute(W$3,s):l&&e.removeAttribute(W$3);const u=this.__style,c=t.__style;return u?u!==c&&e.setAttribute("style",u):c&&e.removeAttribute("style"),false}exportDOM(t){const n=document.createElement("pre");lt$3(n,t._config.theme.code),n.setAttribute("spellcheck","false");const r=this.getLanguage();r&&(n.setAttribute(K$2,r),this.getIsSyntaxHighlightSupported()&&n.setAttribute($$1,r));const i=this.getTheme();i&&n.setAttribute(W$3,i);const o=this.getStyle();return o&&n.setAttribute("style",o),{element:n}}static importDOM(){return {code:t=>null!=t.textContent&&(/\r?\n/.test(t.textContent)||R$1(t,"BR"))?{conversion:Q$1,priority:1}:null,div:()=>({conversion:G$1,priority:1}),pre:()=>({conversion:Q$1,priority:0}),table:t=>tt(t)?{conversion:V$2,priority:3}:null,td:t=>{const e=t,n=e.closest("table");return e.classList.contains("js-file-line")||n&&tt(n)?{conversion:Y,priority:3}:null},tr:t=>{const e=t.closest("table");return e&&tt(e)?{conversion:Y,priority:3}:null}}}static importJSON(t){return U$2().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setLanguage(t.language).setTheme(t.theme)}exportJSON(){return {...super.exportJSON(),language:this.getLanguage(),theme:this.getTheme()}}insertNewAfter(t,e=true){const n=this.getChildren(),r=n.length;if(r>=2&&"\n"===n[r-1].getTextContent()&&"\n"===n[r-2].getTextContent()&&t.isCollapsed()&&t.anchor.key===this.__key&&t.anchor.offset===r){n[r-1].remove(),n[r-2].remove();const t=Li();return this.insertAfter(t,e),t}const{anchor:i,focus:o}=t,a=(i.isBefore(o)?i:o).getNode();if(lr(a)){let t=st$1(a);const e=[];for(;;)if(fr(t))e.push(ur()),t=t.getNextSibling();else {if(!it$1(t))break;{let n=0;const r=t.getTextContent(),i=t.getTextContentSize();for(;n<i&&" "===r[n];)n++;if(0!==n&&e.push(rt(" ".repeat(n))),n!==i)break;t=t.getNextSibling();}}const n=a.splitText(i.offset)[0],r=0===i.offset?0:1,o=n.getIndexWithinParent()+r,s=a.getParentOrThrow(),l=[Jn(),...e];s.splice(o,0,l);const f=e[e.length-1];f?f.select():0===i.offset?n.selectPrevious():n.getNextSibling().selectNext(0,0);}if(X$1(a)){const{offset:e}=t.anchor;a.splice(e,0,[Jn()]),a.select(e+1,e+1);}return null}canIndent(){return  false}collapseAtStart(){const t=Li();return this.getChildren().forEach(e=>t.append(e)),this.replace(t),true}setLanguage(t){const e=this.getWritable();return e.__language=t||void 0,e}getLanguage(){return this.getLatest().__language}setIsSyntaxHighlightSupported(t){const e=this.getWritable();return e.__isSyntaxHighlightSupported=t,e}getIsSyntaxHighlightSupported(){return this.getLatest().__isSyntaxHighlightSupported}setTheme(t){const e=this.getWritable();return e.__theme=t||void 0,e}getTheme(){return this.getLatest().__theme}};function U$2(t,e){return Ks(q$1).setLanguage(t).setTheme(e)}function X$1(t){return t instanceof q$1}function Q$1(t){return {node:U$2(t.getAttribute(K$2))}}function G$1(t){const e=t,n=Z(e);return n||function(t){let e=t.parentElement;for(;null!==e;){if(Z(e))return  true;e=e.parentElement;}return  false}(e)?{node:n?U$2():null}:{node:null}}function V$2(){return {node:U$2()}}function Y(){return {node:null}}function Z(t){return null!==t.style.fontFamily.match("monospace")}function tt(t){return t.classList.contains("js-file-line-container")}let et$1 = class et extends Xn{__highlightType;constructor(t="",e,n){super(t,n),this.__highlightType=e;}static getType(){return "code-highlight"}static clone(t){return new et(t.__text,t.__highlightType||void 0,t.__key)}getHighlightType(){return this.getLatest().__highlightType}setHighlightType(t){const e=this.getWritable();return e.__highlightType=t||void 0,e}canHaveFormat(){return  false}createDOM(t){const n=super.createDOM(t),r=nt$1(t.theme,this.__highlightType);return lt$3(n,r),n}updateDOM(t,r,i){const o=super.updateDOM(t,r,i),s=nt$1(i.theme,t.__highlightType),l=nt$1(i.theme,this.__highlightType);return s!==l&&(s&&ut$2(r,s),l&&lt$3(r,l)),o}static importJSON(t){return rt().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setHighlightType(t.highlightType)}exportJSON(){return {...super.exportJSON(),highlightType:this.getHighlightType()}}setFormat(t){return this}isParentRequired(){return  true}createParentElementNode(){return U$2()}};function nt$1(t,e){return e&&t&&t.codeHighlight&&t.codeHighlight[e]}function rt(t="",e){return fs(new et$1(t,e))}function it$1(t){return t instanceof et$1}function ot$1(t,e){let n=t;for(let i=tl(t,e);i&&(it$1(i.origin)||fr(i.origin));i=ft$1(i))n=i.origin;return n}function st$1(t){return ot$1(t,"previous")}function lt$1(t){return ot$1(t,"next")}function ut(t){const e=st$1(t),n=lt$1(t);let r=e;for(;null!==r;){if(it$1(r)){const t=oo(r.getTextContent());if(null!==t)return t}if(r===n)break;r=r.getNextSibling();}const i=e.getParent();if(Si(i)){const t=i.getDirection();if("ltr"===t||"rtl"===t)return t}return null}function ct$1(t,e){let n=null,r=null,i=t,o=e,s=t.getTextContent();for(;;){if(0===o){if(i=i.getPreviousSibling(),null===i)break;if(it$1(i)||fr(i)||jn(i)||I$2(167),jn(i)){n={node:i,offset:1};break}o=Math.max(0,i.getTextContentSize()-1),s=i.getTextContent();}else o--;const t=s[o];it$1(i)&&" "!==t&&(r={node:i,offset:o});}if(null!==r)return r;let l=null;if(e<t.getTextContentSize())it$1(t)&&(l=t.getTextContent()[e]);else {const e=t.getNextSibling();it$1(e)&&(l=e.getTextContent()[0]);}if(null!==l&&" "!==l)return n;{const r=function(t,e){let n=t,r=e,i=t.getTextContent(),o=t.getTextContentSize();for(;;){if(!it$1(n)||r===o){if(n=n.getNextSibling(),null===n||jn(n))return null;it$1(n)&&(r=0,i=n.getTextContent(),o=n.getTextContentSize());}if(it$1(n)){if(" "!==i[r])return {node:n,offset:r};r++;}}}(t,e);return null!==r?r:n}}function gt(t){const e=lt$1(t);return jn(e)&&I$2(168),e}!function(t){t.languages.diff={coord:[/^(?:\*{3}|-{3}|\+{3}).*$/m,/^@@.*@@$/m,/^\d.*$/m]};var e={"deleted-sign":"-","deleted-arrow":"<","inserted-sign":"+","inserted-arrow":">",unchanged:" ",diff:"!"};Object.keys(e).forEach(function(n){var r=e[n],i=[];/^\w+$/.test(n)||i.push(/\w+/.exec(n)[0]),"diff"===n&&i.push("bold"),t.languages.diff[n]={pattern:RegExp("^(?:["+r+"].*(?:\r\n?|\n|(?![\\s\\S])))+","m"),alias:i,inside:{line:{pattern:/(.)(?=[\s\S]).*(?:\r\n?|\n)?/,lookbehind:true},prefix:{pattern:/[\s\S]/,alias:/\w+/.exec(n)[0]}}};}),Object.defineProperty(t.languages.diff,"PREFIXES",{value:e});}(Prism);const ft=globalThis.Prism||window.Prism,pt={c:"C",clike:"C-like",cpp:"C++",css:"CSS",html:"HTML",java:"Java",js:"JavaScript",markdown:"Markdown",objc:"Objective-C",plain:"Plain Text",powershell:"PowerShell",py:"Python",rust:"Rust",sql:"SQL",swift:"Swift",typescript:"TypeScript",xml:"XML"},ht$1={cpp:"cpp",java:"java",javascript:"js",md:"markdown",plaintext:"plain",python:"py",text:"plain",ts:"typescript"};function dt(t){return ht$1[t]||t}function St$1(t){return "string"==typeof t?t:Array.isArray(t)?t.map(St$1).join(""):St$1(t.content)}function vt(t,e){const n=/^diff-([\w-]+)/i.exec(e),r=t.getTextContent();let i=ft.tokenize(r,ft.languages[n?"diff":e]);return n&&(i=function(t,e){const n=e,r=ft.languages[n],i={tokens:t},o=ft.languages.diff.PREFIXES;for(const t of i.tokens){if("string"==typeof t||!(t.type in o)||!Array.isArray(t.content))continue;const e=t.type;let n=0;const i=()=>(n++,new ft.Token("prefix",o[e],e.replace(/^(\w+).*/,"$1"))),s=t.content.filter(t=>"string"==typeof t||"prefix"!==t.type),l=t.content.length-s.length,u=ft.tokenize(St$1(s),r);u.unshift(i());const c=/\r\n|\n/g,g=t=>{const e=[];c.lastIndex=0;let r,o=0;for(;n<l&&(r=c.exec(t));){const n=r.index+r[0].length;e.push(t.slice(o,n)),o=n,e.push(i());}if(0!==e.length)return o<t.length&&e.push(t.slice(o)),e},a=t=>{for(let e=0;e<t.length&&n<l;e++){const n=t[e];if("string"==typeof n){const r=g(n);r&&(t.splice(e,1,...r),e+=r.length-1);}else if("string"==typeof n.content){const t=g(n.content);t&&(n.content=t);}else Array.isArray(n.content)?a(n.content):a([n.content]);}};a(u),n<l&&u.push(i()),t.content=u;}return i.tokens}(i,n[1])),Tt$1(i)}function Tt$1(t,e){const n=[];for(const r of t)if("string"==typeof r){const t=r.split(/(\n|\t)/),i=t.length;for(let r=0;r<i;r++){const i=t[r];"\n"===i||"\r\n"===i?n.push(Jn()):"\t"===i?n.push(ur()):i.length>0&&n.push(rt(i,e));}}else {const{content:t,alias:e}=r;"string"==typeof t?n.push(...Tt$1([t],"prefix"===r.type&&"string"==typeof e?e:r.type)):Array.isArray(t)&&n.push(...Tt$1(t,"unchanged"===r.type?void 0:r.type));}return n}const bt$1={$tokenize(t,e){return vt(t,e||this.defaultLanguage)},defaultLanguage:M$2,tokenize(t,e){return ft.tokenize(t,ft.languages[e||""]||ft.languages[this.defaultLanguage])}};function Ct$1(t,e,n){const r=t.getParent();X$1(r)?wt$1(r,e,n):it$1(t)&&t.replace(sr(t.__text));}function Nt$1(t,e){const n=e.getElementByKey(t.getKey());if(null===n)return;const r=t.getChildren(),i=r.length;if(i===n.__cachedChildrenLength)return;n.__cachedChildrenLength=i;let o="1",s=1;for(let t=0;t<i;t++)jn(r[t])&&(o+="\n"+ ++s);n.setAttribute("data-gutter",o);}const jt$1=new Set;function wt$1(t,e,n){const r=t.getKey();void 0===t.getLanguage()&&t.setLanguage(n.defaultLanguage);const i=t.getLanguage()||n.defaultLanguage;if(!function(t){const e=function(t){const e=/^diff-([\w-]+)/i.exec(t);return e?e[1]:null}(t),n=e||t;try{return !!n&&ft.languages.hasOwnProperty(n)}catch(t){return  false}}(i))return t.getIsSyntaxHighlightSupported()&&t.setIsSyntaxHighlightSupported(false),void async function(){}();t.getIsSyntaxHighlightSupported()||t.setIsSyntaxHighlightSupported(true),jt$1.has(r)||(jt$1.add(r),e.update(()=>{!function(t,e){const n=xo(t);if(!X$1(n)||!n.isAttached())return;const r=Lr();if(!yr(r))return void e();const i=r.anchor,o=i.offset,s="element"===i.type&&jn(n.getChildAtIndex(i.offset-1));let u=0;if(!s){const t=i.getNode();u=o+t.getPreviousSiblings().reduce((t,e)=>t+e.getTextContentSize(),0);}if(!e())return;if(s)return void i.getNode().select(o,o);n.getChildren().some(t=>{const e=lr(t);if(e||jn(t)){const n=t.getTextContentSize();if(e&&n>=u)return t.select(u,u),true;u-=n;}return  false});}(r,()=>{const e=xo(r);if(!X$1(e)||!e.isAttached())return  false;const i=e.getLanguage()||n.defaultLanguage,o=n.$tokenize(e,i),s=function(t,e){let n=0;for(;n<t.length&&kt$1(t[n],e[n]);)n++;const r=t.length,i=e.length,o=Math.min(r,i)-n;let s=0;for(;s<o;)if(s++,!kt$1(t[r-s],e[i-s])){s--;break}const l=n,u=r-s,c=e.slice(n,i-s);return {from:l,nodesForReplacement:c,to:u}}(e.getChildren(),o),{from:l,to:u,nodesForReplacement:c}=s;return !(l===u&&!c.length)&&(t.splice(l,u-l,c),true)});},{onUpdate:()=>{jt$1.delete(r);},skipTransforms:true}));}function kt$1(t,e){return it$1(t)&&it$1(e)&&t.__text===e.__text&&t.__highlightType===e.__highlightType||fr(t)&&fr(e)||jn(t)&&jn(e)}function At$1(t){if(!yr(t))return  false;const e=t.anchor.getNode(),n=X$1(e)?e:e.getParent(),r=t.focus.getNode(),i=X$1(r)?r:r.getParent();return X$1(n)&&n.is(i)}function Pt$1(t){const e=t.getNodes(),n=[];if(1===e.length&&X$1(e[0]))return n;let r=[];for(let t=0;t<e.length;t++){const i=e[t];it$1(i)||fr(i)||jn(i)||I$2(169),jn(i)?r.length>0&&(n.push(r),r=[]):r.push(i);}if(r.length>0){const e=t.isBackward()?t.anchor:t.focus,i=hr(r[0].getKey(),0,"text");e.is(i)||n.push(r);}return n}function Lt$1(t){const e=Lr();if(!yr(e)||!At$1(e))return  false;const n=Pt$1(e),r=n.length;if(0===r&&e.isCollapsed())return t===Pe$1&&e.insertNodes([ur()]),true;if(0===r&&t===Pe$1&&"\n"===e.getTextContent()){const t=ur(),n=Jn(),r=e.isBackward()?"previous":"next";return e.insertNodes([t,n]),Sl(Al(dl(el(t,"next",0),El(tl(n,"next"))),r)),true}for(let i=0;i<r;i++){const r=n[i];if(r.length>0){let n=r[0];if(0===i&&(n=st$1(n)),t===Pe$1){const t=ur();if(n.insertBefore(t),0===i){const r=e.isBackward()?"focus":"anchor",i=hr(n.getKey(),0,"text");e[r].is(i)&&e[r].set(t.getKey(),0,"text");}}else fr(n)&&n.remove();}}return  true}function Ot(t,e){const n=Lr();if(!yr(n))return  false;const{anchor:r,focus:i}=n,o=r.offset,s=i.offset,l=r.getNode(),c=i.getNode(),g=t===ke$1;if(!At$1(n)||!it$1(l)&&!fr(l)||!it$1(c)&&!fr(c))return  false;if(!e.altKey){if(n.isCollapsed()){const t=l.getParentOrThrow();if(g&&0===o&&null===l.getPreviousSibling()){if(null===t.getPreviousSibling())return t.selectPrevious(),e.preventDefault(),true}else if(!g&&o===l.getTextContentSize()&&null===l.getNextSibling()){if(null===t.getNextSibling())return t.selectNext(),e.preventDefault(),true}}return  false}let a,f;if(l.isBefore(c)?(a=st$1(l),f=lt$1(c)):(a=st$1(c),f=lt$1(l)),null==a||null==f)return  false;const p=a.getNodesBetween(f);for(let t=0;t<p.length;t++){const e=p[t];if(!it$1(e)&&!fr(e)&&!jn(e))return  false}e.preventDefault(),e.stopPropagation();const h=g?a.getPreviousSibling():f.getNextSibling();if(!jn(h))return  true;const d=g?h.getPreviousSibling():h.getNextSibling();if(null==d)return  true;const m=it$1(d)||fr(d)||jn(d)?g?st$1(d):lt$1(d):null;let x=null!=m?m:d;return h.remove(),p.forEach(t=>t.remove()),t===ke$1?(p.forEach(t=>x.insertBefore(t)),x.insertBefore(h)):(x.insertAfter(h),x=h,p.forEach(t=>{x.insertAfter(t),x=t;})),n.setTextNodeRange(l,o,c,s),true}function Ht(t,e){const n=Lr();if(!yr(n))return  false;const{anchor:r,focus:i}=n,o=r.getNode(),s=i.getNode(),l=t===ve$1;if(!At$1(n)||!it$1(o)&&!fr(o)||!it$1(s)&&!fr(s))return  false;const c=s;if("rtl"===ut(c)?!l:l){const t=ct$1(c,i.offset);if(null!==t){const{node:e,offset:r}=t;jn(e)?e.selectNext(0,0):n.setTextNodeRange(e,r,e,r);}else c.getParentOrThrow().selectStart();}else {gt(c).select();}return e.preventDefault(),e.stopPropagation(),true}function Et$1(t,e){if(!t.hasNodes([q$1,et$1]))throw new Error("CodeHighlightPlugin: CodeNode or CodeHighlightNode not registered on editor");null==e&&(e=bt$1);const n=[];return  true!==t._headless&&n.push(t.registerMutationListener(q$1,e=>{t.getEditorState().read(()=>{for(const[n,r]of e)if("destroyed"!==r){const e=xo(n);null!==e&&Nt$1(e,t);}});},{skipInitialization:false})),n.push(t.registerNodeTransform(q$1,n=>wt$1(n,t,e)),t.registerNodeTransform(Xn,n=>Ct$1(n,t,e)),t.registerNodeTransform(et$1,n=>Ct$1(n,t,e)),t.registerCommand(Me$1,e=>{const n=function(t){const e=Lr();if(!yr(e)||!At$1(e))return null;const n=t?De$1:Pe$1,r=t?De$1:Ae$1,i=e.anchor,o=e.focus;if(i.is(o))return r;const s=Pt$1(e);if(1!==s.length)return n;const l=s[0];let u,c;0===l.length&&I$2(285),e.isBackward()?(u=o,c=i):(u=i,c=o);const g=st$1(l[0]),a=lt$1(l[0]),f=hr(g.getKey(),0,"text"),p=hr(a.getKey(),a.getTextContentSize(),"text");return u.isBefore(f)||p.isBefore(c)?n:f.isBefore(u)||c.isBefore(p)?r:n}(e.shiftKey);return null!==n&&(e.preventDefault(),t.dispatchCommand(n,void 0),true)},zi),t.registerCommand(Ae$1,()=>!!At$1(Lr())&&(jr([ur()]),true),zi),t.registerCommand(Pe$1,t=>Lt$1(Pe$1),zi),t.registerCommand(De$1,t=>Lt$1(De$1),zi),t.registerCommand(ke$1,t=>{const e=Lr();if(!yr(e))return  false;const{anchor:n}=e,r=n.getNode();return !!At$1(e)&&(e.isCollapsed()&&0===n.offset&&null===r.getPreviousSibling()&&X$1(r.getParentOrThrow())?(t.preventDefault(),true):Ot(ke$1,t))},zi),t.registerCommand(Te$1,t=>{const e=Lr();if(!yr(e))return  false;const{anchor:n}=e,r=n.getNode();return !!At$1(e)&&(e.isCollapsed()&&n.offset===r.getTextContentSize()&&null===r.getNextSibling()&&X$1(r.getParentOrThrow())?(t.preventDefault(),true):Ot(Te$1,t))},zi),t.registerCommand(ve$1,t=>Ht(ve$1,t),zi),t.registerCommand(Ce$1,t=>Ht(Ce$1,t),zi)),U$4(...n)}
 
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -6254,22 +5149,12 @@ function I$2(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URL
  *
  */
 
-const R=new Set(["http:","https:","mailto:","sms:","tel:"]);let y$1 = class y extends Ci{__url;__target;__rel;__title;static getType(){return "link"}static clone(t){return new y(t.__url,{rel:t.__rel,target:t.__target,title:t.__title},t.__key)}constructor(t="",e={},n){super(n);const{target:r=null,rel:i=null,title:l=null}=e;this.__url=t,this.__target=r,this.__rel=i,this.__title=l;}createDOM(e){const n=document.createElement("a");return this.updateLinkDOM(null,n,e),lt$4(n,e.theme.link),n}updateLinkDOM(t,n,r){if(xs(n)){t&&t.__url===this.__url||(n.href=this.sanitizeUrl(this.__url));for(const e of ["target","rel","title"]){const r=`__${e}`,i=this[r];t&&t[r]===i||(i?n[e]=i:n.removeAttribute(e));}}}updateDOM(t,e,n){return this.updateLinkDOM(t,e,n),false}static importDOM(){return {a:t=>({conversion:N$1,priority:1})}}static importJSON(t){return D$1().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setURL(t.url).setRel(t.rel||null).setTarget(t.target||null).setTitle(t.title||null)}sanitizeUrl(t){t=W$2(t);try{const e=new URL(W$2(t));if(!R.has(e.protocol))return "about:blank"}catch(e){return t}return t}exportJSON(){return {...super.exportJSON(),rel:this.getRel(),target:this.getTarget(),title:this.getTitle(),url:this.getURL()}}getURL(){return this.getLatest().__url}setURL(t){const e=this.getWritable();return e.__url=t,e}getTarget(){return this.getLatest().__target}setTarget(t){const e=this.getWritable();return e.__target=t,e}getRel(){return this.getLatest().__rel}setRel(t){const e=this.getWritable();return e.__rel=t,e}getTitle(){return this.getLatest().__title}setTitle(t){const e=this.getWritable();return e.__title=t,e}insertNewAfter(t,e=true){const n=D$1(this.__url,{rel:this.__rel,target:this.__target,title:this.__title});return this.insertAfter(n,e),n}canInsertTextBefore(){return  false}canInsertTextAfter(){return  false}canBeEmpty(){return  false}isInline(){return  true}extractWithChild(t,e,n){if(!yr(e))return  false;const r=e.anchor.getNode(),i=e.focus.getNode();return this.isParentOf(r)&&this.isParentOf(i)&&e.getTextContent().length>0}isEmailURI(){return this.__url.startsWith("mailto:")}isWebSiteURI(){return this.__url.startsWith("https://")||this.__url.startsWith("http://")}};function N$1(t){let n=null;if(xs(t)){const e=t.textContent;(null!==e&&""!==e||t.children.length>0)&&(n=D$1(t.getAttribute("href")||"",{rel:t.getAttribute("rel"),target:t.getAttribute("target"),title:t.getAttribute("title")}));}return {node:n}}function D$1(t="",e){return fs(new y$1(t,e))}function w$2(t){return t instanceof y$1}class A extends y$1{__isUnlinked;constructor(t="",e={},n){super(t,e,n),this.__isUnlinked=void 0!==e.isUnlinked&&null!==e.isUnlinked&&e.isUnlinked;}static getType(){return "autolink"}static clone(t){return new A(t.__url,{isUnlinked:t.__isUnlinked,rel:t.__rel,target:t.__target,title:t.__title},t.__key)}getIsUnlinked(){return this.__isUnlinked}setIsUnlinked(t){const e=this.getWritable();return e.__isUnlinked=t,e}createDOM(t){return this.__isUnlinked?document.createElement("span"):super.createDOM(t)}updateDOM(t,e,n){return super.updateDOM(t,e,n)||t.__isUnlinked!==this.__isUnlinked}static importJSON(t){return I$1().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setIsUnlinked(t.isUnlinked||false)}static importDOM(){return null}exportJSON(){return {...super.exportJSON(),isUnlinked:this.__isUnlinked}}insertNewAfter(t,e=true){const n=this.getParentOrThrow().insertNewAfter(t,e);if(Si(n)){const t=I$1(this.__url,{isUnlinked:this.__isUnlinked,rel:this.__rel,target:this.__target,title:this.__title});return n.append(t),t}return null}}function I$1(t="",e){return fs(new A(t,e))}function E$2(t){return t instanceof A}function M$1(t,e){if("element"===t.type){const n=t.getNode();Si(n)||function(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSearchParams;r.append("code",t);for(const t of e)r.append("v",t);throw n.search=r.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}(252);return n.getChildren()[t.offset+e]||null}return null}function J$1(t,e={}){let r;if(t&&"object"==typeof t){const{url:n,...i}=t;r=n,e={...i,...e};}else r=t;const{target:i,title:l}=e,s=void 0===e.rel?"noreferrer":e.rel,u=Lr();if(null===u||!yr(u)&&!xr(u))return;if(xr(u)){const t=u.getNodes();if(0===t.length)return;return void t.forEach(t=>{if(null===r){const e=zs(t,t=>!E$2(t)&&w$2(t));e&&(e.insertBefore(t),0===e.getChildren().length&&e.remove());}else {const e=zs(t,t=>!E$2(t)&&w$2(t));if(e)e.setURL(r),void 0!==i&&e.setTarget(i),void 0!==s&&e.setRel(s);else {const e=D$1(r,{rel:s,target:i});t.insertBefore(e),e.append(t);}}})}const h=u.extract();if(null===r){const t=new Set;return void h.forEach(e=>{const n=e.getParent();if(w$2(n)&&!E$2(n)){const e=n.getKey();if(t.has(e))return;!function(t,e){const n=new Set(e.filter(e=>t.isParentOf(e)).map(t=>t.getKey())),r=t.getChildren(),i=r.filter(t=>n.has(t.getKey()));if(i.length===r.length)return r.forEach(e=>t.insertBefore(e)),void t.remove();const l=r.findIndex(t=>n.has(t.getKey())),s=r.findLastIndex(t=>n.has(t.getKey())),o=0===l,u=s===r.length-1;if(o)i.forEach(e=>t.insertBefore(e));else if(u)for(let e=i.length-1;e>=0;e--)t.insertAfter(i[e]);else {for(let e=i.length-1;e>=0;e--)t.insertAfter(i[e]);const e=r.slice(s+1);if(e.length>0){const n=D$1(t.getURL(),{rel:t.getRel(),target:t.getTarget(),title:t.getTitle()});i[i.length-1].insertAfter(n),e.forEach(t=>n.append(t));}}}(n,h),t.add(e);}})}const p=new Set,_=t=>{p.has(t.getKey())||(p.add(t.getKey()),t.setURL(r),void 0!==i&&t.setTarget(i),void 0!==s&&t.setRel(s),void 0!==l&&t.setTitle(l));};if(1===h.length){const t=h[0],e=zs(t,w$2);if(null!==e)return _(e)}!function(t){const e=Lr();if(!yr(e))return t();const n=St$6(e),r=n.isBackward(),i=M$1(n.anchor,r?-1:0),l=M$1(n.focus,r?0:-1);t();if(i||l){const t=Lr();if(yr(t)){const e=t.clone();if(i){const t=i.getParent();t&&e.anchor.set(t.getKey(),i.getIndexWithinParent()+(r?1:0),"element");}if(l){const t=l.getParent();t&&e.focus.set(t.getKey(),l.getIndexWithinParent()+(r?0:1),"element");}wo(St$6(e));}}}(()=>{let t=null;for(const e of h){if(!e.isAttached())continue;const o=zs(e,w$2);if(o){_(o);continue}if(Si(e)){if(!e.isInline())continue;if(w$2(e)){if(!(E$2(e)||null!==t&&t.getParentOrThrow().isParentOf(e))){_(e),t=e;continue}for(const t of e.getChildren())e.insertBefore(t);e.remove();continue}}const u=e.getPreviousSibling();w$2(u)&&u.is(t)?u.append(e):(t=D$1(r,{rel:s,target:i,title:l}),e.insertAfter(t),t.append(e));}});}const K$1=/^\+?[0-9\s()-]{5,}$/;function W$2(t){return t.match(/^[a-z][a-z0-9+.-]*:/i)||t.match(/^[/#.]/)?t:t.includes("@")?`mailto:${t}`:K$1.test(t)?`tel:${t}`:`https://${t}`}
-
-/**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
-const Ne$1=/^(\d+(?:\.\d+)?)px$/,ve$1={BOTH:3,COLUMN:2,NO_STATUS:0,ROW:1};class xe extends Ci{__colSpan;__rowSpan;__headerState;__width;__backgroundColor;__verticalAlign;static getType(){return "tablecell"}static clone(e){return new xe(e.__headerState,e.__colSpan,e.__width,e.__key)}afterCloneFrom(e){super.afterCloneFrom(e),this.__rowSpan=e.__rowSpan,this.__backgroundColor=e.__backgroundColor,this.__verticalAlign=e.__verticalAlign;}static importDOM(){return {td:e=>({conversion:Re$1,priority:0}),th:e=>({conversion:Re$1,priority:0})}}static importJSON(e){return Fe$1().updateFromJSON(e)}updateFromJSON(e){return super.updateFromJSON(e).setHeaderStyles(e.headerState).setColSpan(e.colSpan||1).setRowSpan(e.rowSpan||1).setWidth(e.width||void 0).setBackgroundColor(e.backgroundColor||null).setVerticalAlign(e.verticalAlign||void 0)}constructor(e=ve$1.NO_STATUS,t=1,n,o){super(o),this.__colSpan=t,this.__rowSpan=1,this.__headerState=e,this.__width=n,this.__backgroundColor=null,this.__verticalAlign=void 0;}createDOM(t){const n=document.createElement(this.getTag());return this.__width&&(n.style.width=`${this.__width}px`),this.__colSpan>1&&(n.colSpan=this.__colSpan),this.__rowSpan>1&&(n.rowSpan=this.__rowSpan),null!==this.__backgroundColor&&(n.style.backgroundColor=this.__backgroundColor),Te$1(this.__verticalAlign)&&(n.style.verticalAlign=this.__verticalAlign),lt$4(n,t.theme.tableCell,this.hasHeader()&&t.theme.tableCellHeader),n}exportDOM(e){const t=super.exportDOM(e);if(Cs(t.element)){const e=t.element;e.setAttribute("data-temporary-table-cell-lexical-key",this.getKey()),e.style.border="1px solid black",this.__colSpan>1&&(e.colSpan=this.__colSpan),this.__rowSpan>1&&(e.rowSpan=this.__rowSpan),e.style.width=`${this.getWidth()||75}px`,e.style.verticalAlign=this.getVerticalAlign()||"top",e.style.textAlign="start",null===this.__backgroundColor&&this.hasHeader()&&(e.style.backgroundColor="#f2f3f5");}return t}exportJSON(){return {...super.exportJSON(),...Te$1(this.__verticalAlign)&&{verticalAlign:this.__verticalAlign},backgroundColor:this.getBackgroundColor(),colSpan:this.__colSpan,headerState:this.__headerState,rowSpan:this.__rowSpan,width:this.getWidth()}}getColSpan(){return this.getLatest().__colSpan}setColSpan(e){const t=this.getWritable();return t.__colSpan=e,t}getRowSpan(){return this.getLatest().__rowSpan}setRowSpan(e){const t=this.getWritable();return t.__rowSpan=e,t}getTag(){return this.hasHeader()?"th":"td"}setHeaderStyles(e,t=ve$1.BOTH){const n=this.getWritable();return n.__headerState=e&t|n.__headerState&~t,n}getHeaderStyles(){return this.getLatest().__headerState}setWidth(e){const t=this.getWritable();return t.__width=e,t}getWidth(){return this.getLatest().__width}getBackgroundColor(){return this.getLatest().__backgroundColor}setBackgroundColor(e){const t=this.getWritable();return t.__backgroundColor=e,t}getVerticalAlign(){return this.getLatest().__verticalAlign}setVerticalAlign(e){const t=this.getWritable();return t.__verticalAlign=e||void 0,t}toggleHeaderStyle(e){const t=this.getWritable();return (t.__headerState&e)===e?t.__headerState-=e:t.__headerState+=e,t}hasHeaderState(e){return (this.getHeaderStyles()&e)===e}hasHeader(){return this.getLatest().__headerState!==ve$1.NO_STATUS}updateDOM(e){return e.__headerState!==this.__headerState||e.__width!==this.__width||e.__colSpan!==this.__colSpan||e.__rowSpan!==this.__rowSpan||e.__backgroundColor!==this.__backgroundColor||e.__verticalAlign!==this.__verticalAlign}isShadowRoot(){return  true}collapseAtStart(){return  true}canBeEmpty(){return  false}canIndent(){return  false}}function Te$1(e){return "middle"===e||"bottom"===e}function Re$1(e){const t=e,n=e.nodeName.toLowerCase();let o;Ne$1.test(t.style.width)&&(o=parseFloat(t.style.width));const r=Fe$1("th"===n?ve$1.ROW:ve$1.NO_STATUS,t.colSpan,o);r.__rowSpan=t.rowSpan;const l=t.style.backgroundColor;""!==l&&(r.__backgroundColor=l);const s=t.style.verticalAlign;Te$1(s)&&(r.__verticalAlign=s);const i=t.style,c=(i&&i.textDecoration||"").split(" "),a="700"===i.fontWeight||"bold"===i.fontWeight,u=c.includes("line-through"),h="italic"===i.fontStyle,p=c.includes("underline");return {after:e=>{const t=[];let n=null;const o=()=>{if(n){const e=n.getFirstChild();jn(e)&&1===n.getChildrenSize()&&e.remove();}};for(const r of e)ls(r)||lr(r)||jn(r)?(lr(r)&&(a&&r.toggleFormat("bold"),u&&r.toggleFormat("strikethrough"),h&&r.toggleFormat("italic"),p&&r.toggleFormat("underline")),n?n.append(r):(n=Li().append(r),t.push(n))):(t.push(r),o(),n=null);return o(),0===t.length&&t.push(Li()),t},node:r}}function Fe$1(e=ve$1.NO_STATUS,t=1,n){return fs(new xe(e,t,n))}function Oe$1(e){return e instanceof xe}const Ae$1=re$1("INSERT_TABLE_COMMAND");function Ke$1(e,...t){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",e);for(const e of t)o.append("v",e);throw n.search=o.toString(),Error(`Minified Lexical error #${e}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}let Ee$1 = class Ee extends Ci{__height;static getType(){return "tablerow"}static clone(e){return new Ee(e.__height,e.__key)}static importDOM(){return {tr:e=>({conversion:ke$1,priority:0})}}static importJSON(e){return Me$1().updateFromJSON(e)}updateFromJSON(e){return super.updateFromJSON(e).setHeight(e.height)}constructor(e,t){super(t),this.__height=e;}exportJSON(){const e=this.getHeight();return {...super.exportJSON(),...void 0===e?void 0:{height:e}}}createDOM(t){const n=document.createElement("tr");return this.__height&&(n.style.height=`${this.__height}px`),lt$4(n,t.theme.tableRow),n}extractWithChild(e,t,n){return "html"===n}isShadowRoot(){return  true}setHeight(e){const t=this.getWritable();return t.__height=e,t}getHeight(){return this.getLatest().__height}updateDOM(e){return e.__height!==this.__height}canBeEmpty(){return  false}canIndent(){return  false}};function ke$1(e){const n=e;let o;return Ne$1.test(n.style.height)&&(o=parseFloat(n.style.height)),{after:e=>kt$6(e,Oe$1),node:Me$1(o)}}function Me$1(e){return fs(new Ee$1(e))}function $e$1(e){return e instanceof Ee$1}const ze$1="undefined"!=typeof window&&void 0!==window.document&&void 0!==window.document.createElement,We$1=ze$1&&"documentMode"in document?document.documentMode:null,He$1=ze$1&&/^(?!.*Seamonkey)(?=.*Firefox).*/i.test(navigator.userAgent);function Le$1(e,t,n=true){const o=gn();for(let r=0;r<e;r++){const e=Me$1();for(let o=0;o<t;o++){let t=ve$1.NO_STATUS;"object"==typeof n?(0===r&&n.rows&&(t|=ve$1.ROW),0===o&&n.columns&&(t|=ve$1.COLUMN)):n&&(0===r&&(t|=ve$1.ROW),0===o&&(t|=ve$1.COLUMN));const l=Fe$1(t),s=Li();s.append(sr()),l.append(s),e.append(l);}o.append(e);}return o}function Be$1(e){const t=zs(e,e=>Oe$1(e));return Oe$1(t)?t:null}function Pe$1(e){const t=zs(e,e=>$e$1(e));if($e$1(t))return t;throw new Error("Expected table cell to be inside of table row.")}function De$1(e){const t=zs(e,e=>mn(e));if(mn(t))return t;throw new Error("Expected table cell to be inside of table.")}function Ie$1(e){const t=Pe$1(e);return De$1(t).getChildren().findIndex(e=>e.is(t))}function Ue$1(e){return Pe$1(e).getChildren().findIndex(t=>t.is(e))}ze$1&&"InputEvent"in window&&!We$1&&new window.InputEvent("input");const qe$1=(e,t)=>e===ve$1.BOTH||e===t?t:ve$1.NO_STATUS;function je$1(e=true){const t=Lr();yr(t)||wt$1(t)||Ke$1(188);const n=t.anchor.getNode(),o=t.focus.getNode(),[r]=mt$1(n),[l,,s]=mt$1(o),[,i,c]=ft(s,l,r),{startRow:a}=c,{startRow:u}=i;return e?Ge$1(a+r.__rowSpan>u+l.__rowSpan?r:l,true):Ge$1(u<a?l:r,false)}function Ge$1(e,t=true){const[,,n]=mt$1(e),[o,r]=ft(n,e,e),l=o[0].length,{startRow:s}=r;let i=null;if(t){const t=s+e.__rowSpan-1,r=o[t],c=Me$1();for(let e=0;e<l;e++){const{cell:n,startRow:o}=r[e];if(o+n.__rowSpan-1<=t){const t=r[e].cell.__headerState,n=qe$1(t,ve$1.COLUMN);c.append(Fe$1(n).append(Li()));}else n.setRowSpan(n.__rowSpan+1);}const a=n.getChildAtIndex(t);$e$1(a)||Ke$1(256),a.insertAfter(c),i=c;}else {const e=s,t=o[e],r=Me$1();for(let n=0;n<l;n++){const{cell:o,startRow:l}=t[n];if(l===e){const e=t[n].cell.__headerState,o=qe$1(e,ve$1.COLUMN);r.append(Fe$1(o).append(Li()));}else o.setRowSpan(o.__rowSpan+1);}const c=n.getChildAtIndex(e);$e$1(c)||Ke$1(257),c.insertBefore(r),i=r;}return i}function Ze$1(e=true){const t=Lr();yr(t)||wt$1(t)||Ke$1(188);const n=t.anchor.getNode(),o=t.focus.getNode(),[r]=mt$1(n),[l,,s]=mt$1(o),[,i,c]=ft(s,l,r),{startColumn:a}=c,{startColumn:u}=i;return e?tt(a+r.__colSpan>u+l.__colSpan?r:l,true):tt(u<a?l:r,false)}function tt(e,t=true,n=true){const[,,o]=mt$1(e),[r,l]=ft(o,e,e),s=r.length,{startColumn:i}=l,c=t?i+e.__colSpan-1:i-1,a=o.getFirstChild();$e$1(a)||Ke$1(120);let u=null;function h(e=ve$1.NO_STATUS){const t=Fe$1(e).append(Li());return null===u&&(u=t),t}let d=a;e:for(let e=0;e<s;e++){if(0!==e){const e=d.getNextSibling();$e$1(e)||Ke$1(121),d=e;}const t=r[e],n=t[c<0?0:c].cell.__headerState,o=qe$1(n,ve$1.ROW);if(c<0){ct$1(d,h(o));continue}const{cell:l,startColumn:s,startRow:i}=t[c];if(s+l.__colSpan-1<=c){let n=l,r=i,s=c;for(;r!==e&&n.__rowSpan>1;){if(s-=l.__colSpan,!(s>=0)){d.append(h(o));continue e}{const{cell:e,startRow:o}=t[s];n=e,r=o;}}n.insertAfter(h(o));}else l.setColSpan(l.__colSpan+1);}null!==u&&n&&it$1(u);const f=o.getColWidths();if(f){const e=[...f],t=c<0?0:c,n=e[t];e.splice(t,0,n),o.setColWidths(e);}return u}function ot$1(){const e=Lr();yr(e)||wt$1(e)||Ke$1(188);const[t,n]=e.isBackward()?[e.focus.getNode(),e.anchor.getNode()]:[e.anchor.getNode(),e.focus.getNode()],[o,,r]=mt$1(t),[l]=mt$1(n),[s,i,c]=ft(r,o,l),{startRow:a}=i,{startRow:u}=c,h=u+l.__rowSpan-1;if(s.length===h-a+1)return void r.remove();const d=s[0].length,f=s[h+1],g=r.getChildAtIndex(h+1);for(let e=h;e>=a;e--){for(let t=d-1;t>=0;t--){const{cell:n,startRow:o,startColumn:r}=s[e][t];if(r===t){if(o<a||o+n.__rowSpan-1>h){const e=Math.max(o,a),t=Math.min(n.__rowSpan+o-1,h),r=e<=t?t-e+1:0;n.setRowSpan(n.__rowSpan-r);}if(o>=a&&o+n.__rowSpan-1>h&&e===h){null===g&&Ke$1(122);let o=null;for(let n=0;n<t;n++){const t=f[n],r=t.cell;t.startRow===e+1&&(o=r),r.__colSpan>1&&(n+=r.__colSpan-1);}null===o?ct$1(g,n):o.insertAfter(n);}}}const t=r.getChildAtIndex(e);$e$1(t)||Ke$1(206,String(e)),t.remove();}if(void 0!==f){const{cell:e}=f[0];it$1(e);}else {const e=s[a-1],{cell:t}=e[0];it$1(t);}}function lt$1(){const e=Lr();yr(e)||wt$1(e)||Ke$1(188);const t=e.anchor.getNode(),n=e.focus.getNode(),[o,,r]=mt$1(t),[l]=mt$1(n),[s,i,c]=ft(r,o,l),{startColumn:a}=i,{startRow:u,startColumn:h}=c,d=Math.min(a,h),f=Math.max(a+o.__colSpan-1,h+l.__colSpan-1),g=f-d+1;if(s[0].length===f-d+1)return r.selectPrevious(),void r.remove();const m=s.length;for(let e=0;e<m;e++)for(let t=d;t<=f;t++){const{cell:n,startColumn:o}=s[e][t];if(o<d){if(t===d){const e=d-o;n.setColSpan(n.__colSpan-Math.min(g,n.__colSpan-e));}}else if(o+n.__colSpan-1>f){if(t===f){const e=f-o+1;n.setColSpan(n.__colSpan-e);}}else n.remove();}const p=s[u],C=a>h?p[a+o.__colSpan]:p[h+l.__colSpan];if(void 0!==C){const{cell:e}=C;it$1(e);}else {const e=h<a?p[h-1]:p[a-1],{cell:t}=e;it$1(t);}const _=r.getColWidths();if(_){const e=[..._];e.splice(d,g),r.setColWidths(e);}}function it$1(e){const t=e.getFirstDescendant();null==t?e.selectStart():t.getParentOrThrow().selectStart();}function ct$1(e,t){const n=e.getFirstChild();null!==n?n.insertBefore(t):e.append(t);}function at(e){if(0===e.length)return null;const t=De$1(e[0]),[n]=gt(t,null,null);let o=1/0,r=-1/0,l=1/0,s=-1/0;const i=new Set;for(const t of n)for(const n of t){if(!n||!n.cell)continue;const t=n.cell.getKey();if(!i.has(t)&&e.some(e=>e.is(n.cell))){i.add(t);const e=n.startRow,c=n.startColumn,a=n.cell.__rowSpan||1,u=n.cell.__colSpan||1;o=Math.min(o,e),r=Math.max(r,e+a-1),l=Math.min(l,c),s=Math.max(s,c+u-1);}}if(o===1/0||l===1/0)return null;const c=r-o+1,a=s-l+1,u=n[o][l];if(!u.cell)return null;const h=u.cell;h.setColSpan(a),h.setRowSpan(c);const d=new Set([h.getKey()]);for(let e=o;e<=r;e++)for(let t=l;t<=s;t++){const o=n[e][t];if(!o.cell)continue;const r=o.cell,l=r.getKey();if(!d.has(l)){d.add(l);ut(r)||h.append(...r.getChildren()),r.remove();}}return 0===h.getChildrenSize()&&h.append(Li()),h}function ut(e){if(1!==e.getChildrenSize())return  false;const t=e.getFirstChildOrThrow();return !(!Ii(t)||!t.isEmpty())}function dt(e){const[t,n,o]=mt$1(e),r=t.__colSpan,l=t.__rowSpan;if(1===r&&1===l)return;const[s,i]=ft(o,t,t),{startColumn:c,startRow:a}=i,u=t.__headerState&ve$1.COLUMN,h=Array.from({length:r},(e,t)=>{let n=u;for(let e=0;0!==n&&e<s.length;e++)n&=s[e][t+c].cell.__headerState;return n}),d=t.__headerState&ve$1.ROW,f=Array.from({length:l},(e,t)=>{let n=d;for(let e=0;0!==n&&e<s[0].length;e++)n&=s[t+a][e].cell.__headerState;return n});if(r>1){for(let e=1;e<r;e++)t.insertAfter(Fe$1(h[e]|f[0]).append(Li()));t.setColSpan(1);}if(l>1){let e;for(let t=1;t<l;t++){const o=a+t,l=s[o];e=(e||n).getNextSibling(),$e$1(e)||Ke$1(125);let i=null;for(let e=0;e<c;e++){const t=l[e],n=t.cell;t.startRow===o&&(i=n),n.__colSpan>1&&(e+=n.__colSpan-1);}if(null===i)for(let n=r-1;n>=0;n--)ct$1(e,Fe$1(h[n]|f[t]).append(Li()));else for(let e=r-1;e>=0;e--)i.insertAfter(Fe$1(h[e]|f[t]).append(Li()));}t.setRowSpan(1);}}function ft(e,t,n){const[o,r,l]=gt(e,t,n);return null===r&&Ke$1(207),null===l&&Ke$1(208),[o,r,l]}function gt(e,t,n){const o=[];let r=null,l=null;function s(e){let t=o[e];return void 0===t&&(o[e]=t=[]),t}const i=e.getChildren();for(let e=0;e<i.length;e++){const o=i[e];$e$1(o)||Ke$1(209);const c=s(e);for(let a=o.getFirstChild(),u=0;null!=a;a=a.getNextSibling()){for(Oe$1(a)||Ke$1(147);void 0!==c[u];)u++;const o={cell:a,startColumn:u,startRow:e},{__rowSpan:h,__colSpan:d}=a;for(let t=0;t<h&&!(e+t>=i.length);t++){const n=s(e+t);for(let e=0;e<d;e++)n[u+e]=o;}null!==t&&null===r&&t.is(a)&&(r=o),null!==n&&null===l&&n.is(a)&&(l=o);}}return [o,r,l]}function mt$1(e){let t;if(e instanceof xe)t=e;else if("__type"in e){const o=zs(e,Oe$1);Oe$1(o)||Ke$1(148),t=o;}else {const o=zs(e.getNode(),Oe$1);Oe$1(o)||Ke$1(148),t=o;}const o=t.getParent();$e$1(o)||Ke$1(149);const r=o.getParent();return mn(r)||Ke$1(210),[t,o,r]}function pt(e,t,n){let o,r=Math.min(t.startColumn,n.startColumn),l=Math.min(t.startRow,n.startRow),s=Math.max(t.startColumn+t.cell.__colSpan-1,n.startColumn+n.cell.__colSpan-1),i=Math.max(t.startRow+t.cell.__rowSpan-1,n.startRow+n.cell.__rowSpan-1);do{o=false;for(let t=0;t<e.length;t++)for(let n=0;n<e[0].length;n++){const c=e[t][n];if(!c)continue;const a=c.startColumn+c.cell.__colSpan-1,u=c.startRow+c.cell.__rowSpan-1,h=c.startColumn<=s&&a>=r,d=c.startRow<=i&&u>=l;if(h&&d){const e=Math.min(r,c.startColumn),t=Math.max(s,a),n=Math.min(l,c.startRow),h=Math.max(i,u);e===r&&t===s&&n===l&&h===i||(r=e,s=t,l=n,i=h,o=true);}}}while(o);return {maxColumn:s,maxRow:i,minColumn:r,minRow:l}}function Ct$1(e){const[t,,n]=mt$1(e),o=n.getChildren(),r=o.length,l=o[0].getChildren().length,s=new Array(r);for(let e=0;e<r;e++)s[e]=new Array(l);for(let e=0;e<r;e++){const n=o[e].getChildren();let r=0;for(let o=0;o<n.length;o++){for(;s[e][r];)r++;const l=n[o],i=l.__rowSpan||1,c=l.__colSpan||1;for(let t=0;t<i;t++)for(let n=0;n<c;n++)s[e+t][r+n]=l;if(t===l)return {colSpan:c,columnIndex:r,rowIndex:e,rowSpan:i};r+=c;}}return null}function _t$1(e){const[[t,o,r,l],[s,i,c,a]]=["anchor","focus"].map(t=>{const o=e[t].getNode(),r=zs(o,Oe$1);Oe$1(r)||Ke$1(238,t,o.getKey(),o.getType());const l=r.getParent();$e$1(l)||Ke$1(239,t);const s=l.getParent();return mn(s)||Ke$1(240,t),[o,r,l,s]});return l.is(a)||Ke$1(241),{anchorCell:o,anchorNode:t,anchorRow:r,anchorTable:l,focusCell:i,focusNode:s,focusRow:c,focusTable:a}}let St$1 = class St{tableKey;anchor;focus;_cachedNodes;dirty;constructor(e,t,n){this.anchor=t,this.focus=n,t._selection=this,n._selection=this,this._cachedNodes=null,this.dirty=false,this.tableKey=e;}getStartEndPoints(){return [this.anchor,this.focus]}isValid(){if("root"===this.tableKey||"root"===this.anchor.key||"element"!==this.anchor.type||"root"===this.focus.key||"element"!==this.focus.type)return  false;const e=xo(this.tableKey),t=xo(this.anchor.key),n=xo(this.focus.key);return null!==e&&null!==t&&null!==n}isBackward(){return this.focus.isBefore(this.anchor)}getCachedNodes(){return this._cachedNodes}setCachedNodes(e){this._cachedNodes=e;}is(e){return wt$1(e)&&this.tableKey===e.tableKey&&this.anchor.is(e.anchor)&&this.focus.is(e.focus)}set(e,t,n){this.dirty=this.dirty||e!==this.tableKey||t!==this.anchor.key||n!==this.focus.key,this.tableKey=e,this.anchor.key=t,this.focus.key=n,this._cachedNodes=null;}clone(){return new St(this.tableKey,hr(this.anchor.key,this.anchor.offset,this.anchor.type),hr(this.focus.key,this.focus.offset,this.focus.type))}isCollapsed(){return  false}extract(){return this.getNodes()}insertRawText(e){}insertText(){}hasFormat(e){let t=0;this.getNodes().filter(Oe$1).forEach(e=>{const n=e.getFirstChild();Ii(n)&&(t|=n.getTextFormat());});const n=R$5[e];return 0!==(t&n)}insertNodes(e){const t=this.focus.getNode();Si(t)||Ke$1(151);St$6(t.select(0,t.getChildrenSize())).insertNodes(e);}getShape(){const{anchorCell:e,focusCell:t}=_t$1(this),n=Ct$1(e);null===n&&Ke$1(153);const o=Ct$1(t);null===o&&Ke$1(155);const r=Math.min(n.columnIndex,o.columnIndex),l=Math.max(n.columnIndex+n.colSpan-1,o.columnIndex+o.colSpan-1),s=Math.min(n.rowIndex,o.rowIndex),i=Math.max(n.rowIndex+n.rowSpan-1,o.rowIndex+o.rowSpan-1);return {fromX:Math.min(r,l),fromY:Math.min(s,i),toX:Math.max(r,l),toY:Math.max(s,i)}}getNodes(){if(!this.isValid())return [];const e=this._cachedNodes;if(null!==e)return e;const{anchorTable:t,anchorCell:n,focusCell:o}=_t$1(this),r=o.getParents()[1];if(r!==t){if(t.isParentOf(o)){const e=r.getParent();null==e&&Ke$1(159),this.set(this.tableKey,o.getKey(),e.getKey());}else {const e=t.getParent();null==e&&Ke$1(158),this.set(this.tableKey,e.getKey(),o.getKey());}return this.getNodes()}const[l,s,i]=ft(t,n,o),{minColumn:c,maxColumn:a,minRow:u,maxRow:h}=pt(l,s,i),d=new Map([[t.getKey(),t]]);let f=null;for(let e=u;e<=h;e++)for(let t=c;t<=a;t++){const{cell:n}=l[e][t],o=n.getParent();$e$1(o)||Ke$1(160),o!==f&&(d.set(o.getKey(),o),f=o),d.has(n.getKey())||Nt$1(n,e=>{d.set(e.getKey(),e);});}const g=Array.from(d.values());return ti()||(this._cachedNodes=g),g}getTextContent(){const e=this.getNodes().filter(e=>Oe$1(e));let t="";for(let n=0;n<e.length;n++){const o=e[n],r=o.__parent,l=(e[n+1]||{}).__parent;t+=o.getTextContent()+(l!==r?"\n":"\t");}return t}};function wt$1(e){return e instanceof St$1}function bt$1(){const e=hr("root",0,"element"),t=hr("root",0,"element");return new St$1("root",e,t)}function yt$1(e,t,n){e.getKey(),t.getKey(),n.getKey();const o=Lr(),r=wt$1(o)?o.clone():bt$1();return r.set(e.getKey(),t.getKey(),n.getKey()),r}function Nt$1(e,t){const n=[[e]];for(let e=n.at(-1);void 0!==e&&n.length>0;e=n.at(-1)){const o=e.pop();void 0===o?n.pop():false!==t(o)&&Si(o)&&n.push(o.getChildren());}}function vt(e,t=bs()){const n=xo(e);mn(n)||Ke$1(231,e);const o=Ft$1(n,t.getElementByKey(e));return null===o&&Ke$1(232,e),{tableElement:o,tableNode:n}}let xt$1 = class xt{focusX;focusY;listenersToRemove;table;isHighlightingCells;anchorX;anchorY;tableNodeKey;anchorCell;focusCell;anchorCellNodeKey;focusCellNodeKey;editor;tableSelection;hasHijackedSelectionStyles;isSelecting;pointerType;shouldCheckSelection;abortController;listenerOptions;nextFocus;constructor(e,t){this.isHighlightingCells=false,this.anchorX=-1,this.anchorY=-1,this.focusX=-1,this.focusY=-1,this.listenersToRemove=new Set,this.tableNodeKey=t,this.editor=e,this.table={columns:0,domRows:[],rows:0},this.tableSelection=null,this.anchorCellNodeKey=null,this.focusCellNodeKey=null,this.anchorCell=null,this.focusCell=null,this.hasHijackedSelectionStyles=false,this.isSelecting=false,this.pointerType=null,this.shouldCheckSelection=false,this.abortController=new AbortController,this.listenerOptions={signal:this.abortController.signal},this.nextFocus=null,this.trackTable();}getTable(){return this.table}removeListeners(){this.abortController.abort("removeListeners"),Array.from(this.listenersToRemove).forEach(e=>e()),this.listenersToRemove.clear();}$lookup(){return vt(this.tableNodeKey,this.editor)}trackTable(){const e=new MutationObserver(e=>{this.editor.getEditorState().read(()=>{let t=false;for(let n=0;n<e.length;n++){const o=e[n].target.nodeName;if("TABLE"===o||"TBODY"===o||"THEAD"===o||"TR"===o){t=true;break}}if(!t)return;const{tableNode:n,tableElement:o}=this.$lookup();this.table=Ht(n,o);},{editor:this.editor});});this.editor.getEditorState().read(()=>{const{tableNode:t,tableElement:n}=this.$lookup();this.table=Ht(t,n),e.observe(n,{attributes:true,childList:true,subtree:true});},{editor:this.editor});}$clearHighlight(){const e=this.editor;this.isHighlightingCells=false,this.anchorX=-1,this.anchorY=-1,this.focusX=-1,this.focusY=-1,this.tableSelection=null,this.anchorCellNodeKey=null,this.focusCellNodeKey=null,this.anchorCell=null,this.focusCell=null,this.hasHijackedSelectionStyles=false,this.$enableHighlightStyle();const{tableNode:t,tableElement:n}=this.$lookup();Lt$1(e,Ht(t,n),null),null!==Lr()&&(wo(null),e.dispatchCommand(ie$1,void 0));}$enableHighlightStyle(){const e=this.editor,{tableElement:t}=this.$lookup();ut$3(t,e._config.theme.tableSelection),t.classList.remove("disable-selection"),this.hasHijackedSelectionStyles=false;}$disableHighlightStyle(){const{tableElement:t}=this.$lookup();lt$4(t,this.editor._config.theme.tableSelection),this.hasHijackedSelectionStyles=true;}$updateTableTableSelection(e){if(null!==e){e.tableKey!==this.tableNodeKey&&Ke$1(233,e.tableKey,this.tableNodeKey);const t=this.editor;this.tableSelection=e,this.isHighlightingCells=true,this.$disableHighlightStyle(),this.updateDOMSelection(),Lt$1(t,this.table,this.tableSelection);}else this.$clearHighlight();}setShouldCheckSelection(){this.shouldCheckSelection=true;}getAndClearShouldCheckSelection(){return !!this.shouldCheckSelection&&(this.shouldCheckSelection=false,true)}setNextFocus(e){this.nextFocus=e;}getAndClearNextFocus(){const{nextFocus:e}=this;return null!==e&&(this.nextFocus=null),e}updateDOMSelection(){if(null!==this.anchorCell&&null!==this.focusCell){const e=ps(this.editor._window);e&&e.rangeCount>0&&e.removeAllRanges();}}$setFocusCellForSelection(e,t=false){const n=this.editor,{tableNode:o}=this.$lookup(),r=e.x,l=e.y;if(this.focusCell=e,this.isHighlightingCells||this.anchorX===r&&this.anchorY===l&&!t){if(r===this.focusX&&l===this.focusY)return  false}else this.isHighlightingCells=true,this.$disableHighlightStyle();if(this.focusX=r,this.focusY=l,this.isHighlightingCells){const t=ln(o,e.elem);if(null!=this.tableSelection&&null!=this.anchorCellNodeKey&&null!==t)return this.focusCellNodeKey=t.getKey(),this.tableSelection=yt$1(o,this.$getAnchorTableCellOrThrow(),t),wo(this.tableSelection),n.dispatchCommand(ie$1,void 0),Lt$1(n,this.table,this.tableSelection),true}return  false}$getAnchorTableCell(){return this.anchorCellNodeKey?xo(this.anchorCellNodeKey):null}$getAnchorTableCellOrThrow(){const e=this.$getAnchorTableCell();return null===e&&Ke$1(234),e}$getFocusTableCell(){return this.focusCellNodeKey?xo(this.focusCellNodeKey):null}$getFocusTableCellOrThrow(){const e=this.$getFocusTableCell();return null===e&&Ke$1(235),e}$setAnchorCellForSelection(e){this.isHighlightingCells=false,this.anchorCell=e,this.anchorX=e.x,this.anchorY=e.y;const{tableNode:t}=this.$lookup(),n=ln(t,e.elem);if(null!==n){const e=n.getKey();this.tableSelection=null!=this.tableSelection?this.tableSelection.clone():bt$1(),this.anchorCellNodeKey=e;}}$formatCells(e){const t=Lr();wt$1(t)||Ke$1(236);const n=Ar(),o=n.anchor,r=n.focus,l=t.getNodes().filter(Oe$1);l.length>0||Ke$1(237);const s=l[0].getFirstChild(),i=Ii(s)?s.getFormatFlags(e,null):null;l.forEach(t=>{o.set(t.getKey(),0,"element"),r.set(t.getKey(),t.getChildrenSize(),"element"),n.formatText(e,i);}),wo(t),this.editor.dispatchCommand(ie$1,void 0);}$clearText(){const{editor:e}=this,t=xo(this.tableNodeKey);if(!mn(t))throw new Error("Expected TableNode.");const n=Lr();wt$1(n)||Ke$1(253);const o=n.getNodes().filter(Oe$1),r=t.getFirstChild(),l=t.getLastChild();if(o.length>0&&null!==r&&null!==l&&$e$1(r)&&$e$1(l)&&o[0]===r.getFirstChild()&&o[o.length-1]===l.getLastChild()){t.selectPrevious();const n=t.getParent();return t.remove(),void(bi(n)&&n.isEmpty()&&e.dispatchCommand(ae$1,void 0))}o.forEach(e=>{if(Si(e)){const t=Li(),n=sr();t.append(n),e.append(t),e.getChildren().forEach(e=>{e!==t&&e.remove();});}}),Lt$1(e,this.table,null),wo(null),e.dispatchCommand(ie$1,void 0);}};const Tt$1="__lexicalTableSelection";function Rt$1(e){return Cs(e)&&"TABLE"===e.nodeName}function Ft$1(e,t){if(!t)return t;const n=Rt$1(t)?t:e.getDOMSlot(t).element;return "TABLE"!==n.nodeName&&Ke$1(245,t.nodeName),n}function Ot(e){return e._window}function At$1(e,t){for(let n=t,o=null;null!==n;n=n.getParent()){if(e.is(n))return o;Oe$1(n)&&(o=n);}return null}const Kt=[[Te$2,"down"],[ke$2,"up"],[Se$1,"backward"],[xe$1,"forward"]],Et$1=[he$1,ge$1,le$2],kt$1=[we$1,Oe$2];function Mt$1(e,t,o,l){const s=o.getRootElement(),i=Ot(o);null!==s&&null!==i||Ke$1(246);const c=new xt$1(o,e.getKey()),a=Ft$1(e,t);!function(e,t){null!==$t$1(e)&&Ke$1(205);e[Tt$1]=t;}(a,c),c.listenersToRemove.add(()=>function(e,t){$t$1(e)===t&&delete e[Tt$1];}(a,c));const u=t=>{if(c.pointerType=t.pointerType,0!==t.button||!Ss(t.target)||!i)return;const n=zt$1(t.target);null!==n&&o.update(()=>{const o=Ir();if(He$1&&t.shiftKey&&Xt(o,e)&&(yr(o)||wt$1(o))){const r=o.anchor.getNode(),l=At$1(e,o.anchor.getNode());if(l)c.$setAnchorCellForSelection(rn(c,l)),c.$setFocusCellForSelection(n),tn(t);else {(e.isBefore(r)?e.selectStart():e.selectEnd()).anchor.set(o.anchor.key,o.anchor.offset,o.anchor.type);}}else "touch"!==t.pointerType&&c.$setAnchorCellForSelection(n);}),(()=>{if(c.isSelecting)return;const e=()=>{c.isSelecting=false,i.removeEventListener("pointerup",e),i.removeEventListener("pointermove",t);},t=n=>{if(1&~n.buttons&&c.isSelecting)return c.isSelecting=false,i.removeEventListener("pointerup",e),void i.removeEventListener("pointermove",t);if(!Ss(n.target))return;let r=null;const l=!(He$1||a.contains(n.target));if(l)r=Wt$1(a,n.target);else for(const e of document.elementsFromPoint(n.clientX,n.clientY))if(r=Wt$1(a,e),r)break;!r||null!==c.focusCell&&r.elem===c.focusCell.elem||(c.setNextFocus({focusCell:r,override:l}),o.dispatchCommand(ie$1,void 0));};c.isSelecting=true,i.addEventListener("pointerup",e,c.listenerOptions),i.addEventListener("pointermove",t,c.listenerOptions);})();};a.addEventListener("pointerdown",u,c.listenerOptions),c.listenersToRemove.add(()=>{a.removeEventListener("pointerdown",u);});const h=e=>{if(e.detail>=3&&Ss(e.target)){null!==zt$1(e.target)&&e.preventDefault();}};a.addEventListener("mousedown",h,c.listenerOptions),c.listenersToRemove.add(()=>{a.removeEventListener("mousedown",h);});const d=e=>{const t=e.target;0===e.button&&Ss(t)&&o.update(()=>{const e=Lr();wt$1(e)&&e.tableKey===c.tableNodeKey&&s.contains(t)&&c.$clearHighlight();});};i.addEventListener("pointerdown",d,c.listenerOptions),c.listenersToRemove.add(()=>{i.removeEventListener("pointerdown",d);});for(const[t,n]of Kt)c.listenersToRemove.add(o.registerCommand(t,t=>en(o,t,n,e,c),Bi));c.listenersToRemove.add(o.registerCommand(Ee$2,t=>{const n=Lr();if(wt$1(n)){const o=At$1(e,n.focus.getNode());if(null!==o)return tn(t),o.selectEnd(),true}return  false},Bi));const g=t=>()=>{const o=Lr();if(!Xt(o,e))return  false;if(wt$1(o))return c.$clearText(),true;if(yr(o)){if(!Oe$1(At$1(e,o.anchor.getNode())))return  false;const r=o.anchor.getNode(),l=o.focus.getNode(),s=e.isParentOf(r),i=e.isParentOf(l);if(s&&!i||i&&!s)return c.$clearText(),true;const a=zs(o.anchor.getNode(),e=>Si(e)),u=a&&zs(a,e=>Si(e)&&Oe$1(e.getParent()));if(!Si(u)||!Si(a))return  false;if(t===ge$1&&null===u.getPreviousSibling())return  true}return  false};for(const e of Et$1)c.listenersToRemove.add(o.registerCommand(e,g(e),Bi));const p=t=>{const n=Lr();if(!wt$1(n)&&!yr(n))return  false;const o=e.isParentOf(n.anchor.getNode());if(o!==e.isParentOf(n.focus.getNode())){const t=o?"anchor":"focus",r=o?"focus":"anchor",{key:l,offset:s,type:i}=n[r];return e[n[t].isBefore(n[r])?"selectPrevious":"selectNext"]()[r].set(l,s,i),false}return !!Xt(n,e)&&(!!wt$1(n)&&(t&&(t.preventDefault(),t.stopPropagation()),c.$clearText(),true))};for(const e of kt$1)c.listenersToRemove.add(o.registerCommand(e,p,Bi));return c.listenersToRemove.add(o.registerCommand(Be$2,e=>{const t=Lr();if(t){if(!wt$1(t)&&!yr(t))return  false;F$1(o,Lt$4(e,ClipboardEvent)?e:null,_$1(t));const n=p(e);return yr(t)?(t.removeText(),true):n}return  false},Bi)),c.listenersToRemove.add(o.registerCommand(_e$1,t=>{const o=Lr();if(!Xt(o,e))return  false;if(wt$1(o))return c.$formatCells(t),true;if(yr(o)){const e=zs(o.anchor.getNode(),e=>Oe$1(e));if(!Oe$1(e))return  false}return  false},Bi)),c.listenersToRemove.add(o.registerCommand(Le$2,t=>{const n=Lr();if(!wt$1(n)||!Xt(n,e))return  false;const o=n.anchor.getNode(),r=n.focus.getNode();if(!Oe$1(o)||!Oe$1(r))return  false;if(function(e,t){if(wt$1(e)){const n=e.anchor.getNode(),o=e.focus.getNode();if(t&&n&&o){const[e]=ft(t,n,o);return n.getKey()===e[0][0].cell.getKey()&&o.getKey()===e[e.length-1].at(-1).cell.getKey()}}return  false}(n,e))return e.setFormat(t),true;const[l,s,i]=ft(e,o,r),c=Math.max(s.startRow+s.cell.__rowSpan-1,i.startRow+i.cell.__rowSpan-1),a=Math.max(s.startColumn+s.cell.__colSpan-1,i.startColumn+i.cell.__colSpan-1),u=Math.min(s.startRow,i.startRow),h=Math.min(s.startColumn,i.startColumn),d=new Set;for(let e=u;e<=c;e++)for(let n=h;n<=a;n++){const o=l[e][n].cell;if(d.has(o))continue;d.add(o),o.setFormat(t);const r=o.getChildren();for(let e=0;e<r.length;e++){const n=r[e];Si(n)&&!n.isInline()&&n.setFormat(t);}}return  true},Bi)),c.listenersToRemove.add(o.registerCommand(ue$1,t=>{const r=Lr();if(!Xt(r,e))return  false;if(wt$1(r))return c.$clearHighlight(),false;if(yr(r)){const l=zs(r.anchor.getNode(),e=>Oe$1(e));if(!Oe$1(l))return  false;if("string"==typeof t){const n=on(o,r,e);if(n)return nn(n,e,[sr(t)]),true}}return  false},Bi)),l&&c.listenersToRemove.add(o.registerCommand(Me$2,t=>{const o=Lr();if(!yr(o)||!o.isCollapsed()||!Xt(o,e))return  false;const r=Gt(o.anchor.getNode());return !(null===r||!e.is(Qt(r)))&&(tn(t),function(e,t){const o="next"===t?"getNextSibling":"getPreviousSibling",r="next"===t?"getFirstChild":"getLastChild",l=e[o]();if(Si(l))return l.selectEnd();const s=zs(e,$e$1);null===s&&Ke$1(247);for(let e=s[o]();$e$1(e);e=e[o]()){const t=e[r]();if(Si(t))return t.selectEnd()}const i=zs(s,mn);null===i&&Ke$1(248);"next"===t?i.selectNext():i.selectPrevious();}(r,t.shiftKey?"previous":"next"),true)},Bi)),c.listenersToRemove.add(o.registerCommand(Ve$1,t=>e.isSelected(),Bi)),c.listenersToRemove.add(o.registerCommand(oe$2,(e,t)=>{if(o!==t)return  false;const{nodes:r,selection:l}=e,s=l.getStartEndPoints(),i=wt$1(l),c=yr(l)&&null!==zs(l.anchor.getNode(),e=>Oe$1(e))&&null!==zs(l.focus.getNode(),e=>Oe$1(e))||i;if(1!==r.length||!mn(r[0])||!c||null===s)return  false;const[a,u]=s,[h,d,g]=mt$1(a),p=zs(u.getNode(),e=>Oe$1(e));if(!(Oe$1(h)&&Oe$1(p)&&$e$1(d)&&mn(g)))return  false;const C=r[0],[_,S,b]=ft(g,h,p),[y]=gt(C,null,null),N=_.length,v=N>0?_[0].length:0;let x=S.startRow,T=S.startColumn,R=y.length,F=R>0?y[0].length:0;if(i){const e=pt(_,S,b),t=e.maxRow-e.minRow+1,n=e.maxColumn-e.minColumn+1;x=e.minRow,T=e.minColumn,R=Math.min(R,t),F=Math.min(F,n);}let O=false;const A=Math.min(N,x+R)-1,K=Math.min(v,T+F)-1,E=new Set;for(let e=x;e<=A;e++)for(let t=T;t<=K;t++){const n=_[e][t];E.has(n.cell.getKey())||(1===n.cell.__rowSpan&&1===n.cell.__colSpan||(dt(n.cell),E.add(n.cell.getKey()),O=true));}let[k]=gt(g.getWritable(),null,null);const M=R-N+x;for(let e=0;e<M;e++){Ge$1(k[N-1][0].cell);}const $=F-v+T;for(let e=0;e<$;e++){tt(k[0][v-1].cell,true,false);}[k]=gt(g.getWritable(),null,null);for(let e=x;e<x+R;e++)for(let t=T;t<T+F;t++){const n=e-x,o=t-T,r=y[n][o];if(r.startRow!==n||r.startColumn!==o)continue;const l=r.cell;if(1!==l.__rowSpan||1!==l.__colSpan){const n=[],o=Math.min(e+l.__rowSpan,x+R)-1,r=Math.min(t+l.__colSpan,T+F)-1;for(let l=e;l<=o;l++)for(let e=t;e<=r;e++){const t=k[l][e];n.push(t.cell);}at(n),O=true;}const{cell:s}=k[e][t],i=s.getChildren();l.getChildren().forEach(e=>{if(lr(e)){Li().append(e),s.append(e);}else s.append(e);}),i.forEach(e=>e.remove());}if(i&&O){const[e]=gt(g.getWritable(),null,null);e[S.startRow][S.startColumn].cell.selectEnd();}return  true},Bi)),c.listenersToRemove.add(o.registerCommand(ie$1,()=>{const t=Lr(),r=Ir(),l=c.getAndClearNextFocus();if(null!==l){const{focusCell:n}=l;if(wt$1(t)&&t.tableKey===c.tableNodeKey)return (n.x!==c.focusX||n.y!==c.focusY)&&(c.$setFocusCellForSelection(n),true);if(n!==c.anchorCell&&Xt(t,e))return c.$setFocusCellForSelection(n),true}if(c.getAndClearShouldCheckSelection()&&yr(r)&&yr(t)&&t.isCollapsed()){const o=t.anchor.getNode(),r=e.getFirstChild(),l=Gt(o);if(null!==l&&$e$1(r)){const t=r.getFirstChild();if(Oe$1(t)&&e.is(zs(l,n=>n.is(e)||n.is(t))))return t.selectStart(),true}}if(yr(t)){const{anchor:n,focus:l}=t,s=n.getNode(),i=l.getNode(),a=Gt(s),u=Gt(i),h=!(!a||!e.is(Qt(a))),d=!(!u||!e.is(Qt(u))),f=h!==d,g=h&&d,m=t.isBackward();if(f){const n=t.clone();if(d){const[t]=ft(e,u,u),o=t[0][0].cell,r=t[t.length-1].at(-1).cell;n.focus.set(m?o.getKey():r.getKey(),m?o.getChildrenSize():r.getChildrenSize(),"element");}else if(h){const[t]=ft(e,a,a),o=t[0][0].cell,r=t[t.length-1].at(-1).cell;n.anchor.set(m?r.getKey():o.getKey(),m?r.getChildrenSize():0,"element");}wo(n),Pt$1(o,c);}else if(g&&(a.is(u)||(c.$setAnchorCellForSelection(rn(c,a)),c.$setFocusCellForSelection(rn(c,u),true)),"touch"===c.pointerType&&c.isSelecting&&t.isCollapsed()&&yr(r)&&r.isCollapsed())){const e=Gt(r.anchor.getNode());e&&!e.is(u)&&(c.$setAnchorCellForSelection(rn(c,e)),c.$setFocusCellForSelection(rn(c,u),true),c.pointerType=null);}}else if(t&&wt$1(t)&&t.is(r)&&t.tableKey===e.getKey()){const n=ps(i);if(n&&n.anchorNode&&n.focusNode){const r=vo(n.focusNode),l=r&&!e.isParentOf(r),s=vo(n.anchorNode),i=s&&e.isParentOf(s);if(l&&i&&n.rangeCount>0){const r=Dr(n,o);r&&(r.anchor.set(e.getKey(),t.isBackward()?e.getChildrenSize():0,"element"),n.removeAllRanges(),wo(r));}}}return t&&!t.is(r)&&(wt$1(t)||wt$1(r))&&c.tableSelection&&!c.tableSelection.is(r)?(wt$1(t)&&t.tableKey===c.tableNodeKey?c.$updateTableTableSelection(t):!wt$1(t)&&wt$1(r)&&r.tableKey===c.tableNodeKey&&c.$updateTableTableSelection(null),false):(c.hasHijackedSelectionStyles&&!e.isSelected()?function(e,t){t.$enableHighlightStyle(),Bt$1(t.table,t=>{const n=t.elem;t.highlighted=false,Vt(e,t),n.getAttribute("style")||n.removeAttribute("style");});}(o,c):!c.hasHijackedSelectionStyles&&e.isSelected()&&Pt$1(o,c),false)},Bi)),c.listenersToRemove.add(o.registerCommand(ae$1,()=>{const t=Lr();if(!yr(t)||!t.isCollapsed()||!Xt(t,e))return  false;const n=on(o,t,e);return !!n&&(nn(n,e),true)},Bi)),c}function $t$1(e){return e[Tt$1]||null}function zt$1(e){let t=e;for(;null!=t;){const e=t.nodeName;if("TD"===e||"TH"===e){const e=t._cell;return void 0===e?null:e}t=t.parentNode;}return null}function Wt$1(e,t){if(!e.contains(t))return null;let n=null;for(let o=t;null!=o;o=o.parentNode){if(o===e)return n;const t=o.nodeName;"TD"!==t&&"TH"!==t||(n=o._cell||null);}return null}function Ht(e,t){const n=[],o={columns:0,domRows:n,rows:0};let r=Ft$1(e,t).querySelector("tr"),l=0,s=0;for(n.length=0;null!=r;){const e=r.nodeName;if("TD"===e||"TH"===e){const e={elem:r,hasBackgroundColor:""!==r.style.backgroundColor,highlighted:false,x:l,y:s};r._cell=e;let t=n[s];void 0===t&&(t=n[s]=[]),t[l]=e;}else {const e=r.firstChild;if(null!=e){r=e;continue}}const t=r.nextSibling;if(null!=t){l++,r=t;continue}const o=r.parentNode;if(null!=o){const e=o.nextSibling;if(null==e)break;s++,l=0,r=e;}}return o.columns=l+1,o.rows=s+1,o}function Lt$1(e,t,n){const o=new Set(n?n.getNodes():[]);Bt$1(t,(t,n)=>{const r=t.elem;o.has(n)?(t.highlighted=true,jt$1(e,t)):(t.highlighted=false,Vt(e,t),r.getAttribute("style")||r.removeAttribute("style"));});}function Bt$1(e,t){const{domRows:n}=e;for(let e=0;e<n.length;e++){const o=n[e];if(o)for(let n=0;n<o.length;n++){const r=o[n];if(!r)continue;const l=vo(r.elem);null!==l&&t(r,l,{x:n,y:e});}}}function Pt$1(e,t){t.$disableHighlightStyle(),Bt$1(t.table,t=>{t.highlighted=true,jt$1(e,t);});}const Dt$1=(e,t,n,o,r)=>{const l="forward"===r;switch(r){case "backward":case "forward":return n!==(l?e.table.columns-1:0)?qt(t.getCellNodeFromCordsOrThrow(n+(l?1:-1),o,e.table),l):o!==(l?e.table.rows-1:0)?qt(t.getCellNodeFromCordsOrThrow(l?0:e.table.columns-1,o+(l?1:-1),e.table),l):l?t.selectNext():t.selectPrevious(),true;case "up":return 0!==o?qt(t.getCellNodeFromCordsOrThrow(n,o-1,e.table),false):t.selectPrevious(),true;case "down":return o!==e.table.rows-1?qt(t.getCellNodeFromCordsOrThrow(n,o+1,e.table),true):t.selectNext(),true;default:return  false}};function It$1(e,t){let n,o;if(t.startColumn===e.minColumn)n="minColumn";else {if(t.startColumn+t.cell.__colSpan-1!==e.maxColumn)return null;n="maxColumn";}if(t.startRow===e.minRow)o="minRow";else {if(t.startRow+t.cell.__rowSpan-1!==e.maxRow)return null;o="maxRow";}return [n,o]}function Ut$1([e,t]){return ["minColumn"===e?"maxColumn":"minColumn","minRow"===t?"maxRow":"minRow"]}function Jt(e,t,[n,o]){const r=t[o],l=e[r];void 0===l&&Ke$1(250,o,String(r));const s=t[n],i=l[s];return void 0===i&&Ke$1(250,n,String(s)),i}function Yt(e,t,n,o,r){const l=pt(t,n,o),s=function(e,t){const{minColumn:n,maxColumn:o,minRow:r,maxRow:l}=t;let s=1,i=1,c=1,a=1;const u=e[r],h=e[l];for(let e=n;e<=o;e++)s=Math.max(s,u[e].cell.__rowSpan),a=Math.max(a,h[e].cell.__rowSpan);for(let t=r;t<=l;t++)i=Math.max(i,e[t][n].cell.__colSpan),c=Math.max(c,e[t][o].cell.__colSpan);return {bottomSpan:a,leftSpan:i,rightSpan:c,topSpan:s}}(t,l),{topSpan:i,leftSpan:c,bottomSpan:a,rightSpan:u}=s,h=function(e,t){const n=It$1(e,t);return null===n&&Ke$1(249,t.cell.getKey()),n}(l,n),[d,f]=Ut$1(h);let g=l[d],m=l[f];"forward"===r?g+="maxColumn"===d?1:c:"backward"===r?g-="minColumn"===d?1:u:"down"===r?m+="maxRow"===f?1:i:"up"===r&&(m-="minRow"===f?1:a);const p=t[m];if(void 0===p)return  false;const C=p[g];if(void 0===C)return  false;const[_,S]=function(e,t,n){const o=pt(e,t,n),r=It$1(o,t);if(r)return [Jt(e,o,r),Jt(e,o,Ut$1(r))];const l=It$1(o,n);if(l)return [Jt(e,o,Ut$1(l)),Jt(e,o,l)];const s=["minColumn","minRow"];return [Jt(e,o,s),Jt(e,o,Ut$1(s))]}(t,n,C),w=rn(e,_.cell),b=rn(e,S.cell);return e.$setAnchorCellForSelection(w),e.$setFocusCellForSelection(b,true),true}function Xt(e,t){if(yr(e)||wt$1(e)){const n=t.isParentOf(e.anchor.getNode()),o=t.isParentOf(e.focus.getNode());return n&&o}return  false}function qt(e,t){t?e.selectStart():e.selectEnd();}function jt$1(t,n){const o=n.elem,r=t._config.theme;Oe$1(vo(o))||Ke$1(131),lt$4(o,r.tableCellSelected);}function Vt(e,t){const n=t.elem;Oe$1(vo(n))||Ke$1(131);const r=e._config.theme;ut$3(n,r.tableCellSelected);}function Gt(e){const t=zs(e,Oe$1);return Oe$1(t)?t:null}function Qt(e){const t=zs(e,mn);return mn(t)?t:null}function Zt(e,t,o,r,l,s,i){const c=xl(o.focus,l?"previous":"next");if(Ol(c))return  false;let a=c;for(const e of ul(c).iterNodeCarets("shadowRoot")){if(!Hs(e)||!Si(e.origin))return  false;a=e;}const u=a.getParentAtCaret();if(!Oe$1(u))return  false;const h=u,d=function(e){for(const t of ul(e).iterNodeCarets("root")){const{origin:n}=t;if(Oe$1(n)){if(Gs(t))return il(n,e.direction)}else if(!$e$1(n))break}return null}(tl(h,a.direction)),f=zs(h,mn);if(!f||!f.is(s))return  false;const g=e.getElementByKey(h.getKey()),m=zt$1(g);if(!g||!m)return  false;const p=dn(e,f);if(i.table=p,d)if("extend"===r){const t=zt$1(e.getElementByKey(d.origin.getKey()));if(!t)return  false;i.$setAnchorCellForSelection(m),i.$setFocusCellForSelection(t,true);}else {const e=El(d);Cl(o.anchor,e),Cl(o.focus,e);}else if("extend"===r)i.$setAnchorCellForSelection(m),i.$setFocusCellForSelection(m,true);else {const e=function(e){const t=sl(e);return Gs(t)?El(t):e}(tl(f,c.direction));Cl(o.anchor,e),Cl(o.focus,e);}return tn(t),true}function en(e,t,o,r,l){if(("up"===o||"down"===o)&&function(e){const t=e.getRootElement();if(!t)return  false;return t.hasAttribute("aria-controls")&&"typeahead-menu"===t.getAttribute("aria-controls")}(e))return  false;const s=Lr();if(!Xt(s,r)){if(yr(s)){if("backward"===o){if(s.focus.offset>0)return  false;const e=function(e){for(let t=e,n=e;null!==n;t=n,n=n.getParent())if(Si(n)){if(n!==t&&n.getFirstChild()!==t)return null;if(!n.isInline())return n}return null}(s.focus.getNode());if(!e)return  false;const n=e.getPreviousSibling();return !!mn(n)&&(tn(t),t.shiftKey?s.focus.set(n.getParentOrThrow().getKey(),n.getIndexWithinParent(),"element"):n.selectEnd(),true)}if(t.shiftKey&&("up"===o||"down"===o)){const e=s.focus.getNode();if(!s.isCollapsed()&&("up"===o&&!s.isBackward()||"down"===o&&s.isBackward())){let l=zs(e,e=>mn(e));if(Oe$1(l)&&(l=zs(l,mn)),l!==r)return  false;if(!l)return  false;const i="down"===o?l.getNextSibling():l.getPreviousSibling();if(!i)return  false;let c=0;"up"===o&&Si(i)&&(c=i.getChildrenSize());let a=i;if("up"===o&&Si(i)){const e=i.getLastChild();a=e||i,c=lr(a)?a.getTextContentSize():0;}const u=s.clone();return u.focus.set(a.getKey(),c,lr(a)?"text":"element"),wo(u),tn(t),true}if(as(e)){const e="up"===o?s.getNodes()[s.getNodes().length-1]:s.getNodes()[0];if(e){if(null!==At$1(r,e)){const e=r.getFirstDescendant(),t=r.getLastDescendant();if(!e||!t)return  false;const[n]=mt$1(e),[o]=mt$1(t),s=r.getCordsFromCellNode(n,l.table),i=r.getCordsFromCellNode(o,l.table),c=r.getDOMCellFromCordsOrThrow(s.x,s.y,l.table),a=r.getDOMCellFromCordsOrThrow(i.x,i.y,l.table);return l.$setAnchorCellForSelection(c),l.$setFocusCellForSelection(a,true),true}}return  false}{let r=zs(e,e=>Si(e)&&!e.isInline());if(Oe$1(r)&&(r=zs(r,mn)),!r)return  false;const i="down"===o?r.getNextSibling():r.getPreviousSibling();if(mn(i)&&l.tableNodeKey===i.getKey()){const e=i.getFirstDescendant(),n=i.getLastDescendant();if(!e||!n)return  false;const[r]=mt$1(e),[l]=mt$1(n),c=s.clone();return c.focus.set(("up"===o?r:l).getKey(),"up"===o?0:l.getChildrenSize(),"element"),tn(t),wo(c),true}}}}return "down"===o&&an(e)&&l.setShouldCheckSelection(),false}if(yr(s)){if("backward"===o||"forward"===o){return Zt(e,t,s,t.shiftKey?"extend":"move","backward"===o,r,l)}if(s.isCollapsed()){const{anchor:i,focus:c}=s,a=zs(i.getNode(),Oe$1),u=zs(c.getNode(),Oe$1);if(!Oe$1(a)||!a.is(u))return  false;const h=Qt(a);if(h!==r&&null!=h){const n=Ft$1(h,e.getElementByKey(h.getKey()));if(null!=n)return l.table=Ht(h,n),en(e,t,o,h,l)}const d=e.getElementByKey(a.__key),f=e.getElementByKey(i.key);if(null==f||null==d)return  false;let g;if("element"===i.type)g=f.getBoundingClientRect();else {const t=ps(Ot(e));if(null===t||0===t.rangeCount)return  false;g=t.getRangeAt(0).getBoundingClientRect();}const m="up"===o?a.getFirstChild():a.getLastChild();if(null==m)return  false;const p=e.getElementByKey(m.__key);if(null==p)return  false;const C=p.getBoundingClientRect();if("up"===o?C.top>g.top-g.height:g.bottom+g.height>C.bottom){tn(t);const e=r.getCordsFromCellNode(a,l.table);if(!t.shiftKey)return Dt$1(l,r,e.x,e.y,o);{const t=r.getDOMCellFromCordsOrThrow(e.x,e.y,l.table);l.$setAnchorCellForSelection(t),l.$setFocusCellForSelection(t,true);}return  true}}}else if(wt$1(s)){const{anchor:i,focus:c}=s,a=zs(i.getNode(),Oe$1),u=zs(c.getNode(),Oe$1),[h]=s.getNodes();mn(h)||Ke$1(251);const d=Ft$1(h,e.getElementByKey(h.getKey()));if(!Oe$1(a)||!Oe$1(u)||!mn(h)||null==d)return  false;l.$updateTableTableSelection(s);const f=Ht(h,d),g=r.getCordsFromCellNode(a,f),m=r.getDOMCellFromCordsOrThrow(g.x,g.y,f);if(l.$setAnchorCellForSelection(m),tn(t),t.shiftKey){const[e,t,n]=ft(r,a,u);return Yt(l,e,t,n,o)}return u.selectEnd(),true}return  false}function tn(e){e.preventDefault(),e.stopImmediatePropagation(),e.stopPropagation();}function nn(e,t,n){const o=Li();"first"===e?t.insertBefore(o):t.insertAfter(o),o.append(...n||[]),o.selectEnd();}function on(e,t,o){const r=o.getParent();if(!r)return;const l=ps(Ot(e));if(!l)return;const s=l.anchorNode,i=e.getElementByKey(r.getKey()),c=Ft$1(o,e.getElementByKey(o.getKey()));if(!s||!i||!c||!i.contains(s)||c.contains(s))return;const a=zs(t.anchor.getNode(),e=>Oe$1(e));if(!a)return;const u=zs(a,e=>mn(e));if(!mn(u)||!u.is(o))return;const[h,d]=ft(o,a,a),f=h[0][0],g=h[h.length-1][h[0].length-1],{startRow:m,startColumn:p}=d,C=m===f.startRow&&p===f.startColumn,_=m===g.startRow&&p===g.startColumn;return C?"first":_?"last":void 0}function rn(e,t){const{tableNode:n}=e.$lookup(),o=n.getCordsFromCellNode(t,e.table);return n.getDOMCellFromCordsOrThrow(o.x,o.y,e.table)}function ln(e,t,n){return At$1(e,vo(t,n))}function sn(t,n,r){if(!n.theme.tableAlignment)return;const l=[],s=[];for(const e of ["center","right"]){const t=n.theme.tableAlignment[e];t&&(e===r?s:l).push(t);}ut$3(t,...l),lt$4(t,...s);}const cn=new WeakSet;function an(e=bs()){return cn.has(e)}function un(e,t){cn.add(e);}class hn extends Ci{__rowStriping;__frozenColumnCount;__frozenRowCount;__colWidths;static getType(){return "table"}getColWidths(){return this.getLatest().__colWidths}setColWidths(e){const t=this.getWritable();return t.__colWidths=e,t}static clone(e){return new hn(e.__key)}afterCloneFrom(e){super.afterCloneFrom(e),this.__colWidths=e.__colWidths,this.__rowStriping=e.__rowStriping,this.__frozenColumnCount=e.__frozenColumnCount,this.__frozenRowCount=e.__frozenRowCount;}static importDOM(){return {table:e=>({conversion:fn,priority:1})}}static importJSON(e){return gn().updateFromJSON(e)}updateFromJSON(e){return super.updateFromJSON(e).setRowStriping(e.rowStriping||false).setFrozenColumns(e.frozenColumnCount||0).setFrozenRows(e.frozenRowCount||0).setColWidths(e.colWidths)}constructor(e){super(e),this.__rowStriping=false,this.__frozenColumnCount=0,this.__frozenRowCount=0,this.__colWidths=void 0;}exportJSON(){return {...super.exportJSON(),colWidths:this.getColWidths(),frozenColumnCount:this.__frozenColumnCount?this.__frozenColumnCount:void 0,frozenRowCount:this.__frozenRowCount?this.__frozenRowCount:void 0,rowStriping:this.__rowStriping?this.__rowStriping:void 0}}extractWithChild(e,t,n){return "html"===n}getDOMSlot(e){const t=Rt$1(e)?e:e.querySelector("table");return Rt$1(t)||Ke$1(229),super.getDOMSlot(e).withElement(t).withAfter(t.querySelector("colgroup"))}createDOM(t,n){const o=document.createElement("table");this.__style&&(o.style.cssText=this.__style);const r=document.createElement("colgroup");if(o.appendChild(r),Ds(r),lt$4(o,t.theme.table),this.updateTableElement(null,o,t),an(n)){const n=document.createElement("div"),r=t.theme.tableScrollableWrapper;return r?lt$4(n,r):n.style.cssText="overflow-x: auto;",n.appendChild(o),this.updateTableWrapper(null,n,o,t),n}return o}updateTableWrapper(t,n,r,l){this.__frozenColumnCount!==(t?t.__frozenColumnCount:0)&&function(t,n,r,l){l>0?(lt$4(t,r.theme.tableFrozenColumn),n.setAttribute("data-lexical-frozen-column","true")):(ut$3(t,r.theme.tableFrozenColumn),n.removeAttribute("data-lexical-frozen-column"));}(n,r,l,this.__frozenColumnCount),this.__frozenRowCount!==(t?t.__frozenRowCount:0)&&function(t,n,r,l){l>0?(lt$4(t,r.theme.tableFrozenRow),n.setAttribute("data-lexical-frozen-row","true")):(ut$3(t,r.theme.tableFrozenRow),n.removeAttribute("data-lexical-frozen-row"));}(n,r,l,this.__frozenRowCount);}updateTableElement(t,n,r){this.__style!==(t?t.__style:"")&&(n.style.cssText=this.__style),this.__rowStriping!==(!!t&&t.__rowStriping)&&function(t,n,r){r?(lt$4(t,n.theme.tableRowStriping),t.setAttribute("data-lexical-row-striping","true")):(ut$3(t,n.theme.tableRowStriping),t.removeAttribute("data-lexical-row-striping"));}(n,r,this.__rowStriping),function(e,t,n,o){const r=e.querySelector("colgroup");if(!r)return;const l=[];for(let e=0;e<n;e++){const t=document.createElement("col"),n=o&&o[e];n&&(t.style.width=`${n}px`),l.push(t);}r.replaceChildren(...l);}(n,0,this.getColumnCount(),this.getColWidths()),sn(n,r,this.getFormatType());}updateDOM(e,t,n){const o=this.getDOMSlot(t).element;return t===o===an()||(Cs(r=t)&&"DIV"===r.nodeName&&this.updateTableWrapper(e,t,o,n),this.updateTableElement(e,o,n),false);var r;}exportDOM(e){const t=super.exportDOM(e),{element:n}=t;return {after:n=>{if(t.after&&(n=t.after(n)),!Rt$1(n)&&Cs(n)&&(n=n.querySelector("table")),!Rt$1(n))return null;sn(n,e._config,this.getFormatType());const[o]=gt(this,null,null),r=new Map;for(const e of o)for(const t of e){const e=t.cell.getKey();r.has(e)||r.set(e,{colSpan:t.cell.getColSpan(),startColumn:t.startColumn});}const s=new Set;for(const e of n.querySelectorAll(":scope > tr > [data-temporary-table-cell-lexical-key]")){const t=e.getAttribute("data-temporary-table-cell-lexical-key");if(t){const n=r.get(t);if(e.removeAttribute("data-temporary-table-cell-lexical-key"),n){r.delete(t);for(let e=0;e<n.colSpan;e++)s.add(e+n.startColumn);}}}const i=n.querySelector(":scope > colgroup");if(i){const e=Array.from(n.querySelectorAll(":scope > colgroup > col")).filter((e,t)=>s.has(t));i.replaceChildren(...e);}const c=n.querySelectorAll(":scope > tr");if(c.length>0){const e=document.createElement("tbody");for(const t of c)e.appendChild(t);n.append(e);}return n},element:!Rt$1(n)&&Cs(n)?n.querySelector("table"):n}}canBeEmpty(){return  false}isShadowRoot(){return  true}getCordsFromCellNode(e,t){const{rows:n,domRows:o}=t;for(let t=0;t<n;t++){const n=o[t];if(null!=n)for(let o=0;o<n.length;o++){const r=n[o];if(null==r)continue;const{elem:l}=r,s=ln(this,l);if(null!==s&&e.is(s))return {x:o,y:t}}}throw new Error("Cell not found in table.")}getDOMCellFromCords(e,t,n){const{domRows:o}=n,r=o[t];if(null==r)return null;const l=r[e<r.length?e:r.length-1];return null==l?null:l}getDOMCellFromCordsOrThrow(e,t,n){const o=this.getDOMCellFromCords(e,t,n);if(!o)throw new Error("Cell not found at cords.");return o}getCellNodeFromCords(e,t,n){const o=this.getDOMCellFromCords(e,t,n);if(null==o)return null;const r=vo(o.elem);return Oe$1(r)?r:null}getCellNodeFromCordsOrThrow(e,t,n){const o=this.getCellNodeFromCords(e,t,n);if(!o)throw new Error("Node at cords not TableCellNode.");return o}getRowStriping(){return Boolean(this.getLatest().__rowStriping)}setRowStriping(e){const t=this.getWritable();return t.__rowStriping=e,t}setFrozenColumns(e){const t=this.getWritable();return t.__frozenColumnCount=e,t}getFrozenColumns(){return this.getLatest().__frozenColumnCount}setFrozenRows(e){const t=this.getWritable();return t.__frozenRowCount=e,t}getFrozenRows(){return this.getLatest().__frozenRowCount}canSelectBefore(){return  true}canIndent(){return  false}getColumnCount(){const e=this.getFirstChild();if(!e)return 0;let t=0;return e.getChildren().forEach(e=>{Oe$1(e)&&(t+=e.getColSpan());}),t}}function dn(e,t){const n=e.getElementByKey(t.getKey());return null===n&&Ke$1(230),Ht(t,n)}function fn(e){const n=gn();e.hasAttribute("data-lexical-row-striping")&&n.setRowStriping(true),e.hasAttribute("data-lexical-frozen-column")&&n.setFrozenColumns(1),e.hasAttribute("data-lexical-frozen-row")&&n.setFrozenRows(1);const o=e.querySelector(":scope > colgroup");if(o){let e=[];for(const t of o.querySelectorAll(":scope > col")){let n=t.style.width||"";if(!Ne$1.test(n)&&(n=t.getAttribute("width")||"",!/^\d+$/.test(n))){e=void 0;break}e.push(parseFloat(n));}e&&n.setColWidths(e);}return {after:e=>kt$6(e,$e$1),node:n}}function gn(){return fs(new hn)}function mn(e){return e instanceof hn}function pn({rows:e,columns:t,includeHeaders:n}){const o=Lr()||Ir();if(!o||!yr(o))return  false;if(Qt(o.anchor.getNode()))return  false;const r=Le$1(Number(e),Number(t),n);At$5(r);const l=r.getFirstDescendant();return lr(l)&&l.select(),true}function Cn(e){$e$1(e.getParent())?e.isEmpty()&&e.append(Li()):e.remove();}function _n(e){mn(e.getParent())?Bt$3(e,Oe$1):e.remove();}function Sn(e){Bt$3(e,$e$1);const[t]=gt(e,null,null),n=t.reduce((e,t)=>Math.max(e,t.length),0),o=e.getChildren();for(let e=0;e<t.length;++e){const r=o[e];if(!r)continue;$e$1(r)||Ke$1(254,r.constructor.name,r.getType());const l=t[e].reduce((e,t)=>t?1+e:e,0);if(l!==n)for(let e=l;e<n;++e){const e=Fe$1();e.append(Li()),r.append(e);}}}function wn(e){if(e.detail<3||!Ss(e.target))return  false;const t=vo(e.target);if(null===t)return  false;const o=zs(t,e=>Si(e)&&!e.isInline());if(null===o)return  false;return !!Oe$1(o.getParent())&&(o.select(0),true)}function yn(e,t=true){const n=new Map,o=(o,r,l)=>{const s=Ft$1(o,l),i=Mt$1(o,s,e,t);n.set(r,[i,s]);},r=e.registerMutationListener(hn,t=>{e.getEditorState().read(()=>{for(const[e,r]of t){const t=n.get(e);if("created"===r||"updated"===r){const{tableNode:r,tableElement:l}=vt(e);void 0===t?o(r,e,l):l!==t[1]&&(t[0].removeListeners(),n.delete(e),o(r,e,l));}else "destroyed"===r&&void 0!==t&&(t[0].removeListeners(),n.delete(e));}},{editor:e});},{skipInitialization:false});return ()=>{r();for(const[,[e]]of n)e.removeListeners();}}function Nn(e){return e.hasNodes([hn])||Ke$1(255),U$4(e.registerCommand(Ae$1,pn,Ki),e.registerCommand(oe$2,({nodes:t,selection:n},o)=>{if(e!==o||!yr(n))return  false;return null!==Qt(n.anchor.getNode())&&t.some(mn)},Ki),e.registerCommand(se$1,wn,Ki),e.registerNodeTransform(hn,Sn),e.registerNodeTransform(Ee$1,_n),e.registerNodeTransform(xe,Cn))}
+const R=new Set(["http:","https:","mailto:","sms:","tel:"]);let y$1 = class y extends Ci{__url;__target;__rel;__title;static getType(){return "link"}static clone(t){return new y(t.__url,{rel:t.__rel,target:t.__target,title:t.__title},t.__key)}constructor(t="",e={},n){super(n);const{target:r=null,rel:i=null,title:l=null}=e;this.__url=t,this.__target=r,this.__rel=i,this.__title=l;}createDOM(e){const n=document.createElement("a");return this.updateLinkDOM(null,n,e),lt$3(n,e.theme.link),n}updateLinkDOM(t,n,r){if(xs(n)){t&&t.__url===this.__url||(n.href=this.sanitizeUrl(this.__url));for(const e of ["target","rel","title"]){const r=`__${e}`,i=this[r];t&&t[r]===i||(i?n[e]=i:n.removeAttribute(e));}}}updateDOM(t,e,n){return this.updateLinkDOM(t,e,n),false}static importDOM(){return {a:t=>({conversion:N$1,priority:1})}}static importJSON(t){return D$1().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setURL(t.url).setRel(t.rel||null).setTarget(t.target||null).setTitle(t.title||null)}sanitizeUrl(t){t=W$2(t);try{const e=new URL(W$2(t));if(!R.has(e.protocol))return "about:blank"}catch(e){return t}return t}exportJSON(){return {...super.exportJSON(),rel:this.getRel(),target:this.getTarget(),title:this.getTitle(),url:this.getURL()}}getURL(){return this.getLatest().__url}setURL(t){const e=this.getWritable();return e.__url=t,e}getTarget(){return this.getLatest().__target}setTarget(t){const e=this.getWritable();return e.__target=t,e}getRel(){return this.getLatest().__rel}setRel(t){const e=this.getWritable();return e.__rel=t,e}getTitle(){return this.getLatest().__title}setTitle(t){const e=this.getWritable();return e.__title=t,e}insertNewAfter(t,e=true){const n=D$1(this.__url,{rel:this.__rel,target:this.__target,title:this.__title});return this.insertAfter(n,e),n}canInsertTextBefore(){return  false}canInsertTextAfter(){return  false}canBeEmpty(){return  false}isInline(){return  true}extractWithChild(t,e,n){if(!yr(e))return  false;const r=e.anchor.getNode(),i=e.focus.getNode();return this.isParentOf(r)&&this.isParentOf(i)&&e.getTextContent().length>0}isEmailURI(){return this.__url.startsWith("mailto:")}isWebSiteURI(){return this.__url.startsWith("https://")||this.__url.startsWith("http://")}};function N$1(t){let n=null;if(xs(t)){const e=t.textContent;(null!==e&&""!==e||t.children.length>0)&&(n=D$1(t.getAttribute("href")||"",{rel:t.getAttribute("rel"),target:t.getAttribute("target"),title:t.getAttribute("title")}));}return {node:n}}function D$1(t="",e){return fs(new y$1(t,e))}function w$2(t){return t instanceof y$1}class A extends y$1{__isUnlinked;constructor(t="",e={},n){super(t,e,n),this.__isUnlinked=void 0!==e.isUnlinked&&null!==e.isUnlinked&&e.isUnlinked;}static getType(){return "autolink"}static clone(t){return new A(t.__url,{isUnlinked:t.__isUnlinked,rel:t.__rel,target:t.__target,title:t.__title},t.__key)}getIsUnlinked(){return this.__isUnlinked}setIsUnlinked(t){const e=this.getWritable();return e.__isUnlinked=t,e}createDOM(t){return this.__isUnlinked?document.createElement("span"):super.createDOM(t)}updateDOM(t,e,n){return super.updateDOM(t,e,n)||t.__isUnlinked!==this.__isUnlinked}static importJSON(t){return I$1().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setIsUnlinked(t.isUnlinked||false)}static importDOM(){return null}exportJSON(){return {...super.exportJSON(),isUnlinked:this.__isUnlinked}}insertNewAfter(t,e=true){const n=this.getParentOrThrow().insertNewAfter(t,e);if(Si(n)){const t=I$1(this.__url,{isUnlinked:this.__isUnlinked,rel:this.__rel,target:this.__target,title:this.__title});return n.append(t),t}return null}}function I$1(t="",e){return fs(new A(t,e))}function E$2(t){return t instanceof A}function M$1(t,e){if("element"===t.type){const n=t.getNode();Si(n)||function(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSearchParams;r.append("code",t);for(const t of e)r.append("v",t);throw n.search=r.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}(252);return n.getChildren()[t.offset+e]||null}return null}function J$1(t,e={}){let r;if(t&&"object"==typeof t){const{url:n,...i}=t;r=n,e={...i,...e};}else r=t;const{target:i,title:l}=e,s=void 0===e.rel?"noreferrer":e.rel,u=Lr();if(null===u||!yr(u)&&!xr(u))return;if(xr(u)){const t=u.getNodes();if(0===t.length)return;return void t.forEach(t=>{if(null===r){const e=zs(t,t=>!E$2(t)&&w$2(t));e&&(e.insertBefore(t),0===e.getChildren().length&&e.remove());}else {const e=zs(t,t=>!E$2(t)&&w$2(t));if(e)e.setURL(r),void 0!==i&&e.setTarget(i),void 0!==s&&e.setRel(s);else {const e=D$1(r,{rel:s,target:i});t.insertBefore(e),e.append(t);}}})}const h=u.extract();if(null===r){const t=new Set;return void h.forEach(e=>{const n=e.getParent();if(w$2(n)&&!E$2(n)){const e=n.getKey();if(t.has(e))return;!function(t,e){const n=new Set(e.filter(e=>t.isParentOf(e)).map(t=>t.getKey())),r=t.getChildren(),i=r.filter(t=>n.has(t.getKey()));if(i.length===r.length)return r.forEach(e=>t.insertBefore(e)),void t.remove();const l=r.findIndex(t=>n.has(t.getKey())),s=r.findLastIndex(t=>n.has(t.getKey())),o=0===l,u=s===r.length-1;if(o)i.forEach(e=>t.insertBefore(e));else if(u)for(let e=i.length-1;e>=0;e--)t.insertAfter(i[e]);else {for(let e=i.length-1;e>=0;e--)t.insertAfter(i[e]);const e=r.slice(s+1);if(e.length>0){const n=D$1(t.getURL(),{rel:t.getRel(),target:t.getTarget(),title:t.getTitle()});i[i.length-1].insertAfter(n),e.forEach(t=>n.append(t));}}}(n,h),t.add(e);}})}const p=new Set,_=t=>{p.has(t.getKey())||(p.add(t.getKey()),t.setURL(r),void 0!==i&&t.setTarget(i),void 0!==s&&t.setRel(s),void 0!==l&&t.setTitle(l));};if(1===h.length){const t=h[0],e=zs(t,w$2);if(null!==e)return _(e)}!function(t){const e=Lr();if(!yr(e))return t();const n=St$5(e),r=n.isBackward(),i=M$1(n.anchor,r?-1:0),l=M$1(n.focus,r?0:-1);t();if(i||l){const t=Lr();if(yr(t)){const e=t.clone();if(i){const t=i.getParent();t&&e.anchor.set(t.getKey(),i.getIndexWithinParent()+(r?1:0),"element");}if(l){const t=l.getParent();t&&e.focus.set(t.getKey(),l.getIndexWithinParent()+(r?0:1),"element");}wo(St$5(e));}}}(()=>{let t=null;for(const e of h){if(!e.isAttached())continue;const o=zs(e,w$2);if(o){_(o);continue}if(Si(e)){if(!e.isInline())continue;if(w$2(e)){if(!(E$2(e)||null!==t&&t.getParentOrThrow().isParentOf(e))){_(e),t=e;continue}for(const t of e.getChildren())e.insertBefore(t);e.remove();continue}}const u=e.getPreviousSibling();w$2(u)&&u.is(t)?u.append(e):(t=D$1(r,{rel:s,target:i,title:l}),e.insertAfter(t),t.append(e));}});}const K$1=/^\+?[0-9\s()-]{5,}$/;function W$2(t){return t.match(/^[a-z][a-z0-9+.-]*:/i)||t.match(/^[/#.]/)?t:t.includes("@")?`mailto:${t}`:K$1.test(t)?`tel:${t}`:`https://${t}`}
 
 function getNearestListItemNode(node) {
   let current = node;
   while (current !== null) {
-    if (ot$3(current)) return current
+    if (ot$2(current)) return current
     current = current.getParent();
   }
   return null
@@ -6278,7 +5163,7 @@ function getNearestListItemNode(node) {
 function getListType(node) {
   let current = node;
   while (current) {
-    if (dt$2(current)) {
+    if (dt$1(current)) {
       return current.getListType()
     }
     current = current.getParent();
@@ -6337,6 +5222,66 @@ function hasHighlightStyles(cssOrStyles) {
   return !!(styles.color || styles["background-color"])
 }
 
+function handleRollingTabIndex(items, event) {
+  const currentIndex = items.indexOf(document.activeElement);
+  if (currentIndex === -1) return
+
+  let newItemIndex = currentIndex;
+
+  switch (event.key) {
+    case "ArrowRight":
+    case "ArrowDown":
+      event.preventDefault();
+      setActiveItemFocus(items, findNextVisibleItem(items, currentIndex));
+      break
+
+    case "ArrowLeft":
+    case "ArrowUp":
+      event.preventDefault();
+      setActiveItemFocus(items, findPreviousVisibleItem(items, currentIndex));
+      break
+
+    case "Home":
+      event.preventDefault();
+      newItemIndex = items.findIndex((item) => item.disabled !== true);
+      setActiveItemFocus(items, newItemIndex);
+      break
+
+    case "End":
+      event.preventDefault();
+      newItemIndex = items.filter((item) => item.disabled !== true).length - 1;
+      setActiveItemFocus(items, newItemIndex);
+      break
+  }
+}
+
+
+function findNextVisibleItem(items, index) {
+  let newIndex = (index + 1) % items.length;
+  while (items[newIndex].checkVisibility() === false) {
+    newIndex = (newIndex + 1) % items.length;
+  }
+  return newIndex
+}
+
+function findPreviousVisibleItem(items, index) {
+  let newIndex = (index - 1 + items.length) % items.length;
+  while (items[newIndex].checkVisibility() === false) {
+    newIndex = (newIndex - 1 + items.length) % items.length;
+  }
+  return newIndex
+}
+
+
+function setActiveItemFocus(items, index) {
+  if (items[index]?.disabled) return
+
+  items.forEach((item, i) => {
+    item.tabIndex = i === index ? 0 : -1;
+  });
+  items[index].focus();
+}
+
 class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
 
@@ -6348,9 +5293,12 @@ class LexicalToolbarElement extends HTMLElement {
 
   connectedCallback() {
     requestAnimationFrame(() => this.#refreshToolbarOverflow());
+    this.setAttribute("role", "toolbar");
 
     this._resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow());
     this._resizeObserver.observe(this);
+
+    this.addEventListener("keydown", (event) => handleRollingTabIndex(this.#focusableItems, event));
   }
 
   disconnectedCallback() {
@@ -6359,6 +5307,7 @@ class LexicalToolbarElement extends HTMLElement {
       this._resizeObserver = null;
     }
     this.#unbindHotkeys();
+    this.removeEventListener("keydown", (event) => handleRollingTabIndex(this.#focusableItems, event));
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -6372,7 +5321,7 @@ class LexicalToolbarElement extends HTMLElement {
     this.editor = editorElement.editor;
     this.#bindButtons();
     this.#bindHotkeys();
-    this.#setTabIndexValues();
+    this.#resetTabIndexValues();
     this.#setItemPositionValues();
     this.#monitorSelectionChanges();
     this.#monitorHistoryChanges();
@@ -6390,20 +5339,28 @@ class LexicalToolbarElement extends HTMLElement {
     this.addEventListener("click", this.#handleButtonClicked.bind(this));
   }
 
-  #handleButtonClicked({ target }) {
-    this.#handleTargetClicked(target, "[data-command]", this.#dispatchButtonCommand.bind(this));
+  #handleButtonClicked(event) {
+    this.#handleTargetClicked(event, "[data-command]", this.#dispatchButtonCommand.bind(this));
   }
 
-  #handleTargetClicked(target, selector, callback) {
-    const button = target.closest(selector);
+  #handleTargetClicked(event, selector, callback) {
+    const button = event.target.closest(selector);
     if (button) {
-      callback(button);
+      callback(event, button);
     }
   }
 
-  #dispatchButtonCommand(button) {
-    const { command, payload } = button.dataset;
-    this.editor.dispatchCommand(command, payload);
+  #dispatchButtonCommand(event, button) {
+    this.editor.update(() => {
+      // Keep the focus on the toolbar when using a keyboard to trigger the command
+      const isKeyboard = event.detail === 0 || !event.isTrusted;
+      if (isKeyboard) {
+        ns(zn);
+      }
+
+      const { command, payload } = button.dataset;
+      this.editor.dispatchCommand(command, payload);
+    });
   }
 
   #bindHotkeys() {
@@ -6438,9 +5395,9 @@ class LexicalToolbarElement extends HTMLElement {
     return [ ...modifiers, pressedKey ].join("+")
   }
 
-  #setTabIndexValues() {
-    this.#buttons.forEach((button) => {
-      button.setAttribute("tabindex", 0);
+  #resetTabIndexValues() {
+    this.#focusableItems.forEach((button, index) => {
+      button.setAttribute("tabindex", index === 0 ? 0 : "-1");
     });
   }
 
@@ -6482,12 +5439,11 @@ class LexicalToolbarElement extends HTMLElement {
     const isStrikethrough = selection.hasFormat("strikethrough");
     const isHighlight = isSelectionHighlighted(selection);
     const isInLink = this.#isInLink(anchorNode);
-    const isInQuote = Ot$2(topLevelElement);
-    const isInHeading = It$2(topLevelElement);
+    const isInQuote = Ot$1(topLevelElement);
+    const isInHeading = It$1(topLevelElement);
     const isInCode = X$1(topLevelElement) || selection.hasFormat("code");
     const isInList = this.#isInList(anchorNode);
     const listType = getListType(anchorNode);
-    const isInTable = Be$1(anchorNode) !== null;
 
     this.#setButtonPressed("bold", isBold);
     this.#setButtonPressed("italic", isItalic);
@@ -6499,15 +5455,16 @@ class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("code", isInCode);
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet");
     this.#setButtonPressed("ordered-list", isInList && listType === "number");
-    this.#setButtonPressed("table", isInTable);
 
     this.#updateUndoRedoButtonStates();
+
+    this.#resetTabIndexValues();
   }
 
   #isInList(node) {
     let current = node;
     while (current) {
-      if (dt$2(current) || ot$3(current)) return true
+      if (dt$1(current) || ot$2(current)) return true
       current = current.getParent();
     }
     return false
@@ -6550,6 +5507,7 @@ class LexicalToolbarElement extends HTMLElement {
 
     const isOverflowing = this.#overflowMenu.children.length > 0;
     this.toggleAttribute("overflowing", isOverflowing);
+    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing);
   }
 
   #compactMenu() {
@@ -6599,6 +5557,10 @@ class LexicalToolbarElement extends HTMLElement {
 
   get #buttons() {
     return Array.from(this.querySelectorAll(":scope > button"))
+  }
+
+  get #focusableItems() {
+    return Array.from(this.querySelectorAll(":scope button, :scope > details > summary"))
   }
 
   get #toolbarItems() {
@@ -6671,21 +5633,17 @@ class LexicalToolbarElement extends HTMLElement {
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 8a2 2 0 110 4 2 2 0 010-4z""/><path d="M22 2a1 1 0 011 1v18a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1h20zM3 18.714L9 11l5.25 6.75L17 15l4 4V4H3v14.714z"/></svg>
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="table" data-command="insertTable" title="Insert a table">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.2041 2.01074C21.2128 2.113 22 2.96435 22 4V20L21.9893 20.2041C21.8938 21.1457 21.1457 21.8938 20.2041 21.9893L20 22H4C2.96435 22 2.113 21.2128 2.01074 20.2041L2 20V4C2 2.89543 2.89543 2 4 2H20L20.2041 2.01074ZM4 13V20H11V13H4ZM13 13V20H20V13H13ZM4 11H11V4H4V11ZM13 11H20V4H13V11Z"/></svg>
-      </button>
-
       <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 12C0 11.4477 0.447715 11 1 11H23C23.5523 11 24 11.4477 24 12C24 12.5523 23.5523 13 23 13H1C0.447716 13 0 12.5523 0 12Z"/><path d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5C20 6.10457 19.1046 7 18 7H6C4.89543 7 4 6.10457 4 5Z"/><path d="M4 19C4 17.8954 4.89543 17 6 17H18C19.1046 17 20 17.8954 20 19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19Z"/></svg>
       </button>
  
       <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
  
-      <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo">
+      <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo" data-hotkey="cmd+z ctrl+z">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5.64648 8.26531C7.93911 6.56386 10.7827 5.77629 13.624 6.05535C16.4655 6.33452 19.1018 7.66079 21.0195 9.77605C22.5839 11.5016 23.5799 13.6516 23.8936 15.9352C24.0115 16.7939 23.2974 17.4997 22.4307 17.4997C21.5641 17.4997 20.8766 16.7915 20.7148 15.9401C20.4295 14.4379 19.7348 13.0321 18.6943 11.8844C17.3 10.3464 15.3835 9.38139 13.3174 9.17839C11.2514 8.97546 9.18359 9.54856 7.5166 10.7858C6.38259 11.6275 5.48981 12.7361 4.90723 13.9997H8.5C9.3283 13.9997 9.99979 14.6714 10 15.4997C10 16.3281 9.32843 16.9997 8.5 16.9997H1.5C0.671573 16.9997 0 16.3281 0 15.4997V8.49968C0.000213656 7.67144 0.671705 6.99968 1.5 6.99968C2.3283 6.99968 2.99979 7.67144 3 8.49968V11.0212C3.7166 9.9704 4.60793 9.03613 5.64648 8.26531Z"/></svg>
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo">
+      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo" data-hotkey="cmd+shift+z ctrl+shift+z ctrl+y">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.2599 8.26531C15.9672 6.56386 13.1237 5.77629 10.2823 6.05535C7.4408 6.33452 4.80455 7.66079 2.88681 9.77605C1.32245 11.5016 0.326407 13.6516 0.0127834 15.9352C-0.105117 16.7939 0.608975 17.4997 1.47567 17.4997C2.34228 17.4997 3.02969 16.7915 3.19149 15.9401C3.47682 14.4379 4.17156 13.0321 5.212 11.8844C6.60637 10.3464 8.52287 9.38139 10.589 9.17839C12.655 8.97546 14.7227 9.54856 16.3897 10.7858C17.5237 11.6275 18.4165 12.7361 18.9991 13.9997H15.4063C14.578 13.9997 13.9066 14.6714 13.9063 15.4997C13.9063 16.3281 14.5779 16.9997 15.4063 16.9997H22.4063C23.2348 16.9997 23.9063 16.3281 23.9063 15.4997V8.49968C23.9061 7.67144 23.2346 6.99968 22.4063 6.99968C21.578 6.99968 20.9066 7.67144 20.9063 8.49968V11.0212C20.1897 9.9704 19.2984 9.03613 18.2599 8.26531Z"/></svg>
       </button>
 
@@ -6700,14 +5658,895 @@ class LexicalToolbarElement extends HTMLElement {
 customElements.define("lexxy-toolbar", LexicalToolbarElement);
 
 /**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Original by Samuel Flores
  *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
+ * Adds the following new token classes:
+ *     constant, builtin, variable, symbol, regex
  */
+(function (Prism) {
+	Prism.languages.ruby = Prism.languages.extend('clike', {
+		'comment': {
+			pattern: /#.*|^=begin\s[\s\S]*?^=end/m,
+			greedy: true
+		},
+		'class-name': {
+			pattern: /(\b(?:class|module)\s+|\bcatch\s+\()[\w.\\]+|\b[A-Z_]\w*(?=\s*\.\s*new\b)/,
+			lookbehind: true,
+			inside: {
+				'punctuation': /[.\\]/
+			}
+		},
+		'keyword': /\b(?:BEGIN|END|alias|and|begin|break|case|class|def|define_method|defined|do|each|else|elsif|end|ensure|extend|for|if|in|include|module|new|next|nil|not|or|prepend|private|protected|public|raise|redo|require|rescue|retry|return|self|super|then|throw|undef|unless|until|when|while|yield)\b/,
+		'operator': /\.{2,3}|&\.|===|<?=>|[!=]?~|(?:&&|\|\||<<|>>|\*\*|[+\-*/%<>!^&|=])=?|[?:]/,
+		'punctuation': /[(){}[\].,;]/,
+	});
 
-function z$1(t,e){const n={};for(const o of t){const t=e(o);t&&(n[t]?n[t].push(o):n[t]=[o]);}return n}function U$1(t){const e=z$1(t,t=>t.type);return {element:e.element||[],multilineElement:e["multiline-element"]||[],textFormat:e["text-format"]||[],textMatch:e["text-match"]||[]}}const W$1=/[!-/:-@[-`{-~\s]/;function V$1(t){return lr(t)&&!t.hasFormat("code")}function et(t,...e){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",t);for(const t of e)o.append("v",t);throw n.search=o.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const nt=/^(\s*)(\d{1,})\.\s/,ot=/^(\s*)[-*+]\s/,it=/^(#{1,6})\s/,st=/^>\s/,lt=/^[ \t]*```([\w-]+)?/,ct=/[ \t]*```$/,mt=ot$5("mdListMarker",{parse:t=>"string"==typeof t&&/^[-*+]$/.test(t)?t:"-"}),ht=t=>(e,n,o,r)=>{const i=t(o);i.append(...n),e.replace(i),r||i.select(0,0);};const xt=t=>(e,n,o,r)=>{const i=e.getPreviousSibling(),s=e.getNextSibling(),l=st$2("check"===t?"x"===o[3]:void 0),c=o[0].trim()[0],f="bullet"!==t&&"check"!==t||c!==mt.parse(c)?void 0:c;if(dt$2(s)&&s.getListType()===t){f&&ct$5(s,mt,f);const t=s.getFirstChild();null!==t?t.insertBefore(l):s.append(l),e.remove();}else if(dt$2(i)&&i.getListType()===t)f&&ct$5(i,mt,f),i.append(l),e.remove();else {const n=ht$3(t,"number"===t?Number(o[2]):void 0);f&&ct$5(n,mt,f),n.append(l),e.replace(n);}l.append(...n),r||l.select(0,0);const a=function(t){const e=t.match(/\t/g),n=t.match(/ /g);let o=0;return e&&(o+=e.length),n&&(o+=Math.floor(n.length/4)),o}(o[1]);a&&l.setIndent(a);},Tt=(t,e,n)=>{const o=[],r=t.getChildren();let i=0;for(const s of r)if(ot$3(s)){if(1===s.getChildrenSize()){const t=s.getFirstChild();if(dt$2(t)){o.push(Tt(t,e,n+1));continue}}const r=" ".repeat(4*n),l=t.getListType(),c=st$4(t,mt),f="number"===l?`${t.getStart()+i}. `:"check"===l?`${c} [${s.getChecked()?"x":" "}] `:c+" ";o.push(r+f+e(s)),i++;}return o.join("\n")},Et={dependencies:[Pt$3],export:(t,e)=>{if(!It$2(t))return null;const n=Number(t.getTag().slice(1));return "#".repeat(n)+" "+e(t)},regExp:it,replace:ht(t=>{const e="h"+t[1].length;return St$3(e)}),type:"element"},Ct={dependencies:[Et$3],export:(t,e)=>{if(!Ot$2(t))return null;const n=e(t).split("\n"),o=[];for(const t of n)o.push("> "+t);return o.join("\n")},regExp:st,replace:(t,e,n,o)=>{if(o){const n=t.getPreviousSibling();if(Ot$2(n))return n.splice(n.getChildrenSize(),0,[Jn(),...e]),void t.remove()}const r=_t$2();r.append(...e),t.replace(r),o||r.select(0,0);},type:"element"},yt={dependencies:[q$1],export:t=>{if(!X$1(t))return null;const e=t.getTextContent();return "```"+(t.getLanguage()||"")+(e?"\n"+e:"")+"\n```"},regExpEnd:{optional:true,regExp:ct},regExpStart:lt,replace:(t,e,n,o,r,i)=>{let s,c;if(!e&&r){if(1===r.length)o?(s=U$2(),c=n[1]+r[0]):(s=U$2(n[1]),c=r[0].startsWith(" ")?r[0].slice(1):r[0]);else {if(s=U$2(n[1]),0===r[0].trim().length)for(;r.length>0&&!r[0].length;)r.shift();else r[0]=r[0].startsWith(" ")?r[0].slice(1):r[0];for(;r.length>0&&!r[r.length-1].length;)r.pop();c=r.join("\n");}const e=sr(c);s.append(e),t.append(s);}else e&&ht(t=>U$2(t?t[1]:void 0))(t,e,n,i);},type:"multiline-element"},$t={dependencies:[lt$3,nt$2],export:(t,e)=>dt$2(t)?Tt(t,e,0):null,regExp:ot,replace:xt("bullet"),type:"element"},St={dependencies:[lt$3,nt$2],export:(t,e)=>dt$2(t)?Tt(t,e,0):null,regExp:nt,replace:xt("number"),type:"element"},bt={format:["code"],tag:"`",type:"text-format"},Ft={format:["highlight"],tag:"==",type:"text-format"},It={format:["bold","italic"],tag:"***",type:"text-format"},wt={format:["bold","italic"],intraword:false,tag:"___",type:"text-format"},Nt={format:["bold"],tag:"**",type:"text-format"},kt={format:["bold"],intraword:false,tag:"__",type:"text-format"},Rt={format:["strikethrough"],tag:"~~",type:"text-format"},Lt={format:["italic"],tag:"*",type:"text-format"},_t={format:["italic"],intraword:false,tag:"_",type:"text-format"},Pt={dependencies:[y$1],export:(t,e,n)=>{if(!w$2(t)||E$2(t))return null;const o=t.getTitle(),r=e(t);return o?`[${r}](${t.getURL()} "${o}")`:`[${r}](${t.getURL()})`},importRegExp:/(?:\[(.+?)\])(?:\((?:([^()\s]+)(?:\s"((?:[^"]*\\")*[^"]*)"\s*)?)\))/,regExp:/(?:\[(.+?)\])(?:\((?:([^()\s]+)(?:\s"((?:[^"]*\\")*[^"]*)"\s*)?)\))$/,replace:(t,e)=>{const[,n,o,r]=e,i=D$1(o,{title:r}),s=n.split("[").length-1,c=n.split("]").length-1;let f=n,a="";if(s<c)return;if(s>c){const t=n.split("[");a="["+t[0],f=t.slice(1).join("[");}const u=sr(f);return u.setFormat(t.getFormat()),i.append(u),t.replace(i),a&&i.insertBefore(sr(a)),u},trigger:")",type:"text-match"},Bt=[Et,Ct,$t,St],Mt=[yt],jt=[bt,It,wt,Nt,kt,Ft,Lt,_t,Rt],At=[Pt],zt=[...Bt,...Mt,...jt,...At];function Ut(t,e,n){const o=n.length;for(let r=e;r>=o;r--){const e=r-o;if(Wt(t,e,n,0,o)&&" "!==t[e+o])return e}return  -1}function Wt(t,e,n,o,r){for(let i=0;i<r;i++)if(t[e+i]!==n[o+i])return  false;return  true}function Dt(t,n=zt){const o=U$1(n),r=z$1(o.textFormat,({tag:t})=>t[t.length-1]),l=z$1(o.textMatch,({trigger:t})=>t);for(const e of n){const n=e.type;if("element"===n||"text-match"===n||"multiline-element"===n){const n=e.dependencies;for(const e of n)t.hasNode(e)||et(173,e.getType());}}const c=(t,n,c)=>{(function(t,e,n,o){const r=t.getParent();if(!as(r)||t.getFirstChild()!==e)return  false;const i=e.getTextContent();if(" "!==i[n-1])return  false;for(const{regExp:r,replace:s}of o){const o=i.match(r);if(o&&o[0].length===(o[0].endsWith(" ")?n:n-1)){const r=e.getNextSiblings(),[i,l]=e.splitText(n);if(false!==s(t,l?[l,...r]:r,o,false))return i.remove(),true}}return  false})(t,n,c,o.element)||function(t,e,n,o){const r=t.getParent();if(!as(r)||t.getFirstChild()!==e)return  false;const i=e.getTextContent();if(" "!==i[n-1])return  false;for(const{regExpStart:r,replace:s,regExpEnd:l}of o){if(l&&!("optional"in l)||l&&"optional"in l&&!l.optional)continue;const o=i.match(r);if(o&&o[0].length===(o[0].endsWith(" ")?n:n-1)){const r=e.getNextSiblings(),[i,l]=e.splitText(n);if(false!==s(t,l?[l,...r]:r,o,null,null,false))return i.remove(),true}}return  false}(t,n,c,o.multilineElement)||function(t,e,n){let o=t.getTextContent();const r=n[o[e-1]];if(null==r)return  false;e<o.length&&(o=o.slice(0,e));for(const e of r){if(!e.replace||!e.regExp)continue;const n=o.match(e.regExp);if(null===n)continue;const r=n.index||0,i=r+n[0].length;let s;return 0===r?[s]=t.splitText(i):[,s]=t.splitText(r,i),s.selectNext(0,0),e.replace(s,n),true}return  false}(n,c,l)||function(t,n,o){const r=t.getTextContent(),l=n-1,c=r[l],f=o[c];if(!f)return  false;for(const n of f){const{tag:o}=n,f=o.length,a=l-f+1;if(f>1&&!Wt(r,a,o,0,f))continue;if(" "===r[a-1])continue;const u=r[l+1];if(false===n.intraword&&u&&!W$1.test(u))continue;const g=t;let p=g,d=Ut(r,a,o),h=p;for(;d<0&&(h=h.getPreviousSibling())&&!jn(h);)if(lr(h)){if(h.hasFormat("code"))continue;const t=h.getTextContent();p=h,d=Ut(t,t.length,o);}if(d<0)continue;if(p===g&&d+f===a)continue;const E=p.getTextContent();if(d>0&&E[d-1]===c)continue;const C=E[d-1];if(false===n.intraword&&C&&!W$1.test(C))continue;const y=g.getTextContent(),$=y.slice(0,a)+y.slice(l+1);g.setTextContent($);const v=p===g?$:E;p.setTextContent(v.slice(0,d)+v.slice(d+f));const S=Lr(),b=Ar();wo(b);const F=l-f*(p===g?2:1)+1;b.anchor.set(p.__key,d,"text"),b.focus.set(g.__key,F,"text");for(const t of n.format)b.hasFormat(t)||b.formatText(t);b.anchor.set(b.focus.key,b.focus.offset,b.focus.type);for(const t of n.format)b.hasFormat(t)&&b.toggleFormat(t);return yr(S)&&(b.format=S.format),true}}(n,c,r);};return t.registerUpdateListener(({tags:n,dirtyLeaves:o,editorState:r,prevEditorState:i})=>{if(n.has(Ln)||n.has(An))return;if(t.isComposing())return;const l=r.read(Lr),f=i.read(Lr);if(!yr(f)||!yr(l)||!l.isCollapsed()||l.is(f))return;const a=l.anchor.key,u=l.anchor.offset,g=r._nodeMap.get(a);!lr(g)||!o.has(a)||1!==u&&u>f.anchor.offset+1||t.update(()=>{if(!V$1(g))return;const t=g.getParent();null===t||X$1(t)||c(t,g,l.anchor.offset);});})}
+	Prism.languages.insertBefore('ruby', 'operator', {
+		'double-colon': {
+			pattern: /::/,
+			alias: 'punctuation'
+		},
+	});
+
+	var interpolation = {
+		pattern: /((?:^|[^\\])(?:\\{2})*)#\{(?:[^{}]|\{[^{}]*\})*\}/,
+		lookbehind: true,
+		inside: {
+			'content': {
+				pattern: /^(#\{)[\s\S]+(?=\}$)/,
+				lookbehind: true,
+				inside: Prism.languages.ruby
+			},
+			'delimiter': {
+				pattern: /^#\{|\}$/,
+				alias: 'punctuation'
+			}
+		}
+	};
+
+	delete Prism.languages.ruby.function;
+
+	var percentExpression = '(?:' + [
+		/([^a-zA-Z0-9\s{(\[<=])(?:(?!\1)[^\\]|\\[\s\S])*\1/.source,
+		/\((?:[^()\\]|\\[\s\S]|\((?:[^()\\]|\\[\s\S])*\))*\)/.source,
+		/\{(?:[^{}\\]|\\[\s\S]|\{(?:[^{}\\]|\\[\s\S])*\})*\}/.source,
+		/\[(?:[^\[\]\\]|\\[\s\S]|\[(?:[^\[\]\\]|\\[\s\S])*\])*\]/.source,
+		/<(?:[^<>\\]|\\[\s\S]|<(?:[^<>\\]|\\[\s\S])*>)*>/.source
+	].join('|') + ')';
+
+	var symbolName = /(?:"(?:\\.|[^"\\\r\n])*"|(?:\b[a-zA-Z_]\w*|[^\s\0-\x7F]+)[?!]?|\$.)/.source;
+
+	Prism.languages.insertBefore('ruby', 'keyword', {
+		'regex-literal': [
+			{
+				pattern: RegExp(/%r/.source + percentExpression + /[egimnosux]{0,6}/.source),
+				greedy: true,
+				inside: {
+					'interpolation': interpolation,
+					'regex': /[\s\S]+/
+				}
+			},
+			{
+				pattern: /(^|[^/])\/(?!\/)(?:\[[^\r\n\]]+\]|\\.|[^[/\\\r\n])+\/[egimnosux]{0,6}(?=\s*(?:$|[\r\n,.;})#]))/,
+				lookbehind: true,
+				greedy: true,
+				inside: {
+					'interpolation': interpolation,
+					'regex': /[\s\S]+/
+				}
+			}
+		],
+		'variable': /[@$]+[a-zA-Z_]\w*(?:[?!]|\b)/,
+		'symbol': [
+			{
+				pattern: RegExp(/(^|[^:]):/.source + symbolName),
+				lookbehind: true,
+				greedy: true
+			},
+			{
+				pattern: RegExp(/([\r\n{(,][ \t]*)/.source + symbolName + /(?=:(?!:))/.source),
+				lookbehind: true,
+				greedy: true
+			},
+		],
+		'method-definition': {
+			pattern: /(\bdef\s+)\w+(?:\s*\.\s*\w+)?/,
+			lookbehind: true,
+			inside: {
+				'function': /\b\w+$/,
+				'keyword': /^self\b/,
+				'class-name': /^\w+/,
+				'punctuation': /\./
+			}
+		}
+	});
+
+	Prism.languages.insertBefore('ruby', 'string', {
+		'string-literal': [
+			{
+				pattern: RegExp(/%[qQiIwWs]?/.source + percentExpression),
+				greedy: true,
+				inside: {
+					'interpolation': interpolation,
+					'string': /[\s\S]+/
+				}
+			},
+			{
+				pattern: /("|')(?:#\{[^}]+\}|#(?!\{)|\\(?:\r\n|[\s\S])|(?!\1)[^\\#\r\n])*\1/,
+				greedy: true,
+				inside: {
+					'interpolation': interpolation,
+					'string': /[\s\S]+/
+				}
+			},
+			{
+				pattern: /<<[-~]?([a-z_]\w*)[\r\n](?:.*[\r\n])*?[\t ]*\1/i,
+				alias: 'heredoc-string',
+				greedy: true,
+				inside: {
+					'delimiter': {
+						pattern: /^<<[-~]?[a-z_]\w*|\b[a-z_]\w*$/i,
+						inside: {
+							'symbol': /\b\w+/,
+							'punctuation': /^<<[-~]?/
+						}
+					},
+					'interpolation': interpolation,
+					'string': /[\s\S]+/
+				}
+			},
+			{
+				pattern: /<<[-~]?'([a-z_]\w*)'[\r\n](?:.*[\r\n])*?[\t ]*\1/i,
+				alias: 'heredoc-string',
+				greedy: true,
+				inside: {
+					'delimiter': {
+						pattern: /^<<[-~]?'[a-z_]\w*'|\b[a-z_]\w*$/i,
+						inside: {
+							'symbol': /\b\w+/,
+							'punctuation': /^<<[-~]?'|'$/,
+						}
+					},
+					'string': /[\s\S]+/
+				}
+			}
+		],
+		'command-literal': [
+			{
+				pattern: RegExp(/%x/.source + percentExpression),
+				greedy: true,
+				inside: {
+					'interpolation': interpolation,
+					'command': {
+						pattern: /[\s\S]+/,
+						alias: 'string'
+					}
+				}
+			},
+			{
+				pattern: /`(?:#\{[^}]+\}|#(?!\{)|\\(?:\r\n|[\s\S])|[^\\`#\r\n])*`/,
+				greedy: true,
+				inside: {
+					'interpolation': interpolation,
+					'command': {
+						pattern: /[\s\S]+/,
+						alias: 'string'
+					}
+				}
+			}
+		]
+	});
+
+	delete Prism.languages.ruby.string;
+
+	Prism.languages.insertBefore('ruby', 'number', {
+		'builtin': /\b(?:Array|Bignum|Binding|Class|Continuation|Dir|Exception|FalseClass|File|Fixnum|Float|Hash|IO|Integer|MatchData|Method|Module|NilClass|Numeric|Object|Proc|Range|Regexp|Stat|String|Struct|Symbol|TMS|Thread|ThreadGroup|Time|TrueClass)\b/,
+		'constant': /\b[A-Z][A-Z0-9_]*(?:[?!]|\b)/
+	});
+
+	Prism.languages.rb = Prism.languages.ruby;
+}(Prism));
+
+/**
+ * Original by Aaron Harun: http://aahacreative.com/2012/07/31/php-syntax-highlighting-prism/
+ * Modified by Miles Johnson: http://milesj.me
+ * Rewritten by Tom Pavelec
+ *
+ * Supports PHP 5.3 - 8.0
+ */
+(function (Prism) {
+	var comment = /\/\*[\s\S]*?\*\/|\/\/.*|#(?!\[).*/;
+	var constant = [
+		{
+			pattern: /\b(?:false|true)\b/i,
+			alias: 'boolean'
+		},
+		{
+			pattern: /(::\s*)\b[a-z_]\w*\b(?!\s*\()/i,
+			greedy: true,
+			lookbehind: true,
+		},
+		{
+			pattern: /(\b(?:case|const)\s+)\b[a-z_]\w*(?=\s*[;=])/i,
+			greedy: true,
+			lookbehind: true,
+		},
+		/\b(?:null)\b/i,
+		/\b[A-Z_][A-Z0-9_]*\b(?!\s*\()/,
+	];
+	var number = /\b0b[01]+(?:_[01]+)*\b|\b0o[0-7]+(?:_[0-7]+)*\b|\b0x[\da-f]+(?:_[\da-f]+)*\b|(?:\b\d+(?:_\d+)*\.?(?:\d+(?:_\d+)*)?|\B\.\d+)(?:e[+-]?\d+)?/i;
+	var operator = /<?=>|\?\?=?|\.{3}|\??->|[!=]=?=?|::|\*\*=?|--|\+\+|&&|\|\||<<|>>|[?~]|[/^|%*&<>.+-]=?/;
+	var punctuation = /[{}\[\](),:;]/;
+
+	Prism.languages.php = {
+		'delimiter': {
+			pattern: /\?>$|^<\?(?:php(?=\s)|=)?/i,
+			alias: 'important'
+		},
+		'comment': comment,
+		'variable': /\$+(?:\w+\b|(?=\{))/,
+		'package': {
+			pattern: /(namespace\s+|use\s+(?:function\s+)?)(?:\\?\b[a-z_]\w*)+\b(?!\\)/i,
+			lookbehind: true,
+			inside: {
+				'punctuation': /\\/
+			}
+		},
+		'class-name-definition': {
+			pattern: /(\b(?:class|enum|interface|trait)\s+)\b[a-z_]\w*(?!\\)\b/i,
+			lookbehind: true,
+			alias: 'class-name'
+		},
+		'function-definition': {
+			pattern: /(\bfunction\s+)[a-z_]\w*(?=\s*\()/i,
+			lookbehind: true,
+			alias: 'function'
+		},
+		'keyword': [
+			{
+				pattern: /(\(\s*)\b(?:array|bool|boolean|float|int|integer|object|string)\b(?=\s*\))/i,
+				alias: 'type-casting',
+				greedy: true,
+				lookbehind: true
+			},
+			{
+				pattern: /([(,?]\s*)\b(?:array(?!\s*\()|bool|callable|(?:false|null)(?=\s*\|)|float|int|iterable|mixed|object|self|static|string)\b(?=\s*\$)/i,
+				alias: 'type-hint',
+				greedy: true,
+				lookbehind: true
+			},
+			{
+				pattern: /(\)\s*:\s*(?:\?\s*)?)\b(?:array(?!\s*\()|bool|callable|(?:false|null)(?=\s*\|)|float|int|iterable|mixed|never|object|self|static|string|void)\b/i,
+				alias: 'return-type',
+				greedy: true,
+				lookbehind: true
+			},
+			{
+				pattern: /\b(?:array(?!\s*\()|bool|float|int|iterable|mixed|object|string|void)\b/i,
+				alias: 'type-declaration',
+				greedy: true
+			},
+			{
+				pattern: /(\|\s*)(?:false|null)\b|\b(?:false|null)(?=\s*\|)/i,
+				alias: 'type-declaration',
+				greedy: true,
+				lookbehind: true
+			},
+			{
+				pattern: /\b(?:parent|self|static)(?=\s*::)/i,
+				alias: 'static-context',
+				greedy: true
+			},
+			{
+				// yield from
+				pattern: /(\byield\s+)from\b/i,
+				lookbehind: true
+			},
+			// `class` is always a keyword unlike other keywords
+			/\bclass\b/i,
+			{
+				// https://www.php.net/manual/en/reserved.keywords.php
+				//
+				// keywords cannot be preceded by "->"
+				// the complex lookbehind means `(?<!(?:->|::)\s*)`
+				pattern: /((?:^|[^\s>:]|(?:^|[^-])>|(?:^|[^:]):)\s*)\b(?:abstract|and|array|as|break|callable|case|catch|clone|const|continue|declare|default|die|do|echo|else|elseif|empty|enddeclare|endfor|endforeach|endif|endswitch|endwhile|enum|eval|exit|extends|final|finally|fn|for|foreach|function|global|goto|if|implements|include|include_once|instanceof|insteadof|interface|isset|list|match|namespace|never|new|or|parent|print|private|protected|public|readonly|require|require_once|return|self|static|switch|throw|trait|try|unset|use|var|while|xor|yield|__halt_compiler)\b/i,
+				lookbehind: true
+			}
+		],
+		'argument-name': {
+			pattern: /([(,]\s*)\b[a-z_]\w*(?=\s*:(?!:))/i,
+			lookbehind: true
+		},
+		'class-name': [
+			{
+				pattern: /(\b(?:extends|implements|instanceof|new(?!\s+self|\s+static))\s+|\bcatch\s*\()\b[a-z_]\w*(?!\\)\b/i,
+				greedy: true,
+				lookbehind: true
+			},
+			{
+				pattern: /(\|\s*)\b[a-z_]\w*(?!\\)\b/i,
+				greedy: true,
+				lookbehind: true
+			},
+			{
+				pattern: /\b[a-z_]\w*(?!\\)\b(?=\s*\|)/i,
+				greedy: true
+			},
+			{
+				pattern: /(\|\s*)(?:\\?\b[a-z_]\w*)+\b/i,
+				alias: 'class-name-fully-qualified',
+				greedy: true,
+				lookbehind: true,
+				inside: {
+					'punctuation': /\\/
+				}
+			},
+			{
+				pattern: /(?:\\?\b[a-z_]\w*)+\b(?=\s*\|)/i,
+				alias: 'class-name-fully-qualified',
+				greedy: true,
+				inside: {
+					'punctuation': /\\/
+				}
+			},
+			{
+				pattern: /(\b(?:extends|implements|instanceof|new(?!\s+self\b|\s+static\b))\s+|\bcatch\s*\()(?:\\?\b[a-z_]\w*)+\b(?!\\)/i,
+				alias: 'class-name-fully-qualified',
+				greedy: true,
+				lookbehind: true,
+				inside: {
+					'punctuation': /\\/
+				}
+			},
+			{
+				pattern: /\b[a-z_]\w*(?=\s*\$)/i,
+				alias: 'type-declaration',
+				greedy: true
+			},
+			{
+				pattern: /(?:\\?\b[a-z_]\w*)+(?=\s*\$)/i,
+				alias: ['class-name-fully-qualified', 'type-declaration'],
+				greedy: true,
+				inside: {
+					'punctuation': /\\/
+				}
+			},
+			{
+				pattern: /\b[a-z_]\w*(?=\s*::)/i,
+				alias: 'static-context',
+				greedy: true
+			},
+			{
+				pattern: /(?:\\?\b[a-z_]\w*)+(?=\s*::)/i,
+				alias: ['class-name-fully-qualified', 'static-context'],
+				greedy: true,
+				inside: {
+					'punctuation': /\\/
+				}
+			},
+			{
+				pattern: /([(,?]\s*)[a-z_]\w*(?=\s*\$)/i,
+				alias: 'type-hint',
+				greedy: true,
+				lookbehind: true
+			},
+			{
+				pattern: /([(,?]\s*)(?:\\?\b[a-z_]\w*)+(?=\s*\$)/i,
+				alias: ['class-name-fully-qualified', 'type-hint'],
+				greedy: true,
+				lookbehind: true,
+				inside: {
+					'punctuation': /\\/
+				}
+			},
+			{
+				pattern: /(\)\s*:\s*(?:\?\s*)?)\b[a-z_]\w*(?!\\)\b/i,
+				alias: 'return-type',
+				greedy: true,
+				lookbehind: true
+			},
+			{
+				pattern: /(\)\s*:\s*(?:\?\s*)?)(?:\\?\b[a-z_]\w*)+\b(?!\\)/i,
+				alias: ['class-name-fully-qualified', 'return-type'],
+				greedy: true,
+				lookbehind: true,
+				inside: {
+					'punctuation': /\\/
+				}
+			}
+		],
+		'constant': constant,
+		'function': {
+			pattern: /(^|[^\\\w])\\?[a-z_](?:[\w\\]*\w)?(?=\s*\()/i,
+			lookbehind: true,
+			inside: {
+				'punctuation': /\\/
+			}
+		},
+		'property': {
+			pattern: /(->\s*)\w+/,
+			lookbehind: true
+		},
+		'number': number,
+		'operator': operator,
+		'punctuation': punctuation
+	};
+
+	var string_interpolation = {
+		pattern: /\{\$(?:\{(?:\{[^{}]+\}|[^{}]+)\}|[^{}])+\}|(^|[^\\{])\$+(?:\w+(?:\[[^\r\n\[\]]+\]|->\w+)?)/,
+		lookbehind: true,
+		inside: Prism.languages.php
+	};
+
+	var string = [
+		{
+			pattern: /<<<'([^']+)'[\r\n](?:.*[\r\n])*?\1;/,
+			alias: 'nowdoc-string',
+			greedy: true,
+			inside: {
+				'delimiter': {
+					pattern: /^<<<'[^']+'|[a-z_]\w*;$/i,
+					alias: 'symbol',
+					inside: {
+						'punctuation': /^<<<'?|[';]$/
+					}
+				}
+			}
+		},
+		{
+			pattern: /<<<(?:"([^"]+)"[\r\n](?:.*[\r\n])*?\1;|([a-z_]\w*)[\r\n](?:.*[\r\n])*?\2;)/i,
+			alias: 'heredoc-string',
+			greedy: true,
+			inside: {
+				'delimiter': {
+					pattern: /^<<<(?:"[^"]+"|[a-z_]\w*)|[a-z_]\w*;$/i,
+					alias: 'symbol',
+					inside: {
+						'punctuation': /^<<<"?|[";]$/
+					}
+				},
+				'interpolation': string_interpolation
+			}
+		},
+		{
+			pattern: /`(?:\\[\s\S]|[^\\`])*`/,
+			alias: 'backtick-quoted-string',
+			greedy: true
+		},
+		{
+			pattern: /'(?:\\[\s\S]|[^\\'])*'/,
+			alias: 'single-quoted-string',
+			greedy: true
+		},
+		{
+			pattern: /"(?:\\[\s\S]|[^\\"])*"/,
+			alias: 'double-quoted-string',
+			greedy: true,
+			inside: {
+				'interpolation': string_interpolation
+			}
+		}
+	];
+
+	Prism.languages.insertBefore('php', 'variable', {
+		'string': string,
+		'attribute': {
+			pattern: /#\[(?:[^"'\/#]|\/(?![*/])|\/\/.*$|#(?!\[).*$|\/\*(?:[^*]|\*(?!\/))*\*\/|"(?:\\[\s\S]|[^\\"])*"|'(?:\\[\s\S]|[^\\'])*')+\](?=\s*[a-z$#])/im,
+			greedy: true,
+			inside: {
+				'attribute-content': {
+					pattern: /^(#\[)[\s\S]+(?=\]$)/,
+					lookbehind: true,
+					// inside can appear subset of php
+					inside: {
+						'comment': comment,
+						'string': string,
+						'attribute-class-name': [
+							{
+								pattern: /([^:]|^)\b[a-z_]\w*(?!\\)\b/i,
+								alias: 'class-name',
+								greedy: true,
+								lookbehind: true
+							},
+							{
+								pattern: /([^:]|^)(?:\\?\b[a-z_]\w*)+/i,
+								alias: [
+									'class-name',
+									'class-name-fully-qualified'
+								],
+								greedy: true,
+								lookbehind: true,
+								inside: {
+									'punctuation': /\\/
+								}
+							}
+						],
+						'constant': constant,
+						'number': number,
+						'operator': operator,
+						'punctuation': punctuation
+					}
+				},
+				'delimiter': {
+					pattern: /^#\[|\]$/,
+					alias: 'punctuation'
+				}
+			}
+		},
+	});
+
+	Prism.hooks.add('before-tokenize', function (env) {
+		if (!/<\?/.test(env.code)) {
+			return;
+		}
+
+		var phpPattern = /<\?(?:[^"'/#]|\/(?![*/])|("|')(?:\\[\s\S]|(?!\1)[^\\])*\1|(?:\/\/|#(?!\[))(?:[^?\n\r]|\?(?!>))*(?=$|\?>|[\r\n])|#\[|\/\*(?:[^*]|\*(?!\/))*(?:\*\/|$))*?(?:\?>|$)/g;
+		Prism.languages['markup-templating'].buildPlaceholders(env, 'php', phpPattern);
+	});
+
+	Prism.hooks.add('after-tokenize', function (env) {
+		Prism.languages['markup-templating'].tokenizePlaceholders(env, 'php');
+	});
+
+}(Prism));
+
+Prism.languages.go = Prism.languages.extend('clike', {
+	'string': {
+		pattern: /(^|[^\\])"(?:\\.|[^"\\\r\n])*"|`[^`]*`/,
+		lookbehind: true,
+		greedy: true
+	},
+	'keyword': /\b(?:break|case|chan|const|continue|default|defer|else|fallthrough|for|func|go(?:to)?|if|import|interface|map|package|range|return|select|struct|switch|type|var)\b/,
+	'boolean': /\b(?:_|false|iota|nil|true)\b/,
+	'number': [
+		// binary and octal integers
+		/\b0(?:b[01_]+|o[0-7_]+)i?\b/i,
+		// hexadecimal integers and floats
+		/\b0x(?:[a-f\d_]+(?:\.[a-f\d_]*)?|\.[a-f\d_]+)(?:p[+-]?\d+(?:_\d+)*)?i?(?!\w)/i,
+		// decimal integers and floats
+		/(?:\b\d[\d_]*(?:\.[\d_]*)?|\B\.\d[\d_]*)(?:e[+-]?[\d_]+)?i?(?!\w)/i
+	],
+	'operator': /[*\/%^!=]=?|\+[=+]?|-[=-]?|\|[=|]?|&(?:=|&|\^=?)?|>(?:>=?|=)?|<(?:<=?|=|-)?|:=|\.\.\./,
+	'builtin': /\b(?:append|bool|byte|cap|close|complex|complex(?:64|128)|copy|delete|error|float(?:32|64)|u?int(?:8|16|32|64)?|imag|len|make|new|panic|print(?:ln)?|real|recover|rune|string|uintptr)\b/
+});
+
+Prism.languages.insertBefore('go', 'string', {
+	'char': {
+		pattern: /'(?:\\.|[^'\\\r\n]){0,10}'/,
+		greedy: true
+	}
+});
+
+delete Prism.languages.go['class-name'];
+
+(function (Prism) {
+	// $ set | grep '^[A-Z][^[:space:]]*=' | cut -d= -f1 | tr '\n' '|'
+	// + LC_ALL, RANDOM, REPLY, SECONDS.
+	// + make sure PS1..4 are here as they are not always set,
+	// - some useless things.
+	var envVars = '\\b(?:BASH|BASHOPTS|BASH_ALIASES|BASH_ARGC|BASH_ARGV|BASH_CMDS|BASH_COMPLETION_COMPAT_DIR|BASH_LINENO|BASH_REMATCH|BASH_SOURCE|BASH_VERSINFO|BASH_VERSION|COLORTERM|COLUMNS|COMP_WORDBREAKS|DBUS_SESSION_BUS_ADDRESS|DEFAULTS_PATH|DESKTOP_SESSION|DIRSTACK|DISPLAY|EUID|GDMSESSION|GDM_LANG|GNOME_KEYRING_CONTROL|GNOME_KEYRING_PID|GPG_AGENT_INFO|GROUPS|HISTCONTROL|HISTFILE|HISTFILESIZE|HISTSIZE|HOME|HOSTNAME|HOSTTYPE|IFS|INSTANCE|JOB|LANG|LANGUAGE|LC_ADDRESS|LC_ALL|LC_IDENTIFICATION|LC_MEASUREMENT|LC_MONETARY|LC_NAME|LC_NUMERIC|LC_PAPER|LC_TELEPHONE|LC_TIME|LESSCLOSE|LESSOPEN|LINES|LOGNAME|LS_COLORS|MACHTYPE|MAILCHECK|MANDATORY_PATH|NO_AT_BRIDGE|OLDPWD|OPTERR|OPTIND|ORBIT_SOCKETDIR|OSTYPE|PAPERSIZE|PATH|PIPESTATUS|PPID|PS1|PS2|PS3|PS4|PWD|RANDOM|REPLY|SECONDS|SELINUX_INIT|SESSION|SESSIONTYPE|SESSION_MANAGER|SHELL|SHELLOPTS|SHLVL|SSH_AUTH_SOCK|TERM|UID|UPSTART_EVENTS|UPSTART_INSTANCE|UPSTART_JOB|UPSTART_SESSION|USER|WINDOWID|XAUTHORITY|XDG_CONFIG_DIRS|XDG_CURRENT_DESKTOP|XDG_DATA_DIRS|XDG_GREETER_DATA_DIR|XDG_MENU_PREFIX|XDG_RUNTIME_DIR|XDG_SEAT|XDG_SEAT_PATH|XDG_SESSION_DESKTOP|XDG_SESSION_ID|XDG_SESSION_PATH|XDG_SESSION_TYPE|XDG_VTNR|XMODIFIERS)\\b';
+
+	var commandAfterHeredoc = {
+		pattern: /(^(["']?)\w+\2)[ \t]+\S.*/,
+		lookbehind: true,
+		alias: 'punctuation', // this looks reasonably well in all themes
+		inside: null // see below
+	};
+
+	var insideString = {
+		'bash': commandAfterHeredoc,
+		'environment': {
+			pattern: RegExp('\\$' + envVars),
+			alias: 'constant'
+		},
+		'variable': [
+			// [0]: Arithmetic Environment
+			{
+				pattern: /\$?\(\([\s\S]+?\)\)/,
+				greedy: true,
+				inside: {
+					// If there is a $ sign at the beginning highlight $(( and )) as variable
+					'variable': [
+						{
+							pattern: /(^\$\(\([\s\S]+)\)\)/,
+							lookbehind: true
+						},
+						/^\$\(\(/
+					],
+					'number': /\b0x[\dA-Fa-f]+\b|(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:[Ee]-?\d+)?/,
+					// Operators according to https://www.gnu.org/software/bash/manual/bashref.html#Shell-Arithmetic
+					'operator': /--|\+\+|\*\*=?|<<=?|>>=?|&&|\|\||[=!+\-*/%<>^&|]=?|[?~:]/,
+					// If there is no $ sign at the beginning highlight (( and )) as punctuation
+					'punctuation': /\(\(?|\)\)?|,|;/
+				}
+			},
+			// [1]: Command Substitution
+			{
+				pattern: /\$\((?:\([^)]+\)|[^()])+\)|`[^`]+`/,
+				greedy: true,
+				inside: {
+					'variable': /^\$\(|^`|\)$|`$/
+				}
+			},
+			// [2]: Brace expansion
+			{
+				pattern: /\$\{[^}]+\}/,
+				greedy: true,
+				inside: {
+					'operator': /:[-=?+]?|[!\/]|##?|%%?|\^\^?|,,?/,
+					'punctuation': /[\[\]]/,
+					'environment': {
+						pattern: RegExp('(\\{)' + envVars),
+						lookbehind: true,
+						alias: 'constant'
+					}
+				}
+			},
+			/\$(?:\w+|[#?*!@$])/
+		],
+		// Escape sequences from echo and printf's manuals, and escaped quotes.
+		'entity': /\\(?:[abceEfnrtv\\"]|O?[0-7]{1,3}|U[0-9a-fA-F]{8}|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{1,2})/
+	};
+
+	Prism.languages.bash = {
+		'shebang': {
+			pattern: /^#!\s*\/.*/,
+			alias: 'important'
+		},
+		'comment': {
+			pattern: /(^|[^"{\\$])#.*/,
+			lookbehind: true
+		},
+		'function-name': [
+			// a) function foo {
+			// b) foo() {
+			// c) function foo() {
+			// but not “foo {”
+			{
+				// a) and c)
+				pattern: /(\bfunction\s+)[\w-]+(?=(?:\s*\(?:\s*\))?\s*\{)/,
+				lookbehind: true,
+				alias: 'function'
+			},
+			{
+				// b)
+				pattern: /\b[\w-]+(?=\s*\(\s*\)\s*\{)/,
+				alias: 'function'
+			}
+		],
+		// Highlight variable names as variables in for and select beginnings.
+		'for-or-select': {
+			pattern: /(\b(?:for|select)\s+)\w+(?=\s+in\s)/,
+			alias: 'variable',
+			lookbehind: true
+		},
+		// Highlight variable names as variables in the left-hand part
+		// of assignments (“=” and “+=”).
+		'assign-left': {
+			pattern: /(^|[\s;|&]|[<>]\()\w+(?:\.\w+)*(?=\+?=)/,
+			inside: {
+				'environment': {
+					pattern: RegExp('(^|[\\s;|&]|[<>]\\()' + envVars),
+					lookbehind: true,
+					alias: 'constant'
+				}
+			},
+			alias: 'variable',
+			lookbehind: true
+		},
+		// Highlight parameter names as variables
+		'parameter': {
+			pattern: /(^|\s)-{1,2}(?:\w+:[+-]?)?\w+(?:\.\w+)*(?=[=\s]|$)/,
+			alias: 'variable',
+			lookbehind: true
+		},
+		'string': [
+			// Support for Here-documents https://en.wikipedia.org/wiki/Here_document
+			{
+				pattern: /((?:^|[^<])<<-?\s*)(\w+)\s[\s\S]*?(?:\r?\n|\r)\2/,
+				lookbehind: true,
+				greedy: true,
+				inside: insideString
+			},
+			// Here-document with quotes around the tag
+			// → No expansion (so no “inside”).
+			{
+				pattern: /((?:^|[^<])<<-?\s*)(["'])(\w+)\2\s[\s\S]*?(?:\r?\n|\r)\3/,
+				lookbehind: true,
+				greedy: true,
+				inside: {
+					'bash': commandAfterHeredoc
+				}
+			},
+			// “Normal” string
+			{
+				// https://www.gnu.org/software/bash/manual/html_node/Double-Quotes.html
+				pattern: /(^|[^\\](?:\\\\)*)"(?:\\[\s\S]|\$\([^)]+\)|\$(?!\()|`[^`]+`|[^"\\`$])*"/,
+				lookbehind: true,
+				greedy: true,
+				inside: insideString
+			},
+			{
+				// https://www.gnu.org/software/bash/manual/html_node/Single-Quotes.html
+				pattern: /(^|[^$\\])'[^']*'/,
+				lookbehind: true,
+				greedy: true
+			},
+			{
+				// https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html
+				pattern: /\$'(?:[^'\\]|\\[\s\S])*'/,
+				greedy: true,
+				inside: {
+					'entity': insideString.entity
+				}
+			}
+		],
+		'environment': {
+			pattern: RegExp('\\$?' + envVars),
+			alias: 'constant'
+		},
+		'variable': insideString.variable,
+		'function': {
+			pattern: /(^|[\s;|&]|[<>]\()(?:add|apropos|apt|apt-cache|apt-get|aptitude|aspell|automysqlbackup|awk|basename|bash|bc|bconsole|bg|bzip2|cal|cargo|cat|cfdisk|chgrp|chkconfig|chmod|chown|chroot|cksum|clear|cmp|column|comm|composer|cp|cron|crontab|csplit|curl|cut|date|dc|dd|ddrescue|debootstrap|df|diff|diff3|dig|dir|dircolors|dirname|dirs|dmesg|docker|docker-compose|du|egrep|eject|env|ethtool|expand|expect|expr|fdformat|fdisk|fg|fgrep|file|find|fmt|fold|format|free|fsck|ftp|fuser|gawk|git|gparted|grep|groupadd|groupdel|groupmod|groups|grub-mkconfig|gzip|halt|head|hg|history|host|hostname|htop|iconv|id|ifconfig|ifdown|ifup|import|install|ip|java|jobs|join|kill|killall|less|link|ln|locate|logname|logrotate|look|lpc|lpr|lprint|lprintd|lprintq|lprm|ls|lsof|lynx|make|man|mc|mdadm|mkconfig|mkdir|mke2fs|mkfifo|mkfs|mkisofs|mknod|mkswap|mmv|more|most|mount|mtools|mtr|mutt|mv|nano|nc|netstat|nice|nl|node|nohup|notify-send|npm|nslookup|op|open|parted|passwd|paste|pathchk|ping|pkill|pnpm|podman|podman-compose|popd|pr|printcap|printenv|ps|pushd|pv|quota|quotacheck|quotactl|ram|rar|rcp|reboot|remsync|rename|renice|rev|rm|rmdir|rpm|rsync|scp|screen|sdiff|sed|sendmail|seq|service|sftp|sh|shellcheck|shuf|shutdown|sleep|slocate|sort|split|ssh|stat|strace|su|sudo|sum|suspend|swapon|sync|sysctl|tac|tail|tar|tee|time|timeout|top|touch|tr|traceroute|tsort|tty|umount|uname|unexpand|uniq|units|unrar|unshar|unzip|update-grub|uptime|useradd|userdel|usermod|users|uudecode|uuencode|v|vcpkg|vdir|vi|vim|virsh|vmstat|wait|watch|wc|wget|whereis|which|who|whoami|write|xargs|xdg-open|yarn|yes|zenity|zip|zsh|zypper)(?=$|[)\s;|&])/,
+			lookbehind: true
+		},
+		'keyword': {
+			pattern: /(^|[\s;|&]|[<>]\()(?:case|do|done|elif|else|esac|fi|for|function|if|in|select|then|until|while)(?=$|[)\s;|&])/,
+			lookbehind: true
+		},
+		// https://www.gnu.org/software/bash/manual/html_node/Shell-Builtin-Commands.html
+		'builtin': {
+			pattern: /(^|[\s;|&]|[<>]\()(?:\.|:|alias|bind|break|builtin|caller|cd|command|continue|declare|echo|enable|eval|exec|exit|export|getopts|hash|help|let|local|logout|mapfile|printf|pwd|read|readarray|readonly|return|set|shift|shopt|source|test|times|trap|type|typeset|ulimit|umask|unalias|unset)(?=$|[)\s;|&])/,
+			lookbehind: true,
+			// Alias added to make those easier to distinguish from strings.
+			alias: 'class-name'
+		},
+		'boolean': {
+			pattern: /(^|[\s;|&]|[<>]\()(?:false|true)(?=$|[)\s;|&])/,
+			lookbehind: true
+		},
+		'file-descriptor': {
+			pattern: /\B&\d\b/,
+			alias: 'important'
+		},
+		'operator': {
+			// Lots of redirections here, but not just that.
+			pattern: /\d?<>|>\||\+=|=[=~]?|!=?|<<[<-]?|[&\d]?>>|\d[<>]&?|[<>][&=]?|&[>&]?|\|[&|]?/,
+			inside: {
+				'file-descriptor': {
+					pattern: /^\d/,
+					alias: 'important'
+				}
+			}
+		},
+		'punctuation': /\$?\(\(?|\)\)?|\.\.|[{}[\];\\]/,
+		'number': {
+			pattern: /(^|\s)(?:[1-9]\d*|0)(?:[.,]\d+)?\b/,
+			lookbehind: true
+		}
+	};
+
+	commandAfterHeredoc.inside = Prism.languages.bash;
+
+	/* Patterns in command substitution. */
+	var toBeCopied = [
+		'comment',
+		'function-name',
+		'for-or-select',
+		'assign-left',
+		'parameter',
+		'string',
+		'environment',
+		'function',
+		'keyword',
+		'builtin',
+		'boolean',
+		'file-descriptor',
+		'operator',
+		'punctuation',
+		'number'
+	];
+	var inside = insideString.variable[1].inside;
+	for (var i = 0; i < toBeCopied.length; i++) {
+		inside[toBeCopied[i]] = Prism.languages.bash[toBeCopied[i]];
+	}
+
+	Prism.languages.sh = Prism.languages.bash;
+	Prism.languages.shell = Prism.languages.bash;
+}(Prism));
+
+// https://www.json.org/json-en.html
+Prism.languages.json = {
+	'property': {
+		pattern: /(^|[^\\])"(?:\\.|[^\\"\r\n])*"(?=\s*:)/,
+		lookbehind: true,
+		greedy: true
+	},
+	'string': {
+		pattern: /(^|[^\\])"(?:\\.|[^\\"\r\n])*"(?!\s*:)/,
+		lookbehind: true,
+		greedy: true
+	},
+	'comment': {
+		pattern: /\/\/.*|\/\*[\s\S]*?(?:\*\/|$)/,
+		greedy: true
+	},
+	'number': /-?\b\d+(?:\.\d+)?(?:e[+-]?\d+)?\b/i,
+	'punctuation': /[{}[\],]/,
+	'operator': /:/,
+	'boolean': /\b(?:false|true)\b/,
+	'null': {
+		pattern: /\bnull\b/,
+		alias: 'keyword'
+	}
+};
+
+Prism.languages.webmanifest = Prism.languages.json;
+
+(function (Prism) {
+
+	Prism.languages.diff = {
+		'coord': [
+			// Match all kinds of coord lines (prefixed by "+++", "---" or "***").
+			/^(?:\*{3}|-{3}|\+{3}).*$/m,
+			// Match "@@ ... @@" coord lines in unified diff.
+			/^@@.*@@$/m,
+			// Match coord lines in normal diff (starts with a number).
+			/^\d.*$/m
+		]
+
+		// deleted, inserted, unchanged, diff
+	};
+
+	/**
+	 * A map from the name of a block to its line prefix.
+	 *
+	 * @type {Object<string, string>}
+	 */
+	var PREFIXES = {
+		'deleted-sign': '-',
+		'deleted-arrow': '<',
+		'inserted-sign': '+',
+		'inserted-arrow': '>',
+		'unchanged': ' ',
+		'diff': '!',
+	};
+
+	// add a token for each prefix
+	Object.keys(PREFIXES).forEach(function (name) {
+		var prefix = PREFIXES[name];
+
+		var alias = [];
+		if (!/^\w+$/.test(name)) { // "deleted-sign" -> "deleted"
+			alias.push(/\w+/.exec(name)[0]);
+		}
+		if (name === 'diff') {
+			alias.push('bold');
+		}
+
+		Prism.languages.diff[name] = {
+			pattern: RegExp('^(?:[' + prefix + '].*(?:\r\n?|\n|(?![\\s\\S])))+', 'm'),
+			alias: alias,
+			inside: {
+				'line': {
+					pattern: /(.)(?=[\s\S]).*(?:\r\n?|\n)?/,
+					lookbehind: true
+				},
+				'prefix': {
+					pattern: /[\s\S]/,
+					alias: /\w+/.exec(name)[0]
+				}
+			}
+		};
+
+	});
+
+	// make prefixes available to Diff plugin
+	Object.defineProperty(Prism.languages.diff, 'PREFIXES', {
+		value: PREFIXES
+	});
+
+}(Prism));
 
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -6717,7 +6556,17 @@ function z$1(t,e){const n={};for(const o of t){const t=e(o);t&&(n[t]?n[t].push(o
  *
  */
 
-function x$1(t,e,n,r,o){if(null===t||0===n.size&&0===r.size&&!o)return 0;const i=e._selection,a=t._selection;if(o)return 1;if(!(yr(i)&&yr(a)&&a.isCollapsed()&&i.isCollapsed()))return 0;const s=function(t,e,n){const r=t._nodeMap,o=[];for(const t of e){const e=r.get(t);void 0!==e&&o.push(e);}for(const[t,e]of n){if(!e)continue;const n=r.get(t);void 0===n||bi(n)||o.push(n);}return o}(e,n,r);if(0===s.length)return 0;if(s.length>1){const n=e._nodeMap,r=n.get(i.anchor.key),o=n.get(a.anchor.key);return r&&o&&!t._nodeMap.has(r.__key)&&lr(r)&&1===r.__text.length&&1===i.anchor.offset?2:0}const c=s[0],d=t._nodeMap.get(c.__key);if(!lr(d)||!lr(c)||d.__mode!==c.__mode)return 0;const u=d.__text,l=c.__text;if(u===l)return 0;const f=i.anchor,p=a.anchor;if(f.key!==p.key||"text"!==f.type)return 0;const h=f.offset,m=p.offset,y=l.length-u.length;return 1===y&&m===h-1?2:-1===y&&m===h+1?3:-1===y&&m===h?4:0}function C$1(t,e){let n=Date.now(),r=0;return (o,i,a,s,c,d)=>{const u=Date.now();if(d.has(An))return r=0,n=u,2;const l=x$1(o,i,s,c,t.isComposing()),f=(()=>{const f=null===a||a.editor===t,p=d.has(Pn);if(!p&&f&&d.has(Dn))return 0;if(null===o)return 1;const h=i._selection;if(!(s.size>0||c.size>0))return null!==h?0:2;const m="number"==typeof e?e:e.peek();if(false===p&&0!==l&&l===r&&u<n+m&&f)return 0;if(1===s.size){if(function(t,e,n){const r=e._nodeMap.get(t),o=n._nodeMap.get(t),i=e._selection,a=n._selection;return !(yr(i)&&yr(a)&&"element"===i.anchor.type&&"element"===i.focus.type&&"text"===a.anchor.type&&"text"===a.focus.type||!lr(r)||!lr(o)||r.__parent!==o.__parent)&&JSON.stringify(e.read(()=>r.exportJSON()))===JSON.stringify(n.read(()=>o.exportJSON()))}(Array.from(s)[0],o,i))return 0}return 1})();return n=u,r=l,f}}function v$1(t){t.undoStack=[],t.redoStack=[],t.current=null;}function b$1(t,e,n){const r=C$1(t,n),i=U$4(t.registerCommand(pe$1,()=>(function(t,e){const n=e.redoStack,r=e.undoStack;if(0!==r.length){const o=e.current,i=r.pop();null!==o&&(n.push(o),t.dispatchCommand($e$2,true)),0===r.length&&t.dispatchCommand(Ue$2,false),e.current=i||null,i&&i.editor.setEditorState(i.editorState,{tag:An});}}(t,e),true),Ki),t.registerCommand(ye$1,()=>(function(t,e){const n=e.redoStack,r=e.undoStack;if(0!==n.length){const o=e.current;null!==o&&(r.push(o),t.dispatchCommand(Ue$2,true));const i=n.pop();0===n.length&&t.dispatchCommand($e$2,false),e.current=i||null,i&&i.editor.setEditorState(i.editorState,{tag:An});}}(t,e),true),Ki),t.registerCommand(Je$1,()=>(v$1(e),false),Ki),t.registerCommand(je$2,()=>(v$1(e),t.dispatchCommand($e$2,false),t.dispatchCommand(Ue$2,false),true),Ki),t.registerUpdateListener(({editorState:n,prevEditorState:o,dirtyLeaves:i,dirtyElements:a,tags:s})=>{const c=e.current,d=e.redoStack,u=e.undoStack,l=null===c?null:c.editorState;if(null!==c&&n===l)return;const f=r(o,n,c,i,a,s);if(1===f)0!==d.length&&(e.redoStack=[],t.dispatchCommand($e$2,false)),null!==c&&(u.push({...c}),t.dispatchCommand(Ue$2,true));else if(2===f)return;e.current={editor:t,editorState:n};}));return i}function w$1(){return {current:null,redoStack:[],undoStack:[]}}const E$1=Kl({build:(e,{delay:n,createInitialHistoryState:r,disabled:o})=>at$2({delay:n,disabled:o,historyState:r(e)}),config:Bl({createInitialHistoryState:w$1,delay:300,disabled:"undefined"==typeof window}),name:"@lexical/history/History",register:(t,n,r)=>{const o=r.getOutput();return dt$3(()=>o.disabled.value?void 0:b$1(t,o.historyState.value,o.delay))}});Kl({dependencies:[zl(E$1,{createInitialHistoryState:()=>{throw new Error("SharedHistory did not inherit parent history")},disabled:true})],name:"@lexical/history/SharedHistory",register(t,o,i){const{output:a}=i.getDependency(E$1),s=function(t){return t?Gt$1(t,E$1.name):null}(t._parentEditor);if(!s)return ()=>{};const c=s.output;return dt$3(()=>F$2(()=>{a.delay.value=c.delay.value,a.historyState.value=c.historyState.value,a.disabled.value=c.disabled.value;}))}});
+function z$1(t,e){const n={};for(const o of t){const t=e(o);t&&(n[t]?n[t].push(o):n[t]=[o]);}return n}function U$1(t){const e=z$1(t,t=>t.type);return {element:e.element||[],multilineElement:e["multiline-element"]||[],textFormat:e["text-format"]||[],textMatch:e["text-match"]||[]}}const W$1=/[!-/:-@[-`{-~\s]/;function V$1(t){return lr(t)&&!t.hasFormat("code")}function et(t,...e){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",t);for(const t of e)o.append("v",t);throw n.search=o.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const nt=/^(\s*)(\d{1,})\.\s/,ot=/^(\s*)[-*+]\s/,it=/^(#{1,6})\s/,st=/^>\s/,lt=/^[ \t]*```([\w-]+)?/,ct=/[ \t]*```$/,mt=ot$4("mdListMarker",{parse:t=>"string"==typeof t&&/^[-*+]$/.test(t)?t:"-"}),ht=t=>(e,n,o,r)=>{const i=t(o);i.append(...n),e.replace(i),r||i.select(0,0);};const xt=t=>(e,n,o,r)=>{const i=e.getPreviousSibling(),s=e.getNextSibling(),l=st$2("check"===t?"x"===o[3]:void 0),c=o[0].trim()[0],f="bullet"!==t&&"check"!==t||c!==mt.parse(c)?void 0:c;if(dt$1(s)&&s.getListType()===t){f&&ct$4(s,mt,f);const t=s.getFirstChild();null!==t?t.insertBefore(l):s.append(l),e.remove();}else if(dt$1(i)&&i.getListType()===t)f&&ct$4(i,mt,f),i.append(l),e.remove();else {const n=ht$3(t,"number"===t?Number(o[2]):void 0);f&&ct$4(n,mt,f),n.append(l),e.replace(n);}l.append(...n),r||l.select(0,0);const a=function(t){const e=t.match(/\t/g),n=t.match(/ /g);let o=0;return e&&(o+=e.length),n&&(o+=Math.floor(n.length/4)),o}(o[1]);a&&l.setIndent(a);},Tt=(t,e,n)=>{const o=[],r=t.getChildren();let i=0;for(const s of r)if(ot$2(s)){if(1===s.getChildrenSize()){const t=s.getFirstChild();if(dt$1(t)){o.push(Tt(t,e,n+1));continue}}const r=" ".repeat(4*n),l=t.getListType(),c=st$4(t,mt),f="number"===l?`${t.getStart()+i}. `:"check"===l?`${c} [${s.getChecked()?"x":" "}] `:c+" ";o.push(r+f+e(s)),i++;}return o.join("\n")},Et={dependencies:[Pt$2],export:(t,e)=>{if(!It$1(t))return null;const n=Number(t.getTag().slice(1));return "#".repeat(n)+" "+e(t)},regExp:it,replace:ht(t=>{const e="h"+t[1].length;return St$2(e)}),type:"element"},Ct={dependencies:[Et$2],export:(t,e)=>{if(!Ot$1(t))return null;const n=e(t).split("\n"),o=[];for(const t of n)o.push("> "+t);return o.join("\n")},regExp:st,replace:(t,e,n,o)=>{if(o){const n=t.getPreviousSibling();if(Ot$1(n))return n.splice(n.getChildrenSize(),0,[Jn(),...e]),void t.remove()}const r=_t$1();r.append(...e),t.replace(r),o||r.select(0,0);},type:"element"},yt={dependencies:[q$1],export:t=>{if(!X$1(t))return null;const e=t.getTextContent();return "```"+(t.getLanguage()||"")+(e?"\n"+e:"")+"\n```"},regExpEnd:{optional:true,regExp:ct},regExpStart:lt,replace:(t,e,n,o,r,i)=>{let s,c;if(!e&&r){if(1===r.length)o?(s=U$2(),c=n[1]+r[0]):(s=U$2(n[1]),c=r[0].startsWith(" ")?r[0].slice(1):r[0]);else {if(s=U$2(n[1]),0===r[0].trim().length)for(;r.length>0&&!r[0].length;)r.shift();else r[0]=r[0].startsWith(" ")?r[0].slice(1):r[0];for(;r.length>0&&!r[r.length-1].length;)r.pop();c=r.join("\n");}const e=sr(c);s.append(e),t.append(s);}else e&&ht(t=>U$2(t?t[1]:void 0))(t,e,n,i);},type:"multiline-element"},$t={dependencies:[lt$2,nt$2],export:(t,e)=>dt$1(t)?Tt(t,e,0):null,regExp:ot,replace:xt("bullet"),type:"element"},St={dependencies:[lt$2,nt$2],export:(t,e)=>dt$1(t)?Tt(t,e,0):null,regExp:nt,replace:xt("number"),type:"element"},bt={format:["code"],tag:"`",type:"text-format"},Ft={format:["highlight"],tag:"==",type:"text-format"},It={format:["bold","italic"],tag:"***",type:"text-format"},wt={format:["bold","italic"],intraword:false,tag:"___",type:"text-format"},Nt={format:["bold"],tag:"**",type:"text-format"},kt={format:["bold"],intraword:false,tag:"__",type:"text-format"},Rt={format:["strikethrough"],tag:"~~",type:"text-format"},Lt={format:["italic"],tag:"*",type:"text-format"},_t={format:["italic"],intraword:false,tag:"_",type:"text-format"},Pt={dependencies:[y$1],export:(t,e,n)=>{if(!w$2(t)||E$2(t))return null;const o=t.getTitle(),r=e(t);return o?`[${r}](${t.getURL()} "${o}")`:`[${r}](${t.getURL()})`},importRegExp:/(?:\[(.+?)\])(?:\((?:([^()\s]+)(?:\s"((?:[^"]*\\")*[^"]*)"\s*)?)\))/,regExp:/(?:\[(.+?)\])(?:\((?:([^()\s]+)(?:\s"((?:[^"]*\\")*[^"]*)"\s*)?)\))$/,replace:(t,e)=>{const[,n,o,r]=e,i=D$1(o,{title:r}),s=n.split("[").length-1,c=n.split("]").length-1;let f=n,a="";if(s<c)return;if(s>c){const t=n.split("[");a="["+t[0],f=t.slice(1).join("[");}const u=sr(f);return u.setFormat(t.getFormat()),i.append(u),t.replace(i),a&&i.insertBefore(sr(a)),u},trigger:")",type:"text-match"},Bt=[Et,Ct,$t,St],Mt=[yt],jt=[bt,It,wt,Nt,kt,Ft,Lt,_t,Rt],At=[Pt],zt=[...Bt,...Mt,...jt,...At];function Ut(t,e,n){const o=n.length;for(let r=e;r>=o;r--){const e=r-o;if(Wt(t,e,n,0,o)&&" "!==t[e+o])return e}return  -1}function Wt(t,e,n,o,r){for(let i=0;i<r;i++)if(t[e+i]!==n[o+i])return  false;return  true}function Dt(t,n=zt){const o=U$1(n),r=z$1(o.textFormat,({tag:t})=>t[t.length-1]),l=z$1(o.textMatch,({trigger:t})=>t);for(const e of n){const n=e.type;if("element"===n||"text-match"===n||"multiline-element"===n){const n=e.dependencies;for(const e of n)t.hasNode(e)||et(173,e.getType());}}const c=(t,n,c)=>{(function(t,e,n,o){const r=t.getParent();if(!as(r)||t.getFirstChild()!==e)return  false;const i=e.getTextContent();if(" "!==i[n-1])return  false;for(const{regExp:r,replace:s}of o){const o=i.match(r);if(o&&o[0].length===(o[0].endsWith(" ")?n:n-1)){const r=e.getNextSiblings(),[i,l]=e.splitText(n);if(false!==s(t,l?[l,...r]:r,o,false))return i.remove(),true}}return  false})(t,n,c,o.element)||function(t,e,n,o){const r=t.getParent();if(!as(r)||t.getFirstChild()!==e)return  false;const i=e.getTextContent();if(" "!==i[n-1])return  false;for(const{regExpStart:r,replace:s,regExpEnd:l}of o){if(l&&!("optional"in l)||l&&"optional"in l&&!l.optional)continue;const o=i.match(r);if(o&&o[0].length===(o[0].endsWith(" ")?n:n-1)){const r=e.getNextSiblings(),[i,l]=e.splitText(n);if(false!==s(t,l?[l,...r]:r,o,null,null,false))return i.remove(),true}}return  false}(t,n,c,o.multilineElement)||function(t,e,n){let o=t.getTextContent();const r=n[o[e-1]];if(null==r)return  false;e<o.length&&(o=o.slice(0,e));for(const e of r){if(!e.replace||!e.regExp)continue;const n=o.match(e.regExp);if(null===n)continue;const r=n.index||0,i=r+n[0].length;let s;return 0===r?[s]=t.splitText(i):[,s]=t.splitText(r,i),s.selectNext(0,0),e.replace(s,n),true}return  false}(n,c,l)||function(t,n,o){const r=t.getTextContent(),l=n-1,c=r[l],f=o[c];if(!f)return  false;for(const n of f){const{tag:o}=n,f=o.length,a=l-f+1;if(f>1&&!Wt(r,a,o,0,f))continue;if(" "===r[a-1])continue;const u=r[l+1];if(false===n.intraword&&u&&!W$1.test(u))continue;const g=t;let p=g,d=Ut(r,a,o),h=p;for(;d<0&&(h=h.getPreviousSibling())&&!jn(h);)if(lr(h)){if(h.hasFormat("code"))continue;const t=h.getTextContent();p=h,d=Ut(t,t.length,o);}if(d<0)continue;if(p===g&&d+f===a)continue;const E=p.getTextContent();if(d>0&&E[d-1]===c)continue;const C=E[d-1];if(false===n.intraword&&C&&!W$1.test(C))continue;const y=g.getTextContent(),$=y.slice(0,a)+y.slice(l+1);g.setTextContent($);const v=p===g?$:E;p.setTextContent(v.slice(0,d)+v.slice(d+f));const S=Lr(),b=Ar();wo(b);const F=l-f*(p===g?2:1)+1;b.anchor.set(p.__key,d,"text"),b.focus.set(g.__key,F,"text");for(const t of n.format)b.hasFormat(t)||b.formatText(t);b.anchor.set(b.focus.key,b.focus.offset,b.focus.type);for(const t of n.format)b.hasFormat(t)&&b.toggleFormat(t);return yr(S)&&(b.format=S.format),true}}(n,c,r);};return t.registerUpdateListener(({tags:n,dirtyLeaves:o,editorState:r,prevEditorState:i})=>{if(n.has(Ln)||n.has(An))return;if(t.isComposing())return;const l=r.read(Lr),f=i.read(Lr);if(!yr(f)||!yr(l)||!l.isCollapsed()||l.is(f))return;const a=l.anchor.key,u=l.anchor.offset,g=r._nodeMap.get(a);!lr(g)||!o.has(a)||1!==u&&u>f.anchor.offset+1||t.update(()=>{if(!V$1(g))return;const t=g.getParent();null===t||X$1(t)||c(t,g,l.anchor.offset);});})}
+
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ */
+
+function x$1(t,e,n,r,o){if(null===t||0===n.size&&0===r.size&&!o)return 0;const i=e._selection,a=t._selection;if(o)return 1;if(!(yr(i)&&yr(a)&&a.isCollapsed()&&i.isCollapsed()))return 0;const s=function(t,e,n){const r=t._nodeMap,o=[];for(const t of e){const e=r.get(t);void 0!==e&&o.push(e);}for(const[t,e]of n){if(!e)continue;const n=r.get(t);void 0===n||bi(n)||o.push(n);}return o}(e,n,r);if(0===s.length)return 0;if(s.length>1){const n=e._nodeMap,r=n.get(i.anchor.key),o=n.get(a.anchor.key);return r&&o&&!t._nodeMap.has(r.__key)&&lr(r)&&1===r.__text.length&&1===i.anchor.offset?2:0}const c=s[0],d=t._nodeMap.get(c.__key);if(!lr(d)||!lr(c)||d.__mode!==c.__mode)return 0;const u=d.__text,l=c.__text;if(u===l)return 0;const f=i.anchor,p=a.anchor;if(f.key!==p.key||"text"!==f.type)return 0;const h=f.offset,m=p.offset,y=l.length-u.length;return 1===y&&m===h-1?2:-1===y&&m===h+1?3:-1===y&&m===h?4:0}function C$1(t,e){let n=Date.now(),r=0;return (o,i,a,s,c,d)=>{const u=Date.now();if(d.has(An))return r=0,n=u,2;const l=x$1(o,i,s,c,t.isComposing()),f=(()=>{const f=null===a||a.editor===t,p=d.has(Pn);if(!p&&f&&d.has(Dn))return 0;if(null===o)return 1;const h=i._selection;if(!(s.size>0||c.size>0))return null!==h?0:2;const m="number"==typeof e?e:e.peek();if(false===p&&0!==l&&l===r&&u<n+m&&f)return 0;if(1===s.size){if(function(t,e,n){const r=e._nodeMap.get(t),o=n._nodeMap.get(t),i=e._selection,a=n._selection;return !(yr(i)&&yr(a)&&"element"===i.anchor.type&&"element"===i.focus.type&&"text"===a.anchor.type&&"text"===a.focus.type||!lr(r)||!lr(o)||r.__parent!==o.__parent)&&JSON.stringify(e.read(()=>r.exportJSON()))===JSON.stringify(n.read(()=>o.exportJSON()))}(Array.from(s)[0],o,i))return 0}return 1})();return n=u,r=l,f}}function v$1(t){t.undoStack=[],t.redoStack=[],t.current=null;}function b$1(t,e,n){const r=C$1(t,n),i=U$4(t.registerCommand(pe$1,()=>(function(t,e){const n=e.redoStack,r=e.undoStack;if(0!==r.length){const o=e.current,i=r.pop();null!==o&&(n.push(o),t.dispatchCommand($e$1,true)),0===r.length&&t.dispatchCommand(Ue$1,false),e.current=i||null,i&&i.editor.setEditorState(i.editorState,{tag:An});}}(t,e),true),Ki),t.registerCommand(ye$1,()=>(function(t,e){const n=e.redoStack,r=e.undoStack;if(0!==n.length){const o=e.current;null!==o&&(r.push(o),t.dispatchCommand(Ue$1,true));const i=n.pop();0===n.length&&t.dispatchCommand($e$1,false),e.current=i||null,i&&i.editor.setEditorState(i.editorState,{tag:An});}}(t,e),true),Ki),t.registerCommand(Je$1,()=>(v$1(e),false),Ki),t.registerCommand(je$1,()=>(v$1(e),t.dispatchCommand($e$1,false),t.dispatchCommand(Ue$1,false),true),Ki),t.registerUpdateListener(({editorState:n,prevEditorState:o,dirtyLeaves:i,dirtyElements:a,tags:s})=>{const c=e.current,d=e.redoStack,u=e.undoStack,l=null===c?null:c.editorState;if(null!==c&&n===l)return;const f=r(o,n,c,i,a,s);if(1===f)0!==d.length&&(e.redoStack=[],t.dispatchCommand($e$1,false)),null!==c&&(u.push({...c}),t.dispatchCommand(Ue$1,true));else if(2===f)return;e.current={editor:t,editorState:n};}));return i}function w$1(){return {current:null,redoStack:[],undoStack:[]}}const E$1=Kl({build:(e,{delay:n,createInitialHistoryState:r,disabled:o})=>at$1({delay:n,disabled:o,historyState:r(e)}),config:Bl({createInitialHistoryState:w$1,delay:300,disabled:"undefined"==typeof window}),name:"@lexical/history/History",register:(t,n,r)=>{const o=r.getOutput();return dt$2(()=>o.disabled.value?void 0:b$1(t,o.historyState.value,o.delay))}});Kl({dependencies:[zl(E$1,{createInitialHistoryState:()=>{throw new Error("SharedHistory did not inherit parent history")},disabled:true})],name:"@lexical/history/SharedHistory",register(t,o,i){const{output:a}=i.getDependency(E$1),s=function(t){return t?Gt(t,E$1.name):null}(t._parentEditor);if(!s)return ()=>{};const c=s.output;return dt$2(()=>F$2(()=>{a.delay.value=c.delay.value,a.historyState.value=c.historyState.value,a.disabled.value=c.disabled.value;}))}});
 
 var theme = {
   text: {
@@ -6727,10 +6576,6 @@ var theme = {
     underline: "lexxy-content__underline",
     highlight: "lexxy-content__highlight"
   },
-  tableCellHeader: "lexxy-content__table-cell--header",
-  tableCellSelected: "lexxy-content__table-cell--selected",
-  tableSelection: "lexxy-content__table--selection",
-  tableScrollableWrapper: "lexxy-content__table-wrapper",
   list: {
     nested: {
       listitem: "lexxy-nested-listitem",
@@ -6790,7 +6635,7 @@ var theme = {
   }
 };
 
-function createElement(name, properties, content = "") {
+function createElement(name, properties) {
   const element = document.createElement(name);
   for (const [ key, value ] of Object.entries(properties || {})) {
     if (key in element) {
@@ -6798,9 +6643,6 @@ function createElement(name, properties, content = "") {
     } else if (value !== null && value !== undefined) {
       element.setAttribute(key, value);
     }
-  }
-  if (content) {
-    element.innerHTML = content;
   }
   return element
 }
@@ -6953,10 +6795,6 @@ class ActionTextAttachmentNode extends ki {
 
   updateDOM() {
     return true
-  }
-
-  getTextContent() {
-    return `[${ this.caption || this.fileName }]\n\n`
   }
 
   isInline() {
@@ -7115,11 +6953,6 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   static importJSON(serializedNode) {
     return new ActionTextAttachmentUploadNode({ ...serializedNode })
-  }
-
-  // Should never run since this is a transient node. Defined to remove console warning.
-  static importDOM() {
-    return null
   }
 
   constructor({ file, uploadUrl, blobUrlTemplate, editor, progress }, key) {
@@ -7325,10 +7158,6 @@ class HorizontalDividerNode extends ki {
     return true
   }
 
-  getTextContent() {
-    return "┄\n\n"
-  }
-
   isInline() {
     return false
   }
@@ -7365,16 +7194,6 @@ const COMMANDS = [
   "insertCodeBlock",
   "insertHorizontalDivider",
   "uploadAttachments",
-
-  "insertTable",
-  "insertTableRowAbove",
-  "insertTableRowBelow",
-  "insertTableColumnAfter",
-  "insertTableColumnBefore",
-  "deleteTableRow",
-  "deleteTableColumn",
-  "deleteTable",
-
   "undo",
   "redo"
 ];
@@ -7450,7 +7269,7 @@ class CommandDispatcher {
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "bullet") {
       this.contents.unwrapSelectedListItems();
     } else {
-      this.editor.dispatchCommand(St$4, undefined);
+      this.editor.dispatchCommand(St$3, undefined);
     }
   }
 
@@ -7463,12 +7282,12 @@ class CommandDispatcher {
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "number") {
       this.contents.unwrapSelectedListItems();
     } else {
-      this.editor.dispatchCommand(xt$3, undefined);
+      this.editor.dispatchCommand(xt$2, undefined);
     }
   }
 
   dispatchInsertQuoteBlock() {
-    this.contents.toggleNodeWrappingAllSelectedNodes((node) => Ot$2(node), () => _t$2());
+    this.contents.toggleNodeWrappingAllSelectedNodes((node) => Ot$1(node), () => _t$1());
   }
 
   dispatchInsertCodeBlock() {
@@ -7494,14 +7313,9 @@ class CommandDispatcher {
       const selection = Lr();
       if (!yr(selection)) return
 
-      if (as(selection.anchor.getNode())) {
-        selection.insertNodes([ St$2("h2") ]);
-        return
-      }
-
       const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
       let nextTag = "h2";
-      if (It$2(topLevelElement)) {
+      if (It$1(topLevelElement)) {
         const currentTag = topLevelElement.getTag();
         if (currentTag === "h2") {
           nextTag = "h3";
@@ -7515,7 +7329,7 @@ class CommandDispatcher {
       }
 
       if (nextTag) {
-        this.contents.insertNodeWrappingEachSelectedLine(() => St$3(nextTag));
+        this.contents.insertNodeWrappingEachSelectedLine(() => St$2(nextTag));
       } else {
         this.contents.removeFormattingFromSelectedLines();
       }
@@ -7542,45 +7356,6 @@ class CommandDispatcher {
     setTimeout(() => input.remove(), 1000);
   }
 
-  dispatchInsertTable() {
-    this.editor.dispatchCommand(Ae$1, { "rows": 3, "columns": 3, "includeHeaders": true });
-  }
-
-  dispatchInsertTableRowBelow() {
-    je$1(true);
-  }
-
-  dispatchInsertTableRowAbove() {
-    je$1(false);
-  }
-
-  dispatchInsertTableColumnAfter() {
-    Ze$1(true);
-  }
-
-  dispatchInsertTableColumnBefore() {
-    Ze$1(false);
-  }
-
-  dispatchDeleteTableRow() {
-    ot$1();
-  }
-
-  dispatchDeleteTableColumn() {
-    lt$1();
-  }
-
-  dispatchDeleteTable() {
-    this.editor.update(() => {
-      const selection = Lr();
-      if (!yr(selection)) return
-
-      const anchorNode = selection.anchor.getNode();
-      const tableNode = Qt(anchorNode);
-      tableNode.remove();
-    });
-  }
-
   dispatchUndo() {
     this.editor.dispatchCommand(pe$1, undefined);
   }
@@ -7603,7 +7378,7 @@ class CommandDispatcher {
   }
 
   #registerKeyboardCommands() {
-    this.editor.registerCommand(Me$2, this.#handleListIndentation.bind(this), Ri);
+    this.editor.registerCommand(Me$1, this.#handleTabKey.bind(this), Ri);
   }
 
   #registerDragAndDropHandlers() {
@@ -7653,13 +7428,22 @@ class CommandDispatcher {
     this.editor.focus();
   }
 
-  #handleListIndentation(event) {
+  #handleTabKey(event) {
     if (this.selection.isInsideList) {
-      event.preventDefault();
       if (event.shiftKey) {
-        return this.editor.dispatchCommand(De$2, undefined)
+        if (this.selection.isIndentedList) {
+          event.preventDefault();
+          return this.editor.dispatchCommand(De$1, undefined)
+        }
+        return false
       } else {
-        return this.editor.dispatchCommand(Pe$2, undefined)
+        event.preventDefault();
+        return this.editor.dispatchCommand(Pe$1, undefined)
+      }
+    } else if (this.selection.isInsideCodeBlock) {
+      const selection = Lr();
+      if (yr(selection) && selection.isCollapsed()) {
+        return true
       }
     }
     return false
@@ -7841,6 +7625,45 @@ class Selection {
     return getNearestListItemNode(anchorNode) !== null
   }
 
+  get isIndentedList() {
+    let isIndented = false;
+
+    const selection = Lr();
+    if (!yr(selection)) return false
+
+    const nodes = selection.getNodes();
+    for (const node of nodes) {
+      let current = node;
+      while (current) {
+        if (ot$2(current)) {
+          const parentList = current.getParent();
+          if (parentList) {
+            const grandparent = parentList.getParent();
+            if (grandparent && ot$2(grandparent)) {
+              isIndented = true;
+              break
+            }
+          }
+        }
+        current = current.getParent();
+      }
+      if (isIndented) break
+    }
+
+    return isIndented
+  }
+
+  get isInsideCodeBlock() {
+    const selection = Lr();
+    if (!yr(selection)) return false
+
+    const anchorNode = selection.anchor.getNode();
+    if (!anchorNode.getParent()) return false
+
+    const topLevelElement = anchorNode.getTopLevelElementOrThrow();
+    return X$1(topLevelElement) || selection.hasFormat("code")
+  }
+
   get nodeAfterCursor() {
     const { anchorNode, offset } = this.#getCollapsedSelectionData();
     if (!anchorNode) return null
@@ -7922,11 +7745,11 @@ class Selection {
 
   #processSelectionChangeCommands() {
     this.editor.registerCommand(Se$1, this.#selectPreviousNode.bind(this), zi);
-    this.editor.registerCommand(xe$1, this.#selectNextNode.bind(this), zi);
-    this.editor.registerCommand(ke$2, this.#selectPreviousTopLevelNode.bind(this), zi);
-    this.editor.registerCommand(Te$2, this.#selectNextTopLevelNode.bind(this), zi);
+    this.editor.registerCommand(xe, this.#selectNextNode.bind(this), zi);
+    this.editor.registerCommand(ke$1, this.#selectPreviousTopLevelNode.bind(this), zi);
+    this.editor.registerCommand(Te$1, this.#selectNextTopLevelNode.bind(this), zi);
 
-    this.editor.registerCommand(Oe$2, this.#deleteSelectedOrNext.bind(this), zi);
+    this.editor.registerCommand(Oe$1, this.#deleteSelectedOrNext.bind(this), zi);
     this.editor.registerCommand(we$1, this.#deletePreviousOrNext.bind(this), zi);
 
     this.editor.registerCommand(ie$1, () => {
@@ -8420,10 +8243,6 @@ class CustomActionTextAttachmentNode extends ki {
     return true
   }
 
-  getTextContent() {
-    return this.createDOM().textContent.trim() || `[${this.contentType}]`
-  }
-
   isInline() {
     return true
   }
@@ -8461,7 +8280,7 @@ class FormatEscaper {
 
   monitor() {
     this.editor.registerCommand(
-      Ne$2,
+      Ne$1,
       (event) => this.#handleEnterKey(event),
       Bi
     );
@@ -8503,7 +8322,7 @@ class FormatEscaper {
     let currentNode = node;
 
     while (currentNode) {
-      if (Ot$2(currentNode)) {
+      if (Ot$1(currentNode)) {
         return true
       }
       currentNode = currentNode.getParent();
@@ -8526,7 +8345,7 @@ class FormatEscaper {
     if (!this.#isNodeEmpty(paragraph)) return false
 
     const parent = paragraph.getParent();
-    return parent && ot$3(parent)
+    return parent && ot$2(parent)
   }
 
   #isNodeEmpty(node) {
@@ -8545,7 +8364,7 @@ class FormatEscaper {
     let currentNode = node;
 
     while (currentNode) {
-      if (ot$3(currentNode)) {
+      if (ot$2(currentNode)) {
         return currentNode
       }
       currentNode = currentNode.getParent();
@@ -8559,10 +8378,10 @@ class FormatEscaper {
     if (!listItem) return
 
     const parentList = listItem.getParent();
-    if (!parentList || !dt$2(parentList)) return
+    if (!parentList || !dt$1(parentList)) return
 
     const blockquote = parentList.getParent();
-    const isInBlockquote = blockquote && Ot$2(blockquote);
+    const isInBlockquote = blockquote && Ot$1(blockquote);
 
     if (isInBlockquote) {
       const listItemsAfter = this.#getListItemSiblingsAfter(listItem);
@@ -8588,7 +8407,7 @@ class FormatEscaper {
     if (!this.#isNodeEmpty(paragraph)) return false
 
     const parent = paragraph.getParent();
-    return parent && Ot$2(parent)
+    return parent && Ot$1(parent)
   }
 
   #getParagraphNode(node) {
@@ -8609,7 +8428,7 @@ class FormatEscaper {
     if (!paragraph) return
 
     const blockquote = paragraph.getParent();
-    if (!blockquote || !Ot$2(blockquote)) return
+    if (!blockquote || !Ot$1(blockquote)) return
 
     const siblingsAfter = this.#getSiblingsAfter(paragraph);
     const nonEmptySiblings = siblingsAfter.filter(sibling => !this.#isNodeEmpty(sibling));
@@ -8641,7 +8460,7 @@ class FormatEscaper {
     let sibling = listItem.getNextSibling();
 
     while (sibling) {
-      if (ot$3(sibling)) {
+      if (ot$2(sibling)) {
         siblings.push(sibling);
       }
       sibling = sibling.getNextSibling();
@@ -8659,7 +8478,7 @@ class FormatEscaper {
 
     const newList = ht$3(parentList.getListType());
 
-    const newBlockquote = _t$2();
+    const newBlockquote = _t$1();
     middleParagraph.insertAfter(newBlockquote);
     newBlockquote.append(newList);
 
@@ -8693,7 +8512,7 @@ class FormatEscaper {
     const items = list.getChildren();
     for (let i = items.length - 1; i >= 0; i--) {
       const item = items[i];
-      if (ot$3(item) && this.#isNodeEmpty(item)) {
+      if (ot$2(item) && this.#isNodeEmpty(item)) {
         item.remove();
       } else {
         break
@@ -8717,7 +8536,7 @@ class FormatEscaper {
     const newParagraph = Li();
     blockquote.insertAfter(newParagraph);
 
-    const newBlockquote = _t$2();
+    const newBlockquote = _t$1();
     newParagraph.insertAfter(newBlockquote);
 
     siblingsAfter.forEach(sibling => {
@@ -8797,11 +8616,6 @@ class Contents {
     this.editor.update(() => {
       const selection = Lr();
       if (!yr(selection)) return
-
-      if (as(selection.anchor.getNode())) {
-        selection.insertNodes([ newNodeFn() ]);
-        return
-      }
 
       const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
 
@@ -9077,19 +8891,9 @@ class Contents {
   #unwrap(node) {
     const children = node.getChildren();
 
-    if (children.length == 0) {
-      node.insertBefore(Li());
-    } else {
-      children.forEach((child) => {
-        if (lr(child) && child.getTextContent().trim() !== "") {
-          const newParagraph = Li();
-          newParagraph.append(child);
-          node.insertBefore(newParagraph);
-        } else if (!jn(child)) {
-          node.insertBefore(child);
-        }
-      });
-    }
+    children.forEach((child) => {
+      node.insertBefore(child);
+    });
 
     node.remove();
   }
@@ -9103,12 +8907,6 @@ class Contents {
       if (selectedNodes.length === 0) {
         return
       }
-
-      if (as(selectedNodes[0])) {
-        selection.insertNodes([ newNodeFn() ]);
-        return
-      }
-
       const topLevelElements = new Set();
       selectedNodes.forEach((node) => {
         const topLevel = node.getTopLevelElementOrThrow();
@@ -9179,12 +8977,6 @@ class Contents {
 
   #wrapCurrentLine(selection, newNodeFn) {
     const anchorNode = selection.anchor.getNode();
-
-    if (as(anchorNode)) {
-      selection.insertNodes([ newNodeFn() ]);
-      return
-    }
-
     const topLevelElement = anchorNode.getTopLevelElementOrThrow();
 
     if (topLevelElement.getTextContent()) {
@@ -9318,7 +9110,7 @@ class Contents {
       if (listItem) {
         listItems.add(listItem);
         const parentList = listItem.getParent();
-        if (parentList && dt$2(parentList)) {
+        if (parentList && dt$1(parentList)) {
           parentLists.add(parentList);
         }
       }
@@ -9342,7 +9134,7 @@ class Contents {
 
   #convertListItemToParagraph(listItem) {
     const parentList = listItem.getParent();
-    if (!parentList || !dt$2(parentList)) return null
+    if (!parentList || !dt$1(parentList)) return null
 
     const paragraph = Li();
     const sublists = this.#extractSublistsAndContent(listItem, paragraph);
@@ -9358,7 +9150,7 @@ class Contents {
     const sublists = [];
 
     listItem.getChildren().forEach((child) => {
-      if (dt$2(child)) {
+      if (dt$1(child)) {
         sublists.push(child);
       } else {
         paragraph.append(child);
@@ -9376,7 +9168,7 @@ class Contents {
 
   #removeEmptyParentLists(parentLists) {
     for (const parentList of parentLists) {
-      if (dt$2(parentList) && parentList.getChildrenSize() === 0) {
+      if (dt$1(parentList) && parentList.getChildrenSize() === 0) {
         parentList.remove();
       }
     }
@@ -9817,13 +9609,13 @@ function onlyPreLanguageElements(element, conversion) {
 }
 
 function applyLanguage(conversionOutput, element) {
-  const language = dt$1(element.getAttribute(TRIX_LANGUAGE_ATTR));
+  const language = dt(element.getAttribute(TRIX_LANGUAGE_ATTR));
   conversionOutput.node.setLanguage(language);
 }
 
 class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
-  static debug = false
+  static debug = true
   static commands = [ "bold", "italic", "strikethrough" ]
 
   static observedAttributes = [ "connected", "required" ]
@@ -9872,7 +9664,7 @@ class LexicalEditorElement extends HTMLElement {
 
   formResetCallback() {
     this.value = this.#initialValue;
-    this.editor.dispatchCommand(je$2, undefined);
+    this.editor.dispatchCommand(je$1, undefined);
   }
 
   get form() {
@@ -9896,18 +9688,6 @@ class LexicalEditorElement extends HTMLElement {
 
   get blobUrlTemplate() {
     return this.dataset.blobUrlTemplate
-  }
-
-  get isEmpty() {
-    return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
-  }
-
-  get isBlank() {
-    return this.isEmpty || this.toString().match(/^\s*$/g) !== null
-  }
-
-  get hasOpenPrompt() {
-    return this.querySelector(".lexxy-prompt-menu.lexxy-prompt-menu--visible") !== null
   }
 
   get isSingleLineMode() {
@@ -9942,7 +9722,7 @@ class LexicalEditorElement extends HTMLElement {
       const root = No();
       root.clear();
       if (html !== "") root.append(...this.#parseHtmlIntoLexicalNodes(html));
-      root.selectEnd();
+      root.select();
 
       this.#toggleEmptyStatus();
 
@@ -9953,20 +9733,9 @@ class LexicalEditorElement extends HTMLElement {
     });
   }
 
-  toString() {
-    if (!this.cachedStringValue) {
-      this.editor?.getEditorState().read(() => {
-        this.cachedStringValue = No().getTextContent();
-      });
-    }
-
-    return this.cachedStringValue
-  }
-
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>";
     const nodes = m$1(this.editor, parseHtml(`<div>${html}</div>`));
-
     // Custom decorator block elements such action-text-attachments get wrapped into <p> automatically by Lexical.
     // We flatten those.
     return nodes.map(node => {
@@ -9986,7 +9755,6 @@ class LexicalEditorElement extends HTMLElement {
     this.#listenForInvalidatedNodes();
     this.#handleEnter();
     this.#handleFocus();
-    this.#handleTables();
     this.#attachDebugHooks();
     this.#attachToolbar();
     this.#loadInitialValue();
@@ -10014,18 +9782,15 @@ class LexicalEditorElement extends HTMLElement {
     const nodes = [
       TrixTextNode,
       HighlightNode,
-      Et$3,
-      Pt$3,
-      lt$3,
+      Et$2,
+      Pt$2,
+      lt$2,
       nt$2,
       q$1,
       et$1,
       y$1,
       A,
       HorizontalDividerNode,
-      hn,
-      xe,
-      Ee$1,
 
       CustomActionTextAttachmentNode,
     ];
@@ -10073,7 +9838,7 @@ class LexicalEditorElement extends HTMLElement {
 
     this.internals.setFormValue(html);
     this._internalFormValue = html;
-    this.#validationTextArea.value = this.isEmpty ? "" : html;
+    this.#validationTextArea.value = this.#isEmpty ? "" : html;
 
     if (changed) {
       dispatch(this, "lexxy:change");
@@ -10099,16 +9864,11 @@ class LexicalEditorElement extends HTMLElement {
 
   #synchronizeWithChanges() {
     this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
-      this.#clearCachedValues();
+      this.cachedValue = null;
       this.#internalFormValue = this.value;
       this.#toggleEmptyStatus();
       this.#setValidity();
     }));
-  }
-
-  #clearCachedValues() {
-    this.cachedValue = null;
-    this.cachedStringValue = null;
   }
 
   #addUnregisterHandler(handler) {
@@ -10124,25 +9884,17 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   #registerComponents() {
-    Jt$1(this.editor);
+    Jt(this.editor);
     this.historyState = w$1();
     b$1(this.editor, this.historyState, 20);
-    bt$4(this.editor);
-    this.#registerTableComponents();
+    bt$3(this.editor);
     this.#registerCodeHiglightingComponents();
     Dt(this.editor, zt);
   }
 
-  #registerTableComponents() {
-    Nn(this.editor);
-    this.tableHandler = createElement("lexxy-table-handler");
-    this.append(this.tableHandler);
-  }
-
   #registerCodeHiglightingComponents() {
-    Et$2(this.editor);
-    this.codeLanguagePicker = createElement("lexxy-code-language-picker");
-    this.append(this.codeLanguagePicker);
+    Et$1(this.editor);
+    this.append(createElement("lexxy-code-language-picker"));
   }
 
   #listenForInvalidatedNodes() {
@@ -10163,7 +9915,7 @@ class LexicalEditorElement extends HTMLElement {
   #handleEnter() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
     this.editor.registerCommand(
-      Ne$2,
+      Ne$1,
       (event) => {
         // Prevent CTRL+ENTER
         if (event.ctrlKey || event.metaKey) {
@@ -10191,18 +9943,12 @@ class LexicalEditorElement extends HTMLElement {
     this.editor.registerCommand(Ve$1, () => { dispatch(this, "lexxy:focus"); }, Ri);
   }
 
-  #handleTables() {
-    this.removeTableSelectionObserver = yn(this.editor, true);
-    un(this.editor);
-  }
-
   #attachDebugHooks() {
     if (!LexicalEditorElement.debug) return
 
     this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
-        console.debug("HTML: ", this.value, "String:", this.toString());
-        console.debug("empty", this.isEmpty, "blank", this.isBlank);
+        console.debug("HTML: ", this.value);
       });
     }));
   }
@@ -10231,7 +9977,11 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   #toggleEmptyStatus() {
-    this.classList.toggle("lexxy-editor--empty", this.isEmpty);
+    this.classList.toggle("lexxy-editor--empty", this.#isEmpty);
+  }
+
+  get #isEmpty() {
+    return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
   }
 
   #setValidity() {
@@ -10258,16 +10008,6 @@ class LexicalEditorElement extends HTMLElement {
       this.toolbar = null;
     }
 
-    if (this.codeLanguagePicker) {
-      this.codeLanguagePicker.remove();
-      this.codeLanguagePicker = null;
-    }
-
-    if (this.tableHandler) {
-      this.tableHandler.remove();
-      this.tableHandler = null;
-    }
-
     this.selection = null;
 
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache);
@@ -10288,8 +10028,6 @@ class ToolbarDropdown extends HTMLElement {
 
     this.container.addEventListener("toggle", this.#handleToggle.bind(this));
     this.container.addEventListener("keydown", this.#handleKeyDown.bind(this));
-
-    this.#setTabIndexValues();
   }
 
   disconnectedCallback() {
@@ -10321,6 +10059,8 @@ class ToolbarDropdown extends HTMLElement {
     this.trigger = trigger;
     this.#interactiveElements[0].focus();
     this.#setupClickOutsideHandler();
+
+    this.#resetTabIndexValues();
   }
 
   #handleClose() {
@@ -10354,15 +10094,19 @@ class ToolbarDropdown extends HTMLElement {
     }
   }
 
-  async #setTabIndexValues() {
+  async #resetTabIndexValues() {
     await nextFrame();
-    this.#interactiveElements.forEach((element) => {
-      element.setAttribute("tabindex", 0);
+    this.#buttons.forEach((element, index) => {
+      element.setAttribute("tabindex", index === 0 ? 0 : "-1");
     });
   }
 
   get #interactiveElements() {
     return Array.from(this.querySelectorAll("button, input"))
+  }
+
+  get #buttons() {
+    return Array.from(this.querySelectorAll("button"))
   }
 }
 
@@ -10519,494 +10263,6 @@ class HighlightDropdown extends ToolbarDropdown {
 }
 
 customElements.define("lexxy-highlight-dropdown", HighlightDropdown);
-
-class TableHandler extends HTMLElement {
-  connectedCallback() {
-    this.#setUpButtons();
-    this.#monitorForTableSelection();
-    this.#registerKeyboardShortcuts();
-  }
-
-  disconnectedCallback() {
-    this.#unregisterKeyboardShortcuts();
-  }
-
-  get #editor() {
-    return this.#editorElement.editor
-  }
-
-  get #editorElement() {
-    return this.closest("lexxy-editor")
-  }
-
-  get #currentCell() {
-    const selection = Lr();
-    if (!yr(selection)) return null
-
-    const anchorNode = selection.anchor.getNode();
-    return Be$1(anchorNode)
-  }
-
-  get #currentRow() {
-    const currentCell = this.#currentCell;
-    if (!currentCell) return 0
-    return Ie$1(currentCell)
-  }
-
-  get #currentColumn() {
-    const currentCell = this.#currentCell;
-    if (!currentCell) return 0
-    return Ue$1(currentCell)
-  }
-
-  #registerKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(me$1, this.#handleKeyDown.bind(this), Bi);
-  }
-
-  #unregisterKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts();
-  }
-
-  #handleKeyDown(event) {
-    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
-      const firstButton = this.buttonsContainer?.querySelector("button, [tabindex]:not([tabindex='-1'])");
-      this.#setFocusStateOnSelectedCell();
-      firstButton?.focus();
-    } else if (event.key === "Escape") {
-      this.#editor.getEditorState().read(() => {
-        const cell = this.#currentCell;
-        if (!cell) return
-
-        this.#editor.update(() => {
-          cell.select();
-        });
-      });
-      this.#closeMoreMenu();
-    }
-  }
-
-  #setUpButtons() {
-    this.buttonsContainer = createElement("div", {
-      className: "lexxy-table-handle-buttons"
-    });
-
-    this.buttonsContainer.appendChild(this.#createRowButtonsContainer());
-    this.buttonsContainer.appendChild(this.#createColumnButtonsContainer());
-
-    this.moreMenu = this.#createMoreMenu();
-    this.buttonsContainer.appendChild(this.moreMenu);
-
-    this.#editorElement.appendChild(this.buttonsContainer);
-  }
-
-  #showTableHandlerButtons() {
-    this.buttonsContainer.style.display = "flex";
-    this.#closeMoreMenu();
-
-    this.#updateRowColumnCount();
-    this.#setTableFocusState(true);
-  }
-
-  #hideTableHandlerButtons() {
-    this.buttonsContainer.style.display = "none";
-    this.#closeMoreMenu();
-
-    this.#setTableFocusState(false);
-    this.currentTableNode = null;
-  }
-
-  #updateButtonsPosition(tableNode) {
-    const tableElement = this.#editor.getElementByKey(tableNode.getKey());
-    if (!tableElement) return
-
-    const tableRect = tableElement.getBoundingClientRect();
-    const editorRect = this.#editorElement.getBoundingClientRect();
-
-    const relativeTop = tableRect.top - editorRect.top;
-    const relativeCenter = (tableRect.left + tableRect.right) / 2 - editorRect.left;
-    this.buttonsContainer.style.top = `${relativeTop}px`;
-    this.buttonsContainer.style.left = `${relativeCenter}px`;
-  }
-
-  #updateRowColumnCount() {
-    if (!this.currentTableNode) return
-
-    const tableElement = dn(this.#editor, this.currentTableNode);
-    if (!tableElement) return
-
-    const rowCount = tableElement.rows;
-    const columnCount = tableElement.columns;
-
-    this.rowCount.textContent = `${rowCount} row${rowCount === 1 ? "" : "s"}`;
-    this.columnCount.textContent = `${columnCount} column${columnCount === 1 ? "" : "s"}`;
-  }
-
-  #createButton(icon, label, onClick) {
-    const button = createElement("button", {
-      className: "lexxy-table-control__button",
-      "aria-label": label,
-      type: "button"
-    });
-    button.tabIndex = -1;
-    button.innerHTML = `${icon} <span>${label}</span>`;
-    button.addEventListener("click", onClick.bind(this));
-
-    return button
-  }
-
-  #createRowButtonsContainer() {
-    const container = createElement("div", { className: "lexxy-table-control" });
-
-    const plusButton = this.#createButton("+", "Add row", () => this.#insertTableRow("end"));
-    const minusButton = this.#createButton("−", "Remove row", () => this.#deleteTableRow("end"));
-
-    this.rowCount = createElement("span");
-    this.rowCount.textContent = "_ rows";
-
-    container.appendChild(minusButton);
-    container.appendChild(this.rowCount);
-    container.appendChild(plusButton);
-
-    return container
-  }
-
-  #createColumnButtonsContainer() {
-    const container = createElement("div", { className: "lexxy-table-control" });
-
-    const plusButton = this.#createButton("+", "Add column", () => this.#insertTableColumn("end"));
-    const minusButton = this.#createButton("−", "Remove column", () => this.#deleteTableColumn("end"));
-
-    this.columnCount = createElement("span");
-    this.columnCount.textContent = "_ columns";
-
-    container.appendChild(minusButton);
-    container.appendChild(this.columnCount);
-    container.appendChild(plusButton);
-
-    return container
-  }
-
-  #createMoreMenu() {
-    const container = createElement("details", {
-      className: "lexxy-table-control lexxy-table-control__more-menu"
-    });
-
-    container.tabIndex = -1;
-
-    const summary = createElement("summary", {}, "•••");
-    container.appendChild(summary);
-
-    const details = createElement("div", { className: "lexxy-table-control__more-menu-details" });
-    container.appendChild(details);
-
-    details.appendChild(this.#createRowSection());
-    details.appendChild(this.#createColumnSection());
-    details.appendChild(this.#createDeleteTableSection());
-
-    container.addEventListener("toggle", this.#handleMoreMenuToggle.bind(this));
-
-    return container
-  }
-
-  #createColumnSection() {
-    const columnSection = createElement("section", { className: "lexxy-table-control__more-menu-section" });
-
-    const columnButtons = [
-      { icon: this.#icon("add-column-before"), label: "Add column before", onClick: () => this.#insertTableColumn("left") },
-      { icon: this.#icon("add-column-after"), label: "Add column after", onClick: () => this.#insertTableColumn("right") },
-      { icon: this.#icon("remove-column"), label: "Remove column", onClick: this.#deleteTableColumn },
-      { icon: this.#icon("toggle-column-style"), label: "Toggle column style", onClick: this.#toggleColumnHeaderStyle },
-    ];
-
-    columnButtons.forEach(button => {
-      const buttonElement = this.#createButton(button.icon, button.label, button.onClick);
-      columnSection.appendChild(buttonElement);
-    });
-
-    return columnSection
-  }
-
-  #createRowSection() {
-    const rowSection = createElement("section", { className: "lexxy-table-control__more-menu-section" });
-
-    const rowButtons = [
-      { icon: this.#icon("add-row-above"), label: "Add row above", onClick: () => this.#insertTableRow("above") },
-      { icon: this.#icon("add-row-below"), label: "Add row below", onClick: () => this.#insertTableRow("below") },
-      { icon: this.#icon("remove-row"), label: "Remove row", onClick: this.#deleteTableRow },
-      { icon: this.#icon("toggle-row-style"), label: "Toggle row style", onClick: this.#toggleRowHeaderStyle }
-    ];
-
-    rowButtons.forEach(button => {
-      const buttonElement = this.#createButton(button.icon, button.label, button.onClick);
-      rowSection.appendChild(buttonElement);
-    });
-
-    return rowSection
-  }
-
-  #createDeleteTableSection() {
-    const deleteSection = createElement("section", { className: "lexxy-table-control__more-menu-section" });
-
-    const deleteButton = { icon: this.#icon("delete-table"), label: "Delete table", onClick: this.#deleteTable };
-
-    const buttonElement = this.#createButton(deleteButton.icon, deleteButton.label, deleteButton.onClick);
-    deleteSection.appendChild(buttonElement);
-
-    return deleteSection
-  }
-
-  #handleMoreMenuToggle() {
-    if (this.moreMenu.open) {
-      this.#setFocusStateOnSelectedCell();
-    } else {
-      this.#removeFocusStateFromSelectedCell();
-    }
-  }
-
-  #closeMoreMenu() {
-    this.#removeFocusStateFromSelectedCell();
-    this.moreMenu.removeAttribute("open");
-  }
-
-  #monitorForTableSelection() {
-    this.#editor.registerUpdateListener(() => {
-      this.#editor.getEditorState().read(() => {
-        const selection = Lr();
-        if (!yr(selection)) return
-
-        const anchorNode = selection.anchor.getNode();
-        const tableNode = Qt(anchorNode);
-
-        if (tableNode) {
-          this.#tableCellWasSelected(tableNode);
-        } else {
-          this.#hideTableHandlerButtons();
-        }
-      });
-    });
-  }
-
-  #setTableFocusState(focused) {
-    this.#editorElement.querySelector("div.node--selected:has(table)")?.classList.remove("node--selected");
-
-    if (focused && this.currentTableNode) {
-      const tableParent = this.#editor.getElementByKey(this.currentTableNode.getKey());
-      if (!tableParent) return
-      tableParent.classList.add("node--selected");
-    }
-  }
-
-  #tableCellWasSelected(tableNode) {
-    this.currentTableNode = tableNode;
-    this.#updateButtonsPosition(tableNode);
-    this.#showTableHandlerButtons();
-  }
-
-  #setFocusStateOnSelectedCell() {
-    this.#editor.getEditorState().read(() => {
-      const currentCell = this.#currentCell;
-      if (!currentCell) return
-
-      const cellElement = this.#editor.getElementByKey(currentCell.getKey());
-      if (!cellElement) return
-
-      cellElement.classList.add("table-cell--selected");
-    });
-  }
-
-  #removeFocusStateFromSelectedCell() {
-    this.#editorElement.querySelector(".table-cell--selected")?.classList.remove("table-cell--selected");
-  }
-
-  #selectLastTableCell() {
-    if (!this.currentTableNode) return
-
-    const last = this.currentTableNode.getLastChild().getLastChild();
-    if (!Oe$1(last)) return
-
-    last.selectEnd();
-  }
-
-  #deleteTable() {
-    this.#editor.dispatchCommand("deleteTable");
-
-    this.#closeMoreMenu();
-    this.#updateRowColumnCount();
-  }
-
-  #insertTableRow(direction) {
-    this.#executeTableCommand("insert", "row", direction);
-  }
-
-  #insertTableColumn(direction) {
-    this.#executeTableCommand("insert", "column", direction);
-  }
-
-  #deleteTableRow(direction) {
-    this.#executeTableCommand("delete", "row", direction);
-  }
-
-  #deleteTableColumn(direction) {
-    this.#executeTableCommand("delete", "column", direction);
-  }
-
-  #executeTableCommand(action = "insert", childType = "row", direction) {
-    this.#editor.update(() => {
-      const currentCell = this.#currentCell;
-      if (!currentCell) return
-
-      if (direction === "end") {
-        this.#selectLastTableCell();
-      }
-
-      this.#dispatchTableCommand(action, childType, direction);
-
-      if (currentCell.isAttached()) {
-        currentCell.selectEnd();
-      }
-    });
-
-    this.#closeMoreMenu();
-    this.#updateRowColumnCount();
-  }
-
-  #dispatchTableCommand(action, childType, direction) {
-    switch (action) {
-      case "insert":
-        switch (childType) {
-          case "row":
-            if (direction === "above") {
-              this.#editor.dispatchCommand("insertTableRowAbove");
-            } else {
-              this.#editor.dispatchCommand("insertTableRowBelow");
-            }
-            break
-          case "column":
-            if (direction === "left") {
-              this.#editor.dispatchCommand("insertTableColumnBefore");
-            } else {
-              this.#editor.dispatchCommand("insertTableColumnAfter");
-            }
-            break
-        }
-        break
-      case "delete":
-        switch (childType) {
-          case "row":
-            this.#editor.dispatchCommand("deleteTableRow");
-            break
-          case "column":
-            this.#editor.dispatchCommand("deleteTableColumn");
-            break
-        }
-        break
-    }
-  }
-
-  #toggleRowHeaderStyle() {
-    this.#editor.update(() => {
-      const rows = this.currentTableNode.getChildren();
-
-      const row = rows[this.#currentRow];
-      if (!row) return
-
-      const cells = row.getChildren();
-      const firstCell = Be$1(cells[0]);
-      if (!firstCell) return
-
-      const currentStyle = firstCell.getHeaderStyles();
-      const newStyle = currentStyle ^ ve$1.ROW;
-
-      cells.forEach(cell => {
-        this.#setHeaderStyle(cell, newStyle, ve$1.ROW);
-      });
-    });
-  }
-
-  #toggleColumnHeaderStyle() {
-    this.#editor.update(() => {
-      const rows = this.currentTableNode.getChildren();
-
-      const row = rows[this.#currentRow];
-      if (!row) return
-
-      const cells = row.getChildren();
-      const selectedCell = Be$1(cells[this.#currentColumn]);
-      if (!selectedCell) return
-
-      const currentStyle = selectedCell.getHeaderStyles();
-      const newStyle = currentStyle ^ ve$1.COLUMN;
-
-      rows.forEach(row => {
-        const cell = row.getChildren()[this.#currentColumn];
-        if (!cell) return
-        this.#setHeaderStyle(cell, newStyle, ve$1.COLUMN);
-      });
-    });
-  }
-
-  #setHeaderStyle(cell, newStyle, headerState) {
-    const tableCellNode = Be$1(cell);
-
-    if (tableCellNode) {
-      tableCellNode.setHeaderStyles(newStyle, headerState);
-    }
-  }
-
-  #icon(name) {
-    const icons =
-      {
-        "add-row-above":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 7L0 10V4L4 7ZM6.5 7.5H16.5V6.5H6.5V7.5ZM18 8C18 8.55228 17.5523 9 17 9H6C5.44772 9 5 8.55228 5 8V6C5 5.44772 5.44772 5 6 5H17C17.5523 5 18 5.44772 18 6V8Z"/><path d="M2 2C2 1.44772 2.44772 1 3 1H15C15.5523 1 16 1.44772 16 2C16 2.55228 15.5523 3 15 3H3C2.44772 3 2 2.55228 2 2Z"/><path d="M2 12C2 11.4477 2.44772 11 3 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H3C2.44772 13 2 12.5523 2 12Z"/><path d="M2 16C2 15.4477 2.44772 15 3 15H15C15.5523 15 16 15.4477 16 16C16 16.5523 15.5523 17 15 17H3C2.44772 17 2 16.5523 2 16Z"/>
-          </svg>`,
-
-        "add-row-below":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 11L0 8V14L4 11ZM6.5 10.5H16.5V11.5H6.5V10.5ZM18 10C18 9.44772 17.5523 9 17 9H6C5.44772 9 5 9.44772 5 10V12C5 12.5523 5.44772 13 6 13H17C17.5523 13 18 12.5523 18 12V10Z"/><path d="M2 16C2 16.5523 2.44772 17 3 17H15C15.5523 17 16 16.5523 16 16C16 15.4477 15.5523 15 15 15H3C2.44772 15 2 15.4477 2 16Z"/><path d="M2 6C2 6.55228 2.44772 7 3 7H15C15.5523 7 16 6.55228 16 6C16 5.44772 15.5523 5 15 5H3C2.44772 5 2 5.44772 2 6Z"/><path d="M2 2C2 2.55228 2.44772 3 3 3H15C15.5523 3 16 2.55228 16 2C16 1.44772 15.5523 1 15 1H3C2.44772 1 2 1.44772 2 2Z"/>
-          </svg>`,
-
-        "remove-row":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.9951 10.1025C17.9438 10.6067 17.5177 11 17 11H12.4922L13.9922 9.5H16.5V5.5L1.5 5.5L1.5 9.5H4.00586L5.50586 11H1L0.897461 10.9951C0.427034 10.9472 0.0527828 10.573 0.00488281 10.1025L0 10L1.78814e-07 5C2.61831e-07 4.48232 0.393332 4.05621 0.897461 4.00488L1 4L17 4C17.5523 4 18 4.44772 18 5V10L17.9951 10.1025Z"/><path d="M11.2969 15.0146L8.99902 12.7168L6.7002 15.0146L5.63965 13.9541L7.93848 11.6562L5.63965 9.3584L6.7002 8.29785L8.99902 10.5957L11.2969 8.29785L12.3574 9.3584L10.0596 11.6562L12.3574 13.9541L11.2969 15.0146Z"/>
-          </svg>`,
-
-        "toggle-row-style":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M1 2C1 1.44772 1.44772 1 2 1H7C7.55228 1 8 1.44772 8 2V7C8 7.55228 7.55228 8 7 8H2C1.44772 8 1 7.55228 1 7V2Z"/><path d="M2.5 15.5H6.5V11.5H2.5V15.5ZM8 16C8 16.5177 7.60667 16.9438 7.10254 16.9951L7 17H2L1.89746 16.9951C1.42703 16.9472 1.05278 16.573 1.00488 16.1025L1 16V11C1 10.4477 1.44772 10 2 10H7C7.55228 10 8 10.4477 8 11V16Z"/><path d="M10 2C10 1.44772 10.4477 1 11 1H16C16.5523 1 17 1.44772 17 2V7C17 7.55228 16.5523 8 16 8H11C10.4477 8 10 7.55228 10 7V2Z"/><path d="M11.5 15.5H15.5V11.5H11.5V15.5ZM17 16C17 16.5177 16.6067 16.9438 16.1025 16.9951L16 17H11L10.8975 16.9951C10.427 16.9472 10.0528 16.573 10.0049 16.1025L10 16V11C10 10.4477 10.4477 10 11 10H16C16.5523 10 17 10.4477 17 11V16Z"/>
-          </svg>`,
-
-        "add-column-before":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M7 4L10 2.62268e-07L4 0L7 4ZM7.5 6.5L7.5 16.5H6.5L6.5 6.5H7.5ZM8 18C8.55228 18 9 17.5523 9 17V6C9 5.44772 8.55229 5 8 5H6C5.44772 5 5 5.44772 5 6L5 17C5 17.5523 5.44772 18 6 18H8Z"/><path d="M2 2C1.44772 2 1 2.44772 1 3L1 15C1 15.5523 1.44772 16 2 16C2.55228 16 3 15.5523 3 15L3 3C3 2.44772 2.55229 2 2 2Z"/><path d="M12 2C11.4477 2 11 2.44772 11 3L11 15C11 15.5523 11.4477 16 12 16C12.5523 16 13 15.5523 13 15L13 3C13 2.44772 12.5523 2 12 2Z"/><path d="M16 2C15.4477 2 15 2.44772 15 3L15 15C15 15.5523 15.4477 16 16 16C16.5523 16 17 15.5523 17 15V3C17 2.44772 16.5523 2 16 2Z"/>
-          </svg>`,
-
-        "add-column-after":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M11 4L8 2.62268e-07L14 0L11 4ZM10.5 6.5V16.5H11.5V6.5H10.5ZM10 18C9.44772 18 9 17.5523 9 17V6C9 5.44772 9.44772 5 10 5H12C12.5523 5 13 5.44772 13 6V17C13 17.5523 12.5523 18 12 18H10Z"/><path d="M16 2C16.5523 2 17 2.44772 17 3L17 15C17 15.5523 16.5523 16 16 16C15.4477 16 15 15.5523 15 15V3C15 2.44772 15.4477 2 16 2Z"/><path d="M6 2C6.55228 2 7 2.44772 7 3L7 15C7 15.5523 6.55228 16 6 16C5.44772 16 5 15.5523 5 15L5 3C5 2.44772 5.44771 2 6 2Z"/><path d="M2 2C2.55228 2 3 2.44772 3 3L3 15C3 15.5523 2.55228 16 2 16C1.44772 16 1 15.5523 1 15V3C1 2.44772 1.44771 2 2 2Z"/>
-          </svg>`,
-
-        "remove-column":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10.1025 0.00488281C10.6067 0.0562145 11 0.482323 11 1V5.50781L9.5 4.00781V1.5H5.5V16.5H9.5V13.9941L11 12.4941V17L10.9951 17.1025C10.9472 17.573 10.573 17.9472 10.1025 17.9951L10 18H5C4.48232 18 4.05621 17.6067 4.00488 17.1025L4 17V1C4 0.447715 4.44772 1.61064e-08 5 0H10L10.1025 0.00488281Z"/><path d="M12.7169 8.99999L15.015 11.2981L13.9543 12.3588L11.6562 10.0607L9.35815 12.3588L8.29749 11.2981L10.5956 8.99999L8.29749 6.7019L9.35815 5.64124L11.6562 7.93933L13.9543 5.64124L15.015 6.7019L12.7169 8.99999Z"/>
-          </svg>`,
-
-        "toggle-column-style":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M1 2C1 1.44772 1.44772 1 2 1H7C7.55228 1 8 1.44772 8 2V7C8 7.55228 7.55228 8 7 8H2C1.44772 8 1 7.55228 1 7V2Z"/><path d="M1 11C1 10.4477 1.44772 10 2 10H7C7.55228 10 8 10.4477 8 11V16C8 16.5523 7.55228 17 7 17H2C1.44772 17 1 16.5523 1 16V11Z"/><path d="M11.5 6.5H15.5V2.5H11.5V6.5ZM17 7C17 7.51768 16.6067 7.94379 16.1025 7.99512L16 8H11L10.8975 7.99512C10.427 7.94722 10.0528 7.57297 10.0049 7.10254L10 7V2C10 1.44772 10.4477 1 11 1H16C16.5523 1 17 1.44772 17 2V7Z"/><path d="M11.5 15.5H15.5V11.5H11.5V15.5ZM17 16C17 16.5177 16.6067 16.9438 16.1025 16.9951L16 17H11L10.8975 16.9951C10.427 16.9472 10.0528 16.573 10.0049 16.1025L10 16V11C10 10.4477 10.4477 10 11 10H16C16.5523 10 17 10.4477 17 11V16Z"/>
-          </svg>`,
-
-        "delete-table":
-          `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M18.2129 19.2305C18.0925 20.7933 16.7892 22 15.2217 22H7.77832C6.21084 22 4.90753 20.7933 4.78711 19.2305L4 9H19L18.2129 19.2305Z"/><path d="M13 2C14.1046 2 15 2.89543 15 4H19C19.5523 4 20 4.44772 20 5V6C20 6.55228 19.5523 7 19 7H4C3.44772 7 3 6.55228 3 6V5C3 4.44772 3.44772 4 4 4H8C8 2.89543 8.89543 2 10 2H13Z"/>
-          </svg>`
-      };
-
-    return icons[name]
-  }
-}
-
-customElements.define("lexxy-table-handler", TableHandler);
 
 class BaseSource {
   // Template method to override
@@ -11296,16 +10552,16 @@ class LexicalPromptElement extends HTMLElement {
 
   #registerKeyListeners() {
     // We can't use a regular keydown for Enter as Lexical handles it first
-    this.keyListeners.push(this.#editor.registerCommand(Ne$2, this.#handleSelectedOption.bind(this), Bi));
-    this.keyListeners.push(this.#editor.registerCommand(Me$2, this.#handleSelectedOption.bind(this), Bi));
+    this.keyListeners.push(this.#editor.registerCommand(Ne$1, this.#handleSelectedOption.bind(this), Bi));
+    this.keyListeners.push(this.#editor.registerCommand(Me$1, this.#handleSelectedOption.bind(this), Bi));
 
     if (this.#doesSpaceSelect) {
       this.keyListeners.push(this.#editor.registerCommand(be$1, this.#handleSelectedOption.bind(this), Bi));
     }
 
     // Register arrow keys with HIGH priority to prevent Lexical's selection handlers from running
-    this.keyListeners.push(this.#editor.registerCommand(ke$2, this.#handleArrowUp.bind(this), Bi));
-    this.keyListeners.push(this.#editor.registerCommand(Te$2, this.#handleArrowDown.bind(this), Bi));
+    this.keyListeners.push(this.#editor.registerCommand(ke$1, this.#handleArrowUp.bind(this), Bi));
+    this.keyListeners.push(this.#editor.registerCommand(Te$1, this.#handleArrowDown.bind(this), Bi));
   }
 
   #handleArrowUp(event) {
@@ -11585,7 +10841,7 @@ class CodeLanguagePicker extends HTMLElement {
   }
 
   get #languages() {
-    const languages = { ...pt$1 };
+    const languages = { ...pt };
 
     if (!languages.ruby) languages.ruby = "Ruby";
     if (!languages.php) languages.php = "PHP";
@@ -11656,7 +10912,7 @@ class CodeLanguagePicker extends HTMLElement {
 
   #updateLanguagePickerWith(language) {
     if (this.languagePickerElement && language) {
-      const normalizedLanguage = dt$1(language);
+      const normalizedLanguage = dt(language);
       this.languagePickerElement.value = normalizedLanguage;
     }
   }
@@ -11693,17 +10949,24 @@ function highlightAll() {
 
 function highlightElement(preElement) {
   const language = preElement.getAttribute("data-language");
+
   let code = preElement.innerHTML.replace(/<br\s*\/?>/gi, "\n");
 
-  const grammar = Prism$1.languages?.[language];
+  const grammar = Prism.languages[language];
   if (!grammar) return
 
   // unescape HTML entities in the code block
   code = new DOMParser().parseFromString(code, "text/html").body.textContent || "";
 
-  const highlightedHtml = Prism$1.highlight(code, grammar, language);
+  const highlightedHtml = Prism.highlight(code, grammar, language);
+
   const codeElement = createElement("code", { "data-language": language, innerHTML: highlightedHtml });
   preElement.replaceWith(codeElement);
 }
+
+// Manual highlighting mode to prevent invocation on every page. See https://prismjs.com/docs/prism
+// This must happen before importing any Prism components
+window.Prism = window.Prism || {};
+Prism.manual = true;
 
 export { highlightAll };

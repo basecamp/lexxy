@@ -35,7 +35,6 @@
   --lexxy-color-selected-dark: var(--lexxy-color-blue);
   --lexxy-color-code-bg: var(--lexxy-color-ink-lightest);
 
-  /* Text color highlights */
   --highlight-1: rgb(136, 118, 38);
   --highlight-2: rgb(185, 94, 6);
   --highlight-3: rgb(207, 0, 0);
@@ -55,13 +54,6 @@
   --highlight-bg-7: rgba(140, 255, 129, 0.3); 
   --highlight-bg-8: rgba(221, 170, 123, 0.3);
   --highlight-bg-9: rgba(200, 200, 200, 0.3);
-
-  /* Tables */
-  --lexxy-color-table-header-bg: var(--lexxy-color-ink-lightest);
-  --lexxy-color-table-cell-border: var(--lexxy-color-ink-lighter);
-  --lexxy-color-table-cell-selected: var(--lexxy-color-selected);
-  --lexxy-color-table-cell-selected-border: highlight;
-  --lexxy-color-table-cell-selected-bg: highlight;
 
   /* Typography */
   --lexxy-font-base: system-ui, sans-serif;

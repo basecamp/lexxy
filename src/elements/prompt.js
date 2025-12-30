@@ -7,6 +7,7 @@ import DeferredPromptSource from "../editor/prompt/deferred_source"
 import RemoteFilterSource from "../editor/prompt/remote_filter_source"
 import { $generateNodesFromDOM } from "@lexical/html"
 import { nextFrame } from "../helpers/timing_helpers"
+import { ATTACHMENT_CONTENT_TYPE_PREFIX } from "../config/attachments"
 
 const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found"
 

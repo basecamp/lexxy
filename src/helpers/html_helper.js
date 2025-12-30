@@ -1,7 +1,6 @@
 import DOMPurify from "dompurify"
-import { buildConfig } from "../config/dom_purify"
 
-export function createElement(name, properties, content = "") {
+export function createElement(name, properties) {
   const element = document.createElement(name)
   for (const [ key, value ] of Object.entries(properties || {})) {
     if (key in element) {
@@ -9,9 +8,6 @@ export function createElement(name, properties, content = "") {
     } else if (value !== null && value !== undefined) {
       element.setAttribute(key, value)
     }
-  }
-  if (content) {
-    element.innerHTML = content
   }
   return element
 }
@@ -42,7 +38,7 @@ export function dispatchCustomEvent(element, name, detail) {
 }
 
 export function sanitize(html) {
-  return DOMPurify.sanitize(html, buildConfig())
+  return DOMPurify.sanitize(html)
 }
 
 export function dispatch(element, eventName, detail = null, cancelable = false) {

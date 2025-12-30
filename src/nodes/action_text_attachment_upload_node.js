@@ -1,10 +1,11 @@
-import lexxyConfig from "../config/lexxy"
 import { $getNodeByKey } from "lexical"
+import { DirectUpload } from "@rails/activestorage"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { createElement, dispatchCustomEvent } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { HISTORY_MERGE_TAG } from "lexical"
 import { bytesToHumanSize } from "../helpers/storage_helper"
+import { AUTHENTICATED_UPLOADS } from "../config/attachments"
 
 export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   static getType() {
@@ -17,11 +18,6 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   static importJSON(serializedNode) {
     return new ActionTextAttachmentUploadNode({ ...serializedNode })
-  }
-
-  // Should never run since this is a transient node. Defined to remove console warning.
-  static importDOM() {
-    return null
   }
 
   constructor(node, key) {
@@ -109,17 +105,15 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }
   }
 
-  async #startUpload(progressBar, figure) {
-    const { DirectUpload } = await import("@rails/activestorage")
-    const shouldAuthenticateUploads = lexxyConfig.get("attachments.authenticatedUploads")
+  #startUpload(progressBar, figure) {
     const upload = new DirectUpload(this.file, this.uploadUrl, this)
 
     upload.delegate = {
       directUploadWillCreateBlobWithXHR: (request) => {
-        if (shouldAuthenticateUploads) request.withCredentials = true
+        if (AUTHENTICATED_UPLOADS) request.withCredentials = true
       },
       directUploadWillStoreFileWithXHR: (request) => {
-        if (shouldAuthenticateUploads) request.withCredentials = true
+        if (AUTHENTICATED_UPLOADS) request.withCredentials = true
 
         request.upload.addEventListener("progress", (event) => {
           this.editor.update(() => {

@@ -1,16 +1,10 @@
-// Configure Prism for manual highlighting mode
-// This must be set before importing prismjs
-window.Prism = window.Prism || {}
-window.Prism.manual = true
+// Manual highlighting mode to prevent invocation on every page. See https://prismjs.com/docs/prism
+// This must happen before importing any Prism components
+window.Prism ||= {}
+Prism.manual = true
 
-import "prismjs"
-
-// Import base language dependencies first
-import "prismjs/components/prism-clike"
-import "prismjs/components/prism-markup"
+// Additional Prism languages need to be imported before the editor is loaded, otherwise they are not highlighted on inital load
 import "prismjs/components/prism-markup-templating"
-
-// Import languages
 import "prismjs/components/prism-ruby"
 import "prismjs/components/prism-php"
 import "prismjs/components/prism-go"

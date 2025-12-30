@@ -6,9 +6,9 @@ import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
-import { TableCellNode, TableNode, TableRowNode, registerTablePlugin, registerTableSelectionObserver, setScrollableTablesActive } from "@lexical/table"
 
 import theme from "../config/theme"
+import { ATTACHMENT_TAG_NAME } from "../config/attachments"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
@@ -16,7 +16,6 @@ import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
 import LexicalToolbar from "./toolbar"
-import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Highlighter from "../editor/highlighter"
@@ -26,7 +25,7 @@ import { TrixTextNode } from "../nodes/trix_text_node"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
-  static debug = false
+  static debug = true
   static commands = [ "bold", "italic", "strikethrough" ]
 
   static observedAttributes = [ "connected", "required" ]
@@ -42,7 +41,6 @@ export default class LexicalEditorElement extends HTMLElement {
 
   connectedCallback() {
     this.id ??= generateDomId("lexxy-editor")
-    this.config = new Configuration(this, this.preset)
     this.editor = this.#createEditor()
     this.contents = new Contents(this)
     this.selection = new Selection(this)
@@ -105,7 +103,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get isEmpty() {
-    return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
+    return ["<p><br></p>", "<p></p>", ""].includes(this.value.trim())
   }
 
   get isBlank() {
@@ -116,16 +114,12 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.querySelector(".lexxy-prompt-menu.lexxy-prompt-menu--visible") !== null
   }
 
-  get preset() {
-    return this.getAttribute("preset") || "default"
-  }
-
   get isSingleLineMode() {
-    return this.config.get("singleLine")
+    return this.hasAttribute("single-line")
   }
 
   get supportsAttachments() {
-    return this.config.get("attachments")
+    return this.getAttribute("attachments") !== "false"
   }
 
   get contentTabIndex() {
@@ -139,7 +133,7 @@ export default class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
+        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null), { additionalAllowedTags: [ ATTACHMENT_TAG_NAME ] })
       })
     }
 
@@ -174,8 +168,13 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #parseHtmlIntoLexicalNodes(html) {
-    if (!html) html = "<p></p>"
-    const nodes = $generateNodesFromDOM(this.editor, parseHtml(`<div>${html}</div>`))
+    const defaultHtml = "<p></p>"
+    if (!html) html = defaultHtml
+    let nodes = $generateNodesFromDOM(this.editor, parseHtml(`<div>${html}</div>`))
+
+    if (nodes.length === 0) {
+      nodes = $generateNodesFromDOM(this.editor, parseHtml(defaultHtml))
+    }
 
     // Custom decorator block elements such action-text-attachments get wrapped into <p> automatically by Lexical.
     // We flatten those.
@@ -196,7 +195,6 @@ export default class LexicalEditorElement extends HTMLElement {
     this.#listenForInvalidatedNodes()
     this.#handleEnter()
     this.#handleFocus()
-    this.#handleTables()
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#loadInitialValue()
@@ -233,9 +231,6 @@ export default class LexicalEditorElement extends HTMLElement {
       LinkNode,
       AutoLinkNode,
       HorizontalDividerNode,
-      TableNode,
-      TableCellNode,
-      TableRowNode,
 
       CustomActionTextAttachmentNode,
     ]
@@ -338,23 +333,13 @@ export default class LexicalEditorElement extends HTMLElement {
     this.historyState = createEmptyHistoryState()
     registerHistory(this.editor, this.historyState, 20)
     registerList(this.editor)
-    this.#registerTableComponents()
     this.#registerCodeHiglightingComponents()
-    if (this.config.get("markdown")) {
-      registerMarkdownShortcuts(this.editor, TRANSFORMERS)
-    }
-  }
-
-  #registerTableComponents() {
-    registerTablePlugin(this.editor)
-    this.tableHandler = createElement("lexxy-table-handler")
-    this.append(this.tableHandler)
+    registerMarkdownShortcuts(this.editor, TRANSFORMERS)
   }
 
   #registerCodeHiglightingComponents() {
     registerCodeHighlighting(this.editor)
-    this.codeLanguagePicker = createElement("lexxy-code-language-picker")
-    this.append(this.codeLanguagePicker)
+    this.append(createElement("lexxy-code-language-picker"))
   }
 
   #listenForInvalidatedNodes() {
@@ -430,11 +415,6 @@ export default class LexicalEditorElement extends HTMLElement {
     }
   }
 
-  #handleTables() {
-    this.removeTableSelectionObserver = registerTableSelectionObserver(this.editor, true)
-    setScrollableTablesActive(this.editor, true)
-  }
-
   #attachDebugHooks() {
     if (!LexicalEditorElement.debug) return
 
@@ -458,7 +438,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #hasToolbar() {
-    return Boolean(this.config.get("toolbar"))
+    return this.getAttribute("toolbar") !== "false"
   }
 
   #createDefaultToolbar() {
@@ -495,16 +475,6 @@ export default class LexicalEditorElement extends HTMLElement {
     if (this.toolbar) {
       if (!this.getAttribute("toolbar")) { this.toolbar.remove() }
       this.toolbar = null
-    }
-
-    if (this.codeLanguagePicker) {
-      this.codeLanguagePicker.remove()
-      this.codeLanguagePicker = null
-    }
-
-    if (this.tableHandler) {
-      this.tableHandler.remove()
-      this.tableHandler = null
     }
 
     this.selection = null

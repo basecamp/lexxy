@@ -4,10 +4,6 @@ module EditorHelper
     @handlers_by_selector[selector] ||= EditorHandler.new(page, selector)
   end
 
-  def assert_editor_plain_text(value)
-    assert_equal value, find_editor.plain_text_value
-  end
-
   def assert_figure_attachment(content_type:, &block)
     figure = find("figure.attachment[data-content-type='#{content_type}']")
     within(figure, &block) if block_given?
@@ -50,27 +46,5 @@ module EditorHelper
   def wait_for_editor
     assert_css "lexxy-editor[connected]"
     assert_css "lexxy-toolbar[connected]" if has_css?("lexxy-toolbar")
-  end
-
-  def click_table_handler_button(aria_label)
-    find(".lexxy-table-handle-buttons button[aria-label='#{aria_label}']").click
-  end
-
-  def open_table_more_menu
-    more_menu = find(".lexxy-table-handle-buttons details.lexxy-table-control__more-menu")
-    more_menu.click
-  end
-
-  def assert_editor_table_structure(rows, cols)
-    within("lexxy-editor table") do
-      assert_table_structure(cols, rows)
-    end
-  end
-
-  def assert_table_structure(cols, rows)
-    assert_selector "tr", count: rows
-    within(first("tr")) do
-      assert_selector "td, th", count: cols
-    end
   end
 end

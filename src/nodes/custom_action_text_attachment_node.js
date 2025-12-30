@@ -1,7 +1,9 @@
-import lexxyConfig from "../config/lexxy"
 import { $createTextNode, DecoratorNode } from "lexical"
 
 import { createElement, dispatchCustomEvent } from "../helpers/html_helper"
+import { ATTACHMENT_TAG_NAME } from "../config/attachments"
+import { ATTACHMENT_CONTENT_TYPE_PREFIX } from "../config/attachments"
+
 
 export class CustomActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -17,10 +19,9 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   static importDOM() {
-    const attachmentTagName = lexxyConfig.global.get("attachmentTagName")
 
     return {
-      [attachmentTagName]: (element) => {
+      [ATTACHMENT_TAG_NAME]: (element) => {
         if (!element.getAttribute("content")) {
           return null
         }
@@ -35,7 +36,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
             }
 
             nodes.push(new CustomActionTextAttachmentNode({
-              tagName: attachmentTagName,
+              tagName: ATTACHMENT_TAG_NAME,
               sgid: attachment.getAttribute("sgid"),
               innerHtml: JSON.parse(attachment.getAttribute("content")),
               contentType: attachment.getAttribute("content-type")
@@ -51,13 +52,14 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     }
   }
 
-  constructor({ tagName, sgid, contentType, innerHtml }, key) {
+  constructor({ tagName, sgid, contentType, innerHtml, plainText }, key) {
     super(key)
 
-    this.tagName = tagName
+    this.tagName = tagName || ATTACHMENT_TAG_NAME
     this.sgid = sgid
     this.contentType = contentType || `${ATTACHMENT_CONTENT_TYPE_PREFIX}.unknown`
     this.innerHtml = innerHtml
+    this.plainText = plainText
   }
 
   createDOM() {
@@ -77,7 +79,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   getTextContent() {
-    return this.createDOM().textContent.trim() || `[${this.contentType}]`
+    return this.plainText || this.createDOM().textContent.trim() || `[${this.contentType}]`
   }
 
   isInline() {
@@ -101,7 +103,8 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
       tagName: this.tagName,
       sgid: this.sgid,
       contentType: this.contentType,
-      innerHtml: this.innerHtml
+      innerHtml: this.innerHtml,
+      plainText: this.plainText
     }
   }
 

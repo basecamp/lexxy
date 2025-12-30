@@ -1,7 +1,7 @@
-import lexxyConfig from "../config/lexxy"
 import { DecoratorNode } from "lexical"
 import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper"
-import { bytesToHumanSize } from "../helpers/storage_helper"
+import { bytesToHumanSize, mimeTypeToExtension } from "../helpers/storage_helper"
+import { ATTACHMENT_TAG_NAME } from "../config/attachments"
 
 export class ActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -18,14 +18,12 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   static importDOM() {
 
-    const attachmentTagName = lexxyConfig.global.get("attachmentTagName")
-
     return {
-      [attachmentTagName]: (attachment) => {
+      [ATTACHMENT_TAG_NAME]: () => {
         return {
           conversion: (attachment) => ({
             node: new ActionTextAttachmentNode({
-              tagName: attachmentTagName,
+              tagName: ATTACHMENT_TAG_NAME,
               sgid: attachment.getAttribute("sgid"),
               src: attachment.getAttribute("url"),
               previewable: attachment.getAttribute("previewable"),
@@ -37,40 +35,39 @@ export class ActionTextAttachmentNode extends DecoratorNode {
               width: attachment.getAttribute("width"),
               height: attachment.getAttribute("height")
             })
-          }), priority: 1
+          }),
+          priority: 1
         }
       },
       "img": () => {
         return {
           conversion: (img) => ({
             node: new ActionTextAttachmentNode({
-              tagName: attachmentTagName,
+              tagName: ATTACHMENT_TAG_NAME,
               src: img.getAttribute("src"),
               caption: img.getAttribute("alt") || "",
               contentType: "image/*",
               width: img.getAttribute("width"),
               height: img.getAttribute("height")
             })
-          }), priority: 1
+          }),
+          priority: 1
         }
       },
       "video": (video) => {
+        const videoSource = video.getAttribute("src") || video.querySelector("source")?.src
+        const fileName = videoSource?.split("/")?.pop()
+        const contentType = video.querySelector("source")?.getAttribute("content-type") || "video/*"
 
         return {
-          conversion: (video) => {
-            const videoSource = video.getAttribute("src") || video.querySelector("source")?.src
-            const fileName = videoSource?.split("/")?.pop()
-            const contentType = video.querySelector("source")?.getAttribute("content-type") || "video/*"
-
-            return {
-              node: new ActionTextAttachmentNode({
-                tagName: attachmentTagName,
-                src: videoSource,
-                fileName: fileName,
-                contentType: contentType
-              })
-            }
-          }, priority: 1
+          conversion: () => ({
+            node: new ActionTextAttachmentNode({
+              src: videoSource,
+              fileName: fileName,
+              contentType: contentType
+            })
+          }),
+          priority: 1
         }
       }
     }
@@ -79,7 +76,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   constructor({ tagName, sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
     super(key)
 
-    this.tagName = tagName
+    this.tagName = tagName || ATTACHMENT_TAG_NAME
     this.sgid = sgid
     this.src = src
     this.previewable = previewable
@@ -115,7 +112,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   getTextContent() {
-    return `[${ this.caption || this.fileName }]\n\n`
+    return `[${this.caption || this.fileName}]`
   }
 
   isInline() {

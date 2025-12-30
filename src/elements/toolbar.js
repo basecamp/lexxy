@@ -9,7 +9,6 @@ import { $isListItemNode, $isListNode } from "@lexical/list"
 import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode } from "@lexical/code"
 import { $isLinkNode } from "@lexical/link"
-import { $getTableCellNodeFromLexicalNode } from "@lexical/table"
 import { getListType } from "../helpers/lexical_helper"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
@@ -29,6 +28,8 @@ export default class LexicalToolbarElement extends HTMLElement {
 
     this._resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
     this._resizeObserver.observe(this)
+
+    this.addEventListener("keydown", (event) => handleRollingTabIndex(this.#focusableItems, event))
   }
 
   disconnectedCallback() {
@@ -37,7 +38,7 @@ export default class LexicalToolbarElement extends HTMLElement {
       this._resizeObserver = null
     }
     this.#unbindHotkeys()
-    this.#unbindFocusListeners()
+    this.removeEventListener("keydown", (event) => handleRollingTabIndex(this.#focusableItems, event))
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -56,7 +57,6 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#monitorSelectionChanges()
     this.#monitorHistoryChanges()
     this.#refreshToolbarOverflow()
-    this.#bindFocusListeners()
 
     this.toggleAttribute("connected", true)
   }
@@ -126,36 +126,9 @@ export default class LexicalToolbarElement extends HTMLElement {
     return [ ...modifiers, pressedKey ].join("+")
   }
 
-  #bindFocusListeners() {
-    this.editorElement.addEventListener("lexxy:focus", this.#handleFocus.bind(this))
-    this.editorElement.addEventListener("lexxy:blur", this.#handleFocusOut.bind(this))
-    this.addEventListener("focusout", this.#handleFocusOut.bind(this))
-
-    this.addEventListener("keydown", (event) => handleRollingTabIndex(this.#focusableItems, event))
-  }
-
-  #unbindFocusListeners() {
-    this.editorElement.removeEventListener("lexxy:focus", this.#handleFocus.bind(this))
-    this.editorElement.removeEventListener("lexxy:blur", this.#handleFocusOut.bind(this))
-    this.removeEventListener("focusout", this.#handleFocusOut.bind(this))
-
-    this.removeEventListener("keydown", (event) => handleRollingTabIndex(this.#focusableItems, event))
-  }
-
-  #handleFocus() {
-    this.#resetTabIndexValues()
-    this.#focusableItems[0].tabIndex = 0
-  }
-
-  #handleFocusOut() {
-    if (this.contains(document.activeElement)) return
-
-    this.#resetTabIndexValues()
-  }
-
   #resetTabIndexValues() {
-    this.#focusableItems.forEach((button) => {
-      button.tabIndex = -1
+    this.#focusableItems.forEach((button, index) => {
+      button.setAttribute("tabindex", index === 0 ? 0 : "-1")
     })
   }
 
@@ -202,7 +175,6 @@ export default class LexicalToolbarElement extends HTMLElement {
     const isInCode = $isCodeNode(topLevelElement) || selection.hasFormat("code")
     const isInList = this.#isInList(anchorNode)
     const listType = getListType(anchorNode)
-    const isInTable = $getTableCellNodeFromLexicalNode(anchorNode) !== null
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
@@ -214,9 +186,10 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("code", isInCode)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
     this.#setButtonPressed("ordered-list", isInList && listType === "number")
-    this.#setButtonPressed("table", isInTable)
 
     this.#updateUndoRedoButtonStates()
+
+    this.#resetTabIndexValues()
   }
 
   #isInList(node) {
@@ -346,8 +319,8 @@ export default class LexicalToolbarElement extends HTMLElement {
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.65422 0.711575C7.1856 0.242951 6.42579 0.242951 5.95717 0.711575C5.48853 1.18021 5.48853 1.94 5.95717 2.40864L8.70864 5.16011L2.85422 11.0145C1.44834 12.4204 1.44833 14.6998 2.85422 16.1057L7.86011 21.1115C9.26599 22.5174 11.5454 22.5174 12.9513 21.1115L19.6542 14.4087C20.1228 13.94 20.1228 13.1802 19.6542 12.7115L11.8544 4.91171L11.2542 4.31158L7.65422 0.711575ZM4.55127 12.7115L10.4057 6.85716L17.1087 13.56H4.19981C4.19981 13.253 4.31696 12.9459 4.55127 12.7115ZM23.6057 20.76C23.6057 22.0856 22.5311 23.16 21.2057 23.16C19.8802 23.16 18.8057 22.0856 18.8057 20.76C18.8057 19.5408 19.8212 18.5339 20.918 17.4462C21.0135 17.3516 21.1096 17.2563 21.2057 17.16C21.3018 17.2563 21.398 17.3516 21.4935 17.4462C22.5903 18.5339 23.6057 19.5408 23.6057 20.76Z"/></svg>
         </summary>
         <lexxy-highlight-dropdown class="lexxy-editor__toolbar-dropdown-content">
-          <div data-button-group="color"></div>
-          <div data-button-group="background-color"></div>
+          <div data-button-group="color" data-values="var(--highlight-1); var(--highlight-2); var(--highlight-3); var(--highlight-4); var(--highlight-5); var(--highlight-6); var(--highlight-7); var(--highlight-8); var(--highlight-9)"></div>
+          <div data-button-group="background-color" data-values="var(--highlight-bg-1); var(--highlight-bg-2); var(--highlight-bg-3); var(--highlight-bg-4); var(--highlight-bg-5); var(--highlight-bg-6); var(--highlight-bg-7); var(--highlight-bg-8); var(--highlight-bg-9)"></div>
           <button data-command="removeHighlight" class="lexxy-editor__toolbar-dropdown-reset">Remove all coloring</button>
         </lexxy-highlight-dropdown>
       </details>
@@ -389,10 +362,6 @@ export default class LexicalToolbarElement extends HTMLElement {
 
       <button class="lexxy-editor__toolbar-button" type="button" name="upload" data-command="uploadAttachments" title="Upload file">
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 8a2 2 0 110 4 2 2 0 010-4z""/><path d="M22 2a1 1 0 011 1v18a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1h20zM3 18.714L9 11l5.25 6.75L17 15l4 4V4H3v14.714z"/></svg>
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="table" data-command="insertTable" title="Insert a table">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.2041 2.01074C21.2128 2.113 22 2.96435 22 4V20L21.9893 20.2041C21.8938 21.1457 21.1457 21.8938 20.2041 21.9893L20 22H4C2.96435 22 2.113 21.2128 2.01074 20.2041L2 20V4C2 2.89543 2.89543 2 4 2H20L20.2041 2.01074ZM4 13V20H11V13H4ZM13 13V20H20V13H13ZM4 11H11V4H4V11ZM13 11H20V4H13V11Z"/></svg>
       </button>
 
       <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">

@@ -3,6 +3,7 @@ import { CodeNode, normalizeCodeLang } from "@lexical/code"
 import { extendConversion, extendTextNodeConversion } from "../helpers/lexical_helper"
 import { applyHighlightStyle } from "./highlight_node"
 import { HorizontalDividerNode } from "./horizontal_divider_node"
+import { ATTACHMENT_TAG_NAME } from "../config/attachments"
 
 const TRIX_LANGUAGE_ATTR = "language"
 
@@ -37,7 +38,7 @@ export class TrixTextNode extends TextNode {
         priority: 1
       }),
       // trix wraps hr as an attachment
-      "bc-attachment": onlyHorizontalDividerContentTypes({
+      [ATTACHMENT_TAG_NAME]: onlyHorizontalDividerContentTypes({
         conversion: () => extendConversion(HorizontalDividerNode, "hr"),
         priority: 2
       })

@@ -49,7 +49,7 @@ export class HorizontalDividerNode extends DecoratorNode {
   }
 
   getTextContent() {
-    return "┄\n\n"
+    return "┄"
   }
 
   isInline() {
