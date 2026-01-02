@@ -1,3 +1,4 @@
+import Lexxy from "../config/lexxy"
 import { DecoratorNode } from "lexical"
 import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
@@ -17,7 +18,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   static importDOM() {
     return {
-      "action-text-attachment": (attachment) => {
+      [Lexxy.global.get("attachmentTagName")]: (attachment) => {
         return {
           conversion: () => ({
             node: new ActionTextAttachmentNode({
@@ -115,7 +116,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   exportDOM() {
-    const attachment = createElement("action-text-attachment", {
+    const attachment = createElement(Lexxy.global.get("attachmentTagName"), {
       sgid: this.sgid,
       previewable: this.previewable || null,
       url: this.src,

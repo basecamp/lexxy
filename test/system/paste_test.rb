@@ -38,4 +38,11 @@ class PasteTest < ApplicationSystemTestCase
     assert_includes find_editor.value, "**there**"
     refute_includes find_editor.value, "<strong>there</strong>"
   end
+
+  test "don't convert markdown when disabled" do
+    visit edit_post_path(posts(:empty), markdown_disabled: true)
+    find_editor.click
+    find_editor.paste "Hello **there**"
+    assert_equal_html "<p>Hello **there**</p>", find_editor.value
+  end
 end

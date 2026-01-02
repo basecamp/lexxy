@@ -1,3 +1,7 @@
+export function dasherize(value) {
+  return value.replace(/([A-Z])/g, (_, char) => `-${char.toLowerCase()}`)
+}
+
 export function isUrl(string) {
   try {
     new URL(string)

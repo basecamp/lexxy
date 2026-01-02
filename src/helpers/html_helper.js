@@ -1,4 +1,5 @@
 import DOMPurify from "dompurify"
+import { buildConfig } from "../config/dom_purify"
 
 export function createElement(name, properties, content = "") {
   const element = document.createElement(name)
@@ -41,7 +42,7 @@ export function dispatchCustomEvent(element, name, detail) {
 }
 
 export function sanitize(html) {
-  return DOMPurify.sanitize(html)
+  return DOMPurify.sanitize(html, buildConfig())
 }
 
 export function dispatch(element, eventName, detail = null, cancelable = false) {

@@ -16,6 +16,7 @@ import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
 import LexicalToolbar from "./toolbar"
+import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Highlighter from "../editor/highlighter"
@@ -41,6 +42,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
   connectedCallback() {
     this.id ??= generateDomId("lexxy-editor")
+    this.config = new Configuration(this)
     this.editor = this.#createEditor()
     this.contents = new Contents(this)
     this.selection = new Selection(this)
@@ -112,12 +114,20 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.querySelector(".lexxy-prompt-menu.lexxy-prompt-menu--visible") !== null
   }
 
+  get preset() {
+    return this.getAttribute("preset") || "default"
+  }
+
   get isSingleLineMode() {
-    return this.hasAttribute("single-line")
+    return !this.config.get("multiline")
   }
 
   get supportsAttachments() {
-    return this.getAttribute("attachments") !== "false"
+    return this.config.get("attachments")
+  }
+
+  get supportsMarkdown() {
+    return this.config.get("markdown")
   }
 
   get contentTabIndex() {
@@ -331,7 +341,9 @@ export default class LexicalEditorElement extends HTMLElement {
     registerList(this.editor)
     this.#registerTableComponents()
     this.#registerCodeHiglightingComponents()
-    registerMarkdownShortcuts(this.editor, TRANSFORMERS)
+    if (this.supportsMarkdown) {
+      registerMarkdownShortcuts(this.editor, TRANSFORMERS)
+    }
   }
 
   #registerTableComponents() {
@@ -415,19 +427,24 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #findOrCreateDefaultToolbar() {
-    const toolbarId = this.getAttribute("toolbar")
-    return toolbarId ? document.getElementById(toolbarId) : this.#createDefaultToolbar()
+    const toolbarId = this.getAttribute("toolbartarget")
+    if (toolbarId) {
+      const container = document.getElementById(toolbarId)
+      return this.#createDefaultToolbar(container)
+    } else {
+      return this.#createDefaultToolbar()
+    }
   }
 
   get #hasToolbar() {
-    return this.getAttribute("toolbar") !== "false"
+    return this.config.get("toolbar")
   }
 
-  #createDefaultToolbar() {
+  #createDefaultToolbar(container = this) {
     const toolbar = createElement("lexxy-toolbar")
     toolbar.innerHTML = LexicalToolbar.defaultTemplate
     toolbar.setAttribute("data-attachments", this.supportsAttachments) // Drives toolbar CSS styles
-    this.prepend(toolbar)
+    container.prepend(toolbar)
     return toolbar
   }
 
