@@ -341,7 +341,7 @@ export class CommandDispatcher {
 
     event.preventDefault()
     const command = event.shiftKey? OUTDENT_CONTENT_COMMAND : INDENT_CONTENT_COMMAND
-    return this.editor.dispatchCommand(command, undefined)
+    return this.editor.dispatchCommand(command)
   }
 
   #handleTabForCode() {
