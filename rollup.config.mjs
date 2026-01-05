@@ -17,7 +17,7 @@ export default [
       {
         file: "./app/assets/javascript/lexxy.js",
         format: "esm",
-        sourcemap: process.env.NODE_ENV === "development" // eslint-disable-line no-undef
+        sourcemap: true
       },
       {
         file: "./app/assets/javascript/lexxy.min.js",
