@@ -15,6 +15,7 @@ import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
+import { registerTableCellTransform } from "../helpers/table_helper"
 import LexicalToolbar from "./toolbar"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
@@ -338,6 +339,8 @@ export default class LexicalEditorElement extends HTMLElement {
     registerTablePlugin(this.editor)
     this.tableHandler = createElement("lexxy-table-handler")
     this.append(this.tableHandler)
+
+    this.#addUnregisterHandler(registerTableCellTransform(this.editor))
   }
 
   #registerCodeHiglightingComponents() {
