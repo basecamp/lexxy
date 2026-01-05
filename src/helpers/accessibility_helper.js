@@ -1,84 +1,86 @@
 export function handleRollingTabIndex(elements, event) {
   const previousActiveElement = document.activeElement
-  if (!elements.includes(previousActiveElement)) return
 
-  const getNextActiveElement = getFinderFunctionForKey(event.key)?.bind(new ElementFinder(elements))
+  if (elements.includes(previousActiveElement)) {
+    const finder = new NextElementFinder(elements, event.key)
 
-  if (getNextActiveElement) {
-    event.preventDefault()
-    const nextActiveElement = getNextActiveElement(previousActiveElement)
-    const inactiveElements = elements.filter(element => element !== nextActiveElement)
-
-    unsetTabIndex(inactiveElements)
-    focusWithActiveTabIndex(nextActiveElement)
+    if (finder.selectNext(previousActiveElement)) {
+      event.preventDefault()
+    }
   }
 }
 
-function getFinderFunctionForKey(key) {
-  switch (key) {
-    case "ArrowRight":
-    case "ArrowDown":
-      return ElementFinder.prototype.findNextSibling
-
-    case "ArrowLeft":
-    case "ArrowUp":
-      return ElementFinder.prototype.findPreviousSibling
-
-    case "Home":
-      return ElementFinder.prototype.findFirst
-
-    case "End":
-      return ElementFinder.prototype.findLast
-  }
-}
-
-class ElementFinder {
-  constructor(elements) {
+class NextElementFinder {
+  constructor(elements, key) {
     this.elements = elements
+    this.key = key
   }
 
-  findFirst() {
-    return this.elements.find(isActiveAndVisible)
+  selectNext(fromElement) {
+    const nextElement = this.#findNextElement(fromElement)
+
+    if (nextElement) {
+      const inactiveElements = this.elements.filter(element => element !== nextElement)
+      this.#unsetTabIndex(inactiveElements)
+      this.#focusWithActiveTabIndex(nextElement)
+      return true
+    }
+
+    return false
   }
 
-  findLast() {
-    return this.elements.findLast(isActiveAndVisible)
+  #findNextElement(fromElement) {
+    switch (this.key) {
+      case "ArrowRight":
+      case "ArrowDown":
+        return this.#findNextSibling(fromElement)
+
+      case "ArrowLeft":
+      case "ArrowUp":
+        return this.#findPreviousSibling(fromElement)
+
+      case "Home":
+        return this.#findFirst()
+
+      case "End":
+        return this.#findLast()
+    }
   }
 
-  findNextSibling(element) {
-    return this.#after(element).findFirst()
+  #findFirst(elements = this.elements) {
+    return elements.find(isActiveAndVisible)
   }
 
-  findPreviousSibling(element) {
-    return this.#before(element).findLast()
+  #findLast(elements = this.elements) {
+    return elements.findLast(isActiveAndVisible)
   }
 
-  #after(element) {
-    const sliceAfter = this.elements.slice(this.#indexOf(element) + 1)
-    return new ElementFinder(sliceAfter)
+  #findNextSibling(element) {
+    const afterElements = this.elements.slice(this.#indexOf(element) + 1)
+    return this.#findFirst(afterElements)
   }
 
-  #before(element) {
-    const sliceBefore = this.elements.slice(0, this.#indexOf(element))
-    return new ElementFinder(sliceBefore)
+  #findPreviousSibling(element) {
+    const beforeElements = this.elements.slice(0, this.#indexOf(element))
+    return this.#findLast(beforeElements)
   }
 
   #indexOf(element) {
     return this.elements.indexOf(element)
   }
+
+  #focusWithActiveTabIndex(element) {
+    if (isActiveAndVisible(element)) {
+      element.tabIndex = 0
+      element.focus()
+    }
+  }
+
+  #unsetTabIndex(elements) {
+    elements.forEach(element => element.tabIndex = -1)
+  }
 }
 
 function isActiveAndVisible(element) {
-  return element && element.disabled !== true && element.checkVisibility() == true
-}
-
-function focusWithActiveTabIndex(element) {
-  if (!isActiveAndVisible(element)) return
-
-  element.tabIndex = 0
-  element.focus()
-}
-
-function unsetTabIndex(elements) {
-  elements.forEach(element => element.tabIndex = -1)
+  return element && !element.disabled && element.checkVisibility()
 }
