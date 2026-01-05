@@ -1,6 +1,7 @@
 import { $addUpdateTag, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, createEditor } from "lexical"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
+import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
@@ -113,6 +114,10 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.querySelector(".lexxy-prompt-menu.lexxy-prompt-menu--visible") !== null
   }
 
+  get isRichTextMode() {
+    return this.getAttribute("rich-text") !== "false"
+  }
+
   get isSingleLineMode() {
     return this.hasAttribute("single-line")
   }
@@ -213,24 +218,26 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #lexicalNodes() {
-    const nodes = [
-      TrixTextNode,
-      HighlightNode,
-      QuoteNode,
-      HeadingNode,
-      ListNode,
-      ListItemNode,
-      CodeNode,
-      CodeHighlightNode,
-      LinkNode,
-      AutoLinkNode,
-      HorizontalDividerNode,
-      TableNode,
-      TableCellNode,
-      TableRowNode,
+    const nodes = [ CustomActionTextAttachmentNode ]
 
-      CustomActionTextAttachmentNode,
-    ]
+    if (this.isRichTextMode) {
+      nodes.push(
+        TrixTextNode,
+        HighlightNode,
+        QuoteNode,
+        HeadingNode,
+        ListNode,
+        ListItemNode,
+        CodeNode,
+        CodeHighlightNode,
+        LinkNode,
+        AutoLinkNode,
+        HorizontalDividerNode,
+        TableNode,
+        TableCellNode,
+        TableRowNode,
+      )
+    }
 
     if (this.supportsAttachments) {
       nodes.push(ActionTextAttachmentNode, ActionTextAttachmentUploadNode)
@@ -326,13 +333,17 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #registerComponents() {
-    registerRichText(this.editor)
+    if (this.isRichTextMode) {
+      registerRichText(this.editor)
+      registerList(this.editor)
+      this.#registerTableComponents()
+      this.#registerCodeHiglightingComponents()
+      registerMarkdownShortcuts(this.editor, TRANSFORMERS)
+    } else {
+      registerPlainText(this.editor)
+    }
     this.historyState = createEmptyHistoryState()
     registerHistory(this.editor, this.historyState, 20)
-    registerList(this.editor)
-    this.#registerTableComponents()
-    this.#registerCodeHiglightingComponents()
-    registerMarkdownShortcuts(this.editor, TRANSFORMERS)
   }
 
   #registerTableComponents() {
@@ -396,8 +407,10 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #handleTables() {
-    this.removeTableSelectionObserver = registerTableSelectionObserver(this.editor, true)
-    setScrollableTablesActive(this.editor, true)
+    if (this.isRichTextMode) {
+      this.removeTableSelectionObserver = registerTableSelectionObserver(this.editor, true)
+      setScrollableTablesActive(this.editor, true)
+    }
   }
 
   #attachDebugHooks() {
@@ -423,7 +436,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #hasToolbar() {
-    return this.getAttribute("toolbar") !== "false"
+    return this.isRichTextMode && this.getAttribute("toolbar") !== "false"
   }
 
   #createDefaultToolbar() {
