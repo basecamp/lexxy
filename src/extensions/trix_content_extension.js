@@ -1,59 +1,53 @@
-import { TextNode } from "lexical"
+import { defineExtension } from "lexical"
 import { CodeNode, normalizeCodeLang } from "@lexical/code"
 import { extendConversion, extendTextNodeConversion } from "../helpers/lexical_helper"
-import { applyHighlightStyle } from "../extensions/highlight_extension"
+import { $applyHighlightStyle } from "./highlight_extension"
 
 const TRIX_LANGUAGE_ATTR = "language"
 
-export class TrixTextNode extends TextNode {
-  $config() {
-    return this.config("trix-text", { extends: TextNode })
-  }
-
-  static importDOM() {
-    return {
-      // em, span, and strong elements are directly styled in trix
+export const TrixContentExtension = defineExtension({
+  name: "lexxy/trix-content",
+  html: {
+    import: {
       em: (element) => onlyStyledElements(element, {
-        conversion: extendTextNodeConversion("i", applyHighlightStyle),
+        conversion: extendTextNodeConversion("i", $applyHighlightStyle),
         priority: 1
       }),
       span: (element) => onlyStyledElements(element, {
-        conversion: extendTextNodeConversion("mark", applyHighlightStyle),
+        conversion: extendTextNodeConversion("mark", $applyHighlightStyle),
         priority: 1
       }),
       strong: (element) => onlyStyledElements(element, {
-        conversion: extendTextNodeConversion("b", applyHighlightStyle),
+        conversion: extendTextNodeConversion("b", $applyHighlightStyle),
         priority: 1
       }),
-      // del => s
       del: () => ({
-        conversion: extendTextNodeConversion("s", applyStrikethrough),
+        conversion: extendTextNodeConversion("s", $applyStrikethrough, $applyHighlightStyle),
         priority: 1
       }),
-      // read "language" attribute and normalize
       pre: (element) => onlyPreLanguageElements(element, {
-        conversion: extendConversion(CodeNode, "pre", applyLanguage),
+        conversion: extendConversion(CodeNode, "pre", $applyLanguage),
         priority: 1
       })
     }
   }
-}
+})
 
 function onlyStyledElements(element, conversion) {
   const elementHighlighted = element.style.color !== "" || element.style.backgroundColor !== ""
   return elementHighlighted ? conversion : null
 }
 
-function applyStrikethrough(textNode, element) {
+function $applyStrikethrough(textNode) {
   if (!textNode.hasFormat("strikethrough")) textNode.toggleFormat("strikethrough")
-  return applyHighlightStyle(textNode, element)
+  return textNode
 }
 
 function onlyPreLanguageElements(element, conversion) {
   return element.hasAttribute(TRIX_LANGUAGE_ATTR) ? conversion : null
 }
 
-function applyLanguage(conversionOutput, element) {
+function $applyLanguage(conversionOutput, element) {
   const language = normalizeCodeLang(element.getAttribute(TRIX_LANGUAGE_ATTR))
   conversionOutput.node.setLanguage(language)
 }
