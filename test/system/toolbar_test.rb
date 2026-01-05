@@ -199,4 +199,28 @@ class ToolbarTest < ApplicationSystemTestCase
     click_on "Redo"
     assert_equal_html "<p>Hello World</p>", find_editor.value
   end
+
+  test "left align" do
+    find_editor.select("everyone")
+    click_on "Align Left"
+    assert_equal_html "<p style=\"text-align: left;\">Hello everyone</p>", find_editor.value
+  end
+
+  test "center align" do
+    find_editor.select("everyone")
+    click_on "Align Center"
+    assert_equal_html "<p style=\"text-align: center;\">Hello everyone</p>", find_editor.value
+  end
+
+  test "right align" do
+    find_editor.select("everyone")
+    click_on "Align Right"
+    assert_equal_html "<p style=\"text-align: right;\">Hello everyone</p>", find_editor.value
+  end
+
+  test "justify align" do
+    find_editor.select("everyone")
+    click_on "Justify"
+    assert_equal_html "<p style=\"text-align: justify;\">Hello everyone</p>", find_editor.value
+  end
 end

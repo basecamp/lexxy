@@ -8,7 +8,7 @@ const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content
   "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "presentation",
   "previewable", "sgid", "src", "style", "title", "url", "width" ]
 
-const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
+const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color", "text-align" ]
 
 function styleFilterHook(_currentNode, hookEvent) {
   if (hookEvent.attrName === "style" && hookEvent.attrValue) {
