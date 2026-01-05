@@ -173,6 +173,28 @@ class ToolbarTest < ApplicationSystemTestCase
     assert_selector "lexxy-toolbar button[name=upload]"
   end
 
+  test "keyboard navigation from editor to toolbar" do
+    find_editor.click
+
+    # Shift+Tab from editor should move focus to toolbar
+    find_editor.send [ :shift, :tab ]
+
+    # First button (Bold) should be focused
+    assert_css "button[name='bold']:focus"
+
+    # Arrow right should move to next button (Italic)
+    page.active_element.send_keys(:arrow_right)
+    assert_css "button[name='italic']:focus"
+
+    # Arrow right again should move to Strikethrough
+    page.active_element.send_keys(:arrow_right)
+    assert_css "button[name='strikethrough']:focus"
+
+    # Arrow left should go back to Italic
+    page.active_element.send_keys(:arrow_left)
+    assert_css "button[name='italic']:focus"
+  end
+
   test "undo and redo commands" do
     # Start with empty editor
     visit edit_post_path(posts(:empty))
