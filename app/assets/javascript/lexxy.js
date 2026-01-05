@@ -10695,15 +10695,19 @@ class TableHandler extends HTMLElement {
     return Ue$1(currentCell)
   }
 
+  get #tableHandlerButtons() {
+    return Array.from(this.buttonsContainer.querySelectorAll("button, details > summary"))
+  }
+
   #registerKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(me$1, this.#handleKeyDown.bind(this), Bi);
+    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(me$1, this.#handleKeyDown, Bi);
   }
 
   #unregisterKeyboardShortcuts() {
     this.unregisterKeyboardShortcuts();
   }
 
-  #handleKeyDown(event) {
+  #handleKeyDown = (event) => {
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
       const firstButton = this.buttonsContainer?.querySelector("button, [tabindex]:not([tabindex='-1'])");
       this.#setFocusStateOnSelectedCell();
@@ -10721,6 +10725,14 @@ class TableHandler extends HTMLElement {
     }
   }
 
+  #handleTableHandlerKeydown = (event) => {
+    if (event.key === "Escape") {
+      this.#editor.focus();
+    } else {
+      handleRollingTabIndex(this.#tableHandlerButtons, event);
+    }
+  }
+
   #setUpButtons() {
     this.buttonsContainer = createElement("div", {
       className: "lexxy-table-handle-buttons"
@@ -10731,6 +10743,7 @@ class TableHandler extends HTMLElement {
 
     this.moreMenu = this.#createMoreMenu();
     this.buttonsContainer.appendChild(this.moreMenu);
+    this.buttonsContainer.addEventListener("keydown", this.#handleTableHandlerKeydown);
 
     this.#editorElement.appendChild(this.buttonsContainer);
   }
