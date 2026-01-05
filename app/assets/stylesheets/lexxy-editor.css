@@ -437,17 +437,6 @@
       }
     }
   }
-
-  .lexxy-editor__table-edit {
-    display: flex;
-    flex-direction: column;
-    flex-wrap: wrap;
-    gap: 0;
-
-    button {
-
-    }
-  }
 }
 
 /* Table handle buttons
@@ -455,6 +444,7 @@
 
 :where(.lexxy-table-handle-buttons) {
   --button-size: 2.5lh;
+
   color: var(--lexxy-color-ink-inverted);
   display: none;
   flex-direction: row;
@@ -491,8 +481,7 @@
       min-inline-size: var(--button-size);
       padding: 0;
 
-      &:hover,
-      &:focus-visible {
+      &:hover {
         background-color: var(--lexxy-color-ink-medium);
       }
 
@@ -504,6 +493,16 @@
 
       span {
         display: none;
+      }
+    }
+
+    button,
+    summary {
+      &:focus,
+      &:focus-visible {
+        background-color: var(--lexxy-color-ink-medium);
+        outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
+        outline-offset: var(--lexxy-focus-ring-offset);
       }
     }
   }

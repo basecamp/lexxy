@@ -14,6 +14,7 @@ import {
   TableCellHeaderStates
 } from "@lexical/table"
 
+import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import { createElement } from "../helpers/html_helper"
 
 export class TableHandler extends HTMLElement {
@@ -55,15 +56,19 @@ export class TableHandler extends HTMLElement {
     return $getTableColumnIndexFromTableCellNode(currentCell)
   }
 
+  get #tableHandlerButtons() {
+    return Array.from(this.buttonsContainer.querySelectorAll("button, details > summary"))
+  }
+
   #registerKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#handleKeyDown.bind(this), COMMAND_PRIORITY_HIGH)
+    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#handleKeyDown, COMMAND_PRIORITY_HIGH)
   }
 
   #unregisterKeyboardShortcuts() {
     this.unregisterKeyboardShortcuts()
   }
 
-  #handleKeyDown(event) {
+  #handleKeyDown = (event) => {
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
       const firstButton = this.buttonsContainer?.querySelector("button, [tabindex]:not([tabindex='-1'])")
       this.#setFocusStateOnSelectedCell()
@@ -81,6 +86,14 @@ export class TableHandler extends HTMLElement {
     }
   }
 
+  #handleTableHandlerKeydown = (event) => {
+    if (event.key === "Escape") {
+      this.#editor.focus()
+    } else {
+      handleRollingTabIndex(this.#tableHandlerButtons, event)
+    }
+  }
+
   #setUpButtons() {
     this.buttonsContainer = createElement("div", {
       className: "lexxy-table-handle-buttons"
@@ -91,6 +104,7 @@ export class TableHandler extends HTMLElement {
 
     this.moreMenu = this.#createMoreMenu()
     this.buttonsContainer.appendChild(this.moreMenu)
+    this.buttonsContainer.addEventListener("keydown", this.#handleTableHandlerKeydown)
 
     this.#editorElement.appendChild(this.buttonsContainer)
   }
