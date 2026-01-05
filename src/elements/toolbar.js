@@ -129,30 +129,32 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #bindFocusListeners() {
-    this.editorElement.addEventListener("lexxy:focus", this.#handleFocus.bind(this))
-    this.editorElement.addEventListener("lexxy:blur", this.#handleFocusOut.bind(this))
-    this.addEventListener("focusout", this.#handleFocusOut.bind(this))
-
-    this.addEventListener("keydown", (event) => handleRollingTabIndex(this.#focusableItems, event))
+    this.editorElement.addEventListener("lexxy:focus", this.#handleFocus)
+    this.editorElement.addEventListener("lexxy:blur", this.#handleFocusOut)
+    this.addEventListener("focusout", this.#handleFocusOut)
+    this.addEventListener("keydown", this.#handleKeydown)
   }
 
   #unbindFocusListeners() {
-    this.editorElement.removeEventListener("lexxy:focus", this.#handleFocus.bind(this))
-    this.editorElement.removeEventListener("lexxy:blur", this.#handleFocusOut.bind(this))
-    this.removeEventListener("focusout", this.#handleFocusOut.bind(this))
-
-    this.removeEventListener("keydown", (event) => handleRollingTabIndex(this.#focusableItems, event))
+    this.editorElement.removeEventListener("lexxy:focus", this.#handleFocus)
+    this.editorElement.removeEventListener("lexxy:blur", this.#handleFocusOut)
+    this.removeEventListener("focusout", this.#handleFocusOut)
+    this.removeEventListener("keydown", this.#handleKeydown)
   }
 
-  #handleFocus() {
+  #handleFocus = () => {
     this.#resetTabIndexValues()
     this.#focusableItems[0].tabIndex = 0
   }
 
-  #handleFocusOut() {
+  #handleFocusOut = () => {
     if (!this.contains(document.activeElement)) {
       this.#resetTabIndexValues()
     }
+  }
+
+  #handleKeydown = (event) => {
+    handleRollingTabIndex(this.#focusableItems, event)
   }
 
   #resetTabIndexValues() {
