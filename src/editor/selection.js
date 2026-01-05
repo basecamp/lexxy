@@ -5,7 +5,7 @@ import {
   KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, SELECTION_CHANGE_COMMAND
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
-import { ListNode, $getListDepth } from "@lexical/list"
+import { $getListDepth, ListNode } from "@lexical/list"
 import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
 import { getNonce } from "../helpers/csp_helper"

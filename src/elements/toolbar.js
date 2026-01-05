@@ -1,5 +1,4 @@
 import {
-  $addUpdateTag,
   $getSelection,
   $isRangeSelection,
   SKIP_DOM_SELECTION_TAG
@@ -88,7 +87,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  #dispatchButtonCommand(event, { dataset: { command, payload }}) {
+  #dispatchButtonCommand(event, { dataset: { command, payload } }) {
     const isKeyboard = event instanceof PointerEvent && event.pointerId === -1
 
     this.editor.update(() => {

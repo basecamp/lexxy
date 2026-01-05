@@ -41,7 +41,8 @@ export default [
         cancelAnimationFrame: "readonly",
         customElements: "readonly",
         Prism: "readonly",
-        ResizeObserver: "readonly"
+        ResizeObserver: "readonly",
+        PointerEvent: "readonly"
       }
     },
     rules: {
