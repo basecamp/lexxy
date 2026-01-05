@@ -252,7 +252,6 @@ export default class LexicalEditorElement extends HTMLElement {
 
     if (this.supportsRichText) {
       nodes.push(
-        TrixTextNode,
         QuoteNode,
         HeadingNode,
         ListNode,

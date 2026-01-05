@@ -32,15 +32,21 @@ export function isPrintableCharacter(event) {
   return event.key.length === 1
 }
 
-export function extendTextNodeConversion(conversionName, callback = (textNode => textNode)) {
+export function extendTextNodeConversion(conversionName, ...callbacks) {
   return extendConversion(TextNode, conversionName, (conversionOutput, element) => ({
     ...conversionOutput,
     forChild: (lexicalNode, parentNode) => {
       const originalForChild = conversionOutput?.forChild ?? (x => x)
       let childNode = originalForChild(lexicalNode, parentNode)
 
-      if ($isTextNode(childNode)) childNode = callback(childNode, element) ?? childNode
-      return childNode
+
+      if ($isTextNode(childNode)) {
+        childNode = callbacks.reduce(
+          (childNode, callback) => callback(childNode, element) ?? childNode,
+          childNode
+        )
+        return childNode
+      }
     }
   }))
 }
