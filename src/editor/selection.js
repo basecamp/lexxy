@@ -4,6 +4,9 @@ import {
   KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
   KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, SELECTION_CHANGE_COMMAND
 } from "lexical"
+import { $getNearestNodeOfType } from "@lexical/utils"
+import { $getListDepth, ListNode } from "@lexical/list"
+import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
 import { getNonce } from "../helpers/csp_helper"
 import { getNearestListItemNode, isPrintableCharacter } from "../helpers/lexical_helper"
@@ -143,6 +146,29 @@ export default class Selection {
 
     const anchorNode = selection.anchor.getNode()
     return getNearestListItemNode(anchorNode) !== null
+  }
+
+  get isIndentedList() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return false
+
+    const nodes = selection.getNodes()
+    for (const node of nodes) {
+      const closestListNode = $getNearestNodeOfType(node, ListNode)
+      if (closestListNode && $getListDepth(closestListNode) > 1) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  get isInsideCodeBlock() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return false
+
+    const anchorNode = selection.anchor.getNode()
+    return $getNearestNodeOfType(anchorNode, CodeNode) !== null
   }
 
   get nodeAfterCursor() {

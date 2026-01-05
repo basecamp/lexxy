@@ -277,7 +277,7 @@ export class CommandDispatcher {
   }
 
   #registerKeyboardCommands() {
-    this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleListIndentation.bind(this), COMMAND_PRIORITY_NORMAL)
+    this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleTabKey.bind(this), COMMAND_PRIORITY_NORMAL)
   }
 
   #registerDragAndDropHandlers() {
@@ -327,16 +327,26 @@ export class CommandDispatcher {
     this.editor.focus()
   }
 
-  #handleListIndentation(event) {
+  #handleTabKey(event) {
     if (this.selection.isInsideList) {
-      event.preventDefault()
-      if (event.shiftKey) {
-        return this.editor.dispatchCommand(OUTDENT_CONTENT_COMMAND, undefined)
-      } else {
-        return this.editor.dispatchCommand(INDENT_CONTENT_COMMAND, undefined)
-      }
+      return this.#handleTabForList(event)
+    } else if (this.selection.isInsideCodeBlock) {
+      return this.#handleTabForCode()
     }
     return false
+  }
+
+  #handleTabForList(event) {
+    if (event.shiftKey && !this.selection.isIndentedList) return false
+
+    event.preventDefault()
+    const command = event.shiftKey? OUTDENT_CONTENT_COMMAND : INDENT_CONTENT_COMMAND
+    return this.editor.dispatchCommand(command)
+  }
+
+  #handleTabForCode() {
+    const selection = $getSelection()
+    return $isRangeSelection(selection) && selection.isCollapsed()
   }
 
   // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin

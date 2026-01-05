@@ -6,8 +6,6 @@ export class ToolbarDropdown extends HTMLElement {
 
     this.container.addEventListener("toggle", this.#handleToggle.bind(this))
     this.container.addEventListener("keydown", this.#handleKeyDown.bind(this))
-
-    this.#setTabIndexValues()
   }
 
   disconnectedCallback() {
@@ -35,14 +33,14 @@ export class ToolbarDropdown extends HTMLElement {
     }
   }
 
-  #handleOpen(trigger) {
-    this.trigger = trigger
+  #handleOpen() {
     this.#interactiveElements[0].focus()
     this.#setupClickOutsideHandler()
+
+    this.#resetTabIndexValues()
   }
 
   #handleClose() {
-    this.trigger = null
     this.#removeClickOutsideHandler()
     this.editor.focus()
   }
@@ -72,15 +70,19 @@ export class ToolbarDropdown extends HTMLElement {
     }
   }
 
-  async #setTabIndexValues() {
+  async #resetTabIndexValues() {
     await nextFrame()
-    this.#interactiveElements.forEach((element) => {
-      element.setAttribute("tabindex", 0)
+    this.#buttons.forEach((element, index) => {
+      element.setAttribute("tabindex", index === 0 ? 0 : "-1")
     })
   }
 
   get #interactiveElements() {
     return Array.from(this.querySelectorAll("button, input"))
+  }
+
+  get #buttons() {
+    return Array.from(this.querySelectorAll("button"))
   }
 }
 

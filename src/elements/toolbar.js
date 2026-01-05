@@ -1,6 +1,7 @@
 import {
   $getSelection,
-  $isRangeSelection
+  $isRangeSelection,
+  SKIP_DOM_SELECTION_TAG
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
 import { $isListItemNode, $isListNode } from "@lexical/list"
@@ -10,6 +11,7 @@ import { $isLinkNode } from "@lexical/link"
 import { $getTableCellNodeFromLexicalNode } from "@lexical/table"
 import { getListType } from "../helpers/lexical_helper"
 import { isSelectionHighlighted } from "../helpers/format_helper"
+import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 
 export default class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
@@ -22,17 +24,14 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   connectedCallback() {
     requestAnimationFrame(() => this.#refreshToolbarOverflow())
-
-    this._resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
-    this._resizeObserver.observe(this)
+    this.setAttribute("role", "toolbar")
+    this.#installResizeObserver()
   }
 
   disconnectedCallback() {
-    if (this._resizeObserver) {
-      this._resizeObserver.disconnect()
-      this._resizeObserver = null
-    }
+    this.#uninstallResizeObserver()
     this.#unbindHotkeys()
+    this.#unbindFocusListeners()
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -46,11 +45,12 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.editor = editorElement.editor
     this.#bindButtons()
     this.#bindHotkeys()
-    this.#setTabIndexValues()
+    this.#resetTabIndexValues()
     this.#setItemPositionValues()
     this.#monitorSelectionChanges()
     this.#monitorHistoryChanges()
     this.#refreshToolbarOverflow()
+    this.#bindFocusListeners()
 
     this.toggleAttribute("connected", true)
   }
@@ -60,24 +60,39 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.connectedCallback()
   }
 
+  #installResizeObserver() {
+    this.resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
+    this.resizeObserver.observe(this)
+  }
+
+  #uninstallResizeObserver() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+      this.resizeObserver = null
+    }
+  }
+
   #bindButtons() {
     this.addEventListener("click", this.#handleButtonClicked.bind(this))
   }
 
-  #handleButtonClicked({ target }) {
-    this.#handleTargetClicked(target, "[data-command]", this.#dispatchButtonCommand.bind(this))
+  #handleButtonClicked(event) {
+    this.#handleTargetClicked(event, "[data-command]", this.#dispatchButtonCommand.bind(this))
   }
 
-  #handleTargetClicked(target, selector, callback) {
-    const button = target.closest(selector)
+  #handleTargetClicked(event, selector, callback) {
+    const button = event.target.closest(selector)
     if (button) {
-      callback(button)
+      callback(event, button)
     }
   }
 
-  #dispatchButtonCommand(button) {
-    const { command, payload } = button.dataset
-    this.editor.dispatchCommand(command, payload)
+  #dispatchButtonCommand(event, { dataset: { command, payload } }) {
+    const isKeyboard = event instanceof PointerEvent && event.pointerId === -1
+
+    this.editor.update(() => {
+      this.editor.dispatchCommand(command, payload)
+    }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined } )
   }
 
   #bindHotkeys() {
@@ -112,9 +127,38 @@ export default class LexicalToolbarElement extends HTMLElement {
     return [ ...modifiers, pressedKey ].join("+")
   }
 
-  #setTabIndexValues() {
-    this.#buttons.forEach((button) => {
-      button.setAttribute("tabindex", 0)
+  #bindFocusListeners() {
+    this.editorElement.addEventListener("lexxy:focus", this.#handleFocus)
+    this.editorElement.addEventListener("lexxy:blur", this.#handleFocusOut)
+    this.addEventListener("focusout", this.#handleFocusOut)
+    this.addEventListener("keydown", this.#handleKeydown)
+  }
+
+  #unbindFocusListeners() {
+    this.editorElement.removeEventListener("lexxy:focus", this.#handleFocus)
+    this.editorElement.removeEventListener("lexxy:blur", this.#handleFocusOut)
+    this.removeEventListener("focusout", this.#handleFocusOut)
+    this.removeEventListener("keydown", this.#handleKeydown)
+  }
+
+  #handleFocus = () => {
+    this.#resetTabIndexValues()
+    this.#focusableItems[0].tabIndex = 0
+  }
+
+  #handleFocusOut = () => {
+    if (!this.contains(document.activeElement)) {
+      this.#resetTabIndexValues()
+    }
+  }
+
+  #handleKeydown = (event) => {
+    handleRollingTabIndex(this.#focusableItems, event)
+  }
+
+  #resetTabIndexValues() {
+    this.#focusableItems.forEach((button) => {
+      button.tabIndex = -1
     })
   }
 
@@ -224,6 +268,7 @@ export default class LexicalToolbarElement extends HTMLElement {
 
     const isOverflowing = this.#overflowMenu.children.length > 0
     this.toggleAttribute("overflowing", isOverflowing)
+    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
   }
 
   #compactMenu() {
@@ -273,6 +318,10 @@ export default class LexicalToolbarElement extends HTMLElement {
 
   get #buttons() {
     return Array.from(this.querySelectorAll(":scope > button"))
+  }
+
+  get #focusableItems() {
+    return Array.from(this.querySelectorAll(":scope button, :scope > details > summary"))
   }
 
   get #toolbarItems() {
