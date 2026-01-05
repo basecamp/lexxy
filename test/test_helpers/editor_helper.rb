@@ -1,4 +1,8 @@
 module EditorHelper
+  def assert_toolbar_button_focused(name)
+    assert_css "button[name='#{name}']:focus"
+  end
+
   def find_editor(selector = "lexxy-editor")
     @handlers_by_selector ||= {}
     @handlers_by_selector[selector] ||= EditorHandler.new(page, selector)

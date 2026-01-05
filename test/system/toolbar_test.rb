@@ -176,23 +176,17 @@ class ToolbarTest < ApplicationSystemTestCase
   test "keyboard navigation from editor to toolbar" do
     find_editor.click
 
-    # Shift+Tab from editor should move focus to toolbar
     find_editor.send [ :shift, :tab ]
+    assert_toolbar_button_focused "bold"
 
-    # First button (Bold) should be focused
-    assert_css "button[name='bold']:focus"
-
-    # Arrow right should move to next button (Italic)
     page.active_element.send_keys(:arrow_right)
-    assert_css "button[name='italic']:focus"
+    assert_toolbar_button_focused "italic"
 
-    # Arrow right again should move to Strikethrough
     page.active_element.send_keys(:arrow_right)
-    assert_css "button[name='strikethrough']:focus"
+    assert_toolbar_button_focused "strikethrough"
 
-    # Arrow left should go back to Italic
     page.active_element.send_keys(:arrow_left)
-    assert_css "button[name='italic']:focus"
+    assert_toolbar_button_focused "italic"
   end
 
   test "undo and redo commands" do
