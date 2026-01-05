@@ -26,16 +26,11 @@ export default class LexicalToolbarElement extends HTMLElement {
   connectedCallback() {
     requestAnimationFrame(() => this.#refreshToolbarOverflow())
     this.setAttribute("role", "toolbar")
-
-    this._resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
-    this._resizeObserver.observe(this)
+    this.#installResizeObserver()
   }
 
   disconnectedCallback() {
-    if (this._resizeObserver) {
-      this._resizeObserver.disconnect()
-      this._resizeObserver = null
-    }
+    this.#uninstallResizeObserver()
     this.#unbindHotkeys()
     this.#unbindFocusListeners()
   }
@@ -64,6 +59,18 @@ export default class LexicalToolbarElement extends HTMLElement {
   #reconnect() {
     this.disconnectedCallback()
     this.connectedCallback()
+  }
+
+  #installResizeObserver() {
+    this.resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
+    this.resizeObserver.observe(this)
+  }
+
+  #uninstallResizeObserver() {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+      this.resizeObserver = null
+    }
   }
 
   #bindButtons() {
