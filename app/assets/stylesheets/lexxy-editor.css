@@ -64,7 +64,7 @@
         border-color: var(--lexxy-color-table-cell-selected-border);
       }
     }
-    
+ 
     &.lexxy-content__table--selection {
       ::selection {
         background: transparent;
