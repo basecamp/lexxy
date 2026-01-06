@@ -4602,61 +4602,39 @@ function t(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSe
 
 function K$4(e,...t){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",e);for(const e of t)o.append("v",e);throw n.search=o.toString(),Error(`Minified Lexical error #${e}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const P$2=new Map;function F$4(e){const t={};if(!e)return t;const n=e.split(";");for(const e of n)if(""!==e){const[n,o]=e.split(/:([^]+)/);n&&o&&(t[n.trim()]=o.trim());}return t}function b$3(e){let t=P$2.get(e);return void 0===t&&(t=F$4(e),P$2.set(e,t)),t}function R$4(e){let t="";for(const n in e)n&&(t+=`${n}: ${e[n]};`);return t}function O$1(e){const n=bs().getElementByKey(e.getKey());if(null===n)return null;const o=n.ownerDocument.defaultView;return null===o?null:o.getComputedStyle(n)}function z$3(e){return O$1(bi(e)?e:e.getParentOrThrow())}function A$2(e){const t=z$3(e);return null!==t&&"rtl"===t.direction}function M$4(e,t,n="self"){const o=e.getStartEndPoints();if(t.isSelected(e)&&!lo(t)&&null!==o){const[l,r]=o,s=e.isBackward(),i=l.getNode(),c=r.getNode(),f=t.is(i),u=t.is(c);if(f||u){const[o,l]=Sr(e),r=i.is(c),f=t.is(s?c:i),u=t.is(s?i:c);let d,p=0;if(r)p=o>l?l:o,d=o>l?o:l;else if(f){p=s?l:o,d=void 0;}else if(u){p=0,d=s?o:l;}const h=t.__text.slice(p,d);h!==t.__text&&("clone"===n&&(t=As(t)),t.__text=h);}}return t}function $$3(e){const t=e.getStyle(),n=F$4(t);P$2.set(t,n);}function D$3(t,n){(yr(t)?t.isCollapsed():lr(t)||Si(t))||K$4(280);const l=b$3(yr(t)?t.style:lr(t)?t.getStyle():t.getTextStyle()),r=Object.entries(n).reduce((e,[n,o])=>("function"==typeof o?e[n]=o(l[n],t):null===o?delete e[n]:e[n]=o,e),{...l}),s=R$4(r);yr(t)||lr(t)?t.setStyle(s):t.setTextStyle(s),P$2.set(s,r);}function U$5(e,t){if(yr(e)&&e.isCollapsed()){D$3(e,t);const n=e.anchor.getNode();Si(n)&&n.isEmpty()&&D$3(n,t);}j$2(e=>{D$3(e,t);});}function j$2(t){const n=Lr();if(!n)return;const o=new Map,l=e=>o.get(e.getKey())||[0,e.getTextContentSize()];if(yr(n))for(const e of kl(n).getTextSlices())e&&o.set(e.caret.origin.getKey(),e.getSliceIndices());const r=n.getNodes();for(const n of r){if(!lr(n)||!n.canHaveFormat())continue;const[o,r]=l(n);if(r!==o)if(lo(n)||0===o&&r===n.getTextContentSize())t(n);else {t(n.splitText(o,r)[0===o?0:1]);}}yr(n)&&"text"===n.anchor.type&&"text"===n.focus.type&&n.anchor.key===n.focus.key&&H$2(n);}function H$2(e){if(e.isBackward()){const{anchor:t,focus:n}=e,{key:o,offset:l,type:r}=t;t.set(n.key,n.offset,n.type),n.set(o,l,r);}}function Q$4(e){const t=Y$3(e);return null!==t&&"vertical-rl"===t.writingMode}function Y$3(e){const t=e.anchor.getNode();return Si(t)?O$1(t):z$3(t)}function Z$3(e,t){let n=Q$4(e)?!t:t;te(e)&&(n=!n);const l=xl(e.focus,n?"previous":"next");if(Ol(l))return  false;for(const e of ul(l)){if(Gs(e))return !e.origin.isInline();if(!Si(e.origin)){if(Ti(e.origin))return  true;break}}return  false}function ee(e,t,n,o){e.modify(t?"extend":"move",n,o);}function te(e){const t=Y$3(e);return null!==t&&"rtl"===t.direction}function ne(e,t,n){const o=te(e);let l;l=Q$4(e)||o?!n:n,ee(e,t,l,"character");}function oe$1(e,t,n){const o=b$3(e.getStyle());return null!==o&&o[t]||n}function le$1(t,n,o=""){let l=null;const r=t.getNodes(),s=t.anchor,c=t.focus,f=t.isBackward(),u=f?c.offset:s.offset,g=f?c.getNode():s.getNode();if(yr(t)&&t.isCollapsed()&&""!==t.style){const e=b$3(t.style);if(null!==e&&n in e)return e[n]}for(let t=0;t<r.length;t++){const s=r[t];if((0===t||0!==u||!s.is(g))&&lr(s)){const e=oe$1(s,n,o);if(null===l)l=e;else if(l!==e){l="";break}}}return null===l?o:l}
 
-function deepMerge(target, source) {
-  const result = { ...target, ...source };
-  for (const [ key, value ] of Object.entries(source)) {
-    if (arePlainHashes(target[key], value)) {
-      result[key] = deepMerge(target[key], value);
+function deepMerge(target, ...sources) {
+  for (const source of sources) {
+    for (const [ key, value ] of Object.entries(source)) {
+      if (arePlainHashes(target[key], value)) {
+        deepMerge(target[key], value);
+      } else {
+        target[key] = value;
+      }
     }
   }
 
-  return result
+  return target
 }
 
 function arePlainHashes(...values) {
   return values.every(value => value && value.constructor == Object)
 }
 
-class Configuration {
-  #tree = {}
-
-  constructor(...configs) {
-    this.merge(...configs);
-  }
-
-  merge(...configs) {
-    return this.#tree = configs.reduce(deepMerge, this.#tree)
-  }
-
-  get(path) {
-    const keys = path.split(".");
-    return keys.reduce((node, key) => node[key], this.#tree)
-  }
-}
-
-const global$1 = new Configuration({
-  attachmentTagName: "action-text-attachment"
-});
-
-const presets = new Configuration({
+const config = {
+  global: {
+    attachmentTagName: "action-text-attachment",
+  },
   default: {
     attachments: true,
     markdown: true,
     multiline: true,
     toolbar: true,
   }
-});
-
-var Lexxy = {
-  global: global$1,
-  presets,
-  configure({ global: newGlobal, ...newPresets }) {
-    if (newGlobal) {
-      global$1.merge(newGlobal);
-    }
-    presets.merge(newPresets);
-  }
 };
+
+function configure(changes) {
+  deepMerge(config, changes);
+}
 
 const ALLOWED_HTML_TAGS = [ "a", "b", "blockquote", "br", "code", "em",
   "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "ul", "table", "tbody", "tr", "th", "td" ];
@@ -4696,7 +4674,7 @@ purify.addHook("uponSanitizeElement", (node, data) => {
 
 function buildConfig() {
   return {
-    ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(Lexxy.global.get("attachmentTagName")),
+    ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(config.global.attachmentTagName),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
   }
@@ -6922,7 +6900,7 @@ class ActionTextAttachmentNode extends ki {
 
   static importDOM() {
     return {
-      [Lexxy.global.get("attachmentTagName")]: (attachment) => {
+      [config.global.attachmentTagName]: (attachment) => {
         return {
           conversion: () => ({
             node: new ActionTextAttachmentNode({
@@ -7020,7 +6998,7 @@ class ActionTextAttachmentNode extends ki {
   }
 
   exportDOM() {
-    const attachment = createElement(Lexxy.global.get("attachmentTagName"), {
+    const attachment = createElement(config.global.attachmentTagName, {
       sgid: this.sgid,
       previewable: this.previewable || null,
       url: this.src,
@@ -7660,7 +7638,7 @@ class CommandDispatcher {
   }
 
   #registerDragAndDropHandlers() {
-    if (this.editorElement.supportsAttachments) {
+    if (this.editorElement.config.attachments) {
       this.dragCounter = 0;
       this.editor.getRootElement().addEventListener("dragover", this.#handleDragOver.bind(this));
       this.editor.getRootElement().addEventListener("drop", this.#handleDrop.bind(this));
@@ -8428,24 +8406,26 @@ function filterMatches(text, potentialMatch) {
 
 class EditorConfiguration {
   #editorElement
-  #config
+  #tree = {}
+
+  static for(editorElement) {
+    const config = new EditorConfiguration(editorElement);
+    return config.#tree
+  }
 
   constructor(editorElement) {
     this.#editorElement = editorElement;
-    this.#config = new Configuration(
-      Lexxy.presets.get("default"),
-      Lexxy.presets.get(editorElement.preset),
+    deepMerge(
+      this.#tree,
+      config.default,
+      config[editorElement.preset],
       this.#overrides
     );
   }
 
-  get(path) {
-    return this.#config.get(path)
-  }
-
   get #overrides() {
     const overrides = {};
-    for (const option of Object.keys(Lexxy.presets.get("default"))) {
+    for (const option of Object.keys(config.default)) {
       if (this.#editorElement.hasAttribute(option)) {
         overrides[option] = this.#parseAttribute(dasherize(option));
       }
@@ -8478,7 +8458,7 @@ class CustomActionTextAttachmentNode extends ki {
 
   static importDOM() {
     return {
-      [Lexxy.global.get("attachmentTagName")]: (attachment) => {
+      [config.global.attachmentTagName]: (attachment) => {
         const content = attachment.getAttribute("content");
         if (!attachment.getAttribute("content")) {
           return null
@@ -8518,7 +8498,7 @@ class CustomActionTextAttachmentNode extends ki {
   }
 
   createDOM() {
-    const figure = createElement(Lexxy.global.get("attachmentTagName"), { "content-type": this.contentType, "data-lexxy-decorator": true });
+    const figure = createElement(config.global.attachmentTagName, { "content-type": this.contentType, "data-lexxy-decorator": true });
 
     figure.addEventListener("click", (event) => {
       dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
@@ -8542,7 +8522,7 @@ class CustomActionTextAttachmentNode extends ki {
   }
 
   exportDOM() {
-    const attachment = createElement(Lexxy.global.get("attachmentTagName"), {
+    const attachment = createElement(config.global.attachmentTagName, {
       sgid: this.sgid,
       content: JSON.stringify(this.innerHtml),
       "content-type": this.contentType
@@ -9089,7 +9069,7 @@ class Contents {
   }
 
   uploadFile(file) {
-    if (!this.editorElement.supportsAttachments) {
+    if (!this.editorElement.config.attachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])");
       return
     }
@@ -9536,7 +9516,7 @@ class Contents {
   }
 
   #appendLineBreakIfNeeded(paragraph) {
-    if (Ii(paragraph) && !this.editorElement.isSingleLineMode) {
+    if (Ii(paragraph) && this.editorElement.config.multiline) {
       const children = paragraph.getChildren();
       const last = children[children.length - 1];
       const beforeLast = children[children.length - 2];
@@ -9704,7 +9684,7 @@ class Clipboard {
       } else if (isUrl(text)) {
         const nodeKey = this.contents.createLink(text);
         this.#dispatchLinkInsertEvent(nodeKey, { url: text });
-      } else if (this.editorElement.supportsMarkdown) {
+      } else if (this.editorElement.config.markdown) {
         this.#pasteMarkdown(text);
       } else {
         this.#pasteRichText(clipboardData);
@@ -9737,7 +9717,7 @@ class Clipboard {
   }
 
   #handlePastedFiles(clipboardData) {
-    if (!this.editorElement.supportsAttachments) return
+    if (!this.editorElement.config.attachments) return
 
     const html = clipboardData.getData("text/html");
     if (html) return // Ignore if image copied from browser since we will load it as a remote image
@@ -9915,7 +9895,7 @@ class LexicalEditorElement extends HTMLElement {
 
   connectedCallback() {
     this.id ??= generateDomId("lexxy-editor");
-    this.config = new EditorConfiguration(this);
+    this.config = EditorConfiguration.for(this);
     this.editor = this.#createEditor();
     this.contents = new Contents(this);
     this.selection = new Selection(this);
@@ -9961,7 +9941,7 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   get toolbarElement() {
-    if (!this.#hasToolbar) return null
+    if (!this.config.toolbar) return null
 
     this.toolbar = this.toolbar || this.#findOrCreateDefaultToolbar();
     return this.toolbar
@@ -9989,18 +9969,6 @@ class LexicalEditorElement extends HTMLElement {
 
   get preset() {
     return this.getAttribute("preset") || "default"
-  }
-
-  get isSingleLineMode() {
-    return !this.config.get("multiline")
-  }
-
-  get supportsAttachments() {
-    return this.config.get("attachments")
-  }
-
-  get supportsMarkdown() {
-    return this.config.get("markdown")
   }
 
   get contentTabIndex() {
@@ -10114,7 +10082,7 @@ class LexicalEditorElement extends HTMLElement {
       CustomActionTextAttachmentNode,
     ];
 
-    if (this.supportsAttachments) {
+    if (this.config.attachments) {
       nodes.push(ActionTextAttachmentNode, ActionTextAttachmentUploadNode);
     }
 
@@ -10214,7 +10182,7 @@ class LexicalEditorElement extends HTMLElement {
     bt$4(this.editor);
     this.#registerTableComponents();
     this.#registerCodeHiglightingComponents();
-    if (this.supportsMarkdown) {
+    if (this.config.markdown) {
       Dt(this.editor, zt);
     }
   }
@@ -10258,7 +10226,7 @@ class LexicalEditorElement extends HTMLElement {
         }
 
         // In single line mode, prevent ENTER
-        if (this.isSingleLineMode) {
+        if (!this.config.multiline) {
           event.preventDefault();
           return true
         }
@@ -10294,7 +10262,7 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   #attachToolbar() {
-    if (this.#hasToolbar) {
+    if (this.config.toolbar) {
       this.toolbarElement.setEditor(this);
     }
   }
@@ -10309,14 +10277,10 @@ class LexicalEditorElement extends HTMLElement {
     }
   }
 
-  get #hasToolbar() {
-    return this.config.get("toolbar")
-  }
-
   #createDefaultToolbar(container = this) {
     const toolbar = createElement("lexxy-toolbar");
     toolbar.innerHTML = LexicalToolbarElement.defaultTemplate;
-    toolbar.setAttribute("data-attachments", this.supportsAttachments); // Drives toolbar CSS styles
+    toolbar.setAttribute("data-attachments", this.config.attachments); // Drives toolbar CSS styles
     container.prepend(toolbar);
     return toolbar
   }
@@ -11796,7 +11760,5 @@ function highlightElement(preElement) {
   const codeElement = createElement("code", { "data-language": language, innerHTML: highlightedHtml });
   preElement.replaceWith(codeElement);
 }
-
-const configure = Lexxy.configure;
 
 export { configure, highlightAll };

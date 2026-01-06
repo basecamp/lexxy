@@ -1,12 +1,15 @@
-export function deepMerge(target, source) {
-  const result = { ...target, ...source }
-  for (const [ key, value ] of Object.entries(source)) {
-    if (arePlainHashes(target[key], value)) {
-      result[key] = deepMerge(target[key], value)
+export function deepMerge(target, ...sources) {
+  for (const source of sources) {
+    for (const [ key, value ] of Object.entries(source)) {
+      if (arePlainHashes(target[key], value)) {
+        deepMerge(target[key], value)
+      } else {
+        target[key] = value
+      }
     }
   }
 
-  return result
+  return target
 }
 
 function arePlainHashes(...values) {

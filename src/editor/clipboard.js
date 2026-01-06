@@ -71,7 +71,7 @@ export default class Clipboard {
       } else if (isUrl(text)) {
         const nodeKey = this.contents.createLink(text)
         this.#dispatchLinkInsertEvent(nodeKey, { url: text })
-      } else if (this.editorElement.supportsMarkdown) {
+      } else if (this.editorElement.config.markdown) {
         this.#pasteMarkdown(text)
       } else {
         this.#pasteRichText(clipboardData)
@@ -104,7 +104,7 @@ export default class Clipboard {
   }
 
   #handlePastedFiles(clipboardData) {
-    if (!this.editorElement.supportsAttachments) return
+    if (!this.editorElement.config.attachments) return
 
     const html = clipboardData.getData("text/html")
     if (html) return // Ignore if image copied from browser since we will load it as a remote image

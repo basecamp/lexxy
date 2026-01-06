@@ -281,7 +281,7 @@ export class CommandDispatcher {
   }
 
   #registerDragAndDropHandlers() {
-    if (this.editorElement.supportsAttachments) {
+    if (this.editorElement.config.attachments) {
       this.dragCounter = 0
       this.editor.getRootElement().addEventListener("dragover", this.#handleDragOver.bind(this))
       this.editor.getRootElement().addEventListener("drop", this.#handleDrop.bind(this))

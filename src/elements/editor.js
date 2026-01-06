@@ -42,7 +42,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
   connectedCallback() {
     this.id ??= generateDomId("lexxy-editor")
-    this.config = new Configuration(this)
+    this.config = Configuration.for(this)
     this.editor = this.#createEditor()
     this.contents = new Contents(this)
     this.selection = new Selection(this)
@@ -88,7 +88,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get toolbarElement() {
-    if (!this.#hasToolbar) return null
+    if (!this.config.toolbar) return null
 
     this.toolbar = this.toolbar || this.#findOrCreateDefaultToolbar()
     return this.toolbar
@@ -116,18 +116,6 @@ export default class LexicalEditorElement extends HTMLElement {
 
   get preset() {
     return this.getAttribute("preset") || "default"
-  }
-
-  get isSingleLineMode() {
-    return !this.config.get("multiline")
-  }
-
-  get supportsAttachments() {
-    return this.config.get("attachments")
-  }
-
-  get supportsMarkdown() {
-    return this.config.get("markdown")
   }
 
   get contentTabIndex() {
@@ -241,7 +229,7 @@ export default class LexicalEditorElement extends HTMLElement {
       CustomActionTextAttachmentNode,
     ]
 
-    if (this.supportsAttachments) {
+    if (this.config.attachments) {
       nodes.push(ActionTextAttachmentNode, ActionTextAttachmentUploadNode)
     }
 
@@ -341,7 +329,7 @@ export default class LexicalEditorElement extends HTMLElement {
     registerList(this.editor)
     this.#registerTableComponents()
     this.#registerCodeHiglightingComponents()
-    if (this.supportsMarkdown) {
+    if (this.config.markdown) {
       registerMarkdownShortcuts(this.editor, TRANSFORMERS)
     }
   }
@@ -385,7 +373,7 @@ export default class LexicalEditorElement extends HTMLElement {
         }
 
         // In single line mode, prevent ENTER
-        if (this.isSingleLineMode) {
+        if (!this.config.multiline) {
           event.preventDefault()
           return true
         }
@@ -421,7 +409,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #attachToolbar() {
-    if (this.#hasToolbar) {
+    if (this.config.toolbar) {
       this.toolbarElement.setEditor(this)
     }
   }
@@ -436,14 +424,10 @@ export default class LexicalEditorElement extends HTMLElement {
     }
   }
 
-  get #hasToolbar() {
-    return this.config.get("toolbar")
-  }
-
   #createDefaultToolbar(container = this) {
     const toolbar = createElement("lexxy-toolbar")
     toolbar.innerHTML = LexicalToolbar.defaultTemplate
-    toolbar.setAttribute("data-attachments", this.supportsAttachments) // Drives toolbar CSS styles
+    toolbar.setAttribute("data-attachments", this.config.attachments) // Drives toolbar CSS styles
     container.prepend(toolbar)
     return toolbar
   }

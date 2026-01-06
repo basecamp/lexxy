@@ -1,25 +1,19 @@
-import Configuration from "./configuration"
+import { deepMerge } from "../helpers/hash_helper"
 
-const global = new Configuration({
-  attachmentTagName: "action-text-attachment"
-})
-
-const presets = new Configuration({
+const config = {
+  global: {
+    attachmentTagName: "action-text-attachment",
+  },
   default: {
     attachments: true,
     markdown: true,
     multiline: true,
     toolbar: true,
   }
-})
-
-export default {
-  global,
-  presets,
-  configure({ global: newGlobal, ...newPresets }) {
-    if (newGlobal) {
-      global.merge(newGlobal)
-    }
-    presets.merge(newPresets)
-  }
 }
+
+export function configure(changes) {
+  deepMerge(config, changes)
+}
+
+export default config

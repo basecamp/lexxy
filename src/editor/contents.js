@@ -256,7 +256,7 @@ export default class Contents {
   }
 
   uploadFile(file) {
-    if (!this.editorElement.supportsAttachments) {
+    if (!this.editorElement.config.attachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
       return
     }
@@ -703,7 +703,7 @@ export default class Contents {
   }
 
   #appendLineBreakIfNeeded(paragraph) {
-    if ($isParagraphNode(paragraph) && !this.editorElement.isSingleLineMode) {
+    if ($isParagraphNode(paragraph) && this.editorElement.config.multiline) {
       const children = paragraph.getChildren()
       const last = children[children.length - 1]
       const beforeLast = children[children.length - 2]
