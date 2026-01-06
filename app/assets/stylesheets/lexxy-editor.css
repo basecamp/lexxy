@@ -672,3 +672,23 @@
   color: var(--lexxy-color-ink-medium);
   padding: var(--lexxy-prompt-padding);
 }
+
+/* Markdown textarea
+/* -------------------------------------------------------------------------- */
+
+:where(.lexxy-editor__markdown-textarea) {
+  width: 100%;
+  min-height: var(--lexxy-editor-rows);
+  font-family: ui-monospace, monospace;
+  font-size: inherit;
+  line-height: 1.6;
+  padding: var(--lexxy-editor-padding);
+  border: none;
+  resize: vertical;
+  background-color: var(--lexxy-color-canvas);
+  color: var(--lexxy-color-text);
+
+  &:focus {
+    outline: none;
+  }
+}

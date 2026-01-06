@@ -4,7 +4,7 @@ import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
-import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
+import { TRANSFORMERS, registerMarkdownShortcuts, $convertToMarkdownString, $convertFromMarkdownString } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 import { TableCellNode, TableNode, TableRowNode, registerTablePlugin, registerTableSelectionObserver, setScrollableTablesActive } from "@lexical/table"
 
@@ -32,6 +32,9 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
+  #isMarkdownMode = false
+  #markdownTextarea = null
+  #formSubmitHandler = null
 
   constructor() {
     super()
@@ -128,6 +131,50 @@ export default class LexicalEditorElement extends HTMLElement {
     this.editor.focus()
   }
 
+  toggleMarkdownMode() {
+    if (this.#isMarkdownMode) {
+      this.#switchToRichText()
+    } else {
+      this.#switchToMarkdown()
+    }
+  }
+
+  #switchToMarkdown() {
+    let markdown = ''
+    this.editor.getEditorState().read(() => {
+      markdown = $convertToMarkdownString(TRANSFORMERS)
+    })
+
+    if (!this.#markdownTextarea) {
+      this.#markdownTextarea = document.createElement('textarea')
+      this.#markdownTextarea.className = 'lexxy-editor__markdown-textarea'
+      this.appendChild(this.#markdownTextarea)
+    }
+
+    this.#markdownTextarea.value = markdown
+    this.#markdownTextarea.hidden = false
+    this.editorContentElement.hidden = true
+    this.#isMarkdownMode = true
+    this.#markdownTextarea.focus()
+
+    dispatch(this, 'lexxy:mode-change', { mode: 'markdown' })
+  }
+
+  #switchToRichText() {
+    const markdown = this.#markdownTextarea.value
+
+    this.editor.update(() => {
+      $convertFromMarkdownString(markdown, TRANSFORMERS)
+    })
+
+    this.#markdownTextarea.hidden = true
+    this.editorContentElement.hidden = false
+    this.#isMarkdownMode = false
+    this.focus()
+
+    dispatch(this, 'lexxy:mode-change', { mode: 'rich' })
+  }
+
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
@@ -192,6 +239,19 @@ export default class LexicalEditorElement extends HTMLElement {
     this.#attachToolbar()
     this.#loadInitialValue()
     this.#resetBeforeTurboCaches()
+    this.#syncOnFormSubmit()
+  }
+
+  #syncOnFormSubmit() {
+    this.#formSubmitHandler = () => {
+      if (this.#isMarkdownMode) {
+        const markdown = this.#markdownTextarea.value
+        this.editor.update(() => {
+          $convertFromMarkdownString(markdown, TRANSFORMERS)
+        })
+      }
+    }
+    this.form?.addEventListener('submit', this.#formSubmitHandler)
   }
 
   #createEditor() {
@@ -295,6 +355,9 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #handleTurboBeforeCache = (event) => {
+    if (this.#isMarkdownMode) {
+      this.#switchToRichText()
+    }
     this.#reset()
   }
 
@@ -470,6 +533,14 @@ export default class LexicalEditorElement extends HTMLElement {
     }
 
     this.selection = null
+
+    this.form?.removeEventListener('submit', this.#formSubmitHandler)
+
+    if (this.#markdownTextarea) {
+      this.#markdownTextarea.remove()
+      this.#markdownTextarea = null
+    }
+    this.#isMarkdownMode = false
 
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
   }
