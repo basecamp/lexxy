@@ -32,6 +32,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#uninstallResizeObserver()
     this.#unbindHotkeys()
     this.#unbindFocusListeners()
+    this.#unbindModeChangeListener()
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -51,6 +52,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#monitorHistoryChanges()
     this.#refreshToolbarOverflow()
     this.#bindFocusListeners()
+    this.#bindModeChangeListener()
 
     this.toggleAttribute("connected", true)
   }
@@ -77,6 +79,15 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #handleButtonClicked(event) {
+    const button = event.target.closest('button')
+    if (!button) return
+
+    // Handle markdown toggle directly - not a Lexical command
+    if (button.name === 'markdown') {
+      this.editorElement.toggleMarkdownMode()
+      return
+    }
+
     this.#handleTargetClicked(event, "[data-command]", this.#dispatchButtonCommand.bind(this))
   }
 
@@ -139,6 +150,21 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.editorElement.removeEventListener("lexxy:blur", this.#handleFocusOut)
     this.removeEventListener("focusout", this.#handleFocusOut)
     this.removeEventListener("keydown", this.#handleKeydown)
+  }
+
+  #bindModeChangeListener() {
+    this.editorElement.addEventListener("lexxy:mode-change", this.#handleModeChange)
+  }
+
+  #unbindModeChangeListener() {
+    this.editorElement?.removeEventListener("lexxy:mode-change", this.#handleModeChange)
+  }
+
+  #handleModeChange = (event) => {
+    const btn = this.querySelector('[name="markdown"]')
+    if (btn) {
+      btn.setAttribute('aria-pressed', (event.detail.mode === 'markdown').toString())
+    }
   }
 
   #handleFocus = () => {
@@ -401,7 +427,11 @@ export default class LexicalToolbarElement extends HTMLElement {
       <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 12C0 11.4477 0.447715 11 1 11H23C23.5523 11 24 11.4477 24 12C24 12.5523 23.5523 13 23 13H1C0.447716 13 0 12.5523 0 12Z"/><path d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5C20 6.10457 19.1046 7 18 7H6C4.89543 7 4 6.10457 4 5Z"/><path d="M4 19C4 17.8954 4.89543 17 6 17H18C19.1046 17 20 17.8954 20 19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19Z"/></svg>
       </button>
- 
+
+      <button class="lexxy-editor__toolbar-button" type="button" name="markdown" title="Markdown">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 5h2v14H3V5zm4 0h2v6l3-3 3 3V5h2v14h-2v-6l-3 3-3-3v6H7V5zm14 0h-2v14h2V5z"/></svg>
+      </button>
+
       <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
  
       <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo" data-hotkey="cmd+z ctrl+z">
