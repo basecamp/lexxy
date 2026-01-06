@@ -8515,7 +8515,7 @@ class Selection {
 // Prevent the hardcoded background color
 // A background color value is set by Lexical if background is null:
 // https://github.com/facebook/lexical/blob/5bbbe849bd229e1db0e7b536e6a919520ada7bb2/packages/lexical-table/src/LexicalTableCellNode.ts#L187
-function registerTableCellTransform(editor) {
+function registerHeaderBackgroundTransform(editor) {
   return editor.registerNodeTransform(xe, (node) => {
     if (node.getBackgroundColor() === null) {
       node.setBackgroundColor("");
@@ -10283,7 +10283,7 @@ class LexicalEditorElement extends HTMLElement {
     this.tableHandler = createElement("lexxy-table-handler");
     this.append(this.tableHandler);
 
-    this.#addUnregisterHandler(registerTableCellTransform(this.editor));
+    this.#addUnregisterHandler(registerHeaderBackgroundTransform(this.editor));
   }
 
   #registerCodeHiglightingComponents() {
@@ -10852,6 +10852,7 @@ class TableHandler extends HTMLElement {
     const container = createElement("details", {
       className: "lexxy-table-control lexxy-table-control__more-menu"
     });
+    container.setAttribute("name", "lexxy-dropdown");
 
     container.tabIndex = -1;
 
