@@ -200,6 +200,7 @@ export class TableHandler extends HTMLElement {
     const container = createElement("details", {
       className: "lexxy-table-control lexxy-table-control__more-menu"
     })
+    container.setAttribute("name", "lexxy-dropdown")
 
     container.tabIndex = -1
 
