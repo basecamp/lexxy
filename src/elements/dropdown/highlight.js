@@ -42,8 +42,8 @@ export class HighlightDropdown extends ToolbarDropdown {
   }
 
   #populateButtonGroup(buttonGroup) {
-    const values = buttonGroup.dataset.values?.split("; ") || []
     const attribute = buttonGroup.dataset.buttonGroup
+    const values = this.editorElement.config.get(`highlight.buttons.${attribute}`) || []
     values.forEach((value, index) => {
       buttonGroup.appendChild(this.#createButton(attribute, value, index))
     })
