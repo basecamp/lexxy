@@ -24,26 +24,19 @@ export default class Selection {
     this.#containEditorFocus()
   }
 
-  clear() {
-    this.current = null
-  }
-
   set current(selection) {
-    if ($isNodeSelection(selection)) {
-      this.editor.getEditorState().read(() => {
-        this._current = $getSelection()
-        this.#syncSelectedClasses()
-      })
-    } else {
-      this.editor.update(() => {
-        this.#syncSelectedClasses()
-        this._current = null
-      })
-    }
+    this.editor.update(() => {
+      this.#syncSelectedClasses()
+    })
   }
 
-  get current() {
-    return this._current
+  get hasNodeSelection() {
+    let result = false
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      result = selection !== null && $isNodeSelection(selection)
+    })
+    return result
   }
 
   get cursorPosition() {
@@ -236,18 +229,18 @@ export default class Selection {
   }
 
   get #currentlySelectedKeys() {
-    if (this._currentlySelectedKeys) { return this._currentlySelectedKeys }
+    if (this.currentlySelectedKeys) { return this.currentlySelectedKeys }
 
-    this._currentlySelectedKeys = new Set()
+    this.currentlySelectedKeys = new Set()
 
     const selection = $getSelection()
     if (selection && $isNodeSelection(selection)) {
       for (const node of selection.getNodes()) {
-        this._currentlySelectedKeys.add(node.getKey())
+        this.currentlySelectedKeys.add(node.getKey())
       }
     }
 
-    return this._currentlySelectedKeys
+    return this.currentlySelectedKeys
   }
 
   #processSelectionChangeCommands() {
@@ -377,7 +370,7 @@ export default class Selection {
     this.#highlightNewItems()
 
     this.previouslySelectedKeys = this.#currentlySelectedKeys
-    this._currentlySelectedKeys = null
+    this.currentlySelectedKeys = null
   }
 
   #clearPreviouslyHighlightedItems() {
@@ -399,7 +392,7 @@ export default class Selection {
   }
 
   async #selectPreviousNode() {
-    if (this.current) {
+    if (this.hasNodeSelection) {
       await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
     } else {
       this.#selectInLexical(this.nodeBeforeCursor)
@@ -407,7 +400,7 @@ export default class Selection {
   }
 
   async #selectNextNode() {
-    if (this.current) {
+    if (this.hasNodeSelection) {
       await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
     } else {
       this.#selectInLexical(this.nodeAfterCursor)
@@ -415,7 +408,7 @@ export default class Selection {
   }
 
   async #selectPreviousTopLevelNode() {
-    if (this.current) {
+    if (this.hasNodeSelection) {
       await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
     } else {
       this.#selectInLexical(this.topLevelNodeBeforeCursor)
@@ -423,7 +416,7 @@ export default class Selection {
   }
 
   async #selectNextTopLevelNode() {
-    if (this.current) {
+    if (this.hasNodeSelection) {
       await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
     } else {
       this.#selectInLexical(this.topLevelNodeAfterCursor)
@@ -432,10 +425,9 @@ export default class Selection {
 
   async #withCurrentNode(fn) {
     await nextFrame()
-    if (this.current) {
+    if (this.hasNodeSelection) {
       this.editor.update(() => {
-        this.clear()
-        fn(this.current.getNodes()[0])
+        fn($getSelection().getNodes()[0])
         this.editor.focus()
       })
     }
