@@ -261,3 +261,34 @@ pre[data-line] {
     padding: 0 0.25rem;
   }
 }
+
+/* Editor value buttons */
+/* -------------------------------------------------------------------------- */
+
+.editor-value-buttons {
+  background: var(--lexxy-color-ink-lightest);
+  border: 1px solid var(--lexxy-color-ink-lighter);
+  border-radius: 0.25rem;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+
+  button {
+    background: var(--lexxy-color-canvas);
+    color: var(--sandbox-text-color);
+    border: 0;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    font-size: 0.8em;
+
+    &:hover {
+      background: var(--lexxy-color-ink-lightest);
+    }
+
+    &:active {
+      background: var(--lexxy-color-ink-lighter);
+    }
+  }
+}
