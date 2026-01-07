@@ -39,7 +39,7 @@ class EditorHandler
     content_element.send_keys *keys
   end
 
-  def send_key(key)
+  def send_key(key, ctrl: false)
     simulate_first_interaction_if_needed
 
     content_element.execute_script <<~JS
@@ -47,7 +47,7 @@ class EditorHandler
         bubbles: true,
         cancelable: true,
         key: "#{key}",
-        keyCode: 46
+        ctrlKey: #{ctrl}
       });
       this.dispatchEvent(event);
     JS
