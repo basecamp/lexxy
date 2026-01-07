@@ -3,8 +3,16 @@
 <main data-controller="lexxy-output" data-action="lexxy:change->lexxy-output#refresh">
   <section>
     <h2>Editor</h2>
+    <div class="editor-value-buttons">
+      <button data-action="click->lexxy-output#loadContent" data-partial="default">Default</button>
+      <button data-action="click->lexxy-output#loadContent" data-partial="tables">Tables</button>
+      <button data-action="click->lexxy-output#loadContent" data-partial="code_blocks">Code blocks</button>
+      <button data-action="click->lexxy-output#loadContent" data-partial="lists">Lists</button>
+      <button data-action="click->lexxy-output#loadContent" data-partial="highlights">Color highlights</button>
+      <button data-action="click->lexxy-output#loadContent" data-partial="empty">Empty</button>
+    </div>
     <div>
-      <%= rich_text_area_tag :sandbox, render("value"), placeholder: "Write something...", data: { lexxy_output_target: "editor" } do %>
+      <%= rich_text_area_tag :sandbox, render("default"), placeholder: "Write something...", data: { lexxy_output_target: "editor" } do %>
         <lexxy-prompt trigger="@" src="<%= people_path %>" name="mention"></lexxy-prompt>
         <lexxy-prompt trigger=":" insert-editable-text>
           <lexxy-prompt-item search="joy laughing face">
