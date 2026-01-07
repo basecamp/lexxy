@@ -278,8 +278,8 @@ export default class Contents {
     let focusNode = null
 
     this.editor.update(() => {
-      if ($isNodeSelection(this.#selection.current)) {
-        const nodesToRemove = this.#selection.current.getNodes()
+      if (this.#selection.hasNodeSelection) {
+        const nodesToRemove = $getSelection().getNodes()
         if (nodesToRemove.length === 0) return
 
         focusNode = this.#findAdjacentNodeTo(nodesToRemove)
@@ -291,7 +291,6 @@ export default class Contents {
 
     this.editor.update(() => {
       this.#selectAfterDeletion(focusNode)
-      this.#selection.clear()
       this.editor.focus()
     })
   }

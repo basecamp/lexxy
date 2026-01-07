@@ -7856,26 +7856,19 @@ class Selection {
     this.#containEditorFocus();
   }
 
-  clear() {
-    this.current = null;
-  }
-
   set current(selection) {
-    if (xr(selection)) {
-      this.editor.getEditorState().read(() => {
-        this._current = Lr();
-        this.#syncSelectedClasses();
-      });
-    } else {
-      this.editor.update(() => {
-        this.#syncSelectedClasses();
-        this._current = null;
-      });
-    }
+    this.editor.update(() => {
+      this.#syncSelectedClasses();
+    });
   }
 
-  get current() {
-    return this._current
+  get hasNodeSelection() {
+    let result = false;
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      result = selection !== null && xr(selection);
+    });
+    return result
   }
 
   get cursorPosition() {
@@ -8068,18 +8061,18 @@ class Selection {
   }
 
   get #currentlySelectedKeys() {
-    if (this._currentlySelectedKeys) { return this._currentlySelectedKeys }
+    if (this.currentlySelectedKeys) { return this.currentlySelectedKeys }
 
-    this._currentlySelectedKeys = new Set();
+    this.currentlySelectedKeys = new Set();
 
     const selection = Lr();
     if (selection && xr(selection)) {
       for (const node of selection.getNodes()) {
-        this._currentlySelectedKeys.add(node.getKey());
+        this.currentlySelectedKeys.add(node.getKey());
       }
     }
 
-    return this._currentlySelectedKeys
+    return this.currentlySelectedKeys
   }
 
   #processSelectionChangeCommands() {
@@ -8209,7 +8202,7 @@ class Selection {
     this.#highlightNewItems();
 
     this.previouslySelectedKeys = this.#currentlySelectedKeys;
-    this._currentlySelectedKeys = null;
+    this.currentlySelectedKeys = null;
   }
 
   #clearPreviouslyHighlightedItems() {
@@ -8231,7 +8224,7 @@ class Selection {
   }
 
   async #selectPreviousNode() {
-    if (this.current) {
+    if (this.hasNodeSelection) {
       await this.#withCurrentNode((currentNode) => currentNode.selectPrevious());
     } else {
       this.#selectInLexical(this.nodeBeforeCursor);
@@ -8239,7 +8232,7 @@ class Selection {
   }
 
   async #selectNextNode() {
-    if (this.current) {
+    if (this.hasNodeSelection) {
       await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0));
     } else {
       this.#selectInLexical(this.nodeAfterCursor);
@@ -8247,7 +8240,7 @@ class Selection {
   }
 
   async #selectPreviousTopLevelNode() {
-    if (this.current) {
+    if (this.hasNodeSelection) {
       await this.#withCurrentNode((currentNode) => currentNode.selectPrevious());
     } else {
       this.#selectInLexical(this.topLevelNodeBeforeCursor);
@@ -8255,7 +8248,7 @@ class Selection {
   }
 
   async #selectNextTopLevelNode() {
-    if (this.current) {
+    if (this.hasNodeSelection) {
       await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0));
     } else {
       this.#selectInLexical(this.topLevelNodeAfterCursor);
@@ -8264,10 +8257,9 @@ class Selection {
 
   async #withCurrentNode(fn) {
     await nextFrame();
-    if (this.current) {
+    if (this.hasNodeSelection) {
       this.editor.update(() => {
-        this.clear();
-        fn(this.current.getNodes()[0]);
+        fn(Lr().getNodes()[0]);
         this.editor.focus();
       });
     }
@@ -9171,8 +9163,8 @@ class Contents {
     let focusNode = null;
 
     this.editor.update(() => {
-      if (xr(this.#selection.current)) {
-        const nodesToRemove = this.#selection.current.getNodes();
+      if (this.#selection.hasNodeSelection) {
+        const nodesToRemove = Lr().getNodes();
         if (nodesToRemove.length === 0) return
 
         focusNode = this.#findAdjacentNodeTo(nodesToRemove);
@@ -9184,7 +9176,6 @@ class Contents {
 
     this.editor.update(() => {
       this.#selectAfterDeletion(focusNode);
-      this.#selection.clear();
       this.editor.focus();
     });
   }
