@@ -56,9 +56,11 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   constructor({ tagName, sgid, contentType, innerHtml }, key) {
     super(key)
 
+    const contentTypeNamespace = Lexxy.global.get("attachmentContentTypeNamespace")
+
     this.tagName = tagName || CustomActionTextAttachmentNode.TAG_NAME
     this.sgid = sgid
-    this.contentType = contentType || "application/vnd.actiontext.unknown"
+    this.contentType = contentType || `application/vnd.${contentTypeNamespace}.unknown`
     this.innerHtml = innerHtml
   }
 

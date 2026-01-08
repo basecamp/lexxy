@@ -2,6 +2,7 @@ import Configuration from "./configuration"
 
 const global = new Configuration({
   attachmentTagName: "action-text-attachment",
+  attachmentContentTypeNamespace: "actiontext",
   authenticatedUploads: false
 })
 
