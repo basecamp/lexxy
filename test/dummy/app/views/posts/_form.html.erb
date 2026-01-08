@@ -1,4 +1,9 @@
-
+<% if tag_name = params[:attachment_tag_name] %>
+  <script type="module">
+    import * as Lexxy from "lexxy"
+    Lexxy.configure({ global: { attachmentTagName: "<%= tag_name %>" }})
+  </script>
+<% end %>
 
 <%= form_with model: post, data: { controller: "events-logger file-acceptance unfurl-link",
   file_acceptance_type_value: params[:attachment_type],
@@ -9,11 +14,24 @@
   </div>
 
   <div>
+    <% if params[:toolbar_external] %>
+      <lexxy-toolbar id="external_toolbar">
+        <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="Bold">bold</button>
+        <details class="lexxy-editor__toolbar-overflow">
+          <summary class="lexxy-editor__toolbar-button" aria-label="Show more toolbar buttons">•••</summary>
+          <div class="lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons"></div>
+        </details>
+      </lexxy-toolbar>
+    <% end %>
+
     <%= form.label :body, style: "display: block" %>
     <%= form.rich_text_area :body, placeholder: "Write something...",
           attachments: (params[:attachments_disabled] != "true"),
+          markdown: params[:markdown_disabled] ? "false" : nil,
+          "single-line": params[:multi_line_disabled] ? "true" : nil,
           "rich-text": params[:rich_text_disabled] ? "false" : nil,
-          toolbar: params[:toolbar_disabled] ? "false" : nil, required: true do %>
+          toolbar: params[:toolbar_disabled] ? "false" : (params[:toolbar_external] ? "external_toolbar" : nil),
+          required: true do %>
       <lexxy-prompt trigger="1" empty-results="No results"  name="mention">
         <%= render partial: "people/prompt_item", collection: Person.all, as: :person %>
       </lexxy-prompt>

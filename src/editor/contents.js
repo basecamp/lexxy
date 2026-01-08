@@ -702,7 +702,7 @@ export default class Contents {
   }
 
   #appendLineBreakIfNeeded(paragraph) {
-    if ($isParagraphNode(paragraph) && !this.editorElement.isSingleLineMode) {
+    if ($isParagraphNode(paragraph) && this.editorElement.supportsMultiLine) {
       const children = paragraph.getChildren()
       const last = children[children.length - 1]
       const beforeLast = children[children.length - 2]

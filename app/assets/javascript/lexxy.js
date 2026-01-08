@@ -1,5 +1,3 @@
-import { DirectUpload } from '@rails/activestorage';
-
 var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
 function getDefaultExportFromCjs (x) {
@@ -4604,7 +4602,64 @@ function t(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSe
 
 function K$4(e,...t){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",e);for(const e of t)o.append("v",e);throw n.search=o.toString(),Error(`Minified Lexical error #${e}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const P$2=new Map;function F$4(e){const t={};if(!e)return t;const n=e.split(";");for(const e of n)if(""!==e){const[n,o]=e.split(/:([^]+)/);n&&o&&(t[n.trim()]=o.trim());}return t}function b$3(e){let t=P$2.get(e);return void 0===t&&(t=F$4(e),P$2.set(e,t)),t}function R$5(e){let t="";for(const n in e)n&&(t+=`${n}: ${e[n]};`);return t}function O$1(e){const n=bs().getElementByKey(e.getKey());if(null===n)return null;const o=n.ownerDocument.defaultView;return null===o?null:o.getComputedStyle(n)}function z$4(e){return O$1(bi(e)?e:e.getParentOrThrow())}function A$2(e){const t=z$4(e);return null!==t&&"rtl"===t.direction}function M$4(e,t,n="self"){const o=e.getStartEndPoints();if(t.isSelected(e)&&!lo(t)&&null!==o){const[l,r]=o,s=e.isBackward(),i=l.getNode(),c=r.getNode(),f=t.is(i),u=t.is(c);if(f||u){const[o,l]=Sr(e),r=i.is(c),f=t.is(s?c:i),u=t.is(s?i:c);let d,p=0;if(r)p=o>l?l:o,d=o>l?o:l;else if(f){p=s?l:o,d=void 0;}else if(u){p=0,d=s?o:l;}const h=t.__text.slice(p,d);h!==t.__text&&("clone"===n&&(t=As(t)),t.__text=h);}}return t}function $$3(e){const t=e.getStyle(),n=F$4(t);P$2.set(t,n);}function D$3(t,n){(yr(t)?t.isCollapsed():lr(t)||Si(t))||K$4(280);const l=b$3(yr(t)?t.style:lr(t)?t.getStyle():t.getTextStyle()),r=Object.entries(n).reduce((e,[n,o])=>("function"==typeof o?e[n]=o(l[n],t):null===o?delete e[n]:e[n]=o,e),{...l}),s=R$5(r);yr(t)||lr(t)?t.setStyle(s):t.setTextStyle(s),P$2.set(s,r);}function U$5(e,t){if(yr(e)&&e.isCollapsed()){D$3(e,t);const n=e.anchor.getNode();Si(n)&&n.isEmpty()&&D$3(n,t);}j$3(e=>{D$3(e,t);});}function j$3(t){const n=Lr();if(!n)return;const o=new Map,l=e=>o.get(e.getKey())||[0,e.getTextContentSize()];if(yr(n))for(const e of kl(n).getTextSlices())e&&o.set(e.caret.origin.getKey(),e.getSliceIndices());const r=n.getNodes();for(const n of r){if(!lr(n)||!n.canHaveFormat())continue;const[o,r]=l(n);if(r!==o)if(lo(n)||0===o&&r===n.getTextContentSize())t(n);else {t(n.splitText(o,r)[0===o?0:1]);}}yr(n)&&"text"===n.anchor.type&&"text"===n.focus.type&&n.anchor.key===n.focus.key&&H$2(n);}function H$2(e){if(e.isBackward()){const{anchor:t,focus:n}=e,{key:o,offset:l,type:r}=t;t.set(n.key,n.offset,n.type),n.set(o,l,r);}}function Q$4(e){const t=Y$3(e);return null!==t&&"vertical-rl"===t.writingMode}function Y$3(e){const t=e.anchor.getNode();return Si(t)?O$1(t):z$4(t)}function Z$3(e,t){let n=Q$4(e)?!t:t;te(e)&&(n=!n);const l=xl(e.focus,n?"previous":"next");if(Ol(l))return  false;for(const e of ul(l)){if(Gs(e))return !e.origin.isInline();if(!Si(e.origin)){if(Ti(e.origin))return  true;break}}return  false}function ee(e,t,n,o){e.modify(t?"extend":"move",n,o);}function te(e){const t=Y$3(e);return null!==t&&"rtl"===t.direction}function ne(e,t,n){const o=te(e);let l;l=Q$4(e)||o?!n:n,ee(e,t,l,"character");}function oe$1(e,t,n){const o=b$3(e.getStyle());return null!==o&&o[t]||n}function le$1(t,n,o=""){let l=null;const r=t.getNodes(),s=t.anchor,c=t.focus,f=t.isBackward(),u=f?c.offset:s.offset,g=f?c.getNode():s.getNode();if(yr(t)&&t.isCollapsed()&&""!==t.style){const e=b$3(t.style);if(null!==e&&n in e)return e[n]}for(let t=0;t<r.length;t++){const s=r[t];if((0===t||0!==u||!s.is(g))&&lr(s)){const e=oe$1(s,n,o);if(null===l)l=e;else if(l!==e){l="";break}}}return null===l?o:l}
 
-const ALLOWED_HTML_TAGS = [ "a", "action-text-attachment", "b", "blockquote", "br", "code", "em",
+function deepMerge(target, source) {
+  const result = { ...target, ...source };
+  for (const [ key, value ] of Object.entries(source)) {
+    if (arePlainHashes(target[key], value)) {
+      result[key] = deepMerge(target[key], value);
+    }
+  }
+
+  return result
+}
+
+function arePlainHashes(...values) {
+  return values.every(value => value && value.constructor == Object)
+}
+
+class Configuration {
+  #tree = {}
+
+  constructor(...configs) {
+    this.merge(...configs);
+  }
+
+  merge(...configs) {
+    return this.#tree = configs.reduce(deepMerge, this.#tree)
+  }
+
+  get(path) {
+    const keys = path.split(".");
+    return keys.reduce((node, key) => node[key], this.#tree)
+  }
+}
+
+const global$1 = new Configuration({
+  attachmentTagName: "action-text-attachment"
+});
+
+const presets = new Configuration({
+  default: {
+    attachments: true,
+    markdown: true,
+    multiLine: true,
+    richText: true,
+    toolbar: true,
+  }
+});
+
+var Lexxy = {
+  global: global$1,
+  presets,
+  configure({ global: newGlobal, ...newPresets }) {
+    if (newGlobal) {
+      global$1.merge(newGlobal);
+    }
+    presets.merge(newPresets);
+  }
+};
+
+const ALLOWED_HTML_TAGS = [ "a", "b", "blockquote", "br", "code", "em",
   "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "ul", "table", "tbody", "tr", "th", "td" ];
 
 const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",
@@ -4640,11 +4695,13 @@ purify.addHook("uponSanitizeElement", (node, data) => {
   }
 });
 
-purify.setConfig({
-  ALLOWED_TAGS: ALLOWED_HTML_TAGS,
-  ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
-  SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
-});
+function buildConfig() {
+  return {
+    ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(Lexxy.global.get("attachmentTagName")),
+    ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
+    SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
+  }
+}
 
 function getNonce() {
   const element = document.head.querySelector("meta[name=csp-nonce]");
@@ -6975,7 +7032,7 @@ function dispatchCustomEvent(element, name, detail) {
 }
 
 function sanitize(html) {
-  return purify.sanitize(html)
+  return purify.sanitize(html, buildConfig())
 }
 
 function dispatch(element, eventName, detail = null, cancelable = false) {
@@ -7010,7 +7067,7 @@ class ActionTextAttachmentNode extends ki {
 
   static importDOM() {
     return {
-      "action-text-attachment": (attachment) => {
+      [Lexxy.global.get("attachmentTagName")]: (attachment) => {
         return {
           conversion: () => ({
             node: new ActionTextAttachmentNode({
@@ -7108,7 +7165,7 @@ class ActionTextAttachmentNode extends ki {
   }
 
   exportDOM() {
-    const attachment = createElement("action-text-attachment", {
+    const attachment = createElement(Lexxy.global.get("attachmentTagName"), {
       sgid: this.sgid,
       previewable: this.previewable || null,
       url: this.src,
@@ -7350,7 +7407,9 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }
   }
 
-  #startUpload(progressBar, figure) {
+  async #startUpload(progressBar, figure) {
+    const { DirectUpload } = await import('@rails/activestorage');
+
     const upload = new DirectUpload(this.file, this.uploadUrl, this);
 
     upload.delegate = {
@@ -8525,6 +8584,71 @@ function registerHeaderBackgroundTransform(editor) {
   })
 }
 
+function dasherize(value) {
+  return value.replace(/([A-Z])/g, (_, char) => `-${char.toLowerCase()}`)
+}
+
+function isUrl(string) {
+  try {
+    new URL(string);
+    return true
+  } catch {
+    return false
+  }
+}
+
+function normalizeFilteredText(string) {
+  return string
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove diacritics
+}
+
+function filterMatches(text, potentialMatch) {
+  return normalizeFilteredText(text).includes(normalizeFilteredText(potentialMatch))
+}
+
+class EditorConfiguration {
+  #editorElement
+  #config
+
+  constructor(editorElement) {
+    this.#editorElement = editorElement;
+    this.#config = new Configuration(
+      Lexxy.presets.get("default"),
+      Lexxy.presets.get(editorElement.preset),
+      this.#overrides
+    );
+  }
+
+  get(path) {
+    return this.#config.get(path)
+  }
+
+  get #overrides() {
+    const overrides = {};
+    for (const option of this.#defaultOptions) {
+      const attribute = dasherize(option);
+      if (this.#editorElement.hasAttribute(attribute)) {
+        overrides[option] = this.#parseAttribute(attribute);
+      }
+    }
+    return overrides
+  }
+
+  get #defaultOptions() {
+    return Object.keys(Lexxy.presets.get("default"))
+  }
+
+  #parseAttribute(attribute) {
+    const value = this.#editorElement.getAttribute(attribute);
+    try {
+      return JSON.parse(value)
+    } catch {
+      return value
+    }
+  }
+}
+
 class CustomActionTextAttachmentNode extends ki {
   static getType() {
     return "custom_action_text_attachment"
@@ -8540,7 +8664,7 @@ class CustomActionTextAttachmentNode extends ki {
 
   static importDOM() {
     return {
-      "action-text-attachment": (attachment) => {
+      [Lexxy.global.get("attachmentTagName")]: (attachment) => {
         const content = attachment.getAttribute("content");
         if (!attachment.getAttribute("content")) {
           return null
@@ -8580,7 +8704,7 @@ class CustomActionTextAttachmentNode extends ki {
   }
 
   createDOM() {
-    const figure = createElement("action-text-attachment", { "content-type": this.contentType, "data-lexxy-decorator": true });
+    const figure = createElement(Lexxy.global.get("attachmentTagName"), { "content-type": this.contentType, "data-lexxy-decorator": true });
 
     figure.addEventListener("click", (event) => {
       dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
@@ -8604,7 +8728,7 @@ class CustomActionTextAttachmentNode extends ki {
   }
 
   exportDOM() {
-    const attachment = createElement("action-text-attachment", {
+    const attachment = createElement(Lexxy.global.get("attachmentTagName"), {
       sgid: this.sgid,
       content: JSON.stringify(this.innerHtml),
       "content-type": this.contentType
@@ -9597,7 +9721,7 @@ class Contents {
   }
 
   #appendLineBreakIfNeeded(paragraph) {
-    if (Ii(paragraph) && !this.editorElement.isSingleLineMode) {
+    if (Ii(paragraph) && this.editorElement.supportsMultiLine) {
       const children = paragraph.getChildren();
       const last = children[children.length - 1];
       const beforeLast = children[children.length - 2];
@@ -9700,25 +9824,6 @@ ${e}</tr>
 `+this.renderer.text(o);t?n+=this.renderer.paragraph({type:"paragraph",raw:a,text:a,tokens:[{type:"text",raw:a,text:a,escaped:true}]}):n+=a;continue}default:{let o='Token with "'+s.type+'" type was not found.';if(this.options.silent)return console.error(o),"";throw new Error(o)}}}return n}parseInline(e,t=this.renderer){let n="";for(let r=0;r<e.length;r++){let i=e[r];if(this.options.extensions?.renderers?.[i.type]){let o=this.options.extensions.renderers[i.type].call({parser:this},i);if(o!==false||!["escape","html","link","image","strong","em","codespan","br","del","text"].includes(i.type)){n+=o||"";continue}}let s=i;switch(s.type){case "escape":{n+=t.text(s);break}case "html":{n+=t.html(s);break}case "link":{n+=t.link(s);break}case "image":{n+=t.image(s);break}case "strong":{n+=t.strong(s);break}case "em":{n+=t.em(s);break}case "codespan":{n+=t.codespan(s);break}case "br":{n+=t.br(s);break}case "del":{n+=t.del(s);break}case "text":{n+=t.text(s);break}default:{let o='Token with "'+s.type+'" type was not found.';if(this.options.silent)return console.error(o),"";throw new Error(o)}}}return n}};var S=class{options;block;constructor(e){this.options=e||T;}static passThroughHooks=new Set(["preprocess","postprocess","processAllTokens","emStrongMask"]);static passThroughHooksRespectAsync=new Set(["preprocess","postprocess","processAllTokens"]);preprocess(e){return e}postprocess(e){return e}processAllTokens(e){return e}emStrongMask(e){return e}provideLexer(){return this.block?x.lex:x.lexInline}provideParser(){return this.block?b.parse:b.parseInline}};var B=class{defaults=L();options=this.setOptions;parse=this.parseMarkdown(true);parseInline=this.parseMarkdown(false);Parser=b;Renderer=P;TextRenderer=$;Lexer=x;Tokenizer=y;Hooks=S;constructor(...e){this.use(...e);}walkTokens(e,t){let n=[];for(let r of e)switch(n=n.concat(t.call(this,r)),r.type){case "table":{let i=r;for(let s of i.header)n=n.concat(this.walkTokens(s.tokens,t));for(let s of i.rows)for(let o of s)n=n.concat(this.walkTokens(o.tokens,t));break}case "list":{let i=r;n=n.concat(this.walkTokens(i.items,t));break}default:{let i=r;this.defaults.extensions?.childTokens?.[i.type]?this.defaults.extensions.childTokens[i.type].forEach(s=>{let o=i[s].flat(1/0);n=n.concat(this.walkTokens(o,t));}):i.tokens&&(n=n.concat(this.walkTokens(i.tokens,t)));}}return n}use(...e){let t=this.defaults.extensions||{renderers:{},childTokens:{}};return e.forEach(n=>{let r={...n};if(r.async=this.defaults.async||r.async||false,n.extensions&&(n.extensions.forEach(i=>{if(!i.name)throw new Error("extension name required");if("renderer"in i){let s=t.renderers[i.name];s?t.renderers[i.name]=function(...o){let a=i.renderer.apply(this,o);return a===false&&(a=s.apply(this,o)),a}:t.renderers[i.name]=i.renderer;}if("tokenizer"in i){if(!i.level||i.level!=="block"&&i.level!=="inline")throw new Error("extension level must be 'block' or 'inline'");let s=t[i.level];s?s.unshift(i.tokenizer):t[i.level]=[i.tokenizer],i.start&&(i.level==="block"?t.startBlock?t.startBlock.push(i.start):t.startBlock=[i.start]:i.level==="inline"&&(t.startInline?t.startInline.push(i.start):t.startInline=[i.start]));}"childTokens"in i&&i.childTokens&&(t.childTokens[i.name]=i.childTokens);}),r.extensions=t),n.renderer){let i=this.defaults.renderer||new P(this.defaults);for(let s in n.renderer){if(!(s in i))throw new Error(`renderer '${s}' does not exist`);if(["options","parser"].includes(s))continue;let o=s,a=n.renderer[o],l=i[o];i[o]=(...c)=>{let p=a.apply(i,c);return p===false&&(p=l.apply(i,c)),p||""};}r.renderer=i;}if(n.tokenizer){let i=this.defaults.tokenizer||new y(this.defaults);for(let s in n.tokenizer){if(!(s in i))throw new Error(`tokenizer '${s}' does not exist`);if(["options","rules","lexer"].includes(s))continue;let o=s,a=n.tokenizer[o],l=i[o];i[o]=(...c)=>{let p=a.apply(i,c);return p===false&&(p=l.apply(i,c)),p};}r.tokenizer=i;}if(n.hooks){let i=this.defaults.hooks||new S;for(let s in n.hooks){if(!(s in i))throw new Error(`hook '${s}' does not exist`);if(["options","block"].includes(s))continue;let o=s,a=n.hooks[o],l=i[o];S.passThroughHooks.has(s)?i[o]=c=>{if(this.defaults.async&&S.passThroughHooksRespectAsync.has(s))return (async()=>{let g=await a.call(i,c);return l.call(i,g)})();let p=a.call(i,c);return l.call(i,p)}:i[o]=(...c)=>{if(this.defaults.async)return (async()=>{let g=await a.apply(i,c);return g===false&&(g=await l.apply(i,c)),g})();let p=a.apply(i,c);return p===false&&(p=l.apply(i,c)),p};}r.hooks=i;}if(n.walkTokens){let i=this.defaults.walkTokens,s=n.walkTokens;r.walkTokens=function(o){let a=[];return a.push(s.call(this,o)),i&&(a=a.concat(i.call(this,o))),a};}this.defaults={...this.defaults,...r};}),this}setOptions(e){return this.defaults={...this.defaults,...e},this}lexer(e,t){return x.lex(e,t??this.defaults)}parser(e,t){return b.parse(e,t??this.defaults)}parseMarkdown(e){return (n,r)=>{let i={...r},s={...this.defaults,...i},o=this.onError(!!s.silent,!!s.async);if(this.defaults.async===true&&i.async===false)return o(new Error("marked(): The async option was set to true by an extension. Remove async: false from the parse options object to return a Promise."));if(typeof n>"u"||n===null)return o(new Error("marked(): input parameter is undefined or null"));if(typeof n!="string")return o(new Error("marked(): input parameter is of type "+Object.prototype.toString.call(n)+", string expected"));if(s.hooks&&(s.hooks.options=s,s.hooks.block=e),s.async)return (async()=>{let a=s.hooks?await s.hooks.preprocess(n):n,c=await(s.hooks?await s.hooks.provideLexer():e?x.lex:x.lexInline)(a,s),p=s.hooks?await s.hooks.processAllTokens(c):c;s.walkTokens&&await Promise.all(this.walkTokens(p,s.walkTokens));let d=await(s.hooks?await s.hooks.provideParser():e?b.parse:b.parseInline)(p,s);return s.hooks?await s.hooks.postprocess(d):d})().catch(o);try{s.hooks&&(n=s.hooks.preprocess(n));let l=(s.hooks?s.hooks.provideLexer():e?x.lex:x.lexInline)(n,s);s.hooks&&(l=s.hooks.processAllTokens(l)),s.walkTokens&&this.walkTokens(l,s.walkTokens);let p=(s.hooks?s.hooks.provideParser():e?b.parse:b.parseInline)(l,s);return s.hooks&&(p=s.hooks.postprocess(p)),p}catch(a){return o(a)}}}onError(e,t){return n=>{if(n.message+=`
 Please report this to https://github.com/markedjs/marked.`,e){let r="<p>An error occurred:</p><pre>"+w(n.message+"",true)+"</pre>";return t?Promise.resolve(r):r}if(t)return Promise.reject(n);throw n}}};var _=new B;function k(u,e){return _.parse(u,e)}k.options=k.setOptions=function(u){return _.setOptions(u),k.defaults=_.defaults,G(k.defaults),k};k.getDefaults=L;k.defaults=T;k.use=function(...u){return _.use(...u),k.defaults=_.defaults,G(k.defaults),k};k.walkTokens=function(u,e){return _.walkTokens(u,e)};k.parseInline=_.parseInline;k.Parser=b;k.parser=b.parse;k.Renderer=P;k.TextRenderer=$;k.Lexer=x;k.lexer=x.lex;k.Tokenizer=y;k.Hooks=S;k.parse=k;k.options;k.setOptions;k.use;k.walkTokens;k.parseInline;b.parse;x.lex;
 
-function isUrl(string) {
-  try {
-    new URL(string);
-    return true
-  } catch {
-    return false
-  }
-}
-
-function normalizeFilteredText(string) {
-  return string
-    .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove diacritics
-}
-
-function filterMatches(text, potentialMatch) {
-  return normalizeFilteredText(text).includes(normalizeFilteredText(potentialMatch))
-}
-
 class Clipboard {
   constructor(editorElement) {
     this.editorElement = editorElement;
@@ -9784,8 +9889,10 @@ class Clipboard {
       } else if (isUrl(text)) {
         const nodeKey = this.contents.createLink(text);
         this.#dispatchLinkInsertEvent(nodeKey, { url: text });
-      } else {
+      } else if (this.editorElement.supportsMarkdown) {
         this.#pasteMarkdown(text);
+      } else {
+        this.#pasteRichText(clipboardData);
       }
     });
   }
@@ -9805,6 +9912,13 @@ class Clipboard {
   #pasteMarkdown(text) {
     const html = k(text);
     this.contents.insertHtml(html);
+  }
+
+  #pasteRichText(clipboardData) {
+    this.editor.update(() => {
+      const selection = Lr();
+      R$3(clipboardData, selection, this.editor);
+    });
   }
 
   #handlePastedFiles(clipboardData) {
@@ -9986,6 +10100,7 @@ class LexicalEditorElement extends HTMLElement {
 
   connectedCallback() {
     this.id ??= generateDomId("lexxy-editor");
+    this.config = new EditorConfiguration(this);
     this.editor = this.#createEditor();
     this.contents = new Contents(this);
     this.selection = new Selection(this);
@@ -10057,16 +10172,29 @@ class LexicalEditorElement extends HTMLElement {
     return this.querySelector(".lexxy-prompt-menu.lexxy-prompt-menu--visible") !== null
   }
 
-  get isRichTextMode() {
-    return this.getAttribute("rich-text") !== "false"
-  }
-
-  get isSingleLineMode() {
-    return this.hasAttribute("single-line")
+  get preset() {
+    return this.getAttribute("preset") || "default"
   }
 
   get supportsAttachments() {
-    return this.getAttribute("attachments") !== "false"
+    return this.config.get("attachments")
+  }
+
+  get supportsMarkdown() {
+    return this.supportsRichText && this.config.get("markdown")
+  }
+
+  get supportsMultiLine() {
+    return this.config.get("multiLine") && !this.isSingleLineMode
+  }
+
+  get supportsRichText() {
+    return this.config.get("richText")
+  }
+
+  // TODO: Deprecate `single-line` attribute
+  get isSingleLineMode() {
+    return this.hasAttribute("single-line")
   }
 
   get contentTabIndex() {
@@ -10163,7 +10291,7 @@ class LexicalEditorElement extends HTMLElement {
   get #lexicalNodes() {
     const nodes = [ CustomActionTextAttachmentNode ];
 
-    if (this.isRichTextMode) {
+    if (this.supportsRichText) {
       nodes.push(
         TrixTextNode,
         HighlightNode,
@@ -10276,12 +10404,14 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   #registerComponents() {
-    if (this.isRichTextMode) {
+    if (this.supportsRichText) {
       Jt$1(this.editor);
       bt$4(this.editor);
       this.#registerTableComponents();
       this.#registerCodeHiglightingComponents();
-      Dt(this.editor, zt);
+      if (this.supportsMarkdown) {
+        Dt(this.editor, zt);
+      }
     } else {
       z$2(this.editor);
     }
@@ -10330,7 +10460,7 @@ class LexicalEditorElement extends HTMLElement {
         }
 
         // In single line mode, prevent ENTER
-        if (this.isSingleLineMode) {
+        if (!this.supportsMultiLine) {
           event.preventDefault();
           return true
         }
@@ -10350,7 +10480,7 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   #handleTables() {
-    if (this.isRichTextMode) {
+    if (this.supportsRichText) {
       this.removeTableSelectionObserver = yn(this.editor, true);
       un(this.editor);
     }
@@ -10374,12 +10504,16 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   #findOrCreateDefaultToolbar() {
-    const toolbarId = this.getAttribute("toolbar");
-    return toolbarId ? document.getElementById(toolbarId) : this.#createDefaultToolbar()
+    const toolbarId = this.config.get("toolbar");
+    if (toolbarId && toolbarId !== true) {
+      return document.getElementById(toolbarId)
+    } else {
+      return this.#createDefaultToolbar()
+    }
   }
 
   get #hasToolbar() {
-    return this.isRichTextMode && this.getAttribute("toolbar") !== "false"
+    return this.supportsRichText && this.config.get("toolbar")
   }
 
   #createDefaultToolbar() {
@@ -11882,5 +12016,7 @@ function highlightElement(preElement) {
   preElement.replaceWith(codeElement);
 }
 
-export { highlightAll };
+const configure = Lexxy.configure;
+
+export { configure, highlightAll };
 //# sourceMappingURL=lexxy.js.map

@@ -18,6 +18,7 @@ import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
 import { registerHeaderBackgroundTransform } from "../helpers/table_helper"
 import LexicalToolbar from "./toolbar"
+import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Highlighter from "../editor/highlighter"
@@ -43,6 +44,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
   connectedCallback() {
     this.id ??= generateDomId("lexxy-editor")
+    this.config = new Configuration(this)
     this.editor = this.#createEditor()
     this.contents = new Contents(this)
     this.selection = new Selection(this)
@@ -114,16 +116,29 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.querySelector(".lexxy-prompt-menu.lexxy-prompt-menu--visible") !== null
   }
 
-  get isRichTextMode() {
-    return this.getAttribute("rich-text") !== "false"
-  }
-
-  get isSingleLineMode() {
-    return this.hasAttribute("single-line")
+  get preset() {
+    return this.getAttribute("preset") || "default"
   }
 
   get supportsAttachments() {
-    return this.getAttribute("attachments") !== "false"
+    return this.config.get("attachments")
+  }
+
+  get supportsMarkdown() {
+    return this.supportsRichText && this.config.get("markdown")
+  }
+
+  get supportsMultiLine() {
+    return this.config.get("multiLine") && !this.isSingleLineMode
+  }
+
+  get supportsRichText() {
+    return this.config.get("richText")
+  }
+
+  // TODO: Deprecate `single-line` attribute
+  get isSingleLineMode() {
+    return this.hasAttribute("single-line")
   }
 
   get contentTabIndex() {
@@ -220,7 +235,7 @@ export default class LexicalEditorElement extends HTMLElement {
   get #lexicalNodes() {
     const nodes = [ CustomActionTextAttachmentNode ]
 
-    if (this.isRichTextMode) {
+    if (this.supportsRichText) {
       nodes.push(
         TrixTextNode,
         HighlightNode,
@@ -333,12 +348,14 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #registerComponents() {
-    if (this.isRichTextMode) {
+    if (this.supportsRichText) {
       registerRichText(this.editor)
       registerList(this.editor)
       this.#registerTableComponents()
       this.#registerCodeHiglightingComponents()
-      registerMarkdownShortcuts(this.editor, TRANSFORMERS)
+      if (this.supportsMarkdown) {
+        registerMarkdownShortcuts(this.editor, TRANSFORMERS)
+      }
     } else {
       registerPlainText(this.editor)
     }
@@ -387,7 +404,7 @@ export default class LexicalEditorElement extends HTMLElement {
         }
 
         // In single line mode, prevent ENTER
-        if (this.isSingleLineMode) {
+        if (!this.supportsMultiLine) {
           event.preventDefault()
           return true
         }
@@ -407,7 +424,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #handleTables() {
-    if (this.isRichTextMode) {
+    if (this.supportsRichText) {
       this.removeTableSelectionObserver = registerTableSelectionObserver(this.editor, true)
       setScrollableTablesActive(this.editor, true)
     }
@@ -431,12 +448,16 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #findOrCreateDefaultToolbar() {
-    const toolbarId = this.getAttribute("toolbar")
-    return toolbarId ? document.getElementById(toolbarId) : this.#createDefaultToolbar()
+    const toolbarId = this.config.get("toolbar")
+    if (toolbarId && toolbarId !== true) {
+      return document.getElementById(toolbarId)
+    } else {
+      return this.#createDefaultToolbar()
+    }
   }
 
   get #hasToolbar() {
-    return this.isRichTextMode && this.getAttribute("toolbar") !== "false"
+    return this.supportsRichText && this.config.get("toolbar")
   }
 
   #createDefaultToolbar() {
