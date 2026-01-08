@@ -57,7 +57,7 @@ export class TableHandler extends HTMLElement {
   }
 
   get #tableHandlerButtons() {
-    return Array.from(this.buttonsContainer.querySelectorAll("button, details > summary"))
+    return Array.from(this.querySelectorAll("button, details > summary"))
   }
 
   #registerKeyboardShortcuts() {
@@ -70,7 +70,7 @@ export class TableHandler extends HTMLElement {
 
   #handleKeyDown = (event) => {
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
-      const firstButton = this.buttonsContainer?.querySelector("button, [tabindex]:not([tabindex='-1'])")
+      const firstButton = this.querySelector("button, [tabindex]:not([tabindex='-1'])")
       this.#setFocusStateOnSelectedCell()
       firstButton?.focus()
     } else if (event.key === "Escape") {
@@ -95,22 +95,16 @@ export class TableHandler extends HTMLElement {
   }
 
   #setUpButtons() {
-    this.buttonsContainer = createElement("div", {
-      className: "lexxy-table-handle-buttons"
-    })
-
-    this.buttonsContainer.appendChild(this.#createRowButtonsContainer())
-    this.buttonsContainer.appendChild(this.#createColumnButtonsContainer())
+    this.appendChild(this.#createRowButtonsContainer())
+    this.appendChild(this.#createColumnButtonsContainer())
 
     this.moreMenu = this.#createMoreMenu()
-    this.buttonsContainer.appendChild(this.moreMenu)
-    this.buttonsContainer.addEventListener("keydown", this.#handleTableHandlerKeydown)
-
-    this.#editorElement.appendChild(this.buttonsContainer)
+    this.appendChild(this.moreMenu)
+    this.addEventListener("keydown", this.#handleTableHandlerKeydown)
   }
 
   #showTableHandlerButtons() {
-    this.buttonsContainer.style.display = "flex"
+    this.style.display = "flex"
     this.#closeMoreMenu()
 
     this.#updateRowColumnCount()
@@ -118,7 +112,7 @@ export class TableHandler extends HTMLElement {
   }
 
   #hideTableHandlerButtons() {
-    this.buttonsContainer.style.display = "none"
+    this.style.display = "none"
     this.#closeMoreMenu()
 
     this.#setTableFocusState(false)
@@ -134,8 +128,8 @@ export class TableHandler extends HTMLElement {
 
     const relativeTop = tableRect.top - editorRect.top
     const relativeCenter = (tableRect.left + tableRect.right) / 2 - editorRect.left
-    this.buttonsContainer.style.top = `${relativeTop}px`
-    this.buttonsContainer.style.left = `${relativeCenter}px`
+    this.style.top = `${relativeTop}px`
+    this.style.left = `${relativeCenter}px`
   }
 
   #updateRowColumnCount() {
