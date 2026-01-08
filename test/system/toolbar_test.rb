@@ -215,4 +215,10 @@ class ToolbarTest < ApplicationSystemTestCase
     click_on "Redo"
     assert_equal_html "<p>Hello World</p>", find_editor.value
   end
+
+  test "external toolbar" do
+    visit edit_post_path(posts(:empty), toolbar_external: true)
+
+    assert_selector "lexxy-toolbar#external_toolbar[connected]"
+  end
 end

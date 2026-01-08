@@ -51,4 +51,11 @@ class AttachmentsTest < ApplicationSystemTestCase
     visit edit_post_path(posts(:empty), attachments_disabled: true)
     assert_no_button "Upload file"
   end
+
+  test "configure attachment tag name" do
+    visit edit_post_path(posts(:empty), attachment_tag_name: "test-attachment")
+    find_editor.send "1"
+    find_editor.send "peter "
+    assert_selector "test-attachment"
+  end
 end
