@@ -55,7 +55,19 @@ jobs:
           ruby-version: ruby-3.3.7
           bundler-cache: true
 
-      - name: Run tests
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run JavaScript tests
+        run: yarn test
+
+      - name: Run Rails tests
         env:
           RAILS_ENV: test
           # REDIS_URL: redis://localhost:6379/0
