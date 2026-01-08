@@ -462,7 +462,7 @@ export default class LexicalEditorElement extends HTMLElement {
       this.isFirstFocus = false
     } else if (this.isEmpty) {
       this.selection.placeCursorAtTheEnd()
-    } 
+    }
   }
 
   #handleAutofocus() {
