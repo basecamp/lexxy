@@ -10,21 +10,12 @@ export default class extends Controller {
     this.refresh()
   }
 
-  async loadContent(event) {
-    const partial = event.currentTarget.dataset.partial
-    if (!partial) return
-
-    try {
-      const response = await fetch(`/sandbox/load_content/${partial}`)
-      const html = await response.text()
-      this.editorTarget.value = html.trim()
-      // Wait for the editor's async update to complete
-      // Use requestAnimationFrame to ensure the DOM has updated
-      await new Promise(resolve => requestAnimationFrame(resolve))
-      this.refresh()
-    } catch (error) {
-      console.error("Error loading content:", error)
-    }
+  async loadContent({ params: { partial } }) {
+    const response = await fetch(`/demo_contents/${partial}`)
+    const html = await response.text()
+    this.editorTarget.value = html.trim()
+    await new Promise(resolve => requestAnimationFrame(resolve))
+    this.refresh()
   }
 
   async refresh(event) {
