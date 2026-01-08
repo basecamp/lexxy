@@ -19,13 +19,12 @@ export default class CodeLanguagePicker extends HTMLElement {
       this.#updateCodeBlockLanguage(this.languagePickerElement.value)
     })
 
-    this.languagePickerElement.style.position = "absolute"
     this.languagePickerElement.setAttribute("nonce", getNonce())
-    this.editorElement.appendChild(this.languagePickerElement)
+    this.appendChild(this.languagePickerElement)
   }
 
   #createLanguagePicker() {
-    const selectElement = createElement("select", { hidden: true, className: "lexxy-code-language-picker", "aria-label": "Pick a language…", name: "lexxy-code-language" })
+    const selectElement = createElement("select", { className: "lexxy-code-language-picker", "aria-label": "Pick a language…", name: "lexxy-code-language" })
 
     for (const [ value, label ] of Object.entries(this.#languages)) {
       const option = document.createElement("option")
@@ -122,15 +121,15 @@ export default class CodeLanguagePicker extends HTMLElement {
     const editorRect = this.editorElement.getBoundingClientRect()
     const relativeTop = codeRect.top - editorRect.top
 
-    this.languagePickerElement.style.top = `${relativeTop}px`
+    this.style.top = `${relativeTop}px`
   }
 
   #showLanguagePicker() {
-    this.languagePickerElement.hidden = false
+    this.hidden = false
   }
 
   #hideLanguagePicker() {
-    this.languagePickerElement.hidden = true
+    this.hidden = true
   }
 }
 
