@@ -219,6 +219,7 @@ Lexxy.configure({
 Global options apply to all editors in your app and are configured using `Lexxy.configure({ global: ... })`:
 
 - `attachmentTagName`: The tag name used for [Action Text Attachments](https://guides.rubyonrails.org/action_text_overview.html#signed-globalid). The default is `action-text-attachment`.
+- `attachmentContentTypeNamespace`: The default content_type namespace for prompts. The default is `actiontext` which will result in `application/vnd.actiontext.[type]`
 - `authenticatedUploads`: will set `withCredentials: true` for ActiveStorage upload requests if you are using authenticated upload contollers. Be sure to set your cookie domain and server CORS/CSRF options accordingly.
 
 ## Prompts

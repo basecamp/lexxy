@@ -3,6 +3,7 @@ import { range } from "../helpers/array_helper.js"
 
 const global = new Configuration({
   attachmentTagName: "action-text-attachment",
+  attachmentContentTypeNamespace: "actiontext",
   authenticatedUploads: false
 })
 
