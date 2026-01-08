@@ -125,6 +125,7 @@
 
   /* Keywords and attributes */
   .code-token__attr,
+  .token.attr-name,
   .token.atrule,
   .token.attr,
   .token.keyword {
@@ -144,6 +145,7 @@
 
   /* Strings, selectors, and built-in constructs */
   .code-token__selector,
+  .token.attr-value,
   .token.builtin,
   .token.char,
   .token.inserted,
