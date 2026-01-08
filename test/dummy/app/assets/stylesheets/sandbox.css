@@ -75,14 +75,61 @@ main {
 section {
   min-inline-size: 0;
   padding: var(--sandbox-padding);
+  position: relative;
 
-  &:first-child {
-    position: relative;
-  }
-
-  &:last-child {
+  &.output {
     background: rgba(100, 100, 100, 0.1);
-    overflow: hidden;
+
+    details {
+      background: var(--lexxy-color-ink-lightest);
+      border-radius: 0.25rem;
+      margin-bottom: 0.5rem;
+      overflow: hidden;
+
+      summary {
+        align-items: center;
+        cursor: pointer;
+        display: flex;
+        font-weight: bold;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+
+        &:hover {
+          background: rgba(100, 100, 100, 0.05);
+        }
+
+        &:after {
+          content: "+";
+          display: inline-block;
+          font-weight: bold;
+          inline-size: 2ch;
+          margin-right: 0.5rem;
+          text-align: center;
+        }
+      }
+
+      > pre {
+        border-block-start: 1px solid var(--lexxy-color-ink-lightest);
+        padding: 1rem;
+      }
+
+      &[open] {
+        background: var(--lexxy-color-canvas);
+
+        summary {
+          &:after {
+            content: "-";
+          }
+        }
+      }
+    }
+
+    pre, code {
+      background: transparent;
+      margin: 0;
+      overflow-x: visible;
+      white-space: pre-wrap;
+    }
   }
 }
 
@@ -91,17 +138,6 @@ h2 {
   font-size: 32px;
   font-weight: 900;
   line-height: 1;
-}
-
-[data-lexxy-output-target="output"] {
-  overflow-x: auto;
-
-  pre, code {
-    background: transparent;
-    margin: 0;
-    overflow-x: visible;
-    white-space: pre-wrap;
-  }
 }
 
 /* Person mention styles with circular profile icons */
