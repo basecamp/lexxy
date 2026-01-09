@@ -13,6 +13,7 @@ import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import { WrappedTableNode } from "../nodes/wrapped_table_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
@@ -248,7 +249,11 @@ export default class LexicalEditorElement extends HTMLElement {
         LinkNode,
         AutoLinkNode,
         HorizontalDividerNode,
-        TableNode,
+        WrappedTableNode,
+        {
+          replace: TableNode,
+          with: () => { return new WrappedTableNode() }
+        },
         TableCellNode,
         TableRowNode,
       )
