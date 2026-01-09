@@ -128,8 +128,7 @@ class TableTest < ApplicationSystemTestCase
 
     html = find_editor.value
     assert_match(/<figure class="lexxy-content__table-wrapper">/, html, "Exported HTML should have figure. table-wrapper")
-    
+
     assert_match(/<figure class="lexxy-content__table-wrapper">.*?<table>.*?<\/table>.*?<\/figure>/m, html, "Table with content should be nested inside the figure wrapper")
-    
   end
 end
