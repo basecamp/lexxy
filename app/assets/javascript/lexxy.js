@@ -7721,6 +7721,11 @@ class CommandDispatcher {
       const selection = Lr();
       if (!yr(selection)) return
 
+      if (as(selection.anchor.getNode())) {
+        selection.insertNodes([ St$3("h2") ]);
+        return
+      }
+
       const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
       let nextTag = "h2";
       if (It$2(topLevelElement)) {
@@ -9121,6 +9126,11 @@ class Contents {
       const selection = Lr();
       if (!yr(selection)) return
 
+      if (as(selection.anchor.getNode())) {
+        selection.insertNodes([ newNodeFn() ]);
+        return
+      }
+
       const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
 
       // Check if format is already applied
@@ -9394,9 +9404,19 @@ class Contents {
   #unwrap(node) {
     const children = node.getChildren();
 
-    children.forEach((child) => {
-      node.insertBefore(child);
-    });
+    if (children.length == 0) {
+      node.insertBefore(Li());
+    } else {
+      children.forEach((child) => {
+        if (lr(child) && child.getTextContent().trim() !== "") {
+          const newParagraph = Li();
+          newParagraph.append(child);
+          node.insertBefore(newParagraph);
+        } else if (!jn(child)) {
+          node.insertBefore(child);
+        }
+      });
+    }
 
     node.remove();
   }
@@ -9410,6 +9430,12 @@ class Contents {
       if (selectedNodes.length === 0) {
         return
       }
+
+      if (as(selectedNodes[0])) {
+        selection.insertNodes([ newNodeFn() ]);
+        return
+      }
+
       const topLevelElements = new Set();
       selectedNodes.forEach((node) => {
         const topLevel = node.getTopLevelElementOrThrow();
@@ -9480,6 +9506,12 @@ class Contents {
 
   #wrapCurrentLine(selection, newNodeFn) {
     const anchorNode = selection.anchor.getNode();
+
+    if (as(anchorNode)) {
+      selection.insertNodes([ newNodeFn() ]);
+      return
+    }
+
     const topLevelElement = anchorNode.getTopLevelElementOrThrow();
 
     if (topLevelElement.getTextContent()) {
@@ -10245,7 +10277,7 @@ class LexicalEditorElement extends HTMLElement {
       const root = No();
       root.clear();
       if (html !== "") root.append(...this.#parseHtmlIntoLexicalNodes(html));
-      root.select();
+      root.selectEnd();
 
       this.#toggleEmptyStatus();
 
@@ -10269,6 +10301,7 @@ class LexicalEditorElement extends HTMLElement {
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>";
     const nodes = m$1(this.editor, parseHtml(`<div>${html}</div>`));
+
     // Custom decorator block elements such action-text-attachments get wrapped into <p> automatically by Lexical.
     // We flatten those.
     return nodes.map(node => {

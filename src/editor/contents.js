@@ -351,9 +351,19 @@ export default class Contents {
   #unwrap(node) {
     const children = node.getChildren()
 
-    children.forEach((child) => {
-      node.insertBefore(child)
-    })
+    if (children.length == 0) {
+      node.insertBefore($createParagraphNode())
+    } else {
+      children.forEach((child) => {
+        if ($isTextNode(child) && child.getTextContent().trim() !== "") {
+          const newParagraph = $createParagraphNode()
+          newParagraph.append(child)
+          node.insertBefore(newParagraph)
+        } else if (!$isLineBreakNode(child)) {
+          node.insertBefore(child)
+        }
+      })
+    }
 
     node.remove()
   }
@@ -367,6 +377,7 @@ export default class Contents {
       if (selectedNodes.length === 0) {
         return
       }
+
       const topLevelElements = new Set()
       selectedNodes.forEach((node) => {
         const topLevel = node.getTopLevelElementOrThrow()
@@ -437,6 +448,7 @@ export default class Contents {
 
   #wrapCurrentLine(selection, newNodeFn) {
     const anchorNode = selection.anchor.getNode()
+
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
 
     if (topLevelElement.getTextContent()) {
