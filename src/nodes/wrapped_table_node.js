@@ -7,21 +7,15 @@ export class WrappedTableNode extends TableNode {
   }
 
   exportDOM(editor) {
-    const output = super.exportDOM(editor)
-
-    const originalAfter = output.after
+    const superExport = super.exportDOM(editor)
 
     return {
-      ...output,
+      ...superExport,
       after: (tableElement) => {
-        if (originalAfter) {
-          tableElement = originalAfter(tableElement)
-        }
-
-        if (tableElement) {
+        if (tableElement = superExport.after?.(tableElement)) {
           const clonedTable = tableElement.cloneNode(true)
-          const figure = createElement("figure", { className: "lexxy-content__table-wrapper" }, clonedTable.outerHTML)
-          return figure
+          const wrappedTable = createElement("figure", { className: "lexxy-content__table-wrapper" }, clonedTable.outerHTML)
+          return wrappedTable
         }
 
         return tableElement
