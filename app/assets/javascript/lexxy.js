@@ -7560,22 +7560,22 @@ class WrappedTableNode extends hn {
 
   exportDOM(editor) {
     const output = super.exportDOM(editor);
-    
+
     const originalAfter = output.after;
-    
+
     return {
       ...output,
       after: (tableElement) => {
         if (originalAfter) {
           tableElement = originalAfter(tableElement);
         }
-        
+
         if (tableElement) {
           const clonedTable = tableElement.cloneNode(true);
           const figure = createElement("figure", { className: "lexxy-content__table-wrapper" }, clonedTable.outerHTML);
           return figure
         }
-        
+
         return tableElement
       }
     }
