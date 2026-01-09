@@ -20,7 +20,7 @@ To the sandbox app:
 bin/rails server
 ```
 
-The sandbox app is available at http://localhost:3000. There is also a CRUD example at http://localhost:3000/posts.
+The sandbox app is available at http://lexxy.localhost:3000. There is also a CRUD example at http://lexxy.localhost:3000/posts.
 
 ## Documentation
 

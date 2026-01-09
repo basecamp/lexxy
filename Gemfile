@@ -15,3 +15,5 @@ gem "image_processing"
 
 gem "turbo-rails"
 gem "stimulus-rails"
+
+gem "rack-cors"

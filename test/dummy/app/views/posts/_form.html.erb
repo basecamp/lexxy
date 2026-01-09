@@ -31,6 +31,7 @@
           "single-line": params[:multi_line_disabled] ? "true" : nil,
           "rich-text": params[:rich_text_disabled] ? "false" : nil,
           toolbar: params[:toolbar_disabled] ? "false" : (params[:toolbar_external] ? "external_toolbar" : nil),
+          data: (params[:authenticated_storage] == "true" ? { direct_upload_url: authenticated_direct_uploads_url } : {}),
           required: true do %>
       <lexxy-prompt trigger="1" empty-results="No results"  name="mention">
         <%= render partial: "people/prompt_item", collection: Person.all, as: :person %>
