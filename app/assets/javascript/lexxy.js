@@ -10884,7 +10884,7 @@ class TableHandler extends HTMLElement {
   }
 
   get #tableHandlerButtons() {
-    return Array.from(this.buttonsContainer.querySelectorAll("button, details > summary"))
+    return Array.from(this.querySelectorAll("button, details > summary"))
   }
 
   #registerKeyboardShortcuts() {
@@ -10897,7 +10897,7 @@ class TableHandler extends HTMLElement {
 
   #handleKeyDown = (event) => {
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
-      const firstButton = this.buttonsContainer?.querySelector("button, [tabindex]:not([tabindex='-1'])");
+      const firstButton = this.querySelector("button, [tabindex]:not([tabindex='-1'])");
       this.#setFocusStateOnSelectedCell();
       firstButton?.focus();
     } else if (event.key === "Escape") {
@@ -10922,22 +10922,16 @@ class TableHandler extends HTMLElement {
   }
 
   #setUpButtons() {
-    this.buttonsContainer = createElement("div", {
-      className: "lexxy-table-handle-buttons"
-    });
-
-    this.buttonsContainer.appendChild(this.#createRowButtonsContainer());
-    this.buttonsContainer.appendChild(this.#createColumnButtonsContainer());
+    this.appendChild(this.#createRowButtonsContainer());
+    this.appendChild(this.#createColumnButtonsContainer());
 
     this.moreMenu = this.#createMoreMenu();
-    this.buttonsContainer.appendChild(this.moreMenu);
-    this.buttonsContainer.addEventListener("keydown", this.#handleTableHandlerKeydown);
-
-    this.#editorElement.appendChild(this.buttonsContainer);
+    this.appendChild(this.moreMenu);
+    this.addEventListener("keydown", this.#handleTableHandlerKeydown);
   }
 
   #showTableHandlerButtons() {
-    this.buttonsContainer.style.display = "flex";
+    this.style.display = "flex";
     this.#closeMoreMenu();
 
     this.#updateRowColumnCount();
@@ -10945,7 +10939,7 @@ class TableHandler extends HTMLElement {
   }
 
   #hideTableHandlerButtons() {
-    this.buttonsContainer.style.display = "none";
+    this.style.display = "none";
     this.#closeMoreMenu();
 
     this.#setTableFocusState(false);
@@ -10961,8 +10955,8 @@ class TableHandler extends HTMLElement {
 
     const relativeTop = tableRect.top - editorRect.top;
     const relativeCenter = (tableRect.left + tableRect.right) / 2 - editorRect.left;
-    this.buttonsContainer.style.top = `${relativeTop}px`;
-    this.buttonsContainer.style.left = `${relativeCenter}px`;
+    this.style.top = `${relativeTop}px`;
+    this.style.left = `${relativeCenter}px`;
   }
 
   #updateRowColumnCount() {
@@ -11904,13 +11898,12 @@ class CodeLanguagePicker extends HTMLElement {
       this.#updateCodeBlockLanguage(this.languagePickerElement.value);
     });
 
-    this.languagePickerElement.style.position = "absolute";
     this.languagePickerElement.setAttribute("nonce", getNonce());
-    this.editorElement.appendChild(this.languagePickerElement);
+    this.appendChild(this.languagePickerElement);
   }
 
   #createLanguagePicker() {
-    const selectElement = createElement("select", { hidden: true, className: "lexxy-code-language-picker", "aria-label": "Pick a language…", name: "lexxy-code-language" });
+    const selectElement = createElement("select", { className: "lexxy-code-language-picker", "aria-label": "Pick a language…", name: "lexxy-code-language" });
 
     for (const [ value, label ] of Object.entries(this.#languages)) {
       const option = document.createElement("option");
@@ -12007,15 +12000,15 @@ class CodeLanguagePicker extends HTMLElement {
     const editorRect = this.editorElement.getBoundingClientRect();
     const relativeTop = codeRect.top - editorRect.top;
 
-    this.languagePickerElement.style.top = `${relativeTop}px`;
+    this.style.top = `${relativeTop}px`;
   }
 
   #showLanguagePicker() {
-    this.languagePickerElement.hidden = false;
+    this.hidden = false;
   }
 
   #hideLanguagePicker() {
-    this.languagePickerElement.hidden = true;
+    this.hidden = true;
   }
 }
 
