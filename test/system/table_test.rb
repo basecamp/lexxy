@@ -122,4 +122,11 @@ class TableTest < ApplicationSystemTestCase
     assert_no_selector "lexxy-editor"
     assert_table_structure(3, 3)
   end
+
+  test "table is wrapped in figure.table-wrapper" do
+    find_editor.toggle_command("insertTable")
+
+    html = find_editor.value
+    assert_match(/<figure[^>]*class=["'][^"']*lexxy-content__table-wrapper[^"']*["'][^>]*>\s*<table>.*?<\/table>\s*<\/figure>/m, html, "Table should be wrapped in figure.lexxy-content__table-wrapper")
+  end
 end
