@@ -28,13 +28,13 @@ class EditorValueMethodsTest < ApplicationSystemTestCase
     end
     sleep 0.1
 
-    assert_editor_plain_text "\n\n[example.png]\n\n"
+    assert_editor_plain_text "[example.png]\n\n"
 
     find("figcaption textarea").click.send_keys("Example Image")
     find_editor.click
     sleep 0.1
 
-    assert_editor_plain_text "\n\n[Example Image]\n\n"
+    assert_editor_plain_text "[Example Image]\n\n"
   end
 
   test "toString returns content for custom_action_text_attachment (mention)" do
