@@ -7553,6 +7553,30 @@ class HorizontalDividerNode extends ki {
   }
 }
 
+class WrappedTableNode extends hn {
+  static clone(node) {
+    return new WrappedTableNode(node.__key)
+  }
+
+  exportDOM(editor) {
+    const superExport = super.exportDOM(editor);
+
+    return {
+      ...superExport,
+      after: (tableElement) => {
+        if (superExport.after) {
+          tableElement = superExport.after(tableElement);
+          const clonedTable = tableElement.cloneNode(true);
+          const wrappedTable = createElement("figure", { className: "lexxy-content__table-wrapper" }, clonedTable.outerHTML);
+          return wrappedTable
+        }
+
+        return tableElement
+      }
+    }
+  }
+}
+
 const COMMANDS = [
   "bold",
   "italic",
@@ -10304,7 +10328,11 @@ class LexicalEditorElement extends HTMLElement {
         y$1,
         A,
         HorizontalDividerNode,
-        hn,
+        WrappedTableNode,
+        {
+          replace: hn,
+          with: () => { return new WrappedTableNode() }
+        },
         xe,
         Ee$1,
       );

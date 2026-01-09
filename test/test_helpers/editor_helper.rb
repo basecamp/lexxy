@@ -65,7 +65,7 @@ module EditorHelper
     more_menu.click
   end
 
-  def assert_editor_table_structure(rows, cols)
+  def assert_editor_table_structure(cols, rows)
     within("lexxy-editor table") do
       assert_table_structure(cols, rows)
     end

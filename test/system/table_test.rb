@@ -25,7 +25,7 @@ class TableTest < ApplicationSystemTestCase
     find_editor.toggle_command("insertTable")
 
     click_table_handler_button("Add row")
-    assert_editor_table_structure(4, 3)
+    assert_editor_table_structure(3, 4)
   end
 
   test "toggling header style on row" do
@@ -68,7 +68,7 @@ class TableTest < ApplicationSystemTestCase
     assert_editor_table_structure(3, 3)
 
     click_table_handler_button("Add column")
-    assert_editor_table_structure(3, 4)
+    assert_editor_table_structure(4, 3)
   end
 
   test "toggling header style on column" do
@@ -99,7 +99,7 @@ class TableTest < ApplicationSystemTestCase
     assert_editor_table_structure(3, 3)
 
     click_table_handler_button("Remove column")
-    assert_editor_table_structure(3, 2)
+    assert_editor_table_structure(2, 3)
   end
 
   test "deleting the table" do
@@ -121,5 +121,14 @@ class TableTest < ApplicationSystemTestCase
 
     assert_no_selector "lexxy-editor"
     assert_table_structure(3, 3)
+  end
+
+  test "table is wrapped in figure.table-wrapper" do
+    find_editor.toggle_command("insertTable")
+
+    html = find_editor.value
+    assert_match(/<figure class="lexxy-content__table-wrapper">/, html, "Exported HTML should have figure. table-wrapper")
+
+    assert_match(/<figure class="lexxy-content__table-wrapper">.*?<table>.*?<\/table>.*?<\/figure>/m, html, "Table with content should be nested inside the figure wrapper")
   end
 end
