@@ -7564,7 +7564,8 @@ class WrappedTableNode extends hn {
     return {
       ...superExport,
       after: (tableElement) => {
-        if (tableElement = superExport.after?.(tableElement)) {
+        if (superExport.after) {
+          tableElement = superExport.after(tableElement);
           const clonedTable = tableElement.cloneNode(true);
           const wrappedTable = createElement("figure", { className: "lexxy-content__table-wrapper" }, clonedTable.outerHTML);
           return wrappedTable
