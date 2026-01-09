@@ -26,13 +26,11 @@ class EditorValueMethodsTest < ApplicationSystemTestCase
     attach_file file_fixture("example.png") do
       click_on "Upload file"
     end
-    sleep 0.1
 
     assert_editor_plain_text "[example.png]\n\n"
 
     find("figcaption textarea").click.send_keys("Example Image")
     find_editor.click
-    sleep 0.1
 
     assert_editor_plain_text "[Example Image]\n\n"
   end

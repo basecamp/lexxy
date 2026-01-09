@@ -15,7 +15,6 @@ class EditorHandler
   def value=(value)
     editor_element.set value
     editor_element.execute_script "this.value = `#{value}`"
-    sleep 0.1
   end
 
   def plain_text_value
@@ -92,7 +91,6 @@ class EditorHandler
         }
       }
     JS
-    sleep 0.1
   end
 
   def select_all
@@ -105,7 +103,6 @@ class EditorHandler
       sel.removeAllRanges()
       sel.addRange(range)
     JS
-    sleep 0.1
   end
 
   def focus

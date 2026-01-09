@@ -9,7 +9,13 @@ module EditorHelper
   end
 
   def assert_editor_plain_text(value)
-    assert_equal value, find_editor.plain_text_value
+    wait_until { find_editor.plain_text_value == value }
+  end
+
+  def wait_until(timeout: Capybara.default_max_wait_time)
+    Timeout.timeout(timeout) do
+      sleep 0.05 until yield
+    end
   end
 
   def assert_figure_attachment(content_type:, &block)
