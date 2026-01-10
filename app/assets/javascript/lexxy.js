@@ -4635,7 +4635,8 @@ class Configuration {
 }
 
 const global$1 = new Configuration({
-  attachmentTagName: "action-text-attachment"
+  attachmentTagName: "action-text-attachment",
+  authenticatedUploads: false
 });
 
 const presets = new Configuration({
@@ -7067,9 +7068,9 @@ class ActionTextAttachmentNode extends ki {
 
   static importDOM() {
     return {
-      [Lexxy.global.get("attachmentTagName")]: (attachment) => {
+      [this.TAG_NAME]: () => {
         return {
-          conversion: () => ({
+          conversion: (attachment) => ({
             node: new ActionTextAttachmentNode({
               sgid: attachment.getAttribute("sgid"),
               src: attachment.getAttribute("url"),
@@ -7082,13 +7083,12 @@ class ActionTextAttachmentNode extends ki {
               width: attachment.getAttribute("width"),
               height: attachment.getAttribute("height")
             })
-          }),
-          priority: 1
+          }), priority: 1
         }
       },
-      "img": (img) => {
+      "img": () => {
         return {
-          conversion: () => ({
+          conversion: (img) => ({
             node: new ActionTextAttachmentNode({
               src: img.getAttribute("src"),
               caption: img.getAttribute("alt") || "",
@@ -7096,32 +7096,37 @@ class ActionTextAttachmentNode extends ki {
               width: img.getAttribute("width"),
               height: img.getAttribute("height")
             })
-          }),
-          priority: 1
+          }), priority: 1
         }
       },
-      "video": (video) => {
-        const videoSource = video.getAttribute("src") || video.querySelector("source")?.src;
-        const fileName = videoSource?.split("/")?.pop();
-        const contentType = video.querySelector("source")?.getAttribute("content-type") || "video/*";
-
+      "video": () => {
         return {
-          conversion: () => ({
-            node: new ActionTextAttachmentNode({
-              src: videoSource,
-              fileName: fileName,
-              contentType: contentType
-            })
-          }),
-          priority: 1
+          conversion: (video) => {
+            const videoSource = video.getAttribute("src") || video.querySelector("source")?.src;
+            const fileName = videoSource?.split("/")?.pop();
+            const contentType = video.querySelector("source")?.getAttribute("content-type") || "video/*";
+
+            return {
+              node: new ActionTextAttachmentNode({
+                src: videoSource,
+                fileName: fileName,
+                contentType: contentType
+              })
+            }
+          }, priority: 1
         }
       }
     }
   }
 
-  constructor({ sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
+  static get TAG_NAME() {
+    return Lexxy.global.get("attachmentTagName")
+  }
+
+  constructor({ tagName, sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
     super(key);
 
+    this.tagName = tagName || ActionTextAttachmentNode.TAG_NAME;
     this.sgid = sgid;
     this.src = src;
     this.previewable = previewable;
@@ -7137,7 +7142,7 @@ class ActionTextAttachmentNode extends ki {
   createDOM() {
     const figure = this.createAttachmentFigure();
 
-    figure.addEventListener("click", (event) => {
+    figure.addEventListener("click", () => {
       this.#select(figure);
     });
 
@@ -7157,7 +7162,7 @@ class ActionTextAttachmentNode extends ki {
   }
 
   getTextContent() {
-    return `[${ this.caption || this.fileName }]\n\n`
+    return `[${this.caption || this.fileName}]\n\n`
   }
 
   isInline() {
@@ -7165,7 +7170,7 @@ class ActionTextAttachmentNode extends ki {
   }
 
   exportDOM() {
-    const attachment = createElement(Lexxy.global.get("attachmentTagName"), {
+    const attachment = createElement(this.tagName, {
       sgid: this.sgid,
       previewable: this.previewable || null,
       url: this.src,
@@ -7186,6 +7191,7 @@ class ActionTextAttachmentNode extends ki {
     return {
       type: "action_text_attachment",
       version: 1,
+      tagName: this.tagName,
       sgid: this.sgid,
       src: this.src,
       previewable: this.previewable,
@@ -7323,8 +7329,9 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return null
   }
 
-  constructor({ file, uploadUrl, blobUrlTemplate, editor, progress }, key) {
-    super({ contentType: file.type }, key);
+  constructor(node, key) {
+    const { file, uploadUrl, blobUrlTemplate, editor, progress } = node;
+    super({ ...node, contentType: file.type }, key);
     this.file = file;
     this.uploadUrl = uploadUrl;
     this.blobUrlTemplate = blobUrlTemplate;
@@ -7409,11 +7416,17 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   async #startUpload(progressBar, figure) {
     const { DirectUpload } = await import('@rails/activestorage');
+    const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads");
 
     const upload = new DirectUpload(this.file, this.uploadUrl, this);
 
     upload.delegate = {
+      directUploadWillCreateBlobWithXHR: (request) => {
+        if (shouldAuthenticateUploads) request.withCredentials = true;
+      },
       directUploadWillStoreFileWithXHR: (request) => {
+        if (shouldAuthenticateUploads) request.withCredentials = true;
+
         request.upload.addEventListener("progress", (event) => {
           this.editor.update(() => {
             progressBar.value = Math.round(event.loaded / event.total * 100);
@@ -7444,11 +7457,12 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       const image = figure.querySelector("img");
 
       const src = this.blobUrlTemplate
-                    .replace(":signed_id", blob.signed_id)
-                    .replace(":filename", encodeURIComponent(blob.filename));
+        .replace(":signed_id", blob.signed_id)
+        .replace(":filename", encodeURIComponent(blob.filename));
       const latest = xo(this.getKey());
       if (latest) {
         latest.replace(new ActionTextAttachmentNode({
+          tagName: this.tagName,
           sgid: blob.attachable_sgid,
           src: blob.previewable ? blob.url : src,
           altText: blob.filename,
@@ -8692,15 +8706,15 @@ class CustomActionTextAttachmentNode extends ki {
   }
 
   static importDOM() {
+
     return {
-      [Lexxy.global.get("attachmentTagName")]: (attachment) => {
-        const content = attachment.getAttribute("content");
-        if (!attachment.getAttribute("content")) {
+      [this.TAG_NAME]: (element) => {
+        if (!element.getAttribute("content")) {
           return null
         }
 
         return {
-          conversion: () => {
+          conversion: (attachment) => {
             // Preserve initial space if present since Lexical removes it
             const nodes = [];
             const previousSibling = attachment.previousSibling;
@@ -8710,7 +8724,7 @@ class CustomActionTextAttachmentNode extends ki {
 
             nodes.push(new CustomActionTextAttachmentNode({
               sgid: attachment.getAttribute("sgid"),
-              innerHtml: JSON.parse(content),
+              innerHtml: JSON.parse(attachment.getAttribute("content")),
               contentType: attachment.getAttribute("content-type")
             }));
 
@@ -8724,16 +8738,21 @@ class CustomActionTextAttachmentNode extends ki {
     }
   }
 
-  constructor({ sgid, contentType, innerHtml }, key) {
+  static get TAG_NAME() {
+    return Lexxy.global.get("attachmentTagName")
+  }
+
+  constructor({ tagName, sgid, contentType, innerHtml }, key) {
     super(key);
 
+    this.tagName = tagName || CustomActionTextAttachmentNode.TAG_NAME;
     this.sgid = sgid;
     this.contentType = contentType || "application/vnd.actiontext.unknown";
     this.innerHtml = innerHtml;
   }
 
   createDOM() {
-    const figure = createElement(Lexxy.global.get("attachmentTagName"), { "content-type": this.contentType, "data-lexxy-decorator": true });
+    const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true });
 
     figure.addEventListener("click", (event) => {
       dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
@@ -8757,7 +8776,7 @@ class CustomActionTextAttachmentNode extends ki {
   }
 
   exportDOM() {
-    const attachment = createElement(Lexxy.global.get("attachmentTagName"), {
+    const attachment = createElement(this.tagName, {
       sgid: this.sgid,
       content: JSON.stringify(this.innerHtml),
       "content-type": this.contentType
@@ -8770,6 +8789,7 @@ class CustomActionTextAttachmentNode extends ki {
     return {
       type: "custom_action_text_attachment",
       version: 1,
+      tagName: this.tagName,
       sgid: this.sgid,
       contentType: this.contentType,
       innerHtml: this.innerHtml
