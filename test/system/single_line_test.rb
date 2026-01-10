@@ -8,6 +8,6 @@ class SingleLineTest < ApplicationSystemTestCase
     find_editor.send :enter
     find_editor.send "there"
 
-    assert_equal_html "<p>Hellothere</p>", find_editor.value
+    assert_editor_html "<p>Hellothere</p>"
   end
 end

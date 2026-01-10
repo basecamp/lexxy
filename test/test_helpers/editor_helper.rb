@@ -12,6 +12,14 @@ module EditorHelper
     wait_until { find_editor.plain_text_value == value }
   end
 
+  def assert_editor_html(value = nil, &block)
+    if block
+      Capybara.string(find_editor.value).instance_exec(&block)
+    else
+      wait_until { assert_equal_html find_editor.value, value }
+    end
+  end
+
   def wait_until(timeout: Capybara.default_max_wait_time)
     Timeout.timeout(timeout) do
       sleep 0.05 until yield

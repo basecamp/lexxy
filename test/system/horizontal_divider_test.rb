@@ -15,7 +15,7 @@ class HorizontalDividerTest < ApplicationSystemTestCase
 
     find_editor.send "Some text after"
 
-    assert_equal_html "<p>Some text before</p><hr><p>Some text after</p>", find_editor.value
+    assert_editor_html "<p>Some text before</p><hr><p>Some text after</p>"
   end
 
   test "delete horizontal divider with keyboard" do
@@ -28,7 +28,7 @@ class HorizontalDividerTest < ApplicationSystemTestCase
     find_editor.send_key "Delete"
 
     assert_no_selector "figure.horizontal-divider"
-    assert_equal_html "<p>Text before</p><p>Text after</p>", find_editor.value
+    assert_editor_html "<p>Text before</p><p>Text after</p>"
   end
 
   test "horizontal divider with surrounding content" do
@@ -39,6 +39,6 @@ class HorizontalDividerTest < ApplicationSystemTestCase
     assert_selector "figure.horizontal-divider"
     assert_selector "figure.horizontal-divider hr"
 
-    assert_equal_html "<p>Before divider</p><hr><p>After divider</p>", find_editor.value
+    assert_editor_html "<p>Before divider</p><hr><p>After divider</p>"
   end
 end
