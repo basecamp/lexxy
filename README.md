@@ -30,10 +30,10 @@ This is an early beta. Here's what's coming next:
 - [x] More editing features:
     - [x] Tables
     - [x] Text highlighting
-- [ ] Image galleries: The only remaining feature for full Action Text compatibility
-- [ ] Install task that generates the necessary JS and adds stylesheets.
 - [x] Configuration hooks.
 - [x] Standalone JS package: to use in non-Rails environments.
+- [ ] Image galleries: The only remaining feature for full Action Text compatibility
+- [ ] Install task that generates the necessary JS and adds stylesheets.
 
 ## Contributing
 
