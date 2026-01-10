@@ -1,0 +1,16 @@
+<lexxy-prompt-item search="<%= locals[:group_name] %>">
+  <template type="menu">
+    <span class="person person--prompt-item">
+      <span class="person--avatar"><%= "GR" %></span>
+      <span class="person--name"><%= locals[:group_name] %></span>
+    </span>
+  </template>
+
+  <% locals[:people].each do |person| %>
+    <template type="editor" sgid="<%= person.attachable_sgid %>" content-type="application/vnd.actiontext.group_mention">
+      <span class="person person--inline">
+        <span class="person--name"><%= person.name %></span>
+      </span>
+    </template>
+  <% end %>
+</lexxy-prompt-item>

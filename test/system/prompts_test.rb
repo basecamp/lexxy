@@ -55,6 +55,28 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_no_mention_attachments
   end
 
+  test "prompt with multiple attachables" do
+    find_editor.send "4"
+
+    click_on_prompt "Group 0"
+
+    find_editor.within_contents do
+      assert_selector %(action-text-attachment[content-type="application/vnd.actiontext.group_mention"]), count: 5
+    end
+
+    all("action-text-attachment").map { |el| el["sgid"] }.uniq.size == 5
+  end
+
+  test "global custom content-type of mentions" do
+    visit edit_post_path(posts(:empty), attachment_content_type_namespace: "myapp")
+
+    find_editor.send "1"
+    click_on_prompt "Peter Johnson"
+
+    assert_selector %(action-text-attachment[content-type="application/vnd.myapp.mention"])
+    assert_no_selector %(action-text-attachment[content-type="application/vnd.actiontext.mention"])
+  end
+
   private
     def within_popover(&block)
       within(".lexxy-prompt-menu", &block)
