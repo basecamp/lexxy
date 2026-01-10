@@ -12,7 +12,7 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     click_on "Create Post"
     click_on "Edit this post"
 
-    assert_equal_html "<p>Hello</p><p>there</p>", find_editor.value
+    assert_editor_html "<p>Hello</p><p>there</p>"
   end
 
   test "edit existing records" do
@@ -24,7 +24,7 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     click_on "Update Post"
 
-    assert_equal_html "<p>Hello</p><p>there</p>", find_editor.value
+    assert_editor_html "<p>Hello</p><p>there</p>"
   end
 
   test "resets editor to initial state when empty" do
@@ -39,7 +39,7 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     click_on "Edit this post"
 
 
-    assert_equal_html "<p>That</p>", find_editor.value
+    assert_editor_html "<p>That</p>"
   end
 
   test "resets editor to initial state when form is reset" do
@@ -49,7 +49,7 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     click_on "Reset"
 
-    assert_equal_html "<p>Hello everyone</p>", find_editor.value
+    assert_editor_html "<p>Hello everyone</p>"
   end
 
   test "supports required field" do
@@ -67,6 +67,6 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     find_editor.value = ""
 
-    assert_editor_html_value "<p><br></p>"
+    assert_editor_html "<p><br></p>"
   end
 end
