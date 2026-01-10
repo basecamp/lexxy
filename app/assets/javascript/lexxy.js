@@ -4636,6 +4636,7 @@ class Configuration {
 
 const global$1 = new Configuration({
   attachmentTagName: "action-text-attachment",
+  attachmentContentTypeNamespace: "actiontext",
   authenticatedUploads: false
 });
 
@@ -8745,9 +8746,11 @@ class CustomActionTextAttachmentNode extends ki {
   constructor({ tagName, sgid, contentType, innerHtml }, key) {
     super(key);
 
+    const contentTypeNamespace = Lexxy.global.get("attachmentContentTypeNamespace");
+
     this.tagName = tagName || CustomActionTextAttachmentNode.TAG_NAME;
     this.sgid = sgid;
-    this.contentType = contentType || "application/vnd.actiontext.unknown";
+    this.contentType = contentType || `application/vnd.${contentTypeNamespace}.unknown`;
     this.innerHtml = innerHtml;
   }
 
@@ -11871,28 +11874,55 @@ class LexicalPromptElement extends HTMLElement {
 
     if (!promptItem) { return }
 
-    const template = promptItem.querySelector("template[type='editor']");
+    const templates = Array.from(promptItem.querySelectorAll("template[type='editor']"));
     const stringToReplace = `${this.trigger}${this.#editorContents.textBackUntil(this.trigger)}`;
 
     if (this.hasAttribute("insert-editable-text")) {
-      this.#insertTemplateAsEditableText(template, stringToReplace);
+      this.#insertTemplatesAsEditableText(templates, stringToReplace);
     } else {
-      this.#insertTemplateAsAttachment(promptItem, template, stringToReplace);
+      this.#insertTemplatesAsAttachments(templates, stringToReplace, promptItem.getAttribute("sgid"));
     }
   }
 
-  #insertTemplateAsEditableText(template, stringToReplace) {
+  #insertTemplatesAsEditableText(templates, stringToReplace) {
     this.#editor.update(() => {
-      const nodes = m$1(this.#editor, parseHtml(`${template.innerHTML}`));
+      const nodes = templates.flatMap(template => this.#buildEditableTextNodes(template));
       this.#editorContents.replaceTextBackUntil(stringToReplace, nodes);
     });
   }
 
-  #insertTemplateAsAttachment(promptItem, template, stringToReplace) {
+  #buildEditableTextNodes(template) {
+    return m$1(this.#editor, parseHtml(`${template.innerHTML}`))
+  }
+
+  #insertTemplatesAsAttachments(templates, stringToReplace, fallbackSgid = null) {
     this.#editor.update(() => {
-      const attachmentNode = new CustomActionTextAttachmentNode({ sgid: promptItem.getAttribute("sgid"), contentType: `application/vnd.actiontext.${this.name}`, innerHtml: template.innerHTML });
-      this.#editorContents.replaceTextBackUntil(stringToReplace, attachmentNode);
+      const attachmentNodes = this.#buildAttachmentNodes(templates, fallbackSgid);
+      const spacedAttachmentNodes = attachmentNodes.flatMap(node => [ node, this.#getSpacerTextNode() ]).slice(0, -1);
+      this.#editorContents.replaceTextBackUntil(stringToReplace, spacedAttachmentNodes);
     });
+  }
+
+  #buildAttachmentNodes(templates, fallbackSgid = null) {
+    return templates.map(
+      template => this.#buildAttachmentNode(
+        template.innerHTML,
+        template.getAttribute("content-type") || this.#defaultPromptContentType,
+        template.getAttribute("sgid") || fallbackSgid
+      ))
+  }
+
+  #getSpacerTextNode() {
+    return sr(" ")
+  }
+
+  get #defaultPromptContentType() {
+    const attachmentContentTypeNamespace = Lexxy.global.get("attachmentContentTypeNamespace");
+    return `application/vnd.${attachmentContentTypeNamespace}.${this.name}`
+  }
+
+  #buildAttachmentNode(innerHtml, contentType, sgid) {
+    return new CustomActionTextAttachmentNode({ sgid, contentType, innerHtml })
   }
 
   get #editorContents() {
