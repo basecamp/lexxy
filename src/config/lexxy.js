@@ -2,7 +2,8 @@ import Configuration from "./configuration"
 import { range } from "../helpers/array_helper.js"
 
 const global = new Configuration({
-  attachmentTagName: "action-text-attachment"
+  attachmentTagName: "action-text-attachment",
+  authenticatedUploads: false
 })
 
 const presets = new Configuration({
