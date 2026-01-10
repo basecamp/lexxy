@@ -36,15 +36,13 @@ The docs will be available at http://localhost:4000/lexxy/.
 
 ## Release
 
-Lexxy is distributed in two forms: a Rails gem and an NPM package.
-
-To release the gem:
+### Gem
 
 1. Update the version in `version.rb`
 2. Run `bundle` to update `Gemfile.lock`
 3. Run `rake release` to publish the gem
 
-To release the NPM package:
+### NPM package
 
 ```bash
 yarn release
