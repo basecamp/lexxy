@@ -144,8 +144,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       const image = figure.querySelector("img")
 
       const src = this.blobUrlTemplate
-                    .replace(":signed_id", blob.signed_id)
-                    .replace(":filename", encodeURIComponent(blob.filename))
+        .replace(":signed_id", blob.signed_id)
+        .replace(":filename", encodeURIComponent(blob.filename))
       const latest = $getNodeByKey(this.getKey())
       if (latest) {
         latest.replace(new ActionTextAttachmentNode({
