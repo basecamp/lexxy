@@ -8,14 +8,15 @@ class PlainTextTest < ApplicationSystemTestCase
   test "markdown conversion on paste disabled in plain-text mode" do
     find_editor.select("Hello")
     find_editor.paste "**Hello**"
-    assert_equal_html "<p>**Hello** everyone</p>", find_editor.value
+
+    assert_editor_html "<p>**Hello** everyone</p>"
   end
 
   test "formatting shortcuts disabled in plain-text mode" do
     find_editor.select("Hello")
     find_editor.send_key("b", ctrl: true)
 
-    assert_equal_html "<p>Hello everyone</p>", find_editor.value
+    assert_editor_html "<p>Hello everyone</p>"
   end
 
   test "no toolbar in plaintext mode" do

@@ -7,20 +7,24 @@ class PasteTest < ApplicationSystemTestCase
 
   test "convert to markdown on paste" do
     find_editor.paste "Hello **there**"
-    assert_equal_html "<p>Hello <b><strong>there</strong></b></p>", find_editor.value
+    assert_editor_html "<p>Hello <b><strong>there</strong></b></p>"
   end
 
   test "create links when pasting URLs" do
     visit edit_post_path(posts(:hello_world))
     find_editor.select("everyone")
     find_editor.paste "https://37signals.com"
-    assert_equal_html %(<p>Hello <a href="https://37signals.com">everyone</a></p>), find_editor.value
+
+    assert_editor_html do
+      assert_selector %(a[href="https://37signals.com"]), text: "everyone"
+    end
   end
 
   test "keep content when pasting URLs" do
     visit edit_post_path(posts(:hello_world))
     find_editor.paste "https://37signals.com"
-    assert_equal_html %(<p><a href=\"https://37signals.com\">https://37signals.com</a>Hello everyone</p>), find_editor.value
+
+    assert_editor_html %(<p><a href=\"https://37signals.com\">https://37signals.com</a>Hello everyone</p>)
   end
 
   test "create links when pasting URLs keeps formatting" do
@@ -28,21 +32,26 @@ class PasteTest < ApplicationSystemTestCase
     find_editor.select("everyone")
     find_editor.toggle_command("bold")
     find_editor.paste "https://37signals.com"
-    assert_equal_html %(<p>Hello <a href="https://37signals.com"><b><strong>everyone</strong></b></a></p>), find_editor.value
+
+    assert_editor_html %(<p>Hello <a href="https://37signals.com"><b><strong>everyone</strong></b></a></p>)
   end
 
   test "don't convert markdown when pasting into code block" do
     find_editor.paste "some text"
     find_editor.toggle_command("insertCodeBlock")
     find_editor.paste "Hello **there**"
-    assert_includes find_editor.value, "**there**"
-    refute_includes find_editor.value, "<strong>there</strong>"
+
+    assert_editor_html do
+      assert_text "**there**"
+      assert_no_selector "strong", text: "there"
+    end
   end
 
   test "don't convert markdown when disabled" do
     visit edit_post_path(posts(:empty), markdown_disabled: true)
     find_editor.click
     find_editor.paste "Hello **there**"
-    assert_equal_html "<p>Hello **there**</p>", find_editor.value
+
+    assert_editor_html "<p>Hello **there**</p>"
   end
 end

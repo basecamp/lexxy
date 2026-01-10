@@ -22,7 +22,7 @@ class EscapeFormatTest < ApplicationSystemTestCase
 
     find_editor.send "Outside quote"
 
-    assert_equal_html "<blockquote><ul><li>First line</li></ul></blockquote><p>Outside quote</p>", find_editor.value
+    assert_editor_html "<blockquote><ul><li>First line</li></ul></blockquote><p>Outside quote</p>"
   end
 
   test "split blockquote when escaping from middle" do
@@ -42,7 +42,7 @@ class EscapeFormatTest < ApplicationSystemTestCase
 
     find_editor.send "Middle content"
 
-    assert_equal_html "<blockquote><p>First paragraph</p><p>Second paragraph</p></blockquote><p>Middle content</p><blockquote><p>Third paragraph</p></blockquote>", find_editor.value
+    assert_editor_html "<blockquote><p>First paragraph</p><p>Second paragraph</p></blockquote><p>Middle content</p><blockquote><p>Third paragraph</p></blockquote>"
   end
 
   test "split blockquote when escaping from middle of list" do
@@ -65,7 +65,7 @@ class EscapeFormatTest < ApplicationSystemTestCase
 
     find_editor.send "Middle text"
 
-    assert_equal_html "<blockquote><ul><li>Item one</li><li>Item two</li></ul></blockquote><p>Middle text</p><blockquote><ul><li>Item three</li></ul></blockquote>", find_editor.value
+    assert_editor_html "<blockquote><ul><li>Item one</li><li>Item two</li></ul></blockquote><p>Middle text</p><blockquote><ul><li>Item three</li></ul></blockquote>"
   end
 
   test "escape without splitting when all nodes after are empty" do
@@ -83,6 +83,6 @@ class EscapeFormatTest < ApplicationSystemTestCase
 
     find_editor.send "After escape"
 
-    assert_equal_html "<blockquote><ul><li>Item one</li></ul></blockquote><p>After escape</p>", find_editor.value
+    assert_editor_html "<blockquote><ul><li>Item one</li></ul></blockquote><p>After escape</p>"
   end
 end

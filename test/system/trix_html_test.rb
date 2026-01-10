@@ -21,7 +21,7 @@ class TrixHtmlTest < ApplicationSystemTestCase
 
       visit edit_post_path(post)
 
-      assert_equal_html lexxy_html, find_editor.value
+      assert_editor_html lexxy_html
     end
   end
 
@@ -53,7 +53,7 @@ class TrixHtmlTest < ApplicationSystemTestCase
 
       visit edit_post_path(post)
 
-      assert_equal_html "<p>#{lexxy_html}</p>", find_editor.value
+      assert_editor_html "<p>#{lexxy_html}</p>"
     end
   end
 end
