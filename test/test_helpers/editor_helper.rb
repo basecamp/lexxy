@@ -12,8 +12,12 @@ module EditorHelper
     wait_until { find_editor.plain_text_value == value }
   end
 
-  def assert_editor_html_value(expected)
-    wait_until { normalize_html(find_editor.value) == normalize_html(expected) }
+  def assert_editor_html(expected = nil, &block)
+    if block
+      Capybara.string(find_editor.value).instance_exec(&block)
+    else
+      wait_until { normalize_html(find_editor.value) == normalize_html(expected) }
+    end
   rescue Timeout::Error
     assert_equal normalize_html(expected), normalize_html(find_editor.value)
   end

@@ -41,7 +41,7 @@ class AttachmentsTest < ApplicationSystemTestCase
 
     assert_no_attachment content_type: "image/png"
 
-    assert_equal_html "<p><br></p>", find_editor.value
+    assert_editor_html "<p><br></p>"
   end
 
   test "disable attachments" do
