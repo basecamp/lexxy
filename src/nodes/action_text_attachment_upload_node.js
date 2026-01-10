@@ -1,3 +1,4 @@
+import Lexxy from "../config/lexxy"
 import { $getNodeByKey } from "lexical"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { createElement } from "../helpers/html_helper"
@@ -23,8 +24,13 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return null
   }
 
-  constructor({ file, uploadUrl, blobUrlTemplate, editor, progress }, key) {
-    super({ contentType: file.type }, key)
+  static get AUTHENTICATED_UPLOADS() {
+    return Lexxy.global.get("authenticatedUploads")
+  }
+
+  constructor(node, key) {
+    const { file, uploadUrl, blobUrlTemplate, editor, progress } = node
+    super({ ...node, contentType: file.type }, key)
     this.file = file
     this.uploadUrl = uploadUrl
     this.blobUrlTemplate = blobUrlTemplate
@@ -109,11 +115,16 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   async #startUpload(progressBar, figure) {
     const { DirectUpload } = await import("@rails/activestorage")
-
+    const shouldAuthenticateUploads = ActionTextAttachmentUploadNode.AUTHENTICATED_UPLOADS
     const upload = new DirectUpload(this.file, this.uploadUrl, this)
 
     upload.delegate = {
+      directUploadWillCreateBlobWithXHR: (request) => {
+        if (shouldAuthenticateUploads) request.withCredentials = true
+      },
       directUploadWillStoreFileWithXHR: (request) => {
+        if (shouldAuthenticateUploads) request.withCredentials = true
+
         request.upload.addEventListener("progress", (event) => {
           this.editor.update(() => {
             progressBar.value = Math.round(event.loaded / event.total * 100)
@@ -144,11 +155,12 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       const image = figure.querySelector("img")
 
       const src = this.blobUrlTemplate
-                    .replace(":signed_id", blob.signed_id)
-                    .replace(":filename", encodeURIComponent(blob.filename))
+        .replace(":signed_id", blob.signed_id)
+        .replace(":filename", encodeURIComponent(blob.filename))
       const latest = $getNodeByKey(this.getKey())
       if (latest) {
         latest.replace(new ActionTextAttachmentNode({
+          tagName: this.tagName,
           sgid: blob.attachable_sgid,
           src: blob.previewable ? blob.url : src,
           altText: blob.filename,

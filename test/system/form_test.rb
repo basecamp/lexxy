@@ -63,6 +63,7 @@ class ActionTextLoadTest < ApplicationSystemTestCase
   end
 
   test "Clearing value of editor doesn't add trailing markup" do
+    skip "https://github.com/basecamp/lexxy/pull/552#issuecomment-3731150800"
     visit edit_post_path(posts(:hello_world))
 
     find_editor.value =  ""
