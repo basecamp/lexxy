@@ -1,0 +1,6 @@
+<% @groups.each_with_index do |people, index| %>
+  <%= render "prompt_item", locals: {
+    group_name: "Group #{index}",
+    people: people
+  } %>
+<% end %>
