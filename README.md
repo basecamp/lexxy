@@ -192,6 +192,7 @@ In addition, the `<lexxy-editor>` element supports these attributes:
 Finally, the following can only be configured using `Lexxy.configure({ global: ... })`:
 
 - `attachmentTagName`: The tag name used for [Action Text custom attachments](https://guides.rubyonrails.org/action_text_overview.html#signed-globalid). By default, they will be rendered as `action-text-attachment` tags.
+- `attachmentContentTypeNamespace`: The default content_type namespace for prompts. The default is `actiontext` which will result in `application/vnd.actiontext.[type]`
 - `authenticatedUploads`: will set `withCredentials: true` for ActiveStorage upload requests if you are using authenticated upload contollers. Be sure to set your cookie domain and server CORS/CSRF options accordingly.
 
 ## Prompts
@@ -341,6 +342,24 @@ There are scenarios where you want to query the server for filtering, instead of
 
 By default, the `SPACE` key will select the current item in the prompt. If you want to allow spaces in the search query, you can add the `supports-space-in-searches` attribute to the prompt. This can be handy to search by full names in combination with remote filtering.
 
+### Multiple Attachments from a Single Prompt Item
+
+A single prompt item can also insert multiple attachments. This is useful for scenarios like mentioning groups of users. To enable this, add multiple `<template type="editor">` elements inside your prompt item and attach the `sgid`s to the `template[type=editor]` tags:
+
+```erb
+<lexxy-prompt-item search="<%= group.name %>" >
+  <template type="menu"><%= group.name %></template>
+
+  <template type="editor" sgid="<% first.attachable_sgid %>">
+    <%# first content %>
+  </template>
+  <template type="editor" sgid="<% second.attachable_sgid %>">
+    <%# second content %>
+  </template>
+  <%# etc... %>
+</lexxy-prompt-item>
+```
+
 ### Prompt Options reference
 
 #### `<lexxy-prompt>`
@@ -356,7 +375,14 @@ By default, the `SPACE` key will select the current item in the prompt. If you w
 #### `<lexxy-prompt-item>`
 
 - `search`: The text to match against when filtering (can include multiple fields for better search).
-- `sgid`: The signed GlobalID for Action Text attachments (use `attachable_sgid` helper). Mandatory unless using `insert-editable-text`.
+- `sgid`: The default signed GlobalID for Action Text attachments (use `attachable_sgid` helper). Can be overridden per-template. Mandatory unless using `insert-editable-text` or specified on the `template` items (see below).
+
+#### `<template type="editor">`
+
+Each `<lexxy-prompt-item>` can contain one or more `<template type="editor">` elements. When multiple templates are present, selecting the prompt item will insert all of them as separate attachments.
+
+- `sgid`: The prompt item's sgid to reference a different attachable record.
+- `content-type` (optional): Override the default content type for this specific attachment. If not specified, uses `application/vnd.{namespace}.{prompt-name}`.
 
 ## Roadmap
 

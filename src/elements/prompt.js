@@ -1,6 +1,7 @@
+import Lexxy from "../config/lexxy"
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $isTextNode, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $createTextNode, $isTextNode, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
@@ -356,28 +357,55 @@ export default class LexicalPromptElement extends HTMLElement {
 
     if (!promptItem) { return }
 
-    const template = promptItem.querySelector("template[type='editor']")
+    const templates = Array.from(promptItem.querySelectorAll("template[type='editor']"))
     const stringToReplace = `${this.trigger}${this.#editorContents.textBackUntil(this.trigger)}`
 
     if (this.hasAttribute("insert-editable-text")) {
-      this.#insertTemplateAsEditableText(template, stringToReplace)
+      this.#insertTemplatesAsEditableText(templates, stringToReplace)
     } else {
-      this.#insertTemplateAsAttachment(promptItem, template, stringToReplace)
+      this.#insertTemplatesAsAttachments(templates, stringToReplace, promptItem.getAttribute("sgid"))
     }
   }
 
-  #insertTemplateAsEditableText(template, stringToReplace) {
+  #insertTemplatesAsEditableText(templates, stringToReplace) {
     this.#editor.update(() => {
-      const nodes = $generateNodesFromDOM(this.#editor, parseHtml(`${template.innerHTML}`))
+      const nodes = templates.flatMap(template => this.#buildEditableTextNodes(template))
       this.#editorContents.replaceTextBackUntil(stringToReplace, nodes)
     })
   }
 
-  #insertTemplateAsAttachment(promptItem, template, stringToReplace) {
+  #buildEditableTextNodes(template) {
+    return $generateNodesFromDOM(this.#editor, parseHtml(`${template.innerHTML}`))
+  }
+
+  #insertTemplatesAsAttachments(templates, stringToReplace, fallbackSgid = null) {
     this.#editor.update(() => {
-      const attachmentNode = new CustomActionTextAttachmentNode({ sgid: promptItem.getAttribute("sgid"), contentType: `application/vnd.actiontext.${this.name}`, innerHtml: template.innerHTML })
-      this.#editorContents.replaceTextBackUntil(stringToReplace, attachmentNode)
+      const attachmentNodes = this.#buildAttachmentNodes(templates, fallbackSgid)
+      const spacedAttachmentNodes = attachmentNodes.flatMap(node => [ node, this.#getSpacerTextNode() ]).slice(0, -1)
+      this.#editorContents.replaceTextBackUntil(stringToReplace, spacedAttachmentNodes)
     })
+  }
+
+  #buildAttachmentNodes(templates, fallbackSgid = null) {
+    return templates.map(
+      template => this.#buildAttachmentNode(
+        template.innerHTML,
+        template.getAttribute("content-type") || this.#defaultPromptContentType,
+        template.getAttribute("sgid") || fallbackSgid
+      ))
+  }
+
+  #getSpacerTextNode() {
+    return $createTextNode(" ")
+  }
+
+  get #defaultPromptContentType() {
+    const attachmentContentTypeNamespace = Lexxy.global.get("attachmentContentTypeNamespace")
+    return `application/vnd.${attachmentContentTypeNamespace}.${this.name}`
+  }
+
+  #buildAttachmentNode(innerHtml, contentType, sgid) {
+    return new CustomActionTextAttachmentNode({ sgid, contentType, innerHtml })
   }
 
   get #editorContents() {
