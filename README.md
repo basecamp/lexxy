@@ -189,9 +189,36 @@ In addition, the `<lexxy-editor>` element supports these attributes:
 - `placeholder`: Text displayed when the editor is empty.
 - Lexxy uses the `ElementInternals` API to participate in HTML forms as any standard control. This means that you can use standard HTML attributes like `name`, `value`, `required`, `disabled`, etc.
 
-Finally, the following can only be configured using `Lexxy.configure({ global: ... })`:
+### Highlight Configuration
 
-- `attachmentTagName`: The tag name used for [Action Text custom attachments](https://guides.rubyonrails.org/action_text_overview.html#signed-globalid). By default, they will be rendered as `action-text-attachment` tags.
+The simplest way to customize highlighting is override the CSS variables provided:
+- `color`: `var(--highlight-1)` to `var(--highlight-9)`
+- `background-color`: `var(--highlight-bg-1)` to `var(--highlight-bg-9)`
+
+To override the styles applied by Lexxy, configure `highlight.buttons.color` and `highlight.buttons.background-color`. Further, since Lexxy sanitizes pasted styles, `highlight.permit.color` and `highlight.permit.background-color` allows you to add additional colors which Lexxy will conserve on paste but are not presented as buttons in the toolbar.
+
+```javascript
+Lexxy.configure({
+  default: {
+    highlight: {
+      buttons: {
+        color: [ "red", "rgb(255, 0, 0)", "var(--text-color-1)" ],
+        "background-color": [ "red", "rgba(0, 255, 0, 0.5)", "var(--bg-color-1)" ]
+      },
+      permit: {
+        color: [ "pink", "blue", "var(--legacy-text-color)" ],
+        "background-color": [ "light-pink", "light-blue", "var(--legacy-bg-color)" ],
+      }
+    }
+  }
+})
+```
+
+### Global Configuration
+
+Global options apply to all editors in your app and are configured using `Lexxy.configure({ global: ... })`:
+
+- `attachmentTagName`: The tag name used for [Action Text Attachments](https://guides.rubyonrails.org/action_text_overview.html#signed-globalid). The default is `action-text-attachment`.
 
 ## Prompts
 
@@ -362,9 +389,6 @@ By default, the `SPACE` key will select the current item in the prompt. If you w
 This is an early beta. Here's what's coming next:
 
 - Configurable editors in Action Text: Choose your editor like you choose your database.
-- More editing features:
-    - Tables
-    - Text highlighting
 - Image galleries: The only remaining feature for full Action Text compatibility
 - Install task that generates the necessary JS and adds stylesheets.
 - Configuration hooks.

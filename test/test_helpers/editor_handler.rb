@@ -109,15 +109,17 @@ class EditorHandler
     execute_script "this.focus()"
   end
 
-  def paste(text)
+  def paste(text, html: nil)
+    simulate_first_interaction_if_needed
+
     content_element.execute_script <<~JS
-      this.focus()
       const pasteEvent = new ClipboardEvent("paste", {
         bubbles: true,
         cancelable: true,
         clipboardData: new DataTransfer()
       })
       pasteEvent.clipboardData.setData("text/plain", "#{text}")
+      #{"pasteEvent.clipboardData.setData(\"text/html\", `#{html}`)" if html}
       this.dispatchEvent(pasteEvent)
     JS
   end

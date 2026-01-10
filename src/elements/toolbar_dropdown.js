@@ -17,6 +17,10 @@ export class ToolbarDropdown extends HTMLElement {
     return this.closest("lexxy-toolbar")
   }
 
+  get editorElement() {
+    return this.toolbar.editorElement
+  }
+
   get editor() {
     return this.toolbar.editor
   }
