@@ -192,6 +192,7 @@ In addition, the `<lexxy-editor>` element supports these attributes:
 Finally, the following can only be configured using `Lexxy.configure({ global: ... })`:
 
 - `attachmentTagName`: The tag name used for [Action Text custom attachments](https://guides.rubyonrails.org/action_text_overview.html#signed-globalid). By default, they will be rendered as `action-text-attachment` tags.
+- `authenticatedUploads`: will set `withCredentials: true` for ActiveStorage upload requests if you are using authenticated upload contollers. Be sure to set your cookie domain and server CORS/CSRF options accordingly.
 
 ## Prompts
 
@@ -384,7 +385,7 @@ To the sandbox app:
 bin/rails server
 ```
 
-The sandbox app is available at http://localhost:3000. There is also a CRUD example at http://localhost:3000/posts.
+The sandbox app is available at http://lexxy.localhost:3000. There is also a CRUD example at http://lexxy.localhost:3000/posts.
 
 ## Events
 
