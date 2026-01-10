@@ -62,11 +62,11 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_current_path new_post_path
   end
 
-  test "Clearing value of editor doesn't add trailing markup" do
+  test "Clearing value of editor keeps an empty paragraph" do
     visit edit_post_path(posts(:hello_world))
 
-    find_editor.value =  ""
+    find_editor.value = ""
 
-    assert_equal_html "", find_editor.value
+    assert_editor_html_value "<p><br></p>"
   end
 end
