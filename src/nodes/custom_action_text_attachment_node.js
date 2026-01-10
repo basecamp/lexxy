@@ -18,13 +18,12 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   static importDOM() {
     return {
       [Lexxy.global.get("attachmentTagName")]: (attachment) => {
-        const content = attachment.getAttribute("content")
         if (!attachment.getAttribute("content")) {
           return null
         }
 
         return {
-          conversion: () => {
+          conversion: (attachment) => {
             // Preserve initial space if present since Lexical removes it
             const nodes = []
             const previousSibling = attachment.previousSibling
@@ -34,7 +33,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
             nodes.push(new CustomActionTextAttachmentNode({
               sgid: attachment.getAttribute("sgid"),
-              innerHtml: JSON.parse(content),
+              innerHtml: JSON.parse(attachment.getAttribute("content")),
               contentType: attachment.getAttribute("content-type")
             }))
 

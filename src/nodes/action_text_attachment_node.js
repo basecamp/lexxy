@@ -18,9 +18,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   static importDOM() {
     return {
-      [Lexxy.global.get("attachmentTagName")]: (attachment) => {
+      [Lexxy.global.get("attachmentTagName")]: () => {
         return {
-          conversion: () => ({
+          conversion: (attachment) => ({
             node: new ActionTextAttachmentNode({
               sgid: attachment.getAttribute("sgid"),
               src: attachment.getAttribute("url"),
@@ -37,9 +37,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
           priority: 1
         }
       },
-      "img": (img) => {
+      "img": () => {
         return {
-          conversion: () => ({
+          conversion: (img) => ({
             node: new ActionTextAttachmentNode({
               src: img.getAttribute("src"),
               caption: img.getAttribute("alt") || "",
@@ -51,20 +51,22 @@ export class ActionTextAttachmentNode extends DecoratorNode {
           priority: 1
         }
       },
-      "video": (video) => {
-        const videoSource = video.getAttribute("src") || video.querySelector("source")?.src
-        const fileName = videoSource?.split("/")?.pop()
-        const contentType = video.querySelector("source")?.getAttribute("content-type") || "video/*"
+      "video": () => {
 
         return {
-          conversion: () => ({
-            node: new ActionTextAttachmentNode({
-              src: videoSource,
-              fileName: fileName,
-              contentType: contentType
-            })
-          }),
-          priority: 1
+          conversion: (video) => {
+            const videoSource = video.getAttribute("src") || video.querySelector("source")?.src
+            const fileName = videoSource?.split("/")?.pop()
+            const contentType = video.querySelector("source")?.getAttribute("content-type") || "video/*"
+
+            return {
+              node: new ActionTextAttachmentNode({
+                src: videoSource,
+                fileName: fileName,
+                contentType: contentType
+              })
+            }
+          }, priority: 1
         }
       }
     }
@@ -88,7 +90,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   createDOM() {
     const figure = this.createAttachmentFigure()
 
-    figure.addEventListener("click", (event) => {
+    figure.addEventListener("click", () => {
       this.#select(figure)
     })
 
