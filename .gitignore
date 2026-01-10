@@ -11,3 +11,9 @@
 /dist/
 /node_modules/
 /app/assets/javascript/*.js.map
+
+# Jekyll docs
+/docs/_site/
+/docs/.jekyll-cache/
+/docs/.jekyll-metadata
+/docs/Gemfile.lock
