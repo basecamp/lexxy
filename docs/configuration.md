@@ -1,25 +1,11 @@
 ---
 title: Configuration
 layout: default
-nav_order: 3
+nav_order: 4
 has_children: true
 ---
 
 # Configuration
-
-You can add a Lexxy instance using the regular Action Text form helper:
-
-```erb
-<%= form_with model: @post do |form| %>
-  <%= form.rich_text_area :content %>
-<% end %>
-```
-
-Under the hood, this will insert a `<lexxy-editor>` tag, that will be a first-class form control:
-
-```html
-<lexxy-editor name="post[body]"...>...</lexxy-editor>
-```
 
 You can configure editors in two ways: using `Lexxy.configure` and element attributes.
 
@@ -53,7 +39,7 @@ Lexxy.configure({
 })
 ```
 
-## Options
+### Editor options
 
 Editors support the following options, configurable using presets and element attributes:
 
@@ -63,10 +49,11 @@ Editors support the following options, configurable using presets and element at
 - `multiLine`: Pass `false` to force single line editing.
 - `richText`: Pass `false` to disable rich text editing.
 
-In addition, the `<lexxy-editor>` element supports these attributes:
+Lexxy also supports standard HTML attributes:
+  - `placeholder`: Text displayed when the editor is empty.
+  - Form attributes: `name`, `value`, `required`, `disabled`, etc.
 
-- `placeholder`: Text displayed when the editor is empty.
-- Lexxy uses the `ElementInternals` API to participate in HTML forms as any standard control. This means that you can use standard HTML attributes like `name`, `value`, `required`, `disabled`, etc.
+### Global options
 
 Finally, the following can only be configured using `Lexxy.configure({ global: ... })`:
 
