@@ -55,6 +55,6 @@ Lexxy also supports standard HTML attributes:
 
 ## Global options
 
-Finally, the following can only be configured using `Lexxy.configure({ global: ... })`:
+The following can only be configured using `Lexxy.configure({ global: ... })`:
 
 - `attachmentTagName`: The tag name used for [Action Text custom attachments](https://guides.rubyonrails.org/action_text_overview.html#signed-globalid). By default, they will be rendered as `action-text-attachment` tags.
