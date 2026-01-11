@@ -39,7 +39,7 @@ Lexxy.configure({
 })
 ```
 
-### Editor options
+## Editor options
 
 Editors support the following options, configurable using presets and element attributes:
 
@@ -53,7 +53,7 @@ Lexxy also supports standard HTML attributes:
   - `placeholder`: Text displayed when the editor is empty.
   - Form attributes: `name`, `value`, `required`, `disabled`, etc.
 
-### Global options
+## Global options
 
 Finally, the following can only be configured using `Lexxy.configure({ global: ... })`:
 
