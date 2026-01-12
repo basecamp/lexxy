@@ -1,4 +1,5 @@
 import Configuration from "./configuration"
+import { range } from "../helpers/array_helper.js"
 
 const global = new Configuration({
   attachmentTagName: "action-text-attachment",
@@ -13,6 +14,16 @@ const presets = new Configuration({
     multiLine: true,
     richText: true,
     toolbar: true,
+    highlight: {
+      buttons: {
+        color: range(1, 9).map(n => `var(--highlight-${n})`),
+        "background-color": range(1, 9).map(n => `var(--highlight-bg-${n})`),
+      },
+      permit: {
+        color: [],
+        "background-color": []
+      }
+    }
   }
 })
 
