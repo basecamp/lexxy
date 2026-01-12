@@ -1,7 +1,8 @@
 import Lexxy from "../config/lexxy"
-import { $getEditor, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
+import { $getEditor, $getRoot, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
+import { $getNextSiblingOrParentSibling } from "@lexical/utils"
 
 
 export class ActionTextAttachmentNode extends DecoratorNode {
@@ -96,11 +97,11 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     const figure = this.createAttachmentFigure()
 
     figure.addEventListener("click", () => {
-      this.#select(figure)
+      this.select()
     })
 
     if (this.isPreviewableAttachment) {
-      figure.appendChild(this.#createDOMForImage())
+      figure.appendChild(this.#createDOMForImage({ draggable: false }))
       figure.appendChild(this.#createEditableCaption())
     } else {
       figure.appendChild(this.#createDOMForFile())
@@ -171,16 +172,20 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return createAttachmentFigure(this.contentType, this.isPreviewableAttachment, this.fileName)
   }
 
-  get #isPreviewableImage() {
-    return isPreviewableImage(this.contentType)
+  select() {
+    dispatchCustomEvent(this.editor.getRootElement(), "lexxy:internal:select-node", { key: this.getKey() })
   }
 
   get isPreviewableAttachment() {
-    return this.#isPreviewableImage || this.previewable
+    return this.isPreviewableImage || this.previewable
   }
 
-  #createDOMForImage() {
-    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions })
+  get isPreviewableImage() {
+    return isPreviewableImage(this.contentType)
+  }
+
+  #createDOMForImage(options = {}) {
+    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions, ...options })
   }
 
   get #imageDimensions() {
@@ -209,10 +214,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     }
 
     return figcaption
-  }
-
-  #select(figure) {
-    dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() })
   }
 
   #createEditableCaption() {
@@ -247,6 +248,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     if (event.key === "Enter") {
       this.#updateCaptionValueFromInput(event.target)
       event.preventDefault()
+      event.target.blur()
 
       this.editor.update(() => {
         this.selectNext()
@@ -254,4 +256,12 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     }
     event.stopPropagation()
   }
+}
+
+export function $createActionTextAttachmentNode(...args) {
+  return new ActionTextAttachmentNode(...args)
+}
+
+export function $isActionTextAttachmentNode(node) {
+  return node instanceof ActionTextAttachmentNode
 }

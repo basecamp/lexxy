@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $isParagraphNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -25,9 +25,9 @@ import Extensions from "../editor/extensions"
 import Highlighter from "../editor/highlighter"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { TrixContentExtension } from "../extensions/trix_content_extension"
+import { TrixContentLexicalExtension } from "../lexical_extensions/trix_content_extension"
 
-import { TablesLexicalExtension } from "../extensions/tables_lexical_extension"
+import GalleryExtension from "../extensions/gallery_extension"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -112,6 +112,12 @@ export default class LexicalEditorElement extends HTMLElement {
 
     this.toolbar = this.toolbar || this.#findOrCreateDefaultToolbar()
     return this.toolbar
+  }
+
+  get baseExtensions() {
+    return [
+      GalleryExtension
+    ]
   }
 
   get directUploadUrl() {
@@ -247,8 +253,7 @@ export default class LexicalEditorElement extends HTMLElement {
     const extensions = [ ]
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
-      TrixContentExtension,
-      TablesLexicalExtension
+      TrixContentLexicalExtension
     ]
 
     if (this.supportsRichText) {
@@ -371,6 +376,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #registerComponents() {
+
     if (this.supportsRichText) {
       registerRichText(this.editor)
       registerList(this.editor)

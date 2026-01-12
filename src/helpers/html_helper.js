@@ -21,6 +21,7 @@ export function parseHtml(html) {
 export function createAttachmentFigure(contentType, isPreviewable, fileName) {
   const extension = fileName ? fileName.split(".").pop().toLowerCase() : "unknown"
   return createElement("figure", {
+    draggable: false,
     className: `attachment attachment--${isPreviewable ? "preview" : "file"} attachment--${extension}`,
     "data-content-type": contentType
   })

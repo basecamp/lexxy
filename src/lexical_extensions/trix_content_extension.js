@@ -5,7 +5,7 @@ import { $applyHighlightStyle } from "./highlight_extension"
 
 const TRIX_LANGUAGE_ATTR = "language"
 
-export const TrixContentExtension = defineExtension({
+export const TrixContentLexicalExtension = defineExtension({
   name: "lexxy/trix-content",
   html: {
     import: {
