@@ -24,7 +24,7 @@ class PasteTest < ApplicationSystemTestCase
     visit edit_post_path(posts(:hello_world))
     find_editor.paste "https://37signals.com"
 
-    assert_editor_html %(<p><a href=\"https://37signals.com\">https://37signals.com</a>Hello everyone</p>)
+    assert_editor_html %(<p>Hello everyone<a href=\"https://37signals.com\">https://37signals.com</a></p>)
   end
 
   test "create links when pasting URLs keeps formatting" do
