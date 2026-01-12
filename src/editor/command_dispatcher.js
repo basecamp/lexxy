@@ -191,14 +191,14 @@ export class CommandDispatcher {
       onchange: ({ target }) => {
         const files = Array.from(target.files)
         if (!files.length) return
-
-        for (const file of files) {
-          this.contents.uploadFile(file)
-        }
+  
+        // Upload all files at once instead of looping
+        this.contents.uploadFiles(files)
       }
     })
 
-    this.editorElement.appendChild(input) // Append and remove just for the sake of making it testable
+    // Append and remove to make testable
+    this.editorElement.appendChild(input)
     input.click()
     setTimeout(() => input.remove(), 1000)
   }

@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $isParagraphNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -375,6 +375,7 @@ export default class LexicalEditorElement extends HTMLElement {
       registerRichText(this.editor)
       registerList(this.editor)
       this.#registerTableComponents()
+      this.#registerImageGalleryCleanup()
       this.#registerCodeHiglightingComponents()
       if (this.supportsMarkdown) {
         registerMarkdownShortcuts(this.editor, TRANSFORMERS)
@@ -385,6 +386,42 @@ export default class LexicalEditorElement extends HTMLElement {
     this.historyState = createEmptyHistoryState()
     registerHistory(this.editor, this.historyState, 20)
   }
+
+  #registerImageGalleryCleanup() {
+    this.editor.registerNodeTransform(ActionTextAttachmentNode, (node) => {
+      // Only process image attachments
+      if (! this.contents.isImageAttachment(node)) {
+        return
+      }
+  
+      // Group adjacent images into gallery
+      this.contents.groupAdjacentImagesIntoGallery(node)
+    })
+
+    this.editor.registerNodeTransform(ImageGalleryNode, (node) => {
+      if (node.isEmpty()) {
+        node.remove()
+      }
+
+      // Ensure empty paragraph before gallery
+      const prevSibling = node.getPreviousSibling()
+      if (!prevSibling || !$isParagraphNode(prevSibling)) {
+        node.insertBefore($createParagraphNode())
+      } else if (prevSibling.getTextContent().trim() !== "") {
+        // If previous paragraph has content, insert an empty one
+        node.insertBefore($createParagraphNode())
+      }
+
+      // Ensure empty paragraph after gallery
+      const nextSibling = node.getNextSibling()
+      if (!nextSibling || !$isParagraphNode(nextSibling)) {
+        node.insertAfter($createParagraphNode())
+      } else if (nextSibling.getTextContent().trim() !== "") {
+        // If next paragraph has content, insert an empty one
+        node.insertAfter($createParagraphNode())
+      }
+    })
+  } 
 
   #registerTableComponents() {
     this.tableTools = createElement("lexxy-table-tools")
