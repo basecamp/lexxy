@@ -4660,7 +4660,7 @@ var Lexxy = {
 };
 
 const ALLOWED_HTML_TAGS = [ "a", "b", "blockquote", "br", "code", "em",
-  "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "ul", "table", "tbody", "tr", "th", "td" ];
+  "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "section", "strong", "ul", "table", "tbody", "tr", "th", "td" ];
 
 const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",
   "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "presentation",
@@ -7577,6 +7577,132 @@ class WrappedTableNode extends hn {
   }
 }
 
+class ImageGalleryNode extends Ci {
+  static getType() {
+    return "image_gallery"
+  }
+
+  static clone(node) {
+    return new ImageGalleryNode(node.__key)
+  }
+
+  static importJSON(serializedNode) {
+    const node = new ImageGalleryNode();
+    node. setFormat(serializedNode.format);
+    node.setIndent(serializedNode.indent);
+    node.setDirection(serializedNode.direction);
+    return node
+  }
+
+  static importDOM() {
+    return {
+      section: (node) => {
+        if (node.classList.contains("lexxy-image-gallery")) {
+          return {
+            conversion: (element) => {
+              return { node: new ImageGalleryNode() }
+            },
+            priority: 2
+          }
+        }
+        return null
+      }
+    }
+  }
+
+  constructor(key) {
+    super(key);
+  }
+
+  createDOM(config) {
+    const section = document.createElement("section");
+    section.className = "lexxy-image-gallery";
+    return section
+  }
+
+  updateDOM(prevNode, dom, config) {
+    return false
+  }
+
+  canBeEmpty() {
+    return false
+  }
+
+  isShadowRoot() {
+    return false
+  }
+
+  isInline() {
+    return false
+  }
+
+  collapseAtStart() {
+    return true
+  }
+
+  canInsertChild(child) {
+    return child instanceof ActionTextAttachmentNode && this.#isImageAttachment(child)
+  }
+
+  #isImageAttachment(node) {
+    return node.contentType && node.contentType.startsWith("image/")
+  }
+
+  canInsertTextBefore() {
+    return false
+  }
+
+  canInsertTextAfter() {
+    return false
+  }
+
+  getImageAttachments() {
+    const children = this.getChildren();
+    return children.filter(child => child instanceof ActionTextAttachmentNode)
+  }
+
+  isEmpty() {
+    return this.getChildren().length === 0
+  }
+
+  exportDOM(editor) {
+    const section = document.createElement("section");
+    section.className = "lexxy-image-gallery";
+    return { element: section }
+  }
+
+  exportJSON() {
+    return {
+      ... super.exportJSON(),
+      type: "image_gallery",
+      version: 1
+    }
+  }
+
+  getTextContent() {
+    const imageCount = this.getImageAttachments().length;
+    return `[Image Gallery: ${imageCount} image${imageCount !== 1 ? 's' : ''}]\n\n`
+  }
+
+  appendImageAttachment(attachmentNode) {
+    if (attachmentNode instanceof ActionTextAttachmentNode && this.#isImageAttachment(attachmentNode)) {
+      this.append(attachmentNode);
+      return true
+    }
+    return false
+  }
+}
+
+// Helper function to create a gallery node
+function $createImageGalleryNode() {
+  return new ImageGalleryNode()
+}
+
+// Helper to check if a node is an image gallery
+function $isImageGalleryNode(node) {
+  return node instanceof ImageGalleryNode
+}
+
 const COMMANDS = [
   "bold",
   "italic",
@@ -7757,14 +7883,13 @@ class CommandDispatcher {
       onchange: ({ target }) => {
         const files = Array.from(target.files);
         if (!files.length) return
-
-        for (const file of files) {
-          this.contents.uploadFile(file);
-        }
+  
+        // Upload all files at once instead of looping
+        this.contents.uploadFiles(files);
       }
     });
-
-    this.editorElement.appendChild(input); // Append and remove just for the sake of making it testable
+  
+    this.editorElement.appendChild(input);
     input.click();
     setTimeout(() => input.remove(), 1000);
   }
@@ -9303,44 +9428,263 @@ class Contents {
     }
   }
 
-  uploadFile(file) {
-    if (!this.editorElement.supportsAttachments) {
-      console.warn("This editor does not supports attachments (it's configured with [attachments=false])");
-      return
-    }
-
-    if (!this.#shouldUploadFile(file)) {
-      return
-    }
-
-    const uploadUrl = this.editorElement.directUploadUrl;
-    const blobUrlTemplate = this.editorElement.blobUrlTemplate;
-
-    this.editor.update(() => {
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor });
-      this.insertAtCursor(uploadedImageNode);
-    }, { tag: Dn });
+  isImageAttachment(node) {
+    return (
+      node instanceof ActionTextAttachmentNode &&
+      node.contentType &&
+      node.contentType.startsWith("image/")
+    )
   }
 
+  #findAdjacentGalleryNode() {
+    let galleryKey = null;
+  
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      
+      // Check if an image node is selected (node selection)
+      if (xr(selection)) {
+        const selectedNodes = selection.getNodes();
+        if (selectedNodes.length > 0) {
+          const firstSelectedNode = selectedNodes[0];
+          
+          // Check if the selected node is an attachment inside a gallery
+          if (firstSelectedNode instanceof ActionTextAttachmentNode) {
+            const parent = firstSelectedNode.getParent();
+            if (parent && $isImageGalleryNode(parent)) {
+              galleryKey = parent.getKey();
+              return
+            }
+          }
+        }
+      }
+      
+      // Check for range selection (cursor position)
+      if (! yr(selection)) return
+  
+      const anchorNode = selection.anchor.getNode();
+      const topLevelNode = anchorNode.getTopLevelElement();
+      
+      if (!topLevelNode) return
+  
+      // Check if cursor is inside a gallery
+      let currentNode = anchorNode;
+      while (currentNode) {
+        if ($isImageGalleryNode(currentNode)) {
+          galleryKey = currentNode.getKey();
+          return
+        }
+        currentNode = currentNode.getParent();
+      }
+  
+      // Check previous sibling
+      const prevSibling = topLevelNode.getPreviousSibling();
+      if (prevSibling && $isImageGalleryNode(prevSibling)) {
+        galleryKey = prevSibling.getKey();
+        return
+      }
+  
+      // Check next sibling
+      const nextSibling = topLevelNode.getNextSibling();
+      if (nextSibling && $isImageGalleryNode(nextSibling)) {
+        galleryKey = nextSibling.getKey();
+        return
+      }
+    });
+  
+    return galleryKey
+  }
+  
+  findAdjacentImageAttachments(startNode) {
+    const images = [];
+    const root = startNode.getParent();
+    
+    if (!root) return [startNode]
+  
+    const siblings = root.getChildren();
+    const startIndex = siblings.indexOf(startNode);
+    
+    if (startIndex === -1) return [startNode]
+  
+    // Collect backward
+    for (let i = startIndex; i >= 0; i--) {
+      const sibling = siblings[i];
+      if (this.isImageAttachment(sibling) && !$isImageGalleryNode(sibling.getParent())) {
+        images.unshift(sibling);
+      } else {
+        break
+      }
+    }
+  
+    // Collect forward
+    for (let i = startIndex + 1; i < siblings.length; i++) {
+      const sibling = siblings[i];
+      if (this.isImageAttachment(sibling) && !$isImageGalleryNode(sibling.getParent())) {
+        images.push(sibling);
+      } else {
+        break
+      }
+    }
+  
+    return images
+  }
+  
+  groupAdjacentImagesIntoGallery(imageNode) {
+    // Skip if already in a gallery
+    const parent = imageNode.getParent();
+    if ($isImageGalleryNode(parent)) {
+      return
+    }
+  
+    // Find all adjacent images
+    const adjacentImages = this.findAdjacentImageAttachments(imageNode);
+    
+    // Only create gallery if there are 2+ images
+    if (adjacentImages. length > 1) {
+      const gallery = $createImageGalleryNode();
+      
+      // Insert gallery before the first image
+      adjacentImages[0].insertBefore(gallery);
+      
+      // Move all images into the gallery
+      adjacentImages.forEach(node => {
+        gallery.append(node);
+      });
+    }
+  }
+  
   async deleteSelectedNodes() {
     let focusNode = null;
-
+  
     this.editor.update(() => {
-      if (this.#selection.hasNodeSelection) {
+      if (this.#selection. hasNodeSelection) {
         const nodesToRemove = Lr().getNodes();
         if (nodesToRemove.length === 0) return
-
+  
         focusNode = this.#findAdjacentNodeTo(nodesToRemove);
         this.#deleteNodes(nodesToRemove);
       }
     });
-
+  
     await nextFrame();
-
+  
     this.editor.update(() => {
       this.#selectAfterDeletion(focusNode);
       this.editor.focus();
     });
+  }
+
+  uploadFile(file) {
+    this.uploadFiles([file]);
+  }
+  
+  uploadFiles(files) {
+    if (!this.editorElement.supportsAttachments) {
+      console.warn("This editor does not supports attachments (it's configured with [attachments=false])");
+      return
+    }
+  
+    // Ensure files is an array
+    const filesArray = Array.isArray(files) ? files : [files];
+    
+    // Filter to only valid files
+    const validFiles = filesArray.filter(file => this. #shouldUploadFile(file));
+    if (validFiles.length === 0) return
+  
+    const uploadUrl = this.editorElement.directUploadUrl;
+    const blobUrlTemplate = this.editorElement. blobUrlTemplate;
+  
+    // Separate images from other files
+    const imageFiles = validFiles.filter(file => file.type.startsWith("image/"));
+    const otherFiles = validFiles.filter(file => !file.type.startsWith("image/"));
+  
+    // Handle non-images individually with default behavior
+    otherFiles.forEach(file => {
+      this.editor.update(() => {
+        const uploadedNode = new ActionTextAttachmentUploadNode({ 
+          file: file, 
+          uploadUrl:  uploadUrl, 
+          blobUrlTemplate: blobUrlTemplate, 
+          editor: this.editor 
+        });
+        this.insertAtCursor(uploadedNode);
+      }, { tag: Dn });
+    });
+  
+    // Handle all images together in a gallery
+    if (imageFiles.length > 0) {
+      this.#uploadImagesToGallery(imageFiles, uploadUrl, blobUrlTemplate);
+    }
+  }
+
+  #uploadImagesToGallery(imageFiles, uploadUrl, blobUrlTemplate) {
+    // Check for adjacent gallery
+    const adjacentGalleryKey = this.#findAdjacentGalleryNode();
+    
+    if (adjacentGalleryKey) {
+      // Add all images to existing gallery
+      this.#addImagesToGallery(adjacentGalleryKey, imageFiles, uploadUrl, blobUrlTemplate);
+    } else {
+      // Create new gallery with all images
+      this.#createNewGalleryWithImages(imageFiles, uploadUrl, blobUrlTemplate);
+    }
+  }
+
+  #addImagesToGallery(galleryKey, imageFiles, uploadUrl, blobUrlTemplate) {
+    this.editor.update(() => {
+      const gallery = xo(galleryKey);
+      if (!gallery || !$isImageGalleryNode(gallery)) return
+
+      // Add all upload nodes to the gallery
+      imageFiles.forEach(file => {
+        const uploadNode = new ActionTextAttachmentUploadNode({ 
+          file: file, 
+          uploadUrl: uploadUrl, 
+          blobUrlTemplate: blobUrlTemplate, 
+          editor: this.editor 
+        });
+        gallery.append(uploadNode);
+      });
+    }, { tag: Dn });
+  }
+
+  #createNewGalleryWithImages(imageFiles, uploadUrl, blobUrlTemplate) {
+    this.editor.update(() => {
+      const selection = Lr();
+      
+      // Create gallery node
+      const galleryNode = $createImageGalleryNode();
+      
+      // Add all images to gallery
+      imageFiles.forEach(file => {
+        const uploadNode = new ActionTextAttachmentUploadNode({ 
+          file: file, 
+          uploadUrl: uploadUrl, 
+          blobUrlTemplate: blobUrlTemplate, 
+          editor: this. editor 
+        });
+        galleryNode.append(uploadNode);
+      });
+      
+      // Insert gallery
+      if (yr(selection)) {
+        const anchorNode = selection.anchor.getNode();
+        const topLevelNode = anchorNode.getTopLevelElement();
+        
+        if (topLevelNode) {
+          topLevelNode.insertAfter(galleryNode);
+        } else {
+          No().append(galleryNode);
+        }
+      } else {
+        No().append(galleryNode);
+      }
+      
+      // Create a paragraph after the gallery for continued editing
+      const newParagraph = Li();
+      galleryNode.insertAfter(newParagraph);
+      newParagraph.selectStart();
+    }, { tag: Dn });
   }
 
   replaceNodeWithHTML(nodeKey, html, options = {}) {
@@ -9964,16 +10308,19 @@ class Clipboard {
 
   #handlePastedFiles(clipboardData) {
     if (!this.editorElement.supportsAttachments) return
-
+  
     const html = clipboardData.getData("text/html");
-    if (html) return // Ignore if image copied from browser since we will load it as a remote image
-
+    if (html) return // Ignore if image copied from browser
+  
     this.#preservingScrollPosition(() => {
+      const files = [];
       for (const item of clipboardData.items) {
         const file = item.getAsFile();
-        if (!file) continue
-
-        this.contents.uploadFile(file);
+        if (file) files.push(file);
+      }
+      
+      if (files.length > 0) {
+        this.contents.uploadFiles(files);
       }
     });
   }
@@ -10357,6 +10704,7 @@ class LexicalEditorElement extends HTMLElement {
         },
         xe,
         Ee$1,
+        ImageGalleryNode,
       );
     }
 
@@ -10458,6 +10806,7 @@ class LexicalEditorElement extends HTMLElement {
       Jt$1(this.editor);
       bt$4(this.editor);
       this.#registerTableComponents();
+      this.#registerImageGalleryCleanup();
       this.#registerCodeHiglightingComponents();
       if (this.supportsMarkdown) {
         Dt(this.editor, zt);
@@ -10468,6 +10817,42 @@ class LexicalEditorElement extends HTMLElement {
     this.historyState = w$1();
     b$1(this.editor, this.historyState, 20);
   }
+
+  #registerImageGalleryCleanup() {
+    this.editor.registerNodeTransform(ActionTextAttachmentNode, (node) => {
+      // Only process image attachments
+      if (! this.contents.isImageAttachment(node)) {
+        return
+      }
+  
+      // Group adjacent images into gallery
+      this.contents.groupAdjacentImagesIntoGallery(node);
+    });
+
+    this.editor.registerNodeTransform(ImageGalleryNode, (node) => {
+      if (node.isEmpty()) {
+        node.remove();
+      }
+
+      // Ensure empty paragraph before gallery
+      const prevSibling = node.getPreviousSibling();
+      if (!prevSibling || !Ii(prevSibling)) {
+        node.insertBefore(Li());
+      } else if (prevSibling.getTextContent().trim() !== "") {
+        // If previous paragraph has content, insert an empty one
+        node.insertBefore(Li());
+      }
+
+      // Ensure empty paragraph after gallery
+      const nextSibling = node.getNextSibling();
+      if (!nextSibling || !Ii(nextSibling)) {
+        node.insertAfter(Li());
+      } else if (nextSibling.getTextContent().trim() !== "") {
+        // If next paragraph has content, insert an empty one
+        node.insertAfter(Li());
+      }
+    });
+  } 
 
   #registerTableComponents() {
     Nn(this.editor);
