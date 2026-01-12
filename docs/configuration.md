@@ -58,4 +58,5 @@ Lexxy also supports standard HTML attributes:
 The following can only be configured using `Lexxy.configure({ global: ... })`:
 
 - `attachmentTagName`: The tag name used for [Action Text custom attachments](https://guides.rubyonrails.org/action_text_overview.html#signed-globalid). By default, they will be rendered as `action-text-attachment` tags.
+- `attachmentContentTypeNamespace`: The default content_type namespace for prompts. The default is `actiontext` which will result in `application/vnd.actiontext.[type]`.
 - `authenticatedUploads`: will set `withCredentials: true` for ActiveStorage upload requests if you are using authenticated upload contollers. Be sure to set cookie domain and server CORS/CSRF options accordingly.

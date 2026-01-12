@@ -3,7 +3,7 @@ title: Options reference
 layout: default
 parent: Prompts
 grand_parent: Configuration
-nav_order: 5
+nav_order: 6
 ---
 
 # Prompt Options reference
@@ -21,4 +21,11 @@ nav_order: 5
 ## `<lexxy-prompt-item>`
 
 - `search`: The text to match against when filtering (can include multiple fields for better search).
-- `sgid`: The signed GlobalID for Action Text attachments (use `attachable_sgid` helper). Mandatory unless using `insert-editable-text`.
+- `sgid`: The default signed GlobalID for Action Text attachments (use `attachable_sgid` helper). Can be overridden per-template. Mandatory unless using `insert-editable-text` or specified on the `template` items (see below).
+
+#### `<template type="editor">`
+
+Each `<lexxy-prompt-item>` can contain one or more `<template type="editor">` elements. When multiple templates are present, selecting the prompt item will insert them as separate attachments.
+
+- `sgid`: The prompt item's sgid to reference a different attachable record.
+- `content-type` (optional): Override the default content type for this specific attachment. If not specified, uses `application/vnd.{namespace}.{prompt-name}`.
