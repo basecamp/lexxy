@@ -6,6 +6,8 @@ import {
 import { $generateNodesFromDOM } from "@lexical/html"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { $createImageGalleryNode, $isImageGalleryNode } from "../nodes/image_gallery_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode } from "@lexical/list"
@@ -255,44 +257,263 @@ export default class Contents {
     }
   }
 
-  uploadFile(file) {
-    if (!this.editorElement.supportsAttachments) {
-      console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
-      return
-    }
-
-    if (!this.#shouldUploadFile(file)) {
-      return
-    }
-
-    const uploadUrl = this.editorElement.directUploadUrl
-    const blobUrlTemplate = this.editorElement.blobUrlTemplate
-
-    this.editor.update(() => {
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor })
-      this.insertAtCursor(uploadedImageNode)
-    }, { tag: HISTORY_MERGE_TAG })
+  isImageAttachment(node) {
+    return (
+      node instanceof ActionTextAttachmentNode &&
+      node.contentType &&
+      node.contentType.startsWith("image/")
+    )
   }
 
+  #findAdjacentGalleryNode() {
+    let galleryKey = null
+  
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      
+      // Check if an image node is selected (node selection)
+      if ($isNodeSelection(selection)) {
+        const selectedNodes = selection.getNodes()
+        if (selectedNodes.length > 0) {
+          const firstSelectedNode = selectedNodes[0]
+          
+          // Check if the selected node is an attachment inside a gallery
+          if (firstSelectedNode instanceof ActionTextAttachmentNode) {
+            const parent = firstSelectedNode.getParent()
+            if (parent && $isImageGalleryNode(parent)) {
+              galleryKey = parent.getKey()
+              return
+            }
+          }
+        }
+      }
+      
+      // Check for range selection (cursor position)
+      if (! $isRangeSelection(selection)) return
+  
+      const anchorNode = selection.anchor.getNode()
+      const topLevelNode = anchorNode.getTopLevelElement()
+      
+      if (!topLevelNode) return
+  
+      // Check if cursor is inside a gallery
+      let currentNode = anchorNode
+      while (currentNode) {
+        if ($isImageGalleryNode(currentNode)) {
+          galleryKey = currentNode.getKey()
+          return
+        }
+        currentNode = currentNode.getParent()
+      }
+  
+      // Check previous sibling
+      const prevSibling = topLevelNode.getPreviousSibling()
+      if (prevSibling && $isImageGalleryNode(prevSibling)) {
+        galleryKey = prevSibling.getKey()
+        return
+      }
+  
+      // Check next sibling
+      const nextSibling = topLevelNode.getNextSibling()
+      if (nextSibling && $isImageGalleryNode(nextSibling)) {
+        galleryKey = nextSibling.getKey()
+        return
+      }
+    })
+  
+    return galleryKey
+  }
+  
+  findAdjacentImageAttachments(startNode) {
+    const images = []
+    const root = startNode.getParent()
+    
+    if (!root) return [startNode]
+  
+    const siblings = root.getChildren()
+    const startIndex = siblings.indexOf(startNode)
+    
+    if (startIndex === -1) return [startNode]
+  
+    // Collect backward
+    for (let i = startIndex; i >= 0; i--) {
+      const sibling = siblings[i]
+      if (this.isImageAttachment(sibling) && !$isImageGalleryNode(sibling.getParent())) {
+        images.unshift(sibling)
+      } else {
+        break
+      }
+    }
+  
+    // Collect forward
+    for (let i = startIndex + 1; i < siblings.length; i++) {
+      const sibling = siblings[i]
+      if (this.isImageAttachment(sibling) && !$isImageGalleryNode(sibling.getParent())) {
+        images.push(sibling)
+      } else {
+        break
+      }
+    }
+  
+    return images
+  }
+  
+  groupAdjacentImagesIntoGallery(imageNode) {
+    // Skip if already in a gallery
+    const parent = imageNode.getParent()
+    if ($isImageGalleryNode(parent)) {
+      return
+    }
+  
+    // Find all adjacent images
+    const adjacentImages = this.findAdjacentImageAttachments(imageNode)
+    
+    // Only create gallery if there are 2+ images
+    if (adjacentImages. length > 1) {
+      const gallery = $createImageGalleryNode()
+      
+      // Insert gallery before the first image
+      adjacentImages[0].insertBefore(gallery)
+      
+      // Move all images into the gallery
+      adjacentImages.forEach(node => {
+        gallery.append(node)
+      })
+    }
+  }
+  
   async deleteSelectedNodes() {
     let focusNode = null
-
+  
     this.editor.update(() => {
-      if (this.#selection.hasNodeSelection) {
+      if (this.#selection. hasNodeSelection) {
         const nodesToRemove = $getSelection().getNodes()
         if (nodesToRemove.length === 0) return
-
+  
         focusNode = this.#findAdjacentNodeTo(nodesToRemove)
         this.#deleteNodes(nodesToRemove)
       }
     })
-
+  
     await nextFrame()
-
+  
     this.editor.update(() => {
       this.#selectAfterDeletion(focusNode)
       this.editor.focus()
     })
+  }
+
+  uploadFile(file) {
+    this.uploadFiles([file])
+  }
+  
+  uploadFiles(files) {
+    if (!this.editorElement.supportsAttachments) {
+      console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
+      return
+    }
+  
+    // Ensure files is an array
+    const filesArray = Array.isArray(files) ? files : [files]
+    
+    // Filter to only valid files
+    const validFiles = filesArray.filter(file => this. #shouldUploadFile(file))
+    if (validFiles.length === 0) return
+  
+    const uploadUrl = this.editorElement.directUploadUrl
+    const blobUrlTemplate = this.editorElement. blobUrlTemplate
+  
+    // Separate images from other files
+    const imageFiles = validFiles.filter(file => file.type.startsWith("image/"))
+    const otherFiles = validFiles.filter(file => !file.type.startsWith("image/"))
+  
+    // Handle non-images individually with default behavior
+    otherFiles.forEach(file => {
+      this.editor.update(() => {
+        const uploadedNode = new ActionTextAttachmentUploadNode({ 
+          file: file, 
+          uploadUrl:  uploadUrl, 
+          blobUrlTemplate: blobUrlTemplate, 
+          editor: this.editor 
+        })
+        this.insertAtCursor(uploadedNode)
+      }, { tag: HISTORY_MERGE_TAG })
+    })
+  
+    // Handle all images together in a gallery
+    if (imageFiles.length > 0) {
+      this.#uploadImagesToGallery(imageFiles, uploadUrl, blobUrlTemplate)
+    }
+  }
+
+  #uploadImagesToGallery(imageFiles, uploadUrl, blobUrlTemplate) {
+    // Check for adjacent gallery
+    const adjacentGalleryKey = this.#findAdjacentGalleryNode()
+    
+    if (adjacentGalleryKey) {
+      // Add all images to existing gallery
+      this.#addImagesToGallery(adjacentGalleryKey, imageFiles, uploadUrl, blobUrlTemplate)
+    } else {
+      // Create new gallery with all images
+      this.#createNewGalleryWithImages(imageFiles, uploadUrl, blobUrlTemplate)
+    }
+  }
+
+  #addImagesToGallery(galleryKey, imageFiles, uploadUrl, blobUrlTemplate) {
+    this.editor.update(() => {
+      const gallery = $getNodeByKey(galleryKey)
+      if (!gallery || !$isImageGalleryNode(gallery)) return
+
+      // Add all upload nodes to the gallery
+      imageFiles.forEach(file => {
+        const uploadNode = new ActionTextAttachmentUploadNode({ 
+          file: file, 
+          uploadUrl: uploadUrl, 
+          blobUrlTemplate: blobUrlTemplate, 
+          editor: this.editor 
+        })
+        gallery.append(uploadNode)
+      })
+    }, { tag: HISTORY_MERGE_TAG })
+  }
+
+  #createNewGalleryWithImages(imageFiles, uploadUrl, blobUrlTemplate) {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      
+      // Create gallery node
+      const galleryNode = $createImageGalleryNode()
+      
+      // Add all images to gallery
+      imageFiles.forEach(file => {
+        const uploadNode = new ActionTextAttachmentUploadNode({ 
+          file: file, 
+          uploadUrl: uploadUrl, 
+          blobUrlTemplate: blobUrlTemplate, 
+          editor: this. editor 
+        })
+        galleryNode.append(uploadNode)
+      })
+      
+      // Insert gallery
+      if ($isRangeSelection(selection)) {
+        const anchorNode = selection.anchor.getNode()
+        const topLevelNode = anchorNode.getTopLevelElement()
+        
+        if (topLevelNode) {
+          topLevelNode.insertAfter(galleryNode)
+        } else {
+          $getRoot().append(galleryNode)
+        }
+      } else {
+        $getRoot().append(galleryNode)
+      }
+      
+      // Create a paragraph after the gallery for continued editing
+      const newParagraph = $createParagraphNode()
+      galleryNode.insertAfter(newParagraph)
+      newParagraph.selectStart()
+    }, { tag: HISTORY_MERGE_TAG })
   }
 
   replaceNodeWithHTML(nodeKey, html, options = {}) {

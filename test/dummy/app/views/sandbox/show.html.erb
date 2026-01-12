@@ -1,7 +1,7 @@
 <% content_for :title, "Lexxy Sandbox" %>
 
 <main data-controller="lexxy-output" data-action="lexxy:change->lexxy-output#refresh">
-  <section>
+  <section class="input">
     <h2>Editor</h2>
     <div class="editor-value-buttons">
       <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="default">Default</button>
@@ -9,6 +9,7 @@
       <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="code_blocks">Code blocks</button>
       <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="lists">Lists</button>
       <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="highlights">Color highlights</button>
+      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="images">Images</button>
       <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="empty">Empty</button>
     </div>
     <div>

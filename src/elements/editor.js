@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, createEditor } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $isParagraphNode, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, createEditor } from "lexical"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { registerPlainText } from "@lexical/plain-text"
@@ -14,6 +14,7 @@ import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { WrappedTableNode } from "../nodes/wrapped_table_node"
+import { ImageGalleryNode } from "../nodes/image_gallery_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
@@ -261,6 +262,7 @@ export default class LexicalEditorElement extends HTMLElement {
         },
         TableCellNode,
         TableRowNode,
+        ImageGalleryNode,
       )
     }
 
@@ -362,6 +364,7 @@ export default class LexicalEditorElement extends HTMLElement {
       registerRichText(this.editor)
       registerList(this.editor)
       this.#registerTableComponents()
+      this.#registerImageGalleryCleanup()
       this.#registerCodeHiglightingComponents()
       if (this.supportsMarkdown) {
         registerMarkdownShortcuts(this.editor, TRANSFORMERS)
@@ -372,6 +375,42 @@ export default class LexicalEditorElement extends HTMLElement {
     this.historyState = createEmptyHistoryState()
     registerHistory(this.editor, this.historyState, 20)
   }
+
+  #registerImageGalleryCleanup() {
+    this.editor.registerNodeTransform(ActionTextAttachmentNode, (node) => {
+      // Only process image attachments
+      if (! this.contents.isImageAttachment(node)) {
+        return
+      }
+  
+      // Group adjacent images into gallery
+      this.contents.groupAdjacentImagesIntoGallery(node)
+    })
+
+    this.editor.registerNodeTransform(ImageGalleryNode, (node) => {
+      if (node.isEmpty()) {
+        node.remove()
+      }
+
+      // Ensure empty paragraph before gallery
+      const prevSibling = node.getPreviousSibling()
+      if (!prevSibling || !$isParagraphNode(prevSibling)) {
+        node.insertBefore($createParagraphNode())
+      } else if (prevSibling.getTextContent().trim() !== "") {
+        // If previous paragraph has content, insert an empty one
+        node.insertBefore($createParagraphNode())
+      }
+
+      // Ensure empty paragraph after gallery
+      const nextSibling = node.getNextSibling()
+      if (!nextSibling || !$isParagraphNode(nextSibling)) {
+        node.insertAfter($createParagraphNode())
+      } else if (nextSibling.getTextContent().trim() !== "") {
+        // If next paragraph has content, insert an empty one
+        node.insertAfter($createParagraphNode())
+      }
+    })
+  } 
 
   #registerTableComponents() {
     registerTablePlugin(this.editor)

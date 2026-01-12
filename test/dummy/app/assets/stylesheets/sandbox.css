@@ -72,7 +72,8 @@ main {
   }
 }
 
-section {
+.input,
+.output {
   min-inline-size: 0;
   padding: var(--sandbox-padding);
   position: relative;
