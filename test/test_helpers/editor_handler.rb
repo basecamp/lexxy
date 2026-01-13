@@ -33,6 +33,11 @@ class EditorHandler
     evaluate_script "this.hasOpenPrompt"
   end
 
+  def click
+    # Proper usage is a click on the content element rather than on the editor
+    content_element.click
+  end
+
   def send(*keys)
     simulate_first_interaction_if_needed
     content_element.send_keys *keys
