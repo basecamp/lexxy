@@ -23,7 +23,9 @@ import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
+import Extensions from "../editor/extensions"
 import Highlighter from "../editor/highlighter"
+
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 
@@ -46,6 +48,7 @@ export default class LexicalEditorElement extends HTMLElement {
   connectedCallback() {
     this.id ??= generateDomId("lexxy-editor")
     this.config = new Configuration(this)
+    this.extensions = new Extensions(this)
     this.highlighter = new Highlighter(this)
 
     this.editor = this.#createEditor()
@@ -243,10 +246,19 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #lexicalExtensions() {
-    return this.supportsRichText ? [
+    const extensions = [ ]
+    const richTextExtensions = [
       this.highlighter.lexicalExtension,
       TrixContentExtension
-    ] : [ ]
+    ]
+
+    if (this.supportsRichText) {
+      extensions.push(...richTextExtensions)
+    }
+
+    extensions.push(...this.extensions.lexicalExtensions)
+
+    return extensions
   }
 
   get #lexicalNodes() {
