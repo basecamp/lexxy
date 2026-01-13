@@ -16,6 +16,24 @@ import {
 
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import { createElement } from "../helpers/html_helper"
+import { capitalizeFirstLetter } from "../helpers/string_helper"
+
+const TableAction = Object.freeze({
+  INSERT:  "insert",
+  DELETE: "delete",
+  TOGGLE: "toggle"
+})
+
+const TableChildType = Object.freeze({
+  ROW: "row",
+  COLUMN: "column",
+  TABLE: "table"
+})
+
+const TableDirection = Object.freeze({
+  BEFORE: "before",
+  AFTER: "after"
+})
 
 export class TableHandler extends HTMLElement {
   connectedCallback() {
@@ -57,7 +75,7 @@ export class TableHandler extends HTMLElement {
   }
 
   get #tableHandlerButtons() {
-    return Array.from(this.querySelectorAll("button, details > summary"))
+    return Array.from(this.buttonsContainer.querySelectorAll("button, details > summary"))
   }
 
   #registerKeyboardShortcuts() {
@@ -70,8 +88,7 @@ export class TableHandler extends HTMLElement {
 
   #handleKeyDown = (event) => {
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
-      const firstButton = this.querySelector("button, [tabindex]:not([tabindex='-1'])")
-      this.#setFocusStateOnSelectedCell()
+      const firstButton = this.buttonsContainer?.querySelector("button, [tabindex]:not([tabindex='-1'])")
       firstButton?.focus()
     } else if (event.key === "Escape") {
       this.#editor.getEditorState().read(() => {
@@ -95,16 +112,22 @@ export class TableHandler extends HTMLElement {
   }
 
   #setUpButtons() {
-    this.appendChild(this.#createRowButtonsContainer())
-    this.appendChild(this.#createColumnButtonsContainer())
+    this.buttonsContainer = createElement("div", {
+      className: "lexxy-table-handle-buttons"
+    })
+
+    this.buttonsContainer.appendChild(this.#createRowButtonsContainer())
+    this.buttonsContainer.appendChild(this.#createColumnButtonsContainer())
 
     this.moreMenu = this.#createMoreMenu()
-    this.appendChild(this.moreMenu)
-    this.addEventListener("keydown", this.#handleTableHandlerKeydown)
+    this.buttonsContainer.appendChild(this.moreMenu)
+    this.buttonsContainer.addEventListener("keydown", this.#handleTableHandlerKeydown)
+
+    this.#editorElement.appendChild(this.buttonsContainer)
   }
 
   #showTableHandlerButtons() {
-    this.style.display = "flex"
+    this.buttonsContainer.style.display = "flex"
     this.#closeMoreMenu()
 
     this.#updateRowColumnCount()
@@ -112,7 +135,7 @@ export class TableHandler extends HTMLElement {
   }
 
   #hideTableHandlerButtons() {
-    this.style.display = "none"
+    this.buttonsContainer.style.display = "none"
     this.#closeMoreMenu()
 
     this.#setTableFocusState(false)
@@ -128,8 +151,8 @@ export class TableHandler extends HTMLElement {
 
     const relativeTop = tableRect.top - editorRect.top
     const relativeCenter = (tableRect.left + tableRect.right) / 2 - editorRect.left
-    this.style.top = `${relativeTop}px`
-    this.style.left = `${relativeCenter}px`
+    this.buttonsContainer.style.top = `${relativeTop}px`
+    this.buttonsContainer.style.left = `${relativeCenter}px`
   }
 
   #updateRowColumnCount() {
@@ -145,24 +168,65 @@ export class TableHandler extends HTMLElement {
     this.columnCount.textContent = `${columnCount} column${columnCount === 1 ? "" : "s"}`
   }
 
-  #createButton(icon, label, onClick) {
+  #createCommandButton(label, command) {
+    const button = this.#createButton(label, this.#executeTableCommand, command)
+    return button
+  }
+
+  #createButton(label, onClick, command = {}) {
     const button = createElement("button", {
       className: "lexxy-table-control__button",
       "aria-label": label,
       type: "button"
     })
     button.tabIndex = -1
-    button.innerHTML = `${icon} <span>${label}</span>`
-    button.addEventListener("click", onClick.bind(this))
+    button.innerHTML = `${this.#icon(command)} <span>${label}</span>`
+    button.addEventListener("click", () => onClick.call(this, command))
+    button.addEventListener("mouseover", () => this.#handleActionHover(true, command))
+    button.addEventListener("focus", () => this.#handleActionHover(true, command))
+    button.addEventListener("mouseout", () => this.#handleActionHover(false, command))
+    button.addEventListener("blur", () => this.#handleActionHover(false, command))
 
     return button
+  }
+
+  #handleActionHover(state, command) {
+    this.#editor.getEditorState().read(() => {
+      let cellsToHighlight = null
+
+      switch (command.childType) {
+        case TableChildType.ROW:
+          cellsToHighlight = this.#getRowSiblingsOfCurrentCell()
+          break
+        case TableChildType.COLUMN:
+          cellsToHighlight = this.#getColumnSiblingsOfCurrentCell()
+          break
+        case TableChildType.TABLE:
+          cellsToHighlight = this.currentTableNode?.getChildren()
+          break
+      }
+
+      if (!cellsToHighlight) return
+
+      cellsToHighlight.forEach(cell => {
+        const cellElement = this.#editor.getElementByKey(cell.getKey())
+        if (!cellElement) return
+        cellElement.classList.toggle("lexxy-content__table-cell--focused", state)
+
+        if (state) {
+          Object.assign(cellElement.dataset, command)
+        } else {
+          this.#clearCellStyles()
+        }
+      })
+    })
   }
 
   #createRowButtonsContainer() {
     const container = createElement("div", { className: "lexxy-table-control" })
 
-    const plusButton = this.#createButton("+", "Add row", () => this.#insertTableRow("after"))
-    const minusButton = this.#createButton("−", "Remove row", this.#deleteTableRow)
+    const plusButton = this.#createCommandButton("Add row", { action: TableAction.INSERT, childType: TableChildType.ROW, direction: TableDirection.AFTER })
+    const minusButton = this.#createCommandButton("Remove row", { action: TableAction.DELETE, childType: TableChildType.ROW })
 
     this.rowCount = createElement("span")
     this.rowCount.textContent = "_ rows"
@@ -177,8 +241,8 @@ export class TableHandler extends HTMLElement {
   #createColumnButtonsContainer() {
     const container = createElement("div", { className: "lexxy-table-control" })
 
-    const plusButton = this.#createButton("+", "Add column", () => this.#insertTableColumn("after"))
-    const minusButton = this.#createButton("−", "Remove column", this.#deleteTableColumn)
+    const plusButton = this.#createCommandButton("Add column", { action: TableAction.INSERT, childType: TableChildType.COLUMN, direction: TableDirection.AFTER })
+    const minusButton = this.#createCommandButton("Remove column", { action: TableAction.DELETE, childType: TableChildType.COLUMN })
 
     this.columnCount = createElement("span")
     this.columnCount.textContent = "_ columns"
@@ -208,23 +272,17 @@ export class TableHandler extends HTMLElement {
     details.appendChild(this.#createColumnSection())
     details.appendChild(this.#createDeleteTableSection())
 
-    container.addEventListener("toggle", this.#handleMoreMenuToggle.bind(this))
-
     return container
   }
 
   #createColumnSection() {
     const columnSection = createElement("section", { className: "lexxy-table-control__more-menu-section" })
 
-    const columnButtons = [
-      { icon: this.#icon("add-column-before"), label: "Add column before", onClick: () => this.#insertTableColumn("left") },
-      { icon: this.#icon("toggle-column-style"), label: "Toggle column style", onClick: this.#toggleColumnHeaderStyle },
-    ]
+    const addColumnBeforeButton = this.#createCommandButton("Add column before", { action: TableAction.INSERT, childType: TableChildType.COLUMN, direction: TableDirection.BEFORE })
+    const toggleColumnStyleButton = this.#createButton("Toggle column style", this.#toggleColumnHeaderStyle, { action: TableAction.TOGGLE, childType: TableChildType.COLUMN })
 
-    columnButtons.forEach(button => {
-      const buttonElement = this.#createButton(button.icon, button.label, button.onClick)
-      columnSection.appendChild(buttonElement)
-    })
+    columnSection.appendChild(addColumnBeforeButton)
+    columnSection.appendChild(toggleColumnStyleButton)
 
     return columnSection
   }
@@ -232,15 +290,11 @@ export class TableHandler extends HTMLElement {
   #createRowSection() {
     const rowSection = createElement("section", { className: "lexxy-table-control__more-menu-section" })
 
-    const rowButtons = [
-      { icon: this.#icon("add-row-above"), label: "Add row above", onClick: () => this.#insertTableRow("above") },
-      { icon: this.#icon("toggle-row-style"), label: "Toggle row style", onClick: this.#toggleRowHeaderStyle }
-    ]
+    const addRowAboveButton = this.#createCommandButton("Add row above", { action: TableAction.INSERT, childType: TableChildType.ROW, direction: TableDirection.BEFORE })
+    const toggleRowStyleButton = this.#createButton("Toggle row style", this.#toggleRowHeaderStyle, { action: TableAction.TOGGLE, childType: TableChildType.ROW })
 
-    rowButtons.forEach(button => {
-      const buttonElement = this.#createButton(button.icon, button.label, button.onClick)
-      rowSection.appendChild(buttonElement)
-    })
+    rowSection.appendChild(addRowAboveButton)
+    rowSection.appendChild(toggleRowStyleButton)
 
     return rowSection
   }
@@ -248,25 +302,16 @@ export class TableHandler extends HTMLElement {
   #createDeleteTableSection() {
     const deleteSection = createElement("section", { className: "lexxy-table-control__more-menu-section" })
 
-    const deleteButton = { icon: this.#icon("delete-table"), label: "Delete table", onClick: this.#deleteTable }
+    const deleteButton = this.#createButton("Delete table", this.#deleteTable, { action: TableAction.DELETE, childType: TableChildType.TABLE })
 
-    const buttonElement = this.#createButton(deleteButton.icon, deleteButton.label, deleteButton.onClick)
-    deleteSection.appendChild(buttonElement)
+    deleteSection.appendChild(deleteButton)
 
     return deleteSection
   }
 
-  #handleMoreMenuToggle() {
-    if (this.moreMenu.open) {
-      this.#setFocusStateOnSelectedCell()
-    } else {
-      this.#removeFocusStateFromSelectedCell()
-    }
-  }
-
   #closeMoreMenu() {
-    this.#removeFocusStateFromSelectedCell()
-    this.moreMenu.removeAttribute("open")
+    this.#clearCellStyles()
+    this.moreMenu?.removeAttribute("open")
   }
 
   #monitorForTableSelection() {
@@ -303,36 +348,63 @@ export class TableHandler extends HTMLElement {
     this.#showTableHandlerButtons()
   }
 
-  #setFocusStateOnSelectedCell() {
-    this.#editor.getEditorState().read(() => {
-      const currentCell = this.#currentCell
-      if (!currentCell) return
+  #getRowSiblingsOfCurrentCell() {
+    const currentCell = this.#currentCell
+    if (!currentCell) return
 
-      const cellElement = this.#editor.getElementByKey(currentCell.getKey())
-      if (!cellElement) return
+    const parentNode = currentCell.getParent()
+    if (!parentNode) return
 
-      cellElement.classList.add("table-cell--selected")
+    const rows = this.currentTableNode.getChildren()
+    const row = rows[this.#currentRowIndex]
+    if (!row) return
+
+    return row.getChildren()
+  }
+
+  #getColumnSiblingsOfCurrentCell() {
+    const currentCell = this.#currentCell
+    if (!currentCell) return
+
+    const rows = this.currentTableNode.getChildren()
+    const column = this.#currentColumnIndex
+
+    const siblings = []
+
+    rows.forEach(row => {
+      const cell = row.getChildren()[column]
+      if (!cell) return
+      siblings.push(cell)
+    })
+
+    return siblings
+  }
+
+  #clearCellStyles() {
+    this.#editorElement.querySelectorAll(".lexxy-content__table-cell--focused")?.forEach(cell => {
+      cell.classList.remove("lexxy-content__table-cell--focused")
+      cell.removeAttribute("data-action")
+      cell.removeAttribute("data-child-type")
+      cell.removeAttribute("data-direction")
     })
   }
 
-  #removeFocusStateFromSelectedCell() {
-    this.#editorElement.querySelector(".table-cell--selected")?.classList.remove("table-cell--selected")
-  }
+  #selectFirstNewCell(command) {
+    const { childType, direction } = command
 
-  #selectFirstNewCell(childType, direction) {
     if (!this.currentTableNode) return
 
     const rows = this.currentTableNode.getChildren()
     let targetCell = null
-    
-    if (childType === "row") {
-      const targetRowIndex = direction === "above" ? this.#currentRowIndex - 1 :  this.#currentRowIndex + 1
+
+    if (childType === TableChildType.ROW) {
+      const targetRowIndex = direction === TableDirection.BEFORE ? this.#currentRowIndex - 1 : this.#currentRowIndex + 1
       targetCell = rows[targetRowIndex]?.getFirstChild()
-    } else if (childType === "column") {
-      const targetColumnIndex = direction === "left" ? this.#currentColumnIndex - 1 : this.#currentColumnIndex
+    } else if (childType === TableChildType.COLUMN) {
+      const targetColumnIndex = this.#currentColumnIndex
       targetCell = rows[0]?.getChildren()[targetColumnIndex]
     }
-      
+
     if ($isTableCellNode(targetCell)) {
       targetCell.selectStart()
     }
@@ -345,69 +417,29 @@ export class TableHandler extends HTMLElement {
     this.#updateRowColumnCount()
   }
 
-  #insertTableRow(direction) {
-    this.#executeTableCommand("insert", "row", direction)
-  }
-
-  #insertTableColumn(direction) {
-    this.#executeTableCommand("insert", "column", direction)
-  }
-
-  #deleteTableRow(direction) {
-    this.#executeTableCommand("delete", "row", direction)
-  }
-
-  #deleteTableColumn(direction) {
-    this.#executeTableCommand("delete", "column", direction)
-  }
-
-  #executeTableCommand(action = "insert", childType = "row", direction) {
+  #executeTableCommand(command) {
     this.#editor.update(() => {
       const currentCell = this.#currentCell
       if (!currentCell) return
 
-      this.#dispatchTableCommand(action, childType, direction)
+      this.#editor.dispatchCommand(this.#commandName(command))
 
-      if (action === "insert") {
-        this.#selectFirstNewCell(childType, direction)
+      if (command.action === TableAction.INSERT) {
+        this.#selectFirstNewCell(command)
       }
     })
 
+    this.#clearCellStyles()
     this.#closeMoreMenu()
     this.#updateRowColumnCount()
   }
 
-  #dispatchTableCommand(action, childType, direction) {
-    switch (action) {
-      case "insert":
-        switch (childType) {
-          case "row":
-            if (direction === "above") {
-              this.#editor.dispatchCommand("insertTableRowAbove")
-            } else {
-              this.#editor.dispatchCommand("insertTableRowBelow")
-            }
-            break
-          case "column":
-            if (direction === "left") {
-              this.#editor.dispatchCommand("insertTableColumnBefore")
-            } else {
-              this.#editor.dispatchCommand("insertTableColumnAfter")
-            }
-            break
-        }
-        break
-      case "delete":
-        switch (childType) {
-          case "row":
-            this.#editor.dispatchCommand("deleteTableRow")
-            break
-          case "column":
-            this.#editor.dispatchCommand("deleteTableColumn")
-            break
-        }
-        break
-    }
+  #commandName(command) {
+    const { action, childType, direction } = command
+
+    const childTypeSuffix = capitalizeFirstLetter(childType)
+    const directionSuffix = action == TableAction.INSERT ? capitalizeFirstLetter(direction) : ""
+    return `${action}Table${childTypeSuffix}${directionSuffix}`
   }
 
   #toggleRowHeaderStyle() {
@@ -461,55 +493,48 @@ export class TableHandler extends HTMLElement {
   }
 
   #icon(name) {
+    const { action, childType, direction } = name
     const icons =
       {
-        "add-row-above":
+        [TableAction.INSERT + TableChildType.ROW + TableDirection.BEFORE]:
           `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
           <path d="M4 7L0 10V4L4 7ZM6.5 7.5H16.5V6.5H6.5V7.5ZM18 8C18 8.55228 17.5523 9 17 9H6C5.44772 9 5 8.55228 5 8V6C5 5.44772 5.44772 5 6 5H17C17.5523 5 18 5.44772 18 6V8Z"/><path d="M2 2C2 1.44772 2.44772 1 3 1H15C15.5523 1 16 1.44772 16 2C16 2.55228 15.5523 3 15 3H3C2.44772 3 2 2.55228 2 2Z"/><path d="M2 12C2 11.4477 2.44772 11 3 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H3C2.44772 13 2 12.5523 2 12Z"/><path d="M2 16C2 15.4477 2.44772 15 3 15H15C15.5523 15 16 15.4477 16 16C16 16.5523 15.5523 17 15 17H3C2.44772 17 2 16.5523 2 16Z"/>
           </svg>`,
 
-        "add-row-below":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 11L0 8V14L4 11ZM6.5 10.5H16.5V11.5H6.5V10.5ZM18 10C18 9.44772 17.5523 9 17 9H6C5.44772 9 5 9.44772 5 10V12C5 12.5523 5.44772 13 6 13H17C17.5523 13 18 12.5523 18 12V10Z"/><path d="M2 16C2 16.5523 2.44772 17 3 17H15C15.5523 17 16 16.5523 16 16C16 15.4477 15.5523 15 15 15H3C2.44772 15 2 15.4477 2 16Z"/><path d="M2 6C2 6.55228 2.44772 7 3 7H15C15.5523 7 16 6.55228 16 6C16 5.44772 15.5523 5 15 5H3C2.44772 5 2 5.44772 2 6Z"/><path d="M2 2C2 2.55228 2.44772 3 3 3H15C15.5523 3 16 2.55228 16 2C16 1.44772 15.5523 1 15 1H3C2.44772 1 2 1.44772 2 2Z"/>
-          </svg>`,
+        [TableAction.INSERT + TableChildType.ROW + TableDirection.AFTER]:
+          "+",
 
-        "remove-row":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.9951 10.1025C17.9438 10.6067 17.5177 11 17 11H12.4922L13.9922 9.5H16.5V5.5L1.5 5.5L1.5 9.5H4.00586L5.50586 11H1L0.897461 10.9951C0.427034 10.9472 0.0527828 10.573 0.00488281 10.1025L0 10L1.78814e-07 5C2.61831e-07 4.48232 0.393332 4.05621 0.897461 4.00488L1 4L17 4C17.5523 4 18 4.44772 18 5V10L17.9951 10.1025Z"/><path d="M11.2969 15.0146L8.99902 12.7168L6.7002 15.0146L5.63965 13.9541L7.93848 11.6562L5.63965 9.3584L6.7002 8.29785L8.99902 10.5957L11.2969 8.29785L12.3574 9.3584L10.0596 11.6562L12.3574 13.9541L11.2969 15.0146Z"/>
-          </svg>`,
+        [TableAction.DELETE + TableChildType.ROW]:
+          "-",
 
-        "toggle-row-style":
+        [TableAction.TOGGLE + TableChildType.ROW]:
           `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
           <path d="M1 2C1 1.44772 1.44772 1 2 1H7C7.55228 1 8 1.44772 8 2V7C8 7.55228 7.55228 8 7 8H2C1.44772 8 1 7.55228 1 7V2Z"/><path d="M2.5 15.5H6.5V11.5H2.5V15.5ZM8 16C8 16.5177 7.60667 16.9438 7.10254 16.9951L7 17H2L1.89746 16.9951C1.42703 16.9472 1.05278 16.573 1.00488 16.1025L1 16V11C1 10.4477 1.44772 10 2 10H7C7.55228 10 8 10.4477 8 11V16Z"/><path d="M10 2C10 1.44772 10.4477 1 11 1H16C16.5523 1 17 1.44772 17 2V7C17 7.55228 16.5523 8 16 8H11C10.4477 8 10 7.55228 10 7V2Z"/><path d="M11.5 15.5H15.5V11.5H11.5V15.5ZM17 16C17 16.5177 16.6067 16.9438 16.1025 16.9951L16 17H11L10.8975 16.9951C10.427 16.9472 10.0528 16.573 10.0049 16.1025L10 16V11C10 10.4477 10.4477 10 11 10H16C16.5523 10 17 10.4477 17 11V16Z"/>
           </svg>`,
 
-        "add-column-before":
+        [TableAction.INSERT + TableChildType.COLUMN + TableDirection.BEFORE]:
           `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
           <path d="M7 4L10 2.62268e-07L4 0L7 4ZM7.5 6.5L7.5 16.5H6.5L6.5 6.5H7.5ZM8 18C8.55228 18 9 17.5523 9 17V6C9 5.44772 8.55229 5 8 5H6C5.44772 5 5 5.44772 5 6L5 17C5 17.5523 5.44772 18 6 18H8Z"/><path d="M2 2C1.44772 2 1 2.44772 1 3L1 15C1 15.5523 1.44772 16 2 16C2.55228 16 3 15.5523 3 15L3 3C3 2.44772 2.55229 2 2 2Z"/><path d="M12 2C11.4477 2 11 2.44772 11 3L11 15C11 15.5523 11.4477 16 12 16C12.5523 16 13 15.5523 13 15L13 3C13 2.44772 12.5523 2 12 2Z"/><path d="M16 2C15.4477 2 15 2.44772 15 3L15 15C15 15.5523 15.4477 16 16 16C16.5523 16 17 15.5523 17 15V3C17 2.44772 16.5523 2 16 2Z"/>
           </svg>`,
 
-        "add-column-after":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M11 4L8 2.62268e-07L14 0L11 4ZM10.5 6.5V16.5H11.5V6.5H10.5ZM10 18C9.44772 18 9 17.5523 9 17V6C9 5.44772 9.44772 5 10 5H12C12.5523 5 13 5.44772 13 6V17C13 17.5523 12.5523 18 12 18H10Z"/><path d="M16 2C16.5523 2 17 2.44772 17 3L17 15C17 15.5523 16.5523 16 16 16C15.4477 16 15 15.5523 15 15V3C15 2.44772 15.4477 2 16 2Z"/><path d="M6 2C6.55228 2 7 2.44772 7 3L7 15C7 15.5523 6.55228 16 6 16C5.44772 16 5 15.5523 5 15L5 3C5 2.44772 5.44771 2 6 2Z"/><path d="M2 2C2.55228 2 3 2.44772 3 3L3 15C3 15.5523 2.55228 16 2 16C1.44772 16 1 15.5523 1 15V3C1 2.44772 1.44771 2 2 2Z"/>
-          </svg>`,
+        [TableAction.INSERT + TableChildType.COLUMN + TableDirection.AFTER]:
+          "+",
 
-        "remove-column":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10.1025 0.00488281C10.6067 0.0562145 11 0.482323 11 1V5.50781L9.5 4.00781V1.5H5.5V16.5H9.5V13.9941L11 12.4941V17L10.9951 17.1025C10.9472 17.573 10.573 17.9472 10.1025 17.9951L10 18H5C4.48232 18 4.05621 17.6067 4.00488 17.1025L4 17V1C4 0.447715 4.44772 1.61064e-08 5 0H10L10.1025 0.00488281Z"/><path d="M12.7169 8.99999L15.015 11.2981L13.9543 12.3588L11.6562 10.0607L9.35815 12.3588L8.29749 11.2981L10.5956 8.99999L8.29749 6.7019L9.35815 5.64124L11.6562 7.93933L13.9543 5.64124L15.015 6.7019L12.7169 8.99999Z"/>
-          </svg>`,
+        [TableAction.DELETE + TableChildType.COLUMN]:
+          "-",
 
-        "toggle-column-style":
+        [TableAction.TOGGLE + TableChildType.COLUMN]:
           `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
           <path d="M1 2C1 1.44772 1.44772 1 2 1H7C7.55228 1 8 1.44772 8 2V7C8 7.55228 7.55228 8 7 8H2C1.44772 8 1 7.55228 1 7V2Z"/><path d="M1 11C1 10.4477 1.44772 10 2 10H7C7.55228 10 8 10.4477 8 11V16C8 16.5523 7.55228 17 7 17H2C1.44772 17 1 16.5523 1 16V11Z"/><path d="M11.5 6.5H15.5V2.5H11.5V6.5ZM17 7C17 7.51768 16.6067 7.94379 16.1025 7.99512L16 8H11L10.8975 7.99512C10.427 7.94722 10.0528 7.57297 10.0049 7.10254L10 7V2C10 1.44772 10.4477 1 11 1H16C16.5523 1 17 1.44772 17 2V7Z"/><path d="M11.5 15.5H15.5V11.5H11.5V15.5ZM17 16C17 16.5177 16.6067 16.9438 16.1025 16.9951L16 17H11L10.8975 16.9951C10.427 16.9472 10.0528 16.573 10.0049 16.1025L10 16V11C10 10.4477 10.4477 10 11 10H16C16.5523 10 17 10.4477 17 11V16Z"/>
           </svg>`,
 
-        "delete-table":
+        [TableAction.DELETE + TableChildType.TABLE]:
           `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M18.2129 19.2305C18.0925 20.7933 16.7892 22 15.2217 22H7.77832C6.21084 22 4.90753 20.7933 4.78711 19.2305L4 9H19L18.2129 19.2305Z"/><path d="M13 2C14.1046 2 15 2.89543 15 4H19C19.5523 4 20 4.44772 20 5V6C20 6.55228 19.5523 7 19 7H4C3.44772 7 3 6.55228 3 6V5C3 4.44772 3.44772 4 4 4H8C8 2.89543 8.89543 2 10 2H13Z"/>
           </svg>`
       }
 
-    return icons[name]
+    return icons[action + childType + (action == TableAction.INSERT ? direction : "")]
   }
 }
 
