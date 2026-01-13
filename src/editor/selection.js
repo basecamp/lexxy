@@ -68,19 +68,6 @@ export default class Selection {
     })
   }
 
-  placeCursorAtTheStart() {
-    this.editor.update(() => {
-      const root = $getRoot()
-      const firstDescendant = root.getFirstDescendant()
-
-      if (firstDescendant && $isTextNode(firstDescendant)) {
-        firstDescendant.selectStart()
-      } else {
-        root.selectStart()
-      }
-    })
-  }
-
   selectedNodeWithOffset() {
     const selection = $getSelection()
     if (!selection) return { node: null, offset: 0 }

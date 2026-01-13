@@ -86,10 +86,6 @@ export default class LexicalEditorElement extends HTMLElement {
     this.editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
   }
 
-  focus() {
-    this.editor.focus()
-  }
-
   toString() {
     if (!this.cachedStringValue) {
       this.editor?.getEditorState().read(() => {
@@ -165,7 +161,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   focus() {
-    this.editor.focus()
+    this.editor.focus(() => this.#onFocus())
   }
 
   get value() {
@@ -444,22 +440,12 @@ export default class LexicalEditorElement extends HTMLElement {
     // and https://stackoverflow.com/a/72212077
     this.editor.registerCommand(BLUR_COMMAND, () => { dispatch(this, "lexxy:blur") }, COMMAND_PRIORITY_NORMAL)
     this.editor.registerCommand(FOCUS_COMMAND, () => { dispatch(this, "lexxy:focus") }, COMMAND_PRIORITY_NORMAL)
-
-    this.isFirstFocus = true
-    this.#addRootFocusListener()
-  }
-
-  #addRootFocusListener() {
-    const listener = this.editor.registerRootListener(root => {
-      root?.addEventListener("focusin", () => { this.#onFocus() })
-    })
-    this.#addUnregisterHandler(listener)
   }
 
   #onFocus() {
     if (this.isEmpty) {
       this.selection.placeCursorAtTheEnd()
-    } 
+    }
   }
 
   #handleAutofocus() {
