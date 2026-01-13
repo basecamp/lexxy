@@ -8084,7 +8084,14 @@ class Selection {
 
   placeCursorAtTheEnd() {
     this.editor.update(() => {
-      No().selectEnd();
+      const root = No();
+      const lastDescendant = root.getLastDescendant();
+
+      if (lastDescendant && lr(lastDescendant)) {
+        lastDescendant.selectEnd();
+      } else {
+        root.selectEnd();
+      }
     });
   }
 
@@ -10300,6 +10307,8 @@ class LexicalEditorElement extends HTMLElement {
     requestAnimationFrame(() => dispatch(this, "lexxy:initialize"));
     this.toggleAttribute("connected", true);
 
+    this.#handleAutofocus();
+
     this.valueBeforeDisconnect = null;
   }
 
@@ -10322,10 +10331,6 @@ class LexicalEditorElement extends HTMLElement {
   formResetCallback() {
     this.value = this.#initialValue;
     this.editor.dispatchCommand(je$2, undefined);
-  }
-
-  focus() {
-    this.editor.focus();
   }
 
   toString() {
@@ -10400,6 +10405,10 @@ class LexicalEditorElement extends HTMLElement {
 
   get contentTabIndex() {
     return parseInt(this.editorContentElement?.getAttribute("tabindex") ?? "0")
+  }
+
+  focus() {
+    this.editor.focus(() => this.#onFocus());
   }
 
   get value() {
@@ -10678,6 +10687,20 @@ class LexicalEditorElement extends HTMLElement {
     // and https://stackoverflow.com/a/72212077
     this.editor.registerCommand(Ye, () => { dispatch(this, "lexxy:blur"); }, Ri);
     this.editor.registerCommand(Ve$1, () => { dispatch(this, "lexxy:focus"); }, Ri);
+  }
+
+  #onFocus() {
+    if (this.isEmpty) {
+      this.selection.placeCursorAtTheEnd();
+    }
+  }
+
+  #handleAutofocus() {
+    if (!document.querySelector(":focus")) {
+      if (this.hasAttribute("autofocus") && document.querySelector("[autofocus]") === this) {
+        this.focus();
+      }
+    }
   }
 
   #handleTables() {
