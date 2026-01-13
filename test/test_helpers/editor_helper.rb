@@ -10,6 +10,8 @@ module EditorHelper
 
   def assert_editor_plain_text(value)
     wait_until { find_editor.plain_text_value == value }
+  rescue Timeout::Error
+    assert_equal value, find_editor.plain_text_value
   end
 
   def assert_editor_html(expected = nil, &block)
