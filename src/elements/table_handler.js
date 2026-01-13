@@ -44,13 +44,13 @@ export class TableHandler extends HTMLElement {
     return $getTableCellNodeFromLexicalNode(anchorNode)
   }
 
-  get #currentRow() {
+  get #currentRowIndex() {
     const currentCell = this.#currentCell
     if (!currentCell) return 0
     return $getTableRowIndexFromTableCellNode(currentCell)
   }
 
-  get #currentColumn() {
+  get #currentColumnIndex() {
     const currentCell = this.#currentCell
     if (!currentCell) return 0
     return $getTableColumnIndexFromTableCellNode(currentCell)
@@ -161,8 +161,8 @@ export class TableHandler extends HTMLElement {
   #createRowButtonsContainer() {
     const container = createElement("div", { className: "lexxy-table-control" })
 
-    const plusButton = this.#createButton("+", "Add row", () => this.#insertTableRow("end"))
-    const minusButton = this.#createButton("−", "Remove row", () => this.#deleteTableRow("end"))
+    const plusButton = this.#createButton("+", "Add row", () => this.#insertTableRow("after"))
+    const minusButton = this.#createButton("−", "Remove row", this.#deleteTableRow)
 
     this.rowCount = createElement("span")
     this.rowCount.textContent = "_ rows"
@@ -177,8 +177,8 @@ export class TableHandler extends HTMLElement {
   #createColumnButtonsContainer() {
     const container = createElement("div", { className: "lexxy-table-control" })
 
-    const plusButton = this.#createButton("+", "Add column", () => this.#insertTableColumn("end"))
-    const minusButton = this.#createButton("−", "Remove column", () => this.#deleteTableColumn("end"))
+    const plusButton = this.#createButton("+", "Add column", () => this.#insertTableColumn("after"))
+    const minusButton = this.#createButton("−", "Remove column", this.#deleteTableColumn)
 
     this.columnCount = createElement("span")
     this.columnCount.textContent = "_ columns"
@@ -218,8 +218,6 @@ export class TableHandler extends HTMLElement {
 
     const columnButtons = [
       { icon: this.#icon("add-column-before"), label: "Add column before", onClick: () => this.#insertTableColumn("left") },
-      { icon: this.#icon("add-column-after"), label: "Add column after", onClick: () => this.#insertTableColumn("right") },
-      { icon: this.#icon("remove-column"), label: "Remove column", onClick: this.#deleteTableColumn },
       { icon: this.#icon("toggle-column-style"), label: "Toggle column style", onClick: this.#toggleColumnHeaderStyle },
     ]
 
@@ -236,8 +234,6 @@ export class TableHandler extends HTMLElement {
 
     const rowButtons = [
       { icon: this.#icon("add-row-above"), label: "Add row above", onClick: () => this.#insertTableRow("above") },
-      { icon: this.#icon("add-row-below"), label: "Add row below", onClick: () => this.#insertTableRow("below") },
-      { icon: this.#icon("remove-row"), label: "Remove row", onClick: this.#deleteTableRow },
       { icon: this.#icon("toggle-row-style"), label: "Toggle row style", onClick: this.#toggleRowHeaderStyle }
     ]
 
@@ -323,13 +319,23 @@ export class TableHandler extends HTMLElement {
     this.#editorElement.querySelector(".table-cell--selected")?.classList.remove("table-cell--selected")
   }
 
-  #selectLastTableCell() {
+  #selectFirstNewCell(childType, direction) {
     if (!this.currentTableNode) return
 
-    const last = this.currentTableNode.getLastChild().getLastChild()
-    if (!$isTableCellNode(last)) return
-
-    last.selectEnd()
+    const rows = this.currentTableNode.getChildren()
+    let targetCell = null
+    
+    if (childType === "row") {
+      const targetRowIndex = direction === "above" ? this.#currentRowIndex - 1 :  this.#currentRowIndex + 1
+      targetCell = rows[targetRowIndex]?.getFirstChild()
+    } else if (childType === "column") {
+      const targetColumnIndex = direction === "left" ? this.#currentColumnIndex - 1 : this.#currentColumnIndex
+      targetCell = rows[0]?.getChildren()[targetColumnIndex]
+    }
+      
+    if ($isTableCellNode(targetCell)) {
+      targetCell.selectStart()
+    }
   }
 
   #deleteTable() {
@@ -360,14 +366,10 @@ export class TableHandler extends HTMLElement {
       const currentCell = this.#currentCell
       if (!currentCell) return
 
-      if (direction === "end") {
-        this.#selectLastTableCell()
-      }
-
       this.#dispatchTableCommand(action, childType, direction)
 
-      if (currentCell.isAttached()) {
-        currentCell.selectEnd()
+      if (action === "insert") {
+        this.#selectFirstNewCell(childType, direction)
       }
     })
 
@@ -412,7 +414,7 @@ export class TableHandler extends HTMLElement {
     this.#editor.update(() => {
       const rows = this.currentTableNode.getChildren()
 
-      const row = rows[this.#currentRow]
+      const row = rows[this.#currentRowIndex]
       if (!row) return
 
       const cells = row.getChildren()
@@ -432,18 +434,18 @@ export class TableHandler extends HTMLElement {
     this.#editor.update(() => {
       const rows = this.currentTableNode.getChildren()
 
-      const row = rows[this.#currentRow]
+      const row = rows[this.#currentRowIndex]
       if (!row) return
 
       const cells = row.getChildren()
-      const selectedCell = $getTableCellNodeFromLexicalNode(cells[this.#currentColumn])
+      const selectedCell = $getTableCellNodeFromLexicalNode(cells[this.#currentColumnIndex])
       if (!selectedCell) return
 
       const currentStyle = selectedCell.getHeaderStyles()
       const newStyle = currentStyle ^ TableCellHeaderStates.COLUMN
 
       rows.forEach(row => {
-        const cell = row.getChildren()[this.#currentColumn]
+        const cell = row.getChildren()[this.#currentColumnIndex]
         if (!cell) return
         this.#setHeaderStyle(cell, newStyle, TableCellHeaderStates.COLUMN)
       })
