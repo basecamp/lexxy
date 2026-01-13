@@ -450,10 +450,10 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #addRootFocusListener() {
-    const root = this.editor.getRootElement()
-    root.addEventListener("focusin", () => {
-      this.#onFocus()
+    const listener = this.editor.registerRootListener(root => {
+      root?.addEventListener("focusin", () => { this.#onFocus() })
     })
+    this.#addUnregisterHandler(listener)
   }
 
   #onFocus() {
