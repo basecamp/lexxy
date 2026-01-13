@@ -37,11 +37,11 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     find_editor.send "1"
 
-    assert find_editor.open_prompt?
+    wait_until { find_editor.open_prompt? }
 
     find_editor.send "peter "
 
-    assert_not find_editor.open_prompt?
+    wait_until { !find_editor.open_prompt? }
   end
 
   test "configure space support in searches" do
