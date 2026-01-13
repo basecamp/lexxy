@@ -55,34 +55,60 @@
 
   table {
     th, td {
-      --add-style: 1ch solid var(--lexxy-color-table-cell-add);
-      transition: all 0.1s ease-out;
-
-      &.table-cell--selected {
-        background-color: var(--lexxy-color-table-cell-selected-bg);
-      }
+      position: relative;
+      transition: all 0.1s ease-in-out;
 
       &.lexxy-content__table-cell--selected {
         background-color: var(--lexxy-color-table-cell-selected-bg);
         border-color: var(--lexxy-color-table-cell-selected-border);
       }
 
+      /* Used for column and row adding visualisations */
+      &:after {
+        box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent inset;
+        content: "";
+        display: block;
+        inset-block-start: -1px;
+        inset-block-end: -1px;
+        inset-inline-start: -1px;
+        inset-inline-end: -1px;
+        pointer-events: none;
+        position: absolute;
+        transition: box-shadow 0.2s ease-in-out;
+        z-index: 2;
+      }
+
       &.lexxy-content__table-cell--focused {
         &[data-action="insert"] {
           &[data-child-type="row"] {
             &[data-direction="after"] {
-              border-bottom: var(--add-style);
+              &:after {
+                box-shadow:
+                  0 var(--lexxy-table-cell-add-size) 0 0 var(--lexxy-color-table-cell-add),
+                  0 calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 var(--lexxy-color-table-cell-add) inset;
+              }
             }
             &[data-direction="before"] {
-              border-top: var(--add-style);
+              &:after {
+                box-shadow:
+                  0 calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 var(--lexxy-color-table-cell-add),
+                  0 var(--lexxy-table-cell-add-size) 0 0 var(--lexxy-color-table-cell-add) inset;
+              }
             }
           }
           &[data-child-type="column"] {
-            &[data-direction="after"] {
-              border-right: var(--add-style);
+            &[data-direction="after"] {&:after {
+              box-shadow:
+                var(--lexxy-table-cell-add-size) 0 0 0 var(--lexxy-color-table-cell-add),
+                calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 0 var(--lexxy-color-table-cell-add) inset;
+            }
             }
             &[data-direction="before"] {
-              border-left: var(--add-style);
+              &:after {
+                box-shadow:
+                  calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 0 var(--lexxy-color-table-cell-add),
+                  var(--lexxy-table-cell-add-size) 0 0 0 var(--lexxy-color-table-cell-add) inset;
+              }
             }
           }
         }
@@ -91,7 +117,7 @@
           color: var(--lexxy-color-red);
         }
         &[data-action="toggle"] {
-          background-color: var(--lexxy-color-table-cell-selected-bg);
+          background-color: var(--lexxy-color-table-cell-toggle);
         }
       }
     }
@@ -107,6 +133,12 @@
       ::selection {
         background: transparent;
       }
+    }
+  }
+
+  &:has(.lexxy-content__table-cell--selected) {
+    lexxy-table-handler {
+      visibility: hidden;
     }
   }
 
