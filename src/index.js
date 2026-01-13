@@ -14,3 +14,4 @@ import Lexxy from "./config/lexxy"
 export { highlightAll } from "./helpers/code_highlighting_helper"
 
 export const configure = Lexxy.configure
+export { default as Extension } from "./extensions/lexxy_extension"
