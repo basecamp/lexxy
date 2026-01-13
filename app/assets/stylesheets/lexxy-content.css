@@ -229,7 +229,7 @@
       }
 
       &.lexxy-content__table-cell--header {
-        background-color: var(--lexxy-color-ink-lightest);
+        background-color: var(--lexxy-color-table-header-bg);
         font-weight: bold;
       }
 
