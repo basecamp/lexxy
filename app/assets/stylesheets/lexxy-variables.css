@@ -62,6 +62,8 @@
   --lexxy-color-table-cell-selected: var(--lexxy-color-selected);
   --lexxy-color-table-cell-selected-border: highlight;
   --lexxy-color-table-cell-selected-bg: highlight;
+  --lexxy-color-table-cell-add: oklch(66% 0.196 258 / 0.3);
+  --lexxy-color-table-cell-remove: oklch(60% 0.15 27 / 0.1);
 
   /* Typography */
   --lexxy-font-base: system-ui, sans-serif;

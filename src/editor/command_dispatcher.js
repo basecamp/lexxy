@@ -47,8 +47,8 @@ const COMMANDS = [
   "uploadAttachments",
 
   "insertTable",
-  "insertTableRowAbove",
-  "insertTableRowBelow",
+  "insertTableRowBefore",
+  "insertTableRowAfter",
   "insertTableColumnAfter",
   "insertTableColumnBefore",
   "deleteTableRow",
@@ -224,11 +224,11 @@ export class CommandDispatcher {
     this.editor.dispatchCommand(INSERT_TABLE_COMMAND, { "rows": 3, "columns": 3, "includeHeaders": true })
   }
 
-  dispatchInsertTableRowBelow() {
+  dispatchInsertTableRowAfter() {
     $insertTableRowAtSelection(true)
   }
 
-  dispatchInsertTableRowAbove() {
+  dispatchInsertTableRowBefore() {
     $insertTableRowAtSelection(false)
   }
 
