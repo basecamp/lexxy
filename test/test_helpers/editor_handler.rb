@@ -29,8 +29,17 @@ class EditorHandler
     evaluate_script "this.isBlank"
   end
 
+  def has_node_selection?
+    evaluate_script "this.selection.hasNodeSelection"
+  end
+
   def open_prompt?
     evaluate_script "this.hasOpenPrompt"
+  end
+
+  def click
+    # Proper usage is a click on the content element rather than on the editor
+    content_element.click
   end
 
   def send(*keys)

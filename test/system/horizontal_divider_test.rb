@@ -23,9 +23,11 @@ class HorizontalDividerTest < ApplicationSystemTestCase
     click_on "Insert a divider"
     find_editor.send "Text after"
 
-    # Click on the divider to select it
     find("figure.horizontal-divider").click
+    wait_for_node_selection
+
     find_editor.send_key "Delete"
+    wait_for_node_selection false
 
     assert_no_selector "figure.horizontal-divider"
     assert_editor_html "<p>Text before</p><p>Text after</p>"
@@ -36,8 +38,9 @@ class HorizontalDividerTest < ApplicationSystemTestCase
     click_on "Insert a divider"
     find_editor.send "After divider"
 
-    assert_selector "figure.horizontal-divider"
-    assert_selector "figure.horizontal-divider hr"
+    assert_selector "figure.horizontal-divider" do
+      assert_selector "hr"
+    end
 
     assert_editor_html "<p>Before divider</p><hr><p>After divider</p>"
   end

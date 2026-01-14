@@ -10,6 +10,8 @@ module EditorHelper
 
   def assert_editor_plain_text(value)
     wait_until { find_editor.plain_text_value == value }
+  rescue Timeout::Error
+    assert_equal value, find_editor.plain_text_value
   end
 
   def assert_editor_html(expected = nil, &block)
@@ -70,6 +72,10 @@ module EditorHelper
   def wait_for_editor
     assert_css "lexxy-editor[connected]"
     assert_css "lexxy-toolbar[connected]" if has_css?("lexxy-toolbar")
+  end
+
+  def wait_for_node_selection(expected = true)
+    wait_until { expected == find_editor.has_node_selection? }
   end
 
   def click_table_handler_button(aria_label)
