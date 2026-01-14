@@ -47,3 +47,9 @@ The docs will be available at http://localhost:4000/lexxy/.
 ```bash
 yarn release
 ```
+
+### Create release in GitHub
+
+Create [a new release in GitHub](https://github.com/basecamp/lexxy/releases). 
+
+While in beta we are flagging the releases as pre-release.
