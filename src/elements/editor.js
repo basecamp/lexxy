@@ -60,6 +60,8 @@ export default class LexicalEditorElement extends HTMLElement {
     requestAnimationFrame(() => dispatch(this, "lexxy:initialize"))
     this.toggleAttribute("connected", true)
 
+    this.#handleAutofocus()
+
     this.valueBeforeDisconnect = null
   }
 
@@ -82,10 +84,6 @@ export default class LexicalEditorElement extends HTMLElement {
   formResetCallback() {
     this.value = this.#initialValue
     this.editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
-  }
-
-  focus() {
-    this.editor.focus()
   }
 
   toString() {
@@ -160,6 +158,10 @@ export default class LexicalEditorElement extends HTMLElement {
 
   get contentTabIndex() {
     return parseInt(this.editorContentElement?.getAttribute("tabindex") ?? "0")
+  }
+
+  focus() {
+    this.editor.focus(() => this.#onFocus())
   }
 
   get value() {
@@ -438,6 +440,20 @@ export default class LexicalEditorElement extends HTMLElement {
     // and https://stackoverflow.com/a/72212077
     this.editor.registerCommand(BLUR_COMMAND, () => { dispatch(this, "lexxy:blur") }, COMMAND_PRIORITY_NORMAL)
     this.editor.registerCommand(FOCUS_COMMAND, () => { dispatch(this, "lexxy:focus") }, COMMAND_PRIORITY_NORMAL)
+  }
+
+  #onFocus() {
+    if (this.isEmpty) {
+      this.selection.placeCursorAtTheEnd()
+    }
+  }
+
+  #handleAutofocus() {
+    if (!document.querySelector(":focus")) {
+      if (this.hasAttribute("autofocus") && document.querySelector("[autofocus]") === this) {
+        this.focus()
+      }
+    }
   }
 
   #handleTables() {

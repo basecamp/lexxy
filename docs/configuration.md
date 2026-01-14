@@ -51,7 +51,7 @@ Editors support the following options, configurable using presets and element at
 
 Lexxy also supports standard HTML attributes:
   - `placeholder`: Text displayed when the editor is empty.
-  - Form attributes: `name`, `value`, `required`, `disabled`, etc.
+  - Form attributes: `name`, `value`, `required`, `disabled`, `autofocus` etc.
 
 ## Global options
 
