@@ -24,3 +24,12 @@ export function normalizeFilteredText(string) {
 export function filterMatches(text, potentialMatch) {
   return normalizeFilteredText(text).includes(normalizeFilteredText(potentialMatch))
 }
+
+export function parameterize(text) {
+  return normalizeFilteredText(text)
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}

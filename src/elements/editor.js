@@ -18,6 +18,7 @@ import { WrappedTableNode } from "../nodes/wrapped_table_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml, sanitize } from "../helpers/html_helper"
+import { assignHeadingIds } from "../helpers/heading_id_helper"
 import { registerHeaderBackgroundTransform } from "../helpers/table_helper"
 import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
@@ -165,7 +166,9 @@ export default class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
+        let html = $generateHtmlFromNodes(this.editor, null)
+        html = assignHeadingIds(html)
+        this.cachedValue = sanitize(html)
       })
     }
 

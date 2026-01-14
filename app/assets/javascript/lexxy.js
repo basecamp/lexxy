@@ -4679,7 +4679,7 @@ const ALLOWED_HTML_TAGS = [ "a", "b", "blockquote", "br", "code", "em",
   "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "ul", "table", "tbody", "tr", "th", "td" ];
 
 const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",
-  "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "presentation",
+  "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "id", "presentation",
   "previewable", "sgid", "src", "style", "title", "url", "width" ];
 
 const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ];
@@ -8699,17 +8699,6 @@ class Selection {
   }
 }
 
-// Prevent the hardcoded background color
-// A background color value is set by Lexical if background is null:
-// https://github.com/facebook/lexical/blob/5bbbe849bd229e1db0e7b536e6a919520ada7bb2/packages/lexical-table/src/LexicalTableCellNode.ts#L187
-function registerHeaderBackgroundTransform(editor) {
-  return editor.registerNodeTransform(xe, (node) => {
-    if (node.getBackgroundColor() === null) {
-      node.setBackgroundColor("");
-    }
-  })
-}
-
 function dasherize(value) {
   return value.replace(/([A-Z])/g, (_, char) => `-${char.toLowerCase()}`)
 }
@@ -8731,6 +8720,53 @@ function normalizeFilteredText(string) {
 
 function filterMatches(text, potentialMatch) {
   return normalizeFilteredText(text).includes(normalizeFilteredText(potentialMatch))
+}
+
+function parameterize(text) {
+  return normalizeFilteredText(text)
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+function assignHeadingIds(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
+  const container = doc.body.firstChild;
+
+  const usedIds = new Map();
+  const headings = container.querySelectorAll("h1, h2, h3, h4, h5, h6");
+
+  headings.forEach((heading) => {
+    const baseSlug = parameterize(heading.textContent);
+    if (!baseSlug) return
+
+    let finalId = baseSlug;
+    if (usedIds.has(baseSlug)) {
+      const count = usedIds.get(baseSlug) + 1;
+      usedIds.set(baseSlug, count);
+      finalId = `${baseSlug}-${count}`;
+    } else {
+      usedIds.set(baseSlug, 0);
+    }
+
+    heading.setAttribute("id", finalId);
+  });
+
+  return container.innerHTML
+}
+
+// Prevent the hardcoded background color
+// A background color value is set by Lexical if background is null:
+// https://github.com/facebook/lexical/blob/5bbbe849bd229e1db0e7b536e6a919520ada7bb2/packages/lexical-table/src/LexicalTableCellNode.ts#L187
+function registerHeaderBackgroundTransform(editor) {
+  return editor.registerNodeTransform(xe, (node) => {
+    if (node.getBackgroundColor() === null) {
+      node.setBackgroundColor("");
+    }
+  })
 }
 
 class EditorConfiguration {
@@ -10405,7 +10441,9 @@ class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize(g(this.editor, null));
+        let html = g(this.editor, null);
+        html = assignHeadingIds(html);
+        this.cachedValue = sanitize(html);
       });
     }
 
