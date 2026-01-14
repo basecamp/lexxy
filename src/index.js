@@ -12,6 +12,7 @@ import "./elements/code_language_picker"
 
 import Lexxy from "./config/lexxy"
 export { highlightAll } from "./helpers/code_highlighting_helper"
+export { highlightAll as highlightCode } from "./helpers/code_highlighting_helper.js"
 export * as nodes from "./nodes/index"
 export const configure = Lexxy.configure
 export { default as Extension } from "./extensions/lexxy_extension.js"
