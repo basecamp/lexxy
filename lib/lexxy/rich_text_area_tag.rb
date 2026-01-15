@@ -25,6 +25,7 @@ module Lexxy
       def render_custom_attachments_in(value)
         if value.respond_to?(:body)
           if html = value.body_before_type_cast.presence
+            self.prefix_partial_path_with_controller_namespace = false if respond_to?(:prefix_partial_path_with_controller_namespace=)
             ActionText::Fragment.wrap(html).replace(ActionText::Attachment.tag_name) do |node|
               if node["url"].blank?
                 attachment = ActionText::Attachment.from_node(node)
