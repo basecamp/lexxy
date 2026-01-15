@@ -102,6 +102,20 @@
   outline: 2px dashed var(--lexxy-color-selected-dark);
 }
 
+:where([data-lexical-cursor]) {
+  animation: blink 1s infinite;
+  block-size: 1lh;
+  border-inline-start: 1.5px solid currentColor;
+  line-height: inherit;
+  margin-block: 0 var(--lexxy-content-margin);
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  60% { opacity: 1; }
+  100% { opacity: 0;}
+}
+
 /* Toolbar
 /* -------------------------------------------------------------------------- */
 

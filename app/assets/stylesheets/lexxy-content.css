@@ -240,14 +240,6 @@
   }
 }
 
-:where([data-lexical-cursor]) {
-  animation: blink 1s step-end infinite;
-  block-size: 1lh;
-  border-inline-start: 1px solid currentColor;
-  line-height: inherit;
-  margin-block: 1em;
-}
-
 /* Attachments
 /* ------------------------------------------------------------------------ */
 
