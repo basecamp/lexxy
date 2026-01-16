@@ -4641,7 +4641,8 @@ function range(from, to) {
 const global$1 = new Configuration({
   attachmentTagName: "action-text-attachment",
   attachmentContentTypeNamespace: "actiontext",
-  authenticatedUploads: false
+  authenticatedUploads: false,
+  extensions: []
 });
 
 const presets = new Configuration({
@@ -6449,10 +6450,6 @@ function dispatchCustomEvent(element, name, detail) {
     bubbles: true,
   });
   element.dispatchEvent(event);
-}
-
-function sanitize(html) {
-  return purify.sanitize(html, buildConfig())
 }
 
 function dispatch(element, eventName, detail = null, cancelable = false) {
@@ -8706,6 +8703,10 @@ class Selection {
   }
 }
 
+function sanitize(html) {
+  return purify.sanitize(html, buildConfig())
+}
+
 // Prevent the hardcoded background color
 // A background color value is set by Lexical if background is null:
 // https://github.com/facebook/lexical/blob/5bbbe849bd229e1db0e7b536e6a919520ada7bb2/packages/lexical-table/src/LexicalTableCellNode.ts#L187
@@ -10104,6 +10105,37 @@ class Clipboard {
   }
 }
 
+class Extensions {
+
+  constructor(lexxyElement) {
+    this.lexxyElement = lexxyElement;
+
+    this.enabledExtensions = this.#initializeExtensions();
+  }
+
+  get lexicalExtensions() {
+    return this.enabledExtensions.map(ext => ext.lexicalExtension).filter(Boolean)
+  }
+
+  initializeToolbars() {
+    if (this.#lexxyToolbar) {
+      this.enabledExtensions.forEach(ext => ext.initializeToobar(this.#lexxyToolbar));
+    }
+  }
+
+  get #lexxyToolbar() {
+    return this.lexxyElement.toolbar
+  }
+
+  #initializeExtensions() {
+    const extensionDefinitions = Lexxy.global.get("extensions");
+
+    return extensionDefinitions.map(
+      extension => new extension(this.lexxyElement)
+    ).filter(extension => extension.enabled)
+  }
+}
+
 const TOGGLE_HIGHLIGHT_COMMAND = re$1();
 
 const hasPastedStylesState = ot$5("hasPastedStyles", {
@@ -10293,6 +10325,7 @@ class LexicalEditorElement extends HTMLElement {
   connectedCallback() {
     this.id ??= generateDomId("lexxy-editor");
     this.config = new EditorConfiguration(this);
+    this.extensions = new Extensions(this);
     this.highlighter = new Highlighter(this);
 
     this.editor = this.#createEditor();
@@ -10490,10 +10523,19 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   get #lexicalExtensions() {
-    return this.supportsRichText ? [
+    const extensions = [ ];
+    const richTextExtensions = [
       this.highlighter.lexicalExtension,
       TrixContentExtension
-    ] : [ ]
+    ];
+
+    if (this.supportsRichText) {
+      extensions.push(...richTextExtensions);
+    }
+
+    extensions.push(...this.extensions.lexicalExtensions);
+
+    return extensions
   }
 
   get #lexicalNodes() {
@@ -12254,7 +12296,7 @@ class CodeLanguagePicker extends HTMLElement {
 
 customElements.define("lexxy-code-language-picker", CodeLanguagePicker);
 
-function highlightAll() {
+function highlightCode() {
   const elements = document.querySelectorAll("pre[data-language]");
 
   elements.forEach(preElement => {
@@ -12277,7 +12319,36 @@ function highlightElement(preElement) {
   preElement.replaceWith(codeElement);
 }
 
+class LexxyExtension {
+  #editorElement
+
+  constructor(editorElement) {
+    this.#editorElement = editorElement;
+  }
+
+  get editorElement() {
+    return this.#editorElement
+  }
+
+  get editorConfig() {
+    return this.#editorElement.config
+  }
+
+  // optional: defaults to true
+  get enabled() {
+    return true
+  }
+
+  get lexicalExtension() {
+    return null
+  }
+
+  initializeToolbar(_lexxyToolbar) {
+
+  }
+}
+
 const configure = Lexxy.configure;
 
-export { configure, highlightAll };
+export { ActionTextAttachmentNode, ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, configure, highlightCode as highlightAll, highlightCode };
 //# sourceMappingURL=lexxy.js.map

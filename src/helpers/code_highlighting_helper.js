@@ -1,7 +1,7 @@
 import { createElement } from "./html_helper"
 import Prism from "prismjs"
 
-export function highlightAll() {
+export function highlightCode() {
   const elements = document.querySelectorAll("pre[data-language]")
 
   elements.forEach(preElement => {

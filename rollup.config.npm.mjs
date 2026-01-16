@@ -1,10 +1,24 @@
 import copy from 'rollup-plugin-copy';
 
+const helperChunks = [
+  "prismjs",
+  "code_highlighting_helper"
+]
+
 export default {
-  input: "./src/index.js",
+  input: { lexxy: "src/index.js" },
   output: {
-    file: "./dist/lexxy.esm.js",
-    format: "esm"
+    dir: "./dist",
+    format: "esm",
+    entryFileNames: "[name].esm.js",
+
+    // Force a helpers chunk with named exports and without a content hash
+    manualChunks: (id) => {
+      if (helperChunks.some(file => id.includes(file))) return "lexxy_helpers"
+      return null
+    },
+    chunkFileNames: "[name].esm.js",
+    minifyInternalExports: false
   },
   external: [
     /^@lexical\//,
