@@ -10,45 +10,6 @@ import { TableAction, TableChildType, TableController, TableDirection } from "./
 import { handleRollingTabIndex } from "../../helpers/accessibility_helper"
 import { createElement } from "../../helpers/html_helper"
 
-const ICONS = Object.freeze({
-  [TableAction.INSERT + TableChildType.ROW + TableDirection.BEFORE]:
-    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 7L0 10V4L4 7ZM6.5 7.5H16.5V6.5H6.5V7.5ZM18 8C18 8.55228 17.5523 9 17 9H6C5.44772 9 5 8.55228 5 8V6C5 5.44772 5.44772 5 6 5H17C17.5523 5 18 5.44772 18 6V8Z"/><path d="M2 2C2 1.44772 2.44772 1 3 1H15C15.5523 1 16 1.44772 16 2C16 2.55228 15.5523 3 15 3H3C2.44772 3 2 2.55228 2 2Z"/><path d="M2 12C2 11.4477 2.44772 11 3 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H3C2.44772 13 2 12.5523 2 12Z"/><path d="M2 16C2 15.4477 2.44772 15 3 15H15C15.5523 15 16 15.4477 16 16C16 16.5523 15.5523 17 15 17H3C2.44772 17 2 16.5523 2 16Z"/>
-    </svg>`,
-
-  [TableAction.INSERT + TableChildType.ROW + TableDirection.AFTER]:
-    "+",
-
-  [TableAction.DELETE + TableChildType.ROW]:
-    "–",
-
-  [TableAction.TOGGLE + TableChildType.ROW]:
-    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-    <path d="M1 2C1 1.44772 1.44772 1 2 1H7C7.55228 1 8 1.44772 8 2V7C8 7.55228 7.55228 8 7 8H2C1.44772 8 1 7.55228 1 7V2Z"/><path d="M2.5 15.5H6.5V11.5H2.5V15.5ZM8 16C8 16.5177 7.60667 16.9438 7.10254 16.9951L7 17H2L1.89746 16.9951C1.42703 16.9472 1.05278 16.573 1.00488 16.1025L1 16V11C1 10.4477 1.44772 10 2 10H7C7.55228 10 8 10.4477 8 11V16Z"/><path d="M10 2C10 1.44772 10.4477 1 11 1H16C16.5523 1 17 1.44772 17 2V7C17 7.55228 16.5523 8 16 8H11C10.4477 8 10 7.55228 10 7V2Z"/><path d="M11.5 15.5H15.5V11.5H11.5V15.5ZM17 16C17 16.5177 16.6067 16.9438 16.1025 16.9951L16 17H11L10.8975 16.9951C10.427 16.9472 10.0528 16.573 10.0049 16.1025L10 16V11C10 10.4477 10.4477 10 11 10H16C16.5523 10 17 10.4477 17 11V16Z"/>
-    </svg>`,
-
-  [TableAction.INSERT + TableChildType.COLUMN + TableDirection.BEFORE]:
-    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-    <path d="M7 4L10 2.62268e-07L4 0L7 4ZM7.5 6.5L7.5 16.5H6.5L6.5 6.5H7.5ZM8 18C8.55228 18 9 17.5523 9 17V6C9 5.44772 8.55229 5 8 5H6C5.44772 5 5 5.44772 5 6L5 17C5 17.5523 5.44772 18 6 18H8Z"/><path d="M2 2C1.44772 2 1 2.44772 1 3L1 15C1 15.5523 1.44772 16 2 16C2.55228 16 3 15.5523 3 15L3 3C3 2.44772 2.55229 2 2 2Z"/><path d="M12 2C11.4477 2 11 2.44772 11 3L11 15C11 15.5523 11.4477 16 12 16C12.5523 16 13 15.5523 13 15L13 3C13 2.44772 12.5523 2 12 2Z"/><path d="M16 2C15.4477 2 15 2.44772 15 3L15 15C15 15.5523 15.4477 16 16 16C16.5523 16 17 15.5523 17 15V3C17 2.44772 16.5523 2 16 2Z"/>
-    </svg>`,
-
-  [TableAction.INSERT + TableChildType.COLUMN + TableDirection.AFTER]:
-    "+",
-
-  [TableAction.DELETE + TableChildType.COLUMN]:
-    "–",
-
-  [TableAction.TOGGLE + TableChildType.COLUMN]:
-    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-    <path d="M1 2C1 1.44772 1.44772 1 2 1H7C7.55228 1 8 1.44772 8 2V7C8 7.55228 7.55228 8 7 8H2C1.44772 8 1 7.55228 1 7V2Z"/><path d="M1 11C1 10.4477 1.44772 10 2 10H7C7.55228 10 8 10.4477 8 11V16C8 16.5523 7.55228 17 7 17H2C1.44772 17 1 16.5523 1 16V11Z"/><path d="M11.5 6.5H15.5V2.5H11.5V6.5ZM17 7C17 7.51768 16.6067 7.94379 16.1025 7.99512L16 8H11L10.8975 7.99512C10.427 7.94722 10.0528 7.57297 10.0049 7.10254L10 7V2C10 1.44772 10.4477 1 11 1H16C16.5523 1 17 1.44772 17 2V7Z"/><path d="M11.5 15.5H15.5V11.5H11.5V15.5ZM17 16C17 16.5177 16.6067 16.9438 16.1025 16.9951L16 17H11L10.8975 16.9951C10.427 16.9472 10.0528 16.573 10.0049 16.1025L10 16V11C10 10.4477 10.4477 10 11 10H16C16.5523 10 17 10.4477 17 11V16Z"/>
-    </svg>`,
-
-  [TableAction.DELETE + TableChildType.TABLE]:
-    `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path d="M18.2129 19.2305C18.0925 20.7933 16.7892 22 15.2217 22H7.77832C6.21084 22 4.90753 20.7933 4.78711 19.2305L4 9H19L18.2129 19.2305Z"/><path d="M13 2C14.1046 2 15 2.89543 15 4H19C19.5523 4 20 4.44772 20 5V6C20 6.55228 19.5523 7 19 7H4C3.44772 7 3 6.55228 3 6V5C3 4.44772 3.44772 4 4 4H8C8 2.89543 8.89543 2 10 2H13Z"/>
-    </svg>`
-})
-
 export class TableTools extends HTMLElement {
   connectedCallback() {
     this.#setUpButtons()
@@ -78,128 +39,94 @@ export class TableTools extends HTMLElement {
     this.appendChild(this.#createRowButtonsContainer())
     this.appendChild(this.#createColumnButtonsContainer())
 
-    this.moreMenu = this.#createMoreMenu()
-    this.appendChild(this.moreMenu)
+    //this.moreMenu = this.#createMoreMenu()
+    this.appendChild(this.#createDeleteTableButton())
     this.addEventListener("keydown", this.#handleToolsKeydown)
   }
 
-  #createRowButtonsContainer() {
-    return this.#createButtonsContainer(
-      "row",
-      "Add row",
-      "Remove row",
-      TableChildType.ROW,
-      (count) => { this.rowCount = count }
-    )
-  }
-
-  #createColumnButtonsContainer() {
-    return this.#createButtonsContainer(
-      "column",
-      "Add column",
-      "Remove column",
-      TableChildType.COLUMN,
-      (count) => { this.columnCount = count }
-    )
-  }
-
-  #createButtonsContainer(type, addLabel, removeLabel, childType, setCountProperty) {
+  #createButtonsContainer(childType, setCountProperty, moreMenu) {
     const container = createElement("div", { className: "lexxy-table-control" })
 
-    const plusButton = this.#createCommandButton(addLabel, { action: TableAction.INSERT, childType, direction: TableDirection.AFTER })
-    const minusButton = this.#createCommandButton(removeLabel, { action: TableAction.DELETE, childType })
+    const plusButton = this.#createButton("Add ${childType}", { action: TableAction.INSERT, childType, direction: TableDirection.AFTER }, "+")
+    const minusButton = this.#createButton("Remove ${childType}", { action: TableAction.DELETE, childType }, "−")
 
-    const count = createElement("span")
-    count.textContent = `_ ${type}s`
+    const dropdown = createElement("details", { className: "lexxy-table-control__more-menu" })
+    dropdown.setAttribute("name", "lexxy-dropdown")
+    dropdown.tabIndex = -1
+
+    const count = createElement("summary", {}, `_ ${childType}s`)
     setCountProperty(count)
+    dropdown.appendChild(count)
+
+    dropdown.appendChild(moreMenu)
 
     container.appendChild(minusButton)
-    container.appendChild(count)
+    container.appendChild(dropdown)
     container.appendChild(plusButton)
 
     return container
   }
 
-  #createMoreMenu() {
-    const container = createElement("details", {
-      className: "lexxy-table-control lexxy-table-control__more-menu"
-    })
-    container.setAttribute("name", "lexxy-dropdown")
-
-    container.tabIndex = -1
-
-    const summary = createElement("summary", {}, "•••")
-    container.appendChild(summary)
-
-    const details = createElement("div", { className: "lexxy-table-control__more-menu-details" })
-    container.appendChild(details)
-
-    details.appendChild(this.#createRowSection())
-    details.appendChild(this.#createColumnSection())
-    details.appendChild(this.#createDeleteTableSection())
-
-    return container
+  #createRowButtonsContainer() {
+    return this.#createButtonsContainer(
+      TableChildType.ROW,
+      (count) => { this.rowCount = count },
+      this.#createMoreMenuSection(TableChildType.ROW)
+    )
   }
 
-  #createRowSection() {
-    const section = this.#createMenuSection()
-    const addRowAboveButton = this.#createCommandButton("Add row above", { action: TableAction.INSERT, childType: TableChildType.ROW, direction: TableDirection.BEFORE })
-    const toggleRowStyleButton = this.#createButton("Toggle row style", this.#toggleRowHeaderStyle, { action: TableAction.TOGGLE, childType: TableChildType.ROW })
-
-    section.appendChild(addRowAboveButton)
-    section.appendChild(toggleRowStyleButton)
-
-    return section
+  #createColumnButtonsContainer() {
+    return this.#createButtonsContainer(
+      TableChildType.COLUMN,
+      (count) => { this.columnCount = count },
+      this.#createMoreMenuSection(TableChildType.COLUMN)
+    )
   }
 
-  #createColumnSection() {
-    const section = this.#createMenuSection()
-    const addColumnBeforeButton = this.#createCommandButton("Add column before", { action: TableAction.INSERT, childType: TableChildType.COLUMN, direction: TableDirection.BEFORE })
-    const toggleColumnStyleButton = this.#createButton("Toggle column style", this.#toggleColumnHeaderStyle, { action: TableAction.TOGGLE, childType: TableChildType.COLUMN })
+  #createMoreMenuSection(childType) {
+    const section = createElement("div", { className: "lexxy-table-control__more-menu-details" })
+    const addBeforeButton = this.#createButton(`Add ${childType} before`, { action: TableAction.INSERT, childType, direction: TableDirection.BEFORE })
+    const addAfterButton = this.#createButton(`Add ${childType} after`, { action: TableAction.INSERT, childType, direction: TableDirection.AFTER })
+    const toggleStyleButton = this.#createButton(`Toggle ${childType} style`, { action: TableAction.TOGGLE, childType })
+    const deleteButton = this.#createButton(`Delete ${childType}`, { action: TableAction.DELETE, childType })
 
-    section.appendChild(addColumnBeforeButton)
-    section.appendChild(toggleColumnStyleButton)
-
-    return section
-  }
-
-  #createDeleteTableSection() {
-    const section = this.#createMenuSection()
-    const deleteButton = this.#createButton("Delete table", this.#deleteTable, { action: TableAction.DELETE, childType: TableChildType.TABLE })
-
+    section.appendChild(addBeforeButton)
+    section.appendChild(addAfterButton)
+    section.appendChild(toggleStyleButton)
     section.appendChild(deleteButton)
 
     return section
   }
 
-  #createMenuSection() {
-    return createElement("section", { className: "lexxy-table-control__more-menu-section" })
+  #createDeleteTableButton() {
+    const container = createElement("div", { className: "lexxy-table-control" })
+
+    const deleteTableButton = this.#createButton("Delete table", { action: TableAction.DELETE, childType: TableChildType.TABLE })
+    container.appendChild(deleteTableButton)
+
+    return container
   }
 
-  #createButton(label, onClick, command = {}) {
+  #createButton(label, command = {}, icon = this.#icon(command)) {
     const button = createElement("button", {
       className: "lexxy-table-control__button",
       "aria-label": label,
       type: "button"
     })
     button.tabIndex = -1
-    button.innerHTML = `${this.#icon(command)} <span>${label}</span>`
+    button.innerHTML = `${icon} <span>${label}</span>`
 
     button.dataset.action = command.action
     button.dataset.childType = command.childType
     button.dataset.direction = command.direction
 
-    button.addEventListener("click", () => onClick.call(this, command))
+    button.addEventListener("click", () => this.#executeTableCommand(command))
 
     button.addEventListener("mouseover", () => this.#handleCommandButtonHover())
     button.addEventListener("focus", () => this.#handleCommandButtonHover())
     button.addEventListener("mouseout", () => this.#handleCommandButtonHover())
 
     return button
-  }
-
-  #createCommandButton(label, command) {
-    return this.#createButton(label, this.#executeTableCommand, command)
   }
 
   #registerKeyboardShortcuts() {
@@ -293,12 +220,12 @@ export class TableTools extends HTMLElement {
     })
   }
 
-  #deleteTable() {
-    this.#editor.dispatchCommand("deleteTable")
-  }
-
   #executeTableCommand(command) {
-    this.tableController.executeTableCommand(command)
+    if (command.action === TableAction.DELETE && command.childType === TableChildType.TABLE) {
+      this.#editor.dispatchCommand("deleteTable")
+    } else {
+      this.tableController.executeTableCommand(command)
+    }
 
     this.#finishTableOperation()
   }
@@ -307,18 +234,6 @@ export class TableTools extends HTMLElement {
     this.#closeMoreMenu()
     this.#updateRowColumnCount()
     this.#handleCommandButtonHover()
-  }
-
-  #toggleRowHeaderStyle() {
-    this.#editor.update(() => {
-      this.tableController.toggleHeaderStyle(TableChildType.ROW)
-    })
-  }
-
-  #toggleColumnHeaderStyle() {
-    this.#editor.update(() => {
-      this.tableController.toggleHeaderStyle(TableChildType.COLUMN)
-    })
   }
 
   #showTableToolsButtons() {
@@ -395,7 +310,7 @@ export class TableTools extends HTMLElement {
   }
 
   #closeMoreMenu() {
-    this.moreMenu?.removeAttribute("open")
+    this.querySelector("details[open]")?.removeAttribute("open")
   }
 
   #icon(command) {
@@ -403,5 +318,58 @@ export class TableTools extends HTMLElement {
     return ICONS[action + childType + (action == TableAction.INSERT ? direction : "")]
   }
 }
+
+const ICONS = Object.freeze({
+  [TableAction.INSERT + TableChildType.ROW + TableDirection.BEFORE]:
+    `<svg  viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M7.86804e-07 15C8.29055e-07 15.8284 0.671574 16.5 1.5 16.5H15L15.1533 16.4922C15.8593 16.4205 16.4205 15.8593 16.4922 15.1533L16.5 15V4.5L16.4922 4.34668C16.4154 3.59028 15.7767 3 15 3H13.5L13.5 4.5H15V9H1.5L1.5 4.5L3 4.5V3H1.5C0.671574 3 1.20956e-06 3.67157 1.24577e-06 4.5L7.86804e-07 15ZM15 10.5V15H1.5L1.5 10.5H15Z"/>
+    <path d="M4.5 4.5H7.5V7.5H9V4.5H12L12 3L9 3V6.55671e-08L7.5 0V3L4.5 3V4.5Z"/>
+    </svg>`,
+
+  [TableAction.INSERT + TableChildType.ROW + TableDirection.AFTER]:
+  `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M7.86804e-07 13.5C7.50592e-07 14.3284 0.671574 15 1.5 15H3V13.5H1.5L1.5 9L15 9V13.5H13.5V15H15C15.7767 15 16.4154 14.4097 16.4922 13.6533L16.5 13.5V3L16.4922 2.84668C16.4205 2.14069 15.8593 1.57949 15.1533 1.50781L15 1.5L1.5 1.5C0.671574 1.5 1.28803e-06 2.17157 1.24577e-06 3L7.86804e-07 13.5ZM15 3V7.5L1.5 7.5L1.5 3L15 3Z"/>
+  <path d="M7.5 15V18H9V15H12V13.5H9V10.5H7.5V13.5H4.5V15H7.5Z"/>
+  </svg>`,
+
+  [TableAction.DELETE + TableChildType.ROW]:
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path d="M16.4922 12.1533C16.4154 12.9097 15.7767 13.5 15 13.5L12 13.5V12H15V6L1.5 6L1.5 12H4.5V13.5H1.5C0.723337 13.5 0.0846104 12.9097 0.00781328 12.1533L7.86804e-07 12L1.04907e-06 6C1.17362e-06 5.22334 0.590278 4.58461 1.34668 4.50781L1.5 4.5L15 4.5C15.8284 4.5 16.5 5.17157 16.5 6V12L16.4922 12.1533Z"/>
+    <path d="M10.3711 15.9316L8.25 13.8096L6.12793 15.9316L5.06738 14.8711L7.18945 12.75L5.06738 10.6289L6.12793 9.56836L8.25 11.6895L10.3711 9.56836L11.4316 10.6289L9.31055 12.75L11.4316 14.8711L10.3711 15.9316Z"/>
+    </svg>`,
+
+  [TableAction.TOGGLE + TableChildType.ROW]:
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M0.00781328 13.6533C0.0846108 14.4097 0.723337 15 1.5 15L15 15L15.1533 14.9922C15.8593 14.9205 16.4205 14.3593 16.4922 13.6533L16.5 13.5V4.5L16.4922 4.34668C16.4205 3.64069 15.8593 3.07949 15.1533 3.00781L15 3L1.5 3C0.671574 3 1.24863e-06 3.67157 1.18021e-06 4.5L7.86804e-07 13.5L0.00781328 13.6533ZM15 9V13.5L1.5 13.5L1.5 9L15 9Z"/>
+    </svg>`,
+
+  [TableAction.INSERT + TableChildType.COLUMN + TableDirection.BEFORE]:
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M4.5 0C3.67157 0 3 0.671573 3 1.5V3H4.5V1.5H9V15H4.5V13.5H3V15C3 15.7767 3.59028 16.4154 4.34668 16.4922L4.5 16.5H15L15.1533 16.4922C15.8593 16.4205 16.4205 15.8593 16.4922 15.1533L16.5 15V1.5C16.5 0.671573 15.8284 6.03989e-09 15 0H4.5ZM15 15H10.5V1.5H15V15Z"/>
+    <path d="M3 7.5H0V9H3V12H4.5V9H7.5V7.5H4.5V4.5H3V7.5Z"/>
+    </svg>`,
+
+  [TableAction.INSERT + TableChildType.COLUMN + TableDirection.AFTER]:
+  `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M13.5 0C14.3284 0 15 0.671573 15 1.5V3H13.5V1.5H9V15H13.5V13.5H15V15C15 15.7767 14.4097 16.4154 13.6533 16.4922L13.5 16.5H3L2.84668 16.4922C2.14069 16.4205 1.57949 15.8593 1.50781 15.1533L1.5 15V1.5C1.5 0.671573 2.17157 6.03989e-09 3 0H13.5ZM3 15H7.5V1.5H3V15Z"/>
+  <path d="M15 7.5H18V9H15V12H13.5V9H10.5V7.5H13.5V4.5H15V7.5Z"/>
+  </svg>`,
+
+  [TableAction.DELETE + TableChildType.COLUMN]:
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12.1533 0.0078125C12.9097 0.0846097 13.5 0.723336 13.5 1.5V4.5H12V1.5H6V15H12V12H13.5V15C13.5 15.7767 12.9097 16.4154 12.1533 16.4922L12 16.5H6C5.22334 16.5 4.58461 15.9097 4.50781 15.1533L4.5 15V1.5C4.5 0.671573 5.17157 2.41596e-08 6 0H12L12.1533 0.0078125Z"/>
+    <path d="M15.9316 6.12891L13.8105 8.24902L15.9326 10.3711L14.8711 11.4316L12.75 9.31055L10.6289 11.4316L9.56738 10.3711L11.6885 8.24902L9.56836 6.12891L10.6289 5.06836L12.75 7.18848L14.8711 5.06836L15.9316 6.12891Z"/>
+    </svg>`,
+
+  [TableAction.TOGGLE + TableChildType.COLUMN]:
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M13.6533 17.9922C14.4097 17.9154 15 17.2767 15 16.5L15 3L14.9922 2.84668C14.9205 2.14069 14.3593 1.57949 13.6533 1.50781L13.5 1.5L4.5 1.5L4.34668 1.50781C3.59028 1.58461 3 2.22334 3 3L3 16.5C3 17.2767 3.59028 17.9154 4.34668 17.9922L4.5 18L13.5 18L13.6533 17.9922ZM9 3L13.5 3L13.5 16.5L9 16.5L9 3Z" />
+    </svg>`,
+
+  [TableAction.DELETE + TableChildType.TABLE]:
+    `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18.2129 19.2305C18.0925 20.7933 16.7892 22 15.2217 22H7.77832C6.21084 22 4.90753 20.7933 4.78711 19.2305L4 9H19L18.2129 19.2305Z"/><path d="M13 2C14.1046 2 15 2.89543 15 4H19C19.5523 4 20 4.44772 20 5V6C20 6.55228 19.5523 7 19 7H4C3.44772 7 3 6.55228 3 6V5C3 4.44772 3.44772 4 4 4H8C8 2.89543 8.89543 2 10 2H13Z"/>
+    </svg>`
+})
 
 customElements.define("lexxy-table-tools", TableTools)
