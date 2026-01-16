@@ -40,7 +40,8 @@ The docs will be available at http://localhost:4000/lexxy/.
 
 1. Update the version in `version.rb`
 2. Run `bundle` to update `Gemfile.lock`
-3. Run `rake release` to publish the gem
+3. Commit the version bump
+4. Run `rake release` to publish the gem
 
 ### NPM package
 
