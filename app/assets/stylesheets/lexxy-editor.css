@@ -462,10 +462,10 @@
   }
 }
 
-/* Table handle buttons
+/* Table Tools
 /* -------------------------------------------------------------------------- */
 
-:where(lexxy-table-handler) {
+:where(lexxy-table-tools) {
   --button-size: 2.5lh;
 
   color: var(--lexxy-color-ink-inverted);

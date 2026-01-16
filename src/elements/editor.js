@@ -397,8 +397,8 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #registerTableComponents() {
     registerTablePlugin(this.editor)
-    this.tableHandler = createElement("lexxy-table-handler")
-    this.append(this.tableHandler)
+    this.tableTools = createElement("lexxy-table-tools")
+    this.append(this.tableTools)
 
     this.#addUnregisterHandler(registerHeaderBackgroundTransform(this.editor))
   }
