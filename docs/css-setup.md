@@ -29,17 +29,17 @@ For applying the same styles to rendered Action Text content, you need to overri
 </div>
 ```
 
-To apply syntax highlighting to rendered Action Text content, you need to call the `highlightAll` function from Lexxy. For example, create a Stimulus controller in `app/javascript/controllers/syntax_highlight_controller.js`:
+To apply syntax highlighting to rendered Action Text content, you need to call the `highlightCode` function from Lexxy. For example, create a Stimulus controller in `app/javascript/controllers/syntax_highlight_controller.js`:
 
 ```javascript
 import { Controller } from "@hotwired/stimulus"
 import { highlightAll } from "lexxy"
 // Or if you installed via a javascript bundler:
-// import { highlightAll } from "@37signals/lexxy"
+// import { highlightCode } from "@37signals/lexxy"
 
 export default class extends Controller {
   connect() {
-    highlightAll()
+    highlightCode()
   }
 }
 ```
@@ -51,3 +51,10 @@ Then update the Action Text Content template to include the `data-controller` at
   <%= yield -%>
 </div>
 ```
+
+If you are importing the npm package and want to split Lexxy from your main bundle, you can import just the `highlightCode` helper from a submodule:
+
+```javascript
+import { highlightCode } from "@37signals/lexxy/helpers"
+```
+
