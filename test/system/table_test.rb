@@ -39,7 +39,7 @@ class TableTest < ApplicationSystemTestCase
       assert_selector single_hr_row, count: 2
     end
 
-    open_table_more_menu
+    open_table_row_menu
     click_table_handler_button("Toggle row style")
 
     within_table do
@@ -47,7 +47,7 @@ class TableTest < ApplicationSystemTestCase
       assert_selector single_hr_row, count: 3
     end
 
-    open_table_more_menu
+    open_table_row_menu
     click_table_handler_button("Toggle row style")
 
     within_table do
@@ -85,14 +85,14 @@ class TableTest < ApplicationSystemTestCase
       assert_selector "tr > th:first-child", count: 3
     end
 
-    open_table_more_menu
+    open_table_column_menu
     click_table_handler_button("Toggle column style")
 
     within_table do
       assert_selector "tr > th:first-child", count: 1
     end
 
-    open_table_more_menu
+    open_table_column_menu
     click_table_handler_button("Toggle column style")
 
     within_table do
@@ -114,7 +114,6 @@ class TableTest < ApplicationSystemTestCase
 
     find_editor.value { has_table? }
 
-    open_table_more_menu
     click_table_handler_button("Delete table")
 
     find_editor.value { has_no_table? }

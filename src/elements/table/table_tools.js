@@ -45,10 +45,10 @@ export class TableTools extends HTMLElement {
   }
 
   #createButtonsContainer(childType, setCountProperty, moreMenu) {
-    const container = createElement("div", { className: "lexxy-table-control" })
+    const container = createElement("div", { className: `lexxy-table-control lexxy-table-control--${childType}` })
 
-    const plusButton = this.#createButton("Add ${childType}", { action: TableAction.INSERT, childType, direction: TableDirection.AFTER }, "+")
-    const minusButton = this.#createButton("Remove ${childType}", { action: TableAction.DELETE, childType }, "−")
+    const plusButton = this.#createButton(`Add ${childType}`, { action: TableAction.INSERT, childType, direction: TableDirection.AFTER }, "+")
+    const minusButton = this.#createButton(`Remove ${childType}`, { action: TableAction.DELETE, childType }, "−")
 
     const dropdown = createElement("details", { className: "lexxy-table-control__more-menu" })
     dropdown.setAttribute("name", "lexxy-dropdown")
@@ -88,7 +88,7 @@ export class TableTools extends HTMLElement {
     const addBeforeButton = this.#createButton(`Add ${childType} before`, { action: TableAction.INSERT, childType, direction: TableDirection.BEFORE })
     const addAfterButton = this.#createButton(`Add ${childType} after`, { action: TableAction.INSERT, childType, direction: TableDirection.AFTER })
     const toggleStyleButton = this.#createButton(`Toggle ${childType} style`, { action: TableAction.TOGGLE, childType })
-    const deleteButton = this.#createButton(`Delete ${childType}`, { action: TableAction.DELETE, childType })
+    const deleteButton = this.#createButton(`Remove ${childType}`, { action: TableAction.DELETE, childType })
 
     section.appendChild(addBeforeButton)
     section.appendChild(addAfterButton)
