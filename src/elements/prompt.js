@@ -11,7 +11,7 @@ import { nextFrame } from "../helpers/timing_helpers"
 
 const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found"
 
-export default class LexicalPromptElement extends HTMLElement {
+export class LexicalPromptElement extends HTMLElement {
   constructor() {
     super()
     this.keyListeners = []
@@ -441,4 +441,4 @@ export default class LexicalPromptElement extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-prompt", LexicalPromptElement)
+export default LexicalPromptElement

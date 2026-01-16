@@ -30,7 +30,7 @@ import Highlighter from "../editor/highlighter"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 
-export default class LexicalEditorElement extends HTMLElement {
+export class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = false
   static commands = [ "bold", "italic", "strikethrough" ]
@@ -233,11 +233,11 @@ export default class LexicalEditorElement extends HTMLElement {
     this.editorContentElement ||= this.#createEditorContentElement()
 
     const editor = buildEditorFromExtensions({
-        name: "lexxy/core",
-        namespace: "Lexxy",
-        theme: theme,
-        nodes: this.#lexicalNodes
-      },
+      name: "lexxy/core",
+      namespace: "Lexxy",
+      theme: theme,
+      nodes: this.#lexicalNodes
+    },
       ...this.#lexicalExtensions
     )
 
@@ -247,7 +247,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #lexicalExtensions() {
-    const extensions = [ ]
+    const extensions = []
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
       TrixContentExtension
@@ -564,4 +564,4 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-editor", LexicalEditorElement)
+export default LexicalEditorElement
