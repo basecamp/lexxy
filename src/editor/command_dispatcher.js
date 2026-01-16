@@ -162,9 +162,7 @@ export class CommandDispatcher {
   }
 
   dispatchInsertHorizontalDivider() {
-    this.editor.update(() => {
-      this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
-    })
+    this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
 
     this.editor.focus()
   }
@@ -251,14 +249,12 @@ export class CommandDispatcher {
   }
 
   dispatchDeleteTable() {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
 
-      const anchorNode = selection.anchor.getNode()
-      const tableNode = $findTableNode(anchorNode)
-      tableNode.remove()
-    })
+    const anchorNode = selection.anchor.getNode()
+    const tableNode = $findTableNode(anchorNode)
+    tableNode.remove()
   }
 
   dispatchUndo() {
