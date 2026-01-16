@@ -111,9 +111,15 @@ export class TableController {
   }
 
   executeTableCommand(command) {
+    const { action, childType } = command
+    if (action === TableAction.TOGGLE) {
+      this.toggleHeaderStyle(childType)
+      return
+    }
+
     this.editor.dispatchCommand(this.#commandName(command))
 
-    if (command.action === TableAction.INSERT) {
+    if (action === TableAction.INSERT) {
       this.#selectFirstNewCell(command)
     }
   }
@@ -146,14 +152,16 @@ export class TableController {
 
     if (!cells || cells.length === 0) return
 
-    const firstCell = $getTableCellNodeFromLexicalNode(cells[0])
-    if (!firstCell) return
+    this.editor.update(() => {
+      const firstCell = $getTableCellNodeFromLexicalNode(cells[0])
+      if (!firstCell) return
 
-    const currentStyle = firstCell.getHeaderStyles()
-    const newStyle = currentStyle ^ headerState
+      const currentStyle = firstCell.getHeaderStyles()
+      const newStyle = currentStyle ^ headerState
 
-    cells.forEach(cell => {
-      this.#setHeaderStyle(cell, newStyle, headerState)
+      cells.forEach(cell => {
+        this.#setHeaderStyle(cell, newStyle, headerState)
+      })
     })
   }
 
