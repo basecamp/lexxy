@@ -17,4 +17,18 @@ class LoadHtmlTest < ApplicationSystemTestCase
     find_editor.value = "<div>hello</div> <div>there</div>"
     assert_editor_html "<p>hello</p><p>there</p>"
   end
+
+  test "load attachment with custom tag" do
+    visit new_post_path(attachment_tag_name: "bc-attachment")
+
+    person = people(:james)
+
+    find_editor.value = <<~HTML
+    <div>Hello World <bc-attachment sgid="#{person.attachable_sgid}" content-type="#{person.content_type}" content="&quot;#{person.name}&quot;"></bc-attachment></div>
+    HTML
+
+    assert_editor_html do
+      assert_selector "bc-attachment"
+    end
+  end
 end
