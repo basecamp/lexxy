@@ -1,45 +1,14 @@
 import {
-  $createParagraphNode,
-  $getNodeByKey,
-  $getSelection,
-  $isRangeSelection,
   COMMAND_PRIORITY_HIGH,
-  COMMAND_PRIORITY_NORMAL,
-  KEY_BACKSPACE_COMMAND,
   KEY_DOWN_COMMAND,
-  KEY_ENTER_COMMAND,
 } from "lexical"
 import {
-  $findCellNode,
-  $findTableNode,
-  $getElementForTableNode,
-  $getTableCellNodeFromLexicalNode,
-  $getTableColumnIndexFromTableCellNode,
-  $getTableRowIndexFromTableCellNode,
-  $isTableCellNode,
-  TableCellHeaderStates
+  $getElementForTableNode
 } from "@lexical/table"
 
-import { handleRollingTabIndex } from "../helpers/accessibility_helper"
-import { createElement } from "../helpers/html_helper"
-import { capitalizeFirstLetter } from "../helpers/string_helper"
-
-const TableAction = Object.freeze({
-  INSERT:  "insert",
-  DELETE: "delete",
-  TOGGLE: "toggle"
-})
-
-const TableChildType = Object.freeze({
-  ROW: "row",
-  COLUMN: "column",
-  TABLE: "table"
-})
-
-const TableDirection = Object.freeze({
-  BEFORE: "before",
-  AFTER: "after"
-})
+import { TableAction, TableChildType, TableController, TableDirection } from "./table_controller"
+import { handleRollingTabIndex } from "../../helpers/accessibility_helper"
+import { createElement } from "../../helpers/html_helper"
 
 const ICONS = Object.freeze({
   [TableAction.INSERT + TableChildType.ROW + TableDirection.BEFORE]:
@@ -80,13 +49,13 @@ const ICONS = Object.freeze({
     </svg>`
 })
 
-export class TableHandler extends HTMLElement {
+export class TableTools extends HTMLElement {
   connectedCallback() {
     this.#setUpButtons()
     this.#monitorForTableSelection()
     this.#registerKeyboardShortcuts()
-    this.#handleEnterKey()
-    this.#handleBackspaceKey()
+
+    this.tableController = new TableController(this.#editorElement.editor)
   }
 
   disconnectedCallback() {
@@ -101,71 +70,7 @@ export class TableHandler extends HTMLElement {
     return this.closest("lexxy-editor")
   }
 
-  get currentCell() {
-    if (!this.currentCellKey) return null
-
-    return this.#editor.getEditorState().read(() => {
-      const node = $getNodeByKey(this.currentCellKey)
-      return $findCellNode(node)
-    })
-  }
-
-  get currentTableNode() {
-    if (!this.currentTableNodeKey) return null
-
-    const cell = this.currentCell
-    if (!cell) return null
-
-    return this.#editor.getEditorState().read(() => {
-      return $findTableNode(cell)
-    })
-  }
-
-  get #currentRowCells() {
-    const currentRowIndex = this.#currentRowIndex
-
-    const rows = this.#tableRows
-    if (!rows) return null
-
-    return this.#editor.getEditorState().read(() => {
-      return rows[currentRowIndex]?.getChildren() ?? null
-    }) ?? null
-  }
-
-  get #currentRowIndex() {
-    const currentCell = this.currentCell
-    if (!currentCell) return 0
-
-    return this.#editor.getEditorState().read(() => {
-      return $getTableRowIndexFromTableCellNode(currentCell)
-    }) ?? 0
-  }
-
-  get #currentColumnCells() {
-    const rows = this.#tableRows
-    const columnIndex = this.#currentColumnIndex
-
-    return this.#editor.getEditorState().read(() => {
-      return rows?.map(row => row.getChildAtIndex(columnIndex)) ?? null
-    }) ?? null
-  }
-
-  get #currentColumnIndex() {
-    const currentCell = this.currentCell
-    if (!currentCell) return 0
-
-    return this.#editor.getEditorState().read(() => {
-      return $getTableColumnIndexFromTableCellNode(currentCell)
-    }) ?? 0
-  }
-
-  get #tableRows() {
-    return this.#editor.getEditorState().read(() => {
-      return this.currentTableNode?.getChildren()
-    }) ?? null
-  }
-
-  get #tableHandlerButtons() {
+  get #tableToolsButtons() {
     return Array.from(this.querySelectorAll("button, details > summary"))
   }
 
@@ -175,7 +80,7 @@ export class TableHandler extends HTMLElement {
 
     this.moreMenu = this.#createMoreMenu()
     this.appendChild(this.moreMenu)
-    this.addEventListener("keydown", this.#handleTableHandlerKeydown)
+    this.addEventListener("keydown", this.#handleToolsKeydown)
   }
 
   #createRowButtonsContainer() {
@@ -298,14 +203,14 @@ export class TableHandler extends HTMLElement {
   }
 
   #registerKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#handleKeyDown, COMMAND_PRIORITY_HIGH)
+    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#handleKeydown, COMMAND_PRIORITY_HIGH)
   }
 
   #unregisterKeyboardShortcuts() {
     this.unregisterKeyboardShortcuts()
   }
 
-  #handleKeyDown = (event) => {
+  #handleKeydown = (event) => {
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
       this.#handleAccessibilityShortcutKey()
     } else if (event.key === "Escape") {
@@ -328,88 +233,11 @@ export class TableHandler extends HTMLElement {
     this.#closeMoreMenu()
   }
 
-  #handleBackspaceKey() {
-    // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.#editor.registerCommand(
-      KEY_BACKSPACE_COMMAND,
-      (event) => {
-
-        if (!this.currentTableNode) return false
-
-        if (this.#isCurrentRowEmpty()) {
-          event.preventDefault()
-
-          this.#executeTableCommand({ action: TableAction.DELETE, childType: TableChildType.ROW })
-
-          const rows = this.#tableRows
-          if (!rows || rows.length === 0) return
-
-          this.#selectLastCellInCurrentRow()
-        } else if (this.#isCurrentCellEmpty()) {
-          event.preventDefault()
-
-          const cell = this.currentCell
-          if (!cell) return
-
-          this.#editor.update(() => {
-            cell.selectPrevious()
-          })
-        }
-
-        return true
-      },
-      COMMAND_PRIORITY_NORMAL
-    )
-  }
-
-  #handleEnterKey() {
-    // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.#editor.registerCommand(
-      KEY_ENTER_COMMAND,
-      (event) => {
-
-        if (event.shiftKey ||!this.currentTableNode) return false
-
-        event.preventDefault()
-
-        if (this.#isCurrentRowLast() && this.#isCurrentRowEmpty()) {
-          this.#executeTableCommand({ action: TableAction.DELETE, childType: TableChildType.ROW })
-
-          this.#editor.update(() => {
-            const next = this.currentTableNode?.getNextSibling()
-            if (next) {
-              next.selectStart()
-            } else {
-              const newParagraph = $createParagraphNode()
-              this.currentTableNode.insertAfter(newParagraph)
-              newParagraph.selectStart()
-            }
-          })
-        } else if (this.#isCurrentRowLast()) {
-          this.#executeTableCommand({ action: TableAction.INSERT, childType: TableChildType.ROW, direction: TableDirection.AFTER })
-        } else {
-          const rows = this.#tableRows
-          if (!rows) return
-
-          const nextRow = rows.at(this.#currentRowIndex + 1)
-          if (!nextRow) return
-
-          this.#editor.update(() => {
-            nextRow.getChildAtIndex(this.#currentColumnIndex)?.selectStart()
-          })
-        }
-
-        return true
-      },
-      COMMAND_PRIORITY_NORMAL
-    )
-  }
-
-  #handleTableHandlerKeydown = (event) => {
+  #handleToolsKeydown = (event) => {
     if (event.key === "Escape") {
       this.#editor.focus()
     } else {
-      handleRollingTabIndex(this.#tableHandlerButtons, event)
+      handleRollingTabIndex(this.#tableToolsButtons, event)
     }
   }
 
@@ -418,9 +246,7 @@ export class TableHandler extends HTMLElement {
 
     requestAnimationFrame(() => {
       const activeElement = this.querySelector("button:hover, button:focus")
-      if (!activeElement) {
-        return
-      }
+      if (!activeElement) return
 
       const command = {
         action: activeElement.dataset.action,
@@ -432,13 +258,13 @@ export class TableHandler extends HTMLElement {
 
       switch (command.childType) {
         case TableChildType.ROW:
-          cellsToHighlight = this.#currentRowCells
+          cellsToHighlight = this.tableController.currentRowCells
           break
         case TableChildType.COLUMN:
-          cellsToHighlight = this.#currentColumnCells
+          cellsToHighlight = this.tableController.currentColumnCells
           break
         case TableChildType.TABLE:
-          cellsToHighlight = this.#tableRows
+          cellsToHighlight = this.tableController.tableRows
           break
       }
 
@@ -456,22 +282,14 @@ export class TableHandler extends HTMLElement {
 
   #monitorForTableSelection() {
     this.#editor.registerUpdateListener(() => {
-      this.#editor.getEditorState().read(() => {
-        const selection = $getSelection()
-        if (!$isRangeSelection(selection)) return
+      this.tableController.updateSelectedTable()
 
-        const anchorNode = selection.anchor.getNode()
-        const tableNode = $findTableNode(anchorNode)
-
-        if (tableNode) {
-          const cellNode = $findCellNode(anchorNode)
-          this.currentCellKey = cellNode?.getKey() ?? null
-          this.#tableCellWasSelected(tableNode)
-        } else {
-          this.#hideTableHandlerButtons()
-          this.currentCellKey = null
-        }
-      })
+      const tableNode = this.tableController.currentTableNode
+      if (tableNode) {
+        this.#tableCellWasSelected(tableNode)
+      } else {
+        this.#hideTableToolsButtons()
+      }
     })
   }
 
@@ -480,11 +298,7 @@ export class TableHandler extends HTMLElement {
   }
 
   #executeTableCommand(command) {
-    this.#editor.dispatchCommand(this.#commandName(command))
-
-    if (command.action === TableAction.INSERT) {
-      this.#selectFirstNewCell(command)
-    }
+    this.tableController.executeTableCommand(command)
 
     this.#finishTableOperation()
   }
@@ -497,31 +311,17 @@ export class TableHandler extends HTMLElement {
 
   #toggleRowHeaderStyle() {
     this.#editor.update(() => {
-      this.#toggleHeaderStyle(this.#currentRowCells, TableCellHeaderStates.ROW)
+      this.tableController.toggleHeaderStyle(TableChildType.ROW)
     })
   }
 
   #toggleColumnHeaderStyle() {
     this.#editor.update(() => {
-      this.#toggleHeaderStyle(this.#currentColumnCells, TableCellHeaderStates.COLUMN)
+      this.tableController.toggleHeaderStyle(TableChildType.COLUMN)
     })
   }
 
-  #toggleHeaderStyle(cells, headerState) {
-    if (!cells || cells.length === 0) return
-
-    const firstCell = $getTableCellNodeFromLexicalNode(cells[0])
-    if (!firstCell) return
-
-    const currentStyle = firstCell.getHeaderStyles()
-    const newStyle = currentStyle ^ headerState
-
-    cells.forEach(cell => {
-      this.#setHeaderStyle(cell, newStyle, headerState)
-    })
-  }
-
-  #showTableHandlerButtons() {
+  #showTableToolsButtons() {
     this.style.display = "flex"
     this.#closeMoreMenu()
 
@@ -529,16 +329,18 @@ export class TableHandler extends HTMLElement {
     this.#setTableFocusState(true)
   }
 
-  #hideTableHandlerButtons() {
+  #hideTableToolsButtons() {
     this.style.display = "none"
     this.#closeMoreMenu()
 
     this.#setTableFocusState(false)
-    this.currentTableNodeKey = null
   }
 
   #updateButtonsPosition() {
-    const tableElement = this.#editor.getElementByKey(this.currentTableNodeKey)
+    const tableNode = this.tableController.currentTableNode
+    if (!tableNode) return
+
+    const tableElement = this.#editor.getElementByKey(tableNode.getKey())
     if (!tableElement) return
 
     const tableRect = tableElement.getBoundingClientRect()
@@ -551,9 +353,10 @@ export class TableHandler extends HTMLElement {
   }
 
   #updateRowColumnCount() {
-    if (!this.currentTableNode) return
+    const tableNode = this.tableController.currentTableNode
+    if (!tableNode) return
 
-    const tableElement = $getElementForTableNode(this.#editor, this.currentTableNode)
+    const tableElement = $getElementForTableNode(this.#editor, tableNode)
     if (!tableElement) return
 
     const rowCount = tableElement.rows
@@ -566,11 +369,20 @@ export class TableHandler extends HTMLElement {
   #setTableFocusState(focused) {
     this.#editorElement.querySelector("div.node--selected:has(table)")?.classList.remove("node--selected")
 
-    if (focused && this.currentTableNodeKey) {
-      const tableParent = this.#editor.getElementByKey(this.currentTableNodeKey)
+    const tableNode = this.tableController.currentTableNode
+    if (!tableNode) return
+
+    if (focused && tableNode) {
+      const tableParent = this.#editor.getElementByKey(tableNode.getKey())
       if (!tableParent) return
+
       tableParent.classList.add("node--selected")
     }
+  }
+
+  #tableCellWasSelected() {
+    this.#updateButtonsPosition()
+    this.#showTableToolsButtons()
   }
 
   #clearCellStyles() {
@@ -582,101 +394,8 @@ export class TableHandler extends HTMLElement {
     })
   }
 
-  #setHeaderStyle(cell, newStyle, headerState) {
-    const tableCellNode = $getTableCellNodeFromLexicalNode(cell)
-
-    if (tableCellNode) {
-      tableCellNode.setHeaderStyles(newStyle, headerState)
-    }
-  }
-
-  #selectFirstNewCell(command) {
-    if (!this.currentTableNode) return
-
-    let rowIndex = this.#currentRowIndex
-    let columnIndex = this.#currentColumnIndex
-
-    const { childType, direction } = command
-
-    if (direction === TableDirection.AFTER) {
-      if (childType === TableChildType.ROW) {
-        rowIndex = rowIndex + 1
-      } else if (childType === TableChildType.COLUMN) {
-        columnIndex = columnIndex + 1
-      }
-    }
-
-    this.#editor.update(() => {
-      const targetCell = this.currentTableNode.getChildAtIndex(rowIndex)?.getChildAtIndex(columnIndex)
-
-      if ($isTableCellNode(targetCell)) {
-        targetCell.selectStart()
-      }
-    })
-  }
-
-  #selectLastCellInCurrentRow() {
-    if (!this.currentTableNode) return
-
-    const rows = this.#tableRows
-    if (!rows) return
-
-    const currentRow = rows[this.#currentRowIndex - 1]
-
-    this.#editor.update(() => {
-      const cells = currentRow?.getChildren()
-      if (!cells) return
-
-      const lastCell = $getTableCellNodeFromLexicalNode(cells.at(-1))
-      if (!lastCell) return
-
-      lastCell.selectEnd()
-    })
-  }
-
   #closeMoreMenu() {
     this.moreMenu?.removeAttribute("open")
-  }
-
-  #commandName(command) {
-    const { action, childType, direction } = command
-
-    const childTypeSuffix = capitalizeFirstLetter(childType)
-    const directionSuffix = action == TableAction.INSERT ? capitalizeFirstLetter(direction) : ""
-    return `${action}Table${childTypeSuffix}${directionSuffix}`
-  }
-
-  #tableCellWasSelected(tableNode) {
-    this.currentTableNodeKey = tableNode.getKey()
-    this.#updateButtonsPosition()
-    this.#showTableHandlerButtons()
-  }
-
-  #isCurrentCellEmpty() {
-    if (!this.currentTableNode) return false
-
-    const cell = this.currentCell
-    if (!cell) return false
-
-    return cell.getTextContent().trim() === ""
-  }
-
-  #isCurrentRowLast() {
-    if (!this.currentTableNode) return false
-
-    const rows = this.#tableRows
-    if (!rows) return false
-
-    return rows.length === this.#currentRowIndex + 1
-  }
-
-  #isCurrentRowEmpty() {
-    if (!this.currentTableNode) return false
-
-    const cells = this.#currentRowCells
-    if (!cells) return false
-
-    return cells.every(cell => cell.getTextContent().trim() === "")
   }
 
   #icon(command) {
@@ -685,4 +404,4 @@ export class TableHandler extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-table-handler", TableHandler)
+customElements.define("lexxy-table-tools", TableTools)
