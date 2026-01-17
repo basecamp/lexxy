@@ -7688,8 +7688,8 @@ const COMMANDS = [
   "uploadAttachments",
 
   "insertTable",
-  "insertTableRowAbove",
-  "insertTableRowBelow",
+  "insertTableRowBefore",
+  "insertTableRowAfter",
   "insertTableColumnAfter",
   "insertTableColumnBefore",
   "deleteTableRow",
@@ -7803,9 +7803,7 @@ class CommandDispatcher {
   }
 
   dispatchInsertHorizontalDivider() {
-    this.editor.update(() => {
-      this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode());
-    });
+    this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode());
 
     this.editor.focus();
   }
@@ -7867,11 +7865,11 @@ class CommandDispatcher {
     this.editor.dispatchCommand(Ae$1, { "rows": 3, "columns": 3, "includeHeaders": true });
   }
 
-  dispatchInsertTableRowBelow() {
+  dispatchInsertTableRowAfter() {
     je$1(true);
   }
 
-  dispatchInsertTableRowAbove() {
+  dispatchInsertTableRowBefore() {
     je$1(false);
   }
 
@@ -7892,14 +7890,12 @@ class CommandDispatcher {
   }
 
   dispatchDeleteTable() {
-    this.editor.update(() => {
-      const selection = Lr();
-      if (!yr(selection)) return
+    const selection = Lr();
+    if (!yr(selection)) return
 
-      const anchorNode = selection.anchor.getNode();
-      const tableNode = Qt(anchorNode);
-      tableNode.remove();
-    });
+    const anchorNode = selection.anchor.getNode();
+    const tableNode = Qt(anchorNode);
+    tableNode.remove();
   }
 
   dispatchUndo() {
@@ -8739,6 +8735,10 @@ function normalizeFilteredText(string) {
 
 function filterMatches(text, potentialMatch) {
   return normalizeFilteredText(text).includes(normalizeFilteredText(potentialMatch))
+}
+
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1)
 }
 
 class EditorConfiguration {
@@ -10673,8 +10673,8 @@ class LexicalEditorElement extends HTMLElement {
 
   #registerTableComponents() {
     Nn(this.editor);
-    this.tableHandler = createElement("lexxy-table-handler");
-    this.append(this.tableHandler);
+    this.tableTools = createElement("lexxy-table-tools");
+    this.append(this.tableTools);
 
     this.#addUnregisterHandler(registerHeaderBackgroundTransform(this.editor));
   }
@@ -11099,11 +11099,323 @@ class HighlightDropdown extends ToolbarDropdown {
 
 customElements.define("lexxy-highlight-dropdown", HighlightDropdown);
 
-class TableHandler extends HTMLElement {
+const TableAction = Object.freeze({
+  INSERT:  "insert",
+  DELETE: "delete",
+  TOGGLE: "toggle"
+});
+
+const TableChildType = Object.freeze({
+  ROW: "row",
+  COLUMN: "column",
+  TABLE: "table"
+});
+
+const TableDirection = Object.freeze({
+  BEFORE: "before",
+  AFTER: "after"
+});
+
+class TableController {
+  constructor(editor) {
+    this.editor = editor;
+    this.currentTableNodeKey = null;
+    this.currentCellKey = null;
+
+    this.#handleEnterKey();
+    this.#handleBackspaceKey();
+  }
+
+  get currentCell() {
+    if (!this.currentCellKey) return null
+
+    return this.editor.getEditorState().read(() => {
+      const node = xo(this.currentCellKey);
+      return Gt(node)
+    })
+  }
+
+  get currentTableNode() {
+    if (!this.currentTableNodeKey) return null
+
+    const cell = this.currentCell;
+    if (!cell) return null
+
+    return this.editor.getEditorState().read(() => {
+      return Qt(cell)
+    })
+  }
+
+  get currentRowCells() {
+    const currentRowIndex = this.currentRowIndex;
+
+    const rows = this.tableRows;
+    if (!rows) return null
+
+    return this.editor.getEditorState().read(() => {
+      return rows[currentRowIndex]?.getChildren() ?? null
+    }) ?? null
+  }
+
+  get currentRowIndex() {
+    const currentCell = this.currentCell;
+    if (!currentCell) return 0
+
+    return this.editor.getEditorState().read(() => {
+      return Ie$1(currentCell)
+    }) ?? 0
+  }
+
+  get currentColumnCells() {
+    const rows = this.tableRows;
+    const columnIndex = this.currentColumnIndex;
+
+    return this.editor.getEditorState().read(() => {
+      return rows?.map(row => row.getChildAtIndex(columnIndex)) ?? null
+    }) ?? null
+  }
+
+  get currentColumnIndex() {
+    const currentCell = this.currentCell;
+    if (!currentCell) return 0
+
+    return this.editor.getEditorState().read(() => {
+      return Ue$1(currentCell)
+    }) ?? 0
+  }
+
+  get tableRows() {
+    return this.editor.getEditorState().read(() => {
+      return this.currentTableNode?.getChildren()
+    }) ?? null
+  }
+
+  executeTableCommand(command) {
+    const { action, childType } = command;
+    if (action === TableAction.TOGGLE) {
+      this.toggleHeaderStyle(childType);
+      return
+    }
+
+    this.editor.dispatchCommand(this.#commandName(command));
+
+    if (action === TableAction.INSERT) {
+      this.#selectFirstNewCell(command);
+    }
+  }
+
+  updateSelectedTable() {
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const anchorNode = selection.anchor.getNode();
+      const tableNode = Qt(anchorNode);
+      const cellNode = Gt(anchorNode);
+
+      this.currentCellKey = cellNode?.getKey() ?? null;
+      this.currentTableNodeKey = tableNode?.getKey() ?? null;
+    });
+  }
+
+  toggleHeaderStyle(childType) {
+    let cells = null;
+    let headerState = null;
+
+    if (childType === TableChildType.ROW) {
+      cells = this.currentRowCells;
+      headerState = ve$1.ROW;
+    } else if (childType === TableChildType.COLUMN) {
+      cells = this.currentColumnCells;
+      headerState = ve$1.COLUMN;
+    }
+
+    if (!cells || cells.length === 0) return
+
+    this.editor.update(() => {
+      const firstCell = Be$1(cells[0]);
+      if (!firstCell) return
+
+      const currentStyle = firstCell.getHeaderStyles();
+      const newStyle = currentStyle ^ headerState;
+
+      cells.forEach(cell => {
+        this.#setHeaderStyle(cell, newStyle, headerState);
+      });
+    });
+  }
+
+  #commandName(command) {
+    const { action, childType, direction } = command;
+
+    const childTypeSuffix = capitalizeFirstLetter(childType);
+    const directionSuffix = action == TableAction.INSERT ? capitalizeFirstLetter(direction) : "";
+    return `${action}Table${childTypeSuffix}${directionSuffix}`
+  }
+
+  #setHeaderStyle(cell, newStyle, headerState) {
+    const tableCellNode = Be$1(cell);
+
+    if (tableCellNode) {
+      tableCellNode.setHeaderStyles(newStyle, headerState);
+    }
+  }
+
+  #selectFirstNewCell(command) {
+    if (!this.currentTableNode) return
+
+    let rowIndex = this.currentRowIndex;
+    let columnIndex = this.currentColumnIndex;
+
+    const { childType, direction } = command;
+
+    if (direction === TableDirection.AFTER) {
+      if (childType === TableChildType.ROW) {
+        rowIndex = rowIndex + 1;
+      } else if (childType === TableChildType.COLUMN) {
+        columnIndex = columnIndex + 1;
+      }
+    }
+
+    this.editor.update(() => {
+      const targetCell = this.currentTableNode.getChildAtIndex(rowIndex)?.getChildAtIndex(columnIndex);
+
+      if (Oe$1(targetCell)) {
+        targetCell.selectStart();
+      }
+    });
+  }
+
+  #selectLastCellInCurrentRow() {
+    if (!this.currentTableNode) return
+
+    const rows = this.tableRows;
+    if (!rows) return
+
+    const currentRow = rows[this.currentRowIndex - 1];
+
+    this.editor.update(() => {
+      const cells = currentRow?.getChildren();
+      if (!cells) return
+
+      const lastCell = Be$1(cells.at(-1));
+      if (!lastCell) return
+
+      lastCell.selectEnd();
+    });
+  }
+
+  #isCurrentCellEmpty() {
+    if (!this.currentTableNode) return false
+
+    const cell = this.currentCell;
+    if (!cell) return false
+
+    return cell.getTextContent().trim() === ""
+  }
+
+  #isCurrentRowLast() {
+    if (!this.currentTableNode) return false
+
+    const rows = this.tableRows;
+    if (!rows) return false
+
+    return rows.length === this.currentRowIndex + 1
+  }
+
+  #isCurrentRowEmpty() {
+    if (!this.currentTableNode) return false
+
+    const cells = this.currentRowCells;
+    if (!cells) return false
+
+    return cells.every(cell => cell.getTextContent().trim() === "")
+  }
+
+  #handleBackspaceKey() {
+    // We can't prevent these externally using regular keydown because Lexical handles it first.
+    this.editor.registerCommand(
+      we$1,
+      (event) => {
+
+        if (!this.currentTableNode) return false
+
+        if (this.#isCurrentRowEmpty()) {
+          event.preventDefault();
+
+          this.executeTableCommand({ action: TableAction.DELETE, childType: TableChildType.ROW });
+
+          const rows = this.tableRows;
+          if (!rows || rows.length === 0) return
+
+          this.#selectLastCellInCurrentRow();
+        } else if (this.#isCurrentCellEmpty()) {
+          event.preventDefault();
+
+          const cell = this.currentCell;
+          if (!cell) return
+
+          this.editor.update(() => {
+            cell.selectPrevious();
+          });
+        }
+
+        return true
+      },
+      Ri
+    );
+  }
+
+  #handleEnterKey() {
+    // We can't prevent these externally using regular keydown because Lexical handles it first.
+    this.editor.registerCommand(
+      Ne$2,
+      (event) => {
+        if (event.shiftKey ||!this.currentTableNode) return false
+
+        event.preventDefault();
+
+        if (this.#isCurrentRowLast() && this.#isCurrentRowEmpty()) {
+          this.executeTableCommand({ action: TableAction.DELETE, childType: TableChildType.ROW });
+
+          this.editor.update(() => {
+            const next = this.currentTableNode?.getNextSibling();
+            if (next) {
+              next.selectStart();
+            } else {
+              const newParagraph = Li();
+              this.currentTableNode.insertAfter(newParagraph);
+              newParagraph.selectStart();
+            }
+          });
+        } else if (this.#isCurrentRowLast()) {
+          this.executeTableCommand({ action: TableAction.INSERT, childType: TableChildType.ROW, direction: TableDirection.AFTER });
+        } else {
+          const rows = this.tableRows;
+          if (!rows) return
+
+          const nextRow = rows.at(this.currentRowIndex + 1);
+          if (!nextRow) return
+
+          this.editor.update(() => {
+            nextRow.getChildAtIndex(this.currentColumnIndex)?.selectStart();
+          });
+        }
+
+        return true
+      },
+      Ri
+    );
+  }
+}
+
+class TableTools extends HTMLElement {
   connectedCallback() {
     this.#setUpButtons();
     this.#monitorForTableSelection();
     this.#registerKeyboardShortcuts();
+
+    this.tableController = new TableController(this.#editorElement.editor);
   }
 
   disconnectedCallback() {
@@ -11118,74 +11430,212 @@ class TableHandler extends HTMLElement {
     return this.closest("lexxy-editor")
   }
 
-  get #currentCell() {
-    const selection = Lr();
-    if (!yr(selection)) return null
-
-    const anchorNode = selection.anchor.getNode();
-    return Be$1(anchorNode)
-  }
-
-  get #currentRow() {
-    const currentCell = this.#currentCell;
-    if (!currentCell) return 0
-    return Ie$1(currentCell)
-  }
-
-  get #currentColumn() {
-    const currentCell = this.#currentCell;
-    if (!currentCell) return 0
-    return Ue$1(currentCell)
-  }
-
-  get #tableHandlerButtons() {
+  get #tableToolsButtons() {
     return Array.from(this.querySelectorAll("button, details > summary"))
-  }
-
-  #registerKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(me$1, this.#handleKeyDown, Bi);
-  }
-
-  #unregisterKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts();
-  }
-
-  #handleKeyDown = (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
-      const firstButton = this.querySelector("button, [tabindex]:not([tabindex='-1'])");
-      this.#setFocusStateOnSelectedCell();
-      firstButton?.focus();
-    } else if (event.key === "Escape") {
-      this.#editor.getEditorState().read(() => {
-        const cell = this.#currentCell;
-        if (!cell) return
-
-        this.#editor.update(() => {
-          cell.select();
-        });
-      });
-      this.#closeMoreMenu();
-    }
-  }
-
-  #handleTableHandlerKeydown = (event) => {
-    if (event.key === "Escape") {
-      this.#editor.focus();
-    } else {
-      handleRollingTabIndex(this.#tableHandlerButtons, event);
-    }
   }
 
   #setUpButtons() {
     this.appendChild(this.#createRowButtonsContainer());
     this.appendChild(this.#createColumnButtonsContainer());
 
-    this.moreMenu = this.#createMoreMenu();
-    this.appendChild(this.moreMenu);
-    this.addEventListener("keydown", this.#handleTableHandlerKeydown);
+    //this.moreMenu = this.#createMoreMenu()
+    this.appendChild(this.#createDeleteTableButton());
+    this.addEventListener("keydown", this.#handleToolsKeydown);
   }
 
-  #showTableHandlerButtons() {
+  #createButtonsContainer(childType, setCountProperty, moreMenu) {
+    const container = createElement("div", { className: `lexxy-table-control lexxy-table-control--${childType}` });
+
+    const plusButton = this.#createButton(`Add ${childType}`, { action: TableAction.INSERT, childType, direction: TableDirection.AFTER }, "+");
+    const minusButton = this.#createButton(`Remove ${childType}`, { action: TableAction.DELETE, childType }, "−");
+
+    const dropdown = createElement("details", { className: "lexxy-table-control__more-menu" });
+    dropdown.setAttribute("name", "lexxy-dropdown");
+    dropdown.tabIndex = -1;
+
+    const count = createElement("summary", {}, `_ ${childType}s`);
+    setCountProperty(count);
+    dropdown.appendChild(count);
+
+    dropdown.appendChild(moreMenu);
+
+    container.appendChild(minusButton);
+    container.appendChild(dropdown);
+    container.appendChild(plusButton);
+
+    return container
+  }
+
+  #createRowButtonsContainer() {
+    return this.#createButtonsContainer(
+      TableChildType.ROW,
+      (count) => { this.rowCount = count; },
+      this.#createMoreMenuSection(TableChildType.ROW)
+    )
+  }
+
+  #createColumnButtonsContainer() {
+    return this.#createButtonsContainer(
+      TableChildType.COLUMN,
+      (count) => { this.columnCount = count; },
+      this.#createMoreMenuSection(TableChildType.COLUMN)
+    )
+  }
+
+  #createMoreMenuSection(childType) {
+    const section = createElement("div", { className: "lexxy-table-control__more-menu-details" });
+    const addBeforeButton = this.#createButton(`Add ${childType} before`, { action: TableAction.INSERT, childType, direction: TableDirection.BEFORE });
+    const addAfterButton = this.#createButton(`Add ${childType} after`, { action: TableAction.INSERT, childType, direction: TableDirection.AFTER });
+    const toggleStyleButton = this.#createButton(`Toggle ${childType} style`, { action: TableAction.TOGGLE, childType });
+    const deleteButton = this.#createButton(`Remove ${childType}`, { action: TableAction.DELETE, childType });
+
+    section.appendChild(addBeforeButton);
+    section.appendChild(addAfterButton);
+    section.appendChild(toggleStyleButton);
+    section.appendChild(deleteButton);
+
+    return section
+  }
+
+  #createDeleteTableButton() {
+    const container = createElement("div", { className: "lexxy-table-control" });
+
+    const deleteTableButton = this.#createButton("Delete table", { action: TableAction.DELETE, childType: TableChildType.TABLE });
+    container.appendChild(deleteTableButton);
+
+    return container
+  }
+
+  #createButton(label, command = {}, icon = this.#icon(command)) {
+    const button = createElement("button", {
+      className: "lexxy-table-control__button",
+      "aria-label": label,
+      type: "button"
+    });
+    button.tabIndex = -1;
+    button.innerHTML = `${icon} <span>${label}</span>`;
+
+    button.dataset.action = command.action;
+    button.dataset.childType = command.childType;
+    button.dataset.direction = command.direction;
+
+    button.addEventListener("click", () => this.#executeTableCommand(command));
+
+    button.addEventListener("mouseover", () => this.#handleCommandButtonHover());
+    button.addEventListener("focus", () => this.#handleCommandButtonHover());
+    button.addEventListener("mouseout", () => this.#handleCommandButtonHover());
+
+    return button
+  }
+
+  #registerKeyboardShortcuts() {
+    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(me$1, this.#handleKeydown, Bi);
+  }
+
+  #unregisterKeyboardShortcuts() {
+    this.unregisterKeyboardShortcuts();
+  }
+
+  #handleKeydown = (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
+      this.#handleAccessibilityShortcutKey();
+    } else if (event.key === "Escape") {
+      this.#handleEscapeKey();
+    }
+  }
+
+  #handleAccessibilityShortcutKey() {
+    const firstButton = this.querySelector("button, [tabindex]:not([tabindex='-1'])");
+    firstButton?.focus();
+  }
+
+  #handleEscapeKey() {
+    const cell = this.currentCell;
+    if (!cell) return
+
+    this.#editor.update(() => {
+      cell.select();
+    });
+    this.#closeMoreMenu();
+  }
+
+  #handleToolsKeydown = (event) => {
+    if (event.key === "Escape") {
+      this.#editor.focus();
+    } else {
+      handleRollingTabIndex(this.#tableToolsButtons, event);
+    }
+  }
+
+  #handleCommandButtonHover() {
+    this.#clearCellStyles();
+
+    requestAnimationFrame(() => {
+      const activeElement = this.querySelector("button:hover, button:focus");
+      if (!activeElement) return
+
+      const command = {
+        action: activeElement.dataset.action,
+        childType: activeElement.dataset.childType,
+        direction: activeElement.dataset.direction
+      };
+
+      let cellsToHighlight = null;
+
+      switch (command.childType) {
+        case TableChildType.ROW:
+          cellsToHighlight = this.tableController.currentRowCells;
+          break
+        case TableChildType.COLUMN:
+          cellsToHighlight = this.tableController.currentColumnCells;
+          break
+        case TableChildType.TABLE:
+          cellsToHighlight = this.tableController.tableRows;
+          break
+      }
+
+      if (!cellsToHighlight) return
+
+      cellsToHighlight.forEach(cell => {
+        const cellElement = this.#editor.getElementByKey(cell.getKey());
+        if (!cellElement) return
+        cellElement.classList.toggle("lexxy-content__table-cell--focused", true);
+
+        Object.assign(cellElement.dataset, command);
+      });
+    });
+  }
+
+  #monitorForTableSelection() {
+    this.#editor.registerUpdateListener(() => {
+      this.tableController.updateSelectedTable();
+
+      const tableNode = this.tableController.currentTableNode;
+      if (tableNode) {
+        this.#tableCellWasSelected(tableNode);
+      } else {
+        this.#hideTableToolsButtons();
+      }
+    });
+  }
+
+  #executeTableCommand(command) {
+    if (command.action === TableAction.DELETE && command.childType === TableChildType.TABLE) {
+      this.#editor.dispatchCommand("deleteTable");
+    } else {
+      this.tableController.executeTableCommand(command);
+    }
+
+    this.#finishTableOperation();
+  }
+
+  #finishTableOperation() {
+    this.#closeMoreMenu();
+    this.#updateRowColumnCount();
+    this.#handleCommandButtonHover();
+  }
+
+  #showTableToolsButtons() {
     this.style.display = "flex";
     this.#closeMoreMenu();
 
@@ -11193,15 +11643,17 @@ class TableHandler extends HTMLElement {
     this.#setTableFocusState(true);
   }
 
-  #hideTableHandlerButtons() {
+  #hideTableToolsButtons() {
     this.style.display = "none";
     this.#closeMoreMenu();
 
     this.#setTableFocusState(false);
-    this.currentTableNode = null;
   }
 
-  #updateButtonsPosition(tableNode) {
+  #updateButtonsPosition() {
+    const tableNode = this.tableController.currentTableNode;
+    if (!tableNode) return
+
     const tableElement = this.#editor.getElementByKey(tableNode.getKey());
     if (!tableElement) return
 
@@ -11215,9 +11667,10 @@ class TableHandler extends HTMLElement {
   }
 
   #updateRowColumnCount() {
-    if (!this.currentTableNode) return
+    const tableNode = this.tableController.currentTableNode;
+    if (!tableNode) return
 
-    const tableElement = dn(this.#editor, this.currentTableNode);
+    const tableElement = dn(this.#editor, tableNode);
     if (!tableElement) return
 
     const rowCount = tableElement.rows;
@@ -11227,373 +11680,98 @@ class TableHandler extends HTMLElement {
     this.columnCount.textContent = `${columnCount} column${columnCount === 1 ? "" : "s"}`;
   }
 
-  #createButton(icon, label, onClick) {
-    const button = createElement("button", {
-      className: "lexxy-table-control__button",
-      "aria-label": label,
-      type: "button"
-    });
-    button.tabIndex = -1;
-    button.innerHTML = `${icon} <span>${label}</span>`;
-    button.addEventListener("click", onClick.bind(this));
-
-    return button
-  }
-
-  #createRowButtonsContainer() {
-    const container = createElement("div", { className: "lexxy-table-control" });
-
-    const plusButton = this.#createButton("+", "Add row", () => this.#insertTableRow("end"));
-    const minusButton = this.#createButton("−", "Remove row", () => this.#deleteTableRow("end"));
-
-    this.rowCount = createElement("span");
-    this.rowCount.textContent = "_ rows";
-
-    container.appendChild(minusButton);
-    container.appendChild(this.rowCount);
-    container.appendChild(plusButton);
-
-    return container
-  }
-
-  #createColumnButtonsContainer() {
-    const container = createElement("div", { className: "lexxy-table-control" });
-
-    const plusButton = this.#createButton("+", "Add column", () => this.#insertTableColumn("end"));
-    const minusButton = this.#createButton("−", "Remove column", () => this.#deleteTableColumn("end"));
-
-    this.columnCount = createElement("span");
-    this.columnCount.textContent = "_ columns";
-
-    container.appendChild(minusButton);
-    container.appendChild(this.columnCount);
-    container.appendChild(plusButton);
-
-    return container
-  }
-
-  #createMoreMenu() {
-    const container = createElement("details", {
-      className: "lexxy-table-control lexxy-table-control__more-menu"
-    });
-    container.setAttribute("name", "lexxy-dropdown");
-
-    container.tabIndex = -1;
-
-    const summary = createElement("summary", {}, "•••");
-    container.appendChild(summary);
-
-    const details = createElement("div", { className: "lexxy-table-control__more-menu-details" });
-    container.appendChild(details);
-
-    details.appendChild(this.#createRowSection());
-    details.appendChild(this.#createColumnSection());
-    details.appendChild(this.#createDeleteTableSection());
-
-    container.addEventListener("toggle", this.#handleMoreMenuToggle.bind(this));
-
-    return container
-  }
-
-  #createColumnSection() {
-    const columnSection = createElement("section", { className: "lexxy-table-control__more-menu-section" });
-
-    const columnButtons = [
-      { icon: this.#icon("add-column-before"), label: "Add column before", onClick: () => this.#insertTableColumn("left") },
-      { icon: this.#icon("add-column-after"), label: "Add column after", onClick: () => this.#insertTableColumn("right") },
-      { icon: this.#icon("remove-column"), label: "Remove column", onClick: this.#deleteTableColumn },
-      { icon: this.#icon("toggle-column-style"), label: "Toggle column style", onClick: this.#toggleColumnHeaderStyle },
-    ];
-
-    columnButtons.forEach(button => {
-      const buttonElement = this.#createButton(button.icon, button.label, button.onClick);
-      columnSection.appendChild(buttonElement);
-    });
-
-    return columnSection
-  }
-
-  #createRowSection() {
-    const rowSection = createElement("section", { className: "lexxy-table-control__more-menu-section" });
-
-    const rowButtons = [
-      { icon: this.#icon("add-row-above"), label: "Add row above", onClick: () => this.#insertTableRow("above") },
-      { icon: this.#icon("add-row-below"), label: "Add row below", onClick: () => this.#insertTableRow("below") },
-      { icon: this.#icon("remove-row"), label: "Remove row", onClick: this.#deleteTableRow },
-      { icon: this.#icon("toggle-row-style"), label: "Toggle row style", onClick: this.#toggleRowHeaderStyle }
-    ];
-
-    rowButtons.forEach(button => {
-      const buttonElement = this.#createButton(button.icon, button.label, button.onClick);
-      rowSection.appendChild(buttonElement);
-    });
-
-    return rowSection
-  }
-
-  #createDeleteTableSection() {
-    const deleteSection = createElement("section", { className: "lexxy-table-control__more-menu-section" });
-
-    const deleteButton = { icon: this.#icon("delete-table"), label: "Delete table", onClick: this.#deleteTable };
-
-    const buttonElement = this.#createButton(deleteButton.icon, deleteButton.label, deleteButton.onClick);
-    deleteSection.appendChild(buttonElement);
-
-    return deleteSection
-  }
-
-  #handleMoreMenuToggle() {
-    if (this.moreMenu.open) {
-      this.#setFocusStateOnSelectedCell();
-    } else {
-      this.#removeFocusStateFromSelectedCell();
-    }
-  }
-
-  #closeMoreMenu() {
-    this.#removeFocusStateFromSelectedCell();
-    this.moreMenu.removeAttribute("open");
-  }
-
-  #monitorForTableSelection() {
-    this.#editor.registerUpdateListener(() => {
-      this.#editor.getEditorState().read(() => {
-        const selection = Lr();
-        if (!yr(selection)) return
-
-        const anchorNode = selection.anchor.getNode();
-        const tableNode = Qt(anchorNode);
-
-        if (tableNode) {
-          this.#tableCellWasSelected(tableNode);
-        } else {
-          this.#hideTableHandlerButtons();
-        }
-      });
-    });
-  }
-
   #setTableFocusState(focused) {
     this.#editorElement.querySelector("div.node--selected:has(table)")?.classList.remove("node--selected");
 
-    if (focused && this.currentTableNode) {
-      const tableParent = this.#editor.getElementByKey(this.currentTableNode.getKey());
+    const tableNode = this.tableController.currentTableNode;
+    if (!tableNode) return
+
+    if (focused && tableNode) {
+      const tableParent = this.#editor.getElementByKey(tableNode.getKey());
       if (!tableParent) return
+
       tableParent.classList.add("node--selected");
     }
   }
 
-  #tableCellWasSelected(tableNode) {
-    this.currentTableNode = tableNode;
-    this.#updateButtonsPosition(tableNode);
-    this.#showTableHandlerButtons();
+  #tableCellWasSelected() {
+    this.#updateButtonsPosition();
+    this.#showTableToolsButtons();
   }
 
-  #setFocusStateOnSelectedCell() {
-    this.#editor.getEditorState().read(() => {
-      const currentCell = this.#currentCell;
-      if (!currentCell) return
-
-      const cellElement = this.#editor.getElementByKey(currentCell.getKey());
-      if (!cellElement) return
-
-      cellElement.classList.add("table-cell--selected");
+  #clearCellStyles() {
+    this.#editorElement.querySelectorAll(".lexxy-content__table-cell--focused")?.forEach(cell => {
+      cell.classList.remove("lexxy-content__table-cell--focused");
+      cell.removeAttribute("data-action");
+      cell.removeAttribute("data-child-type");
+      cell.removeAttribute("data-direction");
     });
   }
 
-  #removeFocusStateFromSelectedCell() {
-    this.#editorElement.querySelector(".table-cell--selected")?.classList.remove("table-cell--selected");
+  #closeMoreMenu() {
+    this.querySelector("details[open]")?.removeAttribute("open");
   }
 
-  #selectLastTableCell() {
-    if (!this.currentTableNode) return
-
-    const last = this.currentTableNode.getLastChild().getLastChild();
-    if (!Oe$1(last)) return
-
-    last.selectEnd();
-  }
-
-  #deleteTable() {
-    this.#editor.dispatchCommand("deleteTable");
-
-    this.#closeMoreMenu();
-    this.#updateRowColumnCount();
-  }
-
-  #insertTableRow(direction) {
-    this.#executeTableCommand("insert", "row", direction);
-  }
-
-  #insertTableColumn(direction) {
-    this.#executeTableCommand("insert", "column", direction);
-  }
-
-  #deleteTableRow(direction) {
-    this.#executeTableCommand("delete", "row", direction);
-  }
-
-  #deleteTableColumn(direction) {
-    this.#executeTableCommand("delete", "column", direction);
-  }
-
-  #executeTableCommand(action = "insert", childType = "row", direction) {
-    this.#editor.update(() => {
-      const currentCell = this.#currentCell;
-      if (!currentCell) return
-
-      if (direction === "end") {
-        this.#selectLastTableCell();
-      }
-
-      this.#dispatchTableCommand(action, childType, direction);
-
-      if (currentCell.isAttached()) {
-        currentCell.selectEnd();
-      }
-    });
-
-    this.#closeMoreMenu();
-    this.#updateRowColumnCount();
-  }
-
-  #dispatchTableCommand(action, childType, direction) {
-    switch (action) {
-      case "insert":
-        switch (childType) {
-          case "row":
-            if (direction === "above") {
-              this.#editor.dispatchCommand("insertTableRowAbove");
-            } else {
-              this.#editor.dispatchCommand("insertTableRowBelow");
-            }
-            break
-          case "column":
-            if (direction === "left") {
-              this.#editor.dispatchCommand("insertTableColumnBefore");
-            } else {
-              this.#editor.dispatchCommand("insertTableColumnAfter");
-            }
-            break
-        }
-        break
-      case "delete":
-        switch (childType) {
-          case "row":
-            this.#editor.dispatchCommand("deleteTableRow");
-            break
-          case "column":
-            this.#editor.dispatchCommand("deleteTableColumn");
-            break
-        }
-        break
-    }
-  }
-
-  #toggleRowHeaderStyle() {
-    this.#editor.update(() => {
-      const rows = this.currentTableNode.getChildren();
-
-      const row = rows[this.#currentRow];
-      if (!row) return
-
-      const cells = row.getChildren();
-      const firstCell = Be$1(cells[0]);
-      if (!firstCell) return
-
-      const currentStyle = firstCell.getHeaderStyles();
-      const newStyle = currentStyle ^ ve$1.ROW;
-
-      cells.forEach(cell => {
-        this.#setHeaderStyle(cell, newStyle, ve$1.ROW);
-      });
-    });
-  }
-
-  #toggleColumnHeaderStyle() {
-    this.#editor.update(() => {
-      const rows = this.currentTableNode.getChildren();
-
-      const row = rows[this.#currentRow];
-      if (!row) return
-
-      const cells = row.getChildren();
-      const selectedCell = Be$1(cells[this.#currentColumn]);
-      if (!selectedCell) return
-
-      const currentStyle = selectedCell.getHeaderStyles();
-      const newStyle = currentStyle ^ ve$1.COLUMN;
-
-      rows.forEach(row => {
-        const cell = row.getChildren()[this.#currentColumn];
-        if (!cell) return
-        this.#setHeaderStyle(cell, newStyle, ve$1.COLUMN);
-      });
-    });
-  }
-
-  #setHeaderStyle(cell, newStyle, headerState) {
-    const tableCellNode = Be$1(cell);
-
-    if (tableCellNode) {
-      tableCellNode.setHeaderStyles(newStyle, headerState);
-    }
-  }
-
-  #icon(name) {
-    const icons =
-      {
-        "add-row-above":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 7L0 10V4L4 7ZM6.5 7.5H16.5V6.5H6.5V7.5ZM18 8C18 8.55228 17.5523 9 17 9H6C5.44772 9 5 8.55228 5 8V6C5 5.44772 5.44772 5 6 5H17C17.5523 5 18 5.44772 18 6V8Z"/><path d="M2 2C2 1.44772 2.44772 1 3 1H15C15.5523 1 16 1.44772 16 2C16 2.55228 15.5523 3 15 3H3C2.44772 3 2 2.55228 2 2Z"/><path d="M2 12C2 11.4477 2.44772 11 3 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H3C2.44772 13 2 12.5523 2 12Z"/><path d="M2 16C2 15.4477 2.44772 15 3 15H15C15.5523 15 16 15.4477 16 16C16 16.5523 15.5523 17 15 17H3C2.44772 17 2 16.5523 2 16Z"/>
-          </svg>`,
-
-        "add-row-below":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 11L0 8V14L4 11ZM6.5 10.5H16.5V11.5H6.5V10.5ZM18 10C18 9.44772 17.5523 9 17 9H6C5.44772 9 5 9.44772 5 10V12C5 12.5523 5.44772 13 6 13H17C17.5523 13 18 12.5523 18 12V10Z"/><path d="M2 16C2 16.5523 2.44772 17 3 17H15C15.5523 17 16 16.5523 16 16C16 15.4477 15.5523 15 15 15H3C2.44772 15 2 15.4477 2 16Z"/><path d="M2 6C2 6.55228 2.44772 7 3 7H15C15.5523 7 16 6.55228 16 6C16 5.44772 15.5523 5 15 5H3C2.44772 5 2 5.44772 2 6Z"/><path d="M2 2C2 2.55228 2.44772 3 3 3H15C15.5523 3 16 2.55228 16 2C16 1.44772 15.5523 1 15 1H3C2.44772 1 2 1.44772 2 2Z"/>
-          </svg>`,
-
-        "remove-row":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.9951 10.1025C17.9438 10.6067 17.5177 11 17 11H12.4922L13.9922 9.5H16.5V5.5L1.5 5.5L1.5 9.5H4.00586L5.50586 11H1L0.897461 10.9951C0.427034 10.9472 0.0527828 10.573 0.00488281 10.1025L0 10L1.78814e-07 5C2.61831e-07 4.48232 0.393332 4.05621 0.897461 4.00488L1 4L17 4C17.5523 4 18 4.44772 18 5V10L17.9951 10.1025Z"/><path d="M11.2969 15.0146L8.99902 12.7168L6.7002 15.0146L5.63965 13.9541L7.93848 11.6562L5.63965 9.3584L6.7002 8.29785L8.99902 10.5957L11.2969 8.29785L12.3574 9.3584L10.0596 11.6562L12.3574 13.9541L11.2969 15.0146Z"/>
-          </svg>`,
-
-        "toggle-row-style":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M1 2C1 1.44772 1.44772 1 2 1H7C7.55228 1 8 1.44772 8 2V7C8 7.55228 7.55228 8 7 8H2C1.44772 8 1 7.55228 1 7V2Z"/><path d="M2.5 15.5H6.5V11.5H2.5V15.5ZM8 16C8 16.5177 7.60667 16.9438 7.10254 16.9951L7 17H2L1.89746 16.9951C1.42703 16.9472 1.05278 16.573 1.00488 16.1025L1 16V11C1 10.4477 1.44772 10 2 10H7C7.55228 10 8 10.4477 8 11V16Z"/><path d="M10 2C10 1.44772 10.4477 1 11 1H16C16.5523 1 17 1.44772 17 2V7C17 7.55228 16.5523 8 16 8H11C10.4477 8 10 7.55228 10 7V2Z"/><path d="M11.5 15.5H15.5V11.5H11.5V15.5ZM17 16C17 16.5177 16.6067 16.9438 16.1025 16.9951L16 17H11L10.8975 16.9951C10.427 16.9472 10.0528 16.573 10.0049 16.1025L10 16V11C10 10.4477 10.4477 10 11 10H16C16.5523 10 17 10.4477 17 11V16Z"/>
-          </svg>`,
-
-        "add-column-before":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M7 4L10 2.62268e-07L4 0L7 4ZM7.5 6.5L7.5 16.5H6.5L6.5 6.5H7.5ZM8 18C8.55228 18 9 17.5523 9 17V6C9 5.44772 8.55229 5 8 5H6C5.44772 5 5 5.44772 5 6L5 17C5 17.5523 5.44772 18 6 18H8Z"/><path d="M2 2C1.44772 2 1 2.44772 1 3L1 15C1 15.5523 1.44772 16 2 16C2.55228 16 3 15.5523 3 15L3 3C3 2.44772 2.55229 2 2 2Z"/><path d="M12 2C11.4477 2 11 2.44772 11 3L11 15C11 15.5523 11.4477 16 12 16C12.5523 16 13 15.5523 13 15L13 3C13 2.44772 12.5523 2 12 2Z"/><path d="M16 2C15.4477 2 15 2.44772 15 3L15 15C15 15.5523 15.4477 16 16 16C16.5523 16 17 15.5523 17 15V3C17 2.44772 16.5523 2 16 2Z"/>
-          </svg>`,
-
-        "add-column-after":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M11 4L8 2.62268e-07L14 0L11 4ZM10.5 6.5V16.5H11.5V6.5H10.5ZM10 18C9.44772 18 9 17.5523 9 17V6C9 5.44772 9.44772 5 10 5H12C12.5523 5 13 5.44772 13 6V17C13 17.5523 12.5523 18 12 18H10Z"/><path d="M16 2C16.5523 2 17 2.44772 17 3L17 15C17 15.5523 16.5523 16 16 16C15.4477 16 15 15.5523 15 15V3C15 2.44772 15.4477 2 16 2Z"/><path d="M6 2C6.55228 2 7 2.44772 7 3L7 15C7 15.5523 6.55228 16 6 16C5.44772 16 5 15.5523 5 15L5 3C5 2.44772 5.44771 2 6 2Z"/><path d="M2 2C2.55228 2 3 2.44772 3 3L3 15C3 15.5523 2.55228 16 2 16C1.44772 16 1 15.5523 1 15V3C1 2.44772 1.44771 2 2 2Z"/>
-          </svg>`,
-
-        "remove-column":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10.1025 0.00488281C10.6067 0.0562145 11 0.482323 11 1V5.50781L9.5 4.00781V1.5H5.5V16.5H9.5V13.9941L11 12.4941V17L10.9951 17.1025C10.9472 17.573 10.573 17.9472 10.1025 17.9951L10 18H5C4.48232 18 4.05621 17.6067 4.00488 17.1025L4 17V1C4 0.447715 4.44772 1.61064e-08 5 0H10L10.1025 0.00488281Z"/><path d="M12.7169 8.99999L15.015 11.2981L13.9543 12.3588L11.6562 10.0607L9.35815 12.3588L8.29749 11.2981L10.5956 8.99999L8.29749 6.7019L9.35815 5.64124L11.6562 7.93933L13.9543 5.64124L15.015 6.7019L12.7169 8.99999Z"/>
-          </svg>`,
-
-        "toggle-column-style":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M1 2C1 1.44772 1.44772 1 2 1H7C7.55228 1 8 1.44772 8 2V7C8 7.55228 7.55228 8 7 8H2C1.44772 8 1 7.55228 1 7V2Z"/><path d="M1 11C1 10.4477 1.44772 10 2 10H7C7.55228 10 8 10.4477 8 11V16C8 16.5523 7.55228 17 7 17H2C1.44772 17 1 16.5523 1 16V11Z"/><path d="M11.5 6.5H15.5V2.5H11.5V6.5ZM17 7C17 7.51768 16.6067 7.94379 16.1025 7.99512L16 8H11L10.8975 7.99512C10.427 7.94722 10.0528 7.57297 10.0049 7.10254L10 7V2C10 1.44772 10.4477 1 11 1H16C16.5523 1 17 1.44772 17 2V7Z"/><path d="M11.5 15.5H15.5V11.5H11.5V15.5ZM17 16C17 16.5177 16.6067 16.9438 16.1025 16.9951L16 17H11L10.8975 16.9951C10.427 16.9472 10.0528 16.573 10.0049 16.1025L10 16V11C10 10.4477 10.4477 10 11 10H16C16.5523 10 17 10.4477 17 11V16Z"/>
-          </svg>`,
-
-        "delete-table":
-          `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M18.2129 19.2305C18.0925 20.7933 16.7892 22 15.2217 22H7.77832C6.21084 22 4.90753 20.7933 4.78711 19.2305L4 9H19L18.2129 19.2305Z"/><path d="M13 2C14.1046 2 15 2.89543 15 4H19C19.5523 4 20 4.44772 20 5V6C20 6.55228 19.5523 7 19 7H4C3.44772 7 3 6.55228 3 6V5C3 4.44772 3.44772 4 4 4H8C8 2.89543 8.89543 2 10 2H13Z"/>
-          </svg>`
-      };
-
-    return icons[name]
+  #icon(command) {
+    const { action, childType, direction } = command;
+    return ICONS[action + childType + (action == TableAction.INSERT ? direction : "")]
   }
 }
 
-customElements.define("lexxy-table-handler", TableHandler);
+const ICONS = Object.freeze({
+  [TableAction.INSERT + TableChildType.ROW + TableDirection.BEFORE]:
+    `<svg  viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M7.86804e-07 15C8.29055e-07 15.8284 0.671574 16.5 1.5 16.5H15L15.1533 16.4922C15.8593 16.4205 16.4205 15.8593 16.4922 15.1533L16.5 15V4.5L16.4922 4.34668C16.4154 3.59028 15.7767 3 15 3H13.5L13.5 4.5H15V9H1.5L1.5 4.5L3 4.5V3H1.5C0.671574 3 1.20956e-06 3.67157 1.24577e-06 4.5L7.86804e-07 15ZM15 10.5V15H1.5L1.5 10.5H15Z"/>
+    <path d="M4.5 4.5H7.5V7.5H9V4.5H12L12 3L9 3V6.55671e-08L7.5 0V3L4.5 3V4.5Z"/>
+    </svg>`,
+
+  [TableAction.INSERT + TableChildType.ROW + TableDirection.AFTER]:
+  `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M7.86804e-07 13.5C7.50592e-07 14.3284 0.671574 15 1.5 15H3V13.5H1.5L1.5 9L15 9V13.5H13.5V15H15C15.7767 15 16.4154 14.4097 16.4922 13.6533L16.5 13.5V3L16.4922 2.84668C16.4205 2.14069 15.8593 1.57949 15.1533 1.50781L15 1.5L1.5 1.5C0.671574 1.5 1.28803e-06 2.17157 1.24577e-06 3L7.86804e-07 13.5ZM15 3V7.5L1.5 7.5L1.5 3L15 3Z"/>
+  <path d="M7.5 15V18H9V15H12V13.5H9V10.5H7.5V13.5H4.5V15H7.5Z"/>
+  </svg>`,
+
+  [TableAction.DELETE + TableChildType.ROW]:
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path d="M16.4922 12.1533C16.4154 12.9097 15.7767 13.5 15 13.5L12 13.5V12H15V6L1.5 6L1.5 12H4.5V13.5H1.5C0.723337 13.5 0.0846104 12.9097 0.00781328 12.1533L7.86804e-07 12L1.04907e-06 6C1.17362e-06 5.22334 0.590278 4.58461 1.34668 4.50781L1.5 4.5L15 4.5C15.8284 4.5 16.5 5.17157 16.5 6V12L16.4922 12.1533Z"/>
+    <path d="M10.3711 15.9316L8.25 13.8096L6.12793 15.9316L5.06738 14.8711L7.18945 12.75L5.06738 10.6289L6.12793 9.56836L8.25 11.6895L10.3711 9.56836L11.4316 10.6289L9.31055 12.75L11.4316 14.8711L10.3711 15.9316Z"/>
+    </svg>`,
+
+  [TableAction.TOGGLE + TableChildType.ROW]:
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M0.00781328 13.6533C0.0846108 14.4097 0.723337 15 1.5 15L15 15L15.1533 14.9922C15.8593 14.9205 16.4205 14.3593 16.4922 13.6533L16.5 13.5V4.5L16.4922 4.34668C16.4205 3.64069 15.8593 3.07949 15.1533 3.00781L15 3L1.5 3C0.671574 3 1.24863e-06 3.67157 1.18021e-06 4.5L7.86804e-07 13.5L0.00781328 13.6533ZM15 9V13.5L1.5 13.5L1.5 9L15 9Z"/>
+    </svg>`,
+
+  [TableAction.INSERT + TableChildType.COLUMN + TableDirection.BEFORE]:
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M4.5 0C3.67157 0 3 0.671573 3 1.5V3H4.5V1.5H9V15H4.5V13.5H3V15C3 15.7767 3.59028 16.4154 4.34668 16.4922L4.5 16.5H15L15.1533 16.4922C15.8593 16.4205 16.4205 15.8593 16.4922 15.1533L16.5 15V1.5C16.5 0.671573 15.8284 6.03989e-09 15 0H4.5ZM15 15H10.5V1.5H15V15Z"/>
+    <path d="M3 7.5H0V9H3V12H4.5V9H7.5V7.5H4.5V4.5H3V7.5Z"/>
+    </svg>`,
+
+  [TableAction.INSERT + TableChildType.COLUMN + TableDirection.AFTER]:
+  `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M13.5 0C14.3284 0 15 0.671573 15 1.5V3H13.5V1.5H9V15H13.5V13.5H15V15C15 15.7767 14.4097 16.4154 13.6533 16.4922L13.5 16.5H3L2.84668 16.4922C2.14069 16.4205 1.57949 15.8593 1.50781 15.1533L1.5 15V1.5C1.5 0.671573 2.17157 6.03989e-09 3 0H13.5ZM3 15H7.5V1.5H3V15Z"/>
+  <path d="M15 7.5H18V9H15V12H13.5V9H10.5V7.5H13.5V4.5H15V7.5Z"/>
+  </svg>`,
+
+  [TableAction.DELETE + TableChildType.COLUMN]:
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12.1533 0.0078125C12.9097 0.0846097 13.5 0.723336 13.5 1.5V4.5H12V1.5H6V15H12V12H13.5V15C13.5 15.7767 12.9097 16.4154 12.1533 16.4922L12 16.5H6C5.22334 16.5 4.58461 15.9097 4.50781 15.1533L4.5 15V1.5C4.5 0.671573 5.17157 2.41596e-08 6 0H12L12.1533 0.0078125Z"/>
+    <path d="M15.9316 6.12891L13.8105 8.24902L15.9326 10.3711L14.8711 11.4316L12.75 9.31055L10.6289 11.4316L9.56738 10.3711L11.6885 8.24902L9.56836 6.12891L10.6289 5.06836L12.75 7.18848L14.8711 5.06836L15.9316 6.12891Z"/>
+    </svg>`,
+
+  [TableAction.TOGGLE + TableChildType.COLUMN]:
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M13.6533 17.9922C14.4097 17.9154 15 17.2767 15 16.5L15 3L14.9922 2.84668C14.9205 2.14069 14.3593 1.57949 13.6533 1.50781L13.5 1.5L4.5 1.5L4.34668 1.50781C3.59028 1.58461 3 2.22334 3 3L3 16.5C3 17.2767 3.59028 17.9154 4.34668 17.9922L4.5 18L13.5 18L13.6533 17.9922ZM9 3L13.5 3L13.5 16.5L9 16.5L9 3Z" />
+    </svg>`,
+
+  [TableAction.DELETE + TableChildType.TABLE]:
+    `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18.2129 19.2305C18.0925 20.7933 16.7892 22 15.2217 22H7.77832C6.21084 22 4.90753 20.7933 4.78711 19.2305L4 9H19L18.2129 19.2305Z"/><path d="M13 2C14.1046 2 15 2.89543 15 4H19C19.5523 4 20 4.44772 20 5V6C20 6.55228 19.5523 7 19 7H4C3.44772 7 3 6.55228 3 6V5C3 4.44772 3.44772 4 4 4H8C8 2.89543 8.89543 2 10 2H13Z"/>
+    </svg>`
+});
+
+customElements.define("lexxy-table-tools", TableTools);
 
 class BaseSource {
   // Template method to override
@@ -12281,8 +12459,10 @@ class CodeLanguagePicker extends HTMLElement {
     const codeRect = codeElement.getBoundingClientRect();
     const editorRect = this.editorElement.getBoundingClientRect();
     const relativeTop = codeRect.top - editorRect.top;
+    const relativeRight = editorRect.right - codeRect.right;
 
     this.style.top = `${relativeTop}px`;
+    this.style.right = `${relativeRight}px`;
   }
 
   #showLanguagePicker() {

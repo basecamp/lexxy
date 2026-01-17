@@ -47,8 +47,8 @@ const COMMANDS = [
   "uploadAttachments",
 
   "insertTable",
-  "insertTableRowAbove",
-  "insertTableRowBelow",
+  "insertTableRowBefore",
+  "insertTableRowAfter",
   "insertTableColumnAfter",
   "insertTableColumnBefore",
   "deleteTableRow",
@@ -162,9 +162,7 @@ export class CommandDispatcher {
   }
 
   dispatchInsertHorizontalDivider() {
-    this.editor.update(() => {
-      this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
-    })
+    this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
 
     this.editor.focus()
   }
@@ -226,11 +224,11 @@ export class CommandDispatcher {
     this.editor.dispatchCommand(INSERT_TABLE_COMMAND, { "rows": 3, "columns": 3, "includeHeaders": true })
   }
 
-  dispatchInsertTableRowBelow() {
+  dispatchInsertTableRowAfter() {
     $insertTableRowAtSelection(true)
   }
 
-  dispatchInsertTableRowAbove() {
+  dispatchInsertTableRowBefore() {
     $insertTableRowAtSelection(false)
   }
 
@@ -251,14 +249,12 @@ export class CommandDispatcher {
   }
 
   dispatchDeleteTable() {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
 
-      const anchorNode = selection.anchor.getNode()
-      const tableNode = $findTableNode(anchorNode)
-      tableNode.remove()
-    })
+    const anchorNode = selection.anchor.getNode()
+    const tableNode = $findTableNode(anchorNode)
+    tableNode.remove()
   }
 
   dispatchUndo() {

@@ -218,6 +218,8 @@
     th,
     td {
       border: 1px solid var(--lexxy-color-ink-lighter);
+      min-width: 5ch;
+      max-width: 50ch;
       padding: 1ch;
       text-align: start;
       word-break: normal;
@@ -227,7 +229,7 @@
       }
 
       &.lexxy-content__table-cell--header {
-        background-color: var(--lexxy-color-ink-lightest);
+        background-color: var(--lexxy-color-table-header-bg);
         font-weight: bold;
       }
 

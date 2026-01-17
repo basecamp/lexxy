@@ -79,11 +79,16 @@ module EditorHelper
   end
 
   def click_table_handler_button(aria_label)
-    find("lexxy-table-handler button[aria-label='#{aria_label}']").click
+    find("lexxy-table-tools button[aria-label='#{aria_label}']").click
   end
 
-  def open_table_more_menu
-    more_menu = find("lexxy-table-handler details.lexxy-table-control__more-menu")
+  def open_table_row_menu
+    more_menu = find("lexxy-table-tools .lexxy-table-control--row details")
+    more_menu.click
+  end
+
+  def open_table_column_menu
+    more_menu = find("lexxy-table-tools .lexxy-table-control--column details")
     more_menu.click
   end
 
