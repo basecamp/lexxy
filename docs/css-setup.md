@@ -33,7 +33,7 @@ To apply syntax highlighting to rendered Action Text content, you need to call t
 
 ```javascript
 import { Controller } from "@hotwired/stimulus"
-import { highlightAll } from "lexxy"
+import { highlightCode } from "lexxy"
 // Or if you installed via a javascript bundler:
 // import { highlightCode } from "@37signals/lexxy"
 
