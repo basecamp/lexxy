@@ -1,14 +1,7 @@
 import "./config/prism"
 import "./config/dom_purify"
 
-import "./elements/toolbar"
-
-import "./elements/editor"
-import "./elements/dropdown/link"
-import "./elements/dropdown/highlight"
-import "./elements/table_handler"
-import "./elements/prompt"
-import "./elements/code_language_picker"
+import { start } from "./elements"
 
 import Lexxy from "./config/lexxy"
 
@@ -20,3 +13,5 @@ export { default as Extension } from "./extensions/lexxy_extension"
 
 // legacy export for <=v0.7
 export { highlightCode as highlightAll } from "./helpers/code_highlighting_helper"
+
+setTimeout(start, 0)
