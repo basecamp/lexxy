@@ -13,7 +13,6 @@ import {
   $getTableCellNodeFromLexicalNode,
   $getTableColumnIndexFromTableCellNode,
   $getTableRowIndexFromTableCellNode,
-  $isTableCellNode,
   TableCellHeaderStates
 } from "@lexical/table"
 
@@ -206,8 +205,8 @@ export class TableController {
     let rowIndex = this.currentRowIndex
     let columnIndex = this.currentColumnIndex
 
-    let deleteOffset = action === TableAction.DELETE ? -1 : 0
-    let offset = direction === TableDirection.AFTER ? 1 : deleteOffset
+    const deleteOffset = action === TableAction.DELETE ? -1 : 0
+    const offset = direction === TableDirection.AFTER ? 1 : deleteOffset
 
     if (childType === TableChildType.ROW) {
       rowIndex += offset
@@ -250,6 +249,15 @@ export class TableController {
     return cells.every(cell => cell.getTextContent().trim() === "")
   }
 
+  #isFirstCellInRow() {
+    if (!this.currentTableNode) return false
+
+    const cells = this.currentRowCells
+    if (!cells) return false
+
+    return cells.indexOf(this.currentCell) === 0
+  }
+
   #handleBackspaceKey() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
     this.editor.registerCommand(
@@ -257,7 +265,7 @@ export class TableController {
       (event) => {
         if (!this.currentTableNode) return false
 
-        if (this.#isCurrentRowEmpty()) {
+        if (this.#isCurrentRowEmpty() && this.#isFirstCellInRow()) {
           event.preventDefault()
 
           this.executeTableCommand({ action: TableAction.DELETE, childType: TableChildType.ROW })
@@ -270,7 +278,7 @@ export class TableController {
           return true
         }
 
-        if (this.#isCurrentCellEmpty()) {
+        if (this.#isCurrentCellEmpty() && !this.#isFirstCellInRow()) {
           event.preventDefault()
 
           const cell = this.currentCell
