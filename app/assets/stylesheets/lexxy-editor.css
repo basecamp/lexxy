@@ -56,17 +56,7 @@
   table {
     th, td {
       position: relative;
-      transition: background 0.1s ease-in-out, color 0.1s ease-in-out;
-
-      &.lexxy-content__table-cell--selected {
-        background-color: var(--lexxy-color-table-cell-selected-bg);
-        border-color: var(--lexxy-color-table-cell-selected-border);
-      }
-
-      &.lexxy-content__table-cell--focus {
-        outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
-        outline-offset: calc(-1 * var(--lexxy-focus-ring-size));
-      }
+      transition: all 0.1s ease-in-out;
 
       /* Used for column and row adding visualisations */
       &:after {
@@ -79,8 +69,18 @@
         inset-inline-end: -1px;
         pointer-events: none;
         position: absolute;
-        transition: box-shadow 0.15s ease-in-out;
+        transition: box-shadow 0.1s ease-in-out;
         z-index: 2;
+      }
+
+      &.lexxy-content__table-cell--selected {
+        background-color: var(--lexxy-color-table-cell-selected-bg);
+      }
+
+      &.lexxy-content__table-cell--focus {
+        &:after {
+          box-shadow: 0 0 0 0 transparent, 0 0 0 2px var(--lexxy-color-table-cell-selected-border) inset;
+        }
       }
 
       &.lexxy-content__table-cell--highlight {
@@ -102,11 +102,12 @@
             }
           }
           &[data-child-type="column"] {
-            &[data-direction="after"] {&:after {
-              box-shadow:
-                var(--lexxy-table-cell-add-size) 0 0 0 var(--lexxy-color-table-cell-add),
-                calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 0 var(--lexxy-color-table-cell-add) inset;
-            }
+            &[data-direction="after"] {
+              &:after {
+                box-shadow:
+                  var(--lexxy-table-cell-add-size) 0 0 0 var(--lexxy-color-table-cell-add),
+                  calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 0 var(--lexxy-color-table-cell-add) inset;
+              }
             }
             &[data-direction="before"] {
               &:after {
@@ -120,9 +121,13 @@
         &[data-action="delete"] {
           background-color: var(--lexxy-color-table-cell-remove);
           color: var(--lexxy-color-red);
+
+          &:after { box-shadow: 0 0 0 0 transparent; }
         }
         &[data-action="toggle"] {
           background-color: var(--lexxy-color-table-cell-toggle);
+          
+          &:after { box-shadow: 0 0 0 0 transparent; }
         }
       }
     }
@@ -131,6 +136,8 @@
       th, td {
         background-color: var(--lexxy-color-table-cell-remove);
         color: var(--lexxy-color-red);
+
+        &:after { box-shadow: 0 0 0 0 transparent; }
       }
     }
 
