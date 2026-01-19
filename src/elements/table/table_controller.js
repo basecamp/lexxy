@@ -37,8 +37,10 @@ export const TableDirection = Object.freeze({
 })
 
 export class TableController {
-  constructor(editor) {
-    this.editor = editor
+  constructor(editorElement) {
+    this.editor = editorElement.editor
+    this.contents = editorElement.contents
+
     this.currentTableNodeKey = null
     this.currentCellKey = null
 
@@ -212,10 +214,10 @@ export class TableController {
     const rows = this.tableRows
     if (!rows) return
 
-    const currentRow = rows[this.currentRowIndex - 1]
+    const previousRow = rows[this.currentRowIndex - 1]
 
     this.editor.update(() => {
-      const cells = currentRow?.getChildren()
+      const cells = previousRow?.getChildren()
       if (!cells) return
 
       const lastCell = $getTableCellNodeFromLexicalNode(cells.at(-1))
@@ -257,7 +259,6 @@ export class TableController {
     this.editor.registerCommand(
       KEY_BACKSPACE_COMMAND,
       (event) => {
-
         if (!this.currentTableNode) return false
 
         if (this.#isCurrentRowEmpty()) {
@@ -269,7 +270,11 @@ export class TableController {
           if (!rows || rows.length === 0) return
 
           this.#selectLastCellInCurrentRow()
-        } else if (this.#isCurrentCellEmpty()) {
+
+          return true
+        }
+
+        if (this.#isCurrentCellEmpty()) {
           event.preventDefault()
 
           const cell = this.currentCell
@@ -278,9 +283,11 @@ export class TableController {
           this.editor.update(() => {
             cell.selectPrevious()
           })
+
+          return true
         }
 
-        return true
+        return false
       },
       COMMAND_PRIORITY_NORMAL
     )

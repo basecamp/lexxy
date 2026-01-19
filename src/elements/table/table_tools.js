@@ -15,11 +15,11 @@ const FOCUS_CLASS = "lexxy-content__table-cell--focus"
 
 export class TableTools extends HTMLElement {
   connectedCallback() {
+    this.tableController = new TableController(this.#editorElement)
+
     this.#setUpButtons()
     this.#monitorForTableSelection()
     this.#registerKeyboardShortcuts()
-
-    this.tableController = new TableController(this.#editorElement.editor)
   }
 
   disconnectedCallback() {
