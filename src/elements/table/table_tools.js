@@ -10,6 +10,9 @@ import { TableAction, TableChildType, TableController, TableDirection } from "./
 import { handleRollingTabIndex } from "../../helpers/accessibility_helper"
 import { createElement } from "../../helpers/html_helper"
 
+const HIGHLIGHT_CLASS = "lexxy-content__table-cell--highlight"
+const FOCUS_CLASS = "lexxy-content__table-cell--focus"
+
 export class TableTools extends HTMLElement {
   connectedCallback() {
     this.#setUpButtons()
@@ -200,7 +203,7 @@ export class TableTools extends HTMLElement {
       cellsToHighlight.forEach(cell => {
         const cellElement = this.#editor.getElementByKey(cell.getKey())
         if (!cellElement) return
-        cellElement.classList.toggle("lexxy-content__table-cell--focused", true)
+        cellElement.classList.toggle(HIGHLIGHT_CLASS, true)
 
         Object.assign(cellElement.dataset, command)
       })
@@ -241,14 +244,13 @@ export class TableTools extends HTMLElement {
     this.#closeMoreMenu()
 
     this.#updateRowColumnCount()
-    this.#setTableFocusState(true)
   }
 
   #hideTableToolsButtons() {
     this.style.display = "none"
     this.#closeMoreMenu()
 
-    this.#setTableFocusState(false)
+    this.#setTableCellFocus()
   }
 
   #updateButtonsPosition() {
@@ -281,28 +283,29 @@ export class TableTools extends HTMLElement {
     this.columnCount.textContent = `${columnCount} column${columnCount === 1 ? "" : "s"}`
   }
 
-  #setTableFocusState(focused) {
-    this.#editorElement.querySelector("div.node--selected:has(table)")?.classList.remove("node--selected")
-
-    const tableNode = this.tableController.currentTableNode
-    if (!tableNode) return
-
-    if (focused && tableNode) {
-      const tableParent = this.#editor.getElementByKey(tableNode.getKey())
-      if (!tableParent) return
-
-      tableParent.classList.add("node--selected")
-    }
-  }
-
   #tableCellWasSelected() {
     this.#updateButtonsPosition()
     this.#showTableToolsButtons()
+    this.#setTableCellFocus()
+  }
+
+  #setTableCellFocus() {
+    this.#editorElement.querySelectorAll(`.${FOCUS_CLASS}`)?.forEach(cell => {
+      cell.classList.remove(FOCUS_CLASS)
+    })
+
+    const cell = this.tableController.currentCell
+    if (!cell) return
+
+    const cellElement = this.#editor.getElementByKey(cell.getKey())
+    if (!cellElement) return
+
+    cellElement.classList.add(FOCUS_CLASS)
   }
 
   #clearCellStyles() {
-    this.#editorElement.querySelectorAll(".lexxy-content__table-cell--focused")?.forEach(cell => {
-      cell.classList.remove("lexxy-content__table-cell--focused")
+    this.#editorElement.querySelectorAll(`.${HIGHLIGHT_CLASS}`)?.forEach(cell => {
+      cell.classList.remove(HIGHLIGHT_CLASS)
       cell.removeAttribute("data-action")
       cell.removeAttribute("data-child-type")
       cell.removeAttribute("data-direction")

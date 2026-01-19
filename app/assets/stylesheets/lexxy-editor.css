@@ -56,11 +56,16 @@
   table {
     th, td {
       position: relative;
-      transition: all 0.1s ease-in-out;
+      transition: background 0.1s ease-in-out, color 0.1s ease-in-out;
 
       &.lexxy-content__table-cell--selected {
         background-color: var(--lexxy-color-table-cell-selected-bg);
         border-color: var(--lexxy-color-table-cell-selected-border);
+      }
+
+      &.lexxy-content__table-cell--focus {
+        outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
+        outline-offset: calc(-1 * var(--lexxy-focus-ring-size));
       }
 
       /* Used for column and row adding visualisations */
@@ -78,7 +83,7 @@
         z-index: 2;
       }
 
-      &.lexxy-content__table-cell--focused {
+      &.lexxy-content__table-cell--highlight {
         &[data-action="insert"] {
           &[data-child-type="row"] {
             &[data-direction="after"] {
@@ -122,7 +127,7 @@
       }
     }
 
-    tr.lexxy-content__table-cell--focused[data-action="delete"] {
+    tr.lexxy-content__table-cell--highlight[data-action="delete"] {
       th, td {
         background-color: var(--lexxy-color-table-cell-remove);
         color: var(--lexxy-color-red);
