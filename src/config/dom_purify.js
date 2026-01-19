@@ -2,8 +2,8 @@ import DOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 import Lexxy from "./lexxy"
 
-const ALLOWED_HTML_TAGS = [ "a", "b", "blockquote", "br", "code", "em",
-  "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "section", "strong", "ul", "table", "tbody", "tr", "th", "td" ]
+const ALLOWED_HTML_TAGS = [ "a", "b", "blockquote", "br", "code", "div", "em",
+  "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "ul", "table", "tbody", "tr", "th", "td" ]
 
 const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",
   "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "presentation",

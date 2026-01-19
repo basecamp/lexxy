@@ -110,13 +110,8 @@ export default class Clipboard {
     if (html) return // Ignore if image copied from browser
 
     this.#preservingScrollPosition(() => {
-      const files = []
-      for (const item of clipboardData.items) {
-        const file = item.getAsFile()
-        if (file) files.push(file)
-      }
-      
-      if (files.length > 0) {
+      const files = clipboardData.files
+      if (files.length) {
         this.contents.uploadFiles(files)
       }
     })

@@ -1,4 +1,4 @@
-import { HighlightExtension, TOGGLE_HIGHLIGHT_COMMAND } from "../extensions/highlight_extension.js"
+import { HighlightLexicalExtension, TOGGLE_HIGHLIGHT_COMMAND } from "../lexical_extensions/highlight_extension.js"
 
 export default class Highlighter {
 
@@ -11,7 +11,7 @@ export default class Highlighter {
   }
 
   get lexicalExtension() {
-    return [ HighlightExtension, this.editorElement.config.get("highlight") ]
+    return [ HighlightLexicalExtension, this.editorElement.config.get("highlight") ]
   }
 
   toggle(styles) {

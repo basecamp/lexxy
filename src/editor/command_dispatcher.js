@@ -188,12 +188,8 @@ export class CommandDispatcher {
       type: "file",
       multiple: true,
       style: "display: none;",
-      onchange: ({ target }) => {
-        const files = Array.from(target.files)
-        if (!files.length) return
-  
-        // Upload all files at once instead of looping
-        this.contents.uploadFiles(files)
+      onchange: ({ target: { files } }) => {
+        this.contents.uploadFiles(Array.from(files))
       }
     })
 
@@ -272,9 +268,7 @@ export class CommandDispatcher {
     const files = Array.from(dataTransfer.files)
     if (!files.length) return
 
-    for (const file of files) {
-      this.contents.uploadFile(file)
-    }
+    this.contents.uploadFiles(files)
 
     this.editor.focus()
   }

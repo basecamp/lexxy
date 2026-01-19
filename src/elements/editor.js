@@ -25,9 +25,9 @@ import Extensions from "../editor/extensions"
 import Highlighter from "../editor/highlighter"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { TrixContentExtension } from "../extensions/trix_content_extension"
+import { TrixContentLexicalExtension } from "../lexical_extensions/trix_content_extension"
 
-import { TablesLexicalExtension } from "../extensions/tables_lexical_extension"
+import GalleryExtension from "../extensions/gallery_extension"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -112,6 +112,12 @@ export default class LexicalEditorElement extends HTMLElement {
 
     this.toolbar = this.toolbar || this.#findOrCreateDefaultToolbar()
     return this.toolbar
+  }
+
+  get baseExtensions() {
+    return [
+      GalleryExtension
+    ]
   }
 
   get directUploadUrl() {
@@ -247,8 +253,7 @@ export default class LexicalEditorElement extends HTMLElement {
     const extensions = [ ]
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
-      TrixContentExtension,
-      TablesLexicalExtension
+      TrixContentLexicalExtension
     ]
 
     if (this.supportsRichText) {
@@ -371,11 +376,11 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #registerComponents() {
+
     if (this.supportsRichText) {
       registerRichText(this.editor)
       registerList(this.editor)
       this.#registerTableComponents()
-      this.#registerImageGalleryCleanup()
       this.#registerCodeHiglightingComponents()
       if (this.supportsMarkdown) {
         registerMarkdownShortcuts(this.editor, TRANSFORMERS)
@@ -386,42 +391,6 @@ export default class LexicalEditorElement extends HTMLElement {
     this.historyState = createEmptyHistoryState()
     registerHistory(this.editor, this.historyState, 20)
   }
-
-  #registerImageGalleryCleanup() {
-    this.editor.registerNodeTransform(ActionTextAttachmentNode, (node) => {
-      // Only process image attachments
-      if (! this.contents.isImageAttachment(node)) {
-        return
-      }
-  
-      // Group adjacent images into gallery
-      this.contents.groupAdjacentImagesIntoGallery(node)
-    })
-
-    this.editor.registerNodeTransform(ImageGalleryNode, (node) => {
-      if (node.isEmpty()) {
-        node.remove()
-      }
-
-      // Ensure empty paragraph before gallery
-      const prevSibling = node.getPreviousSibling()
-      if (!prevSibling || !$isParagraphNode(prevSibling)) {
-        node.insertBefore($createParagraphNode())
-      } else if (prevSibling.getTextContent().trim() !== "") {
-        // If previous paragraph has content, insert an empty one
-        node.insertBefore($createParagraphNode())
-      }
-
-      // Ensure empty paragraph after gallery
-      const nextSibling = node.getNextSibling()
-      if (!nextSibling || !$isParagraphNode(nextSibling)) {
-        node.insertAfter($createParagraphNode())
-      } else if (nextSibling.getTextContent().trim() !== "") {
-        // If next paragraph has content, insert an empty one
-        node.insertAfter($createParagraphNode())
-      }
-    })
-  } 
 
   #registerTableComponents() {
     this.tableTools = createElement("lexxy-table-tools")
