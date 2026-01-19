@@ -121,9 +121,7 @@ export class TableController {
 
     this.editor.dispatchCommand(this.#commandName(command))
 
-    if (action === TableAction.INSERT) {
-      this.#selectFirstNewCell(command)
-    }
+    this.#selectNextBestCell(command)
   }
 
   updateSelectedTable() {
@@ -183,48 +181,46 @@ export class TableController {
     }
   }
 
-  #selectFirstNewCell(command) {
-    if (!this.currentTableNode) return
+  #selectCellAtIndex(rowIndex, columnIndex) {
+    requestAnimationFrame(() => {
+      if (!this.currentTableNode) return
+
+      const rows = this.tableRows
+      if (!rows) return
+
+      const row = rows[rowIndex]
+      if (!row) return
+
+      this.editor.update(() => {
+        const cell = $getTableCellNodeFromLexicalNode(row.getChildAtIndex(columnIndex))
+        if (!cell) return
+
+        cell.selectEnd()
+      })
+    })
+  }
+
+  #selectNextBestCell(command) {
+    const { action, childType, direction } = command
 
     let rowIndex = this.currentRowIndex
     let columnIndex = this.currentColumnIndex
 
-    const { childType, direction } = command
+    let deleteOffset = action === TableAction.DELETE ? -1 : 0
+    let offset = direction === TableDirection.AFTER ? 1 : deleteOffset
 
-    if (direction === TableDirection.AFTER) {
-      if (childType === TableChildType.ROW) {
-        rowIndex = rowIndex + 1
-      } else if (childType === TableChildType.COLUMN) {
-        columnIndex = columnIndex + 1
-      }
+    if (childType === TableChildType.ROW) {
+      rowIndex += offset
+    } else if (childType === TableChildType.COLUMN) {
+      columnIndex += offset
     }
 
-    this.editor.update(() => {
-      const targetCell = this.currentTableNode.getChildAtIndex(rowIndex)?.getChildAtIndex(columnIndex)
-
-      if ($isTableCellNode(targetCell)) {
-        targetCell.selectStart()
-      }
-    })
+    this.#selectCellAtIndex(rowIndex, columnIndex)
   }
 
   #selectLastCellInCurrentRow() {
-    if (!this.currentTableNode) return
-
-    const rows = this.tableRows
-    if (!rows) return
-
-    const previousRow = rows[this.currentRowIndex - 1]
-
-    this.editor.update(() => {
-      const cells = previousRow?.getChildren()
-      if (!cells) return
-
-      const lastCell = $getTableCellNodeFromLexicalNode(cells.at(-1))
-      if (!lastCell) return
-
-      lastCell.selectEnd()
-    })
+    const rowLength = this.currentRowCells?.length ?? 0
+    this.#selectCellAtIndex(this.currentRowIndex - 1, rowLength - 1)
   }
 
   #isCurrentCellEmpty() {
