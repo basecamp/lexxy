@@ -26,22 +26,14 @@ export class TableController {
     this.currentTableNodeKey = null
     this.currentCellKey = null
 
-    this.unregisterEnterKeyHandler = null
-    this.unregisterBackspaceKeyHandler = null
-
-    this.#handleEnterKey()
-    this.#handleBackspaceKey()
+    this.#registerKeyHandlers()
   }
 
   destroy() {
-    this.unregisterEnterKeyHandler?.()
-    this.unregisterBackspaceKeyHandler?.()
-
-    this.unregisterEnterKeyHandler = null
-    this.unregisterBackspaceKeyHandler = null
-
     this.currentTableNodeKey = null
     this.currentCellKey = null
+
+    this.#unregisterKeyHandlers()
   }
 
   get currentCell() {
@@ -137,36 +129,8 @@ export class TableController {
     }
   }
 
-  #executeInsert(command) {
-    this.#selectCellAtSelection()
-    this.editor.dispatchCommand(this.#commandName(command))
-    this.#selectNextBestCell(command)
-  }
-
-  #executeDelete(command, selectLastCell) {
-    this.#selectCellAtSelection()
-    this.editor.dispatchCommand(this.#commandName(command))
-    this.#selectNextBestCell(command, selectLastCell)
-  }
-
-  #executeToggle(command) {
-    this.toggleHeaderStyle(command.childType)
-  }
-
-  #selectCellAtSelection() {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!selection) return
-
-      const node = selection.getNodes()[0]
-      const cellNode = $findCellNode(node)
-      if (!cellNode) return
-
-      cellNode.selectEnd()
-    })
-  }
-
   deleteTable() {
+    this.#selectCellAtSelection()
     this.editor.dispatchCommand("deleteTable")
   }
 
@@ -194,6 +158,35 @@ export class TableController {
       cells.forEach(cell => {
         this.#setHeaderStyle(cell, newStyle, headerState)
       })
+    })
+  }
+
+  #executeInsert(command) {
+    this.#selectCellAtSelection()
+    this.editor.dispatchCommand(this.#commandName(command))
+    this.#selectNextBestCell(command)
+  }
+
+  #executeDelete(command, selectLastCell) {
+    this.#selectCellAtSelection()
+    this.editor.dispatchCommand(this.#commandName(command))
+    this.#selectNextBestCell(command, selectLastCell)
+  }
+
+  #executeToggle(command) {
+    this.toggleHeaderStyle(command.childType)
+  }
+
+  #selectCellAtSelection() {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!selection) return
+
+      const node = selection.getNodes()[0]
+      const cellNode = $findCellNode(node)
+      if (!cellNode) return
+
+      cellNode.selectEnd()
     })
   }
 
@@ -258,7 +251,7 @@ export class TableController {
     if (!nextRow) return
 
     this.editor.update(() => {
-      nextRow.getChildAtIndex(this.currentColumnIndex)?.selectStart()
+      nextRow.getChildAtIndex(this.currentColumnIndex)?.selectEnd()
     })
   }
 
@@ -327,51 +320,51 @@ export class TableController {
     return cells.indexOf(this.currentCell) === 0
   }
 
-  #handleBackspaceKey() {
+  #registerKeyHandlers() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.unregisterBackspaceKeyHandler = this.editor.registerCommand(
-      KEY_BACKSPACE_COMMAND,
-      (event) => {
-        if (!this.currentTableNode) return false
-
-        if (this.#isCurrentRowEmpty() && this.#isFirstCellInRow()) {
-          event.preventDefault()
-          this.#deleteRowAndSelectLastCell()
-          return true
-        }
-
-        if (this.#isCurrentCellEmpty() && !this.#isFirstCellInRow()) {
-          event.preventDefault()
-          this.#selectPreviousCell()
-          return true
-        }
-
-        return false
-      },
-      COMMAND_PRIORITY_NORMAL
-    )
+    this.unregisterBackspaceKeyHandler = this.editor.registerCommand(KEY_BACKSPACE_COMMAND, (event) => this.#handleBackspaceKey(event), COMMAND_PRIORITY_NORMAL)
+    this.unregisterEnterKeyHandler = this.editor.registerCommand(KEY_ENTER_COMMAND, (event) => this.#handleEnterKey(event), COMMAND_PRIORITY_NORMAL)
   }
 
-  #handleEnterKey() {
-    // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.unregisterEnterKeyHandler = this.editor.registerCommand(
-      KEY_ENTER_COMMAND,
-      (event) => {
-        if (event.shiftKey ||!this.currentTableNode) return false
+  #unregisterKeyHandlers() {
+    this.unregisterBackspaceKeyHandler?.()
+    this.unregisterEnterKeyHandler?.()
 
-        event.preventDefault()
+    this.unregisterBackspaceKeyHandler = null
+    this.unregisterEnterKeyHandler = null
+  }
 
-        if (this.#isCurrentRowLast() && this.#isCurrentRowEmpty()) {
-          this.#deleteLastRowAndSelectNext()
-        } else if (this.#isCurrentRowLast()) {
-          this.executeTableCommand({ action: "insert", childType: "row", direction: "after" })
-        } else {
-          this.#selectNextRow()
-        }
+  #handleBackspaceKey(event) {
+    if (!this.currentTableNode) return false
 
-        return true
-      },
-      COMMAND_PRIORITY_NORMAL
-    )
+    if (this.#isCurrentRowEmpty() && this.#isFirstCellInRow()) {
+      event.preventDefault()
+      this.#deleteRowAndSelectLastCell()
+      return true
+    }
+
+    if (this.#isCurrentCellEmpty() && !this.#isFirstCellInRow()) {
+      event.preventDefault()
+      this.#selectPreviousCell()
+      return true
+    }
+
+    return false
+  }
+
+  #handleEnterKey(event) {
+    if (event.shiftKey ||!this.currentTableNode) return false
+
+    event.preventDefault()
+
+    if (this.#isCurrentRowLast() && this.#isCurrentRowEmpty()) {
+      this.#deleteLastRowAndSelectNext()
+    } else if (this.#isCurrentRowLast()) {
+      this.executeTableCommand({ action: "insert", childType: "row", direction: "after" })
+    } else {
+      this.#selectNextRow()
+    }
+
+    return true
   }
 }
