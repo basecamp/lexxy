@@ -254,6 +254,8 @@ export class CommandDispatcher {
 
     const anchorNode = selection.anchor.getNode()
     const tableNode = $findTableNode(anchorNode)
+    if (!tableNode) return
+
     tableNode.remove()
   }
 

@@ -173,9 +173,9 @@ export class TableTools extends HTMLElement {
   }
 
   #handleCommandButtonHover() {
-    this.#clearCellStyles()
-
     requestAnimationFrame(() => {
+      this.#clearCellStyles()
+
       const activeElement = this.querySelector("button:hover, button:focus")
       if (!activeElement) return
 
