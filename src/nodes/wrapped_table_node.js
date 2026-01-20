@@ -2,8 +2,12 @@ import { TableNode } from "@lexical/table"
 import { createElement } from "../helpers/html_helper"
 
 export class WrappedTableNode extends TableNode {
-  static clone(node) {
-    return new WrappedTableNode(node.__key)
+  $config() {
+    return this.config("wrapped_table_node", { extends: TableNode })
+  }
+
+  static importDOM() {
+    return super.importDOM()
   }
 
   exportDOM(editor) {
