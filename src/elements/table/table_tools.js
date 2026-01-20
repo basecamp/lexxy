@@ -137,7 +137,7 @@ export class TableTools extends HTMLElement {
   }
 
   #registerKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#handleKeydown, COMMAND_PRIORITY_HIGH)
+    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#handleAccessibilityShortcutKey, COMMAND_PRIORITY_HIGH)
   }
 
   #unregisterKeyboardShortcuts() {
@@ -145,35 +145,31 @@ export class TableTools extends HTMLElement {
     this.unregisterKeyboardShortcuts = null
   }
 
-  #handleKeydown = (event) => {
+  #handleAccessibilityShortcutKey = (event) => {
     if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
-      this.#handleAccessibilityShortcutKey()
-    } else if (event.key === "Escape") {
-      this.#handleEscapeKey()
+      const firstButton = this.querySelector("button, [tabindex]:not([tabindex='-1'])")
+      firstButton?.focus()
     }
-  }
-
-  #handleAccessibilityShortcutKey() {
-    const firstButton = this.querySelector("button, [tabindex]:not([tabindex='-1'])")
-    firstButton?.focus()
-  }
-
-  #handleEscapeKey() {
-    const cell = this.currentCell
-    if (!cell) return
-
-    this.#editor.update(() => {
-      cell.select()
-    })
-    this.#closeMoreMenu()
   }
 
   #handleToolsKeydown = (event) => {
     if (event.key === "Escape") {
-      this.#editor.focus()
+      this.#handleEscapeKey()
     } else {
       handleRollingTabIndex(this.#tableToolsButtons, event)
     }
+  }
+
+  #handleEscapeKey() {
+    const cell = this.tableController.currentCell
+    if (!cell) return
+
+    this.#editor.update(() => {
+      cell.select()
+      this.#editor.focus()
+    })
+
+    this.#finishTableOperation()
   }
 
   #handleCommandButtonHover() {
