@@ -1,10 +1,5 @@
-import {
-  COMMAND_PRIORITY_HIGH,
-  KEY_DOWN_COMMAND,
-} from "lexical"
-import {
-  $getElementForTableNode
-} from "@lexical/table"
+import { COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND } from "lexical"
+import { $getElementForTableNode } from "@lexical/table"
 
 import { TableAction, TableChildType, TableController, TableDirection } from "./table_controller"
 import { handleRollingTabIndex } from "../../helpers/accessibility_helper"
@@ -15,7 +10,6 @@ const FOCUS_CLASS = "lexxy-content__table-cell--focus"
 
 export class TableTools extends HTMLElement {
   connectedCallback() {
-    this.#cleanup()
     this.tableController = new TableController(this.#editorElement)
 
     this.#setUpButtons()
@@ -24,7 +18,15 @@ export class TableTools extends HTMLElement {
   }
 
   disconnectedCallback() {
-    this.#cleanup()
+    this.#unregisterKeyboardShortcuts()
+
+    this.unregisterUpdateListener?.()
+    this.unregisterUpdateListener = null
+
+    this.removeEventListener("keydown", this.#handleToolsKeydown)
+
+    this.tableController?.destroy?.()
+    this.tableController = null
   }
 
   get #editor() {
@@ -169,7 +171,7 @@ export class TableTools extends HTMLElement {
       this.#editor.focus()
     })
 
-    this.#finishTableOperation()
+    this.#update()
   }
 
   #handleCommandButtonHover() {
@@ -204,8 +206,8 @@ export class TableTools extends HTMLElement {
       cellsToHighlight.forEach(cell => {
         const cellElement = this.#editor.getElementByKey(cell.getKey())
         if (!cellElement) return
-        cellElement.classList.toggle(HIGHLIGHT_CLASS, true)
 
+        cellElement.classList.toggle(HIGHLIGHT_CLASS, true)
         Object.assign(cellElement.dataset, command)
       })
     })
@@ -217,23 +219,11 @@ export class TableTools extends HTMLElement {
 
       const tableNode = this.tableController.currentTableNode
       if (tableNode) {
-        this.#tableCellWasSelected(tableNode)
+        this.#show()
       } else {
-        this.#hideTableToolsButtons()
+        this.#hide()
       }
     })
-  }
-
-  #cleanup() {
-    this.#unregisterKeyboardShortcuts()
-
-    this.unregisterUpdateListener?.()
-    this.unregisterUpdateListener = null
-
-    this.removeEventListener("keydown", this.#handleToolsKeydown)
-
-    this.tableController?.destroy?.()
-    this.tableController = null
   }
 
   #executeTableCommand(command) {
@@ -243,27 +233,28 @@ export class TableTools extends HTMLElement {
       this.tableController.executeTableCommand(command)
     }
 
-    this.#finishTableOperation()
+    this.#update()
   }
 
-  #finishTableOperation() {
-    this.#closeMoreMenu()
+  #show() {
+    this.style.display = "flex"
+    this.#update()
+  }
+
+  #hide() {
+    this.style.display = "none"
+    this.#clearCellStyles()
+  }
+
+  #update() {
+    this.#updateButtonsPosition()
     this.#updateRowColumnCount()
+    this.#closeMoreMenu()
     this.#handleCommandButtonHover()
   }
 
-  #showTableToolsButtons() {
-    this.style.display = "flex"
-    this.#closeMoreMenu()
-
-    this.#updateRowColumnCount()
-  }
-
-  #hideTableToolsButtons() {
-    this.style.display = "none"
-    this.#closeMoreMenu()
-
-    this.#setTableCellFocus()
+  #closeMoreMenu() {
+    this.querySelector("details[open]")?.removeAttribute("open")
   }
 
   #updateButtonsPosition() {
@@ -296,17 +287,7 @@ export class TableTools extends HTMLElement {
     this.columnCount.textContent = `${columnCount} column${columnCount === 1 ? "" : "s"}`
   }
 
-  #tableCellWasSelected() {
-    this.#updateButtonsPosition()
-    this.#showTableToolsButtons()
-    this.#setTableCellFocus()
-  }
-
   #setTableCellFocus() {
-    this.#editorElement.querySelectorAll(`.${FOCUS_CLASS}`)?.forEach(cell => {
-      cell.classList.remove(FOCUS_CLASS)
-    })
-
     const cell = this.tableController.currentCell
     if (!cell) return
 
@@ -317,16 +298,18 @@ export class TableTools extends HTMLElement {
   }
 
   #clearCellStyles() {
+    this.#editorElement.querySelectorAll(`.${FOCUS_CLASS}`)?.forEach(cell => {
+      cell.classList.remove(FOCUS_CLASS)
+    })
+
     this.#editorElement.querySelectorAll(`.${HIGHLIGHT_CLASS}`)?.forEach(cell => {
       cell.classList.remove(HIGHLIGHT_CLASS)
       cell.removeAttribute("data-action")
       cell.removeAttribute("data-child-type")
       cell.removeAttribute("data-direction")
     })
-  }
 
-  #closeMoreMenu() {
-    this.querySelector("details[open]")?.removeAttribute("open")
+    this.#setTableCellFocus()
   }
 
   #icon(command) {
