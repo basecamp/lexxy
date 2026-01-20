@@ -12,7 +12,9 @@ import {
   $getTableCellNodeFromLexicalNode,
   $getTableColumnIndexFromTableCellNode,
   $getTableRowIndexFromTableCellNode,
-  TableCellHeaderStates
+  TableCellHeaderStates,
+  TableCellNode,
+  TableNode,
 } from "@lexical/table"
 
 import { capitalizeFirstLetter } from "../../helpers/string_helper"
@@ -40,19 +42,17 @@ export class TableController {
     if (!this.currentCellKey) return null
 
     return this.editor.getEditorState().read(() => {
-      const node = $getNodeByKey(this.currentCellKey)
-      return $findCellNode(node)
+      const cell = $getNodeByKey(this.currentCellKey)
+      return (cell instanceof TableCellNode) ? cell : null
     })
   }
 
   get currentTableNode() {
     if (!this.currentTableNodeKey) return null
 
-    const cell = this.currentCell
-    if (!cell) return null
-
     return this.editor.getEditorState().read(() => {
-      return $findTableNode(cell)
+      const tableNode = $getNodeByKey(this.currentTableNodeKey)
+      return (tableNode instanceof TableNode) ? tableNode : null
     })
   }
 
@@ -77,11 +77,13 @@ export class TableController {
   }
 
   get currentColumnCells() {
-    const rows = this.tableRows
     const columnIndex = this.currentColumnIndex
 
+    const rows = this.tableRows
+    if (!rows) return null
+
     return this.editor.getEditorState().read(() => {
-      return rows?.map(row => row.getChildAtIndex(columnIndex)) ?? null
+      return rows.map(row => row.getChildAtIndex(columnIndex))
     }) ?? null
   }
 
@@ -115,13 +117,13 @@ export class TableController {
     })
   }
 
-  executeTableCommand(command, selectLastCell = false) {
+  executeTableCommand(command, customIndex = null) {
     switch (command.action) {
       case "insert":
-        this.#executeInsert(command)
+        this.#executeInsert(command, customIndex)
         break
       case "delete":
-        this.#executeDelete(command, selectLastCell)
+        this.#executeDelete(command, customIndex)
         break
       case "toggle":
         this.#executeToggle(command)
@@ -161,16 +163,16 @@ export class TableController {
     })
   }
 
-  #executeInsert(command) {
+  #executeInsert(command, customIndex = null) {
     this.#selectCellAtSelection()
     this.editor.dispatchCommand(this.#commandName(command))
-    this.#selectNextBestCell(command)
+    this.#selectNextBestCell(command, customIndex)
   }
 
-  #executeDelete(command, selectLastCell) {
+  #executeDelete(command, customIndex = null) {
     this.#selectCellAtSelection()
     this.editor.dispatchCommand(this.#commandName(command))
-    this.#selectNextBestCell(command, selectLastCell)
+    this.#selectNextBestCell(command, customIndex)
   }
 
   #executeToggle(command) {
@@ -207,6 +209,7 @@ export class TableController {
   }
 
   async #selectCellAtIndex(rowIndex, columnIndex) {
+    // We wait for next frame, otherwise table operations have might've not completed yet.
     await nextFrame()
 
     if (!this.currentTableNode) return
@@ -225,11 +228,11 @@ export class TableController {
     })
   }
 
-  #selectNextBestCell(command, selectLastCell = false) {
+  #selectNextBestCell(command, customIndex = null) {
     const { childType, direction } = command
 
     let rowIndex = this.currentRowIndex
-    let columnIndex = selectLastCell ? this.currentRowCells.length - 1 : this.currentColumnIndex
+    let columnIndex = customIndex !== null ? customIndex : this.currentColumnIndex
 
     const deleteOffset = command.action === "delete" ? -1 : 0
     const offset = direction === "after" ? 1 : deleteOffset
@@ -264,11 +267,15 @@ export class TableController {
     })
   }
 
-  #deleteRowAndSelectLastCell() {
-    this.executeTableCommand({ action: "delete", childType: "row" }, true)
+  #insertRowAndSelectFirstCell() {
+    this.executeTableCommand({ action: "insert", childType: "row" }, 0)
   }
 
-  #deleteLastRowAndSelectNext() {
+  #deleteRowAndSelectLastCell() {
+    this.executeTableCommand({ action: "delete", childType: "row" }, -1)
+  }
+
+  #deleteRowAndSelectNextNode() {
     const tableNode = this.currentTableNode
     this.executeTableCommand({ action: "delete", childType: "row" })
 
@@ -358,9 +365,9 @@ export class TableController {
     event.preventDefault()
 
     if (this.#isCurrentRowLast() && this.#isCurrentRowEmpty()) {
-      this.#deleteLastRowAndSelectNext()
+      this.#deleteRowAndSelectNextNode()
     } else if (this.#isCurrentRowLast()) {
-      this.executeTableCommand({ action: "insert", childType: "row", direction: "after" })
+      this.#insertRowAndSelectFirstCell()
     } else {
       this.#selectNextRow()
     }
