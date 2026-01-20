@@ -235,9 +235,50 @@ export class TableController {
     this.#selectCellAtIndex(rowIndex, columnIndex)
   }
 
-  #selectLastCellInCurrentRow() {
+  #selectNextRow() {
+    const rows = this.tableRows
+    if (!rows) return
+
+    const nextRow = rows.at(this.currentRowIndex + 1)
+    if (!nextRow) return
+
+    this.editor.update(() => {
+      nextRow.getChildAtIndex(this.currentColumnIndex)?.selectStart()
+    })
+  }
+
+  #selectPreviousCell() {
+    const cell = this.currentCell
+    if (!cell) return
+
+    this.editor.update(() => {
+      cell.selectPrevious()
+    })
+  }
+  
+  #deleteRowAndSelectLastCell() {
+    this.executeTableCommand({ action: TableAction.DELETE, childType: TableChildType.ROW })
+
+    const rows = this.tableRows
+    if (!rows || rows.length === 0) return
+
     const rowLength = this.currentRowCells?.length ?? 0
     this.#selectCellAtIndex(this.currentRowIndex - 1, rowLength - 1)
+  }
+
+  #deleteLastRowAndSelectNext() {
+    this.executeTableCommand({ action: TableAction.DELETE, childType: TableChildType.ROW })
+
+    this.editor.update(() => {
+      const next = this.currentTableNode?.getNextSibling()
+      if (next) {
+        next.selectStart()
+      } else {
+        const newParagraph = $createParagraphNode()
+        this.currentTableNode.insertAfter(newParagraph)
+        newParagraph.selectStart()
+      }
+    })
   }
 
   #isCurrentCellEmpty() {
@@ -285,27 +326,13 @@ export class TableController {
 
         if (this.#isCurrentRowEmpty() && this.#isFirstCellInRow()) {
           event.preventDefault()
-
-          this.executeTableCommand({ action: TableAction.DELETE, childType: TableChildType.ROW })
-
-          const rows = this.tableRows
-          if (!rows || rows.length === 0) return
-
-          this.#selectLastCellInCurrentRow()
-
+          this.#deleteRowAndSelectLastCell()
           return true
         }
 
         if (this.#isCurrentCellEmpty() && !this.#isFirstCellInRow()) {
           event.preventDefault()
-
-          const cell = this.currentCell
-          if (!cell) return
-
-          this.editor.update(() => {
-            cell.selectPrevious()
-          })
-
+          this.#selectPreviousCell()
           return true
         }
 
@@ -325,30 +352,11 @@ export class TableController {
         event.preventDefault()
 
         if (this.#isCurrentRowLast() && this.#isCurrentRowEmpty()) {
-          this.executeTableCommand({ action: TableAction.DELETE, childType: TableChildType.ROW })
-
-          this.editor.update(() => {
-            const next = this.currentTableNode?.getNextSibling()
-            if (next) {
-              next.selectStart()
-            } else {
-              const newParagraph = $createParagraphNode()
-              this.currentTableNode.insertAfter(newParagraph)
-              newParagraph.selectStart()
-            }
-          })
+          this.#deleteLastRowAndSelectNext()
         } else if (this.#isCurrentRowLast()) {
           this.executeTableCommand({ action: TableAction.INSERT, childType: TableChildType.ROW, direction: TableDirection.AFTER })
         } else {
-          const rows = this.tableRows
-          if (!rows) return
-
-          const nextRow = rows.at(this.currentRowIndex + 1)
-          if (!nextRow) return
-
-          this.editor.update(() => {
-            nextRow.getChildAtIndex(this.currentColumnIndex)?.selectStart()
-          })
+          this.#selectNextRow()
         }
 
         return true
