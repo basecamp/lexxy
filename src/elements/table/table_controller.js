@@ -43,8 +43,22 @@ export class TableController {
     this.currentTableNodeKey = null
     this.currentCellKey = null
 
+    this.unregisterEnterKeyHandler = null
+    this.unregisterBackspaceKeyHandler = null
+
     this.#handleEnterKey()
     this.#handleBackspaceKey()
+  }
+
+  destroy() {
+    this.unregisterEnterKeyHandler?.()
+    this.unregisterBackspaceKeyHandler?.()
+
+    this.unregisterEnterKeyHandler = null
+    this.unregisterBackspaceKeyHandler = null
+
+    this.currentTableNodeKey = null
+    this.currentCellKey = null
   }
 
   get currentCell() {
@@ -264,7 +278,7 @@ export class TableController {
 
   #handleBackspaceKey() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.editor.registerCommand(
+    this.unregisterBackspaceKeyHandler = this.editor.registerCommand(
       KEY_BACKSPACE_COMMAND,
       (event) => {
         if (!this.currentTableNode) return false
@@ -303,7 +317,7 @@ export class TableController {
 
   #handleEnterKey() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.editor.registerCommand(
+    this.unregisterEnterKeyHandler = this.editor.registerCommand(
       KEY_ENTER_COMMAND,
       (event) => {
         if (event.shiftKey ||!this.currentTableNode) return false

@@ -15,6 +15,7 @@ const FOCUS_CLASS = "lexxy-content__table-cell--focus"
 
 export class TableTools extends HTMLElement {
   connectedCallback() {
+    this.#cleanup()
     this.tableController = new TableController(this.#editorElement)
 
     this.#setUpButtons()
@@ -23,7 +24,7 @@ export class TableTools extends HTMLElement {
   }
 
   disconnectedCallback() {
-    this.#unregisterKeyboardShortcuts()
+    this.#cleanup()
   }
 
   get #editor() {
@@ -140,7 +141,8 @@ export class TableTools extends HTMLElement {
   }
 
   #unregisterKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts()
+    this.unregisterKeyboardShortcuts?.()
+    this.unregisterKeyboardShortcuts = null
   }
 
   #handleKeydown = (event) => {
@@ -214,7 +216,7 @@ export class TableTools extends HTMLElement {
   }
 
   #monitorForTableSelection() {
-    this.#editor.registerUpdateListener(() => {
+    this.unregisterUpdateListener = this.#editor.registerUpdateListener(() => {
       this.tableController.updateSelectedTable()
 
       const tableNode = this.tableController.currentTableNode
@@ -224,6 +226,18 @@ export class TableTools extends HTMLElement {
         this.#hideTableToolsButtons()
       }
     })
+  }
+
+  #cleanup() {
+    this.#unregisterKeyboardShortcuts()
+
+    this.unregisterUpdateListener?.()
+    this.unregisterUpdateListener = null
+
+    this.removeEventListener("keydown", this.#handleToolsKeydown)
+
+    this.tableController?.destroy?.()
+    this.tableController = null
   }
 
   #executeTableCommand(command) {
