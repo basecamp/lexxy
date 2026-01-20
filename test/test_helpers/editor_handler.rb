@@ -127,7 +127,7 @@ class EditorHandler
         cancelable: true,
         clipboardData: new DataTransfer()
       })
-      pasteEvent.clipboardData.setData("text/plain", "#{text}")
+      pasteEvent.clipboardData.setData("text/plain", #{text.to_json})
       #{"pasteEvent.clipboardData.setData(\"text/html\", `#{html}`)" if html}
       this.dispatchEvent(pasteEvent)
     JS

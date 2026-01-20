@@ -2,8 +2,8 @@ import { marked } from "marked"
 import { isUrl } from "../helpers/string_helper"
 import { nextFrame } from "../helpers/timing_helpers"
 import { dispatch } from "../helpers/html_helper"
-import { $getSelection, $isRangeSelection } from "lexical"
 import { $isCodeNode } from "@lexical/code"
+import { $getSelection, $isRangeSelection, PASTE_TAG } from "lexical"
 import { $insertDataTransferForRichText } from "@lexical/clipboard"
 
 export default class Clipboard {
@@ -93,14 +93,14 @@ export default class Clipboard {
 
   #pasteMarkdown(text) {
     const html = marked(text)
-    this.contents.insertHtml(html)
+    this.contents.insertHtml(html, { tag: [ PASTE_TAG ] })
   }
 
   #pasteRichText(clipboardData) {
     this.editor.update(() => {
       const selection = $getSelection()
       $insertDataTransferForRichText(clipboardData, selection, this.editor)
-    })
+    }, { tag: PASTE_TAG })
   }
 
   #handlePastedFiles(clipboardData) {
