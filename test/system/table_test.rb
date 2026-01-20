@@ -114,7 +114,7 @@ class TableTest < ApplicationSystemTestCase
 
     find_editor.value { has_table? }
 
-    click_table_handler_button("Delete table")
+    click_table_handler_button("Delete this table?")
 
     find_editor.value { has_no_table? }
   end

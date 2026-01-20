@@ -511,7 +511,6 @@
       color: var(--lexxy-color-ink-inverted);
       cursor: pointer;
       display: flex;
-      flex: 1;
       justify-content: center;
       line-height: 1;
       list-style: none;
@@ -551,42 +550,85 @@
       border: 1px solid var(--lexxy-color-ink-medium);
       padding: 0 1.25ch;
     }
-  }
 
-  .lexxy-table-control__more-menu {
-    gap: 0;
-    position: relative;
+    .lexxy-table-control__more-menu {
+      gap: 0;
+      position: relative;
+  
+      .lexxy-table-control__more-menu-details {
+        background: var(--lexxy-color-ink);
+        border-radius: var(--table-tools-radius);
+        display: flex;
+        flex-direction: column;
+        gap: 0.25ch;
+        inset-block-start: 110%;
+        inset-inline-start: 50%;
+        padding: 0.25ch;
+        position: absolute;
+        transform: translateX(-50%);
+  
+        button {
+          aspect-ratio: unset;
+          flex-direction: row;
+          font-weight: normal;
+          gap: 1ch;
+          justify-content: flex-start;
+          padding: 0.75ch;
+          padding-inline-end: 1.5ch;
+          white-space: nowrap;
+  
+          span {
+            display: inline-block;
+          }
+  
+          svg {
+            block-size: 1.3lh;
+            inline-size: 1.3lh;
+            fill: currentColor;
+          }
+        }
+      }
+    }
+  
+    .lexxy-table-control__button--delete-table {
+      align-items: center;
+      aspect-ratio: unset;
+      block-size: auto;
+      font-weight: normal;
+      justify-content: center;
+      padding: 0 1ch;
 
-    .lexxy-table-control__more-menu-details {
-      background: var(--lexxy-color-ink);
-      border-radius: var(--table-tools-radius);
-      display: flex;
-      flex-direction: column;
-      gap: 0.25ch;
-      inset-block-start: 110%;
-      inset-inline-start: 50%;
-      padding: 0.25ch;
-      position: absolute;
-      transform: translateX(-50%);
+      svg {
+        min-block-size: 1em;
+        min-inline-size: 1em;
+      }
 
-      button {
-        aspect-ratio: unset;
-        flex-direction: row;
-        font-weight: normal;
-        gap: 1ch;
-        justify-content: flex-start;
-        padding: 0.75ch;
-        padding-inline-end: 1.5ch;
+      span {
+        align-items: center;
+        background: var(--lexxy-color-ink);
+        border-radius: var(--table-tools-radius);
+        color: color-mix(in srgb, var(--lexxy-color-ink-inverted) 80%, transparent);
+        display: flex;
+        inset-inline-end: calc(var(--button-size) + 1ch);
+        inset-block-start: 0;
+        inset-block-end: 0;
+        inset-inline-start: 0;
+        justify-content: center;
+        padding: 0.5ch 1ch;
+        position: absolute;
+        transition: all 0.2s ease-out;
+        opacity: 0;
+        pointer-events: none;
         white-space: nowrap;
+      }
+
+      &:hover {
+        background-color: var(--lexxy-color-red);
+
+        svg { color: var(--lexxy-color-ink-inverted); }
 
         span {
-          display: inline-block;
-        }
-
-        svg {
-          block-size: 1.3lh;
-          inline-size: 1.3lh;
-          fill: currentColor;
+          opacity: 1;
         }
       }
     }

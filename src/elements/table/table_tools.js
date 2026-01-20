@@ -42,7 +42,6 @@ export class TableTools extends HTMLElement {
     this.appendChild(this.#createRowButtonsContainer())
     this.appendChild(this.#createColumnButtonsContainer())
 
-    //this.moreMenu = this.#createMoreMenu()
     this.appendChild(this.#createDeleteTableButton())
     this.addEventListener("keydown", this.#handleToolsKeydown)
   }
@@ -104,8 +103,12 @@ export class TableTools extends HTMLElement {
   #createDeleteTableButton() {
     const container = createElement("div", { className: "lexxy-table-control" })
 
-    const deleteTableButton = this.#createButton("Delete table", { action: TableAction.DELETE, childType: TableChildType.TABLE })
+    const deleteTableButton = this.#createButton("Delete this table?", { action: TableAction.DELETE, childType: TableChildType.TABLE })
+    deleteTableButton.classList.add("lexxy-table-control__button--delete-table")
+
     container.appendChild(deleteTableButton)
+
+    this.deleteContainer = container
 
     return container
   }
@@ -225,7 +228,7 @@ export class TableTools extends HTMLElement {
 
   #executeTableCommand(command) {
     if (command.action === TableAction.DELETE && command.childType === TableChildType.TABLE) {
-      this.#editor.dispatchCommand("deleteTable")
+      this.tableController.deleteTable()
     } else {
       this.tableController.executeTableCommand(command)
     }

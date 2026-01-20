@@ -123,14 +123,18 @@ export class TableController {
     this.#selectNextBestCell(command)
   }
 
+  deleteTable() {
+    this.editor.dispatchCommand("deleteTable")
+  }
+
   updateSelectedTable() {
     this.editor.getEditorState().read(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
       const anchorNode = selection.anchor.getNode()
-      const tableNode = $findTableNode(anchorNode)
       const cellNode = $findCellNode(anchorNode)
+      const tableNode = $findTableNode(anchorNode)
 
       this.currentCellKey = cellNode?.getKey() ?? null
       this.currentTableNodeKey = tableNode?.getKey() ?? null
