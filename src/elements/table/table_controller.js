@@ -2,7 +2,6 @@ import {
   $createParagraphNode,
   $getNodeByKey,
   $getSelection,
-  $isRangeSelection,
   COMMAND_PRIORITY_NORMAL,
   KEY_BACKSPACE_COMMAND,
   KEY_ENTER_COMMAND
@@ -17,23 +16,7 @@ import {
 } from "@lexical/table"
 
 import { capitalizeFirstLetter } from "../../helpers/string_helper"
-
-export const TableAction = Object.freeze({
-  INSERT:  "insert",
-  DELETE: "delete",
-  TOGGLE: "toggle"
-})
-
-export const TableChildType = Object.freeze({
-  ROW: "row",
-  COLUMN: "column",
-  TABLE: "table"
-})
-
-export const TableDirection = Object.freeze({
-  BEFORE: "before",
-  AFTER: "after"
-})
+import { nextFrame } from "../../helpers/timing_helpers"
 
 export class TableController {
   constructor(editorElement) {
@@ -125,46 +108,76 @@ export class TableController {
     }) ?? null
   }
 
-  executeTableCommand(command) {
-    this.#selectCellAtSelection()
-
-    const { action, childType } = command
-    if (action === TableAction.TOGGLE) {
-      this.toggleHeaderStyle(childType)
-      return
-    }
-
-    this.editor.dispatchCommand(this.#commandName(command))
-
-    this.#selectNextBestCell(command)
-  }
-
-  deleteTable() {
-    this.editor.dispatchCommand("deleteTable")
-  }
-
   updateSelectedTable() {
     this.editor.getEditorState().read(() => {
       const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+      if (!selection) return
 
-      const anchorNode = selection.anchor.getNode()
-      const cellNode = $findCellNode(anchorNode)
-      const tableNode = $findTableNode(anchorNode)
+      const node = selection.getNodes()[0]
+
+      const cellNode = $findCellNode(node)
+      const tableNode = $findTableNode(node)
 
       this.currentCellKey = cellNode?.getKey() ?? null
       this.currentTableNodeKey = tableNode?.getKey() ?? null
     })
   }
 
+  executeTableCommand(command, selectLastCell = false) {
+    switch (command.action) {
+      case "insert":
+        this.#executeInsert(command)
+        break
+      case "delete":
+        this.#executeDelete(command, selectLastCell)
+        break
+      case "toggle":
+        this.#executeToggle(command)
+        break
+    }
+  }
+
+  #executeInsert(command) {
+    this.#selectCellAtSelection()
+    this.editor.dispatchCommand(this.#commandName(command))
+    this.#selectNextBestCell(command)
+  }
+
+  #executeDelete(command, selectLastCell) {
+    this.#selectCellAtSelection()
+    this.editor.dispatchCommand(this.#commandName(command))
+    this.#selectNextBestCell(command, selectLastCell)
+  }
+
+  #executeToggle(command) {
+    this.toggleHeaderStyle(command.childType)
+  }
+
+  #selectCellAtSelection() {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!selection) return
+
+      const node = selection.getNodes()[0]
+      const cellNode = $findCellNode(node)
+      if (!cellNode) return
+
+      cellNode.selectEnd()
+    })
+  }
+
+  deleteTable() {
+    this.editor.dispatchCommand("deleteTable")
+  }
+
   toggleHeaderStyle(childType) {
     let cells = null
     let headerState = null
 
-    if (childType === TableChildType.ROW) {
+    if (childType === "row") {
       cells = this.currentRowCells
       headerState = TableCellHeaderStates.ROW
-    } else if (childType === TableChildType.COLUMN) {
+    } else if (childType === "column") {
       cells = this.currentColumnCells
       headerState = TableCellHeaderStates.COLUMN
     }
@@ -188,7 +201,7 @@ export class TableController {
     const { action, childType, direction } = command
 
     const childTypeSuffix = capitalizeFirstLetter(childType)
-    const directionSuffix = action == TableAction.INSERT ? capitalizeFirstLetter(direction) : ""
+    const directionSuffix = action == "insert" ? capitalizeFirstLetter(direction) : ""
     return `${action}Table${childTypeSuffix}${directionSuffix}`
   }
 
@@ -200,53 +213,37 @@ export class TableController {
     }
   }
 
-  #selectCellAtSelection() {
-    this.editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!selection) return
+  async #selectCellAtIndex(rowIndex, columnIndex) {
+    await nextFrame()
 
-      const node = selection.getNodes()[0]
+    if (!this.currentTableNode) return
 
-      this.editor.update(() => {
-        const tableCell = $getTableCellNodeFromLexicalNode(node)
-        if (!tableCell) return
+    const rows = this.tableRows
+    if (!rows) return
 
-        tableCell.selectEnd()
-      })
+    const row = rows[rowIndex]
+    if (!row) return
+
+    this.editor.update(() => {
+      const cell = $getTableCellNodeFromLexicalNode(row.getChildAtIndex(columnIndex))
+      if (!cell) return
+
+      cell.selectEnd()
     })
   }
 
-  #selectCellAtIndex(rowIndex, columnIndex) {
-    requestAnimationFrame(() => {
-      if (!this.currentTableNode) return
-
-      const rows = this.tableRows
-      if (!rows) return
-
-      const row = rows[rowIndex]
-      if (!row) return
-
-      this.editor.update(() => {
-        const cell = $getTableCellNodeFromLexicalNode(row.getChildAtIndex(columnIndex))
-        if (!cell) return
-
-        cell.selectEnd()
-      })
-    })
-  }
-
-  #selectNextBestCell(command) {
-    const { action, childType, direction } = command
+  #selectNextBestCell(command, selectLastCell = false) {
+    const { childType, direction } = command
 
     let rowIndex = this.currentRowIndex
-    let columnIndex = this.currentColumnIndex
+    let columnIndex = selectLastCell ? this.currentRowCells.length - 1 : this.currentColumnIndex
 
-    const deleteOffset = action === TableAction.DELETE ? -1 : 0
-    const offset = direction === TableDirection.AFTER ? 1 : deleteOffset
+    const deleteOffset = command.action === "delete" ? -1 : 0
+    const offset = direction === "after" ? 1 : deleteOffset
 
-    if (childType === TableChildType.ROW) {
+    if (childType === "row") {
       rowIndex += offset
-    } else if (childType === TableChildType.COLUMN) {
+    } else if (childType === "column") {
       columnIndex += offset
     }
 
@@ -275,20 +272,15 @@ export class TableController {
   }
 
   #deleteRowAndSelectLastCell() {
-    this.executeTableCommand({ action: TableAction.DELETE, childType: TableChildType.ROW })
-
-    const rows = this.tableRows
-    if (!rows || rows.length === 0) return
-
-    const rowLength = this.currentRowCells?.length ?? 0
-    this.#selectCellAtIndex(this.currentRowIndex - 1, rowLength - 1)
+    this.executeTableCommand({ action: "delete", childType: "row" }, true)
   }
 
   #deleteLastRowAndSelectNext() {
-    this.executeTableCommand({ action: TableAction.DELETE, childType: TableChildType.ROW })
+    const tableNode = this.currentTableNode
+    this.executeTableCommand({ action: "delete", childType: "row" })
 
     this.editor.update(() => {
-      const next = this.currentTableNode?.getNextSibling()
+      const next = tableNode?.getNextSibling()
       if (next) {
         next.selectStart()
       } else {
@@ -372,7 +364,7 @@ export class TableController {
         if (this.#isCurrentRowLast() && this.#isCurrentRowEmpty()) {
           this.#deleteLastRowAndSelectNext()
         } else if (this.#isCurrentRowLast()) {
-          this.executeTableCommand({ action: TableAction.INSERT, childType: TableChildType.ROW, direction: TableDirection.AFTER })
+          this.executeTableCommand({ action: "insert", childType: "row", direction: "after" })
         } else {
           this.#selectNextRow()
         }

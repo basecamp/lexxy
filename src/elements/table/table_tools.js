@@ -1,8 +1,8 @@
 import { COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND } from "lexical"
 import { $getElementForTableNode } from "@lexical/table"
 
-import { TableAction, TableChildType, TableController, TableDirection } from "./table_controller"
-import { TableIcons } from "./table_icons"
+import { TableController } from "./table_controller"
+import TableIcons from "./table_icons"
 import { handleRollingTabIndex } from "../../helpers/accessibility_helper"
 import { createElement } from "../../helpers/html_helper"
 import theme from "../../config/theme"
@@ -51,8 +51,8 @@ export class TableTools extends HTMLElement {
   #createButtonsContainer(childType, setCountProperty, moreMenu) {
     const container = createElement("div", { className: `lexxy-table-control lexxy-table-control--${childType}` })
 
-    const plusButton = this.#createButton(`Add ${childType}`, { action: TableAction.INSERT, childType, direction: TableDirection.AFTER }, "+")
-    const minusButton = this.#createButton(`Remove ${childType}`, { action: TableAction.DELETE, childType }, "−")
+    const plusButton = this.#createButton(`Add ${childType}`, { action: "insert", childType, direction: "after" }, "+")
+    const minusButton = this.#createButton(`Remove ${childType}`, { action: "delete", childType }, "−")
 
     const dropdown = createElement("details", { className: "lexxy-table-control__more-menu" })
     dropdown.setAttribute("name", "lexxy-dropdown")
@@ -73,26 +73,26 @@ export class TableTools extends HTMLElement {
 
   #createRowButtonsContainer() {
     return this.#createButtonsContainer(
-      TableChildType.ROW,
+      "row",
       (count) => { this.rowCount = count },
-      this.#createMoreMenuSection(TableChildType.ROW)
+      this.#createMoreMenuSection("row")
     )
   }
 
   #createColumnButtonsContainer() {
     return this.#createButtonsContainer(
-      TableChildType.COLUMN,
+      "column",
       (count) => { this.columnCount = count },
-      this.#createMoreMenuSection(TableChildType.COLUMN)
+      this.#createMoreMenuSection("column")
     )
   }
 
   #createMoreMenuSection(childType) {
     const section = createElement("div", { className: "lexxy-table-control__more-menu-details" })
-    const addBeforeButton = this.#createButton(`Add ${childType} before`, { action: TableAction.INSERT, childType, direction: TableDirection.BEFORE })
-    const addAfterButton = this.#createButton(`Add ${childType} after`, { action: TableAction.INSERT, childType, direction: TableDirection.AFTER })
-    const toggleStyleButton = this.#createButton(`Toggle ${childType} style`, { action: TableAction.TOGGLE, childType })
-    const deleteButton = this.#createButton(`Remove ${childType}`, { action: TableAction.DELETE, childType })
+    const addBeforeButton = this.#createButton(`Add ${childType} before`, { action: "insert", childType, direction: "before" })
+    const addAfterButton = this.#createButton(`Add ${childType} after`, { action: "insert", childType, direction: "after" })
+    const toggleStyleButton = this.#createButton(`Toggle ${childType} style`, { action: "toggle", childType })
+    const deleteButton = this.#createButton(`Remove ${childType}`, { action: "delete", childType })
 
     section.appendChild(addBeforeButton)
     section.appendChild(addAfterButton)
@@ -105,7 +105,7 @@ export class TableTools extends HTMLElement {
   #createDeleteTableButton() {
     const container = createElement("div", { className: "lexxy-table-control" })
 
-    const deleteTableButton = this.#createButton("Delete this table?", { action: TableAction.DELETE, childType: TableChildType.TABLE })
+    const deleteTableButton = this.#createButton("Delete this table?", { action: "delete", childType: "table" })
     deleteTableButton.classList.add("lexxy-table-control__button--delete-table")
 
     container.appendChild(deleteTableButton)
@@ -189,13 +189,13 @@ export class TableTools extends HTMLElement {
       let cellsToHighlight = null
 
       switch (command.childType) {
-        case TableChildType.ROW:
+        case "row":
           cellsToHighlight = this.tableController.currentRowCells
           break
-        case TableChildType.COLUMN:
+        case "column":
           cellsToHighlight = this.tableController.currentColumnCells
           break
-        case TableChildType.TABLE:
+        case "table":
           cellsToHighlight = this.tableController.tableRows
           break
       }
@@ -226,7 +226,7 @@ export class TableTools extends HTMLElement {
   }
 
   #executeTableCommand(command) {
-    if (command.action === TableAction.DELETE && command.childType === TableChildType.TABLE) {
+    if (command.action === "delete" && command.childType === "table") {
       this.tableController.deleteTable()
     } else {
       this.tableController.executeTableCommand(command)
@@ -313,8 +313,8 @@ export class TableTools extends HTMLElement {
 
   #icon(command) {
     const { action, childType } = command
-    const direction = (action == TableAction.INSERT ? command.direction : "")
-    const iconId = [ action, childType, direction ].join("")
+    const direction = (action == "insert" ? command.direction : null)
+    const iconId = [ action, childType, direction ].filter(Boolean).join("-")
     return TableIcons[iconId]
   }
 }
