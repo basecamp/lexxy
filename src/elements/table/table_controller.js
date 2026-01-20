@@ -126,6 +126,8 @@ export class TableController {
   }
 
   executeTableCommand(command) {
+    this.#selectCellAtSelection()
+
     const { action, childType } = command
     if (action === TableAction.TOGGLE) {
       this.toggleHeaderStyle(childType)
@@ -198,6 +200,22 @@ export class TableController {
     }
   }
 
+  #selectCellAtSelection() {
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (!selection) return
+
+      const node = selection.getNodes()[0]
+
+      this.editor.update(() => {
+        const tableCell = $getTableCellNodeFromLexicalNode(node)
+        if (!tableCell) return
+
+        tableCell.selectEnd()
+      })
+    })
+  }
+
   #selectCellAtIndex(rowIndex, columnIndex) {
     requestAnimationFrame(() => {
       if (!this.currentTableNode) return
@@ -255,7 +273,7 @@ export class TableController {
       cell.selectPrevious()
     })
   }
-  
+
   #deleteRowAndSelectLastCell() {
     this.executeTableCommand({ action: TableAction.DELETE, childType: TableChildType.ROW })
 
