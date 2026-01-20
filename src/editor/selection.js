@@ -10,6 +10,8 @@ import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
 import { getNonce } from "../helpers/csp_helper"
 import { getNearestListItemNode, isPrintableCharacter } from "../helpers/lexical_helper"
+import { ImageGalleryNode } from "../nodes/image_gallery_node"
+import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 
 export default class Selection {
   constructor(editorElement) {
@@ -31,12 +33,10 @@ export default class Selection {
   }
 
   get hasNodeSelection() {
-    let result = false
-    this.editor.getEditorState().read(() => {
+    return this.editor.getEditorState().read(() => {
       const selection = $getSelection()
-      result = selection !== null && $isNodeSelection(selection)
+      return selection !== null && $isNodeSelection(selection)
     })
-    return result
   }
 
   get cursorPosition() {
@@ -169,6 +169,12 @@ export default class Selection {
 
     const anchorNode = selection.anchor.getNode()
     return $getNearestNodeOfType(anchorNode, CodeNode) !== null
+  }
+
+  get isOnPreviewableImage() {
+    const selection = $getSelection()
+    const firstNode = selection.getNodes().at(0)
+    return this.hasNodeSelection && $isActionTextAttachmentNode(firstNode) && firstNode.isPreviewableImage
   }
 
   get nodeAfterCursor() {

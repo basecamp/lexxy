@@ -238,6 +238,46 @@
       }
     }
   }
+
+  /* Image Gallery */
+:where(.lexxy-image-gallery) {
+  --gallery-gap: 1rem;
+
+  background: var(--lexxy-color-ink-lightest);
+  border: 1px dashed var(--lexxy-color-ink-lighter);
+  border-radius: var(--lexxy-radius);
+  display: grid;
+  gap: var(--gallery-gap);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  margin: 0;
+  padding: var(--gallery-gap);
+
+  > figure.attachment {
+    margin: 0;
+  }
+
+  img {
+    width: 100%;
+    height:  auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--lexxy-radius);
+  }
+
+  figcaption {
+    font-size: 0.875rem;
+  }
+
+  &:has(.node--selected) {
+    outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
+    outline-offset: var(--lexxy-focus-ring-offset);
+  }
+}
+
+/* Make sure individual images in gallery don't have bottom margin */
+:where(.lexxy-image-gallery) .attachment {
+  margin-block-end: 0;
+}
 }
 
 /* Attachments

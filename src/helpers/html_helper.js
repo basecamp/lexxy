@@ -1,6 +1,6 @@
 export function createElement(name, properties, content = "") {
   const element = document.createElement(name)
-  for (const [ key, value ] of Object.entries(properties || {})) {
+  for (const [key, value] of Object.entries(properties || {})) {
     if (key in element) {
       element[key] = value
     } else if (value !== null && value !== undefined) {
@@ -21,6 +21,7 @@ export function parseHtml(html) {
 export function createAttachmentFigure(contentType, isPreviewable, fileName) {
   const extension = fileName ? fileName.split(".").pop().toLowerCase() : "unknown"
   return createElement("figure", {
+    draggable: false,
     className: `attachment attachment--${isPreviewable ? "preview" : "file"} attachment--${extension}`,
     "data-content-type": contentType
   })

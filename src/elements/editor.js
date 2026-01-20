@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, $isParagraphNode, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -15,6 +15,7 @@ import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { WrappedTableNode } from "../nodes/wrapped_table_node"
+import { ImageGalleryNode } from "../nodes/image_gallery_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
@@ -28,7 +29,9 @@ import Extensions from "../editor/extensions"
 import Highlighter from "../editor/highlighter"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { TrixContentExtension } from "../extensions/trix_content_extension"
+import { TrixContentLexicalExtension } from "../lexical_extensions/trix_content_extension"
+
+import GalleryExtension from "../extensions/gallery_extension"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -113,6 +116,12 @@ export default class LexicalEditorElement extends HTMLElement {
 
     this.toolbar = this.toolbar || this.#findOrCreateDefaultToolbar()
     return this.toolbar
+  }
+
+  get baseExtensions() {
+    return [
+      GalleryExtension
+    ]
   }
 
   get directUploadUrl() {
@@ -250,7 +259,7 @@ export default class LexicalEditorElement extends HTMLElement {
     const extensions = [ ]
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
-      TrixContentExtension
+      TrixContentLexicalExtension
     ]
 
     if (this.supportsRichText) {
@@ -279,10 +288,12 @@ export default class LexicalEditorElement extends HTMLElement {
         WrappedTableNode,
         {
           replace: TableNode,
-          with: () => { return new WrappedTableNode() }
+          with: () => { return new WrappedTableNode() },
+          withKlass: WrappedTableNode
         },
         TableCellNode,
         TableRowNode,
+        ImageGalleryNode,
       )
     }
 
@@ -380,6 +391,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #registerComponents() {
+
     if (this.supportsRichText) {
       registerRichText(this.editor)
       registerList(this.editor)

@@ -110,7 +110,7 @@ export class CommandDispatcher {
         const autoLinkNode = $createAutoLinkNode(url)
         const textNode = $createTextNode(url)
         autoLinkNode.append(textNode)
-        selection.insertNodes([ autoLinkNode ])
+        selection.insertNodes([autoLinkNode])
       } else {
         $toggleLink(url)
       }
@@ -162,44 +162,39 @@ export class CommandDispatcher {
   }
 
   dispatchInsertHorizontalDivider() {
-    this.editor.update(() => {
-      this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
-    })
-
+    this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
     this.editor.focus()
   }
 
   dispatchRotateHeadingFormat() {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
 
-      if ($isRootOrShadowRoot(selection.anchor.getNode())) {
-        selection.insertNodes([ $createHeadingNode("h2") ])
-        return
-      }
+    if ($isRootOrShadowRoot(selection.anchor.getNode())) {
+      selection.insertNodes([$createHeadingNode("h2")])
+      return
+    }
 
-      const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
-      let nextTag = "h2"
-      if ($isHeadingNode(topLevelElement)) {
-        const currentTag = topLevelElement.getTag()
-        if (currentTag === "h2") {
-          nextTag = "h3"
-        } else if (currentTag === "h3") {
-          nextTag = "h4"
-        } else if (currentTag === "h4") {
-          nextTag = null
-        } else {
-          nextTag = "h2"
-        }
-      }
-
-      if (nextTag) {
-        this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
+    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
+    let nextTag = "h2"
+    if ($isHeadingNode(topLevelElement)) {
+      const currentTag = topLevelElement.getTag()
+      if (currentTag === "h2") {
+        nextTag = "h3"
+      } else if (currentTag === "h3") {
+        nextTag = "h4"
+      } else if (currentTag === "h4") {
+        nextTag = null
       } else {
-        this.contents.removeFormattingFromSelectedLines()
+        nextTag = "h2"
       }
-    })
+    }
+
+    if (nextTag) {
+      this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
+    } else {
+      this.contents.removeFormattingFromSelectedLines()
+    }
   }
 
   dispatchUploadAttachments() {
@@ -207,17 +202,13 @@ export class CommandDispatcher {
       type: "file",
       multiple: true,
       style: "display: none;",
-      onchange: ({ target }) => {
-        const files = Array.from(target.files)
-        if (!files.length) return
-
-        for (const file of files) {
-          this.contents.uploadFile(file)
-        }
+      onchange: ({ target: { files } }) => {
+        this.contents.uploadFiles(Array.from(files))
       }
     })
 
-    this.editorElement.appendChild(input) // Append and remove just for the sake of making it testable
+    // Append and remove to make testable
+    this.editorElement.appendChild(input)
     input.click()
     setTimeout(() => input.remove(), 1000)
   }
@@ -326,9 +317,7 @@ export class CommandDispatcher {
     const files = Array.from(dataTransfer.files)
     if (!files.length) return
 
-    for (const file of files) {
-      this.contents.uploadFile(file)
-    }
+    this.contents.uploadFiles(files)
 
     this.editor.focus()
   }
@@ -346,7 +335,7 @@ export class CommandDispatcher {
     if (event.shiftKey && !this.selection.isIndentedList) return false
 
     event.preventDefault()
-    const command = event.shiftKey? OUTDENT_CONTENT_COMMAND : INDENT_CONTENT_COMMAND
+    const command = event.shiftKey ? OUTDENT_CONTENT_COMMAND : INDENT_CONTENT_COMMAND
     return this.editor.dispatchCommand(command)
   }
 

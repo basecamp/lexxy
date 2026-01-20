@@ -1,17 +1,18 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
-  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
-import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
+import { $createActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { $createImageGalleryNode, $findOrCreateGalleryFor } from "../nodes/image_gallery_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
-import { nextFrame } from "../helpers/timing_helpers.js"
 import { FormatEscaper } from "./format_escaper"
+import { $getNextSiblingOrParentSibling } from "@lexical/utils"
 
 export default class Contents {
   constructor(editorElement) {
@@ -32,20 +33,18 @@ export default class Contents {
   }
 
   insertAtCursor(node) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      const selectedNodes = selection?.getNodes()
+    const selection = $getSelection()
+    const selectedNodes = selection?.getNodes()
 
-      if ($isRangeSelection(selection)) {
-        $insertNodes([ node ])
-      } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
-        const lastNode = selectedNodes[selectedNodes.length - 1]
-        lastNode.insertAfter(node)
-      } else {
-        const root = $getRoot()
-        root.append(node)
-      }
-    })
+    if ($isRangeSelection(selection)) {
+      $insertNodes([node])
+    } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
+      const lastNode = selectedNodes[selectedNodes.length - 1]
+      lastNode.insertAfter(node)
+    } else {
+      const root = $getRoot()
+      root.append(node)
+    }
   }
 
   insertAtCursorEnsuringLineBelow(node) {
@@ -151,7 +150,7 @@ export default class Contents {
 
       const selection = $getSelection()
       if ($isRangeSelection(selection)) {
-        selection.insertNodes([ linkNode ])
+        selection.insertNodes([linkNode])
         linkNodeKey = linkNode.getKey()
       }
     })
@@ -217,7 +216,7 @@ export default class Contents {
   }
 
   replaceTextBackUntil(stringToReplace, replacementNodes) {
-    replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ]
+    replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [replacementNodes]
 
     this.editor.update(() => {
       const { anchorNode, offset } = this.#getTextAnchorData()
@@ -254,43 +253,71 @@ export default class Contents {
     }
   }
 
-  uploadFile(file) {
-    if (!this.editorElement.supportsAttachments) {
-      console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
-      return
-    }
-
-    if (!this.#shouldUploadFile(file)) {
-      return
-    }
-
-    const uploadUrl = this.editorElement.directUploadUrl
-    const blobUrlTemplate = this.editorElement.blobUrlTemplate
-
-    this.editor.update(() => {
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor })
-      this.insertAtCursor(uploadedImageNode)
-    }, { tag: HISTORY_MERGE_TAG })
-  }
-
-  async deleteSelectedNodes() {
+  deleteSelectedNodes() {
     let focusNode = null
+    let focusIsPreviousSibling
 
     this.editor.update(() => {
       if (this.#selection.hasNodeSelection) {
         const nodesToRemove = $getSelection().getNodes()
         if (nodesToRemove.length === 0) return
 
-        focusNode = this.#findAdjacentNodeTo(nodesToRemove)
+        [focusNode, focusIsPreviousSibling] = this.#findAdjacentNodeTo(nodesToRemove)
         this.#deleteNodes(nodesToRemove)
       }
+    }, {
+      onUpdate: () => {
+        this.editor.update(() => {
+          this.#selectAfterDeletion(focusNode, focusIsPreviousSibling)
+          this.editor.focus()
+        })
+      }
     })
+  }
 
-    await nextFrame()
+  uploadFiles(files) {
+    if (!this.editorElement.supportsAttachments) {
+      console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
+      return
+    }
+
+    const filesArray = Array.from(files)
+
+    // Filter to only valid files
+    const validFiles = filesArray.filter(file => this.#shouldUploadFile(file))
+    if (validFiles.length === 0) return
+
+
+    const uploadUrl = this.editorElement.directUploadUrl
+    const blobUrlTemplate = this.editorElement.blobUrlTemplate
 
     this.editor.update(() => {
-      this.#selectAfterDeletion(focusNode)
-      this.editor.focus()
+      const uploads = validFiles.map(file => {
+        return $createActionTextAttachmentUploadNode({
+          file: file,
+          uploadUrl: uploadUrl,
+          blobUrlTemplate: blobUrlTemplate,
+          editor: this.editor
+        })
+      })
+
+      const imageUploads = uploads.filter(attachment => attachment.isPreviewableImage)
+      const otherUploads = uploads.filter(attachment => !attachment.isPreviewableImage)
+
+      if (this.#selection.isOnPreviewableImage && imageUploads.length) {
+        const { node } = this.#selection.selectedNodeWithOffset()
+        const gallery = $findOrCreateGalleryFor(node)
+        gallery.append(...imageUploads)
+      } else if (imageUploads.length > 1) {
+        const gallery = $createImageGalleryNode()
+        this.insertAtCursorEnsuringLineBelow(gallery)
+        gallery.append(...imageUploads)
+      } else if (imageUploads.length) {
+        const [imageUpload] = imageUploads
+        this.insertAtCursorEnsuringLineBelow(imageUpload)
+      }
+
+      otherUploads.forEach(fileUpload => this.insertAtCursorEnsuringLineBelow(fileUpload))
     })
   }
 
@@ -455,7 +482,7 @@ export default class Contents {
       wrappingNode.append(...topLevelElement.getChildren())
       topLevelElement.replace(wrappingNode)
     } else {
-      $insertNodes([ newNodeFn() ])
+      $insertNodes([newNodeFn()])
     }
   }
 
@@ -553,10 +580,15 @@ export default class Contents {
     const firstNode = nodes[0]
     const lastNode = nodes[nodes.length - 1]
 
-    return firstNode?.getPreviousSibling() || lastNode?.getNextSibling()
+    const previousSibling = firstNode?.getPreviousSibling()
+    const isPreviousSibling = Boolean(previousSibling)
+
+    const previousOrNextSibling = previousSibling || lastNode && $getNextSiblingOrParentSibling(lastNode)[0]
+
+    return [previousOrNextSibling, isPreviousSibling]
   }
 
-  #selectAfterDeletion(focusNode) {
+  #selectAfterDeletion(focusNode, selectEnd = true) {
     const root = $getRoot()
     if (root.getChildrenSize() === 0) {
       const newParagraph = $createParagraphNode()
@@ -564,9 +596,9 @@ export default class Contents {
       newParagraph.selectStart()
     } else if (focusNode) {
       if ($isTextNode(focusNode) || $isParagraphNode(focusNode)) {
-        focusNode.selectEnd()
+        selectEnd ? focusNode.selectEnd() : focusNode.selectStart()
       } else {
-        focusNode.selectNext(0, 0)
+        selectEnd ? focusNode.selectNext(0, 0) : focusNode.select()
       }
     }
   }
