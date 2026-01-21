@@ -2,7 +2,7 @@ import {
   $createParagraphNode,
   $getNodeByKey,
   $getSelection,
-  COMMAND_PRIORITY_NORMAL,
+  COMMAND_PRIORITY_HIGH,
   KEY_BACKSPACE_COMMAND,
   KEY_ENTER_COMMAND
 } from "lexical"
@@ -322,8 +322,8 @@ export class TableController {
 
   #registerKeyHandlers() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.unregisterBackspaceKeyHandler = this.editor.registerCommand(KEY_BACKSPACE_COMMAND, (event) => this.#handleBackspaceKey(event), COMMAND_PRIORITY_NORMAL)
-    this.unregisterEnterKeyHandler = this.editor.registerCommand(KEY_ENTER_COMMAND, (event) => this.#handleEnterKey(event), COMMAND_PRIORITY_NORMAL)
+    this.unregisterBackspaceKeyHandler = this.editor.registerCommand(KEY_BACKSPACE_COMMAND, (event) => this.#handleBackspaceKey(event), COMMAND_PRIORITY_HIGH)
+    this.unregisterEnterKeyHandler = this.editor.registerCommand(KEY_ENTER_COMMAND, (event) => this.#handleEnterKey(event), COMMAND_PRIORITY_HIGH)
   }
 
   #unregisterKeyHandlers() {
