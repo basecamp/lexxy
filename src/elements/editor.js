@@ -1,14 +1,37 @@
-import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import {
+  $addUpdateTag,
+  $createParagraphNode,
+  $getNodeByKey,
+  $getRoot,
+  BLUR_COMMAND,
+  CLEAR_HISTORY_COMMAND,
+  COMMAND_PRIORITY_NORMAL,
+  DecoratorNode,
+  FOCUS_COMMAND,
+  KEY_ENTER_COMMAND,
+  SKIP_DOM_SELECTION_TAG,
+} from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
-import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
+import {
+  CodeHighlightNode,
+  CodeNode,
+  registerCodeHighlighting,
+} from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
-import { TableCellNode, TableNode, TableRowNode, registerTablePlugin, registerTableSelectionObserver, setScrollableTablesActive } from "@lexical/table"
+import {
+  TableCellNode,
+  TableNode,
+  TableRowNode,
+  registerTablePlugin,
+  registerTableSelectionObserver,
+  setScrollableTablesActive,
+} from "@lexical/table"
 
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
@@ -17,8 +40,14 @@ import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { WrappedTableNode } from "../nodes/wrapped_table_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
-import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
+import {
+  createElement,
+  dispatch,
+  generateDomId,
+  parseHtml,
+} from "../helpers/html_helper"
 import { sanitize } from "../helpers/sanitization_helper"
+import { normalizeEmptyContent } from "../helpers/html_normalization_helper"
 import { registerHeaderBackgroundTransform } from "../helpers/table_helper"
 import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
@@ -33,9 +62,9 @@ import { TrixContentExtension } from "../extensions/trix_content_extension"
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = false
-  static commands = [ "bold", "italic", "strikethrough" ]
+  static commands = ["bold", "italic", "strikethrough"]
 
-  static observedAttributes = [ "connected", "required" ]
+  static observedAttributes = ["connected", "required"]
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
@@ -75,7 +104,12 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
+    if (
+      name === "connected" &&
+      this.isConnected &&
+      oldValue != null &&
+      oldValue !== newValue
+    ) {
       requestAnimationFrame(() => this.#reconnect())
     }
 
@@ -124,7 +158,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get isEmpty() {
-    return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
+    return ["<p><br></p>", "<p></p>", ""].includes(this.value.trim())
   }
 
   get isBlank() {
@@ -132,7 +166,10 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get hasOpenPrompt() {
-    return this.querySelector(".lexxy-prompt-menu.lexxy-prompt-menu--visible") !== null
+    return (
+      this.querySelector(".lexxy-prompt-menu.lexxy-prompt-menu--visible") !==
+      null
+    )
   }
 
   get preset() {
@@ -171,7 +208,9 @@ export default class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
+        this.cachedValue = normalizeEmptyContent(
+          sanitize($generateHtmlFromNodes(this.editor, null))
+        )
       })
     }
 
@@ -191,21 +230,24 @@ export default class LexicalEditorElement extends HTMLElement {
       // The first time you set the value, when the editor is empty, it seems to leave Lexical
       // in an inconsistent state until, at least, you focus. You can type but adding attachments
       // fails because no root node detected. This is a workaround to deal with the issue.
-      requestAnimationFrame(() => this.editor?.update(() => { }))
+      requestAnimationFrame(() => this.editor?.update(() => {}))
     })
   }
 
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>"
-    const nodes = $generateNodesFromDOM(this.editor, parseHtml(`<div>${html}</div>`))
+    const nodes = $generateNodesFromDOM(
+      this.editor,
+      parseHtml(`<div>${html}</div>`)
+    )
 
     if (nodes.length === 0) {
-      return [ $createParagraphNode() ]
+      return [$createParagraphNode()]
     }
 
     // Custom decorator block elements such action-text-attachments get wrapped into <p> automatically by Lexical.
     // We flatten those.
-    return nodes.map(node => {
+    return nodes.map((node) => {
       if (node.getType() === "paragraph" && node.getChildrenSize() === 1) {
         const child = node.getFirstChild()
         if (child instanceof DecoratorNode && !child.isInline()) {
@@ -232,11 +274,12 @@ export default class LexicalEditorElement extends HTMLElement {
   #createEditor() {
     this.editorContentElement ||= this.#createEditorContentElement()
 
-    const editor = buildEditorFromExtensions({
+    const editor = buildEditorFromExtensions(
+      {
         name: "lexxy/core",
         namespace: "Lexxy",
         theme: theme,
-        nodes: this.#lexicalNodes
+        nodes: this.#lexicalNodes,
       },
       ...this.#lexicalExtensions
     )
@@ -247,10 +290,10 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #lexicalExtensions() {
-    const extensions = [ ]
+    const extensions = []
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
-      TrixContentExtension
+      TrixContentExtension,
     ]
 
     if (this.supportsRichText) {
@@ -263,7 +306,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #lexicalNodes() {
-    const nodes = [ CustomActionTextAttachmentNode ]
+    const nodes = [CustomActionTextAttachmentNode]
 
     if (this.supportsRichText) {
       nodes.push(
@@ -279,10 +322,12 @@ export default class LexicalEditorElement extends HTMLElement {
         WrappedTableNode,
         {
           replace: TableNode,
-          with: () => { return new WrappedTableNode() }
+          with: () => {
+            return new WrappedTableNode()
+          },
         },
         TableCellNode,
-        TableRowNode,
+        TableRowNode
       )
     }
 
@@ -300,14 +345,19 @@ export default class LexicalEditorElement extends HTMLElement {
       role: "textbox",
       "aria-multiline": true,
       "aria-label": this.#labelText,
-      placeholder: this.getAttribute("placeholder")
+      placeholder: this.getAttribute("placeholder"),
     })
     editorContentElement.id = `${this.id}-content`
-    this.#ariaAttributes.forEach(attribute => editorContentElement.setAttribute(attribute.name, attribute.value))
+    this.#ariaAttributes.forEach((attribute) =>
+      editorContentElement.setAttribute(attribute.name, attribute.value)
+    )
     this.appendChild(editorContentElement)
 
     if (this.getAttribute("tabindex")) {
-      editorContentElement.setAttribute("tabindex", this.getAttribute("tabindex"))
+      editorContentElement.setAttribute(
+        "tabindex",
+        this.getAttribute("tabindex")
+      )
       this.removeAttribute("tabindex")
     } else {
       editorContentElement.setAttribute("tabindex", 0)
@@ -317,15 +367,21 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #labelText() {
-    return Array.from(this.internals.labels).map(label => label.textContent).join(" ")
+    return Array.from(this.internals.labels)
+      .map((label) => label.textContent)
+      .join(" ")
   }
 
   get #ariaAttributes() {
-    return Array.from(this.attributes).filter(attribute => attribute.name.startsWith("aria-"))
+    return Array.from(this.attributes).filter((attribute) =>
+      attribute.name.startsWith("aria-")
+    )
   }
 
   set #internalFormValue(html) {
-    const changed = this.#internalFormValue !== undefined && this.#internalFormValue !== this.value
+    const changed =
+      this.#internalFormValue !== undefined &&
+      this.#internalFormValue !== this.value
 
     this.internals.setFormValue(html)
     this._internalFormValue = html
@@ -341,12 +397,16 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #loadInitialValue() {
-    const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p></p>"
+    const initialHtml =
+      this.valueBeforeDisconnect || this.getAttribute("value") || "<p></p>"
     this.value = this.#initialValue = initialHtml
   }
 
   #resetBeforeTurboCaches() {
-    document.addEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
+    document.addEventListener(
+      "turbo:before-cache",
+      this.#handleTurboBeforeCache
+    )
   }
 
   #handleTurboBeforeCache = (event) => {
@@ -354,12 +414,14 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #synchronizeWithChanges() {
-    this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
-      this.#clearCachedValues()
-      this.#internalFormValue = this.value
-      this.#toggleEmptyStatus()
-      this.#setValidity()
-    }))
+    this.#addUnregisterHandler(
+      this.editor.registerUpdateListener(({ editorState }) => {
+        this.#clearCachedValues()
+        this.#internalFormValue = this.value
+        this.#toggleEmptyStatus()
+        this.#setValidity()
+      })
+    )
   }
 
   #clearCachedValues() {
@@ -410,18 +472,20 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #listenForInvalidatedNodes() {
-    this.editor.getRootElement().addEventListener("lexxy:internal:invalidate-node", (event) => {
-      const { key, values } = event.detail
+    this.editor
+      .getRootElement()
+      .addEventListener("lexxy:internal:invalidate-node", (event) => {
+        const { key, values } = event.detail
 
-      this.editor.update(() => {
-        const node = $getNodeByKey(key)
+        this.editor.update(() => {
+          const node = $getNodeByKey(key)
 
-        if (node instanceof ActionTextAttachmentNode) {
-          const updatedNode = node.getWritable()
-          Object.assign(updatedNode, values)
-        }
+          if (node instanceof ActionTextAttachmentNode) {
+            const updatedNode = node.getWritable()
+            Object.assign(updatedNode, values)
+          }
+        })
       })
-    })
   }
 
   #handleEnter() {
@@ -451,8 +515,20 @@ export default class LexicalEditorElement extends HTMLElement {
     // Lexxy handles focus and blur as commands
     // see https://github.com/facebook/lexical/blob/d1a8e84fe9063a4f817655b346b6ff373aa107f0/packages/lexical/src/LexicalEvents.ts#L35
     // and https://stackoverflow.com/a/72212077
-    this.editor.registerCommand(BLUR_COMMAND, () => { dispatch(this, "lexxy:blur") }, COMMAND_PRIORITY_NORMAL)
-    this.editor.registerCommand(FOCUS_COMMAND, () => { dispatch(this, "lexxy:focus") }, COMMAND_PRIORITY_NORMAL)
+    this.editor.registerCommand(
+      BLUR_COMMAND,
+      () => {
+        dispatch(this, "lexxy:blur")
+      },
+      COMMAND_PRIORITY_NORMAL
+    )
+    this.editor.registerCommand(
+      FOCUS_COMMAND,
+      () => {
+        dispatch(this, "lexxy:focus")
+      },
+      COMMAND_PRIORITY_NORMAL
+    )
   }
 
   #onFocus() {
@@ -463,7 +539,10 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #handleAutofocus() {
     if (!document.querySelector(":focus")) {
-      if (this.hasAttribute("autofocus") && document.querySelector("[autofocus]") === this) {
+      if (
+        this.hasAttribute("autofocus") &&
+        document.querySelector("[autofocus]") === this
+      ) {
         this.focus()
       }
     }
@@ -471,7 +550,10 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #handleTables() {
     if (this.supportsRichText) {
-      this.removeTableSelectionObserver = registerTableSelectionObserver(this.editor, true)
+      this.removeTableSelectionObserver = registerTableSelectionObserver(
+        this.editor,
+        true
+      )
       setScrollableTablesActive(this.editor, true)
     }
   }
@@ -479,12 +561,14 @@ export default class LexicalEditorElement extends HTMLElement {
   #attachDebugHooks() {
     if (!LexicalEditorElement.debug) return
 
-    this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
-      editorState.read(() => {
-        console.debug("HTML: ", this.value, "String:", this.toString())
-        console.debug("empty", this.isEmpty, "blank", this.isBlank)
+    this.#addUnregisterHandler(
+      this.editor.registerUpdateListener(({ editorState }) => {
+        editorState.read(() => {
+          console.debug("HTML: ", this.value, "String:", this.toString())
+          console.debug("empty", this.isEmpty, "blank", this.isBlank)
+        })
       })
-    }))
+    )
   }
 
   #attachToolbar() {
@@ -522,7 +606,11 @@ export default class LexicalEditorElement extends HTMLElement {
     if (this.#validationTextArea.validity.valid) {
       this.internals.setValidity({})
     } else {
-      this.internals.setValidity(this.#validationTextArea.validity, this.#validationTextArea.validationMessage, this.editorContentElement)
+      this.internals.setValidity(
+        this.#validationTextArea.validity,
+        this.#validationTextArea.validationMessage,
+        this.editorContentElement
+      )
     }
   }
 
@@ -538,7 +626,9 @@ export default class LexicalEditorElement extends HTMLElement {
     this.editor = null
 
     if (this.toolbar) {
-      if (!this.getAttribute("toolbar")) { this.toolbar.remove() }
+      if (!this.getAttribute("toolbar")) {
+        this.toolbar.remove()
+      }
       this.toolbar = null
     }
 
@@ -554,7 +644,10 @@ export default class LexicalEditorElement extends HTMLElement {
 
     this.selection = null
 
-    document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
+    document.removeEventListener(
+      "turbo:before-cache",
+      this.#handleTurboBeforeCache
+    )
   }
 
   #reconnect() {
