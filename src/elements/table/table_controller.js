@@ -2,6 +2,7 @@ import {
   $createParagraphNode,
   $getNodeByKey,
   $getSelection,
+  $isParagraphNode,
   COMMAND_PRIORITY_HIGH,
   KEY_BACKSPACE_COMMAND,
   KEY_ENTER_COMMAND
@@ -273,7 +274,7 @@ export class TableController {
 
     this.editor.update(() => {
       const next = tableNode?.getNextSibling()
-      if (next) {
+      if ($isParagraphNode(next)) {
         next.selectStart()
       } else {
         const newParagraph = $createParagraphNode()
