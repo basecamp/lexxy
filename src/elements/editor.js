@@ -30,6 +30,8 @@ import Highlighter from "../editor/highlighter"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 
+import { normalizeEmptyContent } from "../helpers/html_normalization_helper"
+
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = false
@@ -171,7 +173,9 @@ export default class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
+        this.cachedValue = normalizeEmptyContent(
+          sanitize($generateHtmlFromNodes(this.editor, null))
+        )
       })
     }
 
