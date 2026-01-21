@@ -3,9 +3,10 @@ import { $getElementForTableNode } from "@lexical/table"
 
 import { TableController } from "./table_controller"
 import TableIcons from "./table_icons"
+import theme from "../../config/theme"
 import { handleRollingTabIndex } from "../../helpers/accessibility_helper"
 import { createElement } from "../../helpers/html_helper"
-import theme from "../../config/theme"
+import { nextFrame } from "../../helpers/timing_helpers"
 
 export class TableTools extends HTMLElement {
   connectedCallback() {
@@ -24,7 +25,7 @@ export class TableTools extends HTMLElement {
 
     this.removeEventListener("keydown", this.#handleToolsKeydown)
 
-    this.tableController?.destroy?.()
+    this.tableController?.destroy()
     this.tableController = null
   }
 
@@ -173,42 +174,42 @@ export class TableTools extends HTMLElement {
     this.#update()
   }
 
-  #handleCommandButtonHover() {
-    requestAnimationFrame(() => {
-      this.#clearCellStyles()
+  async #handleCommandButtonHover() {
+    await nextFrame()
 
-      const activeElement = this.querySelector("button:hover, button:focus")
-      if (!activeElement) return
+    this.#clearCellStyles()
 
-      const command = {
-        action: activeElement.dataset.action,
-        childType: activeElement.dataset.childType,
-        direction: activeElement.dataset.direction
-      }
+    const activeElement = this.querySelector("button:hover, button:focus")
+    if (!activeElement) return
 
-      let cellsToHighlight = null
+    const command = {
+      action: activeElement.dataset.action,
+      childType: activeElement.dataset.childType,
+      direction: activeElement.dataset.direction
+    }
 
-      switch (command.childType) {
-        case "row":
-          cellsToHighlight = this.tableController.currentRowCells
-          break
-        case "column":
-          cellsToHighlight = this.tableController.currentColumnCells
-          break
-        case "table":
-          cellsToHighlight = this.tableController.tableRows
-          break
-      }
+    let cellsToHighlight = null
 
-      if (!cellsToHighlight) return
+    switch (command.childType) {
+      case "row":
+        cellsToHighlight = this.tableController.currentRowCells
+        break
+      case "column":
+        cellsToHighlight = this.tableController.currentColumnCells
+        break
+      case "table":
+        cellsToHighlight = this.tableController.tableRows
+        break
+    }
 
-      cellsToHighlight.forEach(cell => {
-        const cellElement = this.#editor.getElementByKey(cell.getKey())
-        if (!cellElement) return
+    if (!cellsToHighlight) return
 
-        cellElement.classList.toggle(theme.tableCellHighlight, true)
-        Object.assign(cellElement.dataset, command)
-      })
+    cellsToHighlight.forEach(cell => {
+      const cellElement = this.#editor.getElementByKey(cell.getKey())
+      if (!cellElement) return
+
+      cellElement.classList.toggle(theme.tableCellHighlight, true)
+      Object.assign(cellElement.dataset, command)
     })
   }
 
@@ -226,12 +227,7 @@ export class TableTools extends HTMLElement {
   }
 
   #executeTableCommand(command) {
-    if (command.action === "delete" && command.childType === "table") {
-      this.tableController.deleteTable()
-    } else {
-      this.tableController.executeTableCommand(command)
-    }
-
+    this.tableController.executeTableCommand(command)
     this.#update()
   }
 

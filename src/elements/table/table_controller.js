@@ -18,7 +18,7 @@ import {
   TableNode,
 } from "@lexical/table"
 
-import { capitalizeFirstLetter } from "../../helpers/string_helper"
+import { upcaseFirst } from "../../helpers/string_helper"
 import { nextFrame } from "../../helpers/timing_helpers"
 
 export class TableController {
@@ -123,20 +123,17 @@ export class TableController {
   }
 
   executeTableCommand(command, customIndex = null) {
-    switch (command.action) {
-      case "insert":
-      case "delete":
-        this.#executeCommand(command, customIndex)
-        break
-      case "toggle":
-        this.#executeToggleStyle(command)
-        break
+    if (command.action === "delete" && command.childType === "table") {
+      this.#deleteTable()
+      return
     }
-  }
 
-  deleteTable() {
-    this.#selectCellAtSelection()
-    this.editor.dispatchCommand("deleteTable")
+    if (command.action === "toggle") {
+      this.#executeToggleStyle(command)
+      return
+    }
+
+    this.#executeCommand(command, customIndex)
   }
 
   #executeCommand(command, customIndex = null) {
@@ -174,6 +171,11 @@ export class TableController {
     })
   }
 
+  #deleteTable() {
+    this.#selectCellAtSelection()
+    this.editor.dispatchCommand("deleteTable")
+  }
+
   #selectCellAtSelection() {
     this.editor.update(() => {
       const selection = $getSelection()
@@ -181,31 +183,25 @@ export class TableController {
 
       const node = selection.getNodes()[0]
 
-      const cellNode = $findCellNode(node)
-      if (!cellNode) return
-
-      cellNode.selectEnd()
+      $findCellNode(node)?.selectEnd()
     })
   }
 
   #commandName(command) {
     const { action, childType, direction } = command
 
-    const childTypeSuffix = capitalizeFirstLetter(childType)
-    const directionSuffix = action == "insert" ? capitalizeFirstLetter(direction) : ""
+    const childTypeSuffix = upcaseFirst(childType)
+    const directionSuffix = action == "insert" ? upcaseFirst(direction) : ""
     return `${action}Table${childTypeSuffix}${directionSuffix}`
   }
 
   #setHeaderStyle(cell, newStyle, headerState) {
     const tableCellNode = $getTableCellNodeFromLexicalNode(cell)
-
-    if (tableCellNode) {
-      tableCellNode.setHeaderStyles(newStyle, headerState)
-    }
+    tableCellNode?.setHeaderStyles(newStyle, headerState)
   }
 
   async #selectCellAtIndex(rowIndex, columnIndex) {
-    // We wait for next frame, otherwise table operations have might've not completed yet.
+    // We wait for next frame, otherwise table operations might not have completed yet.
     await nextFrame()
 
     if (!this.currentTableNode) return
@@ -218,9 +214,7 @@ export class TableController {
 
     this.editor.update(() => {
       const cell = $getTableCellNodeFromLexicalNode(row.getChildAtIndex(columnIndex))
-      if (!cell) return
-
-      cell.selectEnd()
+      cell?.selectEnd()
     })
   }
 
@@ -356,7 +350,7 @@ export class TableController {
   }
 
   #handleEnterKey(event) {
-    if (event.shiftKey || !this.currentTableNode) return false
+    if ((event.ctrlKey || event.metaKey) || event.shiftKey || !this.currentTableNode) return false
 
     if (this.selection.isInsideList || this.selection.isInsideCodeBlock) return false
 

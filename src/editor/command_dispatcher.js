@@ -253,10 +253,8 @@ export class CommandDispatcher {
     if (!$isRangeSelection(selection)) return
 
     const anchorNode = selection.anchor.getNode()
-    const tableNode = $findTableNode(anchorNode)
-    if (!tableNode) return
 
-    tableNode.remove()
+    $findTableNode(anchorNode)?.remove()
   }
 
   dispatchUndo() {

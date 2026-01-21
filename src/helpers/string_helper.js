@@ -25,6 +25,6 @@ export function filterMatches(text, potentialMatch) {
   return normalizeFilteredText(text).includes(normalizeFilteredText(potentialMatch))
 }
 
-export function capitalizeFirstLetter(string) {
+export function upcaseFirst(string) {
   return string.charAt(0).toUpperCase() + string.slice(1)
 }
