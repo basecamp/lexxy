@@ -125,7 +125,7 @@ export class TableController {
         this.#executeCommand(command, customIndex)
         break
       case "toggle":
-        this.#executeToggle(command)
+        this.#executeToggleStyle(command)
         break
     }
   }
@@ -135,7 +135,15 @@ export class TableController {
     this.editor.dispatchCommand("deleteTable")
   }
 
-  toggleHeaderStyle(childType) {
+  #executeCommand(command, customIndex = null) {
+    this.#selectCellAtSelection()
+    this.editor.dispatchCommand(this.#commandName(command))
+    this.#selectNextBestCell(command, customIndex)
+  }
+
+  #executeToggleStyle(command) {
+    const childType = command.childType
+
     let cells = null
     let headerState = null
 
@@ -160,16 +168,6 @@ export class TableController {
         this.#setHeaderStyle(cell, newStyle, headerState)
       })
     })
-  }
-
-  #executeCommand(command, customIndex = null) {
-    this.#selectCellAtSelection()
-    this.editor.dispatchCommand(this.#commandName(command))
-    this.#selectNextBestCell(command, customIndex)
-  }
-
-  #executeToggle(command) {
-    this.toggleHeaderStyle(command.childType)
   }
 
   #selectCellAtSelection() {
@@ -354,7 +352,7 @@ export class TableController {
   }
 
   #handleEnterKey(event) {
-    if (event.shiftKey ||!this.currentTableNode) return false
+    if (event.shiftKey || !this.currentTableNode) return false
 
     if (this.selection.isInsideList || this.selection.isInsideCodeBlock) return false
 
