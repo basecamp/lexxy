@@ -24,6 +24,7 @@ export class TableController {
   constructor(editorElement) {
     this.editor = editorElement.editor
     this.contents = editorElement.contents
+    this.selection = editorElement.selection
 
     this.currentTableNodeKey = null
     this.currentCellKey = null
@@ -120,10 +121,8 @@ export class TableController {
   executeTableCommand(command, customIndex = null) {
     switch (command.action) {
       case "insert":
-        this.#executeInsert(command, customIndex)
-        break
       case "delete":
-        this.#executeDelete(command, customIndex)
+        this.#executeCommand(command, customIndex)
         break
       case "toggle":
         this.#executeToggle(command)
@@ -163,13 +162,7 @@ export class TableController {
     })
   }
 
-  #executeInsert(command, customIndex = null) {
-    this.#selectCellAtSelection()
-    this.editor.dispatchCommand(this.#commandName(command))
-    this.#selectNextBestCell(command, customIndex)
-  }
-
-  #executeDelete(command, customIndex = null) {
+  #executeCommand(command, customIndex = null) {
     this.#selectCellAtSelection()
     this.editor.dispatchCommand(this.#commandName(command))
     this.#selectNextBestCell(command, customIndex)
@@ -185,6 +178,7 @@ export class TableController {
       if (!selection) return
 
       const node = selection.getNodes()[0]
+
       const cellNode = $findCellNode(node)
       if (!cellNode) return
 
@@ -268,7 +262,7 @@ export class TableController {
   }
 
   #insertRowAndSelectFirstCell() {
-    this.executeTableCommand({ action: "insert", childType: "row" }, 0)
+    this.executeTableCommand({ action: "insert", childType: "row", direction: "after" }, 0)
   }
 
   #deleteRowAndSelectLastCell() {
@@ -361,6 +355,8 @@ export class TableController {
 
   #handleEnterKey(event) {
     if (event.shiftKey ||!this.currentTableNode) return false
+
+    if (this.selection.isInsideList || this.selection.isInsideCodeBlock) return false
 
     event.preventDefault()
 
