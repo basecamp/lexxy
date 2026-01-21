@@ -4716,6 +4716,7 @@ function buildConfig() {
   return {
     ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(Lexxy.global.get("attachmentTagName")),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
+    ADD_URI_SAFE_ATTR: [ "caption", "filename" ],
     SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
   }
 }
@@ -9180,15 +9181,14 @@ class Contents {
     new FormatEscaper(editorElement).monitor();
   }
 
-  insertHtml(html) {
+  insertHtml(html, { tag } = {}) {
     this.editor.update(() => {
       const selection = Lr();
-
       if (!yr(selection)) return
 
       const nodes = m$1(this.editor, parseHtml(html));
       selection.insertNodes(nodes);
-    });
+    }, { tag });
   }
 
   insertAtCursor(node) {
@@ -10063,14 +10063,14 @@ class Clipboard {
 
   #pasteMarkdown(text) {
     const html = k(text);
-    this.contents.insertHtml(html);
+    this.contents.insertHtml(html, { tag: [ Fn ] });
   }
 
   #pasteRichText(clipboardData) {
     this.editor.update(() => {
       const selection = Lr();
       R$3(clipboardData, selection, this.editor);
-    });
+    }, { tag: Fn });
   }
 
   #handlePastedFiles(clipboardData) {
