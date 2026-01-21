@@ -105,18 +105,21 @@ export class TableController {
   }
 
   updateSelectedTable() {
+    let cellNode = null
+    let tableNode = null
+
     this.editor.getEditorState().read(() => {
       const selection = $getSelection()
-      if (!selection) return
+      if (!selection || !this.selection.isTableCellSelected) return
 
       const node = selection.getNodes()[0]
 
-      const cellNode = $findCellNode(node)
-      const tableNode = $findTableNode(node)
-
-      this.currentCellKey = cellNode?.getKey() ?? null
-      this.currentTableNodeKey = tableNode?.getKey() ?? null
+      cellNode = $findCellNode(node)
+      tableNode = $findTableNode(node)
     })
+
+    this.currentCellKey = cellNode?.getKey() ?? null
+    this.currentTableNodeKey = tableNode?.getKey() ?? null
   }
 
   executeTableCommand(command, customIndex = null) {
