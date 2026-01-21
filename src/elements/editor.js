@@ -19,7 +19,7 @@ import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
 import { sanitize } from "../helpers/sanitization_helper"
-import { registerHeaderBackgroundTransform } from "../helpers/table_helper"
+import { registerHeaderBackgroundTransform, registerTableHeaderStateTransform } from "../helpers/table_helper"
 import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
@@ -401,6 +401,7 @@ export default class LexicalEditorElement extends HTMLElement {
     this.append(this.tableTools)
 
     this.#addUnregisterHandler(registerHeaderBackgroundTransform(this.editor))
+    this.#addUnregisterHandler(registerTableHeaderStateTransform(this.editor))
   }
 
   #registerCodeHiglightingComponents() {
