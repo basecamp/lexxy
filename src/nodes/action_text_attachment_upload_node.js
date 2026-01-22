@@ -58,6 +58,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return figure
   }
 
+  updateDOM() {
+    return false
+  }
+
   exportDOM() {
     const img = document.createElement("img")
     if (this.src) {
