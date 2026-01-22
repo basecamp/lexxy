@@ -149,7 +149,6 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return Boolean(this.width && this.height)
   }
 
-    const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads")
   async #startUploadIfNeeded() {
     if (this.#uploadStarted) return
 
@@ -158,8 +157,20 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const { DirectUpload } = await import("@rails/activestorage")
 
     const upload = new DirectUpload(this.file, this.uploadUrl, this)
+    upload.delegate = this.#createUploadDelegate()
+    upload.create((error, blob) => {
+      if (error) {
+        this.#handleUploadError(error)
+      } else {
+        this.#showUploadedAttachment(blob)
+      }
+    })
+  }
 
-    upload.delegate = {
+  #createUploadDelegate() {
+    const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads")
+
+    return {
       directUploadWillCreateBlobWithXHR: (request) => {
         if (shouldAuthenticateUploads) request.withCredentials = true
       },
@@ -170,14 +181,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
         request.upload.addEventListener("progress", uploadProgressHandler)
       }
     }
+  }
 
-    upload.create((error, blob) => {
-      if (error) {
-        this.#handleUploadError(error)
-      } else {
-        this.#showUploadedAttachment(blob)
-      }
-    })
   #setUploadStarted() {
     this.#setProgress(1)
   }
