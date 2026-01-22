@@ -1,4 +1,4 @@
-import { COMMAND_PRIORITY_LOW, defineExtension } from "lexical"
+import { COMMAND_PRIORITY_NORMAL, defineExtension } from "lexical"
 import { $getSelection, $isRangeSelection } from "lexical"
 import {
   $deleteTableColumnAtSelection,
@@ -80,39 +80,32 @@ export const TablesLexicalExtension = defineExtension({
 
     editor.registerCommand("insertTableRowAfter", () => {
       $insertTableRowAtSelection(true)
-      return true
-    }, COMMAND_PRIORITY_LOW)
+    }, COMMAND_PRIORITY_NORMAL)
 
     editor.registerCommand("insertTableRowBefore", () => {
       $insertTableRowAtSelection(false)
-      return true
-    }, COMMAND_PRIORITY_LOW)
+    }, COMMAND_PRIORITY_NORMAL)
 
     editor.registerCommand("insertTableColumnAfter", () => {
       $insertTableColumnAtSelection(true)
-      return true
-    }, COMMAND_PRIORITY_LOW)
+    }, COMMAND_PRIORITY_NORMAL)
 
     editor.registerCommand("insertTableColumnBefore", () => {
       $insertTableColumnAtSelection(false)
-      return true
-    }, COMMAND_PRIORITY_LOW)
+    }, COMMAND_PRIORITY_NORMAL)
 
     editor.registerCommand("deleteTableRow", () => {
       $deleteTableRowAtSelection()
-      return true
-    }, COMMAND_PRIORITY_LOW)
+    }, COMMAND_PRIORITY_NORMAL)
 
     editor.registerCommand("deleteTableColumn", () => {
       $deleteTableColumnAtSelection()
-      return true
-    }, COMMAND_PRIORITY_LOW)
+    }, COMMAND_PRIORITY_NORMAL)
 
     editor.registerCommand("deleteTable", () => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return false
       $findTableNode(selection.anchor.getNode())?.remove()
-      return true
-    }, COMMAND_PRIORITY_LOW)
+    }, COMMAND_PRIORITY_NORMAL)
   }
 })
