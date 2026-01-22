@@ -256,7 +256,9 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #toolbarIsOverflowing() {
-    return (this.scrollWidth - this.#overflow.clientWidth) > this.clientWidth
+    // Safari can report inconsistent clientWidth values on more than 100% window zoom level,
+    // that was affecting the toolbar overflow calculation. We're adding +1 to get around this issue.
+    return (this.scrollWidth - this.#overflow.clientWidth) > this.clientWidth + 1
   }
 
   #refreshToolbarOverflow = () => {
