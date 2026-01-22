@@ -43,6 +43,11 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   createDOM() {
     if (this.uploadError) return this.#createDOMForError()
 
+    // This side-effect is trigged on DOM load to fire only once and avoid multiple
+    // uploads through cloning. The upload is guarded from restarting in case the
+    // node is reloaded from saved state such as from history.
+    this.#startUploadIfNeeded()
+
     const figure = this.createAttachmentFigure()
 
     if (this.isPreviewableAttachment) {
@@ -56,8 +61,6 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
     figure.appendChild(this.#createCaption())
     figure.appendChild(this.#createProgressBar())
-
-    this.#startUpload()
 
     return figure
   }
@@ -90,6 +93,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       height: this.height,
       uploadError: this.uploadError
     }
+  }
+
+  get #uploadStarted() {
+    return this.progress !== null
   }
 
   #createDOMForError() {
@@ -142,9 +149,13 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return Boolean(this.width && this.height)
   }
 
-  async #startUpload() {
-    const { DirectUpload } = await import("@rails/activestorage")
     const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads")
+  async #startUploadIfNeeded() {
+    if (this.#uploadStarted) return
+
+    this.#setUploadStarted()
+
+    const { DirectUpload } = await import("@rails/activestorage")
 
     const upload = new DirectUpload(this.file, this.uploadUrl, this)
 
@@ -167,6 +178,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
         this.#showUploadedAttachment(blob)
       }
     })
+  #setUploadStarted() {
+    this.#setProgress(1)
   }
 
   #handleUploadProgress(event) {
