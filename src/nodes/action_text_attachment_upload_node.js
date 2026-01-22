@@ -27,7 +27,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   constructor(node, key) {
-    const { file, uploadUrl, blobUrlTemplate, progress, width, height } = node
+    const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError } = node
     super({ ...node, contentType: file.type }, key)
     this.file = file
     this.uploadUrl = uploadUrl
@@ -35,11 +35,14 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     this.progress = progress ?? null
     this.width = width
     this.height = height
+    this.uploadError = uploadError
 
     this.editor = $getEditor()
   }
 
   createDOM() {
+    if (this.uploadError) return this.#createDOMForError()
+
     const figure = this.createAttachmentFigure()
 
     if (this.isPreviewableAttachment) {
@@ -54,12 +57,14 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     figure.appendChild(this.#createCaption())
     figure.appendChild(this.#createProgressBar())
 
-    this.#startUpload(figure)
+    this.#startUpload()
 
     return figure
   }
 
   updateDOM(prevNode, dom) {
+    if (this.uploadError !== prevNode.uploadError) return true
+
     if (prevNode.progress !== this.progress) {
       const progress = dom.querySelector("progress")
       progress.value = this.progress ?? 0
@@ -82,8 +87,16 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       blobUrlTemplate: this.blobUrlTemplate,
       progress: this.progress,
       width: this.width,
-      height: this.height
+      height: this.height,
+      uploadError: this.uploadError
     }
+  }
+
+  #createDOMForError() {
+    const figure = this.createAttachmentFigure()
+    figure.classList.add("attachment--error")
+    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "file"}` }))
+    return figure
   }
 
   #createDOMForImage() {
@@ -129,7 +142,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return Boolean(this.width && this.height)
   }
 
-  async #startUpload(figure) {
+  async #startUpload() {
     const { DirectUpload } = await import("@rails/activestorage")
     const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads")
 
@@ -149,7 +162,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
     upload.create((error, blob) => {
       if (error) {
-        this.#handleUploadError(figure)
+        this.#handleUploadError(error)
       } else {
         this.#showUploadedAttachment(blob)
       }
@@ -166,10 +179,11 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }, { tag: SILENT_UPDATE_TAGS })
   }
 
-  #handleUploadError(figure) {
-    figure.innerHTML = ""
-    figure.classList.add("attachment--error")
-    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "image"}` }))
+  #handleUploadError(error) {
+    console.warn(`Upload error for ${this.file?.name ?? "file"}: ${error}`)
+    this.editor.update(() => {
+      this.getWritable().uploadError = true
+    }, { tag: SILENT_UPDATE_TAGS })
   }
 
   async #showUploadedAttachment(blob) {
