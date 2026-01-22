@@ -18,6 +18,16 @@ class LoadHtmlTest < ApplicationSystemTestCase
     assert_editor_html "<p>hello</p><p>there</p>"
   end
 
+  test "load ordered list with start attribute" do
+    find_editor.value = '<ol start="3"><li>Third</li><li>Fourth</li></ol>'
+
+    assert_editor_html do
+      assert_selector "ol[start='3']"
+      assert_selector "li", text: "Third"
+      assert_selector "li", text: "Fourth"
+    end
+  end
+
   test "load attachment with custom tag" do
     visit new_post_path(attachment_tag_name: "bc-attachment")
 
