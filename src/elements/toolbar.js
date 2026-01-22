@@ -256,7 +256,7 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #toolbarIsOverflowing() {
-    return this.scrollWidth > this.clientWidth
+    return (this.scrollWidth - this.#overflow.clientWidth) > this.clientWidth
   }
 
   #refreshToolbarOverflow = () => {
