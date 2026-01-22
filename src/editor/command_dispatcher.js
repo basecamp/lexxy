@@ -17,7 +17,6 @@ import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lex
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
-import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
@@ -38,8 +37,6 @@ const COMMANDS = [
   "insertCodeBlock",
   "insertHorizontalDivider",
   "uploadAttachments",
-
-  "insertTable",
 
   "undo",
   "redo"
@@ -204,10 +201,6 @@ export class CommandDispatcher {
     this.editorElement.appendChild(input) // Append and remove just for the sake of making it testable
     input.click()
     setTimeout(() => input.remove(), 1000)
-  }
-
-  dispatchInsertTable() {
-    this.editor.dispatchCommand(INSERT_TABLE_COMMAND, { "rows": 3, "columns": 3, "includeHeaders": true })
   }
 
   dispatchUndo() {

@@ -1,5 +1,6 @@
 import { COMMAND_PRIORITY_LOW, defineExtension } from "lexical"
 import { $getSelection, $isRangeSelection } from "lexical"
+import { INSERT_TABLE_COMMAND } from "@lexical/table"
 import {
   $deleteTableColumnAtSelection,
   $deleteTableRowAtSelection,
@@ -77,6 +78,11 @@ export const TablesLexicalExtension = defineExtension({
         node.setHeaderStyles(newHeaderState, TableCellHeaderStates.BOTH)
       }
     })
+
+    editor.registerCommand("insertTable", () => {
+      editor.dispatchCommand(INSERT_TABLE_COMMAND, { "rows": 3, "columns": 3, "includeHeaders": true })
+      return true
+    }, COMMAND_PRIORITY_LOW)
 
     editor.registerCommand("insertTableRowAfter", () => {
       $insertTableRowAtSelection(true)
