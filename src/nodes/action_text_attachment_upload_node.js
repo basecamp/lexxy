@@ -1,11 +1,9 @@
 import Lexxy from "../config/lexxy"
 import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
-import { $getNodeByKey } from "lexical"
 import { $getEditor } from "lexical"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { createElement } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
-import { HISTORY_MERGE_TAG } from "lexical"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 
 export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
@@ -206,24 +204,50 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   async #showUploadedAttachment(blob) {
     this.editor.update(() => {
-      const src = this.blobUrlTemplate
-        .replace(":signed_id", blob.signed_id)
-        .replace(":filename", encodeURIComponent(blob.filename))
-      const latest = $getNodeByKey(this.getKey())
-      if (latest) {
-        latest.replace(new ActionTextAttachmentNode({
-          tagName: this.tagName,
-          sgid: blob.attachable_sgid,
-          src: blob.previewable ? blob.url : src,
-          altText: blob.filename,
-          contentType: blob.content_type,
-          fileName: blob.filename,
-          fileSize: blob.byte_size,
-          previewable: blob.previewable,
-          width: this.width,
-          height: this.height
-        }))
-      }
-    }, { tag: HISTORY_MERGE_TAG })
+      this.replace(this.#toActionTextAttachmentNodeWith(blob))
+    }, { tag: SILENT_UPDATE_TAGS })
+  }
+
+  #toActionTextAttachmentNodeWith(blob) {
+    const conversion = new AttachmentNodeConversion(this, blob)
+    return conversion.toAttachmentNode()
+  }
+
+}
+
+class AttachmentNodeConversion {
+  constructor(uploadNode, blob) {
+    this.uploadNode = uploadNode
+    this.blob = blob
+  }
+
+  toAttachmentNode() {
+    return new ActionTextAttachmentNode({
+      ...this.uploadNode,
+      ...this.#propertiesFromBlob,
+      src: this.#src
+    })
+  }
+
+  get #propertiesFromBlob() {
+    const { blob } = this
+    return {
+      sgid: blob.attachable_sgid,
+      altText: blob.filename,
+      contentType: blob.content_type,
+      fileName: blob.filename,
+      fileSize: blob.byte_size,
+      previewable: blob.previewable,
+    }
+  }
+
+  get #src() {
+    return this.blob.previewable ? this.blob.url : this.#blobSrc
+  }
+
+  get #blobSrc() {
+    return this.uploadNode.blobUrlTemplate
+      .replace(":signed_id", this.blob.signed_id)
+      .replace(":filename", encodeURIComponent(this.blob.filename))
   }
 }
