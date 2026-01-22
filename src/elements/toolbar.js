@@ -166,7 +166,14 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.editor.registerUpdateListener(() => {
       this.editor.getEditorState().read(() => {
         this.#updateButtonStates()
+        this.#closeDropdowns()
       })
+    })
+  }
+
+   #closeDropdowns() {
+    this.querySelectorAll("details").forEach((details) => {
+      details.removeAttribute("open")
     })
   }
 
