@@ -7650,30 +7650,6 @@ class HorizontalDividerNode extends ki {
   }
 }
 
-class WrappedTableNode extends hn {
-  static clone(node) {
-    return new WrappedTableNode(node.__key)
-  }
-
-  exportDOM(editor) {
-    const superExport = super.exportDOM(editor);
-
-    return {
-      ...superExport,
-      after: (tableElement) => {
-        if (superExport.after) {
-          tableElement = superExport.after(tableElement);
-          const clonedTable = tableElement.cloneNode(true);
-          const wrappedTable = createElement("figure", { className: "lexxy-content__table-wrapper" }, clonedTable.outerHTML);
-          return wrappedTable
-        }
-
-        return tableElement
-      }
-    }
-  }
-}
-
 const COMMANDS = [
   "bold",
   "italic",
@@ -7689,15 +7665,6 @@ const COMMANDS = [
   "insertCodeBlock",
   "insertHorizontalDivider",
   "uploadAttachments",
-
-  "insertTable",
-  "insertTableRowBefore",
-  "insertTableRowAfter",
-  "insertTableColumnAfter",
-  "insertTableColumnBefore",
-  "deleteTableRow",
-  "deleteTableColumn",
-  "deleteTable",
 
   "undo",
   "redo"
@@ -7862,43 +7829,6 @@ class CommandDispatcher {
     this.editorElement.appendChild(input); // Append and remove just for the sake of making it testable
     input.click();
     setTimeout(() => input.remove(), 1000);
-  }
-
-  dispatchInsertTable() {
-    this.editor.dispatchCommand(Ae$1, { "rows": 3, "columns": 3, "includeHeaders": true });
-  }
-
-  dispatchInsertTableRowAfter() {
-    je$1(true);
-  }
-
-  dispatchInsertTableRowBefore() {
-    je$1(false);
-  }
-
-  dispatchInsertTableColumnAfter() {
-    Ze$1(true);
-  }
-
-  dispatchInsertTableColumnBefore() {
-    Ze$1(false);
-  }
-
-  dispatchDeleteTableRow() {
-    ot$1();
-  }
-
-  dispatchDeleteTableColumn() {
-    lt$1();
-  }
-
-  dispatchDeleteTable() {
-    const selection = Lr();
-    if (!yr(selection)) return
-
-    const anchorNode = selection.anchor.getNode();
-
-    Qt(anchorNode)?.remove();
   }
 
   dispatchUndo() {
@@ -8712,57 +8642,6 @@ class Selection {
 
 function sanitize(html) {
   return purify.sanitize(html, buildConfig())
-}
-
-// Temporary solve for a Lexical bug: https://github.com/facebook/lexical/issues/8089
-// Prevent the hardcoded background color
-function registerHeaderBackgroundTransform(editor) {
-  return editor.registerNodeTransform(xe, (node) => {
-    if (node.getBackgroundColor() === null) {
-      node.setBackgroundColor("");
-    }
-  })
-}
-
-// Temporary solve for a Lexical bug: https://github.com/facebook/lexical/issues/8090
-// Fix column header states
-function registerTableHeaderStateTransform(editor) {
-  return editor.registerNodeTransform(xe, (node) => {
-    const headerState = node.getHeaderStyles();
-
-    if (headerState !== ve$1.ROW) return
-
-    const rowParent = node.getParent();
-    const tableNode = rowParent?.getParent();
-    if (!tableNode) return
-
-    const rows = tableNode.getChildren();
-    const cellIndex = rowParent.getChildren().indexOf(node);
-
-    const cellsInRow = rowParent.getChildren();
-    const isHeaderRow = cellsInRow.every(cell =>
-      cell.getHeaderStyles() !== ve$1.NO_STATUS
-    );
-
-    const isHeaderColumn = rows.every(row => {
-      const cell = row.getChildren()[cellIndex];
-      return cell && cell.getHeaderStyles() !== ve$1.NO_STATUS
-    });
-
-    let newHeaderState = ve$1.NO_STATUS;
-
-    if (isHeaderRow) {
-      newHeaderState |= ve$1.ROW;
-    }
-
-    if (isHeaderColumn) {
-      newHeaderState |= ve$1.COLUMN;
-    }
-
-    if (newHeaderState !== headerState) {
-      node.setHeaderStyles(newHeaderState, ve$1.BOTH);
-    }
-  })
 }
 
 function dasherize(value) {
@@ -10356,6 +10235,136 @@ function $applyLanguage(conversionOutput, element) {
   conversionOutput.node.setLanguage(language);
 }
 
+class WrappedTableNode extends hn {
+  static clone(node) {
+    return new WrappedTableNode(node.__key)
+  }
+
+  exportDOM(editor) {
+    const superExport = super.exportDOM(editor);
+
+    return {
+      ...superExport,
+      after: (tableElement) => {
+        if (superExport.after) {
+          tableElement = superExport.after(tableElement);
+          const clonedTable = tableElement.cloneNode(true);
+          const wrappedTable = createElement("figure", { className: "lexxy-content__table-wrapper" }, clonedTable.outerHTML);
+          return wrappedTable
+        }
+
+        return tableElement
+      }
+    }
+  }
+}
+
+const TablesLexicalExtension = Kl({
+  name: "lexxy/tables",
+  nodes: [
+    WrappedTableNode,
+    {
+      replace: hn,
+      with: () => new WrappedTableNode()
+    },
+    xe,
+    Ee$1
+  ],
+  register(editor) {
+    // Register Lexical table plugins
+    Nn(editor);
+    yn(editor, true);
+    un(editor);
+
+    // Bug fix: Prevent hardcoded background color (Lexical #8089)
+    editor.registerNodeTransform(xe, (node) => {
+      if (node.getBackgroundColor() === null) {
+        node.setBackgroundColor("");
+      }
+    });
+
+    // Bug fix: Fix column header states (Lexical #8090)
+    editor.registerNodeTransform(xe, (node) => {
+      const headerState = node.getHeaderStyles();
+
+      if (headerState !== ve$1.ROW) return
+
+      const rowParent = node.getParent();
+      const tableNode = rowParent?.getParent();
+      if (!tableNode) return
+
+      const rows = tableNode.getChildren();
+      const cellIndex = rowParent.getChildren().indexOf(node);
+
+      const cellsInRow = rowParent.getChildren();
+      const isHeaderRow = cellsInRow.every(cell =>
+        cell.getHeaderStyles() !== ve$1.NO_STATUS
+      );
+
+      const isHeaderColumn = rows.every(row => {
+        const cell = row.getChildren()[cellIndex];
+        return cell && cell.getHeaderStyles() !== ve$1.NO_STATUS
+      });
+
+      let newHeaderState = ve$1.NO_STATUS;
+
+      if (isHeaderRow) {
+        newHeaderState |= ve$1.ROW;
+      }
+
+      if (isHeaderColumn) {
+        newHeaderState |= ve$1.COLUMN;
+      }
+
+      if (newHeaderState !== headerState) {
+        node.setHeaderStyles(newHeaderState, ve$1.BOTH);
+      }
+    });
+
+    editor.registerCommand("insertTable", () => {
+      editor.dispatchCommand(Ae$1, { "rows": 3, "columns": 3, "includeHeaders": true });
+      return true
+    }, zi);
+
+    editor.registerCommand("insertTableRowAfter", () => {
+      je$1(true);
+      return true
+    }, zi);
+
+    editor.registerCommand("insertTableRowBefore", () => {
+      je$1(false);
+      return true
+    }, zi);
+
+    editor.registerCommand("insertTableColumnAfter", () => {
+      Ze$1(true);
+      return true
+    }, zi);
+
+    editor.registerCommand("insertTableColumnBefore", () => {
+      Ze$1(false);
+      return true
+    }, zi);
+
+    editor.registerCommand("deleteTableRow", () => {
+      ot$1();
+      return true
+    }, zi);
+
+    editor.registerCommand("deleteTableColumn", () => {
+      lt$1();
+      return true
+    }, zi);
+
+    editor.registerCommand("deleteTable", () => {
+      const selection = Lr();
+      if (!yr(selection)) return false
+      Qt(selection.anchor.getNode())?.remove();
+      return true
+    }, zi);
+  }
+});
+
 class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = false
@@ -10548,7 +10557,6 @@ class LexicalEditorElement extends HTMLElement {
     this.#listenForInvalidatedNodes();
     this.#handleEnter();
     this.#handleFocus();
-    this.#handleTables();
     this.#attachDebugHooks();
     this.#attachToolbar();
     this.#loadInitialValue();
@@ -10576,7 +10584,8 @@ class LexicalEditorElement extends HTMLElement {
     const extensions = [ ];
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
-      TrixContentExtension
+      TrixContentExtension,
+      TablesLexicalExtension
     ];
 
     if (this.supportsRichText) {
@@ -10601,14 +10610,7 @@ class LexicalEditorElement extends HTMLElement {
         et$1,
         y$1,
         A,
-        HorizontalDividerNode,
-        WrappedTableNode,
-        {
-          replace: hn,
-          with: () => { return new WrappedTableNode() }
-        },
-        xe,
-        Ee$1,
+        HorizontalDividerNode
       );
     }
 
@@ -10722,12 +10724,8 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   #registerTableComponents() {
-    Nn(this.editor);
     this.tableTools = createElement("lexxy-table-tools");
     this.append(this.tableTools);
-
-    this.#addUnregisterHandler(registerHeaderBackgroundTransform(this.editor));
-    this.#addUnregisterHandler(registerTableHeaderStateTransform(this.editor));
   }
 
   #registerCodeHiglightingComponents() {
@@ -10796,12 +10794,6 @@ class LexicalEditorElement extends HTMLElement {
     }
   }
 
-  #handleTables() {
-    if (this.supportsRichText) {
-      this.removeTableSelectionObserver = yn(this.editor, true);
-      un(this.editor);
-    }
-  }
 
   #attachDebugHooks() {
     if (!LexicalEditorElement.debug) return
