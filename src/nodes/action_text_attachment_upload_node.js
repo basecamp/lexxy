@@ -32,7 +32,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     this.file = file
     this.uploadUrl = uploadUrl
     this.blobUrlTemplate = blobUrlTemplate
-    this.progress = progress || 0
+    this.progress = progress ?? null
     this.width = width
     this.height = height
 
@@ -52,16 +52,19 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }
 
     figure.appendChild(this.#createCaption())
+    figure.appendChild(this.#createProgressBar())
 
-    const progressBar = createElement("progress", { value: this.progress, max: 100 })
-    figure.appendChild(progressBar)
-
-    this.#startUpload(progressBar, figure)
+    this.#startUpload(figure)
 
     return figure
   }
 
-  updateDOM() {
+  updateDOM(prevNode, dom) {
+    if (prevNode.progress !== this.progress) {
+      const progress = dom.querySelector("progress")
+      progress.value = this.progress ?? 0
+    }
+
     return false
   }
 
@@ -75,9 +78,9 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       ...super.exportJSON(),
       type: "action_text_attachment_upload",
       version: 1,
-      progress: this.progress,
       uploadUrl: this.uploadUrl,
       blobUrlTemplate: this.blobUrlTemplate,
+      progress: this.progress,
       width: this.width,
       height: this.height
     }
@@ -108,6 +111,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return figcaption
   }
 
+  #createProgressBar() {
+    return createElement("progress", { value: this.progress ?? 0, max: 100 })
+  }
+
   #setDimensionsFrom({ width, height }) {
     if (this.#hasDimensions) return
 
@@ -122,7 +129,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return Boolean(this.width && this.height)
   }
 
-  async #startUpload(progressBar, figure) {
+  async #startUpload(figure) {
     const { DirectUpload } = await import("@rails/activestorage")
     const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads")
 
@@ -135,11 +142,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       directUploadWillStoreFileWithXHR: (request) => {
         if (shouldAuthenticateUploads) request.withCredentials = true
 
-        request.upload.addEventListener("progress", (event) => {
-          this.editor.update(() => {
-            progressBar.value = Math.round(event.loaded / event.total * 100)
-          })
-        })
+        const uploadProgressHandler = (event) => this.#handleUploadProgress(event)
+        request.upload.addEventListener("progress", uploadProgressHandler)
       }
     }
 
@@ -150,6 +154,16 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
         this.#showUploadedAttachment(blob)
       }
     })
+  }
+
+  #handleUploadProgress(event) {
+    this.#setProgress(Math.round(event.loaded / event.total * 100))
+  }
+
+  #setProgress(progress) {
+    this.editor.update(() => {
+      this.getWritable().progress = progress
+    }, { tag: SILENT_UPDATE_TAGS })
   }
 
   #handleUploadError(figure) {
