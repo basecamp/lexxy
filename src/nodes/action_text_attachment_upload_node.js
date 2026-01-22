@@ -1,4 +1,5 @@
 import Lexxy from "../config/lexxy"
+import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { $getNodeByKey } from "lexical"
 import { $getEditor } from "lexical"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
@@ -26,12 +27,14 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   constructor(node, key) {
-    const { file, uploadUrl, blobUrlTemplate, progress } = node
+    const { file, uploadUrl, blobUrlTemplate, progress, width, height } = node
     super({ ...node, contentType: file.type }, key)
     this.file = file
     this.uploadUrl = uploadUrl
     this.blobUrlTemplate = blobUrlTemplate
     this.progress = progress || 0
+    this.width = width
+    this.height = height
 
     this.editor = $getEditor()
   }
@@ -40,7 +43,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const figure = this.createAttachmentFigure()
 
     if (this.isPreviewableAttachment) {
-      figure.appendChild(this.#createDOMForImage())
+      const img = figure.appendChild(this.#createDOMForImage())
+
+      // load file locally to set dimensions and prevent vertical shifting
+      loadFileIntoImage(this.file, img).then(img => this.#setDimensionsFrom(img))
     } else {
       figure.appendChild(this.#createDOMForFile())
     }
@@ -50,9 +56,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const progressBar = createElement("progress", { value: this.progress, max: 100 })
     figure.appendChild(progressBar)
 
-    // We wait for images to download so that we can pass the dimensions down to the attachment. We do this
-    // so that we can render images in edit mode with the dimensions set, which prevent vertical layout shifts.
-    this.#loadFigure(figure).then(() => this.#startUpload(progressBar, figure))
+    this.#startUpload(progressBar, figure)
 
     return figure
   }
@@ -73,7 +77,9 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       version: 1,
       progress: this.progress,
       uploadUrl: this.uploadUrl,
-      blobUrlTemplate: this.blobUrlTemplate
+      blobUrlTemplate: this.blobUrlTemplate,
+      width: this.width,
+      height: this.height
     }
   }
 
@@ -102,13 +108,18 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return figcaption
   }
 
-  #loadFigure(figure) {
-    const image = figure.querySelector("img")
-    if (!image) {
-      return Promise.resolve()
-    } else {
-      return loadFileIntoImage(this.file, image)
-    }
+  #setDimensionsFrom({ width, height }) {
+    if (this.#hasDimensions) return
+
+    this.editor.update(() => {
+      const writable = this.getWritable()
+      writable.width = width
+      writable.height = height
+    }, { tag: SILENT_UPDATE_TAGS })
+  }
+
+  get #hasDimensions() {
+    return Boolean(this.width && this.height)
   }
 
   async #startUpload(progressBar, figure) {
@@ -147,10 +158,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "image"}` }))
   }
 
-  async #showUploadedAttachment(figure, blob) {
+  async #showUploadedAttachment(blob) {
     this.editor.update(() => {
-      const image = figure.querySelector("img")
-
       const src = this.blobUrlTemplate
         .replace(":signed_id", blob.signed_id)
         .replace(":filename", encodeURIComponent(blob.filename))
@@ -164,9 +173,9 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
           contentType: blob.content_type,
           fileName: blob.filename,
           fileSize: blob.byte_size,
-          width: image?.naturalWidth,
           previewable: blob.previewable,
-          height: image?.naturalHeight
+          width: this.width,
+          height: this.height
         }))
       }
     }, { tag: HISTORY_MERGE_TAG })
