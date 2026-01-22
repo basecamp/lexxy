@@ -136,9 +136,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       if (error) {
         this.#handleUploadError(figure)
       } else {
-        this.#loadFigurePreviewFromBlob(blob, figure).then(() => {
-          this.#showUploadedAttachment(figure, blob)
-        })
+        this.#showUploadedAttachment(blob)
       }
     })
   }
@@ -172,22 +170,5 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
         }))
       }
     }, { tag: HISTORY_MERGE_TAG })
-  }
-
-  async #loadFigurePreviewFromBlob(blob, figure) {
-    if (blob.previewable) {
-      return new Promise((resolve) => {
-        this.editor.update(() => {
-          const image = this.#createDOMForImage()
-          image.addEventListener("load", () => {
-            resolve()
-          })
-          image.src = blob.url
-          figure.insertBefore(image, figure.firstChild)
-        })
-      })
-    } else {
-      return Promise.resolve()
-    }
   }
 }
