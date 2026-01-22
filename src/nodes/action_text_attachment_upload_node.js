@@ -68,12 +68,12 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   exportJSON() {
     return {
+      ...super.exportJSON(),
       type: "action_text_attachment_upload",
       version: 1,
       progress: this.progress,
       uploadUrl: this.uploadUrl,
-      blobUrlTemplate: this.blobUrlTemplate,
-      ...super.exportJSON()
+      blobUrlTemplate: this.blobUrlTemplate
     }
   }
 
