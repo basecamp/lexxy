@@ -120,8 +120,10 @@ export default class CodeLanguagePicker extends HTMLElement {
     const codeRect = codeElement.getBoundingClientRect()
     const editorRect = this.editorElement.getBoundingClientRect()
     const relativeTop = codeRect.top - editorRect.top
+    const relativeRight = editorRect.right - codeRect.right
 
     this.style.top = `${relativeTop}px`
+    this.style.right = `${relativeRight}px`
   }
 
   #showLanguagePicker() {

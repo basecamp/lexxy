@@ -8,18 +8,15 @@ import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
-import { TableCellNode, TableNode, TableRowNode, registerTablePlugin, registerTableSelectionObserver, setScrollableTablesActive } from "@lexical/table"
 
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
-import { WrappedTableNode } from "../nodes/wrapped_table_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
 import { sanitize } from "../helpers/sanitization_helper"
-import { registerHeaderBackgroundTransform } from "../helpers/table_helper"
 import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
@@ -29,6 +26,8 @@ import Highlighter from "../editor/highlighter"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
+
+import { TablesLexicalExtension } from "../extensions/tables_lexical_extension"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -222,7 +221,6 @@ export default class LexicalEditorElement extends HTMLElement {
     this.#listenForInvalidatedNodes()
     this.#handleEnter()
     this.#handleFocus()
-    this.#handleTables()
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#loadInitialValue()
@@ -250,7 +248,8 @@ export default class LexicalEditorElement extends HTMLElement {
     const extensions = [ ]
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
-      TrixContentExtension
+      TrixContentExtension,
+      TablesLexicalExtension
     ]
 
     if (this.supportsRichText) {
@@ -275,14 +274,7 @@ export default class LexicalEditorElement extends HTMLElement {
         CodeHighlightNode,
         LinkNode,
         AutoLinkNode,
-        HorizontalDividerNode,
-        WrappedTableNode,
-        {
-          replace: TableNode,
-          with: () => { return new WrappedTableNode() }
-        },
-        TableCellNode,
-        TableRowNode,
+        HorizontalDividerNode
       )
     }
 
@@ -396,11 +388,8 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #registerTableComponents() {
-    registerTablePlugin(this.editor)
-    this.tableHandler = createElement("lexxy-table-handler")
-    this.append(this.tableHandler)
-
-    this.#addUnregisterHandler(registerHeaderBackgroundTransform(this.editor))
+    this.tableTools = createElement("lexxy-table-tools")
+    this.append(this.tableTools)
   }
 
   #registerCodeHiglightingComponents() {
@@ -469,12 +458,6 @@ export default class LexicalEditorElement extends HTMLElement {
     }
   }
 
-  #handleTables() {
-    if (this.supportsRichText) {
-      this.removeTableSelectionObserver = registerTableSelectionObserver(this.editor, true)
-      setScrollableTablesActive(this.editor, true)
-    }
-  }
 
   #attachDebugHooks() {
     if (!LexicalEditorElement.debug) return

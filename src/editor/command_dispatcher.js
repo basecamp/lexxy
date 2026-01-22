@@ -17,14 +17,7 @@ import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lex
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
-import {
-  $deleteTableColumnAtSelection,
-  $deleteTableRowAtSelection,
-  $findTableNode,
-  $insertTableColumnAtSelection,
-  $insertTableRowAtSelection,
-  INSERT_TABLE_COMMAND,
-} from "@lexical/table"
+import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
@@ -47,13 +40,6 @@ const COMMANDS = [
   "uploadAttachments",
 
   "insertTable",
-  "insertTableRowAbove",
-  "insertTableRowBelow",
-  "insertTableColumnAfter",
-  "insertTableColumnBefore",
-  "deleteTableRow",
-  "deleteTableColumn",
-  "deleteTable",
 
   "undo",
   "redo"
@@ -162,9 +148,7 @@ export class CommandDispatcher {
   }
 
   dispatchInsertHorizontalDivider() {
-    this.editor.update(() => {
-      this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
-    })
+    this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
 
     this.editor.focus()
   }
@@ -224,41 +208,6 @@ export class CommandDispatcher {
 
   dispatchInsertTable() {
     this.editor.dispatchCommand(INSERT_TABLE_COMMAND, { "rows": 3, "columns": 3, "includeHeaders": true })
-  }
-
-  dispatchInsertTableRowBelow() {
-    $insertTableRowAtSelection(true)
-  }
-
-  dispatchInsertTableRowAbove() {
-    $insertTableRowAtSelection(false)
-  }
-
-  dispatchInsertTableColumnAfter() {
-    $insertTableColumnAtSelection(true)
-  }
-
-  dispatchInsertTableColumnBefore() {
-    $insertTableColumnAtSelection(false)
-  }
-
-  dispatchDeleteTableRow() {
-    $deleteTableRowAtSelection()
-  }
-
-  dispatchDeleteTableColumn() {
-    $deleteTableColumnAtSelection()
-  }
-
-  dispatchDeleteTable() {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const anchorNode = selection.anchor.getNode()
-      const tableNode = $findTableNode(anchorNode)
-      tableNode.remove()
-    })
   }
 
   dispatchUndo() {
