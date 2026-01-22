@@ -7666,6 +7666,8 @@ const COMMANDS = [
   "insertHorizontalDivider",
   "uploadAttachments",
 
+  "insertTable",
+
   "undo",
   "redo"
 ];
@@ -7829,6 +7831,10 @@ class CommandDispatcher {
     this.editorElement.appendChild(input); // Append and remove just for the sake of making it testable
     input.click();
     setTimeout(() => input.remove(), 1000);
+  }
+
+  dispatchInsertTable() {
+    this.editor.dispatchCommand(Ae$1, { "rows": 3, "columns": 3, "includeHeaders": true });
   }
 
   dispatchUndo() {
@@ -10321,47 +10327,35 @@ const TablesLexicalExtension = Kl({
       }
     });
 
-    editor.registerCommand("insertTable", () => {
-      editor.dispatchCommand(Ae$1, { "rows": 3, "columns": 3, "includeHeaders": true });
-      return true
-    }, zi);
-
     editor.registerCommand("insertTableRowAfter", () => {
       je$1(true);
-      return true
-    }, zi);
+    }, Ri);
 
     editor.registerCommand("insertTableRowBefore", () => {
       je$1(false);
-      return true
-    }, zi);
+    }, Ri);
 
     editor.registerCommand("insertTableColumnAfter", () => {
       Ze$1(true);
-      return true
-    }, zi);
+    }, Ri);
 
     editor.registerCommand("insertTableColumnBefore", () => {
       Ze$1(false);
-      return true
-    }, zi);
+    }, Ri);
 
     editor.registerCommand("deleteTableRow", () => {
       ot$1();
-      return true
-    }, zi);
+    }, Ri);
 
     editor.registerCommand("deleteTableColumn", () => {
       lt$1();
-      return true
-    }, zi);
+    }, Ri);
 
     editor.registerCommand("deleteTable", () => {
       const selection = Lr();
       if (!yr(selection)) return false
       Qt(selection.anchor.getNode())?.remove();
-      return true
-    }, zi);
+    }, Ri);
   }
 });
 
