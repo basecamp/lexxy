@@ -3,9 +3,9 @@ import Toolbar from "./toolbar"
 import Editor from "./editor"
 import DropdownLink from "./dropdown/link"
 import DropdownHighlight from "./dropdown/highlight"
-import TableHandler from "./table_handler"
 import Prompt from "./prompt"
 import CodeLanguagePicker from "./code_language_picker"
+import TableTools from "./table/table_tools"
 
 export function start() {
   const elements = {
@@ -13,9 +13,9 @@ export function start() {
     "lexxy-editor": Editor,
     "lexxy-link-dropdown": DropdownLink,
     "lexxy-highlight-dropdown": DropdownHighlight,
-    "lexxy-table-handler": TableHandler,
     "lexxy-prompt": Prompt,
     "lexxy-code-language-picker": CodeLanguagePicker,
+    "lexxy-table-tools": TableTools,
   }
 
   Object.entries(elements).forEach(([ name, element ]) => {

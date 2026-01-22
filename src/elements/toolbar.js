@@ -256,7 +256,9 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #toolbarIsOverflowing() {
-    return this.scrollWidth > this.clientWidth
+    // Safari can report inconsistent clientWidth values on more than 100% window zoom level,
+    // that was affecting the toolbar overflow calculation. We're adding +1 to get around this issue.
+    return (this.scrollWidth - this.#overflow.clientWidth) > this.clientWidth + 1
   }
 
   #refreshToolbarOverflow = () => {
@@ -349,9 +351,8 @@ export class LexicalToolbarElement extends HTMLElement {
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.65422 0.711575C7.1856 0.242951 6.42579 0.242951 5.95717 0.711575C5.48853 1.18021 5.48853 1.94 5.95717 2.40864L8.70864 5.16011L2.85422 11.0145C1.44834 12.4204 1.44833 14.6998 2.85422 16.1057L7.86011 21.1115C9.26599 22.5174 11.5454 22.5174 12.9513 21.1115L19.6542 14.4087C20.1228 13.94 20.1228 13.1802 19.6542 12.7115L11.8544 4.91171L11.2542 4.31158L7.65422 0.711575ZM4.55127 12.7115L10.4057 6.85716L17.1087 13.56H4.19981C4.19981 13.253 4.31696 12.9459 4.55127 12.7115ZM23.6057 20.76C23.6057 22.0856 22.5311 23.16 21.2057 23.16C19.8802 23.16 18.8057 22.0856 18.8057 20.76C18.8057 19.5408 19.8212 18.5339 20.918 17.4462C21.0135 17.3516 21.1096 17.2563 21.2057 17.16C21.3018 17.2563 21.398 17.3516 21.4935 17.4462C22.5903 18.5339 23.6057 19.5408 23.6057 20.76Z"/></svg>
         </summary>
         <lexxy-highlight-dropdown class="lexxy-editor__toolbar-dropdown-content">
-          <div data-button-group="color"></div>
-          <div data-button-group="background-color"></div>
-          <button data-command="removeHighlight" class="lexxy-editor__toolbar-dropdown-reset">Remove all coloring</button>
+          <div class="lexxy-highlight-colors"></div>
+          <button data-command="removeHighlight" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset">Remove all coloring</button>
         </lexxy-highlight-dropdown>
       </details>
 
@@ -363,8 +364,8 @@ export class LexicalToolbarElement extends HTMLElement {
           <form method="dialog">
             <input type="url" placeholder="Enter a URL…" class="input">
             <div class="lexxy-editor__toolbar-dropdown-actions">
-              <button type="submit" class="btn" value="link">Link</button>
-              <button type="button" class="btn" value="unlink">Unlink</button>
+              <button type="submit" class="lexxy-editor__toolbar-button" value="link">Link</button>
+              <button type="button" class="lexxy-editor__toolbar-button" value="unlink">Unlink</button>
             </div>
           </form>
         </lexxy-link-dropdown>
@@ -412,9 +413,9 @@ export class LexicalToolbarElement extends HTMLElement {
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.2599 8.26531C15.9672 6.56386 13.1237 5.77629 10.2823 6.05535C7.4408 6.33452 4.80455 7.66079 2.88681 9.77605C1.32245 11.5016 0.326407 13.6516 0.0127834 15.9352C-0.105117 16.7939 0.608975 17.4997 1.47567 17.4997C2.34228 17.4997 3.02969 16.7915 3.19149 15.9401C3.47682 14.4379 4.17156 13.0321 5.212 11.8844C6.60637 10.3464 8.52287 9.38139 10.589 9.17839C12.655 8.97546 14.7227 9.54856 16.3897 10.7858C17.5237 11.6275 18.4165 12.7361 18.9991 13.9997H15.4063C14.578 13.9997 13.9066 14.6714 13.9063 15.4997C13.9063 16.3281 14.5779 16.9997 15.4063 16.9997H22.4063C23.2348 16.9997 23.9063 16.3281 23.9063 15.4997V8.49968C23.9061 7.67144 23.2346 6.99968 22.4063 6.99968C21.578 6.99968 20.9066 7.67144 20.9063 8.49968V11.0212C20.1897 9.9704 19.2984 9.03613 18.2599 8.26531Z"/></svg>
       </button>
 
-      <details class="lexxy-editor__toolbar-overflow">
+      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-overflow" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" aria-label="Show more toolbar buttons">•••</summary>
-        <div class="lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons"></div>
+        <div class="lexxy-editor__toolbar-dropdown-content lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons"></div>
       </details>
     `
   }

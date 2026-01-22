@@ -36,16 +36,18 @@ export class HighlightDropdown extends ToolbarDropdown {
   }
 
   #setUpButtons() {
-    this.#buttonGroups.forEach(buttonGroup => {
-      this.#populateButtonGroup(buttonGroup)
-    })
+    const colorGroups = this.editorElement.config.get("highlight.buttons")
+
+    this.#populateButtonGroup("color", colorGroups.color)
+    this.#populateButtonGroup("background-color", colorGroups["background-color"])
+
+    const maxNumberOfColors = Math.max(colorGroups.color.length, colorGroups["background-color"].length)
+    this.style.setProperty("--max-colors", maxNumberOfColors)
   }
 
-  #populateButtonGroup(buttonGroup) {
-    const attribute = buttonGroup.dataset.buttonGroup
-    const values = this.editorElement.config.get(`highlight.buttons.${attribute}`) || []
+  #populateButtonGroup(attribute, values) {
     values.forEach((value, index) => {
-      buttonGroup.appendChild(this.#createButton(attribute, value, index))
+      this.#buttonContainer.appendChild(this.#createButton(attribute, value, index))
     })
   }
 
@@ -54,7 +56,7 @@ export class HighlightDropdown extends ToolbarDropdown {
     button.dataset.style = attribute
     button.style.setProperty(attribute, value)
     button.dataset.value = value
-    button.classList.add("lexxy-highlight-button")
+    button.classList.add("lexxy-editor__toolbar-button", "lexxy-highlight-button")
     button.name = attribute + "-" + index
     return button
   }
@@ -105,8 +107,8 @@ export class HighlightDropdown extends ToolbarDropdown {
     this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).disabled = !hasHighlight
   }
 
-  get #buttonGroups() {
-    return this.querySelectorAll("[data-button-group]")
+  get #buttonContainer() {
+    return this.querySelector(".lexxy-highlight-colors")
   }
 
   get #colorButtons() {

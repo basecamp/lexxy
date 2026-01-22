@@ -76,6 +76,7 @@
 
   a {
     color: var(--lexxy-color-link);
+    text-decoration: underline;
   }
 
   img,
@@ -115,11 +116,24 @@
     }
   }
 
+  ol, ul {
+    margin-inline-start: calc(var(--lexxy-content-margin) * 1.5);
+    padding: 0;
+  }
+
+  ul {
+    list-style-type: disc;
+  }
+
+  ol {
+    list-style-type: decimal;
+  }
+
   li.lexxy-nested-listitem {
     list-style-type: none;
 
     ol, ul {
-      margin: 0;
+      margin-block-end: 0;
     }
   }
 
@@ -218,6 +232,8 @@
     th,
     td {
       border: 1px solid var(--lexxy-color-ink-lighter);
+      min-width: 5ch;
+      max-width: 50ch;
       padding: 1ch;
       text-align: start;
       word-break: normal;
@@ -227,7 +243,7 @@
       }
 
       &.lexxy-content__table-cell--header {
-        background-color: var(--lexxy-color-ink-lightest);
+        background-color: var(--lexxy-color-table-header-bg);
         font-weight: bold;
       }
 
