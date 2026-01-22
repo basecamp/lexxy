@@ -1,12 +1,12 @@
 import { COMMAND_PRIORITY_LOW, defineExtension } from "lexical"
 import { $getSelection, $isRangeSelection } from "lexical"
-import { INSERT_TABLE_COMMAND } from "@lexical/table"
 import {
   $deleteTableColumnAtSelection,
   $deleteTableRowAtSelection,
   $findTableNode,
   $insertTableColumnAtSelection,
   $insertTableRowAtSelection,
+  INSERT_TABLE_COMMAND,
   TableCellHeaderStates,
   TableCellNode,
   TableNode,
@@ -15,6 +15,7 @@ import {
   registerTableSelectionObserver,
   setScrollableTablesActive
 } from "@lexical/table"
+
 import { WrappedTableNode } from "../nodes/wrapped_table_node.js"
 
 export const TablesLexicalExtension = defineExtension({
