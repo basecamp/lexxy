@@ -76,10 +76,11 @@
 
   /* Focus ring */
   --lexxy-focus-ring-color: var(--lexxy-color-accent-dark);
-  --lexxy-focus-ring-offset: 0;
+  --lexxy-focus-ring-offset: -2px;
   --lexxy-focus-ring-size: 2px;
 
   /* Misc */
+  --lexxy-toolbar-button-size: 2lh;
   --lexxy-radius: 0.5ch;
   --lexxy-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   --lexxy-z-popup: 1000;
