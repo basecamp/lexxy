@@ -31,7 +31,6 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     this.file = file
     this.uploadUrl = uploadUrl
     this.blobUrlTemplate = blobUrlTemplate
-    this.src = null
     this.progress = progress || 0
 
     this.editor = $getEditor()
@@ -64,9 +63,6 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   exportDOM() {
     const img = document.createElement("img")
-    if (this.src) {
-      img.src = this.src
-    }
     return { element: img }
   }
 
