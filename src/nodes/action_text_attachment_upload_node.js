@@ -1,6 +1,5 @@
 import Lexxy from "../config/lexxy"
 import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
-import { $getEditor } from "lexical"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { createElement } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
@@ -34,8 +33,6 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     this.width = width
     this.height = height
     this.uploadError = uploadError
-
-    this.editor = $getEditor()
   }
 
   createDOM() {
