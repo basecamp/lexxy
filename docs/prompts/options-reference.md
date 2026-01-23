@@ -10,7 +10,7 @@ nav_order: 6
 
 ## `<lexxy-prompt>`
 
-- `trigger`: The character that activates the prompt (e.g., "@", "#", "/").
+- `trigger`: The string that activates the prompt (e.g., "@", "#", "by:").
 - `src`: Path or URL to load items remotely.
 - `name`: Identifier for the prompt type (determines attachment content type, e.g., `name= "mention"` creates `application/vnd.actiontext.mention`). Mandatory unless using `insert-editable-text`.
 - `empty-results`: Message shown when no matches found. By default it is "Nothing found".

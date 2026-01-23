@@ -11326,25 +11326,30 @@ class LexicalPromptElement extends HTMLElement {
   }
 
   #addTriggerListener() {
-    const unregister = this.#editor.registerUpdateListener(() => {
-      this.#editor.read(() => {
+    const unregister = this.#editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
         const { node, offset } = this.#selection.selectedNodeWithOffset();
         if (!node) return
 
-        if (lr(node) && offset > 0) {
+        if (lr(node)) {
           const fullText = node.getTextContent();
-          const charBeforeCursor = fullText[offset - 1];
+          const triggerLength = this.trigger.length;
 
-          // Check if trigger is at the start of the text node (new line case) or preceded by space or newline
-          if (charBeforeCursor === this.trigger) {
-            const isAtStart = offset === 1;
+          // Check if we have enough characters for the trigger
+          if (offset >= triggerLength) {
+            const textBeforeCursor = fullText.slice(offset - triggerLength, offset);
 
-            const charBeforeTrigger = offset > 1 ? fullText[offset - 2] : null;
-            const isPrecededBySpaceOrNewline = charBeforeTrigger === " " || charBeforeTrigger === "\n";
+            // Check if trigger is at the start of the text node (new line case) or preceded by space or newline
+            if (textBeforeCursor === this.trigger) {
+              const isAtStart = offset === triggerLength;
 
-            if (isAtStart || isPrecededBySpaceOrNewline) {
-              unregister();
-              this.#showPopover();
+              const charBeforeTrigger = offset > triggerLength ? fullText[offset - triggerLength - 1] : null;
+              const isPrecededBySpaceOrNewline = charBeforeTrigger === " " || charBeforeTrigger === "\n";
+
+              if (isAtStart || isPrecededBySpaceOrNewline) {
+                unregister();
+                this.#showPopover();
+              }
             }
           }
         }
@@ -11364,9 +11369,10 @@ class LexicalPromptElement extends HTMLElement {
           const fullText = node.getTextContent();
           const textBeforeCursor = fullText.slice(0, offset);
           const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger);
+          const triggerEndIndex = lastTriggerIndex + this.trigger.length - 1;
 
-          // If trigger is not found, or cursor is at or before the trigger position, hide popover
-          if (lastTriggerIndex === -1 || offset <= lastTriggerIndex) {
+          // If trigger is not found, or cursor is at or before the trigger end position, hide popover
+          if (lastTriggerIndex === -1 || offset <= triggerEndIndex) {
             this.#hidePopover();
           }
         } else {
