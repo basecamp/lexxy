@@ -56,7 +56,7 @@ class ActionTextLoadTest < ApplicationSystemTestCase
   end
 
   test "prompt with multiple attachables" do
-    find_editor.send "4"
+    find_editor.send "group:"
 
     click_on_prompt "Group 0"
 
@@ -65,6 +65,31 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     end
 
     all("action-text-attachment").map { |el| el["sgid"] }.uniq.size == 5
+  end
+
+  test "multichar prompt preceded by space" do
+    find_editor.send "hello group:"
+
+    within_popover do
+      assert_text "Group 0"
+    end
+  end
+
+  test "multichar prompt not triggered without space" do
+    find_editor.send "hellogroup:"
+
+    assert_no_css ".lexxy-prompt-menu--visible"
+  end
+
+  test "space support in multichar triggers" do
+    find_editor.send "person:"
+    find_editor.send "peter johnson"
+
+    within_popover do
+      assert_text "Peter Johnson"
+    end
+
+    assert_no_mention_attachments
   end
 
   test "global custom content-type of mentions" do
