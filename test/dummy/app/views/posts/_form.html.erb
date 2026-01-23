@@ -60,6 +60,9 @@
 
       <lexxy-prompt trigger="group:" src="<%= groups_path %>" name="mention">
       </lexxy-prompt>
+
+      <lexxy-prompt trigger="person:" src="<%= people_path %>" name="mention" supports-space-in-searches>
+      </lexxy-prompt>
     <% end %>
 
     <% if params[:refresh].present? %>

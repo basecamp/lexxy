@@ -81,6 +81,17 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_no_css ".lexxy-prompt-menu--visible"
   end
 
+  test "space support in multichar triggers" do
+    find_editor.send "person:"
+    find_editor.send "peter johnson"
+
+    within_popover do
+      assert_text "Peter Johnson"
+    end
+
+    assert_no_mention_attachments
+  end
+
   test "global custom content-type of mentions" do
     visit edit_post_path(posts(:empty), attachment_content_type_namespace: "myapp")
 
