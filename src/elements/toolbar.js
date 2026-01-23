@@ -1,6 +1,8 @@
 import {
   $getSelection,
   $isRangeSelection,
+  COMMAND_PRIORITY_HIGH,
+  SELECTION_CHANGE_COMMAND,
   SKIP_DOM_SELECTION_TAG
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
@@ -163,12 +165,13 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
-        this.#updateButtonStates()
+    this.editor.registerCommand(
+      SELECTION_CHANGE_COMMAND,
+      () => {
         this.#closeDropdowns()
-      })
-    })
+        this.#updateButtonStates()
+        return false
+      }, COMMAND_PRIORITY_HIGH)
   }
 
    #closeDropdowns() {
