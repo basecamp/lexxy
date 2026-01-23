@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -220,7 +220,7 @@ export default class LexicalEditorElement extends HTMLElement {
     this.#registerComponents()
     this.#listenForInvalidatedNodes()
     this.#handleEnter()
-    this.#handleFocus()
+    this.#registerFocusEvents()
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#loadInitialValue()
@@ -436,12 +436,24 @@ export default class LexicalEditorElement extends HTMLElement {
     )
   }
 
-  #handleFocus() {
-    // Lexxy handles focus and blur as commands
-    // see https://github.com/facebook/lexical/blob/d1a8e84fe9063a4f817655b346b6ff373aa107f0/packages/lexical/src/LexicalEvents.ts#L35
-    // and https://stackoverflow.com/a/72212077
-    this.editor.registerCommand(BLUR_COMMAND, () => { dispatch(this, "lexxy:blur") }, COMMAND_PRIORITY_NORMAL)
-    this.editor.registerCommand(FOCUS_COMMAND, () => { dispatch(this, "lexxy:focus") }, COMMAND_PRIORITY_NORMAL)
+  #registerFocusEvents() {
+    this.currentlyFocused = false
+    this.addEventListener("focusin", this.#handleFocusIn)
+    this.addEventListener("focusout", this.#handleFocusOut)
+  }
+
+  #handleFocusIn(event) {
+    if (this.contains(event.target) && this.currentlyFocused === false) {
+      dispatch(this, "lexxy:focus")
+      this.currentlyFocused = true
+    }
+  }
+
+  #handleFocusOut(event) {
+    if (!this.contains(event.relatedTarget)) {
+      dispatch(this, "lexxy:blur")
+      this.currentlyFocused = false
+    }
   }
 
   #onFocus() {

@@ -130,28 +130,24 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #bindFocusListeners() {
-    this.editorElement.addEventListener("lexxy:focus", this.#handleFocus)
-    this.editorElement.addEventListener("lexxy:blur", this.#handleFocusOut)
-    this.addEventListener("focusout", this.#handleFocusOut)
+    this.editorElement.addEventListener("lexxy:focus", this.#handleEditorFocus)
+    this.editorElement.addEventListener("lexxy:blur", this.#handleEditorBlur)
     this.addEventListener("keydown", this.#handleKeydown)
   }
 
   #unbindFocusListeners() {
-    this.editorElement.removeEventListener("lexxy:focus", this.#handleFocus)
-    this.editorElement.removeEventListener("lexxy:blur", this.#handleFocusOut)
-    this.removeEventListener("focusout", this.#handleFocusOut)
+    this.editorElement.removeEventListener("lexxy:focus", this.#handleEditorFocus)
+    this.editorElement.removeEventListener("lexxy:blur", this.#handleEditorBlur)
     this.removeEventListener("keydown", this.#handleKeydown)
   }
 
-  #handleFocus = () => {
-    this.#resetTabIndexValues()
+  #handleEditorFocus = () => {
     this.#focusableItems[0].tabIndex = 0
   }
 
-  #handleFocusOut = () => {
-    if (!this.contains(document.activeElement)) {
-      this.#resetTabIndexValues()
-    }
+  #handleEditorBlur = () => {
+    this.#resetTabIndexValues()
+    this.#closeDropdowns()
   }
 
   #handleKeydown = (event) => {
@@ -172,12 +168,6 @@ export default class LexicalToolbarElement extends HTMLElement {
         this.#updateButtonStates()
         return false
       }, COMMAND_PRIORITY_HIGH)
-  }
-
-   #closeDropdowns() {
-    this.querySelectorAll("details").forEach((details) => {
-      details.open = false
-    })
   }
 
   #monitorHistoryChanges() {
@@ -272,7 +262,7 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #refreshToolbarOverflow = () => {
-    this.#resetToolbar()
+    this.#resetToolbarOverflow()
     this.#compactMenu()
 
     this.#overflow.style.display = this.#overflowMenu.children.length ? "block" : "none"
@@ -298,7 +288,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  #resetToolbar() {
+  #resetToolbarOverflow() {
     const items = Array.from(this.#overflowMenu.children)
     items.sort((a, b) => this.#itemPosition(b) - this.#itemPosition(a))
 
@@ -318,6 +308,16 @@ export default class LexicalToolbarElement extends HTMLElement {
         item.dataset.position = index
       }
     })
+  }
+
+  #closeDropdowns() {
+   this.#dropdowns.forEach((details) => {
+     details.open = false
+   })
+ }
+
+  get #dropdowns() {
+    return this.querySelectorAll("details")
   }
 
   get #overflow() {

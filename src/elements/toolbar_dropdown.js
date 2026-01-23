@@ -29,13 +29,15 @@ export class ToolbarDropdown extends HTMLElement {
     this.container.open = false
   }
 
-  #handleToggle(event) {
+  #handleToggle() {
     if (this.container.open) {
-      this.#handleOpen(event.target)
+      this.#handleOpen()
     }
   }
 
-  #handleOpen() {
+  async #handleOpen() {
+    // We wait for next frame, otherwise editor blur event fires
+    await nextFrame()
     this.#interactiveElements[0].focus()
     this.#resetTabIndexValues()
   }
