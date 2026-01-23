@@ -176,7 +176,7 @@ export default class LexicalToolbarElement extends HTMLElement {
 
    #closeDropdowns() {
     this.querySelectorAll("details").forEach((details) => {
-      details.removeAttribute("open")
+      details.open = false
     })
   }
 

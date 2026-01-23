@@ -26,7 +26,7 @@ export class ToolbarDropdown extends HTMLElement {
 
   close() {
     this.editor.focus()
-    this.container.removeAttribute("open")
+    this.container.open = false
   }
 
   #handleToggle(event) {
