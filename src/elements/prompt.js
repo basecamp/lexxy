@@ -76,8 +76,8 @@ export default class LexicalPromptElement extends HTMLElement {
   }
 
   #addTriggerListener() {
-    const unregister = this.#editor.registerUpdateListener(() => {
-      this.#editor.read(() => {
+    const unregister = this.#editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
         const { node, offset } = this.#selection.selectedNodeWithOffset()
         if (!node) return
 
