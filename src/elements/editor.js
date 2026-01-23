@@ -437,23 +437,26 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #registerFocusEvents() {
-    this.currentlyFocused = false
     this.addEventListener("focusin", this.#handleFocusIn)
     this.addEventListener("focusout", this.#handleFocusOut)
   }
 
   #handleFocusIn(event) {
-    if (this.contains(event.target) && this.currentlyFocused === false) {
+    if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
       dispatch(this, "lexxy:focus")
       this.currentlyFocused = true
     }
   }
 
   #handleFocusOut(event) {
-    if (!this.contains(event.relatedTarget)) {
+    if (!this.#elementInEditorOrToolbar(event.relatedTarget)) {
       dispatch(this, "lexxy:blur")
       this.currentlyFocused = false
     }
+  }
+
+  #elementInEditorOrToolbar(element) {
+    return this.contains(element) || this.toolbarElement?.contains(element)
   }
 
   #onFocus() {
