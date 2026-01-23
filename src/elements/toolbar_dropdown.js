@@ -6,10 +6,11 @@ export class ToolbarDropdown extends HTMLElement {
 
     this.container.addEventListener("toggle", this.#handleToggle.bind(this))
     this.container.addEventListener("keydown", this.#handleKeyDown.bind(this))
+
+    this.#onToolbarEditor(this.initialize.bind(this))
   }
 
   disconnectedCallback() {
-    this.#removeClickOutsideHandler()
     this.container.removeEventListener("keydown", this.#handleKeyDown.bind(this))
   }
 
@@ -25,46 +26,29 @@ export class ToolbarDropdown extends HTMLElement {
     return this.toolbar.editor
   }
 
-  close() {
-    this.container.removeAttribute("open")
+  initialize() {
+    // Any post-editor initialization
   }
 
-  #handleToggle(event) {
+  close() {
+    this.editor.focus()
+    this.container.open = false
+  }
+
+  async #onToolbarEditor(callback) {
+    await this.toolbar.editorConnected
+    callback()
+  }
+
+  #handleToggle() {
     if (this.container.open) {
-      this.#handleOpen(event.target)
-    } else {
-      this.#handleClose()
+      this.#handleOpen()
     }
   }
 
-  #handleOpen() {
+  async #handleOpen() {
     this.#interactiveElements[0].focus()
-    this.#setupClickOutsideHandler()
-
     this.#resetTabIndexValues()
-  }
-
-  #handleClose() {
-    this.#removeClickOutsideHandler()
-    this.editor.focus()
-  }
-
-  #setupClickOutsideHandler() {
-    if (this.clickOutsideHandler) return
-
-    this.clickOutsideHandler = this.#handleClickOutside.bind(this)
-    document.addEventListener("click", this.clickOutsideHandler, true)
-  }
-
-  #removeClickOutsideHandler() {
-    if (!this.clickOutsideHandler) return
-
-    document.removeEventListener("click", this.clickOutsideHandler, true)
-    this.clickOutsideHandler = null
-  }
-
-  #handleClickOutside({ target }) {
-    if (this.container.open && !this.container.contains(target)) this.close()
   }
 
   #handleKeyDown(event) {

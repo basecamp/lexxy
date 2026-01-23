@@ -6623,6 +6623,8 @@ class LexicalToolbarElement extends HTMLElement {
     super();
     this.internals = this.attachInternals();
     this.internals.role = "toolbar";
+
+    this.#createEditorPromise();
   }
 
   connectedCallback() {
@@ -6655,12 +6657,24 @@ class LexicalToolbarElement extends HTMLElement {
     this.#refreshToolbarOverflow();
     this.#bindFocusListeners();
 
+    this.resolveEditorPromise(editorElement);
+
     this.toggleAttribute("connected", true);
+  }
+
+  async getEditorElement() {
+    return this.editorElement || await this.editorPromise
   }
 
   #reconnect() {
     this.disconnectedCallback();
     this.connectedCallback();
+  }
+
+  #createEditorPromise() {
+    this.editorPromise = new Promise((resolve) => {
+      this.resolveEditorPromise = resolve;
+    });
   }
 
   #installResizeObserver() {
@@ -6731,28 +6745,24 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #bindFocusListeners() {
-    this.editorElement.addEventListener("lexxy:focus", this.#handleFocus);
-    this.editorElement.addEventListener("lexxy:blur", this.#handleFocusOut);
-    this.addEventListener("focusout", this.#handleFocusOut);
+    this.editorElement.addEventListener("lexxy:focus", this.#handleEditorFocus);
+    this.editorElement.addEventListener("lexxy:blur", this.#handleEditorBlur);
     this.addEventListener("keydown", this.#handleKeydown);
   }
 
   #unbindFocusListeners() {
-    this.editorElement.removeEventListener("lexxy:focus", this.#handleFocus);
-    this.editorElement.removeEventListener("lexxy:blur", this.#handleFocusOut);
-    this.removeEventListener("focusout", this.#handleFocusOut);
+    this.editorElement.removeEventListener("lexxy:focus", this.#handleEditorFocus);
+    this.editorElement.removeEventListener("lexxy:blur", this.#handleEditorBlur);
     this.removeEventListener("keydown", this.#handleKeydown);
   }
 
-  #handleFocus = () => {
-    this.#resetTabIndexValues();
+  #handleEditorFocus = () => {
     this.#focusableItems[0].tabIndex = 0;
   }
 
-  #handleFocusOut = () => {
-    if (!this.contains(document.activeElement)) {
-      this.#resetTabIndexValues();
-    }
+  #handleEditorBlur = () => {
+    this.#resetTabIndexValues();
+    this.#closeDropdowns();
   }
 
   #handleKeydown = (event) => {
@@ -6766,11 +6776,13 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
+    this.editor.registerCommand(
+      ie$1,
+      () => {
+        this.#closeDropdowns();
         this.#updateButtonStates();
-      });
-    });
+        return false
+      }, Bi);
   }
 
   #monitorHistoryChanges() {
@@ -6865,7 +6877,7 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #refreshToolbarOverflow = () => {
-    this.#resetToolbar();
+    this.#resetToolbarOverflow();
     this.#compactMenu();
 
     this.#overflow.style.display = this.#overflowMenu.children.length ? "block" : "none";
@@ -6891,7 +6903,7 @@ class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  #resetToolbar() {
+  #resetToolbarOverflow() {
     const items = Array.from(this.#overflowMenu.children);
     items.sort((a, b) => this.#itemPosition(b) - this.#itemPosition(a));
 
@@ -6911,6 +6923,16 @@ class LexicalToolbarElement extends HTMLElement {
         item.dataset.position = index;
       }
     });
+  }
+
+  #closeDropdowns() {
+   this.#dropdowns.forEach((details) => {
+     details.open = false;
+   });
+ }
+
+  get #dropdowns() {
+    return this.querySelectorAll("details")
   }
 
   get #overflow() {
@@ -10551,7 +10573,7 @@ class LexicalEditorElement extends HTMLElement {
     this.#registerComponents();
     this.#listenForInvalidatedNodes();
     this.#handleEnter();
-    this.#handleFocus();
+    this.#registerFocusEvents();
     this.#attachDebugHooks();
     this.#attachToolbar();
     this.#loadInitialValue();
@@ -10767,12 +10789,27 @@ class LexicalEditorElement extends HTMLElement {
     );
   }
 
-  #handleFocus() {
-    // Lexxy handles focus and blur as commands
-    // see https://github.com/facebook/lexical/blob/d1a8e84fe9063a4f817655b346b6ff373aa107f0/packages/lexical/src/LexicalEvents.ts#L35
-    // and https://stackoverflow.com/a/72212077
-    this.editor.registerCommand(Ye, () => { dispatch(this, "lexxy:blur"); }, Ri);
-    this.editor.registerCommand(Ve$1, () => { dispatch(this, "lexxy:focus"); }, Ri);
+  #registerFocusEvents() {
+    this.addEventListener("focusin", this.#handleFocusIn);
+    this.addEventListener("focusout", this.#handleFocusOut);
+  }
+
+  #handleFocusIn(event) {
+    if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
+      dispatch(this, "lexxy:focus");
+      this.currentlyFocused = true;
+    }
+  }
+
+  #handleFocusOut(event) {
+    if (!this.#elementInEditorOrToolbar(event.relatedTarget)) {
+      dispatch(this, "lexxy:blur");
+      this.currentlyFocused = false;
+    }
+  }
+
+  #elementInEditorOrToolbar(element) {
+    return this.contains(element) || this.toolbarElement?.contains(element)
   }
 
   #onFocus() {
@@ -10886,10 +10923,11 @@ class ToolbarDropdown extends HTMLElement {
 
     this.container.addEventListener("toggle", this.#handleToggle.bind(this));
     this.container.addEventListener("keydown", this.#handleKeyDown.bind(this));
+
+    this.#onToolbarEditor(this.initialize.bind(this));
   }
 
   disconnectedCallback() {
-    this.#removeClickOutsideHandler();
     this.container.removeEventListener("keydown", this.#handleKeyDown.bind(this));
   }
 
@@ -10905,46 +10943,29 @@ class ToolbarDropdown extends HTMLElement {
     return this.toolbar.editor
   }
 
-  close() {
-    this.container.removeAttribute("open");
+  initialize() {
+    // Any post-editor initialization
   }
 
-  #handleToggle(event) {
+  close() {
+    this.editor.focus();
+    this.container.open = false;
+  }
+
+  async #onToolbarEditor(callback) {
+    await this.toolbar.editorConnected;
+    callback();
+  }
+
+  #handleToggle() {
     if (this.container.open) {
-      this.#handleOpen(event.target);
-    } else {
-      this.#handleClose();
+      this.#handleOpen();
     }
   }
 
-  #handleOpen() {
+  async #handleOpen() {
     this.#interactiveElements[0].focus();
-    this.#setupClickOutsideHandler();
-
     this.#resetTabIndexValues();
-  }
-
-  #handleClose() {
-    this.#removeClickOutsideHandler();
-    this.editor.focus();
-  }
-
-  #setupClickOutsideHandler() {
-    if (this.clickOutsideHandler) return
-
-    this.clickOutsideHandler = this.#handleClickOutside.bind(this);
-    document.addEventListener("click", this.clickOutsideHandler, true);
-  }
-
-  #removeClickOutsideHandler() {
-    if (!this.clickOutsideHandler) return
-
-    document.removeEventListener("click", this.clickOutsideHandler, true);
-    this.clickOutsideHandler = null;
-  }
-
-  #handleClickOutside({ target }) {
-    if (this.container.open && !this.container.contains(target)) this.close();
   }
 
   #handleKeyDown(event) {
@@ -11032,19 +11053,14 @@ const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']";
 const NO_STYLE = Symbol("no_style");
 
 class HighlightDropdown extends ToolbarDropdown {
-  #initialized = false
-
   connectedCallback() {
     super.connectedCallback();
     this.#registerToggleHandler();
   }
 
-  #ensureInitialized() {
-    if (this.#initialized) return
-
+  initialize() {
     this.#setUpButtons();
     this.#registerButtonHandlers();
-    this.#initialized = true;
   }
 
   #registerToggleHandler() {
@@ -11084,8 +11100,6 @@ class HighlightDropdown extends ToolbarDropdown {
 
   #handleToggle({ newState }) {
     if (newState === "open") {
-      this.#ensureInitialized();
-
       this.editor.getEditorState().read(() => {
         this.#updateColorButtonStates(Lr());
       });
