@@ -6,6 +6,8 @@ export class ToolbarDropdown extends HTMLElement {
 
     this.container.addEventListener("toggle", this.#handleToggle.bind(this))
     this.container.addEventListener("keydown", this.#handleKeyDown.bind(this))
+
+    this.#onToolbarEditor(this.initialize.bind(this))
   }
 
   disconnectedCallback() {
@@ -24,9 +26,18 @@ export class ToolbarDropdown extends HTMLElement {
     return this.toolbar.editor
   }
 
+  initialize() {
+    // Any post-editor initialization
+  }
+
   close() {
     this.editor.focus()
     this.container.open = false
+  }
+
+  async #onToolbarEditor(callback) {
+    await this.toolbar.editorConnected
+    callback()
   }
 
   #handleToggle() {
@@ -36,8 +47,6 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   async #handleOpen() {
-    // We wait for next frame, otherwise editor blur event fires
-    await nextFrame()
     this.#interactiveElements[0].focus()
     this.#resetTabIndexValues()
   }

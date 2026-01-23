@@ -22,6 +22,8 @@ export default class LexicalToolbarElement extends HTMLElement {
     super()
     this.internals = this.attachInternals()
     this.internals.role = "toolbar"
+
+    this.#createEditorPromise()
   }
 
   connectedCallback() {
@@ -54,12 +56,24 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#refreshToolbarOverflow()
     this.#bindFocusListeners()
 
+    this.resolveEditorPromise(editorElement)
+
     this.toggleAttribute("connected", true)
+  }
+
+  async getEditorElement() {
+    return this.editorElement || await this.editorPromise
   }
 
   #reconnect() {
     this.disconnectedCallback()
     this.connectedCallback()
+  }
+
+  #createEditorPromise() {
+    this.editorPromise = new Promise((resolve) => {
+      this.resolveEditorPromise = resolve
+    })
   }
 
   #installResizeObserver() {

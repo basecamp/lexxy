@@ -35,6 +35,15 @@ class EventsTest < ApplicationSystemTestCase
     assert_no_dispatched_event "lexxy:blur"
   end
 
+  test "toolbar dropdowns do not dispatch lexxy:blur" do
+    visit edit_post_path(posts(:empty))
+    find_editor.focus
+    assert_dispatched_event "lexxy:focus"
+
+    apply_highlight_option "background-color", 1
+    assert_no_dispatched_event "lexxy:blur"
+  end
+
   test "dispatch lexxy:change event on edits" do
     visit edit_post_path(posts(:empty))
 
