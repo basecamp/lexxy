@@ -5,6 +5,7 @@ import { createElement } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { HISTORY_MERGE_TAG } from "lexical"
 import { bytesToHumanSize } from "../helpers/storage_helper"
+import { optimizeImage } from "../helpers/image_optimization_helper";
 
 export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   static getType() {
@@ -104,16 +105,23 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const image = figure.querySelector("img")
     if (!image) {
       return Promise.resolve()
-    } else {
+    }
+
+    const optimizationConfig = Lexxy.global.get("imageOptimization") ?? { enabled: false }
+    if (!optimizationConfig.enabled || !this.file.type.startsWith("image/")) {
       return loadFileIntoImage(this.file, image)
     }
+
+    return this.#optimizeAndSetPreview(image, figure, optimizationConfig)
   }
 
   async #startUpload(progressBar, figure) {
     const { DirectUpload } = await import("@rails/activestorage")
     const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads")
 
-    const upload = new DirectUpload(this.file, this.uploadUrl, this)
+    const fileToUpload = this.optimizedFile ?? this.file
+
+    const upload = new DirectUpload(fileToUpload, this.uploadUrl, this)
 
     upload.delegate = {
       directUploadWillCreateBlobWithXHR: (request) => {
@@ -170,6 +178,32 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
         }))
       }
     }, { tag: HISTORY_MERGE_TAG })
+  }
+
+  async #optimizeAndSetPreview(image, figure, config) {
+    const result = await optimizeImage(this.file, config)
+
+    if (!result) {
+      return loadFileIntoImage(this.file, image)
+    }
+
+    this.optimizedFile = result.optimizedFile
+
+    image.src = result.previewUrl
+
+    const figcaption = figure.querySelector(".attachment__caption")
+    if (figcaption) {
+      figcaption.querySelector(".attachment__name").textContent = result.filename
+      figcaption.querySelector(".attachment__size").textContent = bytesToHumanSize(result.size)
+    }
+
+    return new Promise((resolve) => {
+      if (image.complete) {
+        resolve()
+      } else {
+        image.onload = resolve
+      }
+    })
   }
 
   async #loadFigurePreviewFromBlob(blob, figure) {

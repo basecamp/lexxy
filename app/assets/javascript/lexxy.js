@@ -7417,6 +7417,84 @@ async function loadFileIntoImage(file, image) {
   })
 }
 
+async function optimizeImage(file, config = {}) {
+    if (!file.type.startsWith("image/")) return null
+
+    const { maxWidth = Infinity, maxHeight = Infinity, quality = 0.8 } = config;
+
+    const configFormat = config.format?.toLowerCase().trim();
+    const originalFormat = getOriginalFormat(file);
+    const effectiveFormat = configFormat ?? originalFormat;
+
+    const { mimeType, extension } = getMimeAndExtension(effectiveFormat);
+
+    const originalImg = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    originalImg.src = objectUrl;
+    await originalImg.decode();
+    URL.revokeObjectURL(objectUrl);
+
+    const scale = Math.min(1, maxWidth / originalImg.width, maxHeight / originalImg.height);
+    const width = Math.round(originalImg.width * scale);
+    const height = Math.round(originalImg.height * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(originalImg, 0, 0, width, height);
+
+    const previewUrl = canvas.toDataURL(mimeType, quality);
+
+    const optimizedBlob = await new Promise(resolve => {
+        canvas.toBlob(resolve, mimeType, quality);
+    });
+
+    if (!optimizedBlob) return null
+
+    const baseName = file.name.replace(/\.[^/.]+$/, "");
+    const newFilename = `${baseName}.${extension}`;
+
+    const optimizedFile = new File([ optimizedBlob ], newFilename, { type: optimizedBlob.type });
+
+    return {
+        optimizedFile,
+        previewUrl,
+        width,
+        height,
+        filename: newFilename,
+        size: optimizedBlob.size,
+    }
+}
+
+function getOriginalFormat(file) {
+    const type = file.type.toLowerCase();
+    const ext = file.name.split(".").pop()?.toLowerCase();
+
+    if (type === "image/jpeg" || ext === "jpg" || ext === "jpeg") return "jpeg"
+    if (type === "image/png" || ext === "png") return "png"
+    if (type === "image/webp" || ext === "webp") return "webp"
+    if (type === "image/avif" || ext === "avif") return "avif"
+
+    return "webp"
+}
+
+function getMimeAndExtension(format) {
+    switch (format) {
+        case "jpeg":
+        case "jpg":
+            return { mimeType: "image/jpeg", extension: "jpg" }
+        case "png":
+            return { mimeType: "image/png", extension: "png" }
+        case "webp":
+            return { mimeType: "image/webp", extension: "webp" }
+        case "avif":
+            return { mimeType: "image/avif", extension: "avif" }
+        default:
+            return { mimeType: "image/webp", extension: "webp" }
+    }
+}
+
 class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   static getType() {
     return "action_text_attachment_upload"
@@ -7515,16 +7593,23 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const image = figure.querySelector("img");
     if (!image) {
       return Promise.resolve()
-    } else {
+    }
+
+    const optimizationConfig = Lexxy.global.get("imageOptimization") ?? { enabled: false };
+    if (!optimizationConfig.enabled || !this.file.type.startsWith("image/")) {
       return loadFileIntoImage(this.file, image)
     }
+
+    return this.#optimizeAndSetPreview(image, figure, optimizationConfig)
   }
 
   async #startUpload(progressBar, figure) {
     const { DirectUpload } = await import('@rails/activestorage');
     const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads");
 
-    const upload = new DirectUpload(this.file, this.uploadUrl, this);
+    const fileToUpload = this.optimizedFile ?? this.file;
+
+    const upload = new DirectUpload(fileToUpload, this.uploadUrl, this);
 
     upload.delegate = {
       directUploadWillCreateBlobWithXHR: (request) => {
@@ -7581,6 +7666,32 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
         }));
       }
     }, { tag: Dn });
+  }
+
+  async #optimizeAndSetPreview(image, figure, config) {
+    const result = await optimizeImage(this.file, config);
+
+    if (!result) {
+      return loadFileIntoImage(this.file, image)
+    }
+
+    this.optimizedFile = result.optimizedFile;
+
+    image.src = result.previewUrl;
+
+    const figcaption = figure.querySelector(".attachment__caption");
+    if (figcaption) {
+      figcaption.querySelector(".attachment__name").textContent = result.filename;
+      figcaption.querySelector(".attachment__size").textContent = bytesToHumanSize(result.size);
+    }
+
+    return new Promise((resolve) => {
+      if (image.complete) {
+        resolve();
+      } else {
+        image.onload = resolve;
+      }
+    })
   }
 
   async #loadFigurePreviewFromBlob(blob, figure) {
