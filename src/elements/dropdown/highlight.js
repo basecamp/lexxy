@@ -11,19 +11,14 @@ const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 const NO_STYLE = Symbol("no_style")
 
 export class HighlightDropdown extends ToolbarDropdown {
-  #initialized = false
-
   connectedCallback() {
     super.connectedCallback()
     this.#registerToggleHandler()
   }
 
-  #ensureInitialized() {
-    if (this.#initialized) return
-
+  initialize() {
     this.#setUpButtons()
     this.#registerButtonHandlers()
-    this.#initialized = true
   }
 
   #registerToggleHandler() {
@@ -63,8 +58,6 @@ export class HighlightDropdown extends ToolbarDropdown {
 
   #handleToggle({ newState }) {
     if (newState === "open") {
-      this.#ensureInitialized()
-
       this.editor.getEditorState().read(() => {
         this.#updateColorButtonStates($getSelection())
       })
