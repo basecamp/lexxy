@@ -268,7 +268,7 @@ export default class Contents {
     const blobUrlTemplate = this.editorElement.blobUrlTemplate
 
     this.editor.update(() => {
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor })
+      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate })
       this.insertAtCursor(uploadedImageNode)
     }, { tag: HISTORY_MERGE_TAG })
   }

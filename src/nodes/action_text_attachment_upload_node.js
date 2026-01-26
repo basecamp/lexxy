@@ -1,5 +1,6 @@
 import Lexxy from "../config/lexxy"
 import { $getNodeByKey } from "lexical"
+import { $getEditor } from "lexical"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { createElement } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
@@ -25,14 +26,15 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   constructor(node, key) {
-    const { file, uploadUrl, blobUrlTemplate, editor, progress } = node
+    const { file, uploadUrl, blobUrlTemplate, progress } = node
     super({ ...node, contentType: file.type }, key)
     this.file = file
     this.uploadUrl = uploadUrl
     this.blobUrlTemplate = blobUrlTemplate
     this.src = null
-    this.editor = editor
     this.progress = progress || 0
+
+    this.editor = $getEditor()
   }
 
   createDOM() {
