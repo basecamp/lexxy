@@ -5,7 +5,7 @@ import { createElement } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { HISTORY_MERGE_TAG } from "lexical"
 import { bytesToHumanSize } from "../helpers/storage_helper"
-import { optimizeImage } from "../helpers/image_optimization_helper";
+import { optimizeImage } from "../helpers/image_optimization_helper"
 
 export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   static getType() {
