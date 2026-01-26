@@ -10077,7 +10077,7 @@ class Extensions {
 
   initializeToolbars() {
     if (this.#lexxyToolbar) {
-      this.enabledExtensions.forEach(ext => ext.initializeToobar(this.#lexxyToolbar));
+      this.enabledExtensions.forEach(ext => ext.initializeToolbar(this.#lexxyToolbar));
     }
   }
 
