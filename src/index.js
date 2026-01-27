@@ -10,6 +10,7 @@ import "./elements/table/table_tools.js"
 import "./elements/table/table_controller.js"
 import "./elements/prompt"
 import "./elements/code_language_picker"
+import "./elements/voice_note"
 
 import Lexxy from "./config/lexxy"
 

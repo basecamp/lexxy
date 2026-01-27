@@ -66,6 +66,18 @@ export class ActionTextAttachmentNode extends DecoratorNode {
             }
           }, priority: 1
         }
+      },
+      "audio": () => {
+        return {
+          conversion: (audio) => {
+            return {
+              node: new ActionTextAttachmentNode({
+                src: audio.getAttribute("src"),
+                contentType: "audio/*"
+              })
+            }
+          }, priority: 1
+        }
       }
     }
   }
@@ -102,6 +114,8 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     if (this.isPreviewableAttachment) {
       figure.appendChild(this.#createDOMForImage())
       figure.appendChild(this.#createEditableCaption())
+    } else if (this.tagName === "audio") {
+      figure.appendChild(this.#createDOMForAudio())
     } else {
       figure.appendChild(this.#createDOMForFile())
       figure.appendChild(this.#createDOMForNotImage())
@@ -189,6 +203,14 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     } else {
       return {}
     }
+  }
+  
+  #createDOMForAudio() {
+    const figure = createElement("figure", { className: "attachment audio", "data-lexxy-decorator": true })
+    const audio = createElement("audio", { src: this.src, controls: true, autoplay: false, loop: false, muted: false, preload: "metadata" })
+    figure.appendChild(audio)
+
+    return figure
   }
 
   #createDOMForFile() {

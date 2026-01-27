@@ -14,6 +14,7 @@ import { $getTableCellNodeFromLexicalNode } from "@lexical/table"
 import { getListType } from "../helpers/lexical_helper"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
+import { VoiceNoteButton } from "./voice_note"
 
 export default class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
@@ -55,6 +56,7 @@ export default class LexicalToolbarElement extends HTMLElement {
     this.#monitorHistoryChanges()
     this.#refreshToolbarOverflow()
     this.#bindFocusListeners()
+    this.#registerVoiceNoteComponents()
 
     this.resolveEditorPromise(editorElement)
 
@@ -252,6 +254,11 @@ export default class LexicalToolbarElement extends HTMLElement {
       current = current.getParent()
     }
     return false
+  }
+  
+  #registerVoiceNoteComponents() {
+    const voiceNoteButton = new VoiceNoteButton(this)
+    voiceNoteButton.setup(".lexxy-editor__toolbar-spacer")
   }
 
   #setButtonPressed(name, isPressed) {

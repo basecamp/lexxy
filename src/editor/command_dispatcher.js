@@ -19,6 +19,7 @@ import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
+import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
@@ -40,6 +41,7 @@ const COMMANDS = [
   "uploadAttachments",
 
   "insertTable",
+  "insertVoiceNote",
 
   "undo",
   "redo"
@@ -208,6 +210,17 @@ export class CommandDispatcher {
 
   dispatchInsertTable() {
     this.editor.dispatchCommand(INSERT_TABLE_COMMAND, { "rows": 3, "columns": 3, "includeHeaders": true })
+  }
+
+  dispatchInsertVoiceNote(src) {
+    const audioNode = new ActionTextAttachmentNode({
+      tagName: "audio",
+      src: src,
+      contentType: "audio/*"
+    })
+    this.contents.insertAtCursorEnsuringLineBelow(audioNode)
+
+    this.editor.focus()
   }
 
   dispatchUndo() {
