@@ -7,6 +7,40 @@
     --lexxy-editor-rows: attr(rows lh, 8lh);
   }
 
+  .attachment-gallery {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: relative;
+    margin: 1em 0 -5px !important;
+    padding: 0;
+
+    @include media(small) {
+      .attachment__caption {
+        font-size: 0.6em !important;
+        line-height: 1.2 !important;
+      }
+    }
+
+    .attachment { margin: 0; }
+
+    > .attachment,
+    > bc-attachment {
+      flex: 1 0 33%;
+      margin: 0 5px 1em;
+      max-inline-size: calc(33% - 10px);
+    }
+
+    &.attachment-gallery--2,
+    &.attachment-gallery--4 {
+      > .attachment,
+      > bc-attachment {
+        flex-basis: 50%;
+        max-inline-size: calc(50% - 10px);
+      }
+    }
+  }
+
   --lexxy-toolbar-gap: 2px;
   --lexxy-toolbar-spacing: 0.5ch;
 

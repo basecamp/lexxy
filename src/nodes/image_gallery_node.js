@@ -29,13 +29,13 @@ export class ImageGalleryNode extends ElementNode {
 
   createDOM() {
     const p = document.createElement("p")
-    p.className = "attachment-gallery"
-    p.classList.add("lexxy-image-gallery")
+    p.className = this.#galleryClassNames
     p.style = "display: block; cursor: default; position: relative;"
     return p
   }
 
-  updateDOM() {
+  updateDOM(_prevNode, dom) {
+    dom.classList = this.#galleryClassNames
     return false
   }
 
@@ -71,8 +71,12 @@ export class ImageGalleryNode extends ElementNode {
 
   exportDOM() {
     const div = document.createElement("div")
-    div.className = "attachment-gallery"
+    div.className = this.#galleryClassNames
     return { element: div }
+  }
+
+  get #galleryClassNames () {
+    return "attachment-gallery attachment-gallery--" + this.getChildrenSize()
   }
 }
 
