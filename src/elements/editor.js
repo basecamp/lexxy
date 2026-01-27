@@ -28,6 +28,7 @@ import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_atta
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 
 import { TablesLexicalExtension } from "../extensions/tables_lexical_extension"
+import VoiceNoteExtension from "../extensions/voice_note_extension"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -56,6 +57,7 @@ export default class LexicalEditorElement extends HTMLElement {
     this.contents = new Contents(this)
     this.selection = new Selection(this)
     this.clipboard = new Clipboard(this)
+    this.voiceNote = new VoiceNoteExtension(this)
 
     CommandDispatcher.configureFor(this)
     this.#initialize()

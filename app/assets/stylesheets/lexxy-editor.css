@@ -713,3 +713,47 @@
   color: var(--lexxy-color-ink-medium);
   padding: var(--lexxy-prompt-padding);
 }
+
+@keyframes rec {
+  0% { opacity: 1; }
+  60% { opacity: 1; }
+  80% { opacity: 0.2; }
+  100% { opacity: 1; }
+}
+
+:root { --lexxy-rec-color: rgba(255, 0, 0, 0.5); }
+
+@keyframes pulse {
+
+  0% { box-shadow: 0 0 0 0 var(--lexxy-rec-color), 0 0 0 0 var(--lexxy-rec-color); }
+  30% { box-shadow: 0 0 0 0 var(--lexxy-rec-color), 0 0 0 0 var(--lexxy-rec-color); }
+  40% { box-shadow: 0 0 0 0.25em var(--lexxy-rec-color), 0 0 0 0 var(--lexxy-rec-color); }
+  60% { box-shadow: 0 0 0 1em transparent, 0 0 0 0.25em var(--lexxy-rec-color); }
+  80% { box-shadow: 0 0 0 1em transparent, 0 0 0 1em transparent; }
+  100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
+}
+
+:where(.lexxy-voice-note-button) {
+  &.lexxy-voice-note-button--recording {
+    position: relative;
+
+    svg {
+      fill: white;
+      z-index: 1;
+    }
+
+    &:before {
+      animation: pulse 2s linear infinite;
+      content: "";
+      display: block;
+      background-color: var(--lexxy-color-red);
+      border-radius: 50%;
+      position: absolute;
+      inset-inline-start: 0.25em;
+      inset-inline-end: 0.25em;
+      inset-block-start: 0.25em;
+      inset-block-end: 0.25em;
+      z-index: 0;
+    }
+  }
+}

@@ -1,5 +1,8 @@
 import LexxyExtension from "./lexxy_extension"
 import { createElement, dispatch } from "../helpers/html_helper"
+import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+
+export const INSERT_VOICE_NOTE_COMMAND = "insertVoiceNote"
 
 export default class VoiceNoteExtension extends LexxyExtension {
   mediaRecorder = null
@@ -7,6 +10,27 @@ export default class VoiceNoteExtension extends LexxyExtension {
 
   get enabled() {
     return this.editorConfig.get("voiceNote")?.enabled ?? false
+  }
+
+  constructor(editorElement) {
+    super(editorElement)
+    this.initializeToolbar(this.editorElement.toolbarElement)
+
+    this.editor = this.editorElement.editor
+    this.contents = this.editorElement.contents
+  }
+
+  #insertVoiceNote(src) {
+    this.editor.update(() => {
+      console.log("inserting voice note", src)
+      const audioNode = new ActionTextAttachmentNode({
+        tagName: "audio",
+        src: src,
+        contentType: "audio/*"
+      })
+      this.contents.insertAtCursorEnsuringLineBelow(audioNode)
+      this.editor.focus()
+    })
   }
 
   initializeToolbar(lexxyToolbar) {
@@ -28,7 +52,7 @@ export default class VoiceNoteExtension extends LexxyExtension {
 
   #createButton() {
     const button = createElement("button", {
-      class: "lexxy-editor__toolbar-button",
+      class: "lexxy-editor__toolbar-button lexxy-voice-note-button",
       type: "button",
       name: "voice-note",
       title: "Record voice note"
@@ -44,19 +68,6 @@ export default class VoiceNoteExtension extends LexxyExtension {
   }
 
   #handleRecordButtonClick() {
-    this.#startRecording()
-  }
-
-  #handleRecording() {
-    this.button.style.background = "red"
-  }
-
-  #handleStopped() {
-    this.button.style.background = ""
-  }
-
-  // Recording logic (previously in VoiceNoteController)
-  #startRecording() {
     if (navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ audio: true }).then(
         this.#onSuccess.bind(this),
@@ -65,6 +76,14 @@ export default class VoiceNoteExtension extends LexxyExtension {
     } else {
       console.log("MediaDevices.getUserMedia() not supported on your browser!")
     }
+  }
+
+  #handleRecording() {
+    this.button.classList.add("lexxy-voice-note-button--recording")
+  }
+
+  #handleStopped() {
+    this.button.classList.remove("lexxy-voice-note-button--recording")
   }
 
   #record() {
@@ -89,6 +108,7 @@ export default class VoiceNoteExtension extends LexxyExtension {
       }
     }
 
+    console.log("media recorder state", this.mediaRecorder.state)
     if (this.mediaRecorder.state === "recording") {
       this.#stop()
     } else {
@@ -97,14 +117,16 @@ export default class VoiceNoteExtension extends LexxyExtension {
   }
 
   #onStop() {
+    this.mediaRecorder.stream.getTracks().forEach(track => track.stop())
+
     const blob = new Blob(this.chunks, { type: this.mediaRecorder.mimeType })
     const audioURL = window.URL.createObjectURL(blob)
 
     this.chunks = []
 
-    this.editorElement.editor.dispatchCommand("insertVoiceNote", audioURL)
+    console.log("dispatching voice note command", audioURL)
+    this.#insertVoiceNote(audioURL)
 
-    this.mediaRecorder.stream.getTracks().forEach(track => track.stop())
     this.mediaRecorder = null
   }
 
