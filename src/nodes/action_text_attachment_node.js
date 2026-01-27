@@ -95,6 +95,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   createDOM() {
     const figure = this.createAttachmentFigure()
+    if (this.isInline()) figure.style = "display: inline-block; cursor: default; user-select: none; overflow: hidden; position: relative;"
 
     figure.addEventListener("click", () => {
       this.select()
@@ -125,7 +126,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   isInline() {
-    return false
+    return !this.isAttached() || !this.getParent()?.is($getRoot())
   }
 
   exportDOM() {

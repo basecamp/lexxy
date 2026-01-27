@@ -31,6 +31,7 @@ export class ImageGalleryNode extends ElementNode {
     const p = document.createElement("p")
     p.className = "attachment-gallery"
     p.classList.add("lexxy-image-gallery")
+    p.style = "display: block; cursor: default; position: relative;"
     return p
   }
 
@@ -55,11 +56,12 @@ export class ImageGalleryNode extends ElementNode {
   }
 
   canInsertTextAfter() {
-    return false
+    return true
   }
 
   canBeEmpty() {
-    return false
+    // lying to get the right behavior: a transform handles clean-up
+    return true
   }
 
   getImageAttachments() {
