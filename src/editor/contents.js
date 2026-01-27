@@ -4,6 +4,7 @@ import {
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
+import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
@@ -270,6 +271,38 @@ export default class Contents {
     this.editor.update(() => {
       const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate })
       this.insertAtCursor(uploadedImageNode)
+    }, { tag: HISTORY_MERGE_TAG })
+  }
+
+  insertAttachment(attachment = {}) {
+    if (!this.editorElement.supportsAttachments) {
+      console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
+      return
+    }
+
+    const attributes = this.#normalizeAttachmentAttributes(attachment)
+    if (!attributes.src && !attributes.sgid) return
+
+    this.editor.update(() => {
+      const node = new ActionTextAttachmentNode(attributes)
+      const selection = $getSelection()
+      const selectedNodes = selection?.getNodes()
+
+      if ($isRangeSelection(selection)) {
+        $insertNodes([ node ])
+      } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
+        const lastNode = selectedNodes[selectedNodes.length - 1]
+        lastNode.insertAfter(node)
+      } else {
+        const root = $getRoot()
+        root.append(node)
+      }
+
+      if (!node.getNextSibling()) {
+        const newParagraph = $createParagraphNode()
+        node.insertAfter(newParagraph)
+        newParagraph.selectStart()
+      }
     }, { tag: HISTORY_MERGE_TAG })
   }
 
@@ -737,6 +770,26 @@ export default class Contents {
   #createHtmlNodeWith(html) {
     const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
     return htmlNodes[0] || $createParagraphNode()
+  }
+
+  #normalizeAttachmentAttributes(attachment) {
+    const contentType = attachment.contentType || attachment.content_type || attachment["content-type"] || ""
+    const fileName = attachment.fileName || attachment.filename || ""
+    const src = attachment.src || attachment.url || attachment.href || ""
+    const caption = attachment.caption || fileName
+
+    return {
+      sgid: attachment.sgid || attachment.attachableSgid || attachment.attachable_sgid,
+      src,
+      previewable: attachment.previewable,
+      altText: attachment.altText || attachment.alt || fileName,
+      caption,
+      contentType,
+      fileName,
+      fileSize: attachment.fileSize || attachment.filesize,
+      width: attachment.width,
+      height: attachment.height
+    }
   }
 
   #shouldUploadFile(file) {

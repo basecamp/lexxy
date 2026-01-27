@@ -9,12 +9,15 @@ import { createElement } from "../../helpers/html_helper"
 import { nextFrame } from "../../helpers/timing_helpers"
 
 export class TableTools extends HTMLElement {
+  #isExternallyHidden = false
+
   connectedCallback() {
     this.tableController = new TableController(this.#editorElement)
 
     this.#setUpButtons()
     this.#monitorForTableSelection()
     this.#registerKeyboardShortcuts()
+    this.#registerExternalEvents()
   }
 
   disconnectedCallback() {
@@ -24,6 +27,7 @@ export class TableTools extends HTMLElement {
     this.unregisterUpdateListener = null
 
     this.removeEventListener("keydown", this.#handleToolsKeydown)
+    this.#unregisterExternalEvents()
 
     this.tableController?.destroy()
     this.tableController = null
@@ -162,6 +166,40 @@ export class TableTools extends HTMLElement {
     }
   }
 
+  #registerExternalEvents() {
+    this.#editorElement.addEventListener("lexxy:table-command", this.#handleTableCommandEvent)
+    this.#editorElement.addEventListener("lexxy:table-tools-visibility", this.#handleVisibilityEvent)
+  }
+
+  #unregisterExternalEvents() {
+    this.#editorElement.removeEventListener("lexxy:table-command", this.#handleTableCommandEvent)
+    this.#editorElement.removeEventListener("lexxy:table-tools-visibility", this.#handleVisibilityEvent)
+  }
+
+  #handleTableCommandEvent = (event) => {
+    const { command, customIndex } = event.detail || {}
+    if (!command || !this.tableController.currentTableNode) return
+
+    this.tableController.executeTableCommand(command, customIndex ?? null)
+    if (!this.#isExternallyHidden) {
+      this.#update()
+    }
+  }
+
+  #handleVisibilityEvent = (event) => {
+    const visible = event.detail?.visible !== false
+    this.#isExternallyHidden = !visible
+
+    if (this.#isExternallyHidden) {
+      this.#hide()
+      return
+    }
+
+    if (this.tableController.currentTableNode) {
+      this.#show()
+    }
+  }
+
   #handleEscapeKey() {
     const cell = this.tableController.currentCell
     if (!cell) return
@@ -232,6 +270,10 @@ export class TableTools extends HTMLElement {
   }
 
   #show() {
+    if (this.#isExternallyHidden) {
+      this.style.display = "none"
+      return
+    }
     this.style.display = "flex"
     this.#update()
   }
