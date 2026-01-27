@@ -74,3 +74,4 @@ export class ToolbarDropdown extends HTMLElement {
   }
 }
 
+export default ToolbarDropdown

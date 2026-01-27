@@ -53,4 +53,4 @@ export class LinkDropdown extends ToolbarDropdown {
   }
 }
 
-customElements.define("lexxy-link-dropdown", LinkDropdown)
+export default LinkDropdown

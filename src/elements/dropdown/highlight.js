@@ -109,4 +109,4 @@ export class HighlightDropdown extends ToolbarDropdown {
   }
 }
 
-customElements.define("lexxy-highlight-dropdown", HighlightDropdown)
+export default HighlightDropdown
