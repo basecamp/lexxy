@@ -1,13 +1,16 @@
-import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, $getSelection, $isRangeSelection, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
-import { AutoLinkNode, LinkNode } from "@lexical/link"
+import { $isLinkNode, AutoLinkNode, LinkNode } from "@lexical/link"
 import { registerPlainText } from "@lexical/plain-text"
-import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
+import { $isHeadingNode, $isQuoteNode, HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
-import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
+import { $isCodeNode, CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
+import { $findTableNode, $getTableCellNodeFromLexicalNode } from "@lexical/table"
+import { getListType } from "../helpers/lexical_helper"
+import { isSelectionHighlighted } from "../helpers/format_helper"
 
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
@@ -154,6 +157,47 @@ export default class LexicalEditorElement extends HTMLElement {
     return this.config.get("richText")
   }
 
+  // Selection preservation for native bridge dialogs
+  freezeSelection() {
+    this.frozenSelectionState = null
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if ($isRangeSelection(selection)) {
+        this.frozenSelectionState = {
+          anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
+          focus: { key: selection.focus.key, offset: selection.focus.offset }
+        }
+      }
+    })
+  }
+
+  thawSelection() {
+    const frozenSelectionState = this.frozenSelectionState
+    this.frozenSelectionState = null
+    if (!frozenSelectionState) return this.focus()
+
+    // If the original nodes were removed (e.g., content cleared), restoring the
+    // frozen selection can leave Lexical in a broken state. Only restore when valid.
+    let canRestore = false
+    this.editor.getEditorState().read(() => {
+      const anchorNode = $getNodeByKey(frozenSelectionState.anchor.key)
+      const focusNode = $getNodeByKey(frozenSelectionState.focus.key)
+      canRestore = Boolean(anchorNode?.isAttached() && focusNode?.isAttached())
+    })
+
+    if (canRestore) {
+      this.editor.update(() => {
+        const selection = $getSelection()
+        if ($isRangeSelection(selection)) {
+          selection.anchor.set(frozenSelectionState.anchor.key, frozenSelectionState.anchor.offset, "text")
+          selection.focus.set(frozenSelectionState.focus.key, frozenSelectionState.focus.offset, "text")
+        }
+      })
+    }
+
+    this.focus()
+  }
+
   // TODO: Deprecate `single-line` attribute
   get isSingleLineMode() {
     return this.hasAttribute("single-line")
@@ -178,6 +222,8 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
+    // Clearing/replacing content can invalidate any preserved selection keys.
+    this.frozenSelectionState = null
     this.editor.update(() => {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       const root = $getRoot()
@@ -351,7 +397,75 @@ export default class LexicalEditorElement extends HTMLElement {
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
       this.#setValidity()
+      this.#dispatchAttributesChange()
     }))
+  }
+
+  #dispatchAttributesChange() {
+    let attributes = null
+
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const anchorNode = selection.anchor.getNode()
+      if (!anchorNode.getParent()) return
+
+      // Get link info
+      let inLink = false
+      let linkHref = null
+      let node = anchorNode
+      while (node) {
+        if ($isLinkNode(node)) {
+          inLink = true
+          linkHref = node.getURL()
+          break
+        }
+        node = node.getParent()
+      }
+
+      // Get block-level info
+      const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+      const inQuote = $isQuoteNode(topLevelElement)
+      const inHeading = $isHeadingNode(topLevelElement)
+
+      // Get list type
+      const listType = getListType(anchorNode)
+
+      // Get table info
+      const tableCellNode = $getTableCellNodeFromLexicalNode(anchorNode)
+      const tableNode = tableCellNode ? $findTableNode(tableCellNode) : null
+      const inTable = tableNode !== null
+      const tableRows = tableNode?.getChildrenSize() ?? null
+      const tableColumns = tableNode?.getFirstChild()?.getChildrenSize() ?? null
+
+      // Only include truthy attributes - false/undefined values mean "enabled but not active"
+      // iOS interprets false as "disabled", so we must omit inactive attributes
+      attributes = {}
+      if (selection.hasFormat("bold")) attributes.bold = true
+      if (selection.hasFormat("italic")) attributes.italic = true
+      if (selection.hasFormat("strikethrough")) attributes.strikethrough = true
+      const inCode = $isCodeNode(topLevelElement) || selection.hasFormat("code")
+      if (inCode) attributes.code = true
+      if (isSelectionHighlighted(selection)) attributes.highlight = true
+      if (inLink) {
+        attributes.link = true
+        if (linkHref) attributes.href = linkHref
+      }
+      if (inQuote) attributes.quote = true
+      if (inHeading) attributes.heading = true
+      if (listType === "bullet") attributes["unordered-list"] = true
+      if (listType === "number") attributes["ordered-list"] = true
+      if (inTable) {
+        attributes.table = true
+        if (tableRows) attributes.tableRows = tableRows
+        if (tableColumns) attributes.tableColumns = tableColumns
+      }
+    })
+
+    if (attributes) {
+      dispatch(this, "lexxy:attributes-change", { attributes })
+    }
   }
 
   #clearCachedValues() {
@@ -443,6 +557,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
+      this.#dispatchAttributesChange()
       dispatch(this, "lexxy:focus")
       this.currentlyFocused = true
     }
@@ -526,6 +641,7 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #reset() {
     this.#unregisterHandlers()
+    this.frozenSelectionState = null
 
     if (this.editorContentElement) {
       this.editorContentElement.remove()

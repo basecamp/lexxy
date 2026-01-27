@@ -9393,6 +9393,38 @@ class Contents {
     }, { tag: Dn });
   }
 
+  insertAttachment(attachment = {}) {
+    if (!this.editorElement.supportsAttachments) {
+      console.warn("This editor does not supports attachments (it's configured with [attachments=false])");
+      return
+    }
+
+    const attributes = this.#normalizeAttachmentAttributes(attachment);
+    if (!attributes.src && !attributes.sgid) return
+
+    this.editor.update(() => {
+      const node = new ActionTextAttachmentNode(attributes);
+      const selection = Lr();
+      const selectedNodes = selection?.getNodes();
+
+      if (yr(selection)) {
+        jr([ node ]);
+      } else if (xr(selection) && selectedNodes && selectedNodes.length > 0) {
+        const lastNode = selectedNodes[selectedNodes.length - 1];
+        lastNode.insertAfter(node);
+      } else {
+        const root = No();
+        root.append(node);
+      }
+
+      if (!node.getNextSibling()) {
+        const newParagraph = Li();
+        node.insertAfter(newParagraph);
+        newParagraph.selectStart();
+      }
+    }, { tag: Dn });
+  }
+
   async deleteSelectedNodes() {
     let focusNode = null;
 
@@ -9857,6 +9889,26 @@ class Contents {
   #createHtmlNodeWith(html) {
     const htmlNodes = m$1(this.editor, parseHtml(html));
     return htmlNodes[0] || Li()
+  }
+
+  #normalizeAttachmentAttributes(attachment) {
+    const contentType = attachment.contentType || attachment.content_type || attachment["content-type"] || "";
+    const fileName = attachment.fileName || attachment.filename || "";
+    const src = attachment.src || attachment.url || attachment.href || "";
+    const caption = attachment.caption || fileName;
+
+    return {
+      sgid: attachment.sgid || attachment.attachableSgid || attachment.attachable_sgid,
+      src,
+      previewable: attachment.previewable,
+      altText: attachment.altText || attachment.alt || fileName,
+      caption,
+      contentType,
+      fileName,
+      fileSize: attachment.fileSize || attachment.filesize,
+      width: attachment.width,
+      height: attachment.height
+    }
   }
 
   #shouldUploadFile(file) {
@@ -10507,6 +10559,47 @@ class LexicalEditorElement extends HTMLElement {
     return this.config.get("richText")
   }
 
+  // Selection preservation for native bridge dialogs
+  freezeSelection() {
+    this.frozenSelectionState = null;
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (yr(selection)) {
+        this.frozenSelectionState = {
+          anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
+          focus: { key: selection.focus.key, offset: selection.focus.offset }
+        };
+      }
+    });
+  }
+
+  thawSelection() {
+    const frozenSelectionState = this.frozenSelectionState;
+    this.frozenSelectionState = null;
+    if (!frozenSelectionState) return this.focus()
+
+    // If the original nodes were removed (e.g., content cleared), restoring the
+    // frozen selection can leave Lexical in a broken state. Only restore when valid.
+    let canRestore = false;
+    this.editor.getEditorState().read(() => {
+      const anchorNode = xo(frozenSelectionState.anchor.key);
+      const focusNode = xo(frozenSelectionState.focus.key);
+      canRestore = Boolean(anchorNode?.isAttached() && focusNode?.isAttached());
+    });
+
+    if (canRestore) {
+      this.editor.update(() => {
+        const selection = Lr();
+        if (yr(selection)) {
+          selection.anchor.set(frozenSelectionState.anchor.key, frozenSelectionState.anchor.offset, "text");
+          selection.focus.set(frozenSelectionState.focus.key, frozenSelectionState.focus.offset, "text");
+        }
+      });
+    }
+
+    this.focus();
+  }
+
   // TODO: Deprecate `single-line` attribute
   get isSingleLineMode() {
     return this.hasAttribute("single-line")
@@ -10531,6 +10624,8 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
+    // Clearing/replacing content can invalidate any preserved selection keys.
+    this.frozenSelectionState = null;
     this.editor.update(() => {
       ns(zn);
       const root = No();
@@ -10704,7 +10799,75 @@ class LexicalEditorElement extends HTMLElement {
       this.#internalFormValue = this.value;
       this.#toggleEmptyStatus();
       this.#setValidity();
+      this.#dispatchAttributesChange();
     }));
+  }
+
+  #dispatchAttributesChange() {
+    let attributes = null;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const anchorNode = selection.anchor.getNode();
+      if (!anchorNode.getParent()) return
+
+      // Get link info
+      let inLink = false;
+      let linkHref = null;
+      let node = anchorNode;
+      while (node) {
+        if (w$2(node)) {
+          inLink = true;
+          linkHref = node.getURL();
+          break
+        }
+        node = node.getParent();
+      }
+
+      // Get block-level info
+      const topLevelElement = anchorNode.getTopLevelElementOrThrow();
+      const inQuote = Ot$2(topLevelElement);
+      const inHeading = It$2(topLevelElement);
+
+      // Get list type
+      const listType = getListType(anchorNode);
+
+      // Get table info
+      const tableCellNode = Be$1(anchorNode);
+      const tableNode = tableCellNode ? Qt(tableCellNode) : null;
+      const inTable = tableNode !== null;
+      const tableRows = tableNode?.getChildrenSize() ?? null;
+      const tableColumns = tableNode?.getFirstChild()?.getChildrenSize() ?? null;
+
+      // Only include truthy attributes - false/undefined values mean "enabled but not active"
+      // iOS interprets false as "disabled", so we must omit inactive attributes
+      attributes = {};
+      if (selection.hasFormat("bold")) attributes.bold = true;
+      if (selection.hasFormat("italic")) attributes.italic = true;
+      if (selection.hasFormat("strikethrough")) attributes.strikethrough = true;
+      const inCode = X$1(topLevelElement) || selection.hasFormat("code");
+      if (inCode) attributes.code = true;
+      if (isSelectionHighlighted(selection)) attributes.highlight = true;
+      if (inLink) {
+        attributes.link = true;
+        if (linkHref) attributes.href = linkHref;
+      }
+      if (inQuote) attributes.quote = true;
+      if (inHeading) attributes.heading = true;
+      if (listType === "bullet") attributes["unordered-list"] = true;
+      if (listType === "number") attributes["ordered-list"] = true;
+      if (inTable) {
+        attributes.table = true;
+        if (tableRows) attributes.tableRows = tableRows;
+        if (tableColumns) attributes.tableColumns = tableColumns;
+      }
+    });
+
+    if (attributes) {
+      dispatch(this, "lexxy:attributes-change", { attributes });
+    }
   }
 
   #clearCachedValues() {
@@ -10796,6 +10959,7 @@ class LexicalEditorElement extends HTMLElement {
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
+      this.#dispatchAttributesChange();
       dispatch(this, "lexxy:focus");
       this.currentlyFocused = true;
     }
@@ -10879,6 +11043,7 @@ class LexicalEditorElement extends HTMLElement {
 
   #reset() {
     this.#unregisterHandlers();
+    this.frozenSelectionState = null;
 
     if (this.editorContentElement) {
       this.editorContentElement.remove();
@@ -11554,12 +11719,15 @@ var TableIcons = {
 };
 
 class TableTools extends HTMLElement {
+  #isExternallyHidden = false
+
   connectedCallback() {
     this.tableController = new TableController(this.#editorElement);
 
     this.#setUpButtons();
     this.#monitorForTableSelection();
     this.#registerKeyboardShortcuts();
+    this.#registerExternalEvents();
   }
 
   disconnectedCallback() {
@@ -11569,6 +11737,7 @@ class TableTools extends HTMLElement {
     this.unregisterUpdateListener = null;
 
     this.removeEventListener("keydown", this.#handleToolsKeydown);
+    this.#unregisterExternalEvents();
 
     this.tableController?.destroy();
     this.tableController = null;
@@ -11707,6 +11876,40 @@ class TableTools extends HTMLElement {
     }
   }
 
+  #registerExternalEvents() {
+    this.#editorElement.addEventListener("lexxy:table-command", this.#handleTableCommandEvent);
+    this.#editorElement.addEventListener("lexxy:table-tools-visibility", this.#handleVisibilityEvent);
+  }
+
+  #unregisterExternalEvents() {
+    this.#editorElement.removeEventListener("lexxy:table-command", this.#handleTableCommandEvent);
+    this.#editorElement.removeEventListener("lexxy:table-tools-visibility", this.#handleVisibilityEvent);
+  }
+
+  #handleTableCommandEvent = (event) => {
+    const { command, customIndex } = event.detail || {};
+    if (!command || !this.tableController.currentTableNode) return
+
+    this.tableController.executeTableCommand(command, customIndex ?? null);
+    if (!this.#isExternallyHidden) {
+      this.#update();
+    }
+  }
+
+  #handleVisibilityEvent = (event) => {
+    const visible = event.detail?.visible !== false;
+    this.#isExternallyHidden = !visible;
+
+    if (this.#isExternallyHidden) {
+      this.#hide();
+      return
+    }
+
+    if (this.tableController.currentTableNode) {
+      this.#show();
+    }
+  }
+
   #handleEscapeKey() {
     const cell = this.tableController.currentCell;
     if (!cell) return
@@ -11777,6 +11980,10 @@ class TableTools extends HTMLElement {
   }
 
   #show() {
+    if (this.#isExternallyHidden) {
+      this.style.display = "none";
+      return
+    }
     this.style.display = "flex";
     this.#update();
   }
