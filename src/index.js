@@ -14,4 +14,5 @@ export { default as Extension } from "./extensions/lexxy_extension"
 // legacy export for <=v0.7
 export { highlightCode as highlightAll } from "./helpers/code_highlighting_helper"
 
+// Pushing elements definition to after the current call stack to allow global configuration to take place first
 setTimeout(defineElements, 0)
