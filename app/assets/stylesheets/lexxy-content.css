@@ -262,7 +262,7 @@
   background: var(--lexxy-color-ink-lightest);
   border: 1px dashed var(--lexxy-color-ink-lighter);
   border-radius: var(--lexxy-radius);
-  display: grid;
+  display: flex;
   gap: var(--gallery-gap);
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   margin: 0;
