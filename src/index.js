@@ -1,7 +1,7 @@
 import "./config/prism"
 import "./config/dom_purify"
 
-import { start } from "./elements"
+import { defineElements } from "./elements"
 
 import Lexxy from "./config/lexxy"
 
@@ -14,4 +14,4 @@ export { default as Extension } from "./extensions/lexxy_extension"
 // legacy export for <=v0.7
 export { highlightCode as highlightAll } from "./helpers/code_highlighting_helper"
 
-setTimeout(start, 0)
+setTimeout(defineElements, 0)

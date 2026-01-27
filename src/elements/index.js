@@ -7,7 +7,7 @@ import Prompt from "./prompt"
 import CodeLanguagePicker from "./code_language_picker"
 import TableTools from "./table/table_tools"
 
-export function start() {
+export function defineElements() {
   const elements = {
     "lexxy-toolbar": Toolbar,
     "lexxy-editor": Editor,
