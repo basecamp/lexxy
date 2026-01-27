@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -218,7 +218,6 @@ export class LexicalEditorElement extends HTMLElement {
   #initialize() {
     this.#synchronizeWithChanges()
     this.#registerComponents()
-    this.#listenForInvalidatedNodes()
     this.#handleEnter()
     this.#registerFocusEvents()
     this.#attachDebugHooks()
@@ -396,21 +395,6 @@ export class LexicalEditorElement extends HTMLElement {
     registerCodeHighlighting(this.editor)
     this.codeLanguagePicker = createElement("lexxy-code-language-picker")
     this.append(this.codeLanguagePicker)
-  }
-
-  #listenForInvalidatedNodes() {
-    this.editor.getRootElement().addEventListener("lexxy:internal:invalidate-node", (event) => {
-      const { key, values } = event.detail
-
-      this.editor.update(() => {
-        const node = $getNodeByKey(key)
-
-        if (node instanceof ActionTextAttachmentNode) {
-          const updatedNode = node.getWritable()
-          Object.assign(updatedNode, values)
-        }
-      })
-    })
   }
 
   #handleEnter() {
