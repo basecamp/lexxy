@@ -40,14 +40,14 @@ export class ImageGalleryNode extends ElementNode {
 
   select(anchorOffset, focusOffset) {
     console.debug("select", anchorOffset, focusOffset)
-    if (false && anchorOffset === undefined && focusOffset === undefined) {
+    if (anchorOffset === undefined && focusOffset === undefined) {
       return this.selectNext(0, 0)
     }
     if (anchorOffset === 0 && focusOffset === 0) {
       return this.selectPrevious()
     }
     const childrenSize = this.getChildrenSize()
-    if (false && anchorOffset === childrenSize || focusOffset === childrenSize) {
+    if (anchorOffset === childrenSize || focusOffset === childrenSize) {
       return this.selectNext(0, 0)
     } else {
       return super.select(anchorOffset, focusOffset)
