@@ -367,4 +367,3 @@ export class TableController {
     return true
   }
 }
-
