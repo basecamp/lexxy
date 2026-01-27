@@ -19,8 +19,6 @@ export function start() {
   }
 
   Object.entries(elements).forEach(([ name, element ]) => {
-    if (!customElements.get(name)) {
-      customElements.define(name, element)
-    }
+    customElements.define(name, element)
   })
 }
