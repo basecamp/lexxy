@@ -31,6 +31,7 @@ export class ImageGalleryNode extends ElementNode {
     const p = document.createElement("p")
     p.className = "attachment-gallery"
     p.classList.add("lexxy-image-gallery")
+    p.style = "display: block; cursor: default; position: relative;"
     return p
   }
 
