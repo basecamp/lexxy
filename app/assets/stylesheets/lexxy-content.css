@@ -274,6 +274,15 @@
   }
 }
 
+:where(figure:has(audio)) {
+  padding: 0.5em;
+
+  audio {
+    margin: auto;
+    width: 600px;
+  }
+}
+
 :where(.attachment__caption) {
   color: var(--lexxy-color-text-subtle);
   font-size: var(--lexxy-text-small);

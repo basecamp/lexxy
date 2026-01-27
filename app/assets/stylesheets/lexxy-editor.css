@@ -726,10 +726,8 @@
 @keyframes pulse {
 
   0% { box-shadow: 0 0 0 0 var(--lexxy-rec-color), 0 0 0 0 var(--lexxy-rec-color); }
-  30% { box-shadow: 0 0 0 0 var(--lexxy-rec-color), 0 0 0 0 var(--lexxy-rec-color); }
-  40% { box-shadow: 0 0 0 0.25em var(--lexxy-rec-color), 0 0 0 0 var(--lexxy-rec-color); }
-  60% { box-shadow: 0 0 0 1em transparent, 0 0 0 0.25em var(--lexxy-rec-color); }
-  80% { box-shadow: 0 0 0 1em transparent, 0 0 0 1em transparent; }
+  40% { box-shadow: 0 0 0 1em transparent, 0 0 0 0 var(--lexxy-rec-color); }
+  90% { box-shadow: 0 0 0 1em transparent, 0 0 0 1em transparent; }
   100% { box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent; }
 }
 

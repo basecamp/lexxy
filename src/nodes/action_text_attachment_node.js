@@ -206,11 +206,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
   
   #createDOMForAudio() {
-    const figure = createElement("figure", { className: "attachment audio", "data-lexxy-decorator": true })
     const audio = createElement("audio", { src: this.src, controls: true, autoplay: false, loop: false, muted: false, preload: "metadata" })
-    figure.appendChild(audio)
 
-    return figure
+    return audio
   }
 
   #createDOMForFile() {

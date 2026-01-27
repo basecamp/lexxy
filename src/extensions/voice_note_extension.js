@@ -1,6 +1,7 @@
 import LexxyExtension from "./lexxy_extension"
 import { createElement, dispatch } from "../helpers/html_helper"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { $createParagraphNode, $createTextNode, $getRoot } from "lexical"
 
 export const INSERT_VOICE_NOTE_COMMAND = "insertVoiceNote"
 
@@ -14,23 +15,12 @@ export default class VoiceNoteExtension extends LexxyExtension {
 
   constructor(editorElement) {
     super(editorElement)
-    this.initializeToolbar(this.editorElement.toolbarElement)
 
     this.editor = this.editorElement.editor
     this.contents = this.editorElement.contents
-  }
 
-  #insertVoiceNote(src) {
-    this.editor.update(() => {
-      console.log("inserting voice note", src)
-      const audioNode = new ActionTextAttachmentNode({
-        tagName: "audio",
-        src: src,
-        contentType: "audio/*"
-      })
-      this.contents.insertAtCursorEnsuringLineBelow(audioNode)
-      this.editor.focus()
-    })
+    // This should be called automatically by the editor...
+    this.initializeToolbar(this.editorElement.toolbarElement)
   }
 
   initializeToolbar(lexxyToolbar) {
@@ -48,6 +38,31 @@ export default class VoiceNoteExtension extends LexxyExtension {
 
     this.editorElement.addEventListener("lexxy:voice-note:recording", this.#handleRecording.bind(this))
     this.editorElement.addEventListener("lexxy:voice-note:stopped", this.#handleStopped.bind(this))
+  }
+
+  #insertRecordingPlaceholder() {
+    this.editor.update(() => {
+      $getRoot().clear()
+      const paragraphNode = $createParagraphNode()
+      paragraphNode.append($createTextNode("[ Recording... ]"))
+      this.contents.insertAtCursorEnsuringLineBelow(paragraphNode)
+      this.editor.focus()
+    })
+  }
+
+  #insertVoiceNote(src) {
+    this.editor.update(() => {
+      this.editor.value = ""
+      console.log("inserting voice note", src)
+      const audioNode = new ActionTextAttachmentNode({
+        tagName: "audio",
+        src: src,
+        contentType: "audio/*"
+      })
+      $getRoot().clear()
+      this.contents.insertAtCursorEnsuringLineBelow(audioNode)
+      this.editor.focus()
+    })
   }
 
   #createButton() {
@@ -80,6 +95,7 @@ export default class VoiceNoteExtension extends LexxyExtension {
 
   #handleRecording() {
     this.button.classList.add("lexxy-voice-note-button--recording")
+    this.#insertRecordingPlaceholder()
   }
 
   #handleStopped() {
