@@ -50,6 +50,16 @@ class PastesWithStylesTest < ApplicationSystemTestCase
     assert_canonicalized_to "color: var(--highlight-1);background-color: var(--highlight-bg-1)"
   end
 
+  test "canonicalizes styles in mark-up sent as plain-text" do
+    find_editor.paste %(some <span style='color: purple; background-color: rgba(229, 223, 6, 0.3);'>styled text</span>)
+    assert_canonicalized_to "background-color: var(--highlight-bg-1)"
+  end
+
+  test "canonicalizes styles in <span>" do
+    find_editor.paste "styled text", html: %(some <span style="color: purple; background-color: rgba(229, 223, 6, 0.3);">styled text</span>)
+    assert_canonicalized_to "background-color: var(--highlight-bg-1)"
+  end
+
   test "preserves non-canonical styles loaded from database" do
     post = posts(:empty)
     existing_styled_html = '<p>some <mark style="color: purple;">existing text</mark></p>'

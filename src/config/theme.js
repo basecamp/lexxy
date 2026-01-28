@@ -10,6 +10,8 @@ export default {
   tableCellSelected: "lexxy-content__table-cell--selected",
   tableSelection: "lexxy-content__table--selection",
   tableScrollableWrapper: "lexxy-content__table-wrapper",
+  tableCellHighlight: "lexxy-content__table-cell--highlight",
+  tableCellFocus: "lexxy-content__table-cell--focus",
   list: {
     nested: {
       listitem: "lexxy-nested-listitem",

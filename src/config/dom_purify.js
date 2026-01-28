@@ -42,6 +42,7 @@ export function buildConfig() {
   return {
     ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(Lexxy.global.get("attachmentTagName")),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
+    ADD_URI_SAFE_ATTR: [ "caption", "filename" ],
     SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
   }
 }
