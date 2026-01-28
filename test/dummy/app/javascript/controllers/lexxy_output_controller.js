@@ -5,15 +5,41 @@ import htmlParser from "prettier/parser-html"
 
 export default class extends Controller {
   static targets = [ "editor", "outputHtml", "outputText" ]
+  static values = { template: String }
 
   connect() {
-    this.refresh()
+    // Load template from URL if specified (and different from initial content)
+    const templateFromUrl = this.getTemplateFromUrl()
+    if (templateFromUrl && templateFromUrl !== this.templateValue) {
+      this.loadContentByName(templateFromUrl)
+    } else {
+      this.refresh()
+    }
+  }
+
+  getTemplateFromUrl() {
+    // Check for /sandbox/:template path format
+    const pathMatch = window.location.pathname.match(/^\/sandbox\/([^\/]+)$/)
+    if (pathMatch) {
+      return pathMatch[1]
+    }
+    return null
+  }
+
+  updateUrl(template) {
+    const newPath = template === "default" ? "/sandbox" : `/sandbox/${template}`
+    window.history.replaceState({}, "", newPath)
   }
 
   async loadContent({ params: { partial } }) {
+    await this.loadContentByName(partial)
+  }
+
+  async loadContentByName(partial) {
     const response = await fetch(`/demo_contents/${partial}`)
     const html = await response.text()
     this.editorTarget.value = html.trim()
+    this.updateUrl(partial)
     await new Promise(resolve => requestAnimationFrame(resolve))
     this.refresh()
   }
