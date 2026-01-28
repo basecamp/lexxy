@@ -1,19 +1,19 @@
 <% content_for :title, "Lexxy Sandbox" %>
 
-<main data-controller="lexxy-output" data-action="lexxy:change->lexxy-output#refresh">
+<main data-controller="lexxy-output" data-action="lexxy:change->lexxy-output#refresh" data-lexxy-output-template-value="<%= @template %>">
   <section class="input">
     <h2>Editor</h2>
     <div class="editor-value-buttons">
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="default">Default</button>
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="tables">Tables</button>
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="code_blocks">Code blocks</button>
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="lists">Lists</button>
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="highlights">Color highlights</button>
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="images">Images</button>
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="empty">Empty</button>
+      <button type="button" data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="default">Default</button>
+      <button type="button" data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="tables">Tables</button>
+      <button type="button" data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="code_blocks">Code blocks</button>
+      <button type="button" data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="lists">Lists</button>
+      <button type="button" data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="highlights">Color highlights</button>
+      <button type="button" data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="images">Images</button>
+      <button type="button" data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="empty">Empty</button>
     </div>
     <div>
-      <%= rich_text_area_tag :sandbox, render("default"), placeholder: "Write something...", data: { lexxy_output_target: "editor" } do %>
+      <%= rich_text_area_tag :sandbox, render(@template), placeholder: "Write something...", data: { lexxy_output_target: "editor" } do %>
         <lexxy-prompt trigger="@" src="<%= people_path %>" name="mention"></lexxy-prompt>
         <lexxy-prompt trigger=":" insert-editable-text>
           <lexxy-prompt-item search="joy laughing face">
