@@ -18,7 +18,7 @@ import { WrappedTableNode } from "../nodes/wrapped_table_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
-import { sanitize } from "../helpers/sanitization_helper"
+import { sanitize, normalizeEmptyContent } from "../helpers/sanitization_helper"
 import { registerHeaderBackgroundTransform } from "../helpers/table_helper"
 import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
@@ -29,7 +29,6 @@ import Highlighter from "../editor/highlighter"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
-import { normalizeEmptyContent } from "../helpers/html_normalization_helper"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -172,9 +171,8 @@ export default class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = normalizeEmptyContent(
-          sanitize($generateHtmlFromNodes(this.editor, null))
-        )
+        const html = sanitize($generateHtmlFromNodes(this.editor, null))
+        this.cachedValue = normalizeEmptyContent(html)
       })
     }
 
