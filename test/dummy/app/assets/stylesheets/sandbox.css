@@ -179,10 +179,12 @@ section > h2 {
   margin-bottom: 1rem;
   overflow: hidden;
 
-  button {
+  button,
+  .button {
     background: var(--lexxy-color-canvas);
     border: 1px solid var(--lexxy-color-ink-lighter);
     border-radius: 0.25rem;
+    text-decoration: none;
     color: var(--sandbox-text-color);
     padding: 0.5rem 1rem;
     cursor: pointer;
