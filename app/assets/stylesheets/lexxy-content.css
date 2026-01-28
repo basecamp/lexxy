@@ -254,12 +254,14 @@
       }
     }
   }
-
-  /* Image Gallery */
 }
 
 /* Attachments
 /* ------------------------------------------------------------------------ */
+
+:where(p:has(.attachment)) {
+  text-align: center;
+}
 
 :where(.attachment) {
   block-size: auto;
@@ -279,27 +281,6 @@
 :where(.attachment__caption) {
   color: var(--lexxy-color-text-subtle);
   font-size: var(--lexxy-text-small);
-
-  textarea {
-    background: var(--lexxy-color-canvas);
-    border: none;
-    color: inherit;
-    font-family: inherit;
-    inline-size: 100%;
-    max-inline-size: 100%;
-    resize: none;
-    text-align: center;
-
-    &:focus {
-      outline: none;
-    }
-
-    @supports (field-sizing: content) {
-      field-sizing: content;
-      inline-size: auto;
-      min-inline-size: 20ch;
-    }
-  }
 }
 
 :where(.attachment__icon) {
@@ -323,6 +304,7 @@
   border-radius: var(--lexxy-radius);
 
   img, video {
+    border-radius: var(--lexxy-radius);
     block-size: auto;
     display: block;
     margin-inline: auto;
@@ -406,6 +388,30 @@
   .attachment--xlsx
 ) {
   --lexxy-attachment-icon-color: var(--lexxy-color-green);
+}
+
+
+/* Image galleries */
+/* ------------------------------------------------------------------------ */
+
+:where(.attachment-gallery) {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(20ch, 1fr));
+  justify-content: center;
+  position: relative;
+  padding: 0;
+
+  .attachment {
+    padding: 0.5ch;
+
+    img {
+      aspect-ratio: 4 / 3;
+      block-size: auto;
+      inline-size: 100%;
+      object-fit: cover;
+    }
+  }
 }
 
 /* Horizontal divider */

@@ -28,10 +28,9 @@ export class ImageGalleryNode extends ElementNode {
   }
 
   createDOM() {
-    const p = document.createElement("p")
-    p.className = this.#galleryClassNames
-    p.style = "display: block; cursor: default; position: relative;"
-    return p
+    const div = document.createElement("div")
+    div.className = this.#galleryClassNames
+    return div
   }
 
   updateDOM(_prevNode, dom) {
@@ -76,7 +75,7 @@ export class ImageGalleryNode extends ElementNode {
   }
 
   get #galleryClassNames () {
-    return "attachment-gallery attachment-gallery--" + this.getChildrenSize()
+    return "attachment-gallery"
   }
 }
 
