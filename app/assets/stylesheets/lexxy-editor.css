@@ -17,7 +17,7 @@
   position: relative;
   transition: opacity 150ms;
 
-  p.ephemeral-paragraph {
+  p.provisional-paragraph {
     display: block;
 
     &.hidden {

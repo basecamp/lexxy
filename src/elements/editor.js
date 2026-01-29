@@ -27,6 +27,7 @@ import Highlighter from "../editor/highlighter"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { TrixContentLexicalExtension } from "../lexical_extensions/trix_content_lexical_extension"
 import { TablesLexicalExtension } from "../lexical_extensions/tables_lexical_extension"
+import { ProvisionalParagraphExtension } from "../lexical_extensions/provisional_paragraph_extension"
 
 import AttachmentsExtension from "../extensions/attachments_extension.js"
 
@@ -249,12 +250,13 @@ export default class LexicalEditorElement extends HTMLElement {
     this.editorContentElement ||= this.#createEditorContentElement()
 
     const editor = buildEditorFromExtensions({
-      name: "lexxy/core",
-      namespace: "Lexxy",
-      theme: theme,
-      nodes: this.#lexicalNodes
-    },
-      ...this.#lexicalExtensions
+        name: "lexxy/core",
+        namespace: "Lexxy",
+        theme: theme,
+        nodes: this.#lexicalNodes
+      },
+      ...this.#lexicalExtensions,
+      ProvisionalParagraphExtension
     )
 
     editor.setRootElement(this.editorContentElement)
