@@ -1,11 +1,13 @@
-import { $isRangeSelection, ElementNode } from "lexical"
-import { $descendantsMatching, $getNearestNodeOfType, $wrapNodeInElement } from "@lexical/utils"
+import { $createParagraphNode, $getSelection, $splitNode, ElementNode } from "lexical"
+import { $descendantsMatching, $firstToLastIterator, $getNearestNodeOfType, $unwrapNode, $wrapNodeInElement } from "@lexical/utils"
 
 import { $isActionTextAttachmentNode, ActionTextAttachmentNode } from "./action_text_attachment_node"
 
 export class ImageGalleryNode extends ElementNode {
   $config() {
-    return this.config("image_gallery", { extends: ElementNode })
+    return this.config("image_gallery", {
+      extends: ElementNode,
+    })
   }
 
   static importDOM() {
@@ -27,6 +29,13 @@ export class ImageGalleryNode extends ElementNode {
     }
   }
 
+  static transform() {
+    return (gallery) => {
+      gallery.unwrapEmptyOrSingleChildNode()
+      gallery.splitAroundInvalidChild()
+    }
+  }
+
   createDOM() {
     const div = document.createElement("div")
     div.className = this.#galleryClassNames
@@ -40,18 +49,20 @@ export class ImageGalleryNode extends ElementNode {
 
   select(anchorOffset, focusOffset) {
     console.debug("select", anchorOffset, focusOffset)
-    if (anchorOffset === undefined && focusOffset === undefined) {
+    if (anchorOffset === undefined) {
       return this.selectNext(0, 0)
-    }
-    if (anchorOffset === 0 && focusOffset === 0) {
+    } else if (anchorOffset === 0) {
       return this.selectPrevious()
-    }
-    const childrenSize = this.getChildrenSize()
-    if (anchorOffset === childrenSize || focusOffset === childrenSize) {
-      return this.selectNext(0, 0)
     } else {
-      return super.select(anchorOffset, focusOffset)
+      // adjust so we can select forwards/backwards
+      const targetChild = this.getChildAtIndex(anchorOffset)
+      const selectionTarget = targetChild.isSelected($getSelection()) ? targetChild.getPreviousSibling() : targetChild
+      return selectionTarget.select()
     }
+  }
+
+  canInsertTextBefore() {
+    return false
   }
 
   canInsertTextAfter() {
@@ -72,6 +83,28 @@ export class ImageGalleryNode extends ElementNode {
     const div = document.createElement("div")
     div.className = this.#galleryClassNames
     return { element: div }
+  }
+
+  unwrapEmptyOrSingleChildNode() {
+    if (this.getChildrenSize() <= 1) {
+      $unwrapNode(this)
+    }
+  }
+
+  splitAroundInvalidChild() {
+    for (const child of $firstToLastIterator(this)) {
+      if (!this.validChild(child)) {
+        const poppedNode = child.isParentRequired() ? $wrapNodeInElement(child, $createParagraphNode) : child
+        const [ topGallery ] = $splitNode(this, poppedNode.getIndexWithinParent())
+        topGallery.insertAfter(poppedNode)
+        poppedNode.selectEnd()
+        break
+      }
+    }
+  }
+
+  validChild(node) {
+    return $isActionTextAttachmentNode(node) && node.isPreviewableAttachment
   }
 
   get #galleryClassNames () {
