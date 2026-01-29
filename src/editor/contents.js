@@ -306,7 +306,8 @@ export default class Contents {
       if (this.#selection.isOnPreviewableImage && imageUploads.length) {
         const { node } = this.#selection.selectedNodeWithOffset()
         const gallery = $findOrCreateGalleryFor(node)
-        gallery.append(...imageUploads)
+        gallery.splice(node.getIndexWithinParent() + 1, 0, imageUploads)
+        imageUploads.at(-1).select
       } else if (imageUploads.length > 1) {
         const gallery = $createImageGalleryNode()
         this.insertAtCursorEnsuringLineBelow(gallery)
