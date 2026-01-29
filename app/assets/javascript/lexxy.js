@@ -7429,6 +7429,84 @@ async function loadFileIntoImage(file, image) {
   })
 }
 
+async function optimizeImage(file, config = {}) {
+    if (!file.type.startsWith("image/")) return null
+
+    const { maxWidth = Infinity, maxHeight = Infinity, quality = 0.8 } = config;
+
+    const configFormat = config.format?.toLowerCase().trim();
+    const originalFormat = getOriginalFormat(file);
+    const effectiveFormat = configFormat ?? originalFormat;
+
+    const { mimeType, extension } = getMimeAndExtension(effectiveFormat);
+
+    const originalImg = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    originalImg.src = objectUrl;
+    await originalImg.decode();
+    URL.revokeObjectURL(objectUrl);
+
+    const scale = Math.min(1, maxWidth / originalImg.width, maxHeight / originalImg.height);
+    const width = Math.round(originalImg.width * scale);
+    const height = Math.round(originalImg.height * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(originalImg, 0, 0, width, height);
+
+    const previewUrl = canvas.toDataURL(mimeType, quality);
+
+    const optimizedBlob = await new Promise(resolve => {
+        canvas.toBlob(resolve, mimeType, quality);
+    });
+
+    if (!optimizedBlob) return null
+
+    const baseName = file.name.replace(/\.[^/.]+$/, "");
+    const newFilename = `${baseName}.${extension}`;
+
+    const optimizedFile = new File([ optimizedBlob ], newFilename, { type: optimizedBlob.type });
+
+    return {
+        optimizedFile,
+        previewUrl,
+        width,
+        height,
+        filename: newFilename,
+        size: optimizedBlob.size,
+    }
+}
+
+function getOriginalFormat(file) {
+    const type = file.type.toLowerCase();
+    const ext = file.name.split(".").pop()?.toLowerCase();
+
+    if (type === "image/jpeg" || ext === "jpg" || ext === "jpeg") return "jpeg"
+    if (type === "image/png" || ext === "png") return "png"
+    if (type === "image/webp" || ext === "webp") return "webp"
+    if (type === "image/avif" || ext === "avif") return "avif"
+
+    return "webp"
+}
+
+function getMimeAndExtension(format) {
+    switch (format) {
+        case "jpeg":
+        case "jpg":
+            return { mimeType: "image/jpeg", extension: "jpg" }
+        case "png":
+            return { mimeType: "image/png", extension: "png" }
+        case "webp":
+            return { mimeType: "image/webp", extension: "webp" }
+        case "avif":
+            return { mimeType: "image/avif", extension: "avif" }
+        default:
+            return { mimeType: "image/webp", extension: "webp" }
+    }
+}
+
 class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   static getType() {
     return "action_text_attachment_upload"
@@ -7462,20 +7540,26 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   createDOM() {
     if (this.uploadError) return this.#createDOMForError()
 
-    // This side-effect is trigged on DOM load to fire only once and avoid multiple
-    // uploads through cloning. The upload is guarded from restarting in case the
-    // node is reloaded from saved state such as from history.
-    this.#startUploadIfNeeded();
-
     const figure = this.createAttachmentFigure();
 
     if (this.isPreviewableAttachment) {
       const img = figure.appendChild(this.#createDOMForImage());
 
-      // load file locally to set dimensions and prevent vertical shifting
-      loadFileIntoImage(this.file, img).then(img => this.#setDimensionsFrom(img));
+      const optimizationConfig = Lexxy.global.get("imageOptimization") ?? { enabled: false };
+      const optimizationEnabled = optimizationConfig.enabled && this.file.type.startsWith("image/");
+
+      if (optimizationEnabled) {
+        this.#loadAndOptimizePreview(img, optimizationConfig).finally(() => {
+          this.#setDimensionsFromImage(img);
+          this.#startUploadIfNeeded();
+        });
+      } else {
+        loadFileIntoImage(this.file, img).then(() => this.#setDimensionsFromImage(img));
+        this.#startUploadIfNeeded();
+      }
     } else {
       figure.appendChild(this.#createDOMForFile());
+      this.#startUploadIfNeeded();
     }
 
     figure.appendChild(this.#createCaption());
@@ -7489,7 +7573,7 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
     if (prevNode.progress !== this.progress) {
       const progress = dom.querySelector("progress");
-      progress.value = this.progress ?? 0;
+      if (progress) progress.value = this.progress ?? 0;
     }
 
     return false
@@ -7554,7 +7638,7 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return createElement("progress", { value: this.progress ?? 0, max: 100 })
   }
 
-  #setDimensionsFrom({ width, height }) {
+  #setDimensionsFromImage({ naturalWidth: width, naturalHeight: height }) {
     if (this.#hasDimensions) return
 
     this.editor.update(() => {
@@ -7568,6 +7652,40 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return Boolean(this.width && this.height)
   }
 
+  async #loadAndOptimizePreview(image, config) {
+    try {
+      const result = await optimizeImage(this.file, config);
+
+      if (!result) {
+        return loadFileIntoImage(this.file, image)
+      }
+
+      this.optimizedFile = result.optimizedFile;
+      image.src = result.previewUrl;
+
+      return new Promise((resolve) => {
+        const cleanup = () => {
+          image.onload = null;
+          image.onerror = null;
+          resolve();
+        };
+
+        if (image.complete && image.naturalWidth > 0) {
+          cleanup();
+        } else {
+          image.onload = cleanup;
+          image.onerror = () => {
+            console.warn("Optimized preview failed to load, falling back");
+            loadFileIntoImage(this.file, image).then(cleanup);
+          };
+        }
+      })
+    } catch (err) {
+      console.warn("Optimization failed:", err);
+      return loadFileIntoImage(this.file, image)
+    }
+  }
+
   async #startUploadIfNeeded() {
     if (this.#uploadStarted) return
 
@@ -7575,7 +7693,9 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
     const { DirectUpload } = await import('@rails/activestorage');
 
-    const upload = new DirectUpload(this.file, this.uploadUrl, this);
+    const fileToUpload = this.optimizedFile ?? this.file;
+    const upload = new DirectUpload(fileToUpload, this.uploadUrl, this);
+
     upload.delegate = this.#createUploadDelegate();
     upload.create((error, blob) => {
       if (error) {
@@ -7593,7 +7713,7 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       directUploadWillCreateBlobWithXHR: (request) => {
         if (shouldAuthenticateUploads) request.withCredentials = true;
       },
-      directUploadWillStoreFileWithXHR: (request) => {
+      directUploadWillStoreFileWithXhr: (request) => {
         if (shouldAuthenticateUploads) request.withCredentials = true;
 
         const uploadProgressHandler = (event) => this.#handleUploadProgress(event);
@@ -7633,7 +7753,6 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const conversion = new AttachmentNodeConversion(this, blob);
     return conversion.toAttachmentNode()
   }
-
 }
 
 class AttachmentNodeConversion {
@@ -7646,7 +7765,9 @@ class AttachmentNodeConversion {
     return new ActionTextAttachmentNode({
       ...this.uploadNode,
       ...this.#propertiesFromBlob,
-      src: this.#src
+      src: this.#src,
+      width: this.uploadNode.width,
+      height: this.uploadNode.height
     })
   }
 
@@ -7668,8 +7789,8 @@ class AttachmentNodeConversion {
 
   get #blobSrc() {
     return this.uploadNode.blobUrlTemplate
-      .replace(":signed_id", this.blob.signed_id)
-      .replace(":filename", encodeURIComponent(this.blob.filename))
+        .replace(":signed_id", this.blob.signed_id)
+        .replace(":filename", encodeURIComponent(this.blob.filename))
   }
 }
 
