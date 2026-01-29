@@ -28,6 +28,7 @@ import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_atta
 import { TrixContentLexicalExtension } from "../lexical_extensions/trix_content_extension"
 
 import GalleryExtension from "../extensions/gallery_extension"
+import { EphemeralSelectionParagraphExtension } from "../lexical_extensions/ephemeral_paragraph_extension"
 
 export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -241,7 +242,8 @@ export default class LexicalEditorElement extends HTMLElement {
         theme: theme,
         nodes: this.#lexicalNodes
       },
-      ...this.#lexicalExtensions
+      ...this.#lexicalExtensions,
+      EphemeralSelectionParagraphExtension
     )
 
     editor.setRootElement(this.editorContentElement)

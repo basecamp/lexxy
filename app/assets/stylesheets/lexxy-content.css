@@ -37,6 +37,10 @@
     }
   }
 
+  p.ephemeral-paragraph.hidden {
+    display: none;
+  }
+
   .lexxy-content__italic {
     font-style: italic;
   }
