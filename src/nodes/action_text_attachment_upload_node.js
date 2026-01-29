@@ -1,9 +1,8 @@
 import Lexxy from "../config/lexxy"
-import { $getNodeByKey } from "lexical"
+import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { createElement } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
-import { HISTORY_MERGE_TAG } from "lexical"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 import { optimizeImage } from "../helpers/image_optimization_helper"
 
@@ -26,54 +25,87 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   constructor(node, key) {
-    const { file, uploadUrl, blobUrlTemplate, editor, progress } = node
+    const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError } = node
     super({ ...node, contentType: file.type }, key)
     this.file = file
     this.uploadUrl = uploadUrl
     this.blobUrlTemplate = blobUrlTemplate
-    this.src = null
-    this.editor = editor
-    this.progress = progress || 0
+    this.progress = progress ?? null
+    this.width = width
+    this.height = height
+    this.uploadError = uploadError
   }
 
   createDOM() {
+    if (this.uploadError) return this.#createDOMForError()
+
     const figure = this.createAttachmentFigure()
 
     if (this.isPreviewableAttachment) {
-      figure.appendChild(this.#createDOMForImage())
+      const img = figure.appendChild(this.#createDOMForImage())
+
+      const optimizationConfig = Lexxy.global.get("imageOptimization") ?? { enabled: false }
+      const optimizationEnabled = optimizationConfig.enabled && this.file.type.startsWith("image/")
+
+      if (optimizationEnabled) {
+        this.#loadAndOptimizePreview(img, optimizationConfig).finally(() => {
+          this.#setDimensionsFromImage(img)
+          this.#startUploadIfNeeded()
+        })
+      } else {
+        loadFileIntoImage(this.file, img).then(() => this.#setDimensionsFromImage(img))
+        this.#startUploadIfNeeded()
+      }
     } else {
       figure.appendChild(this.#createDOMForFile())
+      this.#startUploadIfNeeded()
     }
 
     figure.appendChild(this.#createCaption())
-
-    const progressBar = createElement("progress", { value: this.progress, max: 100 })
-    figure.appendChild(progressBar)
-
-    // We wait for images to download so that we can pass the dimensions down to the attachment. We do this
-    // so that we can render images in edit mode with the dimensions set, which prevent vertical layout shifts.
-    this.#loadFigure(figure).then(() => this.#startUpload(progressBar, figure))
+    figure.appendChild(this.#createProgressBar())
 
     return figure
   }
 
+  updateDOM(prevNode, dom) {
+    if (this.uploadError !== prevNode.uploadError) return true
+
+    if (prevNode.progress !== this.progress) {
+      const progress = dom.querySelector("progress")
+      if (progress) progress.value = this.progress ?? 0
+    }
+
+    return false
+  }
+
   exportDOM() {
     const img = document.createElement("img")
-    if (this.src) {
-      img.src = this.src
-    }
     return { element: img }
   }
 
   exportJSON() {
     return {
+      ...super.exportJSON(),
       type: "action_text_attachment_upload",
       version: 1,
-      progress: this.progress,
       uploadUrl: this.uploadUrl,
       blobUrlTemplate: this.blobUrlTemplate,
-      ...super.exportJSON()
+      progress: this.progress,
+      width: this.width,
+      height: this.height,
+      uploadError: this.uploadError
     }
+  }
+
+  get #uploadStarted() {
+    return this.progress !== null
+  }
+
+  #createDOMForError() {
+    const figure = this.createAttachmentFigure()
+    figure.classList.add("attachment--error")
+    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "file"}` }))
+    return figure
   }
 
   #createDOMForImage() {
@@ -101,125 +133,162 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return figcaption
   }
 
-  #loadFigure(figure) {
-    const image = figure.querySelector("img")
-    if (!image) {
-      return Promise.resolve()
-    }
-
-    const optimizationConfig = Lexxy.global.get("imageOptimization") ?? { enabled: false }
-    if (!optimizationConfig.enabled || !this.file.type.startsWith("image/")) {
-      return loadFileIntoImage(this.file, image)
-    }
-
-    return this.#optimizeAndSetPreview(image, figure, optimizationConfig)
+  #createProgressBar() {
+    return createElement("progress", { value: this.progress ?? 0, max: 100 })
   }
 
-  async #startUpload(progressBar, figure) {
+  #setDimensionsFromImage({ naturalWidth: width, naturalHeight: height }) {
+    if (this.#hasDimensions) return
+
+    this.editor.update(() => {
+      const writable = this.getWritable()
+      writable.width = width
+      writable.height = height
+    }, { tag: SILENT_UPDATE_TAGS })
+  }
+
+  get #hasDimensions() {
+    return Boolean(this.width && this.height)
+  }
+
+  async #loadAndOptimizePreview(image, config) {
+    try {
+      const result = await optimizeImage(this.file, config)
+
+      if (!result) {
+        return loadFileIntoImage(this.file, image)
+      }
+
+      this.optimizedFile = result.optimizedFile
+      image.src = result.previewUrl
+
+      return new Promise((resolve) => {
+        const cleanup = () => {
+          image.onload = null
+          image.onerror = null
+          resolve()
+        }
+
+        if (image.complete && image.naturalWidth > 0) {
+          cleanup()
+        } else {
+          image.onload = cleanup
+          image.onerror = () => {
+            console.warn("Optimized preview failed to load, falling back")
+            loadFileIntoImage(this.file, image).then(cleanup)
+          }
+        }
+      })
+    } catch (err) {
+      console.warn("Optimization failed:", err)
+      return loadFileIntoImage(this.file, image)
+    }
+  }
+
+  async #startUploadIfNeeded() {
+    if (this.#uploadStarted) return
+
+    this.#setUploadStarted()
+
     const { DirectUpload } = await import("@rails/activestorage")
-    const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads")
 
     const fileToUpload = this.optimizedFile ?? this.file
-
     const upload = new DirectUpload(fileToUpload, this.uploadUrl, this)
 
-    upload.delegate = {
+    upload.delegate = this.#createUploadDelegate()
+    upload.create((error, blob) => {
+      if (error) {
+        this.#handleUploadError(error)
+      } else {
+        this.#showUploadedAttachment(blob)
+      }
+    })
+  }
+
+  #createUploadDelegate() {
+    const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads")
+
+    return {
       directUploadWillCreateBlobWithXHR: (request) => {
         if (shouldAuthenticateUploads) request.withCredentials = true
       },
-      directUploadWillStoreFileWithXHR: (request) => {
+      directUploadWillStoreFileWithXhr: (request) => {
         if (shouldAuthenticateUploads) request.withCredentials = true
 
-        request.upload.addEventListener("progress", (event) => {
-          this.editor.update(() => {
-            progressBar.value = Math.round(event.loaded / event.total * 100)
-          })
-        })
+        const uploadProgressHandler = (event) => this.#handleUploadProgress(event)
+        request.upload.addEventListener("progress", uploadProgressHandler)
       }
     }
-
-    upload.create((error, blob) => {
-      if (error) {
-        this.#handleUploadError(figure)
-      } else {
-        this.#loadFigurePreviewFromBlob(blob, figure).then(() => {
-          this.#showUploadedAttachment(figure, blob)
-        })
-      }
-    })
   }
 
-  #handleUploadError(figure) {
-    figure.innerHTML = ""
-    figure.classList.add("attachment--error")
-    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "image"}` }))
+  #setUploadStarted() {
+    this.#setProgress(1)
   }
 
-  async #showUploadedAttachment(figure, blob) {
+  #handleUploadProgress(event) {
+    this.#setProgress(Math.round(event.loaded / event.total * 100))
+  }
+
+  #setProgress(progress) {
     this.editor.update(() => {
-      const image = figure.querySelector("img")
-
-      const src = this.blobUrlTemplate
-        .replace(":signed_id", blob.signed_id)
-        .replace(":filename", encodeURIComponent(blob.filename))
-      const latest = $getNodeByKey(this.getKey())
-      if (latest) {
-        latest.replace(new ActionTextAttachmentNode({
-          tagName: this.tagName,
-          sgid: blob.attachable_sgid,
-          src: blob.previewable ? blob.url : src,
-          altText: blob.filename,
-          contentType: blob.content_type,
-          fileName: blob.filename,
-          fileSize: blob.byte_size,
-          width: image?.naturalWidth,
-          previewable: blob.previewable,
-          height: image?.naturalHeight
-        }))
-      }
-    }, { tag: HISTORY_MERGE_TAG })
+      this.getWritable().progress = progress
+    }, { tag: SILENT_UPDATE_TAGS })
   }
 
-  async #optimizeAndSetPreview(image, figure, config) {
-    const result = await optimizeImage(this.file, config)
+  #handleUploadError(error) {
+    console.warn(`Upload error for ${this.file?.name ?? "file"}: ${error}`)
+    this.editor.update(() => {
+      this.getWritable().uploadError = true
+    }, { tag: SILENT_UPDATE_TAGS })
+  }
 
-    if (!result) {
-      return loadFileIntoImage(this.file, image)
-    }
+  async #showUploadedAttachment(blob) {
+    this.editor.update(() => {
+      this.replace(this.#toActionTextAttachmentNodeWith(blob))
+    }, { tag: SILENT_UPDATE_TAGS })
+  }
 
-    this.optimizedFile = result.optimizedFile
+  #toActionTextAttachmentNodeWith(blob) {
+    const conversion = new AttachmentNodeConversion(this, blob)
+    return conversion.toAttachmentNode()
+  }
+}
 
-    image.src = result.previewUrl
+class AttachmentNodeConversion {
+  constructor(uploadNode, blob) {
+    this.uploadNode = uploadNode
+    this.blob = blob
+  }
 
-    const figcaption = figure.querySelector(".attachment__caption")
-    if (figcaption) {
-      figcaption.querySelector(".attachment__name").textContent = result.filename
-      figcaption.querySelector(".attachment__size").textContent = bytesToHumanSize(result.size)
-    }
-
-    return new Promise((resolve) => {
-      if (image.complete) {
-        resolve()
-      } else {
-        image.onload = resolve
-      }
+  toAttachmentNode() {
+    return new ActionTextAttachmentNode({
+      ...this.uploadNode,
+      ...this.#propertiesFromBlob,
+      src: this.#src,
+      width: this.uploadNode.width,
+      height: this.uploadNode.height
     })
   }
 
-  async #loadFigurePreviewFromBlob(blob, figure) {
-    if (blob.previewable) {
-      return new Promise((resolve) => {
-        this.editor.update(() => {
-          const image = this.#createDOMForImage()
-          image.addEventListener("load", () => {
-            resolve()
-          })
-          image.src = blob.url
-          figure.insertBefore(image, figure.firstChild)
-        })
-      })
-    } else {
-      return Promise.resolve()
+  get #propertiesFromBlob() {
+    const { blob } = this
+    return {
+      sgid: blob.attachable_sgid,
+      altText: blob.filename,
+      contentType: blob.content_type,
+      fileName: blob.filename,
+      fileSize: blob.byte_size,
+      previewable: blob.previewable,
     }
+  }
+
+  get #src() {
+    return this.blob.previewable ? this.blob.url : this.#blobSrc
+  }
+
+  get #blobSrc() {
+    return this.uploadNode.blobUrlTemplate
+        .replace(":signed_id", this.blob.signed_id)
+        .replace(":filename", encodeURIComponent(this.blob.filename))
   }
 }
