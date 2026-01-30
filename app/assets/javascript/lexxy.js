@@ -4681,7 +4681,7 @@ const ALLOWED_HTML_TAGS = [ "a", "b", "blockquote", "br", "code", "em",
 
 const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",
   "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "presentation",
-  "previewable", "sgid", "src", "style", "title", "url", "width" ];
+  "previewable", "sgid", "src", "start", "style", "title", "url", "width" ];
 
 const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ];
 
