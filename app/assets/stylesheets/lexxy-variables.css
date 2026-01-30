@@ -33,6 +33,7 @@
   --lexxy-color-selected: var(--lexxy-color-accent-lightest);
   --lexxy-color-selected-hover: var(--lexxy-color-accent-light);
   --lexxy-color-selected-dark: var(--lexxy-color-blue);
+  --lexxy-color-selected-50: color-mix(in oklch, var(--lexxy-color-selected-dark) 50%, transparent);
   --lexxy-color-code-bg: var(--lexxy-color-ink-lightest);
 
   /* Text color highlights */
@@ -60,8 +61,12 @@
   --lexxy-color-table-header-bg: var(--lexxy-color-ink-lightest);
   --lexxy-color-table-cell-border: var(--lexxy-color-ink-lighter);
   --lexxy-color-table-cell-selected: var(--lexxy-color-selected);
-  --lexxy-color-table-cell-selected-border: highlight;
-  --lexxy-color-table-cell-selected-bg: highlight;
+  --lexxy-color-table-cell-selected-border: var(--lexxy-color-selected-dark);
+  --lexxy-color-table-cell-selected-bg: var(--lexxy-color-accent-lightest);
+  --lexxy-color-table-cell-add: var(--lexxy-color-selected-50);
+  --lexxy-color-table-cell-toggle: var(--lexxy-color-accent-lightest);
+  --lexxy-color-table-cell-remove: oklch(60% 0.15 27 / 0.1);
+  --lexxy-table-cell-add-size: 4px;
 
   /* Typography */
   --lexxy-font-base: system-ui, sans-serif;
@@ -71,10 +76,11 @@
 
   /* Focus ring */
   --lexxy-focus-ring-color: var(--lexxy-color-accent-dark);
-  --lexxy-focus-ring-offset: 0;
+  --lexxy-focus-ring-offset: -2px;
   --lexxy-focus-ring-size: 2px;
 
   /* Misc */
+  --lexxy-toolbar-button-size: 2lh;
   --lexxy-radius: 0.5ch;
   --lexxy-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   --lexxy-z-popup: 1000;

@@ -8,6 +8,7 @@
   }
 
   --lexxy-toolbar-gap: 2px;
+  --lexxy-toolbar-spacing: 0.5ch;
 
   border: 1px solid var(--lexxy-color-ink-lighter);
   border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
@@ -25,6 +26,14 @@
       outline-offset: var(--lexxy-focus-ring-offset);
     }
   }
+    
+  summary {
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
 
   button,
   summary {
@@ -34,6 +43,7 @@
     border: none;
     border-radius: var(--lexxy-radius);
     cursor: pointer;
+    line-height: normal;
     font-size: inherit;
     inline-size: auto;
     padding: 0;
@@ -55,20 +65,102 @@
 
   table {
     th, td {
-      &.table-cell--selected {
-        background-color: var(--lexxy-color-table-cell-selected-bg);
+      position: relative;
+      transition: all 0.1s ease-in-out;
+
+      /* Used for column and row adding visualisations */
+      &:after {
+        box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent inset;
+        content: "";
+        display: block;
+        inset-block-start: -1px;
+        inset-block-end: -1px;
+        inset-inline-start: -1px;
+        inset-inline-end: -1px;
+        pointer-events: none;
+        position: absolute;
+        transition: box-shadow 0.1s ease-in-out;
+        z-index: 2;
       }
 
       &.lexxy-content__table-cell--selected {
         background-color: var(--lexxy-color-table-cell-selected-bg);
-        border-color: var(--lexxy-color-table-cell-selected-border);
+      }
+
+      &.lexxy-content__table-cell--focus {
+        &:after {
+          box-shadow: 0 0 0 0 transparent, 0 0 0 2px var(--lexxy-color-table-cell-selected-border) inset;
+        }
+      }
+
+      &.lexxy-content__table-cell--highlight {
+        &[data-action="insert"] {
+          &[data-child-type="row"] {
+            &[data-direction="after"] {
+              &:after {
+                box-shadow:
+                  0 var(--lexxy-table-cell-add-size) 0 0 var(--lexxy-color-table-cell-add),
+                  0 calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 var(--lexxy-color-table-cell-add) inset;
+              }
+            }
+            &[data-direction="before"] {
+              &:after {
+                box-shadow:
+                  0 calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 var(--lexxy-color-table-cell-add),
+                  0 var(--lexxy-table-cell-add-size) 0 0 var(--lexxy-color-table-cell-add) inset;
+              }
+            }
+          }
+          &[data-child-type="column"] {
+            &[data-direction="after"] {
+              &:after {
+                box-shadow:
+                  var(--lexxy-table-cell-add-size) 0 0 0 var(--lexxy-color-table-cell-add),
+                  calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 0 var(--lexxy-color-table-cell-add) inset;
+              }
+            }
+            &[data-direction="before"] {
+              &:after {
+                box-shadow:
+                  calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 0 var(--lexxy-color-table-cell-add),
+                  var(--lexxy-table-cell-add-size) 0 0 0 var(--lexxy-color-table-cell-add) inset;
+              }
+            }
+          }
+        }
+        &[data-action="delete"] {
+          background-color: var(--lexxy-color-table-cell-remove);
+          color: var(--lexxy-color-red);
+
+          &:after { box-shadow: 0 0 0 0 transparent; }
+        }
+        &[data-action="toggle"] {
+          background-color: var(--lexxy-color-table-cell-toggle);
+          
+          &:after { box-shadow: 0 0 0 0 transparent; }
+        }
       }
     }
- 
+
+    tr.lexxy-content__table-cell--highlight[data-action="delete"] {
+      th, td {
+        background-color: var(--lexxy-color-table-cell-remove);
+        color: var(--lexxy-color-red);
+
+        &:after { box-shadow: 0 0 0 0 transparent; }
+      }
+    }
+
     &.lexxy-content__table--selection {
       ::selection {
         background: transparent;
       }
+    }
+  }
+
+  &:has(.lexxy-content__table-cell--selected) {
+    lexxy-table-tools {
+      visibility: hidden;
     }
   }
 
@@ -116,8 +208,8 @@
   100% { opacity: 0;}
 }
 
-/* Toolbar
-/* -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+/* Toolbar */
 
 :where(lexxy-toolbar) {
   --lexxy-toolbar-icon-size: 1em;
@@ -138,7 +230,7 @@
 
 :where(.lexxy-editor__toolbar-button) {
   aspect-ratio: 1;
-  block-size: 2lh;
+  block-size: var(--lexxy-toolbar-button-size);
   color: currentColor;
   display: grid;
   place-items: center;
@@ -171,80 +263,29 @@
   flex: 1;
 }
 
-/* Make sure spacer is only displayed if there's another button before it */
-* + :where(.lexxy-editor__toolbar-spacer) {
-  min-inline-size: 1lh;
-}
-
-:where(.lexxy-editor__toolbar-overflow) {
-  display: none;
-  justify-self: flex-end;
-  position: relative;
-  z-index: 1;
-
-  summary {
-    list-style: none;
-
-    &::-webkit-details-marker {
-      display: none;
-    }
-
-    [open] & {
-      background-color: var(--lexxy-color-ink-lightest);
-    }
-  }
-}
-
-:where(.lexxy-editor__toolbar-overflow-menu) {
-  background-color: var(--lexxy-color-canvas);
-  border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
-  box-shadow: var(--lexxy-shadow);
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--lexxy-toolbar-gap);
-  inset-inline-end: 0;
-  padding: var(--lexxy-toolbar-gap);
-  position: absolute;
-
-  .lexxy-editor__toolbar-spacer {
-    display: none;
-  }
-
-  * + .lexxy-editor__toolbar-spacer + button {
-    margin-left: 0.5lh;
-  }
-}
-
-/* Dropdowns
-/* -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+/* Dropdowns */
 
 :where(.lexxy-editor__toolbar-dropdown) {
-  position: relative;
   user-select: none;
   -webkit-user-select: none;
 
-  :where(.lexxy-editor__toolbar-dropdown-content) {
-    --dropdown-padding: 1ch;
-    --dropdown-gap: calc(var(--dropdown-padding) / 2);
-
+  summary ~ * {
     background-color: var(--lexxy-color-canvas);
     border: 2px solid var(--lexxy-color-selected-hover);
-    border-radius: var(--lexxy-radius);
-    border-start-start-radius: 0;
+    border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
     box-sizing: border-box;
+    box-shadow: var(--lexxy-shadow);
     color: var(--lexxy-color-ink);
     display: flex;
-    gap: var(--dropdown-gap);
-    inset-block-start: 2lh;
-    inset-inline-start: 0;
-    max-inline-size: 40ch;
+    gap: var(--lexxy-toolbar-gap);
     margin: 0;
-    padding: var(--dropdown-padding);
+    padding: var(--lexxy-toolbar-spacing);
     position: absolute;
     z-index: 3;
   }
 
-  &:is([open]) .lexxy-editor__toolbar-button {
+  &:is([open]) > .lexxy-editor__toolbar-button {
     background-color: var(--lexxy-color-selected-hover);
     border-end-end-radius: 0;
     border-end-start-radius: 0;
@@ -254,258 +295,323 @@
     }
   }
   
-  [overflowing] & {
-    position: static;
-
-    .lexxy-editor__toolbar-dropdown-content {
-      --dropdown-padding: 0.5ch;
-      inset-inline-end: var(--dropdown-padding);
-      inset-inline-start: var(--dropdown-padding);
-    }
-  }
-}
-
-/* Link dropdown
-/* -------------------------------------------------------------------------- */
-
-:where(lexxy-link-dropdown) {
-
-  > * { flex: 1; }
-
-  .lexxy-editor__toolbar-dropdown-actions {
-    display: flex;
-    font-size: var(--lexxy-text-small);
-    flex: 1 1 0%;
-    gap: 1ch;
-    margin-block-start: 1ch;
-  }
-
-  input[type="url"],
-  button {
-    line-height: 1.5lh;
-    padding-inline: 1ch;
-  }
-
-  input[type="url"] {
-    background-color: var(--lexxy-color-canvas);
-    border: 1px solid var(--lexxy-color-ink-lighter);
-    border-radius: var(--lexxy-radius);
-    color: var(--lexxy-color-text);
-    box-sizing: border-box;
-    inline-size: 100%;
-    min-inline-size: 40ch;
-
-    [overflowing] & {
-      min-inline-size: 0;
-    }
+  [overflowing] &:not(.lexxy-editor__toolbar-overflow) summary ~ * {
+    inset-inline-end: var(--lexxy-toolbar-spacing);
+    inset-inline-start: var(--lexxy-toolbar-spacing);
   }
 
   button {
-    background-color: var(--lexxy-color-ink-lightest);
     color: var(--lexxy-color-text);
-    inline-size: 100%;
-    justify-content: center;
-  }
-
-  button[type="submit"] {
-    background-color: var(--lexxy-color-accent-dark);
-    color: var(--lexxy-color-ink-inverted);
-
-    &:hover {
-      background-color: var(--lexxy-color-accent-medium);
-    }
-  }
-}
-
-/* Color dropdown
-/* -------------------------------------------------------------------------- */
-
-:where(lexxy-highlight-dropdown) {
-  display: flex;
-  flex-direction: column;
-
-  [data-button-group] {
-    display: flex;
-    justify-items: flex-start;
-    flex-direction: row;
-    gap: var(--dropdown-gap);
-
-    button {
-      aspect-ratio: 1 / 1;
-      inline-size: var(--button-size);
-      min-inline-size: var(--button-size);
-      max-inline-size: var(--button-size);
-
-      &:after {
-        align-self: center;
-        content: "Aa";
-        display: inline-block;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        position: absolute;
-        inset-block-start: 0;
-        inset-block-end: 0;
-        inset-inline-end: 0;
-        inset-inline-start: 0;
-      }
-    }
-  }
-
-  button {
-    --button-size: 2lh;
-
-    color: var(--lexxy-color-text);
-    flex: 1;
-    min-block-size: var(--button-size);
-    position: relative;
 
     &:hover {
       opacity: 0.8;
     }
+  }
 
-    &[aria-pressed="true"] {
-      box-shadow: 0 0 0 2px currentColor inset;
+  /* --------------------------------------------------------------------------
+  /* Overflow menu */
 
-      &:after {
-        content: "✓";
+  &.lexxy-editor__toolbar-overflow {
+    display: none;
+    justify-self: flex-end;
+    z-index: 1;
+    
+    summary ~ * {
+      border-start-end-radius: 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      inset-inline-end: var(--lexxy-toolbar-gap);
+    }
+  }
+
+  /* --------------------------------------------------------------------------
+  /* Link dropdown */
+
+  lexxy-link-dropdown {
+    font-size: var(--lexxy-text-small);
+    inset-inline-start: var(--lexxy-toolbar-spacing);
+    inset-inline-end: var(--lexxy-toolbar-spacing);
+
+    form {
+      display: flex;
+      flex: 1;
+      gap: var(--lexxy-toolbar-spacing);
+
+      [overflowing] & {
+        display: block;
+
+        .lexxy-editor__toolbar-dropdown-actions {
+          margin-block-start: var(--lexxy-toolbar-spacing);
+        }
+      }
+    }
+
+    .lexxy-editor__toolbar-dropdown-actions {
+      display: flex;
+      flex: 1;
+      gap: var(--lexxy-toolbar-spacing);
+    }
+
+    input[type="url"] {
+      background-color: var(--lexxy-color-canvas);
+      border: 1px solid var(--lexxy-color-ink-lighter);
+      border-radius: var(--lexxy-radius);
+      color: var(--lexxy-color-text);
+      block-size: var(--lexxy-toolbar-button-size);
+      box-sizing: border-box;
+      font-size: var(--lexxy-text-small);
+      flex: 2;
+      inline-size: 100%;
+      line-height: normal;
+      padding-block: 0;
+      padding-inline: 1ch;
+    }
+
+    button {
+      background-color: var(--lexxy-color-ink-lightest);
+      inline-size: 100%;
+      padding-inline: 2ch;
+    }
+
+    button[type="submit"] {
+      background-color: var(--lexxy-color-accent-dark);
+      color: var(--lexxy-color-ink-inverted);
+
+      &:hover {
+        background-color: var(--lexxy-color-accent-medium);
       }
     }
   }
 
-  .lexxy-editor__toolbar-dropdown-reset[disabled] {
-    display: none;
-  }
-  
-  [overflowing] & {
-    inline-size: fit-content;
+  /* --------------------------------------------------------------------------
+  /* Color dropdown */
 
-    [data-button-group] {
-      flex-wrap: wrap;
+  &:has(lexxy-highlight-dropdown) {
+    position: relative;
+
+    [overflowing] & {
+      position: static;
+    }
+  }
+
+  lexxy-highlight-dropdown {
+    --max-inline-size: calc(var(--max-colors) * (var(--lexxy-toolbar-button-size) + var(--lexxy-toolbar-spacing)));
+    border-start-start-radius: 0;
+    display: flex;
+    gap: var(--lexxy-toolbar-spacing);
+    flex-direction: column;
+    font-size: var(--lexxy-text-small);
+    inset-inline-start: 0;
+    max-inline-size: var(--max-inline-size);
+
+    button {
+      position: relative;
+    }
+
+    .lexxy-highlight-colors {
+      display: grid;
+      gap: var(--lexxy-toolbar-gap);
+      grid-template-columns: repeat(auto-fill, minmax(var(--lexxy-toolbar-button-size), 1fr));
+      max-inline-size: var(--max-inline-size);
 
       button {
-        --button-size: 1.6lh;
+        block-size: unset;
+        inline-size: 100%;
 
         &:after {
-          font-size: 0.9em;
+          align-self: center;
+          content: "Aa";
+          display: inline-block;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          position: absolute;
+          inset-block-start: 0;
+          inset-block-end: 0;
+          inset-inline-end: 0;
+          inset-inline-start: 0;
+        }
+
+        &[aria-pressed="true"] {
+          background-color: transparent;
+          box-shadow: 0 0 0 2px currentColor inset;
+  
+          &:after {
+            content: "✓";
+          }
+        }
+      }
+    }
+
+    .lexxy-editor__toolbar-dropdown-reset {
+      background-color: var(--lexxy-color-ink-lightest);
+
+      &:is([disabled]) {
+        display: none;
+      }
+    }
+    
+    [overflowing] & {
+      .lexxy-highlight-colors {
+        button {
         }
       }
     }
   }
 }
 
-/* Table handle buttons
+/* Table Tools
 /* -------------------------------------------------------------------------- */
 
-:where(lexxy-table-handler) {
-  --button-size: 2.5lh;
+:where(lexxy-table-tools) {
+  --button-size: 2.3lh;
+  --table-tools-radius: calc(var(--lexxy-radius) * 1.5);
 
   color: var(--lexxy-color-ink-inverted);
   display: none;
   flex-direction: row;
   font-size: var(--lexxy-text-small);
   gap: 0.25ch;
+  inset-inline-start: var(--lexxy-editor-padding);
   line-height: 1;
   position: absolute;
   transform: translate(-50%, -120%);
   z-index: 2;
 
   .lexxy-table-control {
-    align-items: center;
+    align-items: stretch;
     background-color: var(--lexxy-color-ink);
-    border-radius: 0.75ch;
+    border-radius: var(--table-tools-radius);
     display: flex;
     flex-direction: row;
-    gap: 1ch;
-    padding: 2px;
+    gap: 0.25ch;
+    padding: 0.25ch;
     white-space: nowrap;
 
     button,
     summary {
-      aspect-ratio: 1 / 1;
       align-items: center;
       background-color: transparent;
-      border-radius: var(--lexxy-radius);
       border: 0;
+      border-radius: var(--lexxy-radius);
       color: var(--lexxy-color-ink-inverted);
       cursor: pointer;
       display: flex;
-      font-weight: bold;
       justify-content: center;
       line-height: 1;
-      list-style: none;
       min-block-size: var(--button-size);
       min-inline-size: var(--button-size);
-      padding: 0;
       user-select: none;
       -webkit-user-select: none;
 
-      &:hover {
+      &:hover,
+      [open] &:is(summary) {
         background-color: var(--lexxy-color-ink-medium);
       }
 
       &:focus-visible {
         outline-color: var(--lexxy-focus-ring-color);
       }
+    }
+
+    button {
+      aspect-ratio: 1 / 1;
+      font-weight: bold;
 
       svg {
         block-size: 1em;
         inline-size: 1em;
         fill: currentColor;
+        opacity: 0.8;
+        padding: 1px; /* Fixes weird Safari SVG clipping issue */
       }
 
       span {
         display: none;
       }
     }
-  }
 
-  .lexxy-table-control__more-menu {
-    gap: 0;
-    padding: 0.25ch;
-    position: relative;
-    
     summary {
-      &::-webkit-details-marker {
-        display: none;
-      }
+      border: 1px solid var(--lexxy-color-ink-medium);
+      padding: 0 1.25ch;
     }
 
-    .lexxy-table-control__more-menu-details {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25ch;
-      inset-block-start: 105%;
-      inset-inline-start: 0;
-      padding: 0;
-      position: absolute;
-
-      .lexxy-table-control__more-menu-section {
+    .lexxy-table-control__more-menu {
+      gap: 0;
+      position: relative;
+  
+      .lexxy-table-control__more-menu-details {
         background: var(--lexxy-color-ink);
-        border-radius: 0.75ch;
+        border-radius: var(--table-tools-radius);
         display: flex;
         flex-direction: column;
+        gap: 0.25ch;
+        inset-block-start: 110%;
+        inset-inline-start: 50%;
         padding: 0.25ch;
+        position: absolute;
+        transform: translateX(-50%);
+  
+        button {
+          aspect-ratio: unset;
+          flex-direction: row;
+          font-weight: normal;
+          gap: 1ch;
+          justify-content: flex-start;
+          padding: 0.75ch;
+          padding-inline-end: 1.5ch;
+          white-space: nowrap;
+  
+          span {
+            display: inline-block;
+          }
+  
+          svg {
+            block-size: 1.3lh;
+            inline-size: 1.3lh;
+            fill: currentColor;
+          }
+        }
+      }
+    }
+  
+    .lexxy-table-control__button--delete-table {
+      align-items: center;
+      aspect-ratio: unset;
+      block-size: auto;
+      font-weight: normal;
+      justify-content: center;
+      padding: 0 1ch;
+
+      svg {
+        min-block-size: 1em;
+        min-inline-size: 1em;
       }
 
-      button {
-        aspect-ratio: unset;
+      span {
         align-items: center;
+        background: var(--lexxy-color-ink);
+        border-radius: var(--table-tools-radius);
+        color: color-mix(in srgb, var(--lexxy-color-ink-inverted) 80%, transparent);
         display: flex;
-        flex-direction: row;
-        font-weight: normal;
-        gap: 1ch;
-        justify-content: flex-start;
-        padding: 0.5ch 2ch;
-        padding-inline-start: 1ch;
+        inset-inline-end: calc(var(--button-size) + 1ch);
+        inset-block-start: 0;
+        inset-block-end: 0;
+        inset-inline-start: 0;
+        justify-content: center;
+        padding: 0.5ch 1ch;
+        position: absolute;
+        transition: all 0.2s ease-out;
+        opacity: 0;
+        pointer-events: none;
         white-space: nowrap;
+      }
+
+      &:hover {
+        background-color: var(--lexxy-color-red);
+
+        svg { color: var(--lexxy-color-ink-inverted); }
 
         span {
-          display: inline-block;
-        }
-
-        svg {
-          block-size: 1.3lh;
-          inline-size: 1.3lh;
-          fill: currentColor;
+          opacity: 1;
         }
       }
     }

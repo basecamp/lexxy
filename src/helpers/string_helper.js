@@ -24,3 +24,7 @@ export function normalizeFilteredText(string) {
 export function filterMatches(text, potentialMatch) {
   return normalizeFilteredText(text).includes(normalizeFilteredText(potentialMatch))
 }
+
+export function upcaseFirst(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1)
+}
