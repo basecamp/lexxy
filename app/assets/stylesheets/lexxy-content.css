@@ -37,6 +37,11 @@
     }
   }
 
+  p.provisional-paragraph {
+    block-size: 0.5ch;
+    margin: 0;
+  }
+
   .lexxy-content__italic {
     font-style: italic;
   }
