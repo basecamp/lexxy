@@ -126,7 +126,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   isInline() {
-    return !this.isAttached() || !this.getParent()?.is($getRoot())
+    return false // !this.isAttached() || !this.getParent()?.is($getRoot())
   }
 
   exportDOM() {
