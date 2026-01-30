@@ -38,7 +38,8 @@
   }
 
   p.ephemeral-paragraph.hidden {
-    display: none;
+    block-size: 0.5ch;
+    margin: 0;
   }
 
   .lexxy-content__italic {
