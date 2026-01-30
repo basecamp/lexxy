@@ -1,7 +1,7 @@
 import "./config/prism"
 import "./config/dom_purify"
 
-import { defineElements } from "./elements"
+import { defineElements } from "./elements/index"
 
 import Lexxy from "./config/lexxy"
 
