@@ -39,15 +39,19 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       },
       "img": () => {
         return {
-          conversion: (img) => ({
-            node: new ActionTextAttachmentNode({
-              src: img.getAttribute("src"),
-              caption: img.getAttribute("alt") || "",
-              contentType: "image/*",
-              width: img.getAttribute("width"),
-              height: img.getAttribute("height")
-            })
-          }), priority: 1
+          conversion: (img) => {
+            const fileName = img.getAttribute("src")?.split("/")?.pop() || ""
+            return {
+              node: new ActionTextAttachmentNode({
+                src: img.getAttribute("src"),
+                fileName: fileName,
+                caption: img.getAttribute("alt") || "",
+                contentType: "image/*",
+                width: img.getAttribute("width"),
+                height: img.getAttribute("height")
+              })
+            }
+          }, priority: 1
         }
       },
       "video": () => {
