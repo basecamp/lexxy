@@ -6778,13 +6778,12 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.editor.registerCommand(
-      ie$1,
-      () => {
-        this.#closeDropdowns();
+    this.editor.registerUpdateListener(() => {
+      this.editor.getEditorState().read(() => {
         this.#updateButtonStates();
-        return false
-      }, Bi);
+        this.#closeDropdowns();
+      });
+    });
   }
 
   #monitorHistoryChanges() {
@@ -7473,7 +7472,7 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       const img = figure.appendChild(this.#createDOMForImage());
 
       // load file locally to set dimensions and prevent vertical shifting
-      loadFileIntoImage(this.file, img).then(img => this.#setDimensionsFrom(img));
+      loadFileIntoImage(this.file, img).then(img => this.#setDimensionsFromImage(img));
     } else {
       figure.appendChild(this.#createDOMForFile());
     }
@@ -7554,7 +7553,7 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return createElement("progress", { value: this.progress ?? 0, max: 100 })
   }
 
-  #setDimensionsFrom({ width, height }) {
+  #setDimensionsFromImage({ width, height }) {
     if (this.#hasDimensions) return
 
     this.editor.update(() => {
@@ -7633,7 +7632,6 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const conversion = new AttachmentNodeConversion(this, blob);
     return conversion.toAttachmentNode()
   }
-
 }
 
 class AttachmentNodeConversion {
