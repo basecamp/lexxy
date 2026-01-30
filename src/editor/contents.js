@@ -1,7 +1,7 @@
 import {
-  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
+  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $getSiblingCaret, $insertNodes,
   $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection
-} from "lexical"
+ } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
 import { $createActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
@@ -39,7 +39,7 @@ export default class Contents {
     if ($isRangeSelection(selection)) {
       $insertNodes([ node ])
     } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
-      const lastNode = selectedNodes[selectedNodes.length - 1]
+      const lastNode = selectedNodes.at(-1)
       lastNode.insertAfter(node)
     } else {
       const root = $getRoot()
@@ -302,22 +302,33 @@ export default class Contents {
       const imageUploads = uploads.filter(attachment => attachment.isPreviewableImage)
       const otherUploads = uploads.filter(attachment => !attachment.isPreviewableImage)
 
-      // manually handle when the selection is on an image/gallery since $insertNodes won't
+      // manually handle when the selection is on an image/gallery since $insertNodes won't do it gracefully
       if (this.#selection.isOnPreviewableImage && imageUploads.length) {
         const { node } = this.#selection.selectedNodeWithOffset()
         const gallery = $findOrCreateGalleryFor(node)
         gallery.splice(node.getIndexWithinParent() + 1, 0, imageUploads)
-        imageUploads.at(-1).select
+        const lastImageUpload = imageUploads.at(-1)
+        lastImageUpload.select
       } else if (imageUploads.length > 1) {
         const gallery = $createImageGalleryNode()
-        this.insertAtCursorEnsuringLineBelow(gallery)
+        this.insertAtCursor(gallery)
         gallery.append(...imageUploads)
       } else if (imageUploads.length === 1) {
         const [ imageUpload ] = imageUploads
-        this.insertAtCursorEnsuringLineBelow(imageUpload)
+        this.insertAtCursor(imageUpload)
       }
 
-      otherUploads.forEach(fileUpload => this.insertAtCursorEnsuringLineBelow(fileUpload))
+      if (this.#selection.isOnPreviewableImage && imageUploads.length) {
+        const { node } = this.#selection.selectedNodeWithOffset()
+        const topLevelNode = node.getTopLevelElementOrThrow()
+        const caret = $getSiblingCaret(topLevelNode, "next")
+        for (const fileUpload of otherUploads) {
+          caret.insert(fileUpload)
+          caret.getAdjacentCaret()
+        }
+      } else {
+        otherUploads.forEach(fileUpload => this.insertAtCursor(fileUpload))
+      }
     })
   }
 
