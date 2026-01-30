@@ -479,13 +479,6 @@
         display: none;
       }
     }
-    
-    [overflowing] & {
-      .lexxy-highlight-colors {
-        button {
-        }
-      }
-    }
   }
 }
 
@@ -748,29 +741,50 @@
 /* Image galleries */
 /* ------------------------------------------------------------------------ */
 
+:where(.attachment-gallery) {
+  border-radius: var(--lexxy-radius);
+
+  &:has(.node--selected) {
+    outline: var(--lexxy-focus-ring-size) solid var(--lexxy-color-accent-light);
+    outline-offset: var(--lexxy-focus-ring-offset);
+  }
+
+  .node--selected {
+    background-color: var(--lexxy-color-canvas);
+  }
+
+  .attachment__caption {
+    padding: 0;
+  }
+
+  [data-lexical-cursor] {
+    display: none;
+  }
+}
+
 :where(.attachment__caption) {
   textarea {
-    background: var(--lexxy-color-canvas);
+    background: transparent;
     border: 0;
+    border-radius: var(--lexxy-radius);
     box-sizing: border-box;
     color: inherit;
+    display: block;
     font-family: inherit;
     inline-size: 100%;
     max-inline-size: 100%;
     resize: none;
     text-align: center;
-    padding: 0;
-    padding-inline: 1ch;
-    padding-block-end: 1ch;
+    padding: 1ch;
 
     &:focus {
-      outline: none;
+      background: var(--lexxy-color-canvas);
+      outline: 0;
     }
 
     @supports (field-sizing: content) {
       field-sizing: content;
       inline-size: 100%;
-      min-inline-size: 20ch;
     }
   }
 }
