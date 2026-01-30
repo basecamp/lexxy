@@ -6778,13 +6778,12 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.editor.registerCommand(
-      ie$1,
-      () => {
-        this.#closeDropdowns();
+    this.editor.registerUpdateListener(() => {
+      this.editor.getEditorState().read(() => {
         this.#updateButtonStates();
-        return false
-      }, Bi);
+        this.#closeDropdowns();
+      });
+    });
   }
 
   #monitorHistoryChanges() {
