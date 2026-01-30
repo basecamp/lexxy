@@ -28,7 +28,8 @@
   dl,
   blockquote,
   figure,
-  .attachment {
+  .attachment,
+  .attachment-gallery {
     margin-block: 0 var(--lexxy-content-margin);
 
     &:not(lexxy-editor &) {
@@ -37,9 +38,8 @@
     }
   }
 
-  p.ephemeral-paragraph.hidden {
-    block-size: 0.5ch;
-    margin: 0;
+  p.ephemeral-paragraph {
+    display: none;
   }
 
   .lexxy-content__italic {
@@ -306,7 +306,10 @@
 }
 
 :where(.attachment--preview) {
+  --lexxy-attachment-gap: 0.75ch;
+
   border-radius: var(--lexxy-radius);
+  padding: var(--lexxy-attachment-gap);
 
   img, video {
     border-radius: var(--lexxy-radius);
@@ -320,10 +323,6 @@
   > a {
     display: block;
   }
-
-  .attachment__caption {
-    margin-block-start: 1ch;
-  }
 }
 
 :where(.attachment--file) {
@@ -332,7 +331,7 @@
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 1ch;
+  gap: 0;
   inline-size: auto;
 
   .attachment__caption {
@@ -401,14 +400,17 @@
 
 :where(.attachment-gallery) {
   display: grid;
-  gap: 0;
-  grid-template-columns: repeat(auto-fit, minmax(20ch, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(15ch, 1fr));
   justify-content: center;
   position: relative;
-  padding: 0;
 
   .attachment {
-    padding: 0.5ch;
+    block-size: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--lexxy-attachment-gap);
+    margin: 0;
 
     img {
       aspect-ratio: 4 / 3;
