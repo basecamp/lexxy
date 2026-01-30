@@ -315,4 +315,4 @@ export class TableTools extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-table-tools", TableTools)
+export default TableTools

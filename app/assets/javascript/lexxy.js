@@ -6711,7 +6711,7 @@ class LexicalToolbarElement extends HTMLElement {
 
     this.editor.update(() => {
       this.editor.dispatchCommand(command, payload);
-    }, { tag: isKeyboard ? zn : undefined } );
+    }, { tag: isKeyboard ? zn : undefined });
   }
 
   #bindHotkeys() {
@@ -7046,8 +7046,6 @@ class LexicalToolbarElement extends HTMLElement {
     `
   }
 }
-
-customElements.define("lexxy-toolbar", LexicalToolbarElement);
 
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -10653,11 +10651,11 @@ class LexicalEditorElement extends HTMLElement {
     this.editorContentElement ||= this.#createEditorContentElement();
 
     const editor = $t$2({
-        name: "lexxy/core",
-        namespace: "Lexxy",
-        theme: theme,
-        nodes: this.#lexicalNodes
-      },
+      name: "lexxy/core",
+      namespace: "Lexxy",
+      theme: theme,
+      nodes: this.#lexicalNodes
+    },
       ...this.#lexicalExtensions
     );
 
@@ -10667,7 +10665,7 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   get #lexicalExtensions() {
-    const extensions = [ ];
+    const extensions = [];
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
       TrixContentExtension,
@@ -10882,14 +10880,7 @@ class LexicalEditorElement extends HTMLElement {
 
 
   #attachDebugHooks() {
-    if (!LexicalEditorElement.debug) return
-
-    this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
-      editorState.read(() => {
-        console.debug("HTML: ", this.value, "String:", this.toString());
-        console.debug("empty", this.isEmpty, "blank", this.isBlank);
-      });
-    }));
+    return
   }
 
   #attachToolbar() {
@@ -10968,8 +10959,6 @@ class LexicalEditorElement extends HTMLElement {
     this.connectedCallback();
   }
 }
-
-customElements.define("lexxy-editor", LexicalEditorElement);
 
 class ToolbarDropdown extends HTMLElement {
   connectedCallback() {
@@ -11096,8 +11085,6 @@ class LinkDropdown extends ToolbarDropdown {
   }
 }
 
-customElements.define("lexxy-link-dropdown", LinkDropdown);
-
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button";
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']";
 
@@ -11205,7 +11192,710 @@ class HighlightDropdown extends ToolbarDropdown {
   }
 }
 
-customElements.define("lexxy-highlight-dropdown", HighlightDropdown);
+class BaseSource {
+  // Template method to override
+  async buildListItems(filter = "") {
+    return Promise.resolve([])
+  }
+
+  // Template method to override
+  promptItemFor(listItem) {
+    return null
+  }
+
+  // Protected
+
+  buildListItemElementFor(promptItemElement) {
+    const template = promptItemElement.querySelector("template[type='menu']");
+    const fragment = template.content.cloneNode(true);
+    const listItemElement = createElement("li", { role: "option", id: generateDomId("prompt-item"), tabindex: "0" });
+    listItemElement.classList.add("lexxy-prompt-menu__item");
+    listItemElement.appendChild(fragment);
+    return listItemElement
+  }
+
+  async loadPromptItemsFromUrl(url) {
+    try {
+      const response = await fetch(url);
+      const html = await response.text();
+      const promptItems = parseHtml(html).querySelectorAll("lexxy-prompt-item");
+      return Promise.resolve(Array.from(promptItems))
+    } catch (error) {
+      return Promise.reject(error)
+    }
+  }
+}
+
+class LocalFilterSource extends BaseSource {
+  async buildListItems(filter = "") {
+    const promptItems = await this.fetchPromptItems();
+    return this.#buildListItemsFromPromptItems(promptItems, filter)
+  }
+
+  // Template method to override
+  async fetchPromptItems(filter) {
+    return Promise.resolve([])
+  }
+
+  promptItemFor(listItem) {
+    return this.promptItemByListItem.get(listItem)
+  }
+
+  #buildListItemsFromPromptItems(promptItems, filter) {
+    const listItems = [];
+    this.promptItemByListItem = new WeakMap();
+    promptItems.forEach((promptItem) => {
+      const searchableText = promptItem.getAttribute("search");
+
+      if (!filter || filterMatches(searchableText, filter)) {
+        const listItem = this.buildListItemElementFor(promptItem);
+        this.promptItemByListItem.set(listItem, promptItem);
+        listItems.push(listItem);
+      }
+    });
+
+    return listItems
+  }
+}
+
+class InlinePromptSource extends LocalFilterSource {
+  constructor(inlinePromptItems) {
+    super();
+    this.inlinePromptItemElements = Array.from(inlinePromptItems);
+  }
+
+  async fetchPromptItems() {
+    return Promise.resolve(this.inlinePromptItemElements)
+  }
+}
+
+class DeferredPromptSource extends LocalFilterSource {
+  constructor(url) {
+    super();
+    this.url = url;
+
+    this.fetchPromptItems();
+  }
+
+  async fetchPromptItems() {
+    this.promptItems ??= await this.loadPromptItemsFromUrl(this.url);
+
+    return Promise.resolve(this.promptItems)
+  }
+}
+
+const DEBOUNCE_INTERVAL = 200;
+
+class RemoteFilterSource extends BaseSource {
+  constructor(url) {
+    super();
+
+    this.baseURL = url;
+    this.loadAndFilterListItems = debounceAsync(this.fetchFilteredListItems.bind(this), DEBOUNCE_INTERVAL);
+  }
+
+  async buildListItems(filter = "") {
+    return await this.loadAndFilterListItems(filter)
+  }
+
+  promptItemFor(listItem) {
+    return this.promptItemByListItem.get(listItem)
+  }
+
+  async fetchFilteredListItems(filter) {
+    const promptItems = await this.loadPromptItemsFromUrl(this.#urlFor(filter));
+    return this.#buildListItemsFromPromptItems(promptItems)
+  }
+
+  #urlFor(filter) {
+    const url = new URL(this.baseURL, window.location.origin);
+    url.searchParams.append("filter", filter);
+    return url.toString()
+  }
+
+  #buildListItemsFromPromptItems(promptItems) {
+    const listItems = [];
+    this.promptItemByListItem = new WeakMap();
+
+    for (const promptItem of promptItems) {
+      const listItem = this.buildListItemElementFor(promptItem);
+      this.promptItemByListItem.set(listItem, promptItem);
+      listItems.push(listItem);
+    }
+
+    return listItems
+  }
+}
+
+const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found";
+
+class LexicalPromptElement extends HTMLElement {
+  constructor() {
+    super();
+    this.keyListeners = [];
+  }
+
+  static observedAttributes = [ "connected" ]
+
+  connectedCallback() {
+    this.source = this.#createSource();
+
+    this.#addTriggerListener();
+    this.toggleAttribute("connected", true);
+  }
+
+  disconnectedCallback() {
+    this.source = null;
+    this.popoverElement = null;
+  }
+
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
+      requestAnimationFrame(() => this.#reconnect());
+    }
+  }
+
+  get name() {
+    return this.getAttribute("name")
+  }
+
+  get trigger() {
+    return this.getAttribute("trigger")
+  }
+
+  get supportsSpaceInSearches() {
+    return this.hasAttribute("supports-space-in-searches")
+  }
+
+  get open() {
+    return this.popoverElement?.classList?.contains("lexxy-prompt-menu--visible")
+  }
+
+  get closed() {
+    return !this.open
+  }
+
+  get #doesSpaceSelect() {
+    return !this.supportsSpaceInSearches
+  }
+
+  #createSource() {
+    const src = this.getAttribute("src");
+    if (src) {
+      if (this.hasAttribute("remote-filtering")) {
+        return new RemoteFilterSource(src)
+      } else {
+        return new DeferredPromptSource(src)
+      }
+    } else {
+      return new InlinePromptSource(this.querySelectorAll("lexxy-prompt-item"))
+    }
+  }
+
+  #addTriggerListener() {
+    const unregister = this.#editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
+        const { node, offset } = this.#selection.selectedNodeWithOffset();
+        if (!node) return
+
+        if (lr(node)) {
+          const fullText = node.getTextContent();
+          const triggerLength = this.trigger.length;
+
+          // Check if we have enough characters for the trigger
+          if (offset >= triggerLength) {
+            const textBeforeCursor = fullText.slice(offset - triggerLength, offset);
+
+            // Check if trigger is at the start of the text node (new line case) or preceded by space or newline
+            if (textBeforeCursor === this.trigger) {
+              const isAtStart = offset === triggerLength;
+
+              const charBeforeTrigger = offset > triggerLength ? fullText[offset - triggerLength - 1] : null;
+              const isPrecededBySpaceOrNewline = charBeforeTrigger === " " || charBeforeTrigger === "\n";
+
+              if (isAtStart || isPrecededBySpaceOrNewline) {
+                unregister();
+                this.#showPopover();
+              }
+            }
+          }
+        }
+      });
+    });
+  }
+
+  #addCursorPositionListener() {
+    this.cursorPositionListener = this.#editor.registerUpdateListener(() => {
+      if (this.closed) return
+
+      this.#editor.read(() => {
+        const { node, offset } = this.#selection.selectedNodeWithOffset();
+        if (!node) return
+
+        if (lr(node) && offset > 0) {
+          const fullText = node.getTextContent();
+          const textBeforeCursor = fullText.slice(0, offset);
+          const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger);
+          const triggerEndIndex = lastTriggerIndex + this.trigger.length - 1;
+
+          // If trigger is not found, or cursor is at or before the trigger end position, hide popover
+          if (lastTriggerIndex === -1 || offset <= triggerEndIndex) {
+            this.#hidePopover();
+          }
+        } else {
+          // Cursor is not in a text node or at offset 0, hide popover
+          this.#hidePopover();
+        }
+      });
+    });
+  }
+
+  #removeCursorPositionListener() {
+    if (this.cursorPositionListener) {
+      this.cursorPositionListener();
+      this.cursorPositionListener = null;
+    }
+  }
+
+  get #editor() {
+    return this.#editorElement.editor
+  }
+
+  get #editorElement() {
+    return this.closest("lexxy-editor")
+  }
+
+  get #selection() {
+    return this.#editorElement.selection
+  }
+
+  async #showPopover() {
+    this.popoverElement ??= await this.#buildPopover();
+    this.#resetPopoverPosition();
+    await this.#filterOptions();
+    this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", true);
+    this.#selectFirstOption();
+
+    this.#editorElement.addEventListener("keydown", this.#handleKeydownOnPopover);
+    this.#editorElement.addEventListener("lexxy:change", this.#filterOptions);
+
+    this.#registerKeyListeners();
+    this.#addCursorPositionListener();
+  }
+
+  #registerKeyListeners() {
+    // We can't use a regular keydown for Enter as Lexical handles it first
+    this.keyListeners.push(this.#editor.registerCommand(Ne$2, this.#handleSelectedOption.bind(this), Bi));
+    this.keyListeners.push(this.#editor.registerCommand(Me$2, this.#handleSelectedOption.bind(this), Bi));
+
+    if (this.#doesSpaceSelect) {
+      this.keyListeners.push(this.#editor.registerCommand(be$1, this.#handleSelectedOption.bind(this), Bi));
+    }
+
+    // Register arrow keys with HIGH priority to prevent Lexical's selection handlers from running
+    this.keyListeners.push(this.#editor.registerCommand(ke$2, this.#handleArrowUp.bind(this), Bi));
+    this.keyListeners.push(this.#editor.registerCommand(Te$2, this.#handleArrowDown.bind(this), Bi));
+  }
+
+  #handleArrowUp(event) {
+    this.#moveSelectionUp();
+    event.preventDefault();
+    return true
+  }
+
+  #handleArrowDown(event) {
+    this.#moveSelectionDown();
+    event.preventDefault();
+    return true
+  }
+
+  #selectFirstOption() {
+    const firstOption = this.#listItemElements[0];
+
+    if (firstOption) {
+      this.#selectOption(firstOption);
+    }
+  }
+
+  get #listItemElements() {
+    return Array.from(this.popoverElement.querySelectorAll(".lexxy-prompt-menu__item"))
+  }
+
+  #selectOption(listItem) {
+    this.#clearSelection();
+    listItem.toggleAttribute("aria-selected", true);
+    listItem.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    listItem.focus();
+
+    // Preserve selection to prevent cursor jump
+    this.#selection.preservingSelection(() => {
+      this.#editorElement.focus();
+    });
+
+    this.#editorContentElement.setAttribute("aria-controls", this.popoverElement.id);
+    this.#editorContentElement.setAttribute("aria-activedescendant", listItem.id);
+    this.#editorContentElement.setAttribute("aria-haspopup", "listbox");
+  }
+
+  #clearSelection() {
+    this.#listItemElements.forEach((item) => { item.toggleAttribute("aria-selected", false); });
+    this.#editorContentElement.removeAttribute("aria-controls");
+    this.#editorContentElement.removeAttribute("aria-activedescendant");
+    this.#editorContentElement.removeAttribute("aria-haspopup");
+  }
+
+  #positionPopover() {
+    const { x, y, fontSize } = this.#selection.cursorPosition;
+    const editorRect = this.#editorElement.getBoundingClientRect();
+    const contentRect = this.#editorContentElement.getBoundingClientRect();
+    const verticalOffset = contentRect.top - editorRect.top;
+
+    if (!this.popoverElement.hasAttribute("data-anchored")) {
+      this.popoverElement.style.left = `${x}px`;
+      this.popoverElement.toggleAttribute("data-anchored", true);
+    }
+
+    this.popoverElement.style.top = `${y + verticalOffset}px`;
+    this.popoverElement.style.bottom = "auto";
+
+    const popoverRect = this.popoverElement.getBoundingClientRect();
+    const isClippedAtBottom = popoverRect.bottom > window.innerHeight;
+
+    if (isClippedAtBottom || this.popoverElement.hasAttribute("data-clipped-at-bottom")) {
+      this.popoverElement.style.top = `${y + verticalOffset - popoverRect.height - fontSize}px`;
+      this.popoverElement.style.bottom = "auto";
+      this.popoverElement.toggleAttribute("data-clipped-at-bottom", true);
+    }
+  }
+
+  #resetPopoverPosition() {
+    this.popoverElement.removeAttribute("data-clipped-at-bottom");
+    this.popoverElement.removeAttribute("data-anchored");
+  }
+
+  async #hidePopover() {
+    this.#clearSelection();
+    this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", false);
+    this.#editorElement.removeEventListener("lexxy:change", this.#filterOptions);
+    this.#editorElement.removeEventListener("keydown", this.#handleKeydownOnPopover);
+
+    this.#unregisterKeyListeners();
+    this.#removeCursorPositionListener();
+
+    await nextFrame();
+    this.#addTriggerListener();
+  }
+
+  #unregisterKeyListeners() {
+    this.keyListeners.forEach((unregister) => unregister());
+    this.keyListeners = [];
+  }
+
+  #filterOptions = async () => {
+    if (this.initialPrompt) {
+      this.initialPrompt = false;
+      return
+    }
+
+    if (this.#editorContents.containsTextBackUntil(this.trigger)) {
+      await this.#showFilteredOptions();
+      await nextFrame();
+      this.#positionPopover();
+    } else {
+      this.#hidePopover();
+    }
+  }
+
+  async #showFilteredOptions() {
+    const filter = this.#editorContents.textBackUntil(this.trigger);
+    const filteredListItems = await this.source.buildListItems(filter);
+    this.popoverElement.innerHTML = "";
+
+    if (filteredListItems.length > 0) {
+      this.#showResults(filteredListItems);
+    } else {
+      this.#showEmptyResults();
+    }
+    this.#selectFirstOption();
+  }
+
+  #showResults(filteredListItems) {
+    this.popoverElement.classList.remove("lexxy-prompt-menu--empty");
+    this.popoverElement.append(...filteredListItems);
+  }
+
+  #showEmptyResults() {
+    this.popoverElement.classList.add("lexxy-prompt-menu--empty");
+    const el = createElement("li", { innerHTML: this.#emptyResultsMessage });
+    el.classList.add("lexxy-prompt-menu__item--empty");
+    this.popoverElement.append(el);
+  }
+
+  get #emptyResultsMessage() {
+    return this.getAttribute("empty-results") || NOTHING_FOUND_DEFAULT_MESSAGE
+  }
+
+  #handleKeydownOnPopover = (event) => {
+    if (event.key === "Escape") {
+      this.#hidePopover();
+      this.#editorElement.focus();
+      event.stopPropagation();
+    }
+    // Arrow keys are now handled via Lexical commands with HIGH priority
+  }
+
+  #moveSelectionDown() {
+    const nextIndex = this.#selectedIndex + 1;
+    if (nextIndex < this.#listItemElements.length) this.#selectOption(this.#listItemElements[nextIndex]);
+  }
+
+  #moveSelectionUp() {
+    const previousIndex = this.#selectedIndex - 1;
+    if (previousIndex >= 0) this.#selectOption(this.#listItemElements[previousIndex]);
+  }
+
+  get #selectedIndex() {
+    return this.#listItemElements.findIndex((item) => item.hasAttribute("aria-selected"))
+  }
+
+  get #selectedListItem() {
+    return this.#listItemElements[this.#selectedIndex]
+  }
+
+  #handleSelectedOption(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.#optionWasSelected();
+    return true
+  }
+
+  #optionWasSelected() {
+    this.#replaceTriggerWithSelectedItem();
+    this.#hidePopover();
+    this.#editorElement.focus();
+  }
+
+  #replaceTriggerWithSelectedItem() {
+    const promptItem = this.source.promptItemFor(this.#selectedListItem);
+
+    if (!promptItem) { return }
+
+    const templates = Array.from(promptItem.querySelectorAll("template[type='editor']"));
+    const stringToReplace = `${this.trigger}${this.#editorContents.textBackUntil(this.trigger)}`;
+
+    if (this.hasAttribute("insert-editable-text")) {
+      this.#insertTemplatesAsEditableText(templates, stringToReplace);
+    } else {
+      this.#insertTemplatesAsAttachments(templates, stringToReplace, promptItem.getAttribute("sgid"));
+    }
+  }
+
+  #insertTemplatesAsEditableText(templates, stringToReplace) {
+    this.#editor.update(() => {
+      const nodes = templates.flatMap(template => this.#buildEditableTextNodes(template));
+      this.#editorContents.replaceTextBackUntil(stringToReplace, nodes);
+    });
+  }
+
+  #buildEditableTextNodes(template) {
+    return m$1(this.#editor, parseHtml(`${template.innerHTML}`))
+  }
+
+  #insertTemplatesAsAttachments(templates, stringToReplace, fallbackSgid = null) {
+    this.#editor.update(() => {
+      const attachmentNodes = this.#buildAttachmentNodes(templates, fallbackSgid);
+      const spacedAttachmentNodes = attachmentNodes.flatMap(node => [ node, this.#getSpacerTextNode() ]).slice(0, -1);
+      this.#editorContents.replaceTextBackUntil(stringToReplace, spacedAttachmentNodes);
+    });
+  }
+
+  #buildAttachmentNodes(templates, fallbackSgid = null) {
+    return templates.map(
+      template => this.#buildAttachmentNode(
+        template.innerHTML,
+        template.getAttribute("content-type") || this.#defaultPromptContentType,
+        template.getAttribute("sgid") || fallbackSgid
+      ))
+  }
+
+  #getSpacerTextNode() {
+    return sr(" ")
+  }
+
+  get #defaultPromptContentType() {
+    const attachmentContentTypeNamespace = Lexxy.global.get("attachmentContentTypeNamespace");
+    return `application/vnd.${attachmentContentTypeNamespace}.${this.name}`
+  }
+
+  #buildAttachmentNode(innerHtml, contentType, sgid) {
+    return new CustomActionTextAttachmentNode({ sgid, contentType, innerHtml })
+  }
+
+  get #editorContents() {
+    return this.#editorElement.contents
+  }
+
+  get #editorContentElement() {
+    return this.#editorElement.editorContentElement
+  }
+
+  async #buildPopover() {
+    const popoverContainer = createElement("ul", { role: "listbox", id: generateDomId("prompt-popover") }); // Avoiding [popover] due to not being able to position at an arbitrary X, Y position.
+    popoverContainer.classList.add("lexxy-prompt-menu");
+    popoverContainer.style.position = "absolute";
+    popoverContainer.setAttribute("nonce", getNonce());
+    popoverContainer.append(...await this.source.buildListItems());
+    popoverContainer.addEventListener("click", this.#handlePopoverClick);
+    this.#editorElement.appendChild(popoverContainer);
+    return popoverContainer
+  }
+
+  #handlePopoverClick = (event) => {
+    const listItem = event.target.closest(".lexxy-prompt-menu__item");
+    if (listItem) {
+      this.#selectOption(listItem);
+      this.#optionWasSelected();
+    }
+  }
+
+  #reconnect() {
+    this.disconnectedCallback();
+    this.connectedCallback();
+  }
+}
+
+class CodeLanguagePicker extends HTMLElement {
+  connectedCallback() {
+    this.editorElement = this.closest("lexxy-editor");
+    this.editor = this.editorElement.editor;
+
+    this.#attachLanguagePicker();
+    this.#monitorForCodeBlockSelection();
+  }
+
+  #attachLanguagePicker() {
+    this.languagePickerElement = this.#createLanguagePicker();
+
+    this.languagePickerElement.addEventListener("change", () => {
+      this.#updateCodeBlockLanguage(this.languagePickerElement.value);
+    });
+
+    this.languagePickerElement.setAttribute("nonce", getNonce());
+    this.appendChild(this.languagePickerElement);
+  }
+
+  #createLanguagePicker() {
+    const selectElement = createElement("select", { className: "lexxy-code-language-picker", "aria-label": "Pick a language…", name: "lexxy-code-language" });
+
+    for (const [ value, label ] of Object.entries(this.#languages)) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      selectElement.appendChild(option);
+    }
+
+    return selectElement
+  }
+
+  get #languages() {
+    const languages = { ...pt$1 };
+
+    if (!languages.ruby) languages.ruby = "Ruby";
+    if (!languages.php) languages.php = "PHP";
+    if (!languages.go) languages.go = "Go";
+    if (!languages.bash) languages.bash = "Bash";
+    if (!languages.json) languages.json = "JSON";
+    if (!languages.diff) languages.diff = "Diff";
+
+    const sortedEntries = Object.entries(languages)
+      .sort(([ , a ], [ , b ]) => a.localeCompare(b));
+
+    // Place the "plain" entry first, then the rest of language sorted alphabetically
+    const plainIndex = sortedEntries.findIndex(([ key ]) => key === "plain");
+    const plainEntry = sortedEntries.splice(plainIndex, 1)[0];
+    return Object.fromEntries([ plainEntry, ...sortedEntries ])
+  }
+
+  #updateCodeBlockLanguage(language) {
+    this.editor.update(() => {
+      const codeNode = this.#getCurrentCodeNode();
+
+      if (codeNode) {
+        codeNode.setLanguage(language);
+      }
+    });
+  }
+
+  #monitorForCodeBlockSelection() {
+    this.editor.registerUpdateListener(() => {
+      this.editor.getEditorState().read(() => {
+        const codeNode = this.#getCurrentCodeNode();
+
+        if (codeNode) {
+          this.#codeNodeWasSelected(codeNode);
+        } else {
+          this.#hideLanguagePicker();
+        }
+      });
+    });
+  }
+
+  #getCurrentCodeNode() {
+    const selection = Lr();
+
+    if (!yr(selection)) {
+      return null
+    }
+
+    const anchorNode = selection.anchor.getNode();
+    const parentNode = anchorNode.getParent();
+
+    if (X$1(anchorNode)) {
+      return anchorNode
+    } else if (X$1(parentNode)) {
+      return parentNode
+    }
+
+    return null
+  }
+
+  #codeNodeWasSelected(codeNode) {
+    const language = codeNode.getLanguage();
+
+    this.#updateLanguagePickerWith(language);
+    this.#showLanguagePicker();
+    this.#positionLanguagePicker(codeNode);
+  }
+
+  #updateLanguagePickerWith(language) {
+    if (this.languagePickerElement && language) {
+      const normalizedLanguage = dt$1(language);
+      this.languagePickerElement.value = normalizedLanguage;
+    }
+  }
+
+  #positionLanguagePicker(codeNode) {
+    const codeElement = this.editor.getElementByKey(codeNode.getKey());
+    if (!codeElement) return
+
+    const codeRect = codeElement.getBoundingClientRect();
+    const editorRect = this.editorElement.getBoundingClientRect();
+    const relativeTop = codeRect.top - editorRect.top;
+    const relativeRight = editorRect.right - codeRect.right;
+
+    this.style.top = `${relativeTop}px`;
+    this.style.right = `${relativeRight}px`;
+  }
+
+  #showLanguagePicker() {
+    this.hidden = false;
+  }
+
+  #hideLanguagePicker() {
+    this.hidden = true;
+  }
+}
 
 class TableController {
   constructor(editorElement) {
@@ -11914,716 +12604,21 @@ class TableTools extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-table-tools", TableTools);
+function defineElements() {
+  const elements = {
+    "lexxy-toolbar": LexicalToolbarElement,
+    "lexxy-editor": LexicalEditorElement,
+    "lexxy-link-dropdown": LinkDropdown,
+    "lexxy-highlight-dropdown": HighlightDropdown,
+    "lexxy-prompt": LexicalPromptElement,
+    "lexxy-code-language-picker": CodeLanguagePicker,
+    "lexxy-table-tools": TableTools,
+  };
 
-class BaseSource {
-  // Template method to override
-  async buildListItems(filter = "") {
-    return Promise.resolve([])
-  }
-
-  // Template method to override
-  promptItemFor(listItem) {
-    return null
-  }
-
-  // Protected
-
-  buildListItemElementFor(promptItemElement) {
-    const template = promptItemElement.querySelector("template[type='menu']");
-    const fragment = template.content.cloneNode(true);
-    const listItemElement = createElement("li", { role: "option", id: generateDomId("prompt-item"), tabindex: "0" });
-    listItemElement.classList.add("lexxy-prompt-menu__item");
-    listItemElement.appendChild(fragment);
-    return listItemElement
-  }
-
-  async loadPromptItemsFromUrl(url) {
-    try {
-      const response = await fetch(url);
-      const html = await response.text();
-      const promptItems = parseHtml(html).querySelectorAll("lexxy-prompt-item");
-      return Promise.resolve(Array.from(promptItems))
-    } catch (error) {
-      return Promise.reject(error)
-    }
-  }
+  Object.entries(elements).forEach(([ name, element ]) => {
+    customElements.define(name, element);
+  });
 }
-
-class LocalFilterSource extends BaseSource {
-  async buildListItems(filter = "") {
-    const promptItems = await this.fetchPromptItems();
-    return this.#buildListItemsFromPromptItems(promptItems, filter)
-  }
-
-  // Template method to override
-  async fetchPromptItems(filter) {
-    return Promise.resolve([])
-  }
-
-  promptItemFor(listItem) {
-    return this.promptItemByListItem.get(listItem)
-  }
-
-  #buildListItemsFromPromptItems(promptItems, filter) {
-    const listItems = [];
-    this.promptItemByListItem = new WeakMap();
-    promptItems.forEach((promptItem) => {
-      const searchableText = promptItem.getAttribute("search");
-
-      if (!filter || filterMatches(searchableText, filter)) {
-        const listItem = this.buildListItemElementFor(promptItem);
-        this.promptItemByListItem.set(listItem, promptItem);
-        listItems.push(listItem);
-      }
-    });
-
-    return listItems
-  }
-}
-
-class InlinePromptSource extends LocalFilterSource {
-  constructor(inlinePromptItems) {
-    super();
-    this.inlinePromptItemElements = Array.from(inlinePromptItems);
-  }
-
-  async fetchPromptItems() {
-    return Promise.resolve(this.inlinePromptItemElements)
-  }
-}
-
-class DeferredPromptSource extends LocalFilterSource {
-  constructor(url) {
-    super();
-    this.url = url;
-
-    this.fetchPromptItems();
-  }
-
-  async fetchPromptItems() {
-    this.promptItems ??= await this.loadPromptItemsFromUrl(this.url);
-
-    return Promise.resolve(this.promptItems)
-  }
-}
-
-const DEBOUNCE_INTERVAL = 200;
-
-class RemoteFilterSource extends BaseSource {
-  constructor(url) {
-    super();
-
-    this.baseURL = url;
-    this.loadAndFilterListItems = debounceAsync(this.fetchFilteredListItems.bind(this), DEBOUNCE_INTERVAL);
-  }
-
-  async buildListItems(filter = "") {
-    return await this.loadAndFilterListItems(filter)
-  }
-
-  promptItemFor(listItem) {
-    return this.promptItemByListItem.get(listItem)
-  }
-
-  async fetchFilteredListItems(filter) {
-    const promptItems = await this.loadPromptItemsFromUrl(this.#urlFor(filter));
-    return this.#buildListItemsFromPromptItems(promptItems)
-  }
-
-  #urlFor(filter) {
-    const url = new URL(this.baseURL, window.location.origin);
-    url.searchParams.append("filter", filter);
-    return url.toString()
-  }
-
-  #buildListItemsFromPromptItems(promptItems) {
-    const listItems = [];
-    this.promptItemByListItem = new WeakMap();
-
-    for (const promptItem of promptItems) {
-      const listItem = this.buildListItemElementFor(promptItem);
-      this.promptItemByListItem.set(listItem, promptItem);
-      listItems.push(listItem);
-    }
-
-    return listItems
-  }
-}
-
-const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found";
-
-class LexicalPromptElement extends HTMLElement {
-  constructor() {
-    super();
-    this.keyListeners = [];
-  }
-
-  static observedAttributes = [ "connected" ]
-
-  connectedCallback() {
-    this.source = this.#createSource();
-
-    this.#addTriggerListener();
-    this.toggleAttribute("connected", true);
-  }
-
-  disconnectedCallback() {
-    this.source = null;
-    this.popoverElement = null;
-  }
-
-
-  attributeChangedCallback(name, oldValue, newValue) {
-    if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
-      requestAnimationFrame(() => this.#reconnect());
-    }
-  }
-
-  get name() {
-    return this.getAttribute("name")
-  }
-
-  get trigger() {
-    return this.getAttribute("trigger")
-  }
-
-  get supportsSpaceInSearches() {
-    return this.hasAttribute("supports-space-in-searches")
-  }
-
-  get open() {
-    return this.popoverElement?.classList?.contains("lexxy-prompt-menu--visible")
-  }
-
-  get closed() {
-    return !this.open
-  }
-
-  get #doesSpaceSelect() {
-    return !this.supportsSpaceInSearches
-  }
-
-  #createSource() {
-    const src = this.getAttribute("src");
-    if (src) {
-      if (this.hasAttribute("remote-filtering")) {
-        return new RemoteFilterSource(src)
-      } else {
-        return new DeferredPromptSource(src)
-      }
-    } else {
-      return new InlinePromptSource(this.querySelectorAll("lexxy-prompt-item"))
-    }
-  }
-
-  #addTriggerListener() {
-    const unregister = this.#editor.registerUpdateListener(({ editorState }) => {
-      editorState.read(() => {
-        const { node, offset } = this.#selection.selectedNodeWithOffset();
-        if (!node) return
-
-        if (lr(node)) {
-          const fullText = node.getTextContent();
-          const triggerLength = this.trigger.length;
-
-          // Check if we have enough characters for the trigger
-          if (offset >= triggerLength) {
-            const textBeforeCursor = fullText.slice(offset - triggerLength, offset);
-
-            // Check if trigger is at the start of the text node (new line case) or preceded by space or newline
-            if (textBeforeCursor === this.trigger) {
-              const isAtStart = offset === triggerLength;
-
-              const charBeforeTrigger = offset > triggerLength ? fullText[offset - triggerLength - 1] : null;
-              const isPrecededBySpaceOrNewline = charBeforeTrigger === " " || charBeforeTrigger === "\n";
-
-              if (isAtStart || isPrecededBySpaceOrNewline) {
-                unregister();
-                this.#showPopover();
-              }
-            }
-          }
-        }
-      });
-    });
-  }
-
-  #addCursorPositionListener() {
-    this.cursorPositionListener = this.#editor.registerUpdateListener(() => {
-      if (this.closed) return
-
-      this.#editor.read(() => {
-        const { node, offset } = this.#selection.selectedNodeWithOffset();
-        if (!node) return
-
-        if (lr(node) && offset > 0) {
-          const fullText = node.getTextContent();
-          const textBeforeCursor = fullText.slice(0, offset);
-          const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger);
-          const triggerEndIndex = lastTriggerIndex + this.trigger.length - 1;
-
-          // If trigger is not found, or cursor is at or before the trigger end position, hide popover
-          if (lastTriggerIndex === -1 || offset <= triggerEndIndex) {
-            this.#hidePopover();
-          }
-        } else {
-          // Cursor is not in a text node or at offset 0, hide popover
-          this.#hidePopover();
-        }
-      });
-    });
-  }
-
-  #removeCursorPositionListener() {
-    if (this.cursorPositionListener) {
-      this.cursorPositionListener();
-      this.cursorPositionListener = null;
-    }
-  }
-
-  get #editor() {
-    return this.#editorElement.editor
-  }
-
-  get #editorElement() {
-    return this.closest("lexxy-editor")
-  }
-
-  get #selection() {
-    return this.#editorElement.selection
-  }
-
-  async #showPopover() {
-    this.popoverElement ??= await this.#buildPopover();
-    this.#resetPopoverPosition();
-    await this.#filterOptions();
-    this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", true);
-    this.#selectFirstOption();
-
-    this.#editorElement.addEventListener("keydown", this.#handleKeydownOnPopover);
-    this.#editorElement.addEventListener("lexxy:change", this.#filterOptions);
-
-    this.#registerKeyListeners();
-    this.#addCursorPositionListener();
-  }
-
-  #registerKeyListeners() {
-    // We can't use a regular keydown for Enter as Lexical handles it first
-    this.keyListeners.push(this.#editor.registerCommand(Ne$2, this.#handleSelectedOption.bind(this), Bi));
-    this.keyListeners.push(this.#editor.registerCommand(Me$2, this.#handleSelectedOption.bind(this), Bi));
-
-    if (this.#doesSpaceSelect) {
-      this.keyListeners.push(this.#editor.registerCommand(be$1, this.#handleSelectedOption.bind(this), Bi));
-    }
-
-    // Register arrow keys with HIGH priority to prevent Lexical's selection handlers from running
-    this.keyListeners.push(this.#editor.registerCommand(ke$2, this.#handleArrowUp.bind(this), Bi));
-    this.keyListeners.push(this.#editor.registerCommand(Te$2, this.#handleArrowDown.bind(this), Bi));
-  }
-
-  #handleArrowUp(event) {
-    this.#moveSelectionUp();
-    event.preventDefault();
-    return true
-  }
-
-  #handleArrowDown(event) {
-    this.#moveSelectionDown();
-    event.preventDefault();
-    return true
-  }
-
-  #selectFirstOption() {
-    const firstOption = this.#listItemElements[0];
-
-    if (firstOption) {
-      this.#selectOption(firstOption);
-    }
-  }
-
-  get #listItemElements() {
-    return Array.from(this.popoverElement.querySelectorAll(".lexxy-prompt-menu__item"))
-  }
-
-  #selectOption(listItem) {
-    this.#clearSelection();
-    listItem.toggleAttribute("aria-selected", true);
-    listItem.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    listItem.focus();
-
-    // Preserve selection to prevent cursor jump
-    this.#selection.preservingSelection(() => {
-      this.#editorElement.focus();
-    });
-
-    this.#editorContentElement.setAttribute("aria-controls", this.popoverElement.id);
-    this.#editorContentElement.setAttribute("aria-activedescendant", listItem.id);
-    this.#editorContentElement.setAttribute("aria-haspopup", "listbox");
-  }
-
-  #clearSelection() {
-    this.#listItemElements.forEach((item) => { item.toggleAttribute("aria-selected", false); });
-    this.#editorContentElement.removeAttribute("aria-controls");
-    this.#editorContentElement.removeAttribute("aria-activedescendant");
-    this.#editorContentElement.removeAttribute("aria-haspopup");
-  }
-
-  #positionPopover() {
-    const { x, y, fontSize } = this.#selection.cursorPosition;
-    const editorRect = this.#editorElement.getBoundingClientRect();
-    const contentRect = this.#editorContentElement.getBoundingClientRect();
-    const verticalOffset = contentRect.top - editorRect.top;
-
-    if (!this.popoverElement.hasAttribute("data-anchored")) {
-      this.popoverElement.style.left = `${x}px`;
-      this.popoverElement.toggleAttribute("data-anchored", true);
-    }
-
-    this.popoverElement.style.top = `${y + verticalOffset}px`;
-    this.popoverElement.style.bottom = "auto";
-
-    const popoverRect = this.popoverElement.getBoundingClientRect();
-    const isClippedAtBottom = popoverRect.bottom > window.innerHeight;
-
-    if (isClippedAtBottom || this.popoverElement.hasAttribute("data-clipped-at-bottom")) {
-      this.popoverElement.style.top = `${y + verticalOffset - popoverRect.height - fontSize}px`;
-      this.popoverElement.style.bottom = "auto";
-      this.popoverElement.toggleAttribute("data-clipped-at-bottom", true);
-    }
-  }
-
-  #resetPopoverPosition() {
-    this.popoverElement.removeAttribute("data-clipped-at-bottom");
-    this.popoverElement.removeAttribute("data-anchored");
-  }
-
-  async #hidePopover() {
-    this.#clearSelection();
-    this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", false);
-    this.#editorElement.removeEventListener("lexxy:change", this.#filterOptions);
-    this.#editorElement.removeEventListener("keydown", this.#handleKeydownOnPopover);
-
-    this.#unregisterKeyListeners();
-    this.#removeCursorPositionListener();
-
-    await nextFrame();
-    this.#addTriggerListener();
-  }
-
-  #unregisterKeyListeners() {
-    this.keyListeners.forEach((unregister) => unregister());
-    this.keyListeners = [];
-  }
-
-  #filterOptions = async () => {
-    if (this.initialPrompt) {
-      this.initialPrompt = false;
-      return
-    }
-
-    if (this.#editorContents.containsTextBackUntil(this.trigger)) {
-      await this.#showFilteredOptions();
-      await nextFrame();
-      this.#positionPopover();
-    } else {
-      this.#hidePopover();
-    }
-  }
-
-  async #showFilteredOptions() {
-    const filter = this.#editorContents.textBackUntil(this.trigger);
-    const filteredListItems = await this.source.buildListItems(filter);
-    this.popoverElement.innerHTML = "";
-
-    if (filteredListItems.length > 0) {
-      this.#showResults(filteredListItems);
-    } else {
-      this.#showEmptyResults();
-    }
-    this.#selectFirstOption();
-  }
-
-  #showResults(filteredListItems) {
-    this.popoverElement.classList.remove("lexxy-prompt-menu--empty");
-    this.popoverElement.append(...filteredListItems);
-  }
-
-  #showEmptyResults() {
-    this.popoverElement.classList.add("lexxy-prompt-menu--empty");
-    const el = createElement("li", { innerHTML: this.#emptyResultsMessage });
-    el.classList.add("lexxy-prompt-menu__item--empty");
-    this.popoverElement.append(el);
-  }
-
-  get #emptyResultsMessage() {
-    return this.getAttribute("empty-results") || NOTHING_FOUND_DEFAULT_MESSAGE
-  }
-
-  #handleKeydownOnPopover = (event) => {
-    if (event.key === "Escape") {
-      this.#hidePopover();
-      this.#editorElement.focus();
-      event.stopPropagation();
-    }
-    // Arrow keys are now handled via Lexical commands with HIGH priority
-  }
-
-  #moveSelectionDown() {
-    const nextIndex = this.#selectedIndex + 1;
-    if (nextIndex < this.#listItemElements.length) this.#selectOption(this.#listItemElements[nextIndex]);
-  }
-
-  #moveSelectionUp() {
-    const previousIndex = this.#selectedIndex - 1;
-    if (previousIndex >= 0) this.#selectOption(this.#listItemElements[previousIndex]);
-  }
-
-  get #selectedIndex() {
-    return this.#listItemElements.findIndex((item) => item.hasAttribute("aria-selected"))
-  }
-
-  get #selectedListItem() {
-    return this.#listItemElements[this.#selectedIndex]
-  }
-
-  #handleSelectedOption(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    this.#optionWasSelected();
-    return true
-  }
-
-  #optionWasSelected() {
-    this.#replaceTriggerWithSelectedItem();
-    this.#hidePopover();
-    this.#editorElement.focus();
-  }
-
-  #replaceTriggerWithSelectedItem() {
-    const promptItem = this.source.promptItemFor(this.#selectedListItem);
-
-    if (!promptItem) { return }
-
-    const templates = Array.from(promptItem.querySelectorAll("template[type='editor']"));
-    const stringToReplace = `${this.trigger}${this.#editorContents.textBackUntil(this.trigger)}`;
-
-    if (this.hasAttribute("insert-editable-text")) {
-      this.#insertTemplatesAsEditableText(templates, stringToReplace);
-    } else {
-      this.#insertTemplatesAsAttachments(templates, stringToReplace, promptItem.getAttribute("sgid"));
-    }
-  }
-
-  #insertTemplatesAsEditableText(templates, stringToReplace) {
-    this.#editor.update(() => {
-      const nodes = templates.flatMap(template => this.#buildEditableTextNodes(template));
-      this.#editorContents.replaceTextBackUntil(stringToReplace, nodes);
-    });
-  }
-
-  #buildEditableTextNodes(template) {
-    return m$1(this.#editor, parseHtml(`${template.innerHTML}`))
-  }
-
-  #insertTemplatesAsAttachments(templates, stringToReplace, fallbackSgid = null) {
-    this.#editor.update(() => {
-      const attachmentNodes = this.#buildAttachmentNodes(templates, fallbackSgid);
-      const spacedAttachmentNodes = attachmentNodes.flatMap(node => [ node, this.#getSpacerTextNode() ]).slice(0, -1);
-      this.#editorContents.replaceTextBackUntil(stringToReplace, spacedAttachmentNodes);
-    });
-  }
-
-  #buildAttachmentNodes(templates, fallbackSgid = null) {
-    return templates.map(
-      template => this.#buildAttachmentNode(
-        template.innerHTML,
-        template.getAttribute("content-type") || this.#defaultPromptContentType,
-        template.getAttribute("sgid") || fallbackSgid
-      ))
-  }
-
-  #getSpacerTextNode() {
-    return sr(" ")
-  }
-
-  get #defaultPromptContentType() {
-    const attachmentContentTypeNamespace = Lexxy.global.get("attachmentContentTypeNamespace");
-    return `application/vnd.${attachmentContentTypeNamespace}.${this.name}`
-  }
-
-  #buildAttachmentNode(innerHtml, contentType, sgid) {
-    return new CustomActionTextAttachmentNode({ sgid, contentType, innerHtml })
-  }
-
-  get #editorContents() {
-    return this.#editorElement.contents
-  }
-
-  get #editorContentElement() {
-    return this.#editorElement.editorContentElement
-  }
-
-  async #buildPopover() {
-    const popoverContainer = createElement("ul", { role: "listbox", id: generateDomId("prompt-popover") }); // Avoiding [popover] due to not being able to position at an arbitrary X, Y position.
-    popoverContainer.classList.add("lexxy-prompt-menu");
-    popoverContainer.style.position = "absolute";
-    popoverContainer.setAttribute("nonce", getNonce());
-    popoverContainer.append(...await this.source.buildListItems());
-    popoverContainer.addEventListener("click", this.#handlePopoverClick);
-    this.#editorElement.appendChild(popoverContainer);
-    return popoverContainer
-  }
-
-  #handlePopoverClick = (event) => {
-    const listItem = event.target.closest(".lexxy-prompt-menu__item");
-    if (listItem) {
-      this.#selectOption(listItem);
-      this.#optionWasSelected();
-    }
-  }
-
-  #reconnect() {
-    this.disconnectedCallback();
-    this.connectedCallback();
-  }
-}
-
-customElements.define("lexxy-prompt", LexicalPromptElement);
-
-class CodeLanguagePicker extends HTMLElement {
-  connectedCallback() {
-    this.editorElement = this.closest("lexxy-editor");
-    this.editor = this.editorElement.editor;
-
-    this.#attachLanguagePicker();
-    this.#monitorForCodeBlockSelection();
-  }
-
-  #attachLanguagePicker() {
-    this.languagePickerElement = this.#createLanguagePicker();
-
-    this.languagePickerElement.addEventListener("change", () => {
-      this.#updateCodeBlockLanguage(this.languagePickerElement.value);
-    });
-
-    this.languagePickerElement.setAttribute("nonce", getNonce());
-    this.appendChild(this.languagePickerElement);
-  }
-
-  #createLanguagePicker() {
-    const selectElement = createElement("select", { className: "lexxy-code-language-picker", "aria-label": "Pick a language…", name: "lexxy-code-language" });
-
-    for (const [ value, label ] of Object.entries(this.#languages)) {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = label;
-      selectElement.appendChild(option);
-    }
-
-    return selectElement
-  }
-
-  get #languages() {
-    const languages = { ...pt$1 };
-
-    if (!languages.ruby) languages.ruby = "Ruby";
-    if (!languages.php) languages.php = "PHP";
-    if (!languages.go) languages.go = "Go";
-    if (!languages.bash) languages.bash = "Bash";
-    if (!languages.json) languages.json = "JSON";
-    if (!languages.diff) languages.diff = "Diff";
-
-    const sortedEntries = Object.entries(languages)
-      .sort(([ , a ], [ , b ]) => a.localeCompare(b));
-
-    // Place the "plain" entry first, then the rest of language sorted alphabetically
-    const plainIndex = sortedEntries.findIndex(([ key ]) => key === "plain");
-    const plainEntry = sortedEntries.splice(plainIndex, 1)[0];
-    return Object.fromEntries([ plainEntry, ...sortedEntries ])
-  }
-
-  #updateCodeBlockLanguage(language) {
-    this.editor.update(() => {
-      const codeNode = this.#getCurrentCodeNode();
-
-      if (codeNode) {
-        codeNode.setLanguage(language);
-      }
-    });
-  }
-
-  #monitorForCodeBlockSelection() {
-    this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
-        const codeNode = this.#getCurrentCodeNode();
-
-        if (codeNode) {
-          this.#codeNodeWasSelected(codeNode);
-        } else {
-          this.#hideLanguagePicker();
-        }
-      });
-    });
-  }
-
-  #getCurrentCodeNode() {
-    const selection = Lr();
-
-    if (!yr(selection)) {
-      return null
-    }
-
-    const anchorNode = selection.anchor.getNode();
-    const parentNode = anchorNode.getParent();
-
-    if (X$1(anchorNode)) {
-      return anchorNode
-    } else if (X$1(parentNode)) {
-      return parentNode
-    }
-
-    return null
-  }
-
-  #codeNodeWasSelected(codeNode) {
-    const language = codeNode.getLanguage();
-
-    this.#updateLanguagePickerWith(language);
-    this.#showLanguagePicker();
-    this.#positionLanguagePicker(codeNode);
-  }
-
-  #updateLanguagePickerWith(language) {
-    if (this.languagePickerElement && language) {
-      const normalizedLanguage = dt$1(language);
-      this.languagePickerElement.value = normalizedLanguage;
-    }
-  }
-
-  #positionLanguagePicker(codeNode) {
-    const codeElement = this.editor.getElementByKey(codeNode.getKey());
-    if (!codeElement) return
-
-    const codeRect = codeElement.getBoundingClientRect();
-    const editorRect = this.editorElement.getBoundingClientRect();
-    const relativeTop = codeRect.top - editorRect.top;
-    const relativeRight = editorRect.right - codeRect.right;
-
-    this.style.top = `${relativeTop}px`;
-    this.style.right = `${relativeRight}px`;
-  }
-
-  #showLanguagePicker() {
-    this.hidden = false;
-  }
-
-  #hideLanguagePicker() {
-    this.hidden = true;
-  }
-}
-
-customElements.define("lexxy-code-language-picker", CodeLanguagePicker);
 
 function highlightCode() {
   const elements = document.querySelectorAll("pre[data-language]");
@@ -12678,6 +12673,9 @@ class LexxyExtension {
 }
 
 const configure = Lexxy.configure;
+
+// Pushing elements definition to after the current call stack to allow global configuration to take place first
+setTimeout(defineElements, 0);
 
 export { ActionTextAttachmentNode, ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, configure, highlightCode as highlightAll, highlightCode };
 //# sourceMappingURL=lexxy.js.map

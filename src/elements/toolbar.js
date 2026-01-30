@@ -13,7 +13,7 @@ import { getListType } from "../helpers/lexical_helper"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 
-export default class LexicalToolbarElement extends HTMLElement {
+export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
 
   constructor() {
@@ -106,7 +106,7 @@ export default class LexicalToolbarElement extends HTMLElement {
 
     this.editor.update(() => {
       this.editor.dispatchCommand(command, payload)
-    }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined } )
+    }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined })
   }
 
   #bindHotkeys() {
@@ -442,4 +442,4 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-toolbar", LexicalToolbarElement)
+export default LexicalToolbarElement
