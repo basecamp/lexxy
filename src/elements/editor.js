@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $isParagraphNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -28,7 +28,9 @@ import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_atta
 import { TrixContentLexicalExtension } from "../lexical_extensions/trix_content_lexical_extension"
 import { TablesLexicalExtension } from "../lexical_extensions/tables_lexical_extension"
 
-export class LexicalEditorElement extends HTMLElement {
+import AttachmentsExtension from "../extensions/attachments_extension.js"
+
+export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = false
   static commands = [ "bold", "italic", "strikethrough" ]
@@ -114,7 +116,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   get baseExtensions() {
-    return [ ]
+    return [ AttachmentsExtension ]
   }
 
   get directUploadUrl() {
@@ -374,6 +376,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #registerComponents() {
+
     if (this.supportsRichText) {
       registerRichText(this.editor)
       registerList(this.editor)

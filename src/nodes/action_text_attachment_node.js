@@ -171,16 +171,20 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return createAttachmentFigure(this.contentType, this.isPreviewableAttachment, this.fileName)
   }
 
-  get #isPreviewableImage() {
-    return isPreviewableImage(this.contentType)
+  select() {
+    dispatchCustomEvent(document, "lexxy:internal:select-node", { key: this.getKey() })
   }
 
   get isPreviewableAttachment() {
-    return this.#isPreviewableImage || this.previewable
+    return this.isPreviewableImage || this.previewable
   }
 
-  #createDOMForImage() {
-    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions })
+  get isPreviewableImage() {
+    return isPreviewableImage(this.contentType)
+  }
+
+  #createDOMForImage(options = {}) {
+    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions, ...options })
   }
 
   get #imageDimensions() {
@@ -247,6 +251,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     if (event.key === "Enter") {
       this.#updateCaptionValueFromInput(event.target)
       event.preventDefault()
+      event.target.blur()
 
       this.editor.update(() => {
         this.selectNext()
@@ -254,4 +259,12 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     }
     event.stopPropagation()
   }
+}
+
+export function $createActionTextAttachmentNode(...args) {
+  return new ActionTextAttachmentNode(...args)
+}
+
+export function $isActionTextAttachmentNode(node) {
+  return node instanceof ActionTextAttachmentNode
 }

@@ -1,17 +1,19 @@
 import {
-  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
-  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
-} from "lexical"
+  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $getSiblingCaret, $insertNodes,
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection
+ } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
-import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
+import { $createActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { $createImageGalleryNode, $findOrCreateGalleryFor } from "../nodes/image_gallery_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
-import { nextFrame } from "../helpers/timing_helpers.js"
 import { FormatEscaper } from "./format_escaper"
+import { $getNextSiblingOrParentSibling } from "@lexical/utils"
+import { partition } from "../helpers/array_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -252,23 +254,71 @@ export default class Contents {
     }
   }
 
-  uploadFile(file) {
+  uploadFilesAndSelectLast(files) {
+    const nodes = this.uploadFiles(files)
+    if (nodes) {
+      const lastNode = nodes.at(-1)
+      lastNode.select()
+    }
+  }
+
+  uploadFiles(files) {
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
       return
     }
+    let attachmentNodes
 
-    if (!this.#shouldUploadFile(file)) {
-      return
-    }
+    const filesArray = Array.from(files)
+
+    // Filter to only valid files
+    const validFiles = filesArray.filter(file => this. #shouldUploadFile(file))
+    if (validFiles.length === 0) return
+
 
     const uploadUrl = this.editorElement.directUploadUrl
     const blobUrlTemplate = this.editorElement.blobUrlTemplate
 
     this.editor.update(() => {
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate })
-      this.insertAtCursor(uploadedImageNode)
-    }, { tag: HISTORY_MERGE_TAG })
+      attachmentNodes = validFiles.map(file => {
+        return $createActionTextAttachmentUploadNode({
+          file: file,
+          uploadUrl: uploadUrl,
+          blobUrlTemplate: blobUrlTemplate,
+          editor: this.editor
+        })
+      })
+
+      const [ imageUploads, otherUploads ] = partition(attachmentNodes, node => node.isPreviewableImage)
+
+      // manually handle when the selection is on an image/gallery since $insertNodes won't do it gracefully
+      if (this.#selection.isOnPreviewableImage && imageUploads.length) {
+        const { node } = this.#selection.selectedNodeWithOffset()
+        const gallery = $findOrCreateGalleryFor(node)
+        gallery.splice(node.getIndexWithinParent() + 1, 0, imageUploads)
+      } else if (imageUploads.length > 1) {
+        const gallery = $createImageGalleryNode()
+        this.insertAtCursor(gallery)
+        gallery.append(...imageUploads)
+      } else if (imageUploads.length === 1) {
+        const [ imageUpload ] = imageUploads
+        this.insertAtCursor(imageUpload)
+      }
+
+      if (this.#selection.isOnPreviewableImage && otherUploads.length) {
+        const { node } = this.#selection.selectedNodeWithOffset()
+        const topLevelNode = node.getTopLevelElementOrThrow()
+        const caret = $getSiblingCaret(topLevelNode, "next")
+        for (const fileUpload of otherUploads) {
+          caret.insert(fileUpload)
+          caret.getAdjacentCaret()
+        }
+      } else {
+        otherUploads.forEach(fileUpload => this.insertAtCursor(fileUpload))
+      }
+
+      return attachmentNodes
+    })
   }
 
   deleteSelectedNodes() {
