@@ -173,16 +173,16 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return true
   }
 
-  get #isPreviewableImage() {
+  get isPreviewableAttachment() {
+    return this.isPreviewableImage || this.previewable
+  }
+
+  get isPreviewableImage() {
     return isPreviewableImage(this.contentType)
   }
 
-  get isPreviewableAttachment() {
-    return this.#isPreviewableImage || this.previewable
-  }
-
-  #createDOMForImage() {
-    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions })
+  #createDOMForImage(options = {}) {
+    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions, ...options })
   }
 
   get #imageDimensions() {
@@ -245,6 +245,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     if (event.key === "Enter") {
       this.#updateCaptionValueFromInput(event.target)
       event.preventDefault()
+      event.target.blur()
 
       this.editor.update(() => {
         this.selectNext()
@@ -252,4 +253,12 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     }
     event.stopPropagation()
   }
+}
+
+export function $createActionTextAttachmentNode(...args) {
+  return new ActionTextAttachmentNode(...args)
+}
+
+export function $isActionTextAttachmentNode(node) {
+  return node instanceof ActionTextAttachmentNode
 }

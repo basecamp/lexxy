@@ -1,17 +1,19 @@
 import {
-  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
-  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
-} from "lexical"
+  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $getSiblingCaret, $insertNodes,
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection
+ } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
-import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
+import { $createActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { $createImageGalleryNode, $findOrCreateGalleryFor } from "../nodes/image_gallery_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
 import { FormatEscaper } from "./format_escaper"
 import { $getNextSiblingOrParentSibling } from "@lexical/utils"
+import { partition } from "../helpers/array_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -252,23 +254,53 @@ export default class Contents {
     }
   }
 
-  uploadFile(file) {
+  uploadFiles(files, { selectLast } = {}) {
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
       return
     }
+    let attachmentNodes
 
-    if (!this.#shouldUploadFile(file)) {
-      return
-    }
+    const filesArray = Array.from(files)
+
+    // Filter to only valid files
+    const validFiles = filesArray.filter(file => this. #shouldUploadFile(file))
+    if (validFiles.length === 0) return
+
 
     const uploadUrl = this.editorElement.directUploadUrl
     const blobUrlTemplate = this.editorElement.blobUrlTemplate
 
     this.editor.update(() => {
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate })
-      this.insertAtCursor(uploadedImageNode)
-    }, { tag: HISTORY_MERGE_TAG })
+      attachmentNodes = validFiles.map(file => {
+        return $createActionTextAttachmentUploadNode({
+          file: file,
+          uploadUrl: uploadUrl,
+          blobUrlTemplate: blobUrlTemplate,
+          editor: this.editor
+        })
+      })
+
+      if (selectLast && uploader.nodes?.length) {
+        const lastNode = uploader.nodes.at(-1)
+        lastNode.select()
+      }
+
+      if (imageSelected && otherUploads.length) {
+        const { node } = this.#selection.selectedNodeWithOffset()
+        const topLevelNode = node.getTopLevelElementOrThrow()
+        const caret = $getSiblingCaret(topLevelNode, "next")
+        for (const fileUpload of otherUploads) {
+          caret.insert(fileUpload)
+          caret.getAdjacentCaret()
+        }
+      } else {
+        otherUploads.forEach(fileUpload => this.insertAtCursor(fileUpload))
+      }
+
+    })
+
+    return attachmentNodes
   }
 
   deleteSelectedNodes() {
