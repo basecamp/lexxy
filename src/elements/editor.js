@@ -206,10 +206,6 @@ export class LexicalEditorElement extends HTMLElement {
     if (!html) html = "<p></p>"
     const nodes = $generateNodesFromDOM(this.editor, parseHtml(`${html}`))
 
-    if (nodes.length === 0) {
-      return [ $createParagraphNode() ]
-    }
-
     return nodes
       .map(this.#wrapTextNode)
       .map(this.#unwrapDecoratorNode)
