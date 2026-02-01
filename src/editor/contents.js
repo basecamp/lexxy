@@ -32,20 +32,18 @@ export default class Contents {
   }
 
   insertAtCursor(node) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      const selectedNodes = selection?.getNodes()
+    const selection = $getSelection()
+    const selectedNodes = selection?.getNodes()
 
-      if ($isRangeSelection(selection)) {
-        $insertNodes([ node ])
-      } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
-        const lastNode = selectedNodes[selectedNodes.length - 1]
-        lastNode.insertAfter(node)
-      } else {
-        const root = $getRoot()
-        root.append(node)
-      }
-    })
+    if ($isRangeSelection(selection)) {
+      $insertNodes([ node ])
+    } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
+      const lastNode = selectedNodes.at(-1)
+      lastNode.insertAfter(node)
+    } else {
+      const root = $getRoot()
+      root.append(node)
+    }
   }
 
   insertAtCursorEnsuringLineBelow(node) {
