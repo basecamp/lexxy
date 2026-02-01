@@ -32,12 +32,10 @@ export default class Selection {
   }
 
   get hasNodeSelection() {
-    let result = false
-    this.editor.getEditorState().read(() => {
+    return this.editor.getEditorState().read(() => {
       const selection = $getSelection()
-      result = selection !== null && $isNodeSelection(selection)
+      return selection !== null && $isNodeSelection(selection)
     })
-    return result
   }
 
   get cursorPosition() {
@@ -409,33 +407,33 @@ export default class Selection {
 
   async #selectPreviousNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
+      return await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
     } else {
-      this.#selectInLexical(this.nodeBeforeCursor)
+      return this.#selectInLexical(this.nodeBeforeCursor)
     }
   }
 
   async #selectNextNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
+      return await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
     } else {
-      this.#selectInLexical(this.nodeAfterCursor)
+      return this.#selectInLexical(this.nodeAfterCursor)
     }
   }
 
   async #selectPreviousTopLevelNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
+      return await this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectPrevious())
     } else {
-      this.#selectInLexical(this.topLevelNodeBeforeCursor)
+      return this.#selectInLexical(this.topLevelNodeBeforeCursor)
     }
   }
 
   async #selectNextTopLevelNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
+      return await this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectNext(0, 0))
     } else {
-      this.#selectInLexical(this.topLevelNodeAfterCursor)
+      return this.#selectInLexical(this.topLevelNodeAfterCursor)
     }
   }
 
