@@ -1,8 +1,8 @@
 import {
-  $createNodeSelection, $createParagraphNode, $getNodeByKey, $getRoot, $getSelection, $isElementNode,
-  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, COMMAND_PRIORITY_LOW, DecoratorNode,
+  $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
+  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DecoratorNode,
   KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
-  KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, SELECTION_CHANGE_COMMAND
+  KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListNode } from "@lexical/list"
@@ -10,7 +10,7 @@ import { TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
 import { getNonce } from "../helpers/csp_helper"
-import { getNearestListItemNode, isPrintableCharacter } from "../helpers/lexical_helper"
+import { $createNodeSelectionWith, getNearestListItemNode, isPrintableCharacter } from "../helpers/lexical_helper"
 
 export default class Selection {
   constructor(editorElement) {
@@ -272,20 +272,12 @@ export default class Selection {
   }
 
   #listenForNodeSelections() {
-    this.editor.getRootElement().addEventListener("lexxy:internal:select-node", async (event) => {
-      await nextFrame()
+    this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
+      if (!isDOMNode(target)) return false
 
-      const { key } = event.detail
-      this.editor.update(() => {
-        const node = $getNodeByKey(key)
-        if (node) {
-          const selection = $createNodeSelection()
-          selection.add(node.getKey())
-          $setSelection(selection)
-        }
-        this.editor.focus()
-      })
-    })
+      const targetNode = $getNearestNodeFromDOMNode(target)
+      return $isDecoratorNode(targetNode) && this.#selectInLexical(targetNode)
+    }, COMMAND_PRIORITY_LOW)
 
     this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
       this.#selectOrAppendNextLine()
@@ -499,13 +491,13 @@ export default class Selection {
   }
 
   #selectInLexical(node) {
-    if (!node || !(node instanceof DecoratorNode)) return
-
-    this.editor.update(() => {
-      const selection = $createNodeSelection()
-      selection.add(node.getKey())
+    if ($isDecoratorNode(node)) {
+      const selection = $createNodeSelectionWith(node)
       $setSelection(selection)
-    })
+      return selection
+    } else {
+      return false
+    }
   }
 
   #deleteSelectedOrNext() {
