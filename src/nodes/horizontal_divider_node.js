@@ -1,5 +1,6 @@
-import { DecoratorNode } from "lexical"
-import { createElement, dispatchCustomEvent } from "../helpers/html_helper"
+import { $setSelection, DecoratorNode } from "lexical"
+import { createElement } from "../helpers/html_helper"
+import { $createNodeSelectionWith } from "../helpers/lexical_helper"
 
 export class HorizontalDividerNode extends DecoratorNode {
   static getType() {
@@ -35,10 +36,6 @@ export class HorizontalDividerNode extends DecoratorNode {
     const figure = createElement("figure", { className: "horizontal-divider" })
     const hr = createElement("hr")
 
-    figure.addEventListener("click", (event) => {
-      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() })
-    })
-
     figure.appendChild(hr)
 
     return figure
@@ -50,6 +47,11 @@ export class HorizontalDividerNode extends DecoratorNode {
 
   getTextContent() {
     return "┄\n\n"
+  }
+
+  select() {
+    $setSelection($createNodeSelectionWith(this))
+    return true
   }
 
   isInline() {
