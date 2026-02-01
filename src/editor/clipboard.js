@@ -107,14 +107,12 @@ export default class Clipboard {
     if (!this.editorElement.supportsAttachments) return
 
     const html = clipboardData.getData("text/html")
-    if (html) return // Ignore if image copied from browser since we will load it as a remote image
+    if (html) return // Ignore if image copied from browser
 
     this.#preservingScrollPosition(() => {
-      for (const item of clipboardData.items) {
-        const file = item.getAsFile()
-        if (!file) continue
-
-        this.contents.uploadFile(file)
+      const files = clipboardData.files
+      if (files.length) {
+        this.contents.uploadFiles(files, { selectLast: true })
       }
     })
   }

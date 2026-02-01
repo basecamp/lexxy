@@ -188,17 +188,13 @@ export class CommandDispatcher {
       type: "file",
       multiple: true,
       style: "display: none;",
-      onchange: ({ target }) => {
-        const files = Array.from(target.files)
-        if (!files.length) return
-
-        for (const file of files) {
-          this.contents.uploadFile(file)
-        }
+      onchange: ({ target: { files } }) => {
+        this.contents.uploadFiles(files, { selectLast: true })
       }
     })
 
-    this.editorElement.appendChild(input) // Append and remove just for the sake of making it testable
+    // Append and remove to make testable
+    this.editorElement.appendChild(input)
     input.click()
     setTimeout(() => input.remove(), 1000)
   }
@@ -272,9 +268,7 @@ export class CommandDispatcher {
     const files = Array.from(dataTransfer.files)
     if (!files.length) return
 
-    for (const file of files) {
-      this.contents.uploadFile(file)
-    }
+    this.contents.uploadFiles(files, { selectLast: true })
 
     this.editor.focus()
   }
