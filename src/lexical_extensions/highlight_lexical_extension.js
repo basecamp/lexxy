@@ -12,7 +12,7 @@ const hasPastedStylesState = createState("hasPastedStyles", {
   parse: (value) => value || false
 })
 
-export const HighlightExtension = defineExtension({
+export const HighlightLexicalExtension = defineExtension({
   dependencies: [ RichTextExtension ],
   name: "lexxy/highlight",
   config: {

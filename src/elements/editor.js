@@ -25,9 +25,8 @@ import Extensions from "../editor/extensions"
 import Highlighter from "../editor/highlighter"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { TrixContentExtension } from "../extensions/trix_content_extension"
-
-import { TablesLexicalExtension } from "../extensions/tables_lexical_extension"
+import { TrixContentLexicalExtension } from "../lexical_extensions/trix_content_lexical_extension"
+import { TablesLexicalExtension } from "../lexical_extensions/tables_lexical_extension"
 
 export class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -112,6 +111,10 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.toolbar = this.toolbar || this.#findOrCreateDefaultToolbar()
     return this.toolbar
+  }
+
+  get baseExtensions() {
+    return [ ]
   }
 
   get directUploadUrl() {
@@ -261,8 +264,8 @@ export class LexicalEditorElement extends HTMLElement {
     const extensions = []
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
-      TrixContentExtension,
-      TablesLexicalExtension
+      TablesLexicalExtension,
+      TrixContentLexicalExtension
     ]
 
     if (this.supportsRichText) {
