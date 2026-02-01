@@ -246,3 +246,7 @@ class AttachmentNodeConversion {
       .replace(":filename", encodeURIComponent(this.blob.filename))
   }
 }
+
+export function $createActionTextAttachmentUploadNode(...args) {
+  return new ActionTextAttachmentUploadNode(...args)
+}

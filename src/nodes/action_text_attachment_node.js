@@ -172,16 +172,16 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return figure
   }
 
-  get #isPreviewableImage() {
-    return isPreviewableImage(this.contentType)
-  }
-
   get isPreviewableAttachment() {
     return this.#isPreviewableImage || this.previewable
   }
 
-  #createDOMForImage() {
-    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions })
+  get #isPreviewableImage() {
+    return isPreviewableImage(this.contentType)
+  }
+
+  #createDOMForImage(options = {}) {
+    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions, ...options })
   }
 
   get #imageDimensions() {
@@ -255,4 +255,12 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     }
 
   }
+}
+
+export function $createActionTextAttachmentNode(...args) {
+  return new ActionTextAttachmentNode(...args)
+}
+
+export function $isActionTextAttachmentNode(node) {
+  return node instanceof ActionTextAttachmentNode
 }

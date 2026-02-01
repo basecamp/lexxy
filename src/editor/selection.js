@@ -13,6 +13,7 @@ import { getNonce } from "../helpers/csp_helper"
 import { $createNodeSelectionWith, getListType } from "../helpers/lexical_helper"
 import { LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
+import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 
 export default class Selection {
   constructor(editorElement) {
@@ -185,6 +186,12 @@ export default class Selection {
 
   get isTableCellSelected() {
     return this.nearestNodeOfType(TableCellNode) !== null
+  }
+
+  get isOnPreviewableImage() {
+    const selection = $getSelection()
+    const firstNode = selection.getNodes().at(0)
+    return $isActionTextAttachmentNode(firstNode) && firstNode.isPreviewableImage
   }
 
   get nodeAfterCursor() {
