@@ -10,8 +10,8 @@ import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
-import { nextFrame } from "../helpers/timing_helpers.js"
 import { FormatEscaper } from "./format_escaper"
+import { $getNextSiblingOrParentSibling } from "@lexical/utils"
 
 export default class Contents {
   constructor(editorElement) {
@@ -271,24 +271,21 @@ export default class Contents {
     }, { tag: HISTORY_MERGE_TAG })
   }
 
-  async deleteSelectedNodes() {
+  deleteSelectedNodes() {
     let focusNode = null
+    let focusIsPreviousSibling
 
     this.editor.update(() => {
       if (this.#selection.hasNodeSelection) {
         const nodesToRemove = $getSelection().getNodes()
         if (nodesToRemove.length === 0) return
 
-        focusNode = this.#findAdjacentNodeTo(nodesToRemove)
+        [ focusNode, focusIsPreviousSibling ] = this.#findAdjacentNodeTo(nodesToRemove)
         this.#deleteNodes(nodesToRemove)
+
+        this.#selectAfterDeletion(focusNode, focusIsPreviousSibling)
+        this.editor.focus()
       }
-    })
-
-    await nextFrame()
-
-    this.editor.update(() => {
-      this.#selectAfterDeletion(focusNode)
-      this.editor.focus()
     })
   }
 
@@ -551,10 +548,15 @@ export default class Contents {
     const firstNode = nodes[0]
     const lastNode = nodes[nodes.length - 1]
 
-    return firstNode?.getPreviousSibling() || lastNode?.getNextSibling()
+    const previousSibling = firstNode?.getPreviousSibling()
+    const isPreviousSibling = Boolean(previousSibling)
+
+    const previousOrNextSibling = previousSibling || lastNode && $getNextSiblingOrParentSibling(lastNode)?.[0]
+
+    return [ previousOrNextSibling, isPreviousSibling ]
   }
 
-  #selectAfterDeletion(focusNode) {
+  #selectAfterDeletion(focusNode, selectEnd = true) {
     const root = $getRoot()
     if (root.getChildrenSize() === 0) {
       const newParagraph = $createParagraphNode()
@@ -562,9 +564,9 @@ export default class Contents {
       newParagraph.selectStart()
     } else if (focusNode) {
       if ($isTextNode(focusNode) || $isParagraphNode(focusNode)) {
-        focusNode.selectEnd()
+        selectEnd ? focusNode.selectEnd() : focusNode.selectStart()
       } else {
-        focusNode.selectNext(0, 0)
+        selectEnd ? focusNode.selectNext(0, 0) : focusNode.select()
       }
     }
   }
