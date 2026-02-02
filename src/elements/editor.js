@@ -186,12 +186,7 @@ export class LexicalEditorElement extends HTMLElement {
       root.selectEnd()
 
       this.#toggleEmptyStatus()
-
-      // The first time you set the value, when the editor is empty, it seems to leave Lexical
-      // in an inconsistent state until, at least, you focus. You can type but adding attachments
-      // fails because no root node detected. This is a workaround to deal with the issue.
-      requestAnimationFrame(() => this.editor?.update(() => { }))
-    })
+    }, { discrete: true })
   }
 
   #parseHtmlIntoLexicalNodes(html) {
