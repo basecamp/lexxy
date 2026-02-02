@@ -6,6 +6,6 @@ export function sanitize(html) {
 }
 
 export function normalizeEmptyContent(html) {
-  if (!html) return html;
-  return html.trim() === "<p><br></p>" ? "" : html;
+  if (!html) return html
+  return html.trim() === "<p><br></p>" ? "" : html
 }
