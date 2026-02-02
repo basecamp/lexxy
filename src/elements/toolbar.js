@@ -60,7 +60,6 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#resetTabIndexValues()
     this.#setItemPositionValues()
     this.#monitorSelectionChanges()
-    this.#monitorHistoryChanges()
     this.#refreshToolbarOverflow()
     this.#bindFocusListeners()
 
@@ -205,13 +204,8 @@ export class LexicalToolbarElement extends HTMLElement {
       this.editor.getEditorState().read(() => {
         this.#updateButtonStates()
         this.#closeDropdowns()
+        this.#updateUndoRedoButtonStates()
       })
-    })
-  }
-
-  #monitorHistoryChanges() {
-    this.editor.registerUpdateListener(() => {
-      this.#updateUndoRedoButtonStates()
     })
   }
 
