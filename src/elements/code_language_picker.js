@@ -10,6 +10,8 @@ export class CodeLanguagePicker extends HTMLElement {
 
     this.#attachLanguagePicker()
     this.#monitorForCodeBlockSelection()
+
+    this.#hideLanguagePicker()
   }
 
   #attachLanguagePicker() {
