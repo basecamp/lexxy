@@ -19,6 +19,8 @@ This is useful for one-time setup.
 Fired whenever the editor element gains or loses focus.
 Useful to show or hide accessory UI state.
 
+Lexxy considers the entire `<lexxy-editor>` element and associated toolbar as the editor, including any children. Focusing or interacting with a toolbar element from an editor with focus will not fire `lexxy:blur` or `lexxy:focus`.
+
 ## `lexxy:change`
 
 Fired whenever the editor content changes.

@@ -58,7 +58,10 @@
       <lexxy-prompt trigger="3" src="<%= people_path %>" name="mention" remote-filtering insert-editable-text supports-space-in-searches>
       </lexxy-prompt>
 
-      <lexxy-prompt trigger="4" src="<%= groups_path %>" name="mention">
+      <lexxy-prompt trigger="group:" src="<%= groups_path %>" name="mention">
+      </lexxy-prompt>
+
+      <lexxy-prompt trigger="person:" src="<%= people_path %>" name="mention" supports-space-in-searches>
       </lexxy-prompt>
     <% end %>
 

@@ -49,6 +49,8 @@ Editors support the following options, configurable using presets and element at
 - `multiLine`: Pass `false` to force single line editing.
 - `richText`: Pass `false` to disable rich text editing.
 
+The toolbar is considered part of the editor for `lexxy:focus` and `lexxy:blur` events.
+
 Lexxy also supports standard HTML attributes:
   - `placeholder`: Text displayed when the editor is empty.
   - Form attributes: `name`, `value`, `required`, `disabled`, `autofocus` etc.
@@ -60,3 +62,6 @@ Global options apply to all editors in your app and are configured using `Lexxy.
 - `attachmentTagName`: The tag name used for [Action Text custom attachments](https://guides.rubyonrails.org/action_text_overview.html#signed-globalid). By default, they will be rendered as `action-text-attachment` tags.
 - `attachmentContentTypeNamespace`: The default content_type namespace for prompts. The default is `actiontext` which will result in `application/vnd.actiontext.[type]`.
 - `authenticatedUploads`: will set `withCredentials: true` for ActiveStorage upload requests if you are using authenticated upload contollers. Be sure to set cookie domain and server CORS/CSRF options accordingly.
+
+{: .important }
+When overriding configuration, call `Lexxy.configure` immediately after your import statement. Editor elements are registered after the import's call stack completes, so configuration must happen synchronously to take effect.

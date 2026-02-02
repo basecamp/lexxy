@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, BLUR_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, FOCUS_COMMAND, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -8,13 +8,11 @@ import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
-import { TableCellNode, TableNode, TableRowNode, registerTablePlugin, registerTableSelectionObserver, setScrollableTablesActive } from "@lexical/table"
 
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
-import { WrappedTableNode } from "../nodes/wrapped_table_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
@@ -30,7 +28,9 @@ import Highlighter from "../editor/highlighter"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 
-export default class LexicalEditorElement extends HTMLElement {
+import { TablesLexicalExtension } from "../extensions/tables_lexical_extension"
+
+export class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = false
   static commands = [ "bold", "italic", "strikethrough" ]
@@ -220,10 +220,8 @@ export default class LexicalEditorElement extends HTMLElement {
   #initialize() {
     this.#synchronizeWithChanges()
     this.#registerComponents()
-    this.#listenForInvalidatedNodes()
     this.#handleEnter()
-    this.#handleFocus()
-    this.#handleTables()
+    this.#registerFocusEvents()
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#loadInitialValue()
@@ -234,11 +232,11 @@ export default class LexicalEditorElement extends HTMLElement {
     this.editorContentElement ||= this.#createEditorContentElement()
 
     const editor = buildEditorFromExtensions({
-        name: "lexxy/core",
-        namespace: "Lexxy",
-        theme: theme,
-        nodes: this.#lexicalNodes
-      },
+      name: "lexxy/core",
+      namespace: "Lexxy",
+      theme: theme,
+      nodes: this.#lexicalNodes
+    },
       ...this.#lexicalExtensions
     )
 
@@ -248,10 +246,11 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #lexicalExtensions() {
-    const extensions = [ ]
+    const extensions = []
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
-      TrixContentExtension
+      TrixContentExtension,
+      TablesLexicalExtension
     ]
 
     if (this.supportsRichText) {
@@ -276,14 +275,7 @@ export default class LexicalEditorElement extends HTMLElement {
         CodeHighlightNode,
         LinkNode,
         AutoLinkNode,
-        HorizontalDividerNode,
-        WrappedTableNode,
-        {
-          replace: TableNode,
-          with: () => { return new WrappedTableNode() }
-        },
-        TableCellNode,
-        TableRowNode,
+        HorizontalDividerNode
       )
     }
 
@@ -397,32 +389,14 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   #registerTableComponents() {
-    registerTablePlugin(this.editor)
-    this.tableHandler = createElement("lexxy-table-handler")
-    this.append(this.tableHandler)
-
-    this.#addUnregisterHandler(registerHeaderBackgroundTransform(this.editor))
+    this.tableTools = createElement("lexxy-table-tools")
+    this.append(this.tableTools)
   }
 
   #registerCodeHiglightingComponents() {
     registerCodeHighlighting(this.editor)
     this.codeLanguagePicker = createElement("lexxy-code-language-picker")
     this.append(this.codeLanguagePicker)
-  }
-
-  #listenForInvalidatedNodes() {
-    this.editor.getRootElement().addEventListener("lexxy:internal:invalidate-node", (event) => {
-      const { key, values } = event.detail
-
-      this.editor.update(() => {
-        const node = $getNodeByKey(key)
-
-        if (node instanceof ActionTextAttachmentNode) {
-          const updatedNode = node.getWritable()
-          Object.assign(updatedNode, values)
-        }
-      })
-    })
   }
 
   #handleEnter() {
@@ -448,12 +422,27 @@ export default class LexicalEditorElement extends HTMLElement {
     )
   }
 
-  #handleFocus() {
-    // Lexxy handles focus and blur as commands
-    // see https://github.com/facebook/lexical/blob/d1a8e84fe9063a4f817655b346b6ff373aa107f0/packages/lexical/src/LexicalEvents.ts#L35
-    // and https://stackoverflow.com/a/72212077
-    this.editor.registerCommand(BLUR_COMMAND, () => { dispatch(this, "lexxy:blur") }, COMMAND_PRIORITY_NORMAL)
-    this.editor.registerCommand(FOCUS_COMMAND, () => { dispatch(this, "lexxy:focus") }, COMMAND_PRIORITY_NORMAL)
+  #registerFocusEvents() {
+    this.addEventListener("focusin", this.#handleFocusIn)
+    this.addEventListener("focusout", this.#handleFocusOut)
+  }
+
+  #handleFocusIn(event) {
+    if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
+      dispatch(this, "lexxy:focus")
+      this.currentlyFocused = true
+    }
+  }
+
+  #handleFocusOut(event) {
+    if (!this.#elementInEditorOrToolbar(event.relatedTarget)) {
+      dispatch(this, "lexxy:blur")
+      this.currentlyFocused = false
+    }
+  }
+
+  #elementInEditorOrToolbar(element) {
+    return this.contains(element) || this.toolbarElement?.contains(element)
   }
 
   #onFocus() {
@@ -470,12 +459,6 @@ export default class LexicalEditorElement extends HTMLElement {
     }
   }
 
-  #handleTables() {
-    if (this.supportsRichText) {
-      this.removeTableSelectionObserver = registerTableSelectionObserver(this.editor, true)
-      setScrollableTablesActive(this.editor, true)
-    }
-  }
 
   #attachDebugHooks() {
     if (!LexicalEditorElement.debug) return
@@ -565,4 +548,4 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-editor", LexicalEditorElement)
+export default LexicalEditorElement

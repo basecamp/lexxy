@@ -21,15 +21,14 @@ export default class Contents {
     new FormatEscaper(editorElement).monitor()
   }
 
-  insertHtml(html) {
+  insertHtml(html, { tag } = {}) {
     this.editor.update(() => {
       const selection = $getSelection()
-
       if (!$isRangeSelection(selection)) return
 
       const nodes = $generateNodesFromDOM(this.editor, parseHtml(html))
       selection.insertNodes(nodes)
-    })
+    }, { tag })
   }
 
   insertAtCursor(node) {
@@ -269,7 +268,7 @@ export default class Contents {
     const blobUrlTemplate = this.editorElement.blobUrlTemplate
 
     this.editor.update(() => {
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor })
+      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate })
       this.insertAtCursor(uploadedImageNode)
     }, { tag: HISTORY_MERGE_TAG })
   }

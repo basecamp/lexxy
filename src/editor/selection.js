@@ -6,6 +6,7 @@ import {
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListNode } from "@lexical/list"
+import { TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
 import { getNonce } from "../helpers/csp_helper"
@@ -169,6 +170,14 @@ export default class Selection {
 
     const anchorNode = selection.anchor.getNode()
     return $getNearestNodeOfType(anchorNode, CodeNode) !== null
+  }
+
+  get isTableCellSelected() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return false
+
+    const anchorNode = selection.anchor.getNode()
+    return $getNearestNodeOfType(anchorNode, TableCellNode) !== null
   }
 
   get nodeAfterCursor() {

@@ -4716,6 +4716,7 @@ function buildConfig() {
   return {
     ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(Lexxy.global.get("attachmentTagName")),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
+    ADD_URI_SAFE_ATTR: [ "caption", "filename" ],
     SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
   }
 }
@@ -6350,6 +6351,8 @@ const R$1=new Set(["http:","https:","mailto:","sms:","tel:"]);let y$1 = class y 
 
 const Ne$1=/^(\d+(?:\.\d+)?)px$/,ve$1={BOTH:3,COLUMN:2,NO_STATUS:0,ROW:1};class xe extends Ci{__colSpan;__rowSpan;__headerState;__width;__backgroundColor;__verticalAlign;static getType(){return "tablecell"}static clone(e){return new xe(e.__headerState,e.__colSpan,e.__width,e.__key)}afterCloneFrom(e){super.afterCloneFrom(e),this.__rowSpan=e.__rowSpan,this.__backgroundColor=e.__backgroundColor,this.__verticalAlign=e.__verticalAlign;}static importDOM(){return {td:e=>({conversion:Re$1,priority:0}),th:e=>({conversion:Re$1,priority:0})}}static importJSON(e){return Fe$1().updateFromJSON(e)}updateFromJSON(e){return super.updateFromJSON(e).setHeaderStyles(e.headerState).setColSpan(e.colSpan||1).setRowSpan(e.rowSpan||1).setWidth(e.width||void 0).setBackgroundColor(e.backgroundColor||null).setVerticalAlign(e.verticalAlign||void 0)}constructor(e=ve$1.NO_STATUS,t=1,n,o){super(o),this.__colSpan=t,this.__rowSpan=1,this.__headerState=e,this.__width=n,this.__backgroundColor=null,this.__verticalAlign=void 0;}createDOM(t){const n=document.createElement(this.getTag());return this.__width&&(n.style.width=`${this.__width}px`),this.__colSpan>1&&(n.colSpan=this.__colSpan),this.__rowSpan>1&&(n.rowSpan=this.__rowSpan),null!==this.__backgroundColor&&(n.style.backgroundColor=this.__backgroundColor),Te$1(this.__verticalAlign)&&(n.style.verticalAlign=this.__verticalAlign),lt$4(n,t.theme.tableCell,this.hasHeader()&&t.theme.tableCellHeader),n}exportDOM(e){const t=super.exportDOM(e);if(Cs(t.element)){const e=t.element;e.setAttribute("data-temporary-table-cell-lexical-key",this.getKey()),e.style.border="1px solid black",this.__colSpan>1&&(e.colSpan=this.__colSpan),this.__rowSpan>1&&(e.rowSpan=this.__rowSpan),e.style.width=`${this.getWidth()||75}px`,e.style.verticalAlign=this.getVerticalAlign()||"top",e.style.textAlign="start",null===this.__backgroundColor&&this.hasHeader()&&(e.style.backgroundColor="#f2f3f5");}return t}exportJSON(){return {...super.exportJSON(),...Te$1(this.__verticalAlign)&&{verticalAlign:this.__verticalAlign},backgroundColor:this.getBackgroundColor(),colSpan:this.__colSpan,headerState:this.__headerState,rowSpan:this.__rowSpan,width:this.getWidth()}}getColSpan(){return this.getLatest().__colSpan}setColSpan(e){const t=this.getWritable();return t.__colSpan=e,t}getRowSpan(){return this.getLatest().__rowSpan}setRowSpan(e){const t=this.getWritable();return t.__rowSpan=e,t}getTag(){return this.hasHeader()?"th":"td"}setHeaderStyles(e,t=ve$1.BOTH){const n=this.getWritable();return n.__headerState=e&t|n.__headerState&~t,n}getHeaderStyles(){return this.getLatest().__headerState}setWidth(e){const t=this.getWritable();return t.__width=e,t}getWidth(){return this.getLatest().__width}getBackgroundColor(){return this.getLatest().__backgroundColor}setBackgroundColor(e){const t=this.getWritable();return t.__backgroundColor=e,t}getVerticalAlign(){return this.getLatest().__verticalAlign}setVerticalAlign(e){const t=this.getWritable();return t.__verticalAlign=e||void 0,t}toggleHeaderStyle(e){const t=this.getWritable();return (t.__headerState&e)===e?t.__headerState-=e:t.__headerState+=e,t}hasHeaderState(e){return (this.getHeaderStyles()&e)===e}hasHeader(){return this.getLatest().__headerState!==ve$1.NO_STATUS}updateDOM(e){return e.__headerState!==this.__headerState||e.__width!==this.__width||e.__colSpan!==this.__colSpan||e.__rowSpan!==this.__rowSpan||e.__backgroundColor!==this.__backgroundColor||e.__verticalAlign!==this.__verticalAlign}isShadowRoot(){return  true}collapseAtStart(){return  true}canBeEmpty(){return  false}canIndent(){return  false}}function Te$1(e){return "middle"===e||"bottom"===e}function Re$1(e){const t=e,n=e.nodeName.toLowerCase();let o;Ne$1.test(t.style.width)&&(o=parseFloat(t.style.width));const r=Fe$1("th"===n?ve$1.ROW:ve$1.NO_STATUS,t.colSpan,o);r.__rowSpan=t.rowSpan;const l=t.style.backgroundColor;""!==l&&(r.__backgroundColor=l);const s=t.style.verticalAlign;Te$1(s)&&(r.__verticalAlign=s);const i=t.style,c=(i&&i.textDecoration||"").split(" "),a="700"===i.fontWeight||"bold"===i.fontWeight,u=c.includes("line-through"),h="italic"===i.fontStyle,p=c.includes("underline");return {after:e=>{const t=[];let n=null;const o=()=>{if(n){const e=n.getFirstChild();jn(e)&&1===n.getChildrenSize()&&e.remove();}};for(const r of e)ls(r)||lr(r)||jn(r)?(lr(r)&&(a&&r.toggleFormat("bold"),u&&r.toggleFormat("strikethrough"),h&&r.toggleFormat("italic"),p&&r.toggleFormat("underline")),n?n.append(r):(n=Li().append(r),t.push(n))):(t.push(r),o(),n=null);return o(),0===t.length&&t.push(Li()),t},node:r}}function Fe$1(e=ve$1.NO_STATUS,t=1,n){return fs(new xe(e,t,n))}function Oe$1(e){return e instanceof xe}const Ae$1=re$1("INSERT_TABLE_COMMAND");function Ke$1(e,...t){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",e);for(const e of t)o.append("v",e);throw n.search=o.toString(),Error(`Minified Lexical error #${e}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}let Ee$1 = class Ee extends Ci{__height;static getType(){return "tablerow"}static clone(e){return new Ee(e.__height,e.__key)}static importDOM(){return {tr:e=>({conversion:ke$1,priority:0})}}static importJSON(e){return Me$1().updateFromJSON(e)}updateFromJSON(e){return super.updateFromJSON(e).setHeight(e.height)}constructor(e,t){super(t),this.__height=e;}exportJSON(){const e=this.getHeight();return {...super.exportJSON(),...void 0===e?void 0:{height:e}}}createDOM(t){const n=document.createElement("tr");return this.__height&&(n.style.height=`${this.__height}px`),lt$4(n,t.theme.tableRow),n}extractWithChild(e,t,n){return "html"===n}isShadowRoot(){return  true}setHeight(e){const t=this.getWritable();return t.__height=e,t}getHeight(){return this.getLatest().__height}updateDOM(e){return e.__height!==this.__height}canBeEmpty(){return  false}canIndent(){return  false}};function ke$1(e){const n=e;let o;return Ne$1.test(n.style.height)&&(o=parseFloat(n.style.height)),{after:e=>kt$6(e,Oe$1),node:Me$1(o)}}function Me$1(e){return fs(new Ee$1(e))}function $e$1(e){return e instanceof Ee$1}const ze$1="undefined"!=typeof window&&void 0!==window.document&&void 0!==window.document.createElement,We$1=ze$1&&"documentMode"in document?document.documentMode:null,He$1=ze$1&&/^(?!.*Seamonkey)(?=.*Firefox).*/i.test(navigator.userAgent);function Le$1(e,t,n=true){const o=gn();for(let r=0;r<e;r++){const e=Me$1();for(let o=0;o<t;o++){let t=ve$1.NO_STATUS;"object"==typeof n?(0===r&&n.rows&&(t|=ve$1.ROW),0===o&&n.columns&&(t|=ve$1.COLUMN)):n&&(0===r&&(t|=ve$1.ROW),0===o&&(t|=ve$1.COLUMN));const l=Fe$1(t),s=Li();s.append(sr()),l.append(s),e.append(l);}o.append(e);}return o}function Be$1(e){const t=zs(e,e=>Oe$1(e));return Oe$1(t)?t:null}function Pe$1(e){const t=zs(e,e=>$e$1(e));if($e$1(t))return t;throw new Error("Expected table cell to be inside of table row.")}function De$1(e){const t=zs(e,e=>mn(e));if(mn(t))return t;throw new Error("Expected table cell to be inside of table.")}function Ie$1(e){const t=Pe$1(e);return De$1(t).getChildren().findIndex(e=>e.is(t))}function Ue$1(e){return Pe$1(e).getChildren().findIndex(t=>t.is(e))}ze$1&&"InputEvent"in window&&!We$1&&new window.InputEvent("input");const qe$1=(e,t)=>e===ve$1.BOTH||e===t?t:ve$1.NO_STATUS;function je$1(e=true){const t=Lr();yr(t)||wt$1(t)||Ke$1(188);const n=t.anchor.getNode(),o=t.focus.getNode(),[r]=mt$1(n),[l,,s]=mt$1(o),[,i,c]=ft(s,l,r),{startRow:a}=c,{startRow:u}=i;return e?Ge$1(a+r.__rowSpan>u+l.__rowSpan?r:l,true):Ge$1(u<a?l:r,false)}function Ge$1(e,t=true){const[,,n]=mt$1(e),[o,r]=ft(n,e,e),l=o[0].length,{startRow:s}=r;let i=null;if(t){const t=s+e.__rowSpan-1,r=o[t],c=Me$1();for(let e=0;e<l;e++){const{cell:n,startRow:o}=r[e];if(o+n.__rowSpan-1<=t){const t=r[e].cell.__headerState,n=qe$1(t,ve$1.COLUMN);c.append(Fe$1(n).append(Li()));}else n.setRowSpan(n.__rowSpan+1);}const a=n.getChildAtIndex(t);$e$1(a)||Ke$1(256),a.insertAfter(c),i=c;}else {const e=s,t=o[e],r=Me$1();for(let n=0;n<l;n++){const{cell:o,startRow:l}=t[n];if(l===e){const e=t[n].cell.__headerState,o=qe$1(e,ve$1.COLUMN);r.append(Fe$1(o).append(Li()));}else o.setRowSpan(o.__rowSpan+1);}const c=n.getChildAtIndex(e);$e$1(c)||Ke$1(257),c.insertBefore(r),i=r;}return i}function Ze$1(e=true){const t=Lr();yr(t)||wt$1(t)||Ke$1(188);const n=t.anchor.getNode(),o=t.focus.getNode(),[r]=mt$1(n),[l,,s]=mt$1(o),[,i,c]=ft(s,l,r),{startColumn:a}=c,{startColumn:u}=i;return e?tt(a+r.__colSpan>u+l.__colSpan?r:l,true):tt(u<a?l:r,false)}function tt(e,t=true,n=true){const[,,o]=mt$1(e),[r,l]=ft(o,e,e),s=r.length,{startColumn:i}=l,c=t?i+e.__colSpan-1:i-1,a=o.getFirstChild();$e$1(a)||Ke$1(120);let u=null;function h(e=ve$1.NO_STATUS){const t=Fe$1(e).append(Li());return null===u&&(u=t),t}let d=a;e:for(let e=0;e<s;e++){if(0!==e){const e=d.getNextSibling();$e$1(e)||Ke$1(121),d=e;}const t=r[e],n=t[c<0?0:c].cell.__headerState,o=qe$1(n,ve$1.ROW);if(c<0){ct$1(d,h(o));continue}const{cell:l,startColumn:s,startRow:i}=t[c];if(s+l.__colSpan-1<=c){let n=l,r=i,s=c;for(;r!==e&&n.__rowSpan>1;){if(s-=l.__colSpan,!(s>=0)){d.append(h(o));continue e}{const{cell:e,startRow:o}=t[s];n=e,r=o;}}n.insertAfter(h(o));}else l.setColSpan(l.__colSpan+1);}null!==u&&n&&it$1(u);const f=o.getColWidths();if(f){const e=[...f],t=c<0?0:c,n=e[t];e.splice(t,0,n),o.setColWidths(e);}return u}function ot$1(){const e=Lr();yr(e)||wt$1(e)||Ke$1(188);const[t,n]=e.isBackward()?[e.focus.getNode(),e.anchor.getNode()]:[e.anchor.getNode(),e.focus.getNode()],[o,,r]=mt$1(t),[l]=mt$1(n),[s,i,c]=ft(r,o,l),{startRow:a}=i,{startRow:u}=c,h=u+l.__rowSpan-1;if(s.length===h-a+1)return void r.remove();const d=s[0].length,f=s[h+1],g=r.getChildAtIndex(h+1);for(let e=h;e>=a;e--){for(let t=d-1;t>=0;t--){const{cell:n,startRow:o,startColumn:r}=s[e][t];if(r===t){if(o<a||o+n.__rowSpan-1>h){const e=Math.max(o,a),t=Math.min(n.__rowSpan+o-1,h),r=e<=t?t-e+1:0;n.setRowSpan(n.__rowSpan-r);}if(o>=a&&o+n.__rowSpan-1>h&&e===h){null===g&&Ke$1(122);let o=null;for(let n=0;n<t;n++){const t=f[n],r=t.cell;t.startRow===e+1&&(o=r),r.__colSpan>1&&(n+=r.__colSpan-1);}null===o?ct$1(g,n):o.insertAfter(n);}}}const t=r.getChildAtIndex(e);$e$1(t)||Ke$1(206,String(e)),t.remove();}if(void 0!==f){const{cell:e}=f[0];it$1(e);}else {const e=s[a-1],{cell:t}=e[0];it$1(t);}}function lt$1(){const e=Lr();yr(e)||wt$1(e)||Ke$1(188);const t=e.anchor.getNode(),n=e.focus.getNode(),[o,,r]=mt$1(t),[l]=mt$1(n),[s,i,c]=ft(r,o,l),{startColumn:a}=i,{startRow:u,startColumn:h}=c,d=Math.min(a,h),f=Math.max(a+o.__colSpan-1,h+l.__colSpan-1),g=f-d+1;if(s[0].length===f-d+1)return r.selectPrevious(),void r.remove();const m=s.length;for(let e=0;e<m;e++)for(let t=d;t<=f;t++){const{cell:n,startColumn:o}=s[e][t];if(o<d){if(t===d){const e=d-o;n.setColSpan(n.__colSpan-Math.min(g,n.__colSpan-e));}}else if(o+n.__colSpan-1>f){if(t===f){const e=f-o+1;n.setColSpan(n.__colSpan-e);}}else n.remove();}const p=s[u],C=a>h?p[a+o.__colSpan]:p[h+l.__colSpan];if(void 0!==C){const{cell:e}=C;it$1(e);}else {const e=h<a?p[h-1]:p[a-1],{cell:t}=e;it$1(t);}const _=r.getColWidths();if(_){const e=[..._];e.splice(d,g),r.setColWidths(e);}}function it$1(e){const t=e.getFirstDescendant();null==t?e.selectStart():t.getParentOrThrow().selectStart();}function ct$1(e,t){const n=e.getFirstChild();null!==n?n.insertBefore(t):e.append(t);}function at(e){if(0===e.length)return null;const t=De$1(e[0]),[n]=gt(t,null,null);let o=1/0,r=-1/0,l=1/0,s=-1/0;const i=new Set;for(const t of n)for(const n of t){if(!n||!n.cell)continue;const t=n.cell.getKey();if(!i.has(t)&&e.some(e=>e.is(n.cell))){i.add(t);const e=n.startRow,c=n.startColumn,a=n.cell.__rowSpan||1,u=n.cell.__colSpan||1;o=Math.min(o,e),r=Math.max(r,e+a-1),l=Math.min(l,c),s=Math.max(s,c+u-1);}}if(o===1/0||l===1/0)return null;const c=r-o+1,a=s-l+1,u=n[o][l];if(!u.cell)return null;const h=u.cell;h.setColSpan(a),h.setRowSpan(c);const d=new Set([h.getKey()]);for(let e=o;e<=r;e++)for(let t=l;t<=s;t++){const o=n[e][t];if(!o.cell)continue;const r=o.cell,l=r.getKey();if(!d.has(l)){d.add(l);ut(r)||h.append(...r.getChildren()),r.remove();}}return 0===h.getChildrenSize()&&h.append(Li()),h}function ut(e){if(1!==e.getChildrenSize())return  false;const t=e.getFirstChildOrThrow();return !(!Ii(t)||!t.isEmpty())}function dt(e){const[t,n,o]=mt$1(e),r=t.__colSpan,l=t.__rowSpan;if(1===r&&1===l)return;const[s,i]=ft(o,t,t),{startColumn:c,startRow:a}=i,u=t.__headerState&ve$1.COLUMN,h=Array.from({length:r},(e,t)=>{let n=u;for(let e=0;0!==n&&e<s.length;e++)n&=s[e][t+c].cell.__headerState;return n}),d=t.__headerState&ve$1.ROW,f=Array.from({length:l},(e,t)=>{let n=d;for(let e=0;0!==n&&e<s[0].length;e++)n&=s[t+a][e].cell.__headerState;return n});if(r>1){for(let e=1;e<r;e++)t.insertAfter(Fe$1(h[e]|f[0]).append(Li()));t.setColSpan(1);}if(l>1){let e;for(let t=1;t<l;t++){const o=a+t,l=s[o];e=(e||n).getNextSibling(),$e$1(e)||Ke$1(125);let i=null;for(let e=0;e<c;e++){const t=l[e],n=t.cell;t.startRow===o&&(i=n),n.__colSpan>1&&(e+=n.__colSpan-1);}if(null===i)for(let n=r-1;n>=0;n--)ct$1(e,Fe$1(h[n]|f[t]).append(Li()));else for(let e=r-1;e>=0;e--)i.insertAfter(Fe$1(h[e]|f[t]).append(Li()));}t.setRowSpan(1);}}function ft(e,t,n){const[o,r,l]=gt(e,t,n);return null===r&&Ke$1(207),null===l&&Ke$1(208),[o,r,l]}function gt(e,t,n){const o=[];let r=null,l=null;function s(e){let t=o[e];return void 0===t&&(o[e]=t=[]),t}const i=e.getChildren();for(let e=0;e<i.length;e++){const o=i[e];$e$1(o)||Ke$1(209);const c=s(e);for(let a=o.getFirstChild(),u=0;null!=a;a=a.getNextSibling()){for(Oe$1(a)||Ke$1(147);void 0!==c[u];)u++;const o={cell:a,startColumn:u,startRow:e},{__rowSpan:h,__colSpan:d}=a;for(let t=0;t<h&&!(e+t>=i.length);t++){const n=s(e+t);for(let e=0;e<d;e++)n[u+e]=o;}null!==t&&null===r&&t.is(a)&&(r=o),null!==n&&null===l&&n.is(a)&&(l=o);}}return [o,r,l]}function mt$1(e){let t;if(e instanceof xe)t=e;else if("__type"in e){const o=zs(e,Oe$1);Oe$1(o)||Ke$1(148),t=o;}else {const o=zs(e.getNode(),Oe$1);Oe$1(o)||Ke$1(148),t=o;}const o=t.getParent();$e$1(o)||Ke$1(149);const r=o.getParent();return mn(r)||Ke$1(210),[t,o,r]}function pt(e,t,n){let o,r=Math.min(t.startColumn,n.startColumn),l=Math.min(t.startRow,n.startRow),s=Math.max(t.startColumn+t.cell.__colSpan-1,n.startColumn+n.cell.__colSpan-1),i=Math.max(t.startRow+t.cell.__rowSpan-1,n.startRow+n.cell.__rowSpan-1);do{o=false;for(let t=0;t<e.length;t++)for(let n=0;n<e[0].length;n++){const c=e[t][n];if(!c)continue;const a=c.startColumn+c.cell.__colSpan-1,u=c.startRow+c.cell.__rowSpan-1,h=c.startColumn<=s&&a>=r,d=c.startRow<=i&&u>=l;if(h&&d){const e=Math.min(r,c.startColumn),t=Math.max(s,a),n=Math.min(l,c.startRow),h=Math.max(i,u);e===r&&t===s&&n===l&&h===i||(r=e,s=t,l=n,i=h,o=true);}}}while(o);return {maxColumn:s,maxRow:i,minColumn:r,minRow:l}}function Ct$1(e){const[t,,n]=mt$1(e),o=n.getChildren(),r=o.length,l=o[0].getChildren().length,s=new Array(r);for(let e=0;e<r;e++)s[e]=new Array(l);for(let e=0;e<r;e++){const n=o[e].getChildren();let r=0;for(let o=0;o<n.length;o++){for(;s[e][r];)r++;const l=n[o],i=l.__rowSpan||1,c=l.__colSpan||1;for(let t=0;t<i;t++)for(let n=0;n<c;n++)s[e+t][r+n]=l;if(t===l)return {colSpan:c,columnIndex:r,rowIndex:e,rowSpan:i};r+=c;}}return null}function _t$1(e){const[[t,o,r,l],[s,i,c,a]]=["anchor","focus"].map(t=>{const o=e[t].getNode(),r=zs(o,Oe$1);Oe$1(r)||Ke$1(238,t,o.getKey(),o.getType());const l=r.getParent();$e$1(l)||Ke$1(239,t);const s=l.getParent();return mn(s)||Ke$1(240,t),[o,r,l,s]});return l.is(a)||Ke$1(241),{anchorCell:o,anchorNode:t,anchorRow:r,anchorTable:l,focusCell:i,focusNode:s,focusRow:c,focusTable:a}}let St$1 = class St{tableKey;anchor;focus;_cachedNodes;dirty;constructor(e,t,n){this.anchor=t,this.focus=n,t._selection=this,n._selection=this,this._cachedNodes=null,this.dirty=false,this.tableKey=e;}getStartEndPoints(){return [this.anchor,this.focus]}isValid(){if("root"===this.tableKey||"root"===this.anchor.key||"element"!==this.anchor.type||"root"===this.focus.key||"element"!==this.focus.type)return  false;const e=xo(this.tableKey),t=xo(this.anchor.key),n=xo(this.focus.key);return null!==e&&null!==t&&null!==n}isBackward(){return this.focus.isBefore(this.anchor)}getCachedNodes(){return this._cachedNodes}setCachedNodes(e){this._cachedNodes=e;}is(e){return wt$1(e)&&this.tableKey===e.tableKey&&this.anchor.is(e.anchor)&&this.focus.is(e.focus)}set(e,t,n){this.dirty=this.dirty||e!==this.tableKey||t!==this.anchor.key||n!==this.focus.key,this.tableKey=e,this.anchor.key=t,this.focus.key=n,this._cachedNodes=null;}clone(){return new St(this.tableKey,hr(this.anchor.key,this.anchor.offset,this.anchor.type),hr(this.focus.key,this.focus.offset,this.focus.type))}isCollapsed(){return  false}extract(){return this.getNodes()}insertRawText(e){}insertText(){}hasFormat(e){let t=0;this.getNodes().filter(Oe$1).forEach(e=>{const n=e.getFirstChild();Ii(n)&&(t|=n.getTextFormat());});const n=R$6[e];return 0!==(t&n)}insertNodes(e){const t=this.focus.getNode();Si(t)||Ke$1(151);St$6(t.select(0,t.getChildrenSize())).insertNodes(e);}getShape(){const{anchorCell:e,focusCell:t}=_t$1(this),n=Ct$1(e);null===n&&Ke$1(153);const o=Ct$1(t);null===o&&Ke$1(155);const r=Math.min(n.columnIndex,o.columnIndex),l=Math.max(n.columnIndex+n.colSpan-1,o.columnIndex+o.colSpan-1),s=Math.min(n.rowIndex,o.rowIndex),i=Math.max(n.rowIndex+n.rowSpan-1,o.rowIndex+o.rowSpan-1);return {fromX:Math.min(r,l),fromY:Math.min(s,i),toX:Math.max(r,l),toY:Math.max(s,i)}}getNodes(){if(!this.isValid())return [];const e=this._cachedNodes;if(null!==e)return e;const{anchorTable:t,anchorCell:n,focusCell:o}=_t$1(this),r=o.getParents()[1];if(r!==t){if(t.isParentOf(o)){const e=r.getParent();null==e&&Ke$1(159),this.set(this.tableKey,o.getKey(),e.getKey());}else {const e=t.getParent();null==e&&Ke$1(158),this.set(this.tableKey,e.getKey(),o.getKey());}return this.getNodes()}const[l,s,i]=ft(t,n,o),{minColumn:c,maxColumn:a,minRow:u,maxRow:h}=pt(l,s,i),d=new Map([[t.getKey(),t]]);let f=null;for(let e=u;e<=h;e++)for(let t=c;t<=a;t++){const{cell:n}=l[e][t],o=n.getParent();$e$1(o)||Ke$1(160),o!==f&&(d.set(o.getKey(),o),f=o),d.has(n.getKey())||Nt$1(n,e=>{d.set(e.getKey(),e);});}const g=Array.from(d.values());return ti()||(this._cachedNodes=g),g}getTextContent(){const e=this.getNodes().filter(e=>Oe$1(e));let t="";for(let n=0;n<e.length;n++){const o=e[n],r=o.__parent,l=(e[n+1]||{}).__parent;t+=o.getTextContent()+(l!==r?"\n":"\t");}return t}};function wt$1(e){return e instanceof St$1}function bt$1(){const e=hr("root",0,"element"),t=hr("root",0,"element");return new St$1("root",e,t)}function yt$1(e,t,n){e.getKey(),t.getKey(),n.getKey();const o=Lr(),r=wt$1(o)?o.clone():bt$1();return r.set(e.getKey(),t.getKey(),n.getKey()),r}function Nt$1(e,t){const n=[[e]];for(let e=n.at(-1);void 0!==e&&n.length>0;e=n.at(-1)){const o=e.pop();void 0===o?n.pop():false!==t(o)&&Si(o)&&n.push(o.getChildren());}}function vt(e,t=bs()){const n=xo(e);mn(n)||Ke$1(231,e);const o=Ft$1(n,t.getElementByKey(e));return null===o&&Ke$1(232,e),{tableElement:o,tableNode:n}}let xt$1 = class xt{focusX;focusY;listenersToRemove;table;isHighlightingCells;anchorX;anchorY;tableNodeKey;anchorCell;focusCell;anchorCellNodeKey;focusCellNodeKey;editor;tableSelection;hasHijackedSelectionStyles;isSelecting;pointerType;shouldCheckSelection;abortController;listenerOptions;nextFocus;constructor(e,t){this.isHighlightingCells=false,this.anchorX=-1,this.anchorY=-1,this.focusX=-1,this.focusY=-1,this.listenersToRemove=new Set,this.tableNodeKey=t,this.editor=e,this.table={columns:0,domRows:[],rows:0},this.tableSelection=null,this.anchorCellNodeKey=null,this.focusCellNodeKey=null,this.anchorCell=null,this.focusCell=null,this.hasHijackedSelectionStyles=false,this.isSelecting=false,this.pointerType=null,this.shouldCheckSelection=false,this.abortController=new AbortController,this.listenerOptions={signal:this.abortController.signal},this.nextFocus=null,this.trackTable();}getTable(){return this.table}removeListeners(){this.abortController.abort("removeListeners"),Array.from(this.listenersToRemove).forEach(e=>e()),this.listenersToRemove.clear();}$lookup(){return vt(this.tableNodeKey,this.editor)}trackTable(){const e=new MutationObserver(e=>{this.editor.getEditorState().read(()=>{let t=false;for(let n=0;n<e.length;n++){const o=e[n].target.nodeName;if("TABLE"===o||"TBODY"===o||"THEAD"===o||"TR"===o){t=true;break}}if(!t)return;const{tableNode:n,tableElement:o}=this.$lookup();this.table=Ht(n,o);},{editor:this.editor});});this.editor.getEditorState().read(()=>{const{tableNode:t,tableElement:n}=this.$lookup();this.table=Ht(t,n),e.observe(n,{attributes:true,childList:true,subtree:true});},{editor:this.editor});}$clearHighlight(){const e=this.editor;this.isHighlightingCells=false,this.anchorX=-1,this.anchorY=-1,this.focusX=-1,this.focusY=-1,this.tableSelection=null,this.anchorCellNodeKey=null,this.focusCellNodeKey=null,this.anchorCell=null,this.focusCell=null,this.hasHijackedSelectionStyles=false,this.$enableHighlightStyle();const{tableNode:t,tableElement:n}=this.$lookup();Lt$1(e,Ht(t,n),null),null!==Lr()&&(wo(null),e.dispatchCommand(ie$1,void 0));}$enableHighlightStyle(){const e=this.editor,{tableElement:t}=this.$lookup();ut$3(t,e._config.theme.tableSelection),t.classList.remove("disable-selection"),this.hasHijackedSelectionStyles=false;}$disableHighlightStyle(){const{tableElement:t}=this.$lookup();lt$4(t,this.editor._config.theme.tableSelection),this.hasHijackedSelectionStyles=true;}$updateTableTableSelection(e){if(null!==e){e.tableKey!==this.tableNodeKey&&Ke$1(233,e.tableKey,this.tableNodeKey);const t=this.editor;this.tableSelection=e,this.isHighlightingCells=true,this.$disableHighlightStyle(),this.updateDOMSelection(),Lt$1(t,this.table,this.tableSelection);}else this.$clearHighlight();}setShouldCheckSelection(){this.shouldCheckSelection=true;}getAndClearShouldCheckSelection(){return !!this.shouldCheckSelection&&(this.shouldCheckSelection=false,true)}setNextFocus(e){this.nextFocus=e;}getAndClearNextFocus(){const{nextFocus:e}=this;return null!==e&&(this.nextFocus=null),e}updateDOMSelection(){if(null!==this.anchorCell&&null!==this.focusCell){const e=ps(this.editor._window);e&&e.rangeCount>0&&e.removeAllRanges();}}$setFocusCellForSelection(e,t=false){const n=this.editor,{tableNode:o}=this.$lookup(),r=e.x,l=e.y;if(this.focusCell=e,this.isHighlightingCells||this.anchorX===r&&this.anchorY===l&&!t){if(r===this.focusX&&l===this.focusY)return  false}else this.isHighlightingCells=true,this.$disableHighlightStyle();if(this.focusX=r,this.focusY=l,this.isHighlightingCells){const t=ln(o,e.elem);if(null!=this.tableSelection&&null!=this.anchorCellNodeKey&&null!==t)return this.focusCellNodeKey=t.getKey(),this.tableSelection=yt$1(o,this.$getAnchorTableCellOrThrow(),t),wo(this.tableSelection),n.dispatchCommand(ie$1,void 0),Lt$1(n,this.table,this.tableSelection),true}return  false}$getAnchorTableCell(){return this.anchorCellNodeKey?xo(this.anchorCellNodeKey):null}$getAnchorTableCellOrThrow(){const e=this.$getAnchorTableCell();return null===e&&Ke$1(234),e}$getFocusTableCell(){return this.focusCellNodeKey?xo(this.focusCellNodeKey):null}$getFocusTableCellOrThrow(){const e=this.$getFocusTableCell();return null===e&&Ke$1(235),e}$setAnchorCellForSelection(e){this.isHighlightingCells=false,this.anchorCell=e,this.anchorX=e.x,this.anchorY=e.y;const{tableNode:t}=this.$lookup(),n=ln(t,e.elem);if(null!==n){const e=n.getKey();this.tableSelection=null!=this.tableSelection?this.tableSelection.clone():bt$1(),this.anchorCellNodeKey=e;}}$formatCells(e){const t=Lr();wt$1(t)||Ke$1(236);const n=Ar(),o=n.anchor,r=n.focus,l=t.getNodes().filter(Oe$1);l.length>0||Ke$1(237);const s=l[0].getFirstChild(),i=Ii(s)?s.getFormatFlags(e,null):null;l.forEach(t=>{o.set(t.getKey(),0,"element"),r.set(t.getKey(),t.getChildrenSize(),"element"),n.formatText(e,i);}),wo(t),this.editor.dispatchCommand(ie$1,void 0);}$clearText(){const{editor:e}=this,t=xo(this.tableNodeKey);if(!mn(t))throw new Error("Expected TableNode.");const n=Lr();wt$1(n)||Ke$1(253);const o=n.getNodes().filter(Oe$1),r=t.getFirstChild(),l=t.getLastChild();if(o.length>0&&null!==r&&null!==l&&$e$1(r)&&$e$1(l)&&o[0]===r.getFirstChild()&&o[o.length-1]===l.getLastChild()){t.selectPrevious();const n=t.getParent();return t.remove(),void(bi(n)&&n.isEmpty()&&e.dispatchCommand(ae$1,void 0))}o.forEach(e=>{if(Si(e)){const t=Li(),n=sr();t.append(n),e.append(t),e.getChildren().forEach(e=>{e!==t&&e.remove();});}}),Lt$1(e,this.table,null),wo(null),e.dispatchCommand(ie$1,void 0);}};const Tt$1="__lexicalTableSelection";function Rt$1(e){return Cs(e)&&"TABLE"===e.nodeName}function Ft$1(e,t){if(!t)return t;const n=Rt$1(t)?t:e.getDOMSlot(t).element;return "TABLE"!==n.nodeName&&Ke$1(245,t.nodeName),n}function Ot(e){return e._window}function At$1(e,t){for(let n=t,o=null;null!==n;n=n.getParent()){if(e.is(n))return o;Oe$1(n)&&(o=n);}return null}const Kt=[[Te$2,"down"],[ke$2,"up"],[Se$1,"backward"],[xe$1,"forward"]],Et$1=[he$1,ge$1,le$2],kt$1=[we$1,Oe$2];function Mt$1(e,t,o,l){const s=o.getRootElement(),i=Ot(o);null!==s&&null!==i||Ke$1(246);const c=new xt$1(o,e.getKey()),a=Ft$1(e,t);!function(e,t){null!==$t$1(e)&&Ke$1(205);e[Tt$1]=t;}(a,c),c.listenersToRemove.add(()=>function(e,t){$t$1(e)===t&&delete e[Tt$1];}(a,c));const u=t=>{if(c.pointerType=t.pointerType,0!==t.button||!Ss(t.target)||!i)return;const n=zt$1(t.target);null!==n&&o.update(()=>{const o=Ir();if(He$1&&t.shiftKey&&Xt(o,e)&&(yr(o)||wt$1(o))){const r=o.anchor.getNode(),l=At$1(e,o.anchor.getNode());if(l)c.$setAnchorCellForSelection(rn(c,l)),c.$setFocusCellForSelection(n),tn(t);else {(e.isBefore(r)?e.selectStart():e.selectEnd()).anchor.set(o.anchor.key,o.anchor.offset,o.anchor.type);}}else "touch"!==t.pointerType&&c.$setAnchorCellForSelection(n);}),(()=>{if(c.isSelecting)return;const e=()=>{c.isSelecting=false,i.removeEventListener("pointerup",e),i.removeEventListener("pointermove",t);},t=n=>{if(1&~n.buttons&&c.isSelecting)return c.isSelecting=false,i.removeEventListener("pointerup",e),void i.removeEventListener("pointermove",t);if(!Ss(n.target))return;let r=null;const l=!(He$1||a.contains(n.target));if(l)r=Wt$1(a,n.target);else for(const e of document.elementsFromPoint(n.clientX,n.clientY))if(r=Wt$1(a,e),r)break;!r||null!==c.focusCell&&r.elem===c.focusCell.elem||(c.setNextFocus({focusCell:r,override:l}),o.dispatchCommand(ie$1,void 0));};c.isSelecting=true,i.addEventListener("pointerup",e,c.listenerOptions),i.addEventListener("pointermove",t,c.listenerOptions);})();};a.addEventListener("pointerdown",u,c.listenerOptions),c.listenersToRemove.add(()=>{a.removeEventListener("pointerdown",u);});const h=e=>{if(e.detail>=3&&Ss(e.target)){null!==zt$1(e.target)&&e.preventDefault();}};a.addEventListener("mousedown",h,c.listenerOptions),c.listenersToRemove.add(()=>{a.removeEventListener("mousedown",h);});const d=e=>{const t=e.target;0===e.button&&Ss(t)&&o.update(()=>{const e=Lr();wt$1(e)&&e.tableKey===c.tableNodeKey&&s.contains(t)&&c.$clearHighlight();});};i.addEventListener("pointerdown",d,c.listenerOptions),c.listenersToRemove.add(()=>{i.removeEventListener("pointerdown",d);});for(const[t,n]of Kt)c.listenersToRemove.add(o.registerCommand(t,t=>en(o,t,n,e,c),Bi));c.listenersToRemove.add(o.registerCommand(Ee$2,t=>{const n=Lr();if(wt$1(n)){const o=At$1(e,n.focus.getNode());if(null!==o)return tn(t),o.selectEnd(),true}return  false},Bi));const g=t=>()=>{const o=Lr();if(!Xt(o,e))return  false;if(wt$1(o))return c.$clearText(),true;if(yr(o)){if(!Oe$1(At$1(e,o.anchor.getNode())))return  false;const r=o.anchor.getNode(),l=o.focus.getNode(),s=e.isParentOf(r),i=e.isParentOf(l);if(s&&!i||i&&!s)return c.$clearText(),true;const a=zs(o.anchor.getNode(),e=>Si(e)),u=a&&zs(a,e=>Si(e)&&Oe$1(e.getParent()));if(!Si(u)||!Si(a))return  false;if(t===ge$1&&null===u.getPreviousSibling())return  true}return  false};for(const e of Et$1)c.listenersToRemove.add(o.registerCommand(e,g(e),Bi));const p=t=>{const n=Lr();if(!wt$1(n)&&!yr(n))return  false;const o=e.isParentOf(n.anchor.getNode());if(o!==e.isParentOf(n.focus.getNode())){const t=o?"anchor":"focus",r=o?"focus":"anchor",{key:l,offset:s,type:i}=n[r];return e[n[t].isBefore(n[r])?"selectPrevious":"selectNext"]()[r].set(l,s,i),false}return !!Xt(n,e)&&(!!wt$1(n)&&(t&&(t.preventDefault(),t.stopPropagation()),c.$clearText(),true))};for(const e of kt$1)c.listenersToRemove.add(o.registerCommand(e,p,Bi));return c.listenersToRemove.add(o.registerCommand(Be$2,e=>{const t=Lr();if(t){if(!wt$1(t)&&!yr(t))return  false;F$1(o,Lt$4(e,ClipboardEvent)?e:null,_$1(t));const n=p(e);return yr(t)?(t.removeText(),true):n}return  false},Bi)),c.listenersToRemove.add(o.registerCommand(_e$1,t=>{const o=Lr();if(!Xt(o,e))return  false;if(wt$1(o))return c.$formatCells(t),true;if(yr(o)){const e=zs(o.anchor.getNode(),e=>Oe$1(e));if(!Oe$1(e))return  false}return  false},Bi)),c.listenersToRemove.add(o.registerCommand(Le$2,t=>{const n=Lr();if(!wt$1(n)||!Xt(n,e))return  false;const o=n.anchor.getNode(),r=n.focus.getNode();if(!Oe$1(o)||!Oe$1(r))return  false;if(function(e,t){if(wt$1(e)){const n=e.anchor.getNode(),o=e.focus.getNode();if(t&&n&&o){const[e]=ft(t,n,o);return n.getKey()===e[0][0].cell.getKey()&&o.getKey()===e[e.length-1].at(-1).cell.getKey()}}return  false}(n,e))return e.setFormat(t),true;const[l,s,i]=ft(e,o,r),c=Math.max(s.startRow+s.cell.__rowSpan-1,i.startRow+i.cell.__rowSpan-1),a=Math.max(s.startColumn+s.cell.__colSpan-1,i.startColumn+i.cell.__colSpan-1),u=Math.min(s.startRow,i.startRow),h=Math.min(s.startColumn,i.startColumn),d=new Set;for(let e=u;e<=c;e++)for(let n=h;n<=a;n++){const o=l[e][n].cell;if(d.has(o))continue;d.add(o),o.setFormat(t);const r=o.getChildren();for(let e=0;e<r.length;e++){const n=r[e];Si(n)&&!n.isInline()&&n.setFormat(t);}}return  true},Bi)),c.listenersToRemove.add(o.registerCommand(ue$1,t=>{const r=Lr();if(!Xt(r,e))return  false;if(wt$1(r))return c.$clearHighlight(),false;if(yr(r)){const l=zs(r.anchor.getNode(),e=>Oe$1(e));if(!Oe$1(l))return  false;if("string"==typeof t){const n=on(o,r,e);if(n)return nn(n,e,[sr(t)]),true}}return  false},Bi)),l&&c.listenersToRemove.add(o.registerCommand(Me$2,t=>{const o=Lr();if(!yr(o)||!o.isCollapsed()||!Xt(o,e))return  false;const r=Gt(o.anchor.getNode());return !(null===r||!e.is(Qt(r)))&&(tn(t),function(e,t){const o="next"===t?"getNextSibling":"getPreviousSibling",r="next"===t?"getFirstChild":"getLastChild",l=e[o]();if(Si(l))return l.selectEnd();const s=zs(e,$e$1);null===s&&Ke$1(247);for(let e=s[o]();$e$1(e);e=e[o]()){const t=e[r]();if(Si(t))return t.selectEnd()}const i=zs(s,mn);null===i&&Ke$1(248);"next"===t?i.selectNext():i.selectPrevious();}(r,t.shiftKey?"previous":"next"),true)},Bi)),c.listenersToRemove.add(o.registerCommand(Ve$1,t=>e.isSelected(),Bi)),c.listenersToRemove.add(o.registerCommand(oe$2,(e,t)=>{if(o!==t)return  false;const{nodes:r,selection:l}=e,s=l.getStartEndPoints(),i=wt$1(l),c=yr(l)&&null!==zs(l.anchor.getNode(),e=>Oe$1(e))&&null!==zs(l.focus.getNode(),e=>Oe$1(e))||i;if(1!==r.length||!mn(r[0])||!c||null===s)return  false;const[a,u]=s,[h,d,g]=mt$1(a),p=zs(u.getNode(),e=>Oe$1(e));if(!(Oe$1(h)&&Oe$1(p)&&$e$1(d)&&mn(g)))return  false;const C=r[0],[_,S,b]=ft(g,h,p),[y]=gt(C,null,null),N=_.length,v=N>0?_[0].length:0;let x=S.startRow,T=S.startColumn,R=y.length,F=R>0?y[0].length:0;if(i){const e=pt(_,S,b),t=e.maxRow-e.minRow+1,n=e.maxColumn-e.minColumn+1;x=e.minRow,T=e.minColumn,R=Math.min(R,t),F=Math.min(F,n);}let O=false;const A=Math.min(N,x+R)-1,K=Math.min(v,T+F)-1,E=new Set;for(let e=x;e<=A;e++)for(let t=T;t<=K;t++){const n=_[e][t];E.has(n.cell.getKey())||(1===n.cell.__rowSpan&&1===n.cell.__colSpan||(dt(n.cell),E.add(n.cell.getKey()),O=true));}let[k]=gt(g.getWritable(),null,null);const M=R-N+x;for(let e=0;e<M;e++){Ge$1(k[N-1][0].cell);}const $=F-v+T;for(let e=0;e<$;e++){tt(k[0][v-1].cell,true,false);}[k]=gt(g.getWritable(),null,null);for(let e=x;e<x+R;e++)for(let t=T;t<T+F;t++){const n=e-x,o=t-T,r=y[n][o];if(r.startRow!==n||r.startColumn!==o)continue;const l=r.cell;if(1!==l.__rowSpan||1!==l.__colSpan){const n=[],o=Math.min(e+l.__rowSpan,x+R)-1,r=Math.min(t+l.__colSpan,T+F)-1;for(let l=e;l<=o;l++)for(let e=t;e<=r;e++){const t=k[l][e];n.push(t.cell);}at(n),O=true;}const{cell:s}=k[e][t],i=s.getChildren();l.getChildren().forEach(e=>{if(lr(e)){Li().append(e),s.append(e);}else s.append(e);}),i.forEach(e=>e.remove());}if(i&&O){const[e]=gt(g.getWritable(),null,null);e[S.startRow][S.startColumn].cell.selectEnd();}return  true},Bi)),c.listenersToRemove.add(o.registerCommand(ie$1,()=>{const t=Lr(),r=Ir(),l=c.getAndClearNextFocus();if(null!==l){const{focusCell:n}=l;if(wt$1(t)&&t.tableKey===c.tableNodeKey)return (n.x!==c.focusX||n.y!==c.focusY)&&(c.$setFocusCellForSelection(n),true);if(n!==c.anchorCell&&Xt(t,e))return c.$setFocusCellForSelection(n),true}if(c.getAndClearShouldCheckSelection()&&yr(r)&&yr(t)&&t.isCollapsed()){const o=t.anchor.getNode(),r=e.getFirstChild(),l=Gt(o);if(null!==l&&$e$1(r)){const t=r.getFirstChild();if(Oe$1(t)&&e.is(zs(l,n=>n.is(e)||n.is(t))))return t.selectStart(),true}}if(yr(t)){const{anchor:n,focus:l}=t,s=n.getNode(),i=l.getNode(),a=Gt(s),u=Gt(i),h=!(!a||!e.is(Qt(a))),d=!(!u||!e.is(Qt(u))),f=h!==d,g=h&&d,m=t.isBackward();if(f){const n=t.clone();if(d){const[t]=ft(e,u,u),o=t[0][0].cell,r=t[t.length-1].at(-1).cell;n.focus.set(m?o.getKey():r.getKey(),m?o.getChildrenSize():r.getChildrenSize(),"element");}else if(h){const[t]=ft(e,a,a),o=t[0][0].cell,r=t[t.length-1].at(-1).cell;n.anchor.set(m?r.getKey():o.getKey(),m?r.getChildrenSize():0,"element");}wo(n),Pt$1(o,c);}else if(g&&(a.is(u)||(c.$setAnchorCellForSelection(rn(c,a)),c.$setFocusCellForSelection(rn(c,u),true)),"touch"===c.pointerType&&c.isSelecting&&t.isCollapsed()&&yr(r)&&r.isCollapsed())){const e=Gt(r.anchor.getNode());e&&!e.is(u)&&(c.$setAnchorCellForSelection(rn(c,e)),c.$setFocusCellForSelection(rn(c,u),true),c.pointerType=null);}}else if(t&&wt$1(t)&&t.is(r)&&t.tableKey===e.getKey()){const n=ps(i);if(n&&n.anchorNode&&n.focusNode){const r=vo(n.focusNode),l=r&&!e.isParentOf(r),s=vo(n.anchorNode),i=s&&e.isParentOf(s);if(l&&i&&n.rangeCount>0){const r=Dr(n,o);r&&(r.anchor.set(e.getKey(),t.isBackward()?e.getChildrenSize():0,"element"),n.removeAllRanges(),wo(r));}}}return t&&!t.is(r)&&(wt$1(t)||wt$1(r))&&c.tableSelection&&!c.tableSelection.is(r)?(wt$1(t)&&t.tableKey===c.tableNodeKey?c.$updateTableTableSelection(t):!wt$1(t)&&wt$1(r)&&r.tableKey===c.tableNodeKey&&c.$updateTableTableSelection(null),false):(c.hasHijackedSelectionStyles&&!e.isSelected()?function(e,t){t.$enableHighlightStyle(),Bt$1(t.table,t=>{const n=t.elem;t.highlighted=false,Vt(e,t),n.getAttribute("style")||n.removeAttribute("style");});}(o,c):!c.hasHijackedSelectionStyles&&e.isSelected()&&Pt$1(o,c),false)},Bi)),c.listenersToRemove.add(o.registerCommand(ae$1,()=>{const t=Lr();if(!yr(t)||!t.isCollapsed()||!Xt(t,e))return  false;const n=on(o,t,e);return !!n&&(nn(n,e),true)},Bi)),c}function $t$1(e){return e[Tt$1]||null}function zt$1(e){let t=e;for(;null!=t;){const e=t.nodeName;if("TD"===e||"TH"===e){const e=t._cell;return void 0===e?null:e}t=t.parentNode;}return null}function Wt$1(e,t){if(!e.contains(t))return null;let n=null;for(let o=t;null!=o;o=o.parentNode){if(o===e)return n;const t=o.nodeName;"TD"!==t&&"TH"!==t||(n=o._cell||null);}return null}function Ht(e,t){const n=[],o={columns:0,domRows:n,rows:0};let r=Ft$1(e,t).querySelector("tr"),l=0,s=0;for(n.length=0;null!=r;){const e=r.nodeName;if("TD"===e||"TH"===e){const e={elem:r,hasBackgroundColor:""!==r.style.backgroundColor,highlighted:false,x:l,y:s};r._cell=e;let t=n[s];void 0===t&&(t=n[s]=[]),t[l]=e;}else {const e=r.firstChild;if(null!=e){r=e;continue}}const t=r.nextSibling;if(null!=t){l++,r=t;continue}const o=r.parentNode;if(null!=o){const e=o.nextSibling;if(null==e)break;s++,l=0,r=e;}}return o.columns=l+1,o.rows=s+1,o}function Lt$1(e,t,n){const o=new Set(n?n.getNodes():[]);Bt$1(t,(t,n)=>{const r=t.elem;o.has(n)?(t.highlighted=true,jt$1(e,t)):(t.highlighted=false,Vt(e,t),r.getAttribute("style")||r.removeAttribute("style"));});}function Bt$1(e,t){const{domRows:n}=e;for(let e=0;e<n.length;e++){const o=n[e];if(o)for(let n=0;n<o.length;n++){const r=o[n];if(!r)continue;const l=vo(r.elem);null!==l&&t(r,l,{x:n,y:e});}}}function Pt$1(e,t){t.$disableHighlightStyle(),Bt$1(t.table,t=>{t.highlighted=true,jt$1(e,t);});}const Dt$1=(e,t,n,o,r)=>{const l="forward"===r;switch(r){case "backward":case "forward":return n!==(l?e.table.columns-1:0)?qt(t.getCellNodeFromCordsOrThrow(n+(l?1:-1),o,e.table),l):o!==(l?e.table.rows-1:0)?qt(t.getCellNodeFromCordsOrThrow(l?0:e.table.columns-1,o+(l?1:-1),e.table),l):l?t.selectNext():t.selectPrevious(),true;case "up":return 0!==o?qt(t.getCellNodeFromCordsOrThrow(n,o-1,e.table),false):t.selectPrevious(),true;case "down":return o!==e.table.rows-1?qt(t.getCellNodeFromCordsOrThrow(n,o+1,e.table),true):t.selectNext(),true;default:return  false}};function It$1(e,t){let n,o;if(t.startColumn===e.minColumn)n="minColumn";else {if(t.startColumn+t.cell.__colSpan-1!==e.maxColumn)return null;n="maxColumn";}if(t.startRow===e.minRow)o="minRow";else {if(t.startRow+t.cell.__rowSpan-1!==e.maxRow)return null;o="maxRow";}return [n,o]}function Ut$1([e,t]){return ["minColumn"===e?"maxColumn":"minColumn","minRow"===t?"maxRow":"minRow"]}function Jt(e,t,[n,o]){const r=t[o],l=e[r];void 0===l&&Ke$1(250,o,String(r));const s=t[n],i=l[s];return void 0===i&&Ke$1(250,n,String(s)),i}function Yt(e,t,n,o,r){const l=pt(t,n,o),s=function(e,t){const{minColumn:n,maxColumn:o,minRow:r,maxRow:l}=t;let s=1,i=1,c=1,a=1;const u=e[r],h=e[l];for(let e=n;e<=o;e++)s=Math.max(s,u[e].cell.__rowSpan),a=Math.max(a,h[e].cell.__rowSpan);for(let t=r;t<=l;t++)i=Math.max(i,e[t][n].cell.__colSpan),c=Math.max(c,e[t][o].cell.__colSpan);return {bottomSpan:a,leftSpan:i,rightSpan:c,topSpan:s}}(t,l),{topSpan:i,leftSpan:c,bottomSpan:a,rightSpan:u}=s,h=function(e,t){const n=It$1(e,t);return null===n&&Ke$1(249,t.cell.getKey()),n}(l,n),[d,f]=Ut$1(h);let g=l[d],m=l[f];"forward"===r?g+="maxColumn"===d?1:c:"backward"===r?g-="minColumn"===d?1:u:"down"===r?m+="maxRow"===f?1:i:"up"===r&&(m-="minRow"===f?1:a);const p=t[m];if(void 0===p)return  false;const C=p[g];if(void 0===C)return  false;const[_,S]=function(e,t,n){const o=pt(e,t,n),r=It$1(o,t);if(r)return [Jt(e,o,r),Jt(e,o,Ut$1(r))];const l=It$1(o,n);if(l)return [Jt(e,o,Ut$1(l)),Jt(e,o,l)];const s=["minColumn","minRow"];return [Jt(e,o,s),Jt(e,o,Ut$1(s))]}(t,n,C),w=rn(e,_.cell),b=rn(e,S.cell);return e.$setAnchorCellForSelection(w),e.$setFocusCellForSelection(b,true),true}function Xt(e,t){if(yr(e)||wt$1(e)){const n=t.isParentOf(e.anchor.getNode()),o=t.isParentOf(e.focus.getNode());return n&&o}return  false}function qt(e,t){t?e.selectStart():e.selectEnd();}function jt$1(t,n){const o=n.elem,r=t._config.theme;Oe$1(vo(o))||Ke$1(131),lt$4(o,r.tableCellSelected);}function Vt(e,t){const n=t.elem;Oe$1(vo(n))||Ke$1(131);const r=e._config.theme;ut$3(n,r.tableCellSelected);}function Gt(e){const t=zs(e,Oe$1);return Oe$1(t)?t:null}function Qt(e){const t=zs(e,mn);return mn(t)?t:null}function Zt(e,t,o,r,l,s,i){const c=xl(o.focus,l?"previous":"next");if(Ol(c))return  false;let a=c;for(const e of ul(c).iterNodeCarets("shadowRoot")){if(!Hs(e)||!Si(e.origin))return  false;a=e;}const u=a.getParentAtCaret();if(!Oe$1(u))return  false;const h=u,d=function(e){for(const t of ul(e).iterNodeCarets("root")){const{origin:n}=t;if(Oe$1(n)){if(Gs(t))return il(n,e.direction)}else if(!$e$1(n))break}return null}(tl(h,a.direction)),f=zs(h,mn);if(!f||!f.is(s))return  false;const g=e.getElementByKey(h.getKey()),m=zt$1(g);if(!g||!m)return  false;const p=dn(e,f);if(i.table=p,d)if("extend"===r){const t=zt$1(e.getElementByKey(d.origin.getKey()));if(!t)return  false;i.$setAnchorCellForSelection(m),i.$setFocusCellForSelection(t,true);}else {const e=El(d);Cl(o.anchor,e),Cl(o.focus,e);}else if("extend"===r)i.$setAnchorCellForSelection(m),i.$setFocusCellForSelection(m,true);else {const e=function(e){const t=sl(e);return Gs(t)?El(t):e}(tl(f,c.direction));Cl(o.anchor,e),Cl(o.focus,e);}return tn(t),true}function en(e,t,o,r,l){if(("up"===o||"down"===o)&&function(e){const t=e.getRootElement();if(!t)return  false;return t.hasAttribute("aria-controls")&&"typeahead-menu"===t.getAttribute("aria-controls")}(e))return  false;const s=Lr();if(!Xt(s,r)){if(yr(s)){if("backward"===o){if(s.focus.offset>0)return  false;const e=function(e){for(let t=e,n=e;null!==n;t=n,n=n.getParent())if(Si(n)){if(n!==t&&n.getFirstChild()!==t)return null;if(!n.isInline())return n}return null}(s.focus.getNode());if(!e)return  false;const n=e.getPreviousSibling();return !!mn(n)&&(tn(t),t.shiftKey?s.focus.set(n.getParentOrThrow().getKey(),n.getIndexWithinParent(),"element"):n.selectEnd(),true)}if(t.shiftKey&&("up"===o||"down"===o)){const e=s.focus.getNode();if(!s.isCollapsed()&&("up"===o&&!s.isBackward()||"down"===o&&s.isBackward())){let l=zs(e,e=>mn(e));if(Oe$1(l)&&(l=zs(l,mn)),l!==r)return  false;if(!l)return  false;const i="down"===o?l.getNextSibling():l.getPreviousSibling();if(!i)return  false;let c=0;"up"===o&&Si(i)&&(c=i.getChildrenSize());let a=i;if("up"===o&&Si(i)){const e=i.getLastChild();a=e||i,c=lr(a)?a.getTextContentSize():0;}const u=s.clone();return u.focus.set(a.getKey(),c,lr(a)?"text":"element"),wo(u),tn(t),true}if(as(e)){const e="up"===o?s.getNodes()[s.getNodes().length-1]:s.getNodes()[0];if(e){if(null!==At$1(r,e)){const e=r.getFirstDescendant(),t=r.getLastDescendant();if(!e||!t)return  false;const[n]=mt$1(e),[o]=mt$1(t),s=r.getCordsFromCellNode(n,l.table),i=r.getCordsFromCellNode(o,l.table),c=r.getDOMCellFromCordsOrThrow(s.x,s.y,l.table),a=r.getDOMCellFromCordsOrThrow(i.x,i.y,l.table);return l.$setAnchorCellForSelection(c),l.$setFocusCellForSelection(a,true),true}}return  false}{let r=zs(e,e=>Si(e)&&!e.isInline());if(Oe$1(r)&&(r=zs(r,mn)),!r)return  false;const i="down"===o?r.getNextSibling():r.getPreviousSibling();if(mn(i)&&l.tableNodeKey===i.getKey()){const e=i.getFirstDescendant(),n=i.getLastDescendant();if(!e||!n)return  false;const[r]=mt$1(e),[l]=mt$1(n),c=s.clone();return c.focus.set(("up"===o?r:l).getKey(),"up"===o?0:l.getChildrenSize(),"element"),tn(t),wo(c),true}}}}return "down"===o&&an(e)&&l.setShouldCheckSelection(),false}if(yr(s)){if("backward"===o||"forward"===o){return Zt(e,t,s,t.shiftKey?"extend":"move","backward"===o,r,l)}if(s.isCollapsed()){const{anchor:i,focus:c}=s,a=zs(i.getNode(),Oe$1),u=zs(c.getNode(),Oe$1);if(!Oe$1(a)||!a.is(u))return  false;const h=Qt(a);if(h!==r&&null!=h){const n=Ft$1(h,e.getElementByKey(h.getKey()));if(null!=n)return l.table=Ht(h,n),en(e,t,o,h,l)}const d=e.getElementByKey(a.__key),f=e.getElementByKey(i.key);if(null==f||null==d)return  false;let g;if("element"===i.type)g=f.getBoundingClientRect();else {const t=ps(Ot(e));if(null===t||0===t.rangeCount)return  false;g=t.getRangeAt(0).getBoundingClientRect();}const m="up"===o?a.getFirstChild():a.getLastChild();if(null==m)return  false;const p=e.getElementByKey(m.__key);if(null==p)return  false;const C=p.getBoundingClientRect();if("up"===o?C.top>g.top-g.height:g.bottom+g.height>C.bottom){tn(t);const e=r.getCordsFromCellNode(a,l.table);if(!t.shiftKey)return Dt$1(l,r,e.x,e.y,o);{const t=r.getDOMCellFromCordsOrThrow(e.x,e.y,l.table);l.$setAnchorCellForSelection(t),l.$setFocusCellForSelection(t,true);}return  true}}}else if(wt$1(s)){const{anchor:i,focus:c}=s,a=zs(i.getNode(),Oe$1),u=zs(c.getNode(),Oe$1),[h]=s.getNodes();mn(h)||Ke$1(251);const d=Ft$1(h,e.getElementByKey(h.getKey()));if(!Oe$1(a)||!Oe$1(u)||!mn(h)||null==d)return  false;l.$updateTableTableSelection(s);const f=Ht(h,d),g=r.getCordsFromCellNode(a,f),m=r.getDOMCellFromCordsOrThrow(g.x,g.y,f);if(l.$setAnchorCellForSelection(m),tn(t),t.shiftKey){const[e,t,n]=ft(r,a,u);return Yt(l,e,t,n,o)}return u.selectEnd(),true}return  false}function tn(e){e.preventDefault(),e.stopImmediatePropagation(),e.stopPropagation();}function nn(e,t,n){const o=Li();"first"===e?t.insertBefore(o):t.insertAfter(o),o.append(...n||[]),o.selectEnd();}function on(e,t,o){const r=o.getParent();if(!r)return;const l=ps(Ot(e));if(!l)return;const s=l.anchorNode,i=e.getElementByKey(r.getKey()),c=Ft$1(o,e.getElementByKey(o.getKey()));if(!s||!i||!c||!i.contains(s)||c.contains(s))return;const a=zs(t.anchor.getNode(),e=>Oe$1(e));if(!a)return;const u=zs(a,e=>mn(e));if(!mn(u)||!u.is(o))return;const[h,d]=ft(o,a,a),f=h[0][0],g=h[h.length-1][h[0].length-1],{startRow:m,startColumn:p}=d,C=m===f.startRow&&p===f.startColumn,_=m===g.startRow&&p===g.startColumn;return C?"first":_?"last":void 0}function rn(e,t){const{tableNode:n}=e.$lookup(),o=n.getCordsFromCellNode(t,e.table);return n.getDOMCellFromCordsOrThrow(o.x,o.y,e.table)}function ln(e,t,n){return At$1(e,vo(t,n))}function sn(t,n,r){if(!n.theme.tableAlignment)return;const l=[],s=[];for(const e of ["center","right"]){const t=n.theme.tableAlignment[e];t&&(e===r?s:l).push(t);}ut$3(t,...l),lt$4(t,...s);}const cn=new WeakSet;function an(e=bs()){return cn.has(e)}function un(e,t){cn.add(e);}class hn extends Ci{__rowStriping;__frozenColumnCount;__frozenRowCount;__colWidths;static getType(){return "table"}getColWidths(){return this.getLatest().__colWidths}setColWidths(e){const t=this.getWritable();return t.__colWidths=e,t}static clone(e){return new hn(e.__key)}afterCloneFrom(e){super.afterCloneFrom(e),this.__colWidths=e.__colWidths,this.__rowStriping=e.__rowStriping,this.__frozenColumnCount=e.__frozenColumnCount,this.__frozenRowCount=e.__frozenRowCount;}static importDOM(){return {table:e=>({conversion:fn,priority:1})}}static importJSON(e){return gn().updateFromJSON(e)}updateFromJSON(e){return super.updateFromJSON(e).setRowStriping(e.rowStriping||false).setFrozenColumns(e.frozenColumnCount||0).setFrozenRows(e.frozenRowCount||0).setColWidths(e.colWidths)}constructor(e){super(e),this.__rowStriping=false,this.__frozenColumnCount=0,this.__frozenRowCount=0,this.__colWidths=void 0;}exportJSON(){return {...super.exportJSON(),colWidths:this.getColWidths(),frozenColumnCount:this.__frozenColumnCount?this.__frozenColumnCount:void 0,frozenRowCount:this.__frozenRowCount?this.__frozenRowCount:void 0,rowStriping:this.__rowStriping?this.__rowStriping:void 0}}extractWithChild(e,t,n){return "html"===n}getDOMSlot(e){const t=Rt$1(e)?e:e.querySelector("table");return Rt$1(t)||Ke$1(229),super.getDOMSlot(e).withElement(t).withAfter(t.querySelector("colgroup"))}createDOM(t,n){const o=document.createElement("table");this.__style&&(o.style.cssText=this.__style);const r=document.createElement("colgroup");if(o.appendChild(r),Ds(r),lt$4(o,t.theme.table),this.updateTableElement(null,o,t),an(n)){const n=document.createElement("div"),r=t.theme.tableScrollableWrapper;return r?lt$4(n,r):n.style.cssText="overflow-x: auto;",n.appendChild(o),this.updateTableWrapper(null,n,o,t),n}return o}updateTableWrapper(t,n,r,l){this.__frozenColumnCount!==(t?t.__frozenColumnCount:0)&&function(t,n,r,l){l>0?(lt$4(t,r.theme.tableFrozenColumn),n.setAttribute("data-lexical-frozen-column","true")):(ut$3(t,r.theme.tableFrozenColumn),n.removeAttribute("data-lexical-frozen-column"));}(n,r,l,this.__frozenColumnCount),this.__frozenRowCount!==(t?t.__frozenRowCount:0)&&function(t,n,r,l){l>0?(lt$4(t,r.theme.tableFrozenRow),n.setAttribute("data-lexical-frozen-row","true")):(ut$3(t,r.theme.tableFrozenRow),n.removeAttribute("data-lexical-frozen-row"));}(n,r,l,this.__frozenRowCount);}updateTableElement(t,n,r){this.__style!==(t?t.__style:"")&&(n.style.cssText=this.__style),this.__rowStriping!==(!!t&&t.__rowStriping)&&function(t,n,r){r?(lt$4(t,n.theme.tableRowStriping),t.setAttribute("data-lexical-row-striping","true")):(ut$3(t,n.theme.tableRowStriping),t.removeAttribute("data-lexical-row-striping"));}(n,r,this.__rowStriping),function(e,t,n,o){const r=e.querySelector("colgroup");if(!r)return;const l=[];for(let e=0;e<n;e++){const t=document.createElement("col"),n=o&&o[e];n&&(t.style.width=`${n}px`),l.push(t);}r.replaceChildren(...l);}(n,0,this.getColumnCount(),this.getColWidths()),sn(n,r,this.getFormatType());}updateDOM(e,t,n){const o=this.getDOMSlot(t).element;return t===o===an()||(Cs(r=t)&&"DIV"===r.nodeName&&this.updateTableWrapper(e,t,o,n),this.updateTableElement(e,o,n),false);var r;}exportDOM(e){const t=super.exportDOM(e),{element:n}=t;return {after:n=>{if(t.after&&(n=t.after(n)),!Rt$1(n)&&Cs(n)&&(n=n.querySelector("table")),!Rt$1(n))return null;sn(n,e._config,this.getFormatType());const[o]=gt(this,null,null),r=new Map;for(const e of o)for(const t of e){const e=t.cell.getKey();r.has(e)||r.set(e,{colSpan:t.cell.getColSpan(),startColumn:t.startColumn});}const s=new Set;for(const e of n.querySelectorAll(":scope > tr > [data-temporary-table-cell-lexical-key]")){const t=e.getAttribute("data-temporary-table-cell-lexical-key");if(t){const n=r.get(t);if(e.removeAttribute("data-temporary-table-cell-lexical-key"),n){r.delete(t);for(let e=0;e<n.colSpan;e++)s.add(e+n.startColumn);}}}const i=n.querySelector(":scope > colgroup");if(i){const e=Array.from(n.querySelectorAll(":scope > colgroup > col")).filter((e,t)=>s.has(t));i.replaceChildren(...e);}const c=n.querySelectorAll(":scope > tr");if(c.length>0){const e=document.createElement("tbody");for(const t of c)e.appendChild(t);n.append(e);}return n},element:!Rt$1(n)&&Cs(n)?n.querySelector("table"):n}}canBeEmpty(){return  false}isShadowRoot(){return  true}getCordsFromCellNode(e,t){const{rows:n,domRows:o}=t;for(let t=0;t<n;t++){const n=o[t];if(null!=n)for(let o=0;o<n.length;o++){const r=n[o];if(null==r)continue;const{elem:l}=r,s=ln(this,l);if(null!==s&&e.is(s))return {x:o,y:t}}}throw new Error("Cell not found in table.")}getDOMCellFromCords(e,t,n){const{domRows:o}=n,r=o[t];if(null==r)return null;const l=r[e<r.length?e:r.length-1];return null==l?null:l}getDOMCellFromCordsOrThrow(e,t,n){const o=this.getDOMCellFromCords(e,t,n);if(!o)throw new Error("Cell not found at cords.");return o}getCellNodeFromCords(e,t,n){const o=this.getDOMCellFromCords(e,t,n);if(null==o)return null;const r=vo(o.elem);return Oe$1(r)?r:null}getCellNodeFromCordsOrThrow(e,t,n){const o=this.getCellNodeFromCords(e,t,n);if(!o)throw new Error("Node at cords not TableCellNode.");return o}getRowStriping(){return Boolean(this.getLatest().__rowStriping)}setRowStriping(e){const t=this.getWritable();return t.__rowStriping=e,t}setFrozenColumns(e){const t=this.getWritable();return t.__frozenColumnCount=e,t}getFrozenColumns(){return this.getLatest().__frozenColumnCount}setFrozenRows(e){const t=this.getWritable();return t.__frozenRowCount=e,t}getFrozenRows(){return this.getLatest().__frozenRowCount}canSelectBefore(){return  true}canIndent(){return  false}getColumnCount(){const e=this.getFirstChild();if(!e)return 0;let t=0;return e.getChildren().forEach(e=>{Oe$1(e)&&(t+=e.getColSpan());}),t}}function dn(e,t){const n=e.getElementByKey(t.getKey());return null===n&&Ke$1(230),Ht(t,n)}function fn(e){const n=gn();e.hasAttribute("data-lexical-row-striping")&&n.setRowStriping(true),e.hasAttribute("data-lexical-frozen-column")&&n.setFrozenColumns(1),e.hasAttribute("data-lexical-frozen-row")&&n.setFrozenRows(1);const o=e.querySelector(":scope > colgroup");if(o){let e=[];for(const t of o.querySelectorAll(":scope > col")){let n=t.style.width||"";if(!Ne$1.test(n)&&(n=t.getAttribute("width")||"",!/^\d+$/.test(n))){e=void 0;break}e.push(parseFloat(n));}e&&n.setColWidths(e);}return {after:e=>kt$6(e,$e$1),node:n}}function gn(){return fs(new hn)}function mn(e){return e instanceof hn}function pn({rows:e,columns:t,includeHeaders:n}){const o=Lr()||Ir();if(!o||!yr(o))return  false;if(Qt(o.anchor.getNode()))return  false;const r=Le$1(Number(e),Number(t),n);At$5(r);const l=r.getFirstDescendant();return lr(l)&&l.select(),true}function Cn(e){$e$1(e.getParent())?e.isEmpty()&&e.append(Li()):e.remove();}function _n(e){mn(e.getParent())?Bt$3(e,Oe$1):e.remove();}function Sn(e){Bt$3(e,$e$1);const[t]=gt(e,null,null),n=t.reduce((e,t)=>Math.max(e,t.length),0),o=e.getChildren();for(let e=0;e<t.length;++e){const r=o[e];if(!r)continue;$e$1(r)||Ke$1(254,r.constructor.name,r.getType());const l=t[e].reduce((e,t)=>t?1+e:e,0);if(l!==n)for(let e=l;e<n;++e){const e=Fe$1();e.append(Li()),r.append(e);}}}function wn(e){if(e.detail<3||!Ss(e.target))return  false;const t=vo(e.target);if(null===t)return  false;const o=zs(t,e=>Si(e)&&!e.isInline());if(null===o)return  false;return !!Oe$1(o.getParent())&&(o.select(0),true)}function yn(e,t=true){const n=new Map,o=(o,r,l)=>{const s=Ft$1(o,l),i=Mt$1(o,s,e,t);n.set(r,[i,s]);},r=e.registerMutationListener(hn,t=>{e.getEditorState().read(()=>{for(const[e,r]of t){const t=n.get(e);if("created"===r||"updated"===r){const{tableNode:r,tableElement:l}=vt(e);void 0===t?o(r,e,l):l!==t[1]&&(t[0].removeListeners(),n.delete(e),o(r,e,l));}else "destroyed"===r&&void 0!==t&&(t[0].removeListeners(),n.delete(e));}},{editor:e});},{skipInitialization:false});return ()=>{r();for(const[,[e]]of n)e.removeListeners();}}function Nn(e){return e.hasNodes([hn])||Ke$1(255),U$4(e.registerCommand(Ae$1,pn,Ki),e.registerCommand(oe$2,({nodes:t,selection:n},o)=>{if(e!==o||!yr(n))return  false;return null!==Qt(n.anchor.getNode())&&t.some(mn)},Ki),e.registerCommand(se$1,wn,Ki),e.registerNodeTransform(hn,Sn),e.registerNodeTransform(Ee$1,_n),e.registerNodeTransform(xe,Cn))}
 
+const SILENT_UPDATE_TAGS = [ Dn, zn, Kn ];
+
 function getNearestListItemNode(node) {
   let current = node;
   while (current !== null) {
@@ -6622,6 +6625,8 @@ class LexicalToolbarElement extends HTMLElement {
     super();
     this.internals = this.attachInternals();
     this.internals.role = "toolbar";
+
+    this.#createEditorPromise();
   }
 
   connectedCallback() {
@@ -6654,12 +6659,24 @@ class LexicalToolbarElement extends HTMLElement {
     this.#refreshToolbarOverflow();
     this.#bindFocusListeners();
 
+    this.resolveEditorPromise(editorElement);
+
     this.toggleAttribute("connected", true);
+  }
+
+  async getEditorElement() {
+    return this.editorElement || await this.editorPromise
   }
 
   #reconnect() {
     this.disconnectedCallback();
     this.connectedCallback();
+  }
+
+  #createEditorPromise() {
+    this.editorPromise = new Promise((resolve) => {
+      this.resolveEditorPromise = resolve;
+    });
   }
 
   #installResizeObserver() {
@@ -6694,7 +6711,7 @@ class LexicalToolbarElement extends HTMLElement {
 
     this.editor.update(() => {
       this.editor.dispatchCommand(command, payload);
-    }, { tag: isKeyboard ? zn : undefined } );
+    }, { tag: isKeyboard ? zn : undefined });
   }
 
   #bindHotkeys() {
@@ -6730,28 +6747,24 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #bindFocusListeners() {
-    this.editorElement.addEventListener("lexxy:focus", this.#handleFocus);
-    this.editorElement.addEventListener("lexxy:blur", this.#handleFocusOut);
-    this.addEventListener("focusout", this.#handleFocusOut);
+    this.editorElement.addEventListener("lexxy:focus", this.#handleEditorFocus);
+    this.editorElement.addEventListener("lexxy:blur", this.#handleEditorBlur);
     this.addEventListener("keydown", this.#handleKeydown);
   }
 
   #unbindFocusListeners() {
-    this.editorElement.removeEventListener("lexxy:focus", this.#handleFocus);
-    this.editorElement.removeEventListener("lexxy:blur", this.#handleFocusOut);
-    this.removeEventListener("focusout", this.#handleFocusOut);
+    this.editorElement.removeEventListener("lexxy:focus", this.#handleEditorFocus);
+    this.editorElement.removeEventListener("lexxy:blur", this.#handleEditorBlur);
     this.removeEventListener("keydown", this.#handleKeydown);
   }
 
-  #handleFocus = () => {
-    this.#resetTabIndexValues();
+  #handleEditorFocus = () => {
     this.#focusableItems[0].tabIndex = 0;
   }
 
-  #handleFocusOut = () => {
-    if (!this.contains(document.activeElement)) {
-      this.#resetTabIndexValues();
-    }
+  #handleEditorBlur = () => {
+    this.#resetTabIndexValues();
+    this.#closeDropdowns();
   }
 
   #handleKeydown = (event) => {
@@ -6768,6 +6781,7 @@ class LexicalToolbarElement extends HTMLElement {
     this.editor.registerUpdateListener(() => {
       this.editor.getEditorState().read(() => {
         this.#updateButtonStates();
+        this.#closeDropdowns();
       });
     });
   }
@@ -6858,11 +6872,13 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #toolbarIsOverflowing() {
-    return this.scrollWidth > this.clientWidth
+    // Safari can report inconsistent clientWidth values on more than 100% window zoom level,
+    // that was affecting the toolbar overflow calculation. We're adding +1 to get around this issue.
+    return (this.scrollWidth - this.#overflow.clientWidth) > this.clientWidth + 1
   }
 
   #refreshToolbarOverflow = () => {
-    this.#resetToolbar();
+    this.#resetToolbarOverflow();
     this.#compactMenu();
 
     this.#overflow.style.display = this.#overflowMenu.children.length ? "block" : "none";
@@ -6888,7 +6904,7 @@ class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  #resetToolbar() {
+  #resetToolbarOverflow() {
     const items = Array.from(this.#overflowMenu.children);
     items.sort((a, b) => this.#itemPosition(b) - this.#itemPosition(a));
 
@@ -6908,6 +6924,16 @@ class LexicalToolbarElement extends HTMLElement {
         item.dataset.position = index;
       }
     });
+  }
+
+  #closeDropdowns() {
+   this.#dropdowns.forEach((details) => {
+     details.open = false;
+   });
+ }
+
+  get #dropdowns() {
+    return this.querySelectorAll("details")
   }
 
   get #overflow() {
@@ -6951,9 +6977,8 @@ class LexicalToolbarElement extends HTMLElement {
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.65422 0.711575C7.1856 0.242951 6.42579 0.242951 5.95717 0.711575C5.48853 1.18021 5.48853 1.94 5.95717 2.40864L8.70864 5.16011L2.85422 11.0145C1.44834 12.4204 1.44833 14.6998 2.85422 16.1057L7.86011 21.1115C9.26599 22.5174 11.5454 22.5174 12.9513 21.1115L19.6542 14.4087C20.1228 13.94 20.1228 13.1802 19.6542 12.7115L11.8544 4.91171L11.2542 4.31158L7.65422 0.711575ZM4.55127 12.7115L10.4057 6.85716L17.1087 13.56H4.19981C4.19981 13.253 4.31696 12.9459 4.55127 12.7115ZM23.6057 20.76C23.6057 22.0856 22.5311 23.16 21.2057 23.16C19.8802 23.16 18.8057 22.0856 18.8057 20.76C18.8057 19.5408 19.8212 18.5339 20.918 17.4462C21.0135 17.3516 21.1096 17.2563 21.2057 17.16C21.3018 17.2563 21.398 17.3516 21.4935 17.4462C22.5903 18.5339 23.6057 19.5408 23.6057 20.76Z"/></svg>
         </summary>
         <lexxy-highlight-dropdown class="lexxy-editor__toolbar-dropdown-content">
-          <div data-button-group="color"></div>
-          <div data-button-group="background-color"></div>
-          <button data-command="removeHighlight" class="lexxy-editor__toolbar-dropdown-reset">Remove all coloring</button>
+          <div class="lexxy-highlight-colors"></div>
+          <button data-command="removeHighlight" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset">Remove all coloring</button>
         </lexxy-highlight-dropdown>
       </details>
 
@@ -6965,8 +6990,8 @@ class LexicalToolbarElement extends HTMLElement {
           <form method="dialog">
             <input type="url" placeholder="Enter a URL…" class="input">
             <div class="lexxy-editor__toolbar-dropdown-actions">
-              <button type="submit" class="btn" value="link">Link</button>
-              <button type="button" class="btn" value="unlink">Unlink</button>
+              <button type="submit" class="lexxy-editor__toolbar-button" value="link">Link</button>
+              <button type="button" class="lexxy-editor__toolbar-button" value="unlink">Unlink</button>
             </div>
           </form>
         </lexxy-link-dropdown>
@@ -7014,15 +7039,13 @@ class LexicalToolbarElement extends HTMLElement {
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.2599 8.26531C15.9672 6.56386 13.1237 5.77629 10.2823 6.05535C7.4408 6.33452 4.80455 7.66079 2.88681 9.77605C1.32245 11.5016 0.326407 13.6516 0.0127834 15.9352C-0.105117 16.7939 0.608975 17.4997 1.47567 17.4997C2.34228 17.4997 3.02969 16.7915 3.19149 15.9401C3.47682 14.4379 4.17156 13.0321 5.212 11.8844C6.60637 10.3464 8.52287 9.38139 10.589 9.17839C12.655 8.97546 14.7227 9.54856 16.3897 10.7858C17.5237 11.6275 18.4165 12.7361 18.9991 13.9997H15.4063C14.578 13.9997 13.9066 14.6714 13.9063 15.4997C13.9063 16.3281 14.5779 16.9997 15.4063 16.9997H22.4063C23.2348 16.9997 23.9063 16.3281 23.9063 15.4997V8.49968C23.9061 7.67144 23.2346 6.99968 22.4063 6.99968C21.578 6.99968 20.9066 7.67144 20.9063 8.49968V11.0212C20.1897 9.9704 19.2984 9.03613 18.2599 8.26531Z"/></svg>
       </button>
 
-      <details class="lexxy-editor__toolbar-overflow">
+      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-overflow" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" aria-label="Show more toolbar buttons">•••</summary>
-        <div class="lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons"></div>
+        <div class="lexxy-editor__toolbar-dropdown-content lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons"></div>
       </details>
     `
   }
 }
-
-customElements.define("lexxy-toolbar", LexicalToolbarElement);
 
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -7066,6 +7089,8 @@ var theme = {
   tableCellSelected: "lexxy-content__table-cell--selected",
   tableSelection: "lexxy-content__table--selection",
   tableScrollableWrapper: "lexxy-content__table-wrapper",
+  tableCellHighlight: "lexxy-content__table-cell--highlight",
+  tableCellFocus: "lexxy-content__table-cell--focus",
   list: {
     nested: {
       listitem: "lexxy-nested-listitem",
@@ -7217,6 +7242,8 @@ class ActionTextAttachmentNode extends ki {
     this.fileSize = fileSize;
     this.width = width;
     this.height = height;
+
+    this.editor = bs();
   }
 
   createDOM() {
@@ -7237,8 +7264,13 @@ class ActionTextAttachmentNode extends ki {
     return figure
   }
 
-  updateDOM() {
-    return true
+  updateDOM(_prevNode, dom) {
+    const caption = dom.querySelector("figcaption textarea");
+    if (caption && this.caption) {
+      caption.value = this.caption;
+    }
+
+    return false
   }
 
   getTextContent() {
@@ -7346,8 +7378,8 @@ class ActionTextAttachmentNode extends ki {
     });
 
     input.addEventListener("focusin", () => input.placeholder = "Add caption...");
-    input.addEventListener("blur", this.#handleCaptionInputBlurred.bind(this));
-    input.addEventListener("keydown", this.#handleCaptionInputKeydown.bind(this));
+    input.addEventListener("blur", (event) => this.#handleCaptionInputBlurred(event));
+    input.addEventListener("keydown", (event) => this.#handleCaptionInputKeydown(event));
 
     caption.appendChild(input);
 
@@ -7355,21 +7387,24 @@ class ActionTextAttachmentNode extends ki {
   }
 
   #handleCaptionInputBlurred(event) {
-    const input = event.target;
-
-    input.placeholder = this.fileName;
-    this.#updateCaptionValueFromInput(input);
+    this.#updateCaptionValueFromInput(event.target);
   }
 
   #updateCaptionValueFromInput(input) {
-    dispatchCustomEvent(input, "lexxy:internal:invalidate-node", { key: this.getKey(), values: { caption: input.value } });
+    input.placeholder = this.fileName;
+    this.editor.update(() => {
+      this.getWritable().caption = input.value;
+    });
   }
 
   #handleCaptionInputKeydown(event) {
     if (event.key === "Enter") {
       this.#updateCaptionValueFromInput(event.target);
-      dispatchCustomEvent(event.target, "lexxy:internal:move-to-next-line");
       event.preventDefault();
+
+      this.editor.update(() => {
+        this.selectNext();
+      }, { tag: Dn });
     }
     event.stopPropagation();
   }
@@ -7410,54 +7445,81 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   constructor(node, key) {
-    const { file, uploadUrl, blobUrlTemplate, editor, progress } = node;
+    const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError } = node;
     super({ ...node, contentType: file.type }, key);
     this.file = file;
     this.uploadUrl = uploadUrl;
     this.blobUrlTemplate = blobUrlTemplate;
-    this.src = null;
-    this.editor = editor;
-    this.progress = progress || 0;
+    this.progress = progress ?? null;
+    this.width = width;
+    this.height = height;
+    this.uploadError = uploadError;
   }
 
   createDOM() {
+    if (this.uploadError) return this.#createDOMForError()
+
+    // This side-effect is trigged on DOM load to fire only once and avoid multiple
+    // uploads through cloning. The upload is guarded from restarting in case the
+    // node is reloaded from saved state such as from history.
+    this.#startUploadIfNeeded();
+
     const figure = this.createAttachmentFigure();
 
     if (this.isPreviewableAttachment) {
-      figure.appendChild(this.#createDOMForImage());
+      const img = figure.appendChild(this.#createDOMForImage());
+
+      // load file locally to set dimensions and prevent vertical shifting
+      loadFileIntoImage(this.file, img).then(img => this.#setDimensionsFromImage(img));
     } else {
       figure.appendChild(this.#createDOMForFile());
     }
 
     figure.appendChild(this.#createCaption());
-
-    const progressBar = createElement("progress", { value: this.progress, max: 100 });
-    figure.appendChild(progressBar);
-
-    // We wait for images to download so that we can pass the dimensions down to the attachment. We do this
-    // so that we can render images in edit mode with the dimensions set, which prevent vertical layout shifts.
-    this.#loadFigure(figure).then(() => this.#startUpload(progressBar, figure));
+    figure.appendChild(this.#createProgressBar());
 
     return figure
   }
 
+  updateDOM(prevNode, dom) {
+    if (this.uploadError !== prevNode.uploadError) return true
+
+    if (prevNode.progress !== this.progress) {
+      const progress = dom.querySelector("progress");
+      progress.value = this.progress ?? 0;
+    }
+
+    return false
+  }
+
   exportDOM() {
     const img = document.createElement("img");
-    if (this.src) {
-      img.src = this.src;
-    }
     return { element: img }
   }
 
   exportJSON() {
     return {
+      ...super.exportJSON(),
       type: "action_text_attachment_upload",
       version: 1,
-      progress: this.progress,
       uploadUrl: this.uploadUrl,
       blobUrlTemplate: this.blobUrlTemplate,
-      ...super.exportJSON()
+      progress: this.progress,
+      width: this.width,
+      height: this.height,
+      uploadError: this.uploadError
     }
+  }
+
+  get #uploadStarted() {
+    return this.progress !== null
+  }
+
+  #createDOMForError() {
+    const figure = this.createAttachmentFigure();
+    figure.classList.add("attachment--error");
+    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "file"}` }));
+    return figure
   }
 
   #createDOMForImage() {
@@ -7485,93 +7547,125 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return figcaption
   }
 
-  #loadFigure(figure) {
-    const image = figure.querySelector("img");
-    if (!image) {
-      return Promise.resolve()
-    } else {
-      return loadFileIntoImage(this.file, image)
-    }
+  #createProgressBar() {
+    return createElement("progress", { value: this.progress ?? 0, max: 100 })
   }
 
-  async #startUpload(progressBar, figure) {
+  #setDimensionsFromImage({ width, height }) {
+    if (this.#hasDimensions) return
+
+    this.editor.update(() => {
+      const writable = this.getWritable();
+      writable.width = width;
+      writable.height = height;
+    }, { tag: SILENT_UPDATE_TAGS });
+  }
+
+  get #hasDimensions() {
+    return Boolean(this.width && this.height)
+  }
+
+  async #startUploadIfNeeded() {
+    if (this.#uploadStarted) return
+
+    this.#setUploadStarted();
+
     const { DirectUpload } = await import('@rails/activestorage');
-    const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads");
 
     const upload = new DirectUpload(this.file, this.uploadUrl, this);
+    upload.delegate = this.#createUploadDelegate();
+    upload.create((error, blob) => {
+      if (error) {
+        this.#handleUploadError(error);
+      } else {
+        this.#showUploadedAttachment(blob);
+      }
+    });
+  }
 
-    upload.delegate = {
+  #createUploadDelegate() {
+    const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads");
+
+    return {
       directUploadWillCreateBlobWithXHR: (request) => {
         if (shouldAuthenticateUploads) request.withCredentials = true;
       },
       directUploadWillStoreFileWithXHR: (request) => {
         if (shouldAuthenticateUploads) request.withCredentials = true;
 
-        request.upload.addEventListener("progress", (event) => {
-          this.editor.update(() => {
-            progressBar.value = Math.round(event.loaded / event.total * 100);
-          });
-        });
+        const uploadProgressHandler = (event) => this.#handleUploadProgress(event);
+        request.upload.addEventListener("progress", uploadProgressHandler);
       }
-    };
-
-    upload.create((error, blob) => {
-      if (error) {
-        this.#handleUploadError(figure);
-      } else {
-        this.#loadFigurePreviewFromBlob(blob, figure).then(() => {
-          this.#showUploadedAttachment(figure, blob);
-        });
-      }
-    });
-  }
-
-  #handleUploadError(figure) {
-    figure.innerHTML = "";
-    figure.classList.add("attachment--error");
-    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "image"}` }));
-  }
-
-  async #showUploadedAttachment(figure, blob) {
-    this.editor.update(() => {
-      const image = figure.querySelector("img");
-
-      const src = this.blobUrlTemplate
-        .replace(":signed_id", blob.signed_id)
-        .replace(":filename", encodeURIComponent(blob.filename));
-      const latest = xo(this.getKey());
-      if (latest) {
-        latest.replace(new ActionTextAttachmentNode({
-          tagName: this.tagName,
-          sgid: blob.attachable_sgid,
-          src: blob.previewable ? blob.url : src,
-          altText: blob.filename,
-          contentType: blob.content_type,
-          fileName: blob.filename,
-          fileSize: blob.byte_size,
-          width: image?.naturalWidth,
-          previewable: blob.previewable,
-          height: image?.naturalHeight
-        }));
-      }
-    }, { tag: Dn });
-  }
-
-  async #loadFigurePreviewFromBlob(blob, figure) {
-    if (blob.previewable) {
-      return new Promise((resolve) => {
-        this.editor.update(() => {
-          const image = this.#createDOMForImage();
-          image.addEventListener("load", () => {
-            resolve();
-          });
-          image.src = blob.url;
-          figure.insertBefore(image, figure.firstChild);
-        });
-      })
-    } else {
-      return Promise.resolve()
     }
+  }
+
+  #setUploadStarted() {
+    this.#setProgress(1);
+  }
+
+  #handleUploadProgress(event) {
+    this.#setProgress(Math.round(event.loaded / event.total * 100));
+  }
+
+  #setProgress(progress) {
+    this.editor.update(() => {
+      this.getWritable().progress = progress;
+    }, { tag: SILENT_UPDATE_TAGS });
+  }
+
+  #handleUploadError(error) {
+    console.warn(`Upload error for ${this.file?.name ?? "file"}: ${error}`);
+    this.editor.update(() => {
+      this.getWritable().uploadError = true;
+    }, { tag: SILENT_UPDATE_TAGS });
+  }
+
+  async #showUploadedAttachment(blob) {
+    this.editor.update(() => {
+      this.replace(this.#toActionTextAttachmentNodeWith(blob));
+    }, { tag: SILENT_UPDATE_TAGS });
+  }
+
+  #toActionTextAttachmentNodeWith(blob) {
+    const conversion = new AttachmentNodeConversion(this, blob);
+    return conversion.toAttachmentNode()
+  }
+}
+
+class AttachmentNodeConversion {
+  constructor(uploadNode, blob) {
+    this.uploadNode = uploadNode;
+    this.blob = blob;
+  }
+
+  toAttachmentNode() {
+    return new ActionTextAttachmentNode({
+      ...this.uploadNode,
+      ...this.#propertiesFromBlob,
+      src: this.#src
+    })
+  }
+
+  get #propertiesFromBlob() {
+    const { blob } = this;
+    return {
+      sgid: blob.attachable_sgid,
+      altText: blob.filename,
+      contentType: blob.content_type,
+      fileName: blob.filename,
+      fileSize: blob.byte_size,
+      previewable: blob.previewable,
+    }
+  }
+
+  get #src() {
+    return this.blob.previewable ? this.blob.url : this.#blobSrc
+  }
+
+  get #blobSrc() {
+    return this.uploadNode.blobUrlTemplate
+      .replace(":signed_id", this.blob.signed_id)
+      .replace(":filename", encodeURIComponent(this.blob.filename))
   }
 }
 
@@ -7647,30 +7741,6 @@ class HorizontalDividerNode extends ki {
   }
 }
 
-class WrappedTableNode extends hn {
-  static clone(node) {
-    return new WrappedTableNode(node.__key)
-  }
-
-  exportDOM(editor) {
-    const superExport = super.exportDOM(editor);
-
-    return {
-      ...superExport,
-      after: (tableElement) => {
-        if (superExport.after) {
-          tableElement = superExport.after(tableElement);
-          const clonedTable = tableElement.cloneNode(true);
-          const wrappedTable = createElement("figure", { className: "lexxy-content__table-wrapper" }, clonedTable.outerHTML);
-          return wrappedTable
-        }
-
-        return tableElement
-      }
-    }
-  }
-}
-
 const COMMANDS = [
   "bold",
   "italic",
@@ -7688,13 +7758,6 @@ const COMMANDS = [
   "uploadAttachments",
 
   "insertTable",
-  "insertTableRowAbove",
-  "insertTableRowBelow",
-  "insertTableColumnAfter",
-  "insertTableColumnBefore",
-  "deleteTableRow",
-  "deleteTableColumn",
-  "deleteTable",
 
   "undo",
   "redo"
@@ -7803,9 +7866,7 @@ class CommandDispatcher {
   }
 
   dispatchInsertHorizontalDivider() {
-    this.editor.update(() => {
-      this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode());
-    });
+    this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode());
 
     this.editor.focus();
   }
@@ -7865,41 +7926,6 @@ class CommandDispatcher {
 
   dispatchInsertTable() {
     this.editor.dispatchCommand(Ae$1, { "rows": 3, "columns": 3, "includeHeaders": true });
-  }
-
-  dispatchInsertTableRowBelow() {
-    je$1(true);
-  }
-
-  dispatchInsertTableRowAbove() {
-    je$1(false);
-  }
-
-  dispatchInsertTableColumnAfter() {
-    Ze$1(true);
-  }
-
-  dispatchInsertTableColumnBefore() {
-    Ze$1(false);
-  }
-
-  dispatchDeleteTableRow() {
-    ot$1();
-  }
-
-  dispatchDeleteTableColumn() {
-    lt$1();
-  }
-
-  dispatchDeleteTable() {
-    this.editor.update(() => {
-      const selection = Lr();
-      if (!yr(selection)) return
-
-      const anchorNode = selection.anchor.getNode();
-      const tableNode = Qt(anchorNode);
-      tableNode.remove();
-    });
   }
 
   dispatchUndo() {
@@ -8193,6 +8219,14 @@ class Selection {
 
     const anchorNode = selection.anchor.getNode();
     return wt$5(anchorNode, q$2) !== null
+  }
+
+  get isTableCellSelected() {
+    const selection = Lr();
+    if (!yr(selection)) return false
+
+    const anchorNode = selection.anchor.getNode();
+    return wt$5(anchorNode, xe) !== null
   }
 
   get nodeAfterCursor() {
@@ -8707,17 +8741,6 @@ function sanitize(html) {
   return purify.sanitize(html, buildConfig())
 }
 
-// Prevent the hardcoded background color
-// A background color value is set by Lexical if background is null:
-// https://github.com/facebook/lexical/blob/5bbbe849bd229e1db0e7b536e6a919520ada7bb2/packages/lexical-table/src/LexicalTableCellNode.ts#L187
-function registerHeaderBackgroundTransform(editor) {
-  return editor.registerNodeTransform(xe, (node) => {
-    if (node.getBackgroundColor() === null) {
-      node.setBackgroundColor("");
-    }
-  })
-}
-
 function dasherize(value) {
   return value.replace(/([A-Z])/g, (_, char) => `-${char.toLowerCase()}`)
 }
@@ -8739,6 +8762,10 @@ function normalizeFilteredText(string) {
 
 function filterMatches(text, potentialMatch) {
   return normalizeFilteredText(text).includes(normalizeFilteredText(potentialMatch))
+}
+
+function upcaseFirst(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1)
 }
 
 class EditorConfiguration {
@@ -9182,15 +9209,14 @@ class Contents {
     new FormatEscaper(editorElement).monitor();
   }
 
-  insertHtml(html) {
+  insertHtml(html, { tag } = {}) {
     this.editor.update(() => {
       const selection = Lr();
-
       if (!yr(selection)) return
 
       const nodes = m$1(this.editor, parseHtml(html));
       selection.insertNodes(nodes);
-    });
+    }, { tag });
   }
 
   insertAtCursor(node) {
@@ -9430,7 +9456,7 @@ class Contents {
     const blobUrlTemplate = this.editorElement.blobUrlTemplate;
 
     this.editor.update(() => {
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate, editor: this.editor });
+      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate });
       this.insertAtCursor(uploadedImageNode);
     }, { tag: Dn });
   }
@@ -10065,14 +10091,14 @@ class Clipboard {
 
   #pasteMarkdown(text) {
     const html = k(text);
-    this.contents.insertHtml(html);
+    this.contents.insertHtml(html, { tag: [ Fn ] });
   }
 
   #pasteRichText(clipboardData) {
     this.editor.update(() => {
       const selection = Lr();
       R$3(clipboardData, selection, this.editor);
-    });
+    }, { tag: Fn });
   }
 
   #handlePastedFiles(clipboardData) {
@@ -10119,7 +10145,7 @@ class Extensions {
 
   initializeToolbars() {
     if (this.#lexxyToolbar) {
-      this.enabledExtensions.forEach(ext => ext.initializeToobar(this.#lexxyToolbar));
+      this.enabledExtensions.forEach(ext => ext.initializeToolbar(this.#lexxyToolbar));
     }
   }
 
@@ -10305,6 +10331,124 @@ function $applyLanguage(conversionOutput, element) {
   const language = dt$1(element.getAttribute(TRIX_LANGUAGE_ATTR));
   conversionOutput.node.setLanguage(language);
 }
+
+class WrappedTableNode extends hn {
+  static clone(node) {
+    return new WrappedTableNode(node.__key)
+  }
+
+  exportDOM(editor) {
+    const superExport = super.exportDOM(editor);
+
+    return {
+      ...superExport,
+      after: (tableElement) => {
+        if (superExport.after) {
+          tableElement = superExport.after(tableElement);
+          const clonedTable = tableElement.cloneNode(true);
+          const wrappedTable = createElement("figure", { className: "lexxy-content__table-wrapper" }, clonedTable.outerHTML);
+          return wrappedTable
+        }
+
+        return tableElement
+      }
+    }
+  }
+}
+
+const TablesLexicalExtension = Kl({
+  name: "lexxy/tables",
+  nodes: [
+    WrappedTableNode,
+    {
+      replace: hn,
+      with: () => new WrappedTableNode()
+    },
+    xe,
+    Ee$1
+  ],
+  register(editor) {
+    // Register Lexical table plugins
+    Nn(editor);
+    yn(editor, true);
+    un(editor);
+
+    // Bug fix: Prevent hardcoded background color (Lexical #8089)
+    editor.registerNodeTransform(xe, (node) => {
+      if (node.getBackgroundColor() === null) {
+        node.setBackgroundColor("");
+      }
+    });
+
+    // Bug fix: Fix column header states (Lexical #8090)
+    editor.registerNodeTransform(xe, (node) => {
+      const headerState = node.getHeaderStyles();
+
+      if (headerState !== ve$1.ROW) return
+
+      const rowParent = node.getParent();
+      const tableNode = rowParent?.getParent();
+      if (!tableNode) return
+
+      const rows = tableNode.getChildren();
+      const cellIndex = rowParent.getChildren().indexOf(node);
+
+      const cellsInRow = rowParent.getChildren();
+      const isHeaderRow = cellsInRow.every(cell =>
+        cell.getHeaderStyles() !== ve$1.NO_STATUS
+      );
+
+      const isHeaderColumn = rows.every(row => {
+        const cell = row.getChildren()[cellIndex];
+        return cell && cell.getHeaderStyles() !== ve$1.NO_STATUS
+      });
+
+      let newHeaderState = ve$1.NO_STATUS;
+
+      if (isHeaderRow) {
+        newHeaderState |= ve$1.ROW;
+      }
+
+      if (isHeaderColumn) {
+        newHeaderState |= ve$1.COLUMN;
+      }
+
+      if (newHeaderState !== headerState) {
+        node.setHeaderStyles(newHeaderState, ve$1.BOTH);
+      }
+    });
+
+    editor.registerCommand("insertTableRowAfter", () => {
+      je$1(true);
+    }, Ri);
+
+    editor.registerCommand("insertTableRowBefore", () => {
+      je$1(false);
+    }, Ri);
+
+    editor.registerCommand("insertTableColumnAfter", () => {
+      Ze$1(true);
+    }, Ri);
+
+    editor.registerCommand("insertTableColumnBefore", () => {
+      Ze$1(false);
+    }, Ri);
+
+    editor.registerCommand("deleteTableRow", () => {
+      ot$1();
+    }, Ri);
+
+    editor.registerCommand("deleteTableColumn", () => {
+      lt$1();
+    }, Ri);
+
+    editor.registerCommand("deleteTable", () => {
+      const selection = Lr();
+      if (!yr(selection)) return false
+      Qt(selection.anchor.getNode())?.remove();
+    }, Ri);
+  }
+});
 
 class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -10495,10 +10639,8 @@ class LexicalEditorElement extends HTMLElement {
   #initialize() {
     this.#synchronizeWithChanges();
     this.#registerComponents();
-    this.#listenForInvalidatedNodes();
     this.#handleEnter();
-    this.#handleFocus();
-    this.#handleTables();
+    this.#registerFocusEvents();
     this.#attachDebugHooks();
     this.#attachToolbar();
     this.#loadInitialValue();
@@ -10509,11 +10651,11 @@ class LexicalEditorElement extends HTMLElement {
     this.editorContentElement ||= this.#createEditorContentElement();
 
     const editor = $t$2({
-        name: "lexxy/core",
-        namespace: "Lexxy",
-        theme: theme,
-        nodes: this.#lexicalNodes
-      },
+      name: "lexxy/core",
+      namespace: "Lexxy",
+      theme: theme,
+      nodes: this.#lexicalNodes
+    },
       ...this.#lexicalExtensions
     );
 
@@ -10523,10 +10665,11 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   get #lexicalExtensions() {
-    const extensions = [ ];
+    const extensions = [];
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
-      TrixContentExtension
+      TrixContentExtension,
+      TablesLexicalExtension
     ];
 
     if (this.supportsRichText) {
@@ -10551,14 +10694,7 @@ class LexicalEditorElement extends HTMLElement {
         et$1,
         y$1,
         A,
-        HorizontalDividerNode,
-        WrappedTableNode,
-        {
-          replace: hn,
-          with: () => { return new WrappedTableNode() }
-        },
-        xe,
-        Ee$1,
+        HorizontalDividerNode
       );
     }
 
@@ -10672,32 +10808,14 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   #registerTableComponents() {
-    Nn(this.editor);
-    this.tableHandler = createElement("lexxy-table-handler");
-    this.append(this.tableHandler);
-
-    this.#addUnregisterHandler(registerHeaderBackgroundTransform(this.editor));
+    this.tableTools = createElement("lexxy-table-tools");
+    this.append(this.tableTools);
   }
 
   #registerCodeHiglightingComponents() {
     Et$2(this.editor);
     this.codeLanguagePicker = createElement("lexxy-code-language-picker");
     this.append(this.codeLanguagePicker);
-  }
-
-  #listenForInvalidatedNodes() {
-    this.editor.getRootElement().addEventListener("lexxy:internal:invalidate-node", (event) => {
-      const { key, values } = event.detail;
-
-      this.editor.update(() => {
-        const node = xo(key);
-
-        if (node instanceof ActionTextAttachmentNode) {
-          const updatedNode = node.getWritable();
-          Object.assign(updatedNode, values);
-        }
-      });
-    });
   }
 
   #handleEnter() {
@@ -10723,12 +10841,27 @@ class LexicalEditorElement extends HTMLElement {
     );
   }
 
-  #handleFocus() {
-    // Lexxy handles focus and blur as commands
-    // see https://github.com/facebook/lexical/blob/d1a8e84fe9063a4f817655b346b6ff373aa107f0/packages/lexical/src/LexicalEvents.ts#L35
-    // and https://stackoverflow.com/a/72212077
-    this.editor.registerCommand(Ye, () => { dispatch(this, "lexxy:blur"); }, Ri);
-    this.editor.registerCommand(Ve$1, () => { dispatch(this, "lexxy:focus"); }, Ri);
+  #registerFocusEvents() {
+    this.addEventListener("focusin", this.#handleFocusIn);
+    this.addEventListener("focusout", this.#handleFocusOut);
+  }
+
+  #handleFocusIn(event) {
+    if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
+      dispatch(this, "lexxy:focus");
+      this.currentlyFocused = true;
+    }
+  }
+
+  #handleFocusOut(event) {
+    if (!this.#elementInEditorOrToolbar(event.relatedTarget)) {
+      dispatch(this, "lexxy:blur");
+      this.currentlyFocused = false;
+    }
+  }
+
+  #elementInEditorOrToolbar(element) {
+    return this.contains(element) || this.toolbarElement?.contains(element)
   }
 
   #onFocus() {
@@ -10745,22 +10878,9 @@ class LexicalEditorElement extends HTMLElement {
     }
   }
 
-  #handleTables() {
-    if (this.supportsRichText) {
-      this.removeTableSelectionObserver = yn(this.editor, true);
-      un(this.editor);
-    }
-  }
 
   #attachDebugHooks() {
-    if (!LexicalEditorElement.debug) return
-
-    this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
-      editorState.read(() => {
-        console.debug("HTML: ", this.value, "String:", this.toString());
-        console.debug("empty", this.isEmpty, "blank", this.isBlank);
-      });
-    }));
+    return
   }
 
   #attachToolbar() {
@@ -10840,18 +10960,17 @@ class LexicalEditorElement extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-editor", LexicalEditorElement);
-
 class ToolbarDropdown extends HTMLElement {
   connectedCallback() {
     this.container = this.closest("details");
 
     this.container.addEventListener("toggle", this.#handleToggle.bind(this));
     this.container.addEventListener("keydown", this.#handleKeyDown.bind(this));
+
+    this.#onToolbarEditor(this.initialize.bind(this));
   }
 
   disconnectedCallback() {
-    this.#removeClickOutsideHandler();
     this.container.removeEventListener("keydown", this.#handleKeyDown.bind(this));
   }
 
@@ -10867,46 +10986,29 @@ class ToolbarDropdown extends HTMLElement {
     return this.toolbar.editor
   }
 
-  close() {
-    this.container.removeAttribute("open");
+  initialize() {
+    // Any post-editor initialization
   }
 
-  #handleToggle(event) {
+  close() {
+    this.editor.focus();
+    this.container.open = false;
+  }
+
+  async #onToolbarEditor(callback) {
+    await this.toolbar.editorConnected;
+    callback();
+  }
+
+  #handleToggle() {
     if (this.container.open) {
-      this.#handleOpen(event.target);
-    } else {
-      this.#handleClose();
+      this.#handleOpen();
     }
   }
 
-  #handleOpen() {
+  async #handleOpen() {
     this.#interactiveElements[0].focus();
-    this.#setupClickOutsideHandler();
-
     this.#resetTabIndexValues();
-  }
-
-  #handleClose() {
-    this.#removeClickOutsideHandler();
-    this.editor.focus();
-  }
-
-  #setupClickOutsideHandler() {
-    if (this.clickOutsideHandler) return
-
-    this.clickOutsideHandler = this.#handleClickOutside.bind(this);
-    document.addEventListener("click", this.clickOutsideHandler, true);
-  }
-
-  #removeClickOutsideHandler() {
-    if (!this.clickOutsideHandler) return
-
-    document.removeEventListener("click", this.clickOutsideHandler, true);
-    this.clickOutsideHandler = null;
-  }
-
-  #handleClickOutside({ target }) {
-    if (this.container.open && !this.container.contains(target)) this.close();
   }
 
   #handleKeyDown(event) {
@@ -10983,8 +11085,6 @@ class LinkDropdown extends ToolbarDropdown {
   }
 }
 
-customElements.define("lexxy-link-dropdown", LinkDropdown);
-
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button";
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']";
 
@@ -10994,19 +11094,14 @@ const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']";
 const NO_STYLE = Symbol("no_style");
 
 class HighlightDropdown extends ToolbarDropdown {
-  #initialized = false
-
   connectedCallback() {
     super.connectedCallback();
     this.#registerToggleHandler();
   }
 
-  #ensureInitialized() {
-    if (this.#initialized) return
-
+  initialize() {
     this.#setUpButtons();
     this.#registerButtonHandlers();
-    this.#initialized = true;
   }
 
   #registerToggleHandler() {
@@ -11019,16 +11114,18 @@ class HighlightDropdown extends ToolbarDropdown {
   }
 
   #setUpButtons() {
-    this.#buttonGroups.forEach(buttonGroup => {
-      this.#populateButtonGroup(buttonGroup);
-    });
+    const colorGroups = this.editorElement.config.get("highlight.buttons");
+
+    this.#populateButtonGroup("color", colorGroups.color);
+    this.#populateButtonGroup("background-color", colorGroups["background-color"]);
+
+    const maxNumberOfColors = Math.max(colorGroups.color.length, colorGroups["background-color"].length);
+    this.style.setProperty("--max-colors", maxNumberOfColors);
   }
 
-  #populateButtonGroup(buttonGroup) {
-    const attribute = buttonGroup.dataset.buttonGroup;
-    const values = this.editorElement.config.get(`highlight.buttons.${attribute}`) || [];
+  #populateButtonGroup(attribute, values) {
     values.forEach((value, index) => {
-      buttonGroup.appendChild(this.#createButton(attribute, value, index));
+      this.#buttonContainer.appendChild(this.#createButton(attribute, value, index));
     });
   }
 
@@ -11037,15 +11134,13 @@ class HighlightDropdown extends ToolbarDropdown {
     button.dataset.style = attribute;
     button.style.setProperty(attribute, value);
     button.dataset.value = value;
-    button.classList.add("lexxy-highlight-button");
+    button.classList.add("lexxy-editor__toolbar-button", "lexxy-highlight-button");
     button.name = attribute + "-" + index;
     return button
   }
 
   #handleToggle({ newState }) {
     if (newState === "open") {
-      this.#ensureInitialized();
-
       this.editor.getEditorState().read(() => {
         this.#updateColorButtonStates(Lr());
       });
@@ -11088,512 +11183,14 @@ class HighlightDropdown extends ToolbarDropdown {
     this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).disabled = !hasHighlight;
   }
 
-  get #buttonGroups() {
-    return this.querySelectorAll("[data-button-group]")
+  get #buttonContainer() {
+    return this.querySelector(".lexxy-highlight-colors")
   }
 
   get #colorButtons() {
     return Array.from(this.querySelectorAll(APPLY_HIGHLIGHT_SELECTOR))
   }
 }
-
-customElements.define("lexxy-highlight-dropdown", HighlightDropdown);
-
-class TableHandler extends HTMLElement {
-  connectedCallback() {
-    this.#setUpButtons();
-    this.#monitorForTableSelection();
-    this.#registerKeyboardShortcuts();
-  }
-
-  disconnectedCallback() {
-    this.#unregisterKeyboardShortcuts();
-  }
-
-  get #editor() {
-    return this.#editorElement.editor
-  }
-
-  get #editorElement() {
-    return this.closest("lexxy-editor")
-  }
-
-  get #currentCell() {
-    const selection = Lr();
-    if (!yr(selection)) return null
-
-    const anchorNode = selection.anchor.getNode();
-    return Be$1(anchorNode)
-  }
-
-  get #currentRow() {
-    const currentCell = this.#currentCell;
-    if (!currentCell) return 0
-    return Ie$1(currentCell)
-  }
-
-  get #currentColumn() {
-    const currentCell = this.#currentCell;
-    if (!currentCell) return 0
-    return Ue$1(currentCell)
-  }
-
-  get #tableHandlerButtons() {
-    return Array.from(this.querySelectorAll("button, details > summary"))
-  }
-
-  #registerKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(me$1, this.#handleKeyDown, Bi);
-  }
-
-  #unregisterKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts();
-  }
-
-  #handleKeyDown = (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
-      const firstButton = this.querySelector("button, [tabindex]:not([tabindex='-1'])");
-      this.#setFocusStateOnSelectedCell();
-      firstButton?.focus();
-    } else if (event.key === "Escape") {
-      this.#editor.getEditorState().read(() => {
-        const cell = this.#currentCell;
-        if (!cell) return
-
-        this.#editor.update(() => {
-          cell.select();
-        });
-      });
-      this.#closeMoreMenu();
-    }
-  }
-
-  #handleTableHandlerKeydown = (event) => {
-    if (event.key === "Escape") {
-      this.#editor.focus();
-    } else {
-      handleRollingTabIndex(this.#tableHandlerButtons, event);
-    }
-  }
-
-  #setUpButtons() {
-    this.appendChild(this.#createRowButtonsContainer());
-    this.appendChild(this.#createColumnButtonsContainer());
-
-    this.moreMenu = this.#createMoreMenu();
-    this.appendChild(this.moreMenu);
-    this.addEventListener("keydown", this.#handleTableHandlerKeydown);
-  }
-
-  #showTableHandlerButtons() {
-    this.style.display = "flex";
-    this.#closeMoreMenu();
-
-    this.#updateRowColumnCount();
-    this.#setTableFocusState(true);
-  }
-
-  #hideTableHandlerButtons() {
-    this.style.display = "none";
-    this.#closeMoreMenu();
-
-    this.#setTableFocusState(false);
-    this.currentTableNode = null;
-  }
-
-  #updateButtonsPosition(tableNode) {
-    const tableElement = this.#editor.getElementByKey(tableNode.getKey());
-    if (!tableElement) return
-
-    const tableRect = tableElement.getBoundingClientRect();
-    const editorRect = this.#editorElement.getBoundingClientRect();
-
-    const relativeTop = tableRect.top - editorRect.top;
-    const relativeCenter = (tableRect.left + tableRect.right) / 2 - editorRect.left;
-    this.style.top = `${relativeTop}px`;
-    this.style.left = `${relativeCenter}px`;
-  }
-
-  #updateRowColumnCount() {
-    if (!this.currentTableNode) return
-
-    const tableElement = dn(this.#editor, this.currentTableNode);
-    if (!tableElement) return
-
-    const rowCount = tableElement.rows;
-    const columnCount = tableElement.columns;
-
-    this.rowCount.textContent = `${rowCount} row${rowCount === 1 ? "" : "s"}`;
-    this.columnCount.textContent = `${columnCount} column${columnCount === 1 ? "" : "s"}`;
-  }
-
-  #createButton(icon, label, onClick) {
-    const button = createElement("button", {
-      className: "lexxy-table-control__button",
-      "aria-label": label,
-      type: "button"
-    });
-    button.tabIndex = -1;
-    button.innerHTML = `${icon} <span>${label}</span>`;
-    button.addEventListener("click", onClick.bind(this));
-
-    return button
-  }
-
-  #createRowButtonsContainer() {
-    const container = createElement("div", { className: "lexxy-table-control" });
-
-    const plusButton = this.#createButton("+", "Add row", () => this.#insertTableRow("end"));
-    const minusButton = this.#createButton("−", "Remove row", () => this.#deleteTableRow("end"));
-
-    this.rowCount = createElement("span");
-    this.rowCount.textContent = "_ rows";
-
-    container.appendChild(minusButton);
-    container.appendChild(this.rowCount);
-    container.appendChild(plusButton);
-
-    return container
-  }
-
-  #createColumnButtonsContainer() {
-    const container = createElement("div", { className: "lexxy-table-control" });
-
-    const plusButton = this.#createButton("+", "Add column", () => this.#insertTableColumn("end"));
-    const minusButton = this.#createButton("−", "Remove column", () => this.#deleteTableColumn("end"));
-
-    this.columnCount = createElement("span");
-    this.columnCount.textContent = "_ columns";
-
-    container.appendChild(minusButton);
-    container.appendChild(this.columnCount);
-    container.appendChild(plusButton);
-
-    return container
-  }
-
-  #createMoreMenu() {
-    const container = createElement("details", {
-      className: "lexxy-table-control lexxy-table-control__more-menu"
-    });
-    container.setAttribute("name", "lexxy-dropdown");
-
-    container.tabIndex = -1;
-
-    const summary = createElement("summary", {}, "•••");
-    container.appendChild(summary);
-
-    const details = createElement("div", { className: "lexxy-table-control__more-menu-details" });
-    container.appendChild(details);
-
-    details.appendChild(this.#createRowSection());
-    details.appendChild(this.#createColumnSection());
-    details.appendChild(this.#createDeleteTableSection());
-
-    container.addEventListener("toggle", this.#handleMoreMenuToggle.bind(this));
-
-    return container
-  }
-
-  #createColumnSection() {
-    const columnSection = createElement("section", { className: "lexxy-table-control__more-menu-section" });
-
-    const columnButtons = [
-      { icon: this.#icon("add-column-before"), label: "Add column before", onClick: () => this.#insertTableColumn("left") },
-      { icon: this.#icon("add-column-after"), label: "Add column after", onClick: () => this.#insertTableColumn("right") },
-      { icon: this.#icon("remove-column"), label: "Remove column", onClick: this.#deleteTableColumn },
-      { icon: this.#icon("toggle-column-style"), label: "Toggle column style", onClick: this.#toggleColumnHeaderStyle },
-    ];
-
-    columnButtons.forEach(button => {
-      const buttonElement = this.#createButton(button.icon, button.label, button.onClick);
-      columnSection.appendChild(buttonElement);
-    });
-
-    return columnSection
-  }
-
-  #createRowSection() {
-    const rowSection = createElement("section", { className: "lexxy-table-control__more-menu-section" });
-
-    const rowButtons = [
-      { icon: this.#icon("add-row-above"), label: "Add row above", onClick: () => this.#insertTableRow("above") },
-      { icon: this.#icon("add-row-below"), label: "Add row below", onClick: () => this.#insertTableRow("below") },
-      { icon: this.#icon("remove-row"), label: "Remove row", onClick: this.#deleteTableRow },
-      { icon: this.#icon("toggle-row-style"), label: "Toggle row style", onClick: this.#toggleRowHeaderStyle }
-    ];
-
-    rowButtons.forEach(button => {
-      const buttonElement = this.#createButton(button.icon, button.label, button.onClick);
-      rowSection.appendChild(buttonElement);
-    });
-
-    return rowSection
-  }
-
-  #createDeleteTableSection() {
-    const deleteSection = createElement("section", { className: "lexxy-table-control__more-menu-section" });
-
-    const deleteButton = { icon: this.#icon("delete-table"), label: "Delete table", onClick: this.#deleteTable };
-
-    const buttonElement = this.#createButton(deleteButton.icon, deleteButton.label, deleteButton.onClick);
-    deleteSection.appendChild(buttonElement);
-
-    return deleteSection
-  }
-
-  #handleMoreMenuToggle() {
-    if (this.moreMenu.open) {
-      this.#setFocusStateOnSelectedCell();
-    } else {
-      this.#removeFocusStateFromSelectedCell();
-    }
-  }
-
-  #closeMoreMenu() {
-    this.#removeFocusStateFromSelectedCell();
-    this.moreMenu.removeAttribute("open");
-  }
-
-  #monitorForTableSelection() {
-    this.#editor.registerUpdateListener(() => {
-      this.#editor.getEditorState().read(() => {
-        const selection = Lr();
-        if (!yr(selection)) return
-
-        const anchorNode = selection.anchor.getNode();
-        const tableNode = Qt(anchorNode);
-
-        if (tableNode) {
-          this.#tableCellWasSelected(tableNode);
-        } else {
-          this.#hideTableHandlerButtons();
-        }
-      });
-    });
-  }
-
-  #setTableFocusState(focused) {
-    this.#editorElement.querySelector("div.node--selected:has(table)")?.classList.remove("node--selected");
-
-    if (focused && this.currentTableNode) {
-      const tableParent = this.#editor.getElementByKey(this.currentTableNode.getKey());
-      if (!tableParent) return
-      tableParent.classList.add("node--selected");
-    }
-  }
-
-  #tableCellWasSelected(tableNode) {
-    this.currentTableNode = tableNode;
-    this.#updateButtonsPosition(tableNode);
-    this.#showTableHandlerButtons();
-  }
-
-  #setFocusStateOnSelectedCell() {
-    this.#editor.getEditorState().read(() => {
-      const currentCell = this.#currentCell;
-      if (!currentCell) return
-
-      const cellElement = this.#editor.getElementByKey(currentCell.getKey());
-      if (!cellElement) return
-
-      cellElement.classList.add("table-cell--selected");
-    });
-  }
-
-  #removeFocusStateFromSelectedCell() {
-    this.#editorElement.querySelector(".table-cell--selected")?.classList.remove("table-cell--selected");
-  }
-
-  #selectLastTableCell() {
-    if (!this.currentTableNode) return
-
-    const last = this.currentTableNode.getLastChild().getLastChild();
-    if (!Oe$1(last)) return
-
-    last.selectEnd();
-  }
-
-  #deleteTable() {
-    this.#editor.dispatchCommand("deleteTable");
-
-    this.#closeMoreMenu();
-    this.#updateRowColumnCount();
-  }
-
-  #insertTableRow(direction) {
-    this.#executeTableCommand("insert", "row", direction);
-  }
-
-  #insertTableColumn(direction) {
-    this.#executeTableCommand("insert", "column", direction);
-  }
-
-  #deleteTableRow(direction) {
-    this.#executeTableCommand("delete", "row", direction);
-  }
-
-  #deleteTableColumn(direction) {
-    this.#executeTableCommand("delete", "column", direction);
-  }
-
-  #executeTableCommand(action = "insert", childType = "row", direction) {
-    this.#editor.update(() => {
-      const currentCell = this.#currentCell;
-      if (!currentCell) return
-
-      if (direction === "end") {
-        this.#selectLastTableCell();
-      }
-
-      this.#dispatchTableCommand(action, childType, direction);
-
-      if (currentCell.isAttached()) {
-        currentCell.selectEnd();
-      }
-    });
-
-    this.#closeMoreMenu();
-    this.#updateRowColumnCount();
-  }
-
-  #dispatchTableCommand(action, childType, direction) {
-    switch (action) {
-      case "insert":
-        switch (childType) {
-          case "row":
-            if (direction === "above") {
-              this.#editor.dispatchCommand("insertTableRowAbove");
-            } else {
-              this.#editor.dispatchCommand("insertTableRowBelow");
-            }
-            break
-          case "column":
-            if (direction === "left") {
-              this.#editor.dispatchCommand("insertTableColumnBefore");
-            } else {
-              this.#editor.dispatchCommand("insertTableColumnAfter");
-            }
-            break
-        }
-        break
-      case "delete":
-        switch (childType) {
-          case "row":
-            this.#editor.dispatchCommand("deleteTableRow");
-            break
-          case "column":
-            this.#editor.dispatchCommand("deleteTableColumn");
-            break
-        }
-        break
-    }
-  }
-
-  #toggleRowHeaderStyle() {
-    this.#editor.update(() => {
-      const rows = this.currentTableNode.getChildren();
-
-      const row = rows[this.#currentRow];
-      if (!row) return
-
-      const cells = row.getChildren();
-      const firstCell = Be$1(cells[0]);
-      if (!firstCell) return
-
-      const currentStyle = firstCell.getHeaderStyles();
-      const newStyle = currentStyle ^ ve$1.ROW;
-
-      cells.forEach(cell => {
-        this.#setHeaderStyle(cell, newStyle, ve$1.ROW);
-      });
-    });
-  }
-
-  #toggleColumnHeaderStyle() {
-    this.#editor.update(() => {
-      const rows = this.currentTableNode.getChildren();
-
-      const row = rows[this.#currentRow];
-      if (!row) return
-
-      const cells = row.getChildren();
-      const selectedCell = Be$1(cells[this.#currentColumn]);
-      if (!selectedCell) return
-
-      const currentStyle = selectedCell.getHeaderStyles();
-      const newStyle = currentStyle ^ ve$1.COLUMN;
-
-      rows.forEach(row => {
-        const cell = row.getChildren()[this.#currentColumn];
-        if (!cell) return
-        this.#setHeaderStyle(cell, newStyle, ve$1.COLUMN);
-      });
-    });
-  }
-
-  #setHeaderStyle(cell, newStyle, headerState) {
-    const tableCellNode = Be$1(cell);
-
-    if (tableCellNode) {
-      tableCellNode.setHeaderStyles(newStyle, headerState);
-    }
-  }
-
-  #icon(name) {
-    const icons =
-      {
-        "add-row-above":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 7L0 10V4L4 7ZM6.5 7.5H16.5V6.5H6.5V7.5ZM18 8C18 8.55228 17.5523 9 17 9H6C5.44772 9 5 8.55228 5 8V6C5 5.44772 5.44772 5 6 5H17C17.5523 5 18 5.44772 18 6V8Z"/><path d="M2 2C2 1.44772 2.44772 1 3 1H15C15.5523 1 16 1.44772 16 2C16 2.55228 15.5523 3 15 3H3C2.44772 3 2 2.55228 2 2Z"/><path d="M2 12C2 11.4477 2.44772 11 3 11H15C15.5523 11 16 11.4477 16 12C16 12.5523 15.5523 13 15 13H3C2.44772 13 2 12.5523 2 12Z"/><path d="M2 16C2 15.4477 2.44772 15 3 15H15C15.5523 15 16 15.4477 16 16C16 16.5523 15.5523 17 15 17H3C2.44772 17 2 16.5523 2 16Z"/>
-          </svg>`,
-
-        "add-row-below":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 11L0 8V14L4 11ZM6.5 10.5H16.5V11.5H6.5V10.5ZM18 10C18 9.44772 17.5523 9 17 9H6C5.44772 9 5 9.44772 5 10V12C5 12.5523 5.44772 13 6 13H17C17.5523 13 18 12.5523 18 12V10Z"/><path d="M2 16C2 16.5523 2.44772 17 3 17H15C15.5523 17 16 16.5523 16 16C16 15.4477 15.5523 15 15 15H3C2.44772 15 2 15.4477 2 16Z"/><path d="M2 6C2 6.55228 2.44772 7 3 7H15C15.5523 7 16 6.55228 16 6C16 5.44772 15.5523 5 15 5H3C2.44772 5 2 5.44772 2 6Z"/><path d="M2 2C2 2.55228 2.44772 3 3 3H15C15.5523 3 16 2.55228 16 2C16 1.44772 15.5523 1 15 1H3C2.44772 1 2 1.44772 2 2Z"/>
-          </svg>`,
-
-        "remove-row":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.9951 10.1025C17.9438 10.6067 17.5177 11 17 11H12.4922L13.9922 9.5H16.5V5.5L1.5 5.5L1.5 9.5H4.00586L5.50586 11H1L0.897461 10.9951C0.427034 10.9472 0.0527828 10.573 0.00488281 10.1025L0 10L1.78814e-07 5C2.61831e-07 4.48232 0.393332 4.05621 0.897461 4.00488L1 4L17 4C17.5523 4 18 4.44772 18 5V10L17.9951 10.1025Z"/><path d="M11.2969 15.0146L8.99902 12.7168L6.7002 15.0146L5.63965 13.9541L7.93848 11.6562L5.63965 9.3584L6.7002 8.29785L8.99902 10.5957L11.2969 8.29785L12.3574 9.3584L10.0596 11.6562L12.3574 13.9541L11.2969 15.0146Z"/>
-          </svg>`,
-
-        "toggle-row-style":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M1 2C1 1.44772 1.44772 1 2 1H7C7.55228 1 8 1.44772 8 2V7C8 7.55228 7.55228 8 7 8H2C1.44772 8 1 7.55228 1 7V2Z"/><path d="M2.5 15.5H6.5V11.5H2.5V15.5ZM8 16C8 16.5177 7.60667 16.9438 7.10254 16.9951L7 17H2L1.89746 16.9951C1.42703 16.9472 1.05278 16.573 1.00488 16.1025L1 16V11C1 10.4477 1.44772 10 2 10H7C7.55228 10 8 10.4477 8 11V16Z"/><path d="M10 2C10 1.44772 10.4477 1 11 1H16C16.5523 1 17 1.44772 17 2V7C17 7.55228 16.5523 8 16 8H11C10.4477 8 10 7.55228 10 7V2Z"/><path d="M11.5 15.5H15.5V11.5H11.5V15.5ZM17 16C17 16.5177 16.6067 16.9438 16.1025 16.9951L16 17H11L10.8975 16.9951C10.427 16.9472 10.0528 16.573 10.0049 16.1025L10 16V11C10 10.4477 10.4477 10 11 10H16C16.5523 10 17 10.4477 17 11V16Z"/>
-          </svg>`,
-
-        "add-column-before":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M7 4L10 2.62268e-07L4 0L7 4ZM7.5 6.5L7.5 16.5H6.5L6.5 6.5H7.5ZM8 18C8.55228 18 9 17.5523 9 17V6C9 5.44772 8.55229 5 8 5H6C5.44772 5 5 5.44772 5 6L5 17C5 17.5523 5.44772 18 6 18H8Z"/><path d="M2 2C1.44772 2 1 2.44772 1 3L1 15C1 15.5523 1.44772 16 2 16C2.55228 16 3 15.5523 3 15L3 3C3 2.44772 2.55229 2 2 2Z"/><path d="M12 2C11.4477 2 11 2.44772 11 3L11 15C11 15.5523 11.4477 16 12 16C12.5523 16 13 15.5523 13 15L13 3C13 2.44772 12.5523 2 12 2Z"/><path d="M16 2C15.4477 2 15 2.44772 15 3L15 15C15 15.5523 15.4477 16 16 16C16.5523 16 17 15.5523 17 15V3C17 2.44772 16.5523 2 16 2Z"/>
-          </svg>`,
-
-        "add-column-after":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M11 4L8 2.62268e-07L14 0L11 4ZM10.5 6.5V16.5H11.5V6.5H10.5ZM10 18C9.44772 18 9 17.5523 9 17V6C9 5.44772 9.44772 5 10 5H12C12.5523 5 13 5.44772 13 6V17C13 17.5523 12.5523 18 12 18H10Z"/><path d="M16 2C16.5523 2 17 2.44772 17 3L17 15C17 15.5523 16.5523 16 16 16C15.4477 16 15 15.5523 15 15V3C15 2.44772 15.4477 2 16 2Z"/><path d="M6 2C6.55228 2 7 2.44772 7 3L7 15C7 15.5523 6.55228 16 6 16C5.44772 16 5 15.5523 5 15L5 3C5 2.44772 5.44771 2 6 2Z"/><path d="M2 2C2.55228 2 3 2.44772 3 3L3 15C3 15.5523 2.55228 16 2 16C1.44772 16 1 15.5523 1 15V3C1 2.44772 1.44771 2 2 2Z"/>
-          </svg>`,
-
-        "remove-column":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10.1025 0.00488281C10.6067 0.0562145 11 0.482323 11 1V5.50781L9.5 4.00781V1.5H5.5V16.5H9.5V13.9941L11 12.4941V17L10.9951 17.1025C10.9472 17.573 10.573 17.9472 10.1025 17.9951L10 18H5C4.48232 18 4.05621 17.6067 4.00488 17.1025L4 17V1C4 0.447715 4.44772 1.61064e-08 5 0H10L10.1025 0.00488281Z"/><path d="M12.7169 8.99999L15.015 11.2981L13.9543 12.3588L11.6562 10.0607L9.35815 12.3588L8.29749 11.2981L10.5956 8.99999L8.29749 6.7019L9.35815 5.64124L11.6562 7.93933L13.9543 5.64124L15.015 6.7019L12.7169 8.99999Z"/>
-          </svg>`,
-
-        "toggle-column-style":
-          `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-          <path d="M1 2C1 1.44772 1.44772 1 2 1H7C7.55228 1 8 1.44772 8 2V7C8 7.55228 7.55228 8 7 8H2C1.44772 8 1 7.55228 1 7V2Z"/><path d="M1 11C1 10.4477 1.44772 10 2 10H7C7.55228 10 8 10.4477 8 11V16C8 16.5523 7.55228 17 7 17H2C1.44772 17 1 16.5523 1 16V11Z"/><path d="M11.5 6.5H15.5V2.5H11.5V6.5ZM17 7C17 7.51768 16.6067 7.94379 16.1025 7.99512L16 8H11L10.8975 7.99512C10.427 7.94722 10.0528 7.57297 10.0049 7.10254L10 7V2C10 1.44772 10.4477 1 11 1H16C16.5523 1 17 1.44772 17 2V7Z"/><path d="M11.5 15.5H15.5V11.5H11.5V15.5ZM17 16C17 16.5177 16.6067 16.9438 16.1025 16.9951L16 17H11L10.8975 16.9951C10.427 16.9472 10.0528 16.573 10.0049 16.1025L10 16V11C10 10.4477 10.4477 10 11 10H16C16.5523 10 17 10.4477 17 11V16Z"/>
-          </svg>`,
-
-        "delete-table":
-          `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M18.2129 19.2305C18.0925 20.7933 16.7892 22 15.2217 22H7.77832C6.21084 22 4.90753 20.7933 4.78711 19.2305L4 9H19L18.2129 19.2305Z"/><path d="M13 2C14.1046 2 15 2.89543 15 4H19C19.5523 4 20 4.44772 20 5V6C20 6.55228 19.5523 7 19 7H4C3.44772 7 3 6.55228 3 6V5C3 4.44772 3.44772 4 4 4H8C8 2.89543 8.89543 2 10 2H13Z"/>
-          </svg>`
-      };
-
-    return icons[name]
-  }
-}
-
-customElements.define("lexxy-table-handler", TableHandler);
 
 class BaseSource {
   // Template method to override
@@ -11797,25 +11394,30 @@ class LexicalPromptElement extends HTMLElement {
   }
 
   #addTriggerListener() {
-    const unregister = this.#editor.registerUpdateListener(() => {
-      this.#editor.read(() => {
+    const unregister = this.#editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
         const { node, offset } = this.#selection.selectedNodeWithOffset();
         if (!node) return
 
-        if (lr(node) && offset > 0) {
+        if (lr(node)) {
           const fullText = node.getTextContent();
-          const charBeforeCursor = fullText[offset - 1];
+          const triggerLength = this.trigger.length;
 
-          // Check if trigger is at the start of the text node (new line case) or preceded by space or newline
-          if (charBeforeCursor === this.trigger) {
-            const isAtStart = offset === 1;
+          // Check if we have enough characters for the trigger
+          if (offset >= triggerLength) {
+            const textBeforeCursor = fullText.slice(offset - triggerLength, offset);
 
-            const charBeforeTrigger = offset > 1 ? fullText[offset - 2] : null;
-            const isPrecededBySpaceOrNewline = charBeforeTrigger === " " || charBeforeTrigger === "\n";
+            // Check if trigger is at the start of the text node (new line case) or preceded by space or newline
+            if (textBeforeCursor === this.trigger) {
+              const isAtStart = offset === triggerLength;
 
-            if (isAtStart || isPrecededBySpaceOrNewline) {
-              unregister();
-              this.#showPopover();
+              const charBeforeTrigger = offset > triggerLength ? fullText[offset - triggerLength - 1] : null;
+              const isPrecededBySpaceOrNewline = charBeforeTrigger === " " || charBeforeTrigger === "\n";
+
+              if (isAtStart || isPrecededBySpaceOrNewline) {
+                unregister();
+                this.#showPopover();
+              }
             }
           }
         }
@@ -11835,9 +11437,10 @@ class LexicalPromptElement extends HTMLElement {
           const fullText = node.getTextContent();
           const textBeforeCursor = fullText.slice(0, offset);
           const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger);
+          const triggerEndIndex = lastTriggerIndex + this.trigger.length - 1;
 
-          // If trigger is not found, or cursor is at or before the trigger position, hide popover
-          if (lastTriggerIndex === -1 || offset <= lastTriggerIndex) {
+          // If trigger is not found, or cursor is at or before the trigger end position, hide popover
+          if (lastTriggerIndex === -1 || offset <= triggerEndIndex) {
             this.#hidePopover();
           }
         } else {
@@ -12162,8 +11765,6 @@ class LexicalPromptElement extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-prompt", LexicalPromptElement);
-
 class CodeLanguagePicker extends HTMLElement {
   connectedCallback() {
     this.editorElement = this.closest("lexxy-editor");
@@ -12281,8 +11882,10 @@ class CodeLanguagePicker extends HTMLElement {
     const codeRect = codeElement.getBoundingClientRect();
     const editorRect = this.editorElement.getBoundingClientRect();
     const relativeTop = codeRect.top - editorRect.top;
+    const relativeRight = editorRect.right - codeRect.right;
 
     this.style.top = `${relativeTop}px`;
+    this.style.right = `${relativeRight}px`;
   }
 
   #showLanguagePicker() {
@@ -12294,7 +11897,728 @@ class CodeLanguagePicker extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-code-language-picker", CodeLanguagePicker);
+class TableController {
+  constructor(editorElement) {
+    this.editor = editorElement.editor;
+    this.contents = editorElement.contents;
+    this.selection = editorElement.selection;
+
+    this.currentTableNodeKey = null;
+    this.currentCellKey = null;
+
+    this.#registerKeyHandlers();
+  }
+
+  destroy() {
+    this.currentTableNodeKey = null;
+    this.currentCellKey = null;
+
+    this.#unregisterKeyHandlers();
+  }
+
+  get currentCell() {
+    if (!this.currentCellKey) return null
+
+    return this.editor.getEditorState().read(() => {
+      const cell = xo(this.currentCellKey);
+      return (cell instanceof xe) ? cell : null
+    })
+  }
+
+  get currentTableNode() {
+    if (!this.currentTableNodeKey) return null
+
+    return this.editor.getEditorState().read(() => {
+      const tableNode = xo(this.currentTableNodeKey);
+      return (tableNode instanceof hn) ? tableNode : null
+    })
+  }
+
+  get currentRowCells() {
+    const currentRowIndex = this.currentRowIndex;
+
+    const rows = this.tableRows;
+    if (!rows) return null
+
+    return this.editor.getEditorState().read(() => {
+      return rows[currentRowIndex]?.getChildren() ?? null
+    }) ?? null
+  }
+
+  get currentRowIndex() {
+    const currentCell = this.currentCell;
+    if (!currentCell) return 0
+
+    return this.editor.getEditorState().read(() => {
+      return Ie$1(currentCell)
+    }) ?? 0
+  }
+
+  get currentColumnCells() {
+    const columnIndex = this.currentColumnIndex;
+
+    const rows = this.tableRows;
+    if (!rows) return null
+
+    return this.editor.getEditorState().read(() => {
+      return rows.map(row => row.getChildAtIndex(columnIndex))
+    }) ?? null
+  }
+
+  get currentColumnIndex() {
+    const currentCell = this.currentCell;
+    if (!currentCell) return 0
+
+    return this.editor.getEditorState().read(() => {
+      return Ue$1(currentCell)
+    }) ?? 0
+  }
+
+  get tableRows() {
+    return this.editor.getEditorState().read(() => {
+      return this.currentTableNode?.getChildren()
+    }) ?? null
+  }
+
+  updateSelectedTable() {
+    let cellNode = null;
+    let tableNode = null;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!selection || !this.selection.isTableCellSelected) return
+
+      const node = selection.getNodes()[0];
+
+      cellNode = Gt(node);
+      tableNode = Qt(node);
+    });
+
+    this.currentCellKey = cellNode?.getKey() ?? null;
+    this.currentTableNodeKey = tableNode?.getKey() ?? null;
+  }
+
+  executeTableCommand(command, customIndex = null) {
+    if (command.action === "delete" && command.childType === "table") {
+      this.#deleteTable();
+      return
+    }
+
+    if (command.action === "toggle") {
+      this.#executeToggleStyle(command);
+      return
+    }
+
+    this.#executeCommand(command, customIndex);
+  }
+
+  #executeCommand(command, customIndex = null) {
+    this.#selectCellAtSelection();
+    this.editor.dispatchCommand(this.#commandName(command));
+    this.#selectNextBestCell(command, customIndex);
+  }
+
+  #executeToggleStyle(command) {
+    const childType = command.childType;
+
+    let cells = null;
+    let headerState = null;
+
+    if (childType === "row") {
+      cells = this.currentRowCells;
+      headerState = ve$1.ROW;
+    } else if (childType === "column") {
+      cells = this.currentColumnCells;
+      headerState = ve$1.COLUMN;
+    }
+
+    if (!cells || cells.length === 0) return
+
+    this.editor.update(() => {
+      const firstCell = Be$1(cells[0]);
+      if (!firstCell) return
+
+      const currentStyle = firstCell.getHeaderStyles();
+      const newStyle = currentStyle ^ headerState;
+
+      cells.forEach(cell => {
+        this.#setHeaderStyle(cell, newStyle, headerState);
+      });
+    });
+  }
+
+  #deleteTable() {
+    this.#selectCellAtSelection();
+    this.editor.dispatchCommand("deleteTable");
+  }
+
+  #selectCellAtSelection() {
+    this.editor.update(() => {
+      const selection = Lr();
+      if (!selection) return
+
+      const node = selection.getNodes()[0];
+
+      Gt(node)?.selectEnd();
+    });
+  }
+
+  #commandName(command) {
+    const { action, childType, direction } = command;
+
+    const childTypeSuffix = upcaseFirst(childType);
+    const directionSuffix = action == "insert" ? upcaseFirst(direction) : "";
+    return `${action}Table${childTypeSuffix}${directionSuffix}`
+  }
+
+  #setHeaderStyle(cell, newStyle, headerState) {
+    const tableCellNode = Be$1(cell);
+    tableCellNode?.setHeaderStyles(newStyle, headerState);
+  }
+
+  async #selectCellAtIndex(rowIndex, columnIndex) {
+    // We wait for next frame, otherwise table operations might not have completed yet.
+    await nextFrame();
+
+    if (!this.currentTableNode) return
+
+    const rows = this.tableRows;
+    if (!rows) return
+
+    const row = rows[rowIndex];
+    if (!row) return
+
+    this.editor.update(() => {
+      const cell = Be$1(row.getChildAtIndex(columnIndex));
+      cell?.selectEnd();
+    });
+  }
+
+  #selectNextBestCell(command, customIndex = null) {
+    const { childType, direction } = command;
+
+    let rowIndex = this.currentRowIndex;
+    let columnIndex = customIndex !== null ? customIndex : this.currentColumnIndex;
+
+    const deleteOffset = command.action === "delete" ? -1 : 0;
+    const offset = direction === "after" ? 1 : deleteOffset;
+
+    if (childType === "row") {
+      rowIndex += offset;
+    } else if (childType === "column") {
+      columnIndex += offset;
+    }
+
+    this.#selectCellAtIndex(rowIndex, columnIndex);
+  }
+
+  #selectNextRow() {
+    const rows = this.tableRows;
+    if (!rows) return
+
+    const nextRow = rows.at(this.currentRowIndex + 1);
+    if (!nextRow) return
+
+    this.editor.update(() => {
+      nextRow.getChildAtIndex(this.currentColumnIndex)?.selectEnd();
+    });
+  }
+
+  #selectPreviousCell() {
+    const cell = this.currentCell;
+    if (!cell) return
+
+    this.editor.update(() => {
+      cell.selectPrevious();
+    });
+  }
+
+  #insertRowAndSelectFirstCell() {
+    this.executeTableCommand({ action: "insert", childType: "row", direction: "after" }, 0);
+  }
+
+  #deleteRowAndSelectLastCell() {
+    this.executeTableCommand({ action: "delete", childType: "row" }, -1);
+  }
+
+  #deleteRowAndSelectNextNode() {
+    const tableNode = this.currentTableNode;
+    this.executeTableCommand({ action: "delete", childType: "row" });
+
+    this.editor.update(() => {
+      const next = tableNode?.getNextSibling();
+      if (Ii(next)) {
+        next.selectStart();
+      } else {
+        const newParagraph = Li();
+        this.currentTableNode.insertAfter(newParagraph);
+        newParagraph.selectStart();
+      }
+    });
+  }
+
+  #isCurrentCellEmpty() {
+    if (!this.currentTableNode) return false
+
+    const cell = this.currentCell;
+    if (!cell) return false
+
+    return cell.getTextContent().trim() === ""
+  }
+
+  #isCurrentRowLast() {
+    if (!this.currentTableNode) return false
+
+    const rows = this.tableRows;
+    if (!rows) return false
+
+    return rows.length === this.currentRowIndex + 1
+  }
+
+  #isCurrentRowEmpty() {
+    if (!this.currentTableNode) return false
+
+    const cells = this.currentRowCells;
+    if (!cells) return false
+
+    return cells.every(cell => cell.getTextContent().trim() === "")
+  }
+
+  #isFirstCellInRow() {
+    if (!this.currentTableNode) return false
+
+    const cells = this.currentRowCells;
+    if (!cells) return false
+
+    return cells.indexOf(this.currentCell) === 0
+  }
+
+  #registerKeyHandlers() {
+    // We can't prevent these externally using regular keydown because Lexical handles it first.
+    this.unregisterBackspaceKeyHandler = this.editor.registerCommand(we$1, (event) => this.#handleBackspaceKey(event), Bi);
+    this.unregisterEnterKeyHandler = this.editor.registerCommand(Ne$2, (event) => this.#handleEnterKey(event), Bi);
+  }
+
+  #unregisterKeyHandlers() {
+    this.unregisterBackspaceKeyHandler?.();
+    this.unregisterEnterKeyHandler?.();
+
+    this.unregisterBackspaceKeyHandler = null;
+    this.unregisterEnterKeyHandler = null;
+  }
+
+  #handleBackspaceKey(event) {
+    if (!this.currentTableNode) return false
+
+    if (this.#isCurrentRowEmpty() && this.#isFirstCellInRow()) {
+      event.preventDefault();
+      this.#deleteRowAndSelectLastCell();
+      return true
+    }
+
+    if (this.#isCurrentCellEmpty() && !this.#isFirstCellInRow()) {
+      event.preventDefault();
+      this.#selectPreviousCell();
+      return true
+    }
+
+    return false
+  }
+
+  #handleEnterKey(event) {
+    if ((event.ctrlKey || event.metaKey) || event.shiftKey || !this.currentTableNode) return false
+
+    if (this.selection.isInsideList || this.selection.isInsideCodeBlock) return false
+
+    event.preventDefault();
+
+    if (this.#isCurrentRowLast() && this.#isCurrentRowEmpty()) {
+      this.#deleteRowAndSelectNextNode();
+    } else if (this.#isCurrentRowLast()) {
+      this.#insertRowAndSelectFirstCell();
+    } else {
+      this.#selectNextRow();
+    }
+
+    return true
+  }
+}
+
+var TableIcons = {
+  "insert-row-before":
+    `<svg  viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M7.86804e-07 15C8.29055e-07 15.8284 0.671574 16.5 1.5 16.5H15L15.1533 16.4922C15.8593 16.4205 16.4205 15.8593 16.4922 15.1533L16.5 15V4.5L16.4922 4.34668C16.4154 3.59028 15.7767 3 15 3H13.5L13.5 4.5H15V9H1.5L1.5 4.5L3 4.5V3H1.5C0.671574 3 1.20956e-06 3.67157 1.24577e-06 4.5L7.86804e-07 15ZM15 10.5V15H1.5L1.5 10.5H15Z"/>
+    <path d="M4.5 4.5H7.5V7.5H9V4.5H12L12 3L9 3V6.55671e-08L7.5 0V3L4.5 3V4.5Z"/>
+    </svg>`,
+
+  "insert-row-after":
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M7.86804e-07 13.5C7.50592e-07 14.3284 0.671574 15 1.5 15H3V13.5H1.5L1.5 9L15 9V13.5H13.5V15H15C15.7767 15 16.4154 14.4097 16.4922 13.6533L16.5 13.5V3L16.4922 2.84668C16.4205 2.14069 15.8593 1.57949 15.1533 1.50781L15 1.5L1.5 1.5C0.671574 1.5 1.28803e-06 2.17157 1.24577e-06 3L7.86804e-07 13.5ZM15 3V7.5L1.5 7.5L1.5 3L15 3Z"/>
+    <path d="M7.5 15V18H9V15H12V13.5H9V10.5H7.5V13.5H4.5V15H7.5Z"/>
+    </svg>`,
+
+  "delete-row":
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path d="M16.4922 12.1533C16.4154 12.9097 15.7767 13.5 15 13.5L12 13.5V12H15V6L1.5 6L1.5 12H4.5V13.5H1.5C0.723337 13.5 0.0846104 12.9097 0.00781328 12.1533L7.86804e-07 12L1.04907e-06 6C1.17362e-06 5.22334 0.590278 4.58461 1.34668 4.50781L1.5 4.5L15 4.5C15.8284 4.5 16.5 5.17157 16.5 6V12L16.4922 12.1533Z"/>
+    <path d="M10.3711 15.9316L8.25 13.8096L6.12793 15.9316L5.06738 14.8711L7.18945 12.75L5.06738 10.6289L6.12793 9.56836L8.25 11.6895L10.3711 9.56836L11.4316 10.6289L9.31055 12.75L11.4316 14.8711L10.3711 15.9316Z"/>
+    </svg>`,
+
+  "toggle-row":
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M0.00781328 13.6533C0.0846108 14.4097 0.723337 15 1.5 15L15 15L15.1533 14.9922C15.8593 14.9205 16.4205 14.3593 16.4922 13.6533L16.5 13.5V4.5L16.4922 4.34668C16.4205 3.64069 15.8593 3.07949 15.1533 3.00781L15 3L1.5 3C0.671574 3 1.24863e-06 3.67157 1.18021e-06 4.5L7.86804e-07 13.5L0.00781328 13.6533ZM15 9V13.5L1.5 13.5L1.5 9L15 9Z"/>
+    </svg>`,
+
+  "insert-column-before":
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M4.5 0C3.67157 0 3 0.671573 3 1.5V3H4.5V1.5H9V15H4.5V13.5H3V15C3 15.7767 3.59028 16.4154 4.34668 16.4922L4.5 16.5H15L15.1533 16.4922C15.8593 16.4205 16.4205 15.8593 16.4922 15.1533L16.5 15V1.5C16.5 0.671573 15.8284 6.03989e-09 15 0H4.5ZM15 15H10.5V1.5H15V15Z"/>
+    <path d="M3 7.5H0V9H3V12H4.5V9H7.5V7.5H4.5V4.5H3V7.5Z"/>
+    </svg>`,
+
+  "insert-column-after":
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M13.5 0C14.3284 0 15 0.671573 15 1.5V3H13.5V1.5H9V15H13.5V13.5H15V15C15 15.7767 14.4097 16.4154 13.6533 16.4922L13.5 16.5H3L2.84668 16.4922C2.14069 16.4205 1.57949 15.8593 1.50781 15.1533L1.5 15V1.5C1.5 0.671573 2.17157 6.03989e-09 3 0H13.5ZM3 15H7.5V1.5H3V15Z"/>
+    <path d="M15 7.5H18V9H15V12H13.5V9H10.5V7.5H13.5V4.5H15V7.5Z"/>
+    </svg>`,
+
+  "delete-column":
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12.1533 0.0078125C12.9097 0.0846097 13.5 0.723336 13.5 1.5V4.5H12V1.5H6V15H12V12H13.5V15C13.5 15.7767 12.9097 16.4154 12.1533 16.4922L12 16.5H6C5.22334 16.5 4.58461 15.9097 4.50781 15.1533L4.5 15V1.5C4.5 0.671573 5.17157 2.41596e-08 6 0H12L12.1533 0.0078125Z"/>
+    <path d="M15.9316 6.12891L13.8105 8.24902L15.9326 10.3711L14.8711 11.4316L12.75 9.31055L10.6289 11.4316L9.56738 10.3711L11.6885 8.24902L9.56836 6.12891L10.6289 5.06836L12.75 7.18848L14.8711 5.06836L15.9316 6.12891Z"/>
+    </svg>`,
+
+  "toggle-column":
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M13.6533 17.9922C14.4097 17.9154 15 17.2767 15 16.5L15 3L14.9922 2.84668C14.9205 2.14069 14.3593 1.57949 13.6533 1.50781L13.5 1.5L4.5 1.5L4.34668 1.50781C3.59028 1.58461 3 2.22334 3 3L3 16.5C3 17.2767 3.59028 17.9154 4.34668 17.9922L4.5 18L13.5 18L13.6533 17.9922ZM9 3L13.5 3L13.5 16.5L9 16.5L9 3Z" />
+    </svg>`,
+
+  "delete-table":
+    `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M18.2129 19.2305C18.0925 20.7933 16.7892 22 15.2217 22H7.77832C6.21084 22 4.90753 20.7933 4.78711 19.2305L4 9H19L18.2129 19.2305Z"/><path d="M13 2C14.1046 2 15 2.89543 15 4H19C19.5523 4 20 4.44772 20 5V6C20 6.55228 19.5523 7 19 7H4C3.44772 7 3 6.55228 3 6V5C3 4.44772 3.44772 4 4 4H8C8 2.89543 8.89543 2 10 2H13Z"/>
+    </svg>`
+};
+
+class TableTools extends HTMLElement {
+  connectedCallback() {
+    this.tableController = new TableController(this.#editorElement);
+
+    this.#setUpButtons();
+    this.#monitorForTableSelection();
+    this.#registerKeyboardShortcuts();
+  }
+
+  disconnectedCallback() {
+    this.#unregisterKeyboardShortcuts();
+
+    this.unregisterUpdateListener?.();
+    this.unregisterUpdateListener = null;
+
+    this.removeEventListener("keydown", this.#handleToolsKeydown);
+
+    this.tableController?.destroy();
+    this.tableController = null;
+  }
+
+  get #editor() {
+    return this.#editorElement.editor
+  }
+
+  get #editorElement() {
+    return this.closest("lexxy-editor")
+  }
+
+  get #tableToolsButtons() {
+    return Array.from(this.querySelectorAll("button, details > summary"))
+  }
+
+  #setUpButtons() {
+    this.appendChild(this.#createRowButtonsContainer());
+    this.appendChild(this.#createColumnButtonsContainer());
+
+    this.appendChild(this.#createDeleteTableButton());
+    this.addEventListener("keydown", this.#handleToolsKeydown);
+  }
+
+  #createButtonsContainer(childType, setCountProperty, moreMenu) {
+    const container = createElement("div", { className: `lexxy-table-control lexxy-table-control--${childType}` });
+
+    const plusButton = this.#createButton(`Add ${childType}`, { action: "insert", childType, direction: "after" }, "+");
+    const minusButton = this.#createButton(`Remove ${childType}`, { action: "delete", childType }, "−");
+
+    const dropdown = createElement("details", { className: "lexxy-table-control__more-menu" });
+    dropdown.setAttribute("name", "lexxy-dropdown");
+    dropdown.tabIndex = -1;
+
+    const count = createElement("summary", {}, `_ ${childType}s`);
+    setCountProperty(count);
+    dropdown.appendChild(count);
+
+    dropdown.appendChild(moreMenu);
+
+    container.appendChild(minusButton);
+    container.appendChild(dropdown);
+    container.appendChild(plusButton);
+
+    return container
+  }
+
+  #createRowButtonsContainer() {
+    return this.#createButtonsContainer(
+      "row",
+      (count) => { this.rowCount = count; },
+      this.#createMoreMenuSection("row")
+    )
+  }
+
+  #createColumnButtonsContainer() {
+    return this.#createButtonsContainer(
+      "column",
+      (count) => { this.columnCount = count; },
+      this.#createMoreMenuSection("column")
+    )
+  }
+
+  #createMoreMenuSection(childType) {
+    const section = createElement("div", { className: "lexxy-table-control__more-menu-details" });
+    const addBeforeButton = this.#createButton(`Add ${childType} before`, { action: "insert", childType, direction: "before" });
+    const addAfterButton = this.#createButton(`Add ${childType} after`, { action: "insert", childType, direction: "after" });
+    const toggleStyleButton = this.#createButton(`Toggle ${childType} style`, { action: "toggle", childType });
+    const deleteButton = this.#createButton(`Remove ${childType}`, { action: "delete", childType });
+
+    section.appendChild(addBeforeButton);
+    section.appendChild(addAfterButton);
+    section.appendChild(toggleStyleButton);
+    section.appendChild(deleteButton);
+
+    return section
+  }
+
+  #createDeleteTableButton() {
+    const container = createElement("div", { className: "lexxy-table-control" });
+
+    const deleteTableButton = this.#createButton("Delete this table?", { action: "delete", childType: "table" });
+    deleteTableButton.classList.add("lexxy-table-control__button--delete-table");
+
+    container.appendChild(deleteTableButton);
+
+    this.deleteContainer = container;
+
+    return container
+  }
+
+  #createButton(label, command = {}, icon = this.#icon(command)) {
+    const button = createElement("button", {
+      className: "lexxy-table-control__button",
+      "aria-label": label,
+      type: "button"
+    });
+    button.tabIndex = -1;
+    button.innerHTML = `${icon} <span>${label}</span>`;
+
+    button.dataset.action = command.action;
+    button.dataset.childType = command.childType;
+    button.dataset.direction = command.direction;
+
+    button.addEventListener("click", () => this.#executeTableCommand(command));
+
+    button.addEventListener("mouseover", () => this.#handleCommandButtonHover());
+    button.addEventListener("focus", () => this.#handleCommandButtonHover());
+    button.addEventListener("mouseout", () => this.#handleCommandButtonHover());
+
+    return button
+  }
+
+  #registerKeyboardShortcuts() {
+    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(me$1, this.#handleAccessibilityShortcutKey, Bi);
+  }
+
+  #unregisterKeyboardShortcuts() {
+    this.unregisterKeyboardShortcuts?.();
+    this.unregisterKeyboardShortcuts = null;
+  }
+
+  #handleAccessibilityShortcutKey = (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
+      const firstButton = this.querySelector("button, [tabindex]:not([tabindex='-1'])");
+      firstButton?.focus();
+    }
+  }
+
+  #handleToolsKeydown = (event) => {
+    if (event.key === "Escape") {
+      this.#handleEscapeKey();
+    } else {
+      handleRollingTabIndex(this.#tableToolsButtons, event);
+    }
+  }
+
+  #handleEscapeKey() {
+    const cell = this.tableController.currentCell;
+    if (!cell) return
+
+    this.#editor.update(() => {
+      cell.select();
+      this.#editor.focus();
+    });
+
+    this.#update();
+  }
+
+  async #handleCommandButtonHover() {
+    await nextFrame();
+
+    this.#clearCellStyles();
+
+    const activeElement = this.querySelector("button:hover, button:focus");
+    if (!activeElement) return
+
+    const command = {
+      action: activeElement.dataset.action,
+      childType: activeElement.dataset.childType,
+      direction: activeElement.dataset.direction
+    };
+
+    let cellsToHighlight = null;
+
+    switch (command.childType) {
+      case "row":
+        cellsToHighlight = this.tableController.currentRowCells;
+        break
+      case "column":
+        cellsToHighlight = this.tableController.currentColumnCells;
+        break
+      case "table":
+        cellsToHighlight = this.tableController.tableRows;
+        break
+    }
+
+    if (!cellsToHighlight) return
+
+    cellsToHighlight.forEach(cell => {
+      const cellElement = this.#editor.getElementByKey(cell.getKey());
+      if (!cellElement) return
+
+      cellElement.classList.toggle(theme.tableCellHighlight, true);
+      Object.assign(cellElement.dataset, command);
+    });
+  }
+
+  #monitorForTableSelection() {
+    this.unregisterUpdateListener = this.#editor.registerUpdateListener(() => {
+      this.tableController.updateSelectedTable();
+
+      const tableNode = this.tableController.currentTableNode;
+      if (tableNode) {
+        this.#show();
+      } else {
+        this.#hide();
+      }
+    });
+  }
+
+  #executeTableCommand(command) {
+    this.tableController.executeTableCommand(command);
+    this.#update();
+  }
+
+  #show() {
+    this.style.display = "flex";
+    this.#update();
+  }
+
+  #hide() {
+    this.style.display = "none";
+    this.#clearCellStyles();
+  }
+
+  #update() {
+    this.#updateButtonsPosition();
+    this.#updateRowColumnCount();
+    this.#closeMoreMenu();
+    this.#handleCommandButtonHover();
+  }
+
+  #closeMoreMenu() {
+    this.querySelector("details[open]")?.removeAttribute("open");
+  }
+
+  #updateButtonsPosition() {
+    const tableNode = this.tableController.currentTableNode;
+    if (!tableNode) return
+
+    const tableElement = this.#editor.getElementByKey(tableNode.getKey());
+    if (!tableElement) return
+
+    const tableRect = tableElement.getBoundingClientRect();
+    const editorRect = this.#editorElement.getBoundingClientRect();
+
+    const relativeTop = tableRect.top - editorRect.top;
+    const relativeCenter = (tableRect.left + tableRect.right) / 2 - editorRect.left;
+    this.style.top = `${relativeTop}px`;
+    this.style.left = `${relativeCenter}px`;
+  }
+
+  #updateRowColumnCount() {
+    const tableNode = this.tableController.currentTableNode;
+    if (!tableNode) return
+
+    const tableElement = dn(this.#editor, tableNode);
+    if (!tableElement) return
+
+    const rowCount = tableElement.rows;
+    const columnCount = tableElement.columns;
+
+    this.rowCount.textContent = `${rowCount} row${rowCount === 1 ? "" : "s"}`;
+    this.columnCount.textContent = `${columnCount} column${columnCount === 1 ? "" : "s"}`;
+  }
+
+  #setTableCellFocus() {
+    const cell = this.tableController.currentCell;
+    if (!cell) return
+
+    const cellElement = this.#editor.getElementByKey(cell.getKey());
+    if (!cellElement) return
+
+    cellElement.classList.add(theme.tableCellFocus);
+  }
+
+  #clearCellStyles() {
+    this.#editorElement.querySelectorAll(`.${theme.tableCellFocus}`)?.forEach(cell => {
+      cell.classList.remove(theme.tableCellFocus);
+    });
+
+    this.#editorElement.querySelectorAll(`.${theme.tableCellHighlight}`)?.forEach(cell => {
+      cell.classList.remove(theme.tableCellHighlight);
+      cell.removeAttribute("data-action");
+      cell.removeAttribute("data-child-type");
+      cell.removeAttribute("data-direction");
+    });
+
+    this.#setTableCellFocus();
+  }
+
+  #icon(command) {
+    const { action, childType } = command;
+    const direction = (action == "insert" ? command.direction : null);
+    const iconId = [ action, childType, direction ].filter(Boolean).join("-");
+    return TableIcons[iconId]
+  }
+}
+
+function defineElements() {
+  const elements = {
+    "lexxy-toolbar": LexicalToolbarElement,
+    "lexxy-editor": LexicalEditorElement,
+    "lexxy-link-dropdown": LinkDropdown,
+    "lexxy-highlight-dropdown": HighlightDropdown,
+    "lexxy-prompt": LexicalPromptElement,
+    "lexxy-code-language-picker": CodeLanguagePicker,
+    "lexxy-table-tools": TableTools,
+  };
+
+  Object.entries(elements).forEach(([ name, element ]) => {
+    customElements.define(name, element);
+  });
+}
 
 function highlightCode() {
   const elements = document.querySelectorAll("pre[data-language]");
@@ -12349,6 +12673,9 @@ class LexxyExtension {
 }
 
 const configure = Lexxy.configure;
+
+// Pushing elements definition to after the current call stack to allow global configuration to take place first
+setTimeout(defineElements, 0);
 
 export { ActionTextAttachmentNode, ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, configure, highlightCode as highlightAll, highlightCode };
 //# sourceMappingURL=lexxy.js.map
