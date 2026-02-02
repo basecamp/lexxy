@@ -40,68 +40,26 @@ export class TableController {
     this.#unregisterKeyHandlers()
   }
 
-  get currentCell() {
-    if (!this.currentCellKey) return null
-
+  get tableState() {
     return this.editor.getEditorState().read(() => {
+      if (!this.currentCellKey || !this.currentTableNodeKey) return null
+
       const cell = $getNodeByKey(this.currentCellKey)
-      return (cell instanceof TableCellNode) ? cell : null
-    })
-  }
+      if (cell instanceof TableCellNode === false) return null
 
-  get currentTableNode() {
-    if (!this.currentTableNodeKey) return null
-
-    return this.editor.getEditorState().read(() => {
       const tableNode = $getNodeByKey(this.currentTableNodeKey)
-      return (tableNode instanceof TableNode) ? tableNode : null
+      if (tableNode instanceof TableNode === false) return null
+
+      const rows = tableNode?.getChildren() ?? []
+
+      const currentRowIndex = $getTableRowIndexFromTableCellNode(cell)
+      const currentColumnIndex = $getTableColumnIndexFromTableCellNode(cell)
+
+      const rowCells = rows[currentRowIndex]?.getChildren() ?? null
+      const columnCells = rows.map(row => row.getChildAtIndex(currentColumnIndex)) ?? null
+
+      return { cell, tableNode, rows, currentRowIndex, currentColumnIndex, rowCells, columnCells }
     })
-  }
-
-  get currentRowCells() {
-    const currentRowIndex = this.currentRowIndex
-
-    const rows = this.tableRows
-    if (!rows) return null
-
-    return this.editor.getEditorState().read(() => {
-      return rows[currentRowIndex]?.getChildren() ?? null
-    }) ?? null
-  }
-
-  get currentRowIndex() {
-    const currentCell = this.currentCell
-    if (!currentCell) return 0
-
-    return this.editor.getEditorState().read(() => {
-      return $getTableRowIndexFromTableCellNode(currentCell)
-    }) ?? 0
-  }
-
-  get currentColumnCells() {
-    const columnIndex = this.currentColumnIndex
-
-    const rows = this.tableRows
-    if (!rows) return null
-
-    return this.editor.getEditorState().read(() => {
-      return rows.map(row => row.getChildAtIndex(columnIndex))
-    }) ?? null
-  }
-
-  get currentColumnIndex() {
-    const currentCell = this.currentCell
-    if (!currentCell) return 0
-
-    return this.editor.getEditorState().read(() => {
-      return $getTableColumnIndexFromTableCellNode(currentCell)
-    }) ?? 0
-  }
-
-  get tableRows() {
-    return this.editor.getEditorState().read(() => {
-      return this.currentTableNode?.getChildren()
-    }) ?? null
   }
 
   updateSelectedTable() {
@@ -144,15 +102,16 @@ export class TableController {
 
   #executeToggleStyle(command) {
     const childType = command.childType
+    const { rowCells, columnCells } = this.tableState
 
     let cells = null
     let headerState = null
 
     if (childType === "row") {
-      cells = this.currentRowCells
+      cells = rowCells
       headerState = TableCellHeaderStates.ROW
     } else if (childType === "column") {
-      cells = this.currentColumnCells
+      cells = columnCells
       headerState = TableCellHeaderStates.COLUMN
     }
 
@@ -204,12 +163,10 @@ export class TableController {
     // We wait for next frame, otherwise table operations might not have completed yet.
     await nextFrame()
 
-    if (!this.currentTableNode) return
+    const tableState = this.tableState
+    if (!tableState) return
 
-    const rows = this.tableRows
-    if (!rows) return
-
-    const row = rows[rowIndex]
+    const row = tableState.rows[rowIndex]
     if (!row) return
 
     this.editor.update(() => {
@@ -220,9 +177,10 @@ export class TableController {
 
   #selectNextBestCell(command, customIndex = null) {
     const { childType, direction } = command
+    const { currentRowIndex, currentColumnIndex } = this.tableState
 
-    let rowIndex = this.currentRowIndex
-    let columnIndex = customIndex !== null ? customIndex : this.currentColumnIndex
+    let rowIndex = currentRowIndex
+    let columnIndex = customIndex !== null ? customIndex : currentColumnIndex
 
     const deleteOffset = command.action === "delete" ? -1 : 0
     const offset = direction === "after" ? 1 : deleteOffset
@@ -237,19 +195,19 @@ export class TableController {
   }
 
   #selectNextRow() {
-    const rows = this.tableRows
+    const { rows, currentRowIndex, currentColumnIndex } = this.tableState
     if (!rows) return
 
-    const nextRow = rows.at(this.currentRowIndex + 1)
+    const nextRow = rows.at(currentRowIndex + 1)
     if (!nextRow) return
 
     this.editor.update(() => {
-      nextRow.getChildAtIndex(this.currentColumnIndex)?.selectEnd()
+      nextRow.getChildAtIndex(currentColumnIndex)?.selectEnd()
     })
   }
 
   #selectPreviousCell() {
-    const cell = this.currentCell
+    const { cell } = this.tableState
     if (!cell) return
 
     this.editor.update(() => {
@@ -266,7 +224,7 @@ export class TableController {
   }
 
   #deleteRowAndSelectNextNode() {
-    const tableNode = this.currentTableNode
+    const { tableNode } = this.tableState
     this.executeTableCommand({ action: "delete", childType: "row" })
 
     this.editor.update(() => {
@@ -275,46 +233,38 @@ export class TableController {
         next.selectStart()
       } else {
         const newParagraph = $createParagraphNode()
-        this.currentTableNode.insertAfter(newParagraph)
+        tableNode.insertAfter(newParagraph)
         newParagraph.selectStart()
       }
     })
   }
 
   #isCurrentCellEmpty() {
-    if (!this.currentTableNode) return false
-
-    const cell = this.currentCell
-    if (!cell) return false
+    const { tableNode, cell } = this.tableState
+    if (!tableNode || !cell) return false
 
     return cell.getTextContent().trim() === ""
   }
 
   #isCurrentRowLast() {
-    if (!this.currentTableNode) return false
-
-    const rows = this.tableRows
+    const { rows, currentRowIndex } = this.tableState
     if (!rows) return false
 
-    return rows.length === this.currentRowIndex + 1
+    return rows.length === currentRowIndex + 1
   }
 
   #isCurrentRowEmpty() {
-    if (!this.currentTableNode) return false
+    const { rowCells } = this.tableState
+    if (!rowCells) return false
 
-    const cells = this.currentRowCells
-    if (!cells) return false
-
-    return cells.every(cell => cell.getTextContent().trim() === "")
+    return rowCells.every(cell => cell.getTextContent().trim() === "")
   }
 
   #isFirstCellInRow() {
-    if (!this.currentTableNode) return false
+    const { rowCells, cell } = this.tableState
+    if (!rowCells) return false
 
-    const cells = this.currentRowCells
-    if (!cells) return false
-
-    return cells.indexOf(this.currentCell) === 0
+    return rowCells.indexOf(cell) === 0
   }
 
   #registerKeyHandlers() {
@@ -332,7 +282,8 @@ export class TableController {
   }
 
   #handleBackspaceKey(event) {
-    if (!this.currentTableNode) return false
+    const tableState = this.tableState
+    if (!tableState) return false
 
     if (this.#isCurrentRowEmpty() && this.#isFirstCellInRow()) {
       event.preventDefault()
@@ -350,9 +301,12 @@ export class TableController {
   }
 
   #handleEnterKey(event) {
-    if ((event.ctrlKey || event.metaKey) || event.shiftKey || !this.currentTableNode) return false
+    if ((event.ctrlKey || event.metaKey) || event.shiftKey) return false
 
     if (this.selection.isInsideList || this.selection.isInsideCodeBlock) return false
+
+    const tableState = this.tableState
+    if (!tableState) return false
 
     event.preventDefault()
 
