@@ -22,6 +22,8 @@ import { upcaseFirst } from "../../helpers/string_helper"
 import { nextFrame } from "../../helpers/timing_helpers"
 
 export class TableController {
+  #cachedTableState = null
+
   constructor(editorElement) {
     this.editor = editorElement.editor
     this.contents = editorElement.contents
@@ -31,6 +33,7 @@ export class TableController {
     this.currentCellKey = null
 
     this.#registerKeyHandlers()
+    this.#registerUpdateListener()
   }
 
   destroy() {
@@ -38,9 +41,23 @@ export class TableController {
     this.currentCellKey = null
 
     this.#unregisterKeyHandlers()
+    this.#unregisterUpdateListener()
+  }
+
+  #registerUpdateListener() {
+    this.unregisterUpdateListener = this.editor.registerUpdateListener(() => {
+      this.#cachedTableState = null
+    })
+  }
+
+  #unregisterUpdateListener() {
+    this.unregisterUpdateListener?.()
+    this.unregisterUpdateListener = null
   }
 
   get tableState() {
+    if (this.#cachedTableState) return this.#cachedTableState
+
     return this.editor.getEditorState().read(() => {
       if (!this.currentCellKey || !this.currentTableNodeKey) return null
 
@@ -58,7 +75,8 @@ export class TableController {
       const rowCells = rows[currentRowIndex]?.getChildren() ?? null
       const columnCells = rows.map(row => row.getChildAtIndex(currentColumnIndex)) ?? null
 
-      return { cell, tableNode, rows, currentRowIndex, currentColumnIndex, rowCells, columnCells }
+      this.#cachedTableState = { cell, tableNode, rows, currentRowIndex, currentColumnIndex, rowCells, columnCells }
+      return this.#cachedTableState
     })
   }
 

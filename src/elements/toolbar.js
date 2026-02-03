@@ -44,6 +44,7 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#uninstallResizeObserver()
     this.#unbindHotkeys()
     this.#unbindFocusListeners()
+    this.#unbindButtons()
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -115,6 +116,10 @@ export class LexicalToolbarElement extends HTMLElement {
 
   #bindButtons() {
     this.addEventListener("click", this.#handleButtonClicked.bind(this))
+  }
+
+  #unbindButtons() {
+    this.removeEventListener("click", this.#handleButtonClicked.bind(this))
   }
 
   #handleButtonClicked(event) {
@@ -204,19 +209,16 @@ export class LexicalToolbarElement extends HTMLElement {
       this.editor.getEditorState().read(() => {
         this.#updateButtonStates()
         this.#closeDropdowns()
-        this.#updateUndoRedoButtonStates()
       })
     })
   }
 
   #updateUndoRedoButtonStates() {
-    this.editor.getEditorState().read(() => {
-      const historyState = this.editorElement.historyState
-      if (historyState) {
-        this.#setButtonDisabled("undo", historyState.undoStack.length === 0)
-        this.#setButtonDisabled("redo", historyState.redoStack.length === 0)
-      }
-    })
+    const historyState = this.editorElement.historyState
+    if (historyState) {
+      this.#setButtonDisabled("undo", historyState.undoStack.length === 0)
+      this.#setButtonDisabled("redo", historyState.redoStack.length === 0)
+    }
   }
 
   #updateButtonStates() {
