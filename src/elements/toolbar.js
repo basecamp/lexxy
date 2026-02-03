@@ -16,6 +16,14 @@ import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
 
+  #buttons = null
+  #hotkeyButtons = null
+  #dropdowns = null
+  #overflow = null
+  #overflowMenu = null
+  #focusableItems = null
+  #toolbarItems = null
+
   constructor() {
     super()
     this.internals = this.attachInternals()
@@ -25,8 +33,10 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   connectedCallback() {
-    requestAnimationFrame(() => this.#refreshToolbarOverflow())
     this.setAttribute("role", "toolbar")
+    this.#cacheButtonsDOM()
+
+    requestAnimationFrame(() => this.#refreshToolbarOverflow())
     this.#installResizeObserver()
   }
 
@@ -34,6 +44,7 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#uninstallResizeObserver()
     this.#unbindHotkeys()
     this.#unbindFocusListeners()
+    this.#unbindButtons()
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -50,7 +61,6 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#resetTabIndexValues()
     this.#setItemPositionValues()
     this.#monitorSelectionChanges()
-    this.#monitorHistoryChanges()
     this.#refreshToolbarOverflow()
     this.#bindFocusListeners()
 
@@ -86,8 +96,30 @@ export class LexicalToolbarElement extends HTMLElement {
     }
   }
 
+  #cacheButtonsDOM() {
+    this.#buttons = new Map()
+    this.querySelectorAll("[name]").forEach(btn => {
+      this.#buttons.set(btn.getAttribute("name"), btn)
+    })
+
+    this.#hotkeyButtons = Array.from(this.querySelectorAll("[data-hotkey]")).map(btn => ({
+      element: btn,
+      hotkeys: btn.dataset.hotkey.toLowerCase().split(/\s+/)
+    }))
+
+    this.#dropdowns = this.querySelectorAll("details")
+    this.#overflow = this.querySelector(".lexxy-editor__toolbar-overflow")
+    this.#overflowMenu = this.querySelector(".lexxy-editor__toolbar-overflow-menu")
+    this.#focusableItems = Array.from(this.querySelectorAll(":scope button, :scope > details > summary"))
+    this.#toolbarItems = Array.from(this.querySelectorAll(":scope > *:not(.lexxy-editor__toolbar-overflow)"))
+  }
+
   #bindButtons() {
     this.addEventListener("click", this.#handleButtonClicked.bind(this))
+  }
+
+  #unbindButtons() {
+    this.removeEventListener("click", this.#handleButtonClicked.bind(this))
   }
 
   #handleButtonClicked(event) {
@@ -118,7 +150,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #handleHotkey = (event) => {
-    const buttons = this.querySelectorAll("[data-hotkey]")
+    const buttons = this.#hotkeyButtons.map(btn => btn.element)
     buttons.forEach((button) => {
       const hotkeys = button.dataset.hotkey.toLowerCase().split(/\s+/)
       if (hotkeys.includes(this.#keyCombinationFor(event))) {
@@ -181,20 +213,12 @@ export class LexicalToolbarElement extends HTMLElement {
     })
   }
 
-  #monitorHistoryChanges() {
-    this.editor.registerUpdateListener(() => {
-      this.#updateUndoRedoButtonStates()
-    })
-  }
-
   #updateUndoRedoButtonStates() {
-    this.editor.getEditorState().read(() => {
-      const historyState = this.editorElement.historyState
-      if (historyState) {
-        this.#setButtonDisabled("undo", historyState.undoStack.length === 0)
-        this.#setButtonDisabled("redo", historyState.redoStack.length === 0)
-      }
-    })
+    const historyState = this.editorElement.historyState
+    if (historyState) {
+      this.#setButtonDisabled("undo", historyState.undoStack.length === 0)
+      this.#setButtonDisabled("redo", historyState.redoStack.length === 0)
+    }
   }
 
   #updateButtonStates() {
@@ -252,14 +276,14 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #setButtonPressed(name, isPressed) {
-    const button = this.querySelector(`[name="${name}"]`)
+    const button = this.#buttons.get(name)
     if (button) {
       button.setAttribute("aria-pressed", isPressed.toString())
     }
   }
 
   #setButtonDisabled(name, isDisabled) {
-    const button = this.querySelector(`[name="${name}"]`)
+    const button = this.#buttons.get(name)
     if (button) {
       button.disabled = isDisabled
       button.setAttribute("aria-disabled", isDisabled.toString())
@@ -285,7 +309,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #compactMenu() {
-    const buttons = this.#buttons.reverse()
+    const buttons = [ ...this.#buttons.values() ].reverse()
     let movedToOverflow = false
 
     for (const button of buttons) {
@@ -326,30 +350,6 @@ export class LexicalToolbarElement extends HTMLElement {
      details.open = false
    })
  }
-
-  get #dropdowns() {
-    return this.querySelectorAll("details")
-  }
-
-  get #overflow() {
-    return this.querySelector(".lexxy-editor__toolbar-overflow")
-  }
-
-  get #overflowMenu() {
-    return this.querySelector(".lexxy-editor__toolbar-overflow-menu")
-  }
-
-  get #buttons() {
-    return Array.from(this.querySelectorAll(":scope > button"))
-  }
-
-  get #focusableItems() {
-    return Array.from(this.querySelectorAll(":scope button, :scope > details > summary"))
-  }
-
-  get #toolbarItems() {
-    return Array.from(this.querySelectorAll(":scope > *:not(.lexxy-editor__toolbar-overflow)"))
-  }
 
   static get defaultTemplate() {
     return `

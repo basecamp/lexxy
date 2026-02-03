@@ -163,7 +163,7 @@ export class TableTools extends HTMLElement {
   }
 
   #handleEscapeKey() {
-    const cell = this.tableController.currentCell
+    const { cell } = this.tableController.tableState
     if (!cell) return
 
     this.#editor.update(() => {
@@ -190,15 +190,18 @@ export class TableTools extends HTMLElement {
 
     let cellsToHighlight = null
 
+    const tableState = this.tableController.tableState
+    if (!tableState) return
+
     switch (command.childType) {
       case "row":
-        cellsToHighlight = this.tableController.currentRowCells
+        cellsToHighlight = tableState.rowCells
         break
       case "column":
-        cellsToHighlight = this.tableController.currentColumnCells
+        cellsToHighlight = tableState.columnCells
         break
       case "table":
-        cellsToHighlight = this.tableController.tableRows
+        cellsToHighlight = tableState.rows
         break
     }
 
@@ -214,15 +217,16 @@ export class TableTools extends HTMLElement {
   }
 
   #monitorForTableSelection() {
-    this.unregisterUpdateListener = this.#editor.registerUpdateListener(() => {
-      this.tableController.updateSelectedTable()
 
-      const tableNode = this.tableController.currentTableNode
-      if (tableNode) {
-        this.#show()
-      } else {
-        this.#hide()
-      }
+    this.unregisterUpdateListener = this.#editor.registerUpdateListener(() => {
+        this.tableController.updateSelectedTable()
+
+        const tableState = this.tableController.tableState
+        if (tableState?.tableNode) {
+          this.#show()
+        } else {
+          this.#hide()
+        }
     })
   }
 
@@ -253,7 +257,7 @@ export class TableTools extends HTMLElement {
   }
 
   #updateButtonsPosition() {
-    const tableNode = this.tableController.currentTableNode
+    const { tableNode } = this.tableController.tableState
     if (!tableNode) return
 
     const tableElement = this.#editor.getElementByKey(tableNode.getKey())
@@ -269,7 +273,7 @@ export class TableTools extends HTMLElement {
   }
 
   #updateRowColumnCount() {
-    const tableNode = this.tableController.currentTableNode
+    const { tableNode } = this.tableController.tableState
     if (!tableNode) return
 
     const tableElement = $getElementForTableNode(this.#editor, tableNode)
@@ -283,10 +287,10 @@ export class TableTools extends HTMLElement {
   }
 
   #setTableCellFocus() {
-    const cell = this.tableController.currentCell
-    if (!cell) return
+    const tableState = this.tableController.tableState
+    if (!tableState?.cell) return
 
-    const cellElement = this.#editor.getElementByKey(cell.getKey())
+    const cellElement = this.#editor.getElementByKey(tableState.cell.getKey())
     if (!cellElement) return
 
     cellElement.classList.add(theme.tableCellFocus)
