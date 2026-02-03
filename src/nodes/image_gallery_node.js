@@ -13,7 +13,7 @@ export class ImageGalleryNode extends ElementNode {
   static importDOM() {
     return {
       div: (element) => {
-        const containsAttachment = element.querySelector(":scope > :where(img, video, " + ActionTextAttachmentNode.TAG_NAME + ")")
+        const containsAttachment = element.querySelector(":scope > :is(img, video, " + ActionTextAttachmentNode.TAG_NAME + ")")
         if (!containsAttachment) return null
 
         return {
