@@ -6621,6 +6621,14 @@ function isActiveAndVisible(element) {
 class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
 
+  #buttonMap = null
+  #hotkeyButtons = null
+  #dropdowns = null
+  #overflow = null
+  #overflowMenu = null
+  #focusableItems = null
+  #toolbarItems = null
+
   constructor() {
     super();
     this.internals = this.attachInternals();
@@ -6630,8 +6638,10 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   connectedCallback() {
-    requestAnimationFrame(() => this.#refreshToolbarOverflow());
     this.setAttribute("role", "toolbar");
+    this.#cacheButtonsDOM();
+
+    requestAnimationFrame(() => this.#refreshToolbarOverflow());
     this.#installResizeObserver();
   }
 
@@ -6639,6 +6649,7 @@ class LexicalToolbarElement extends HTMLElement {
     this.#uninstallResizeObserver();
     this.#unbindHotkeys();
     this.#unbindFocusListeners();
+    this.#unbindButtons();
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -6655,7 +6666,6 @@ class LexicalToolbarElement extends HTMLElement {
     this.#resetTabIndexValues();
     this.#setItemPositionValues();
     this.#monitorSelectionChanges();
-    this.#monitorHistoryChanges();
     this.#refreshToolbarOverflow();
     this.#bindFocusListeners();
 
@@ -6666,6 +6676,26 @@ class LexicalToolbarElement extends HTMLElement {
 
   async getEditorElement() {
     return this.editorElement || await this.editorPromise
+  }
+
+  get dropdowns() {
+    return this.#dropdowns ??= this.querySelectorAll("details")
+  }
+
+  get buttons() {
+    return Array.from(this.#buttonMap.values())
+  }
+
+  get overflow() {
+    return this.#overflow ??= this.querySelector(".lexxy-editor__toolbar-overflow")
+  }
+
+  get overflowMenu() {
+    return this.#overflowMenu ??= this.querySelector(".lexxy-editor__toolbar-overflow-menu")
+  }
+
+  getButton(name) {
+    return this.#buttonMap.get(name) ?? null
   }
 
   #reconnect() {
@@ -6691,8 +6721,27 @@ class LexicalToolbarElement extends HTMLElement {
     }
   }
 
+  #cacheButtonsDOM() {
+    this.#buttonMap = new Map();
+    this.querySelectorAll(":scope > button").forEach(btn => {
+      this.#buttonMap.set(btn.getAttribute("name"), btn);
+    });
+
+    this.#hotkeyButtons = Array.from(this.querySelectorAll("[data-hotkey]")).map(btn => ({
+      element: btn,
+      hotkeys: btn.dataset.hotkey.toLowerCase().split(/\s+/)
+    }));
+
+    this.#focusableItems = Array.from(this.querySelectorAll(":scope button, :scope > details > summary"));
+    this.#toolbarItems = Array.from(this.querySelectorAll(":scope > *:not(.lexxy-editor__toolbar-overflow)"));
+  }
+
   #bindButtons() {
     this.addEventListener("click", this.#handleButtonClicked.bind(this));
+  }
+
+  #unbindButtons() {
+    this.removeEventListener("click", this.#handleButtonClicked.bind(this));
   }
 
   #handleButtonClicked(event) {
@@ -6723,7 +6772,7 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #handleHotkey = (event) => {
-    const buttons = this.querySelectorAll("[data-hotkey]");
+    const buttons = this.#hotkeyButtons.map(btn => btn.element);
     buttons.forEach((button) => {
       const hotkeys = button.dataset.hotkey.toLowerCase().split(/\s+/);
       if (hotkeys.includes(this.#keyCombinationFor(event))) {
@@ -6778,28 +6827,20 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
+    this.editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
         this.#updateButtonStates();
         this.#closeDropdowns();
       });
     });
   }
 
-  #monitorHistoryChanges() {
-    this.editor.registerUpdateListener(() => {
-      this.#updateUndoRedoButtonStates();
-    });
-  }
-
   #updateUndoRedoButtonStates() {
-    this.editor.getEditorState().read(() => {
-      const historyState = this.editorElement.historyState;
-      if (historyState) {
-        this.#setButtonDisabled("undo", historyState.undoStack.length === 0);
-        this.#setButtonDisabled("redo", historyState.redoStack.length === 0);
-      }
-    });
+    const historyState = this.editorElement.historyState;
+    if (historyState) {
+      this.#setButtonDisabled("undo", historyState.undoStack.length === 0);
+      this.#setButtonDisabled("redo", historyState.redoStack.length === 0);
+    }
   }
 
   #updateButtonStates() {
@@ -6857,14 +6898,14 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #setButtonPressed(name, isPressed) {
-    const button = this.querySelector(`[name="${name}"]`);
+    const button = this.getButton(name);
     if (button) {
       button.setAttribute("aria-pressed", isPressed.toString());
     }
   }
 
   #setButtonDisabled(name, isDisabled) {
-    const button = this.querySelector(`[name="${name}"]`);
+    const button = this.getButton(name);
     if (button) {
       button.disabled = isDisabled;
       button.setAttribute("aria-disabled", isDisabled.toString());
@@ -6874,42 +6915,42 @@ class LexicalToolbarElement extends HTMLElement {
   #toolbarIsOverflowing() {
     // Safari can report inconsistent clientWidth values on more than 100% window zoom level,
     // that was affecting the toolbar overflow calculation. We're adding +1 to get around this issue.
-    return (this.scrollWidth - this.#overflow.clientWidth) > this.clientWidth + 1
+    return (this.scrollWidth - this.overflow.clientWidth) > this.clientWidth + 1
   }
 
   #refreshToolbarOverflow = () => {
     this.#resetToolbarOverflow();
     this.#compactMenu();
 
-    this.#overflow.style.display = this.#overflowMenu.children.length ? "block" : "none";
-    this.#overflow.setAttribute("nonce", getNonce());
+    this.overflow.style.display = this.overflowMenu.children.length ? "block" : "none";
+    this.overflow.setAttribute("nonce", getNonce());
 
-    const isOverflowing = this.#overflowMenu.children.length > 0;
+    const isOverflowing = this.overflowMenu.children.length > 0;
     this.toggleAttribute("overflowing", isOverflowing);
-    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing);
+    this.overflowMenu.toggleAttribute("disabled", !isOverflowing);
   }
 
   #compactMenu() {
-    const buttons = this.#buttons.reverse();
+    const buttons = this.buttons.reverse();
     let movedToOverflow = false;
 
     for (const button of buttons) {
       if (this.#toolbarIsOverflowing()) {
-        this.#overflowMenu.prepend(button);
+        this.overflowMenu.prepend(button);
         movedToOverflow = true;
       } else {
-        if (movedToOverflow) this.#overflowMenu.prepend(button);
+        if (movedToOverflow) this.overflowMenu.prepend(button);
         break
       }
     }
   }
 
   #resetToolbarOverflow() {
-    const items = Array.from(this.#overflowMenu.children);
+    const items = Array.from(this.overflowMenu.children);
     items.sort((a, b) => this.#itemPosition(b) - this.#itemPosition(a));
 
     items.forEach((item) => {
-      const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.#overflow;
+      const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.overflow;
       this.insertBefore(item, nextItem);
     });
   }
@@ -6927,34 +6968,10 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #closeDropdowns() {
-   this.#dropdowns.forEach((details) => {
+   this.dropdowns.forEach((details) => {
      details.open = false;
    });
  }
-
-  get #dropdowns() {
-    return this.querySelectorAll("details")
-  }
-
-  get #overflow() {
-    return this.querySelector(".lexxy-editor__toolbar-overflow")
-  }
-
-  get #overflowMenu() {
-    return this.querySelector(".lexxy-editor__toolbar-overflow-menu")
-  }
-
-  get #buttons() {
-    return Array.from(this.querySelectorAll(":scope > button"))
-  }
-
-  get #focusableItems() {
-    return Array.from(this.querySelectorAll(":scope button, :scope > details > summary"))
-  }
-
-  get #toolbarItems() {
-    return Array.from(this.querySelectorAll(":scope > *:not(.lexxy-editor__toolbar-overflow)"))
-  }
 
   static get defaultTemplate() {
     return `
@@ -7781,6 +7798,11 @@ class CommandDispatcher {
     this.#registerDragAndDropHandlers();
   }
 
+  destroy() {
+    this.#unregisterCommands();
+    this.#unregisterDragAndDropHandlers();
+  }
+
   dispatchPaste(event) {
     return this.clipboard.paste(event)
   }
@@ -7946,20 +7968,46 @@ class CommandDispatcher {
   }
 
   #registerCommandHandler(command, priority, handler) {
-    this.editor.registerCommand(command, handler, priority);
+    this.unregisterCommands ||= [];
+    this.unregisterCommands.push(this.editor.registerCommand(command, handler, priority));
   }
 
   #registerKeyboardCommands() {
-    this.editor.registerCommand(Me$2, this.#handleTabKey.bind(this), Ri);
+    this.unregisterCommands ||= [];
+    this.unregisterCommands.push(this.editor.registerCommand(Me$2, this.#handleTabKey.bind(this), Ri));
+  }
+
+
+  #unregisterCommands() {
+    this.unregisterCommands?.forEach((unregisterCommand) => {
+      unregisterCommand();
+    });
+    this.unregisterCommands = null;
   }
 
   #registerDragAndDropHandlers() {
     if (this.editorElement.supportsAttachments) {
       this.dragCounter = 0;
-      this.editor.getRootElement().addEventListener("dragover", this.#handleDragOver.bind(this));
-      this.editor.getRootElement().addEventListener("drop", this.#handleDrop.bind(this));
-      this.editor.getRootElement().addEventListener("dragenter", this.#handleDragEnter.bind(this));
-      this.editor.getRootElement().addEventListener("dragleave", this.#handleDragLeave.bind(this));
+      this.boundDragHandlers = {
+        dragover: this.#handleDragOver.bind(this),
+        drop: this.#handleDrop.bind(this),
+        dragenter: this.#handleDragEnter.bind(this),
+        dragleave: this.#handleDragLeave.bind(this),
+      };
+      const root = this.editor.getRootElement();
+      for (const [ event, handler ] of Object.entries(this.boundDragHandlers)) {
+        root.addEventListener(event, handler);
+      }
+    }
+  }
+
+  #unregisterDragAndDropHandlers() {
+    if (this.boundDragHandlers) {
+      const root = this.editor.getRootElement();
+      for (const [ event, handler ] of Object.entries(this.boundDragHandlers)) {
+        root.removeEventListener(event, handler);
+      }
+      this.boundDragHandlers = null;
     }
   }
 
@@ -10610,9 +10658,8 @@ class LexicalEditorElement extends HTMLElement {
 
       // The first time you set the value, when the editor is empty, it seems to leave Lexical
       // in an inconsistent state until, at least, you focus. You can type but adding attachments
-      // fails because no root node detected. This is a workaround to deal with the issue.
-      requestAnimationFrame(() => this.editor?.update(() => { }));
-    });
+      // fails because no root node detected. This is why we use discrete update
+    }, { discrete: true });
   }
 
   #parseHtmlIntoLexicalNodes(html) {
@@ -10766,7 +10813,9 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   #synchronizeWithChanges() {
-    this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
+    this.#addUnregisterHandler(this.editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
+      if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return
+
       this.#clearCachedValues();
       this.#internalFormValue = this.value;
       this.#toggleEmptyStatus();
@@ -11772,6 +11821,13 @@ class CodeLanguagePicker extends HTMLElement {
 
     this.#attachLanguagePicker();
     this.#monitorForCodeBlockSelection();
+
+    this.#hideLanguagePicker();
+  }
+
+  disconnectedCallback() {
+    this.unregisterUpdateListener?.();
+    this.unregisterUpdateListener = null;
   }
 
   #attachLanguagePicker() {
@@ -11828,8 +11884,8 @@ class CodeLanguagePicker extends HTMLElement {
   }
 
   #monitorForCodeBlockSelection() {
-    this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
+    this.unregisterUpdateListener = this.editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
         const codeNode = this.#getCurrentCodeNode();
 
         if (codeNode) {
@@ -11898,6 +11954,8 @@ class CodeLanguagePicker extends HTMLElement {
 }
 
 class TableController {
+  #cachedTableState = null
+
   constructor(editorElement) {
     this.editor = editorElement.editor;
     this.contents = editorElement.contents;
@@ -11907,6 +11965,7 @@ class TableController {
     this.currentCellKey = null;
 
     this.#registerKeyHandlers();
+    this.#registerUpdateListener();
   }
 
   destroy() {
@@ -11914,73 +11973,47 @@ class TableController {
     this.currentCellKey = null;
 
     this.#unregisterKeyHandlers();
+    this.#unregisterUpdateListener();
   }
 
-  get currentCell() {
-    if (!this.currentCellKey) return null
+  #registerUpdateListener() {
+    this.unregisterUpdateListener = this.editor.registerUpdateListener(() => {
+      this.#cachedTableState = null;
+    });
+  }
+
+  #unregisterUpdateListener() {
+    this.unregisterUpdateListener?.();
+    this.unregisterUpdateListener = null;
+  }
+
+  getTableState() {
+    if (this.#cachedTableState) return this.#cachedTableState
 
     return this.editor.getEditorState().read(() => {
+      if (!this.currentCellKey || !this.currentTableNodeKey) return null
+
       const cell = xo(this.currentCellKey);
-      return (cell instanceof xe) ? cell : null
-    })
-  }
+      if (Oe$1(cell) === false) return null
 
-  get currentTableNode() {
-    if (!this.currentTableNodeKey) return null
-
-    return this.editor.getEditorState().read(() => {
       const tableNode = xo(this.currentTableNodeKey);
-      return (tableNode instanceof hn) ? tableNode : null
+      if (mn(tableNode) === false) return null
+
+      const rows = tableNode.getChildren() ?? [];
+
+      const currentRowIndex = Ie$1(cell);
+      const currentColumnIndex = Ue$1(cell);
+
+      const rowCells = rows[currentRowIndex].getChildren();
+      const columnCells = rows.map(row => row.getChildAtIndex(currentColumnIndex));
+
+      this.#cachedTableState = { cell, tableNode, rows, currentRowIndex, currentColumnIndex, rowCells, columnCells };
+      return this.#cachedTableState
     })
-  }
-
-  get currentRowCells() {
-    const currentRowIndex = this.currentRowIndex;
-
-    const rows = this.tableRows;
-    if (!rows) return null
-
-    return this.editor.getEditorState().read(() => {
-      return rows[currentRowIndex]?.getChildren() ?? null
-    }) ?? null
-  }
-
-  get currentRowIndex() {
-    const currentCell = this.currentCell;
-    if (!currentCell) return 0
-
-    return this.editor.getEditorState().read(() => {
-      return Ie$1(currentCell)
-    }) ?? 0
-  }
-
-  get currentColumnCells() {
-    const columnIndex = this.currentColumnIndex;
-
-    const rows = this.tableRows;
-    if (!rows) return null
-
-    return this.editor.getEditorState().read(() => {
-      return rows.map(row => row.getChildAtIndex(columnIndex))
-    }) ?? null
-  }
-
-  get currentColumnIndex() {
-    const currentCell = this.currentCell;
-    if (!currentCell) return 0
-
-    return this.editor.getEditorState().read(() => {
-      return Ue$1(currentCell)
-    }) ?? 0
-  }
-
-  get tableRows() {
-    return this.editor.getEditorState().read(() => {
-      return this.currentTableNode?.getChildren()
-    }) ?? null
   }
 
   updateSelectedTable() {
+    this.#cachedTableState = null;
     let cellNode = null;
     let tableNode = null;
 
@@ -12020,15 +12053,16 @@ class TableController {
 
   #executeToggleStyle(command) {
     const childType = command.childType;
+    const { rowCells, columnCells } = this.getTableState();
 
     let cells = null;
     let headerState = null;
 
     if (childType === "row") {
-      cells = this.currentRowCells;
+      cells = rowCells;
       headerState = ve$1.ROW;
     } else if (childType === "column") {
-      cells = this.currentColumnCells;
+      cells = columnCells;
       headerState = ve$1.COLUMN;
     }
 
@@ -12080,12 +12114,10 @@ class TableController {
     // We wait for next frame, otherwise table operations might not have completed yet.
     await nextFrame();
 
-    if (!this.currentTableNode) return
+    const tableState = this.getTableState();
+    if (!tableState) return
 
-    const rows = this.tableRows;
-    if (!rows) return
-
-    const row = rows[rowIndex];
+    const row = tableState.rows[rowIndex];
     if (!row) return
 
     this.editor.update(() => {
@@ -12096,9 +12128,10 @@ class TableController {
 
   #selectNextBestCell(command, customIndex = null) {
     const { childType, direction } = command;
+    const { currentRowIndex, currentColumnIndex } = this.getTableState();
 
-    let rowIndex = this.currentRowIndex;
-    let columnIndex = customIndex !== null ? customIndex : this.currentColumnIndex;
+    let rowIndex = currentRowIndex;
+    let columnIndex = customIndex !== null ? customIndex : currentColumnIndex;
 
     const deleteOffset = command.action === "delete" ? -1 : 0;
     const offset = direction === "after" ? 1 : deleteOffset;
@@ -12113,19 +12146,19 @@ class TableController {
   }
 
   #selectNextRow() {
-    const rows = this.tableRows;
+    const { rows, currentRowIndex, currentColumnIndex } = this.getTableState();
     if (!rows) return
 
-    const nextRow = rows.at(this.currentRowIndex + 1);
+    const nextRow = rows.at(currentRowIndex + 1);
     if (!nextRow) return
 
     this.editor.update(() => {
-      nextRow.getChildAtIndex(this.currentColumnIndex)?.selectEnd();
+      nextRow.getChildAtIndex(currentColumnIndex)?.selectEnd();
     });
   }
 
   #selectPreviousCell() {
-    const cell = this.currentCell;
+    const { cell } = this.getTableState();
     if (!cell) return
 
     this.editor.update(() => {
@@ -12142,7 +12175,7 @@ class TableController {
   }
 
   #deleteRowAndSelectNextNode() {
-    const tableNode = this.currentTableNode;
+    const { tableNode } = this.getTableState();
     this.executeTableCommand({ action: "delete", childType: "row" });
 
     this.editor.update(() => {
@@ -12151,46 +12184,38 @@ class TableController {
         next.selectStart();
       } else {
         const newParagraph = Li();
-        this.currentTableNode.insertAfter(newParagraph);
+        tableNode.insertAfter(newParagraph);
         newParagraph.selectStart();
       }
     });
   }
 
   #isCurrentCellEmpty() {
-    if (!this.currentTableNode) return false
+    const { tableNode, cell } = this.getTableState();
+    if (!tableNode || !cell) return false
 
-    const cell = this.currentCell;
-    if (!cell) return false
-
-    return cell.getTextContent().trim() === ""
+    return cell.getTextContentSize() === 0
   }
 
   #isCurrentRowLast() {
-    if (!this.currentTableNode) return false
-
-    const rows = this.tableRows;
+    const { rows, currentRowIndex } = this.getTableState();
     if (!rows) return false
 
-    return rows.length === this.currentRowIndex + 1
+    return rows.length === currentRowIndex + 1
   }
 
   #isCurrentRowEmpty() {
-    if (!this.currentTableNode) return false
+    const { rowCells } = this.getTableState();
+    if (!rowCells) return false
 
-    const cells = this.currentRowCells;
-    if (!cells) return false
-
-    return cells.every(cell => cell.getTextContent().trim() === "")
+    return rowCells.every(cell => cell.getTextContentSize() === 0)
   }
 
   #isFirstCellInRow() {
-    if (!this.currentTableNode) return false
+    const { rowCells, cell } = this.getTableState();
+    if (!rowCells) return false
 
-    const cells = this.currentRowCells;
-    if (!cells) return false
-
-    return cells.indexOf(this.currentCell) === 0
+    return rowCells.indexOf(cell) === 0
   }
 
   #registerKeyHandlers() {
@@ -12208,7 +12233,8 @@ class TableController {
   }
 
   #handleBackspaceKey(event) {
-    if (!this.currentTableNode) return false
+    const tableState = this.getTableState();
+    if (!tableState) return false
 
     if (this.#isCurrentRowEmpty() && this.#isFirstCellInRow()) {
       event.preventDefault();
@@ -12226,9 +12252,12 @@ class TableController {
   }
 
   #handleEnterKey(event) {
-    if ((event.ctrlKey || event.metaKey) || event.shiftKey || !this.currentTableNode) return false
+    if ((event.ctrlKey || event.metaKey) || event.shiftKey) return false
 
     if (this.selection.isInsideList || this.selection.isInsideCodeBlock) return false
+
+    const tableState = this.getTableState();
+    if (!tableState) return false
 
     event.preventDefault();
 
@@ -12452,7 +12481,7 @@ class TableTools extends HTMLElement {
   }
 
   #handleEscapeKey() {
-    const cell = this.tableController.currentCell;
+    const { cell } = this.tableController.getTableState();
     if (!cell) return
 
     this.#editor.update(() => {
@@ -12479,15 +12508,18 @@ class TableTools extends HTMLElement {
 
     let cellsToHighlight = null;
 
+    const tableState = this.tableController.getTableState();
+    if (!tableState) return
+
     switch (command.childType) {
       case "row":
-        cellsToHighlight = this.tableController.currentRowCells;
+        cellsToHighlight = tableState.rowCells;
         break
       case "column":
-        cellsToHighlight = this.tableController.currentColumnCells;
+        cellsToHighlight = tableState.columnCells;
         break
       case "table":
-        cellsToHighlight = this.tableController.tableRows;
+        cellsToHighlight = tableState.rows;
         break
     }
 
@@ -12503,15 +12535,16 @@ class TableTools extends HTMLElement {
   }
 
   #monitorForTableSelection() {
-    this.unregisterUpdateListener = this.#editor.registerUpdateListener(() => {
-      this.tableController.updateSelectedTable();
 
-      const tableNode = this.tableController.currentTableNode;
-      if (tableNode) {
-        this.#show();
-      } else {
-        this.#hide();
-      }
+    this.unregisterUpdateListener = this.#editor.registerUpdateListener(() => {
+        this.tableController.updateSelectedTable();
+
+        const { tableNode } = this.tableController.getTableState() ?? {};
+        if (tableNode) {
+          this.#show();
+        } else {
+          this.#hide();
+        }
     });
   }
 
@@ -12542,7 +12575,7 @@ class TableTools extends HTMLElement {
   }
 
   #updateButtonsPosition() {
-    const tableNode = this.tableController.currentTableNode;
+    const { tableNode } = this.tableController.getTableState();
     if (!tableNode) return
 
     const tableElement = this.#editor.getElementByKey(tableNode.getKey());
@@ -12558,7 +12591,7 @@ class TableTools extends HTMLElement {
   }
 
   #updateRowColumnCount() {
-    const tableNode = this.tableController.currentTableNode;
+    const { tableNode } = this.tableController.getTableState();
     if (!tableNode) return
 
     const tableElement = dn(this.#editor, tableNode);
@@ -12572,7 +12605,7 @@ class TableTools extends HTMLElement {
   }
 
   #setTableCellFocus() {
-    const cell = this.tableController.currentCell;
+    const { cell } = this.tableController.getTableState() ?? {};
     if (!cell) return
 
     const cellElement = this.#editor.getElementByKey(cell.getKey());
