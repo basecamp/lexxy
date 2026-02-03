@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -25,11 +25,13 @@ import Extensions from "../editor/extensions"
 import Highlighter from "../editor/highlighter"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { TrixContentExtension } from "../extensions/trix_content_extension"
+import { TrixContentLexicalExtension } from "../lexical_extensions/trix_content_lexical_extension"
+import { TablesLexicalExtension } from "../lexical_extensions/tables_lexical_extension"
+import { ProvisionalParagraphExtension } from "../lexical_extensions/provisional_paragraph_extension"
 
-import { TablesLexicalExtension } from "../extensions/tables_lexical_extension"
+import AttachmentsExtension from "../extensions/attachments_extension.js"
 
-export class LexicalEditorElement extends HTMLElement {
+export default class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = false
   static commands = [ "bold", "italic", "strikethrough" ]
@@ -114,6 +116,10 @@ export class LexicalEditorElement extends HTMLElement {
     return this.toolbar
   }
 
+  get baseExtensions() {
+    return [ AttachmentsExtension ]
+  }
+
   get directUploadUrl() {
     return this.dataset.directUploadUrl
   }
@@ -196,23 +202,33 @@ export class LexicalEditorElement extends HTMLElement {
 
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>"
-    const nodes = $generateNodesFromDOM(this.editor, parseHtml(`<div>${html}</div>`))
+    const nodes = $generateNodesFromDOM(this.editor, parseHtml(`${html}`))
 
-    if (nodes.length === 0) {
-      return [ $createParagraphNode() ]
-    }
+    return nodes
+      .map(this.#wrapTextNode)
+      .map(this.#unwrapDecoratorNode)
+  }
 
-    // Custom decorator block elements such action-text-attachments get wrapped into <p> automatically by Lexical.
-    // We flatten those.
-    return nodes.map(node => {
-      if (node.getType() === "paragraph" && node.getChildrenSize() === 1) {
-        const child = node.getFirstChild()
-        if (child instanceof DecoratorNode && !child.isInline()) {
-          return child
-        }
+  // Raw string values produce TextNodes which cannot be appended directly to the RootNode.
+  // We wrap those in <p>
+  #wrapTextNode(node) {
+    if (!$isTextNode(node)) return node
+
+    const paragraph = $createParagraphNode()
+    paragraph.append(node)
+    return paragraph
+  }
+
+  // Custom decorator block elements such action-text-attachments get wrapped into <p> automatically by Lexical.
+  // We unwrap those.
+  #unwrapDecoratorNode(node) {
+    if (node.getType() === "paragraph" && node.getChildrenSize() === 1) {
+      const child = node.getFirstChild()
+      if (child instanceof DecoratorNode && !child.isInline()) {
+        return child
       }
-      return node
-    })
+    }
+    return node
   }
 
   #initialize() {
@@ -230,12 +246,13 @@ export class LexicalEditorElement extends HTMLElement {
     this.editorContentElement ||= this.#createEditorContentElement()
 
     const editor = buildEditorFromExtensions({
-      name: "lexxy/core",
-      namespace: "Lexxy",
-      theme: theme,
-      nodes: this.#lexicalNodes
-    },
-      ...this.#lexicalExtensions
+        name: "lexxy/core",
+        namespace: "Lexxy",
+        theme: theme,
+        nodes: this.#lexicalNodes
+      },
+      ...this.#lexicalExtensions,
+      ProvisionalParagraphExtension
     )
 
     editor.setRootElement(this.editorContentElement)
@@ -247,8 +264,8 @@ export class LexicalEditorElement extends HTMLElement {
     const extensions = []
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
-      TrixContentExtension,
-      TablesLexicalExtension
+      TablesLexicalExtension,
+      TrixContentLexicalExtension
     ]
 
     if (this.supportsRichText) {
@@ -371,6 +388,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #registerComponents() {
+
     if (this.supportsRichText) {
       registerRichText(this.editor)
       registerList(this.editor)
@@ -545,5 +563,3 @@ export class LexicalEditorElement extends HTMLElement {
     this.connectedCallback()
   }
 }
-
-export default LexicalEditorElement

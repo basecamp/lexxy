@@ -23,7 +23,8 @@ export default class Extensions {
   }
 
   #initializeExtensions() {
-    const extensionDefinitions = Lexxy.global.get("extensions")
+    // TODO: allow these to be changed
+    const extensionDefinitions = this.lexxyElement.baseExtensions.concat(Lexxy.global.get("extensions"))
 
     return extensionDefinitions.map(
       extension => new extension(this.lexxyElement)
