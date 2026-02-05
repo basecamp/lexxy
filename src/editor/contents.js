@@ -169,16 +169,12 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    // Collect all unique parent elements that may contain links
+    // Collect direct parent elements of selected nodes
     const parentElements = new Set()
     selection.getNodes().forEach(node => {
-      let current = node
-      while (current) {
-        const parent = current.getParent()
-        if (parent && $isElementNode(parent)) {
-          parentElements.add(parent)
-        }
-        current = parent
+      const parent = node.getParent()
+      if (parent && $isElementNode(parent)) {
+        parentElements.add(parent)
       }
     })
 
