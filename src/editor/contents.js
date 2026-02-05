@@ -194,7 +194,7 @@ export default class Contents {
     while (child) {
       const nextSibling = child.getNextSibling()
 
-      if ($isLinkNode(child) && $isLinkNode(nextSibling) && child.getURL() === nextSibling.getURL()) {
+      if (nextSibling && $isLinkNode(child) && $isLinkNode(nextSibling) && child.getURL() === nextSibling.getURL()) {
         // Move all children from nextSibling into child
         nextSibling.getChildren().forEach(c => child.append(c))
         nextSibling.remove()
