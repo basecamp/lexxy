@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $createTextNode, $isTextNode, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $createTextNode, $isTextNode, COMMAND_PRIORITY_CRITICAL, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
