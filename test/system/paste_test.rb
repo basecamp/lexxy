@@ -36,6 +36,25 @@ class PasteTest < ApplicationSystemTestCase
     assert_editor_html %(<p>Hello <a href="https://37signals.com"><b><strong>everyone</strong></b></a></p>)
   end
 
+  test "merge adjacent links when pasting URL over multiple words" do
+    visit edit_post_path(posts(:empty))
+
+    find_editor.send "Hello"
+    find_editor.select("Hello")
+    find_editor.paste "https://37signals.com"
+
+    find_editor.send :arrow_right
+    find_editor.send " everyone"
+
+    find_editor.select("Hello everyone")
+    find_editor.paste "https://37signals.com"
+
+    assert_editor_html do
+      assert_selector %(a[href="https://37signals.com"]), text: "Hello everyone", count: 1
+      assert_no_selector %(a + a)
+    end
+  end
+
   test "don't convert markdown when pasting into code block" do
     find_editor.paste "some text"
     find_editor.toggle_command("insertCodeBlock")
