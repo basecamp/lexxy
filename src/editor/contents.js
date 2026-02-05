@@ -6,7 +6,7 @@ import {
 import { $generateNodesFromDOM } from "@lexical/html"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { $createLinkNode, $toggleLink } from "@lexical/link"
+import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode, ListItemNode } from "@lexical/list"
 import { FormatEscaper } from "./format_escaper"
@@ -161,7 +161,48 @@ export default class Contents {
 
     this.editor.update(() => {
       $toggleLink(url)
+      this.#mergeAdjacentLinks()
     })
+  }
+
+  #mergeAdjacentLinks() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    // Collect all unique parent elements that may contain links
+    const parentElements = new Set()
+    selection.getNodes().forEach(node => {
+      let current = node
+      while (current) {
+        const parent = current.getParent()
+        if (parent && $isElementNode(parent)) {
+          parentElements.add(parent)
+        }
+        current = parent
+      }
+    })
+
+    // Merge adjacent links in each parent element
+    parentElements.forEach(element => {
+      this.#mergeAdjacentLinksInElement(element)
+    })
+  }
+
+  #mergeAdjacentLinksInElement(element) {
+    let child = element.getFirstChild()
+
+    while (child) {
+      const nextSibling = child.getNextSibling()
+
+      if ($isLinkNode(child) && $isLinkNode(nextSibling) && child.getURL() === nextSibling.getURL()) {
+        // Move all children from nextSibling into child
+        nextSibling.getChildren().forEach(c => child.append(c))
+        nextSibling.remove()
+        // Don't advance - check same position again for 3+ consecutive links
+      } else {
+        child = nextSibling
+      }
+    }
   }
 
   textBackUntil(string) {
