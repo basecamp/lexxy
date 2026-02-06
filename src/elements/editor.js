@@ -403,6 +403,8 @@ export default class LexicalEditorElement extends HTMLElement {
 
   #dispatchAttributesChange() {
     let attributes = null
+    let table = null
+    let link = null
 
     this.editor.getEditorState().read(() => {
       const selection = $getSelection()
@@ -448,23 +450,19 @@ export default class LexicalEditorElement extends HTMLElement {
       const inCode = $isCodeNode(topLevelElement) || selection.hasFormat("code")
       if (inCode) attributes.code = true
       if (isSelectionHighlighted(selection)) attributes.highlight = true
-      if (inLink) {
-        attributes.link = true
-        if (linkHref) attributes.href = linkHref
-      }
+      if (inLink) attributes.link = true
       if (inQuote) attributes.quote = true
       if (inHeading) attributes.heading = true
       if (listType === "bullet") attributes["unordered-list"] = true
       if (listType === "number") attributes["ordered-list"] = true
-      if (inTable) {
-        attributes.table = true
-        if (tableRows) attributes.tableRows = tableRows
-        if (tableColumns) attributes.tableColumns = tableColumns
-      }
+      if (inTable) attributes.table = true
+
+      table = inTable ? { rows: tableRows, columns: tableColumns } : null
+      link = inLink && linkHref ? { href: linkHref } : null
     })
 
     if (attributes) {
-      dispatch(this, "lexxy:attributes-change", { attributes })
+      dispatch(this, "lexxy:attributes-change", { attributes, table, link })
     }
   }
 
