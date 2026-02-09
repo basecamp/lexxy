@@ -486,6 +486,7 @@ export class LexicalEditorElement extends HTMLElement {
   #attachToolbar() {
     if (this.#hasToolbar) {
       this.toolbarElement.setEditor(this)
+      this.extensions.initializeToolbars()
     }
   }
 
