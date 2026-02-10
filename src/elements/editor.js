@@ -24,9 +24,9 @@ import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { TrixContentLexicalExtension } from "../lexical_extensions/trix_content_lexical_extension"
 import { TablesLexicalExtension } from "../lexical_extensions/tables_lexical_extension"
 import { HighlightExtension } from "../extensions/highlight_extension"
+import { TrixContentExtension } from "../extensions/trix_content_extension"
 
 export class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -114,7 +114,8 @@ export class LexicalEditorElement extends HTMLElement {
 
   get baseExtensions() {
     return [
-      HighlightExtension
+      HighlightExtension,
+      TrixContentExtension
     ]
   }
 
@@ -264,8 +265,7 @@ export class LexicalEditorElement extends HTMLElement {
   get #lexicalExtensions() {
     const extensions = []
     const richTextExtensions = [
-      TablesLexicalExtension,
-      TrixContentLexicalExtension
+      TablesLexicalExtension
     ]
 
     if (this.supportsRichText) {
