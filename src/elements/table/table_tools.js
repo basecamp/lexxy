@@ -163,7 +163,7 @@ export class TableTools extends HTMLElement {
   }
 
   #handleEscapeKey() {
-    const { cell } = this.tableController.tableState
+    const { cell } = this.tableController.getTableState()
     if (!cell) return
 
     this.#editor.update(() => {
@@ -190,7 +190,7 @@ export class TableTools extends HTMLElement {
 
     let cellsToHighlight = null
 
-    const tableState = this.tableController.tableState
+    const tableState = this.tableController.getTableState()
     if (!tableState) return
 
     switch (command.childType) {
@@ -221,8 +221,8 @@ export class TableTools extends HTMLElement {
     this.unregisterUpdateListener = this.#editor.registerUpdateListener(() => {
         this.tableController.updateSelectedTable()
 
-        const tableState = this.tableController.tableState
-        if (tableState?.tableNode) {
+        const { tableNode } = this.tableController.getTableState() ?? {}
+        if (tableNode) {
           this.#show()
         } else {
           this.#hide()
@@ -257,7 +257,7 @@ export class TableTools extends HTMLElement {
   }
 
   #updateButtonsPosition() {
-    const { tableNode } = this.tableController.tableState
+    const { tableNode } = this.tableController.getTableState()
     if (!tableNode) return
 
     const tableElement = this.#editor.getElementByKey(tableNode.getKey())
@@ -273,7 +273,7 @@ export class TableTools extends HTMLElement {
   }
 
   #updateRowColumnCount() {
-    const { tableNode } = this.tableController.tableState
+    const { tableNode } = this.tableController.getTableState()
     if (!tableNode) return
 
     const tableElement = $getElementForTableNode(this.#editor, tableNode)
@@ -287,10 +287,10 @@ export class TableTools extends HTMLElement {
   }
 
   #setTableCellFocus() {
-    const tableState = this.tableController.tableState
-    if (!tableState?.cell) return
+    const { cell } = this.tableController.getTableState() ?? {}
+    if (!cell) return
 
-    const cellElement = this.#editor.getElementByKey(tableState.cell.getKey())
+    const cellElement = this.#editor.getElementByKey(cell.getKey())
     if (!cellElement) return
 
     cellElement.classList.add(theme.tableCellFocus)

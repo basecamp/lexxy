@@ -13,9 +13,9 @@ import {
   $getTableCellNodeFromLexicalNode,
   $getTableColumnIndexFromTableCellNode,
   $getTableRowIndexFromTableCellNode,
-  TableCellHeaderStates,
-  TableCellNode,
-  TableNode,
+  $isTableCellNode,
+  $isTableNode,
+  TableCellHeaderStates
 } from "@lexical/table"
 
 import { upcaseFirst } from "../../helpers/string_helper"
@@ -55,25 +55,25 @@ export class TableController {
     this.unregisterUpdateListener = null
   }
 
-  get tableState() {
+  getTableState() {
     if (this.#cachedTableState) return this.#cachedTableState
 
     return this.editor.getEditorState().read(() => {
       if (!this.currentCellKey || !this.currentTableNodeKey) return null
 
       const cell = $getNodeByKey(this.currentCellKey)
-      if (cell instanceof TableCellNode === false) return null
+      if ($isTableCellNode(cell) === false) return null
 
       const tableNode = $getNodeByKey(this.currentTableNodeKey)
-      if (tableNode instanceof TableNode === false) return null
+      if ($isTableNode(tableNode) === false) return null
 
-      const rows = tableNode?.getChildren() ?? []
+      const rows = tableNode.getChildren() ?? []
 
       const currentRowIndex = $getTableRowIndexFromTableCellNode(cell)
       const currentColumnIndex = $getTableColumnIndexFromTableCellNode(cell)
 
-      const rowCells = rows[currentRowIndex]?.getChildren() ?? null
-      const columnCells = rows.map(row => row.getChildAtIndex(currentColumnIndex)) ?? null
+      const rowCells = rows[currentRowIndex].getChildren()
+      const columnCells = rows.map(row => row.getChildAtIndex(currentColumnIndex))
 
       this.#cachedTableState = { cell, tableNode, rows, currentRowIndex, currentColumnIndex, rowCells, columnCells }
       return this.#cachedTableState
@@ -81,6 +81,7 @@ export class TableController {
   }
 
   updateSelectedTable() {
+    this.#cachedTableState = null
     let cellNode = null
     let tableNode = null
 
@@ -120,7 +121,7 @@ export class TableController {
 
   #executeToggleStyle(command) {
     const childType = command.childType
-    const { rowCells, columnCells } = this.tableState
+    const { rowCells, columnCells } = this.getTableState()
 
     let cells = null
     let headerState = null
@@ -181,7 +182,7 @@ export class TableController {
     // We wait for next frame, otherwise table operations might not have completed yet.
     await nextFrame()
 
-    const tableState = this.tableState
+    const tableState = this.getTableState()
     if (!tableState) return
 
     const row = tableState.rows[rowIndex]
@@ -195,7 +196,7 @@ export class TableController {
 
   #selectNextBestCell(command, customIndex = null) {
     const { childType, direction } = command
-    const { currentRowIndex, currentColumnIndex } = this.tableState
+    const { currentRowIndex, currentColumnIndex } = this.getTableState()
 
     let rowIndex = currentRowIndex
     let columnIndex = customIndex !== null ? customIndex : currentColumnIndex
@@ -213,7 +214,7 @@ export class TableController {
   }
 
   #selectNextRow() {
-    const { rows, currentRowIndex, currentColumnIndex } = this.tableState
+    const { rows, currentRowIndex, currentColumnIndex } = this.getTableState()
     if (!rows) return
 
     const nextRow = rows.at(currentRowIndex + 1)
@@ -225,7 +226,7 @@ export class TableController {
   }
 
   #selectPreviousCell() {
-    const { cell } = this.tableState
+    const { cell } = this.getTableState()
     if (!cell) return
 
     this.editor.update(() => {
@@ -242,7 +243,7 @@ export class TableController {
   }
 
   #deleteRowAndSelectNextNode() {
-    const { tableNode } = this.tableState
+    const { tableNode } = this.getTableState()
     this.executeTableCommand({ action: "delete", childType: "row" })
 
     this.editor.update(() => {
@@ -258,28 +259,28 @@ export class TableController {
   }
 
   #isCurrentCellEmpty() {
-    const { tableNode, cell } = this.tableState
+    const { tableNode, cell } = this.getTableState()
     if (!tableNode || !cell) return false
 
-    return cell.getTextContent().trim() === ""
+    return cell.getTextContentSize() === 0
   }
 
   #isCurrentRowLast() {
-    const { rows, currentRowIndex } = this.tableState
+    const { rows, currentRowIndex } = this.getTableState()
     if (!rows) return false
 
     return rows.length === currentRowIndex + 1
   }
 
   #isCurrentRowEmpty() {
-    const { rowCells } = this.tableState
+    const { rowCells } = this.getTableState()
     if (!rowCells) return false
 
-    return rowCells.every(cell => cell.getTextContent().trim() === "")
+    return rowCells.every(cell => cell.getTextContentSize() === 0)
   }
 
   #isFirstCellInRow() {
-    const { rowCells, cell } = this.tableState
+    const { rowCells, cell } = this.getTableState()
     if (!rowCells) return false
 
     return rowCells.indexOf(cell) === 0
@@ -300,7 +301,7 @@ export class TableController {
   }
 
   #handleBackspaceKey(event) {
-    const tableState = this.tableState
+    const tableState = this.getTableState()
     if (!tableState) return false
 
     if (this.#isCurrentRowEmpty() && this.#isFirstCellInRow()) {
@@ -323,7 +324,7 @@ export class TableController {
 
     if (this.selection.isInsideList || this.selection.isInsideCodeBlock) return false
 
-    const tableState = this.tableState
+    const tableState = this.getTableState()
     if (!tableState) return false
 
     event.preventDefault()
