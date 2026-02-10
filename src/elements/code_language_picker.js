@@ -73,8 +73,8 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   #monitorForCodeBlockSelection() {
-    this.unregisterUpdateListener = this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
+    this.unregisterUpdateListener = this.editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
         const codeNode = this.#getCurrentCodeNode()
 
         if (codeNode) {
