@@ -12,6 +12,16 @@ export default class extends Controller {
     this.refresh()
   }
 
+  debounce(fn, delay = 500) {
+    let timeoutId = null
+  
+    return (...args) => {
+      const callback = () => fn.apply(this, args)
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(callback, delay)
+    }
+  }
+
   async loadContent({ params: { partial } }) {
     const response = await fetch(`/demo_contents/${partial}`)
     const html = await response.text()
@@ -20,30 +30,27 @@ export default class extends Controller {
     this.refresh()
   }
 
-  async refresh(event) {
-    clearTimeout(this.#delay)
+  refresh = this.debounce(async (event) => {
     this.outputHtmlTarget.closest("section").classList.add("loading")
 
-    this.#delay = setTimeout(async () => {
-      const code = this.editorTarget.value.trim()
-      let formattedCode = await prettier.format(code, {
-        parser: "html",
-        plugins: [ htmlParser ],
-        printWidth: 80,
-        tabWidth: 2,
-        useTabs: false
-      })
+    const code = this.editorTarget.value.trim()
+    let formattedCode = await prettier.format(code, {
+      parser: "html",
+      plugins: [ htmlParser ],
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false
+    })
 
-      const escaped = document.createElement("textarea")
-      escaped.innerText = this.editorTarget.toString().trim()
-      this.outputTextTarget.innerHTML = escaped.innerHTML
-      escaped.remove()
+    const escaped = document.createElement("textarea")
+    escaped.innerText = this.editorTarget.toString().trim()
+    this.outputTextTarget.innerHTML = escaped.innerHTML
+    escaped.remove()
 
-      formattedCode = formattedCode.replace(/<br\s*\/>/g, '<br/>') // Remove space before self-closing slash for br tags
-      const highlightedCode = Prism.highlight(formattedCode, Prism.languages.html, 'html')
+    formattedCode = formattedCode.replace(/<br\s*\/>/g, '<br/>') // Remove space before self-closing slash for br tags
+    const highlightedCode = Prism.highlight(formattedCode, Prism.languages.html, 'html')
 
-      this.outputHtmlTarget.innerHTML = `<code class="language-html">${highlightedCode}</code>`
-      this.outputHtmlTarget.closest("section").classList.remove("loading")
-    }, 500)
-  }
+    this.outputHtmlTarget.innerHTML = `<code class="language-html">${highlightedCode}</code>`
+    this.outputHtmlTarget.closest("section").classList.remove("loading")
+  })
 }
