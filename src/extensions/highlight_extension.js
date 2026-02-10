@@ -2,36 +2,53 @@ import { $getState, $hasUpdateTag, $setState, COMMAND_PRIORITY_NORMAL, PASTE_TAG
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty, $patchStyleText, getCSSFromStyleObject } from "@lexical/selection"
 import { extendTextNodeConversion } from "../helpers/lexical_helper"
-import { StyleCanonicalizer, applyCanonicalizers } from "../helpers/format_helper"
-import { hasHighlightStyles } from "../helpers/format_helper"
+import { StyleCanonicalizer, applyCanonicalizers, hasHighlightStyles } from "../helpers/format_helper"
 import { RichTextExtension } from "@lexical/rich-text"
+import LexxyExtension from "./lexxy_extension"
+import { mergeRegister } from "@lexical/utils"
 
 export const TOGGLE_HIGHLIGHT_COMMAND = createCommand()
+export const REMOVE_HIGHLIGHT_COMMAND = createCommand()
+export const BLANK_STYLES = { "color": null, "background-color": null }
 
 const hasPastedStylesState = createState("hasPastedStyles", {
   parse: (value) => value || false
 })
 
-export const HighlightLexicalExtension = defineExtension({
-  dependencies: [ RichTextExtension ],
-  name: "lexxy/highlight",
-  config: {
-    color: { buttons: [], permit: [] },
-    "background-color": { buttons: [], permit: [] }
-  },
-  html: {
-    import: {
-      mark: $markConversion
-    }
-  },
-  register(editor, config) {
-    const canonicalizers = buildCanonicalizers(config)
-
-    editor.registerCommand(TOGGLE_HIGHLIGHT_COMMAND, $toggleSelectionStyles, COMMAND_PRIORITY_NORMAL)
-    editor.registerNodeTransform(TextNode, $syncHighlightWithStyle)
-    editor.registerNodeTransform(TextNode, (textNode) => $canonicalizePastedStyles(textNode, canonicalizers))
+export class HighlightExtension extends LexxyExtension {
+  get enabled() {
+    return this.editorElement.supportsRichText
   }
-})
+
+  get lexicalExtension() {
+    const extension = defineExtension({
+      dependencies: [ RichTextExtension ],
+      name: "lexxy/highlight",
+      config: {
+        color: { buttons: [], permit: [] },
+        "background-color": { buttons: [], permit: [] }
+      },
+      html: {
+        import: {
+          mark: $markConversion
+        }
+      },
+      register(editor, config) {
+        // keep the ref to the canonicalizers for optimized css conversion
+        const canonicalizers = buildCanonicalizers(config)
+
+        return mergeRegister(
+          editor.registerCommand(TOGGLE_HIGHLIGHT_COMMAND, $toggleSelectionStyles, COMMAND_PRIORITY_NORMAL),
+          editor.registerCommand(REMOVE_HIGHLIGHT_COMMAND, () => $toggleSelectionStyles(BLANK_STYLES), COMMAND_PRIORITY_NORMAL),
+          editor.registerNodeTransform(TextNode, $syncHighlightWithStyle),
+          editor.registerNodeTransform(TextNode, (textNode) => $canonicalizePastedStyles(textNode, canonicalizers))
+        )
+      }
+    })
+
+    return [ extension, this.editorConfig.get("highlight") ]
+  }
+}
 
 export function $applyHighlightStyle(textNode, element) {
   const elementStyles = {

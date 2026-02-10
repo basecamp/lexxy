@@ -22,6 +22,7 @@ import { INSERT_TABLE_COMMAND } from "@lexical/table"
 import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import { REMOVE_HIGHLIGHT_COMMAND, TOGGLE_HIGHLIGHT_COMMAND } from "../extensions/highlight_extension"
 
 const COMMANDS = [
   "bold",
@@ -56,7 +57,6 @@ export class CommandDispatcher {
     this.selection = editorElement.selection
     this.contents = editorElement.contents
     this.clipboard = editorElement.clipboard
-    this.highlighter = editorElement.highlighter
 
     this.#registerCommands()
     this.#registerKeyboardCommands()
@@ -80,11 +80,11 @@ export class CommandDispatcher {
   }
 
   dispatchToggleHighlight(styles) {
-    this.highlighter.toggle(styles)
+    this.editor.dispatchCommand(TOGGLE_HIGHLIGHT_COMMAND, styles)
   }
 
   dispatchRemoveHighlight() {
-    this.highlighter.remove()
+    this.editor.dispatchCommand(REMOVE_HIGHLIGHT_COMMAND)
   }
 
   dispatchLink(url) {

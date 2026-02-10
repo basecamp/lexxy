@@ -1,7 +1,7 @@
 import { defineExtension } from "lexical"
 import { CodeNode, normalizeCodeLang } from "@lexical/code"
 import { extendConversion, extendTextNodeConversion } from "../helpers/lexical_helper"
-import { $applyHighlightStyle } from "./highlight_lexical_extension"
+import { $applyHighlightStyle } from "../extensions/highlight_extension"
 
 const TRIX_LANGUAGE_ATTR = "language"
 
