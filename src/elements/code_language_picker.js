@@ -10,6 +10,13 @@ export class CodeLanguagePicker extends HTMLElement {
 
     this.#attachLanguagePicker()
     this.#monitorForCodeBlockSelection()
+
+    this.#hideLanguagePicker()
+  }
+
+  disconnectedCallback() {
+    this.unregisterUpdateListener?.()
+    this.unregisterUpdateListener = null
   }
 
   #attachLanguagePicker() {
@@ -66,8 +73,8 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   #monitorForCodeBlockSelection() {
-    this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
+    this.unregisterUpdateListener = this.editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
         const codeNode = this.#getCurrentCodeNode()
 
         if (codeNode) {

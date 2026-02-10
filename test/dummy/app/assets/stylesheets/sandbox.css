@@ -77,6 +77,11 @@ section {
   padding: var(--sandbox-padding);
   position: relative;
 
+  &.loading {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
   &.output {
     background: rgba(100, 100, 100, 0.1);
 

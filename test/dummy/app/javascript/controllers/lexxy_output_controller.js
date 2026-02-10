@@ -6,8 +6,20 @@ import htmlParser from "prettier/parser-html"
 export default class extends Controller {
   static targets = [ "editor", "outputHtml", "outputText" ]
 
+  #delay = null
+
   connect() {
     this.refresh()
+  }
+
+  debounce(fn, delay = 500) {
+    let timeoutId = null
+  
+    return (...args) => {
+      const callback = () => fn.apply(this, args)
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(callback, delay)
+    }
   }
 
   async loadContent({ params: { partial } }) {
@@ -18,7 +30,9 @@ export default class extends Controller {
     this.refresh()
   }
 
-  async refresh(event) {
+  refresh = this.debounce(async (event) => {
+    this.outputHtmlTarget.closest("section").classList.add("loading")
+
     const code = this.editorTarget.value.trim()
     let formattedCode = await prettier.format(code, {
       parser: "html",
@@ -37,5 +51,6 @@ export default class extends Controller {
     const highlightedCode = Prism.highlight(formattedCode, Prism.languages.html, 'html')
 
     this.outputHtmlTarget.innerHTML = `<code class="language-html">${highlightedCode}</code>`
-  }
+    this.outputHtmlTarget.closest("section").classList.remove("loading")
+  })
 }

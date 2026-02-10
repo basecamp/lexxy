@@ -189,9 +189,8 @@ export class LexicalEditorElement extends HTMLElement {
 
       // The first time you set the value, when the editor is empty, it seems to leave Lexical
       // in an inconsistent state until, at least, you focus. You can type but adding attachments
-      // fails because no root node detected. This is a workaround to deal with the issue.
-      requestAnimationFrame(() => this.editor?.update(() => { }))
-    })
+      // fails because no root node detected. This is why we use discrete update
+    }, { discrete: true })
   }
 
   #parseHtmlIntoLexicalNodes(html) {
@@ -345,7 +344,9 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #synchronizeWithChanges() {
-    this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
+    this.#addUnregisterHandler(this.editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
+      if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return
+
       this.#clearCachedValues()
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
