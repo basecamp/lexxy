@@ -1,8 +1,8 @@
 <% content_for :title, "Lexxy Sandbox" %>
 
 <main
-  data-controller="lexxy-output"
-  data-action="lexxy:change->lexxy-output#refresh"
+  data-controller="lexxy-output history" 
+  data-action="lexxy:change->lexxy-output#refresh turbo:frame-load->history#pushFromFrameLoad"
 >
   <section class="input">
     <h2>Editor</h2>
