@@ -10,14 +10,6 @@ export default class extends Controller {
     this.refresh()
   }
 
-  async loadContent({ params: { partial } }) {
-    const response = await fetch(`/demo_contents/${partial}`)
-    const html = await response.text()
-    this.editorTarget.value = html.trim()
-    await new Promise(resolve => requestAnimationFrame(resolve))
-    this.refresh()
-  }
-
   async refresh(event) {
     const code = this.editorTarget.value.trim()
     let formattedCode = await prettier.format(code, {
