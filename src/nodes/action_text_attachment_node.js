@@ -2,6 +2,7 @@ import Lexxy from "../config/lexxy"
 import { $getEditor, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
+import { extractFileName } from "../helpers/storage_helper"
 
 
 export class ActionTextAttachmentNode extends DecoratorNode {
@@ -40,7 +41,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       "img": () => {
         return {
           conversion: (img) => {
-            const fileName = img.getAttribute("src")?.split("/")?.pop() || ""
+            const fileName = extractFileName(img.getAttribute("src")) || ""
             return {
               node: new ActionTextAttachmentNode({
                 src: img.getAttribute("src"),
