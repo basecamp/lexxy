@@ -16,7 +16,7 @@ import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
 
-  #buttons = null
+  #buttonMap = null
   #hotkeyButtons = null
   #dropdowns = null
   #overflow = null
@@ -73,6 +73,26 @@ export class LexicalToolbarElement extends HTMLElement {
     return this.editorElement || await this.editorPromise
   }
 
+  get dropdowns() {
+    return this.#dropdowns ??= this.querySelectorAll("details")
+  }
+
+  get buttons() {
+    return Array.from(this.#buttonMap.values())
+  }
+
+  get overflow() {
+    return this.#overflow ??= this.querySelector(".lexxy-editor__toolbar-overflow")
+  }
+
+  get overflowMenu() {
+    return this.#overflowMenu ??= this.querySelector(".lexxy-editor__toolbar-overflow-menu")
+  }
+
+  getButton(name) {
+    return this.#buttonMap.get(name) ?? null
+  }
+
   #reconnect() {
     this.disconnectedCallback()
     this.connectedCallback()
@@ -97,9 +117,9 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #cacheButtonsDOM() {
-    this.#buttons = new Map()
-    this.querySelectorAll("[name]").forEach(btn => {
-      this.#buttons.set(btn.getAttribute("name"), btn)
+    this.#buttonMap = new Map()
+    this.querySelectorAll(":scope > button").forEach(btn => {
+      this.#buttonMap.set(btn.getAttribute("name"), btn)
     })
 
     this.#hotkeyButtons = Array.from(this.querySelectorAll("[data-hotkey]")).map(btn => ({
@@ -107,9 +127,6 @@ export class LexicalToolbarElement extends HTMLElement {
       hotkeys: btn.dataset.hotkey.toLowerCase().split(/\s+/)
     }))
 
-    this.#dropdowns = this.querySelectorAll("details")
-    this.#overflow = this.querySelector(".lexxy-editor__toolbar-overflow")
-    this.#overflowMenu = this.querySelector(".lexxy-editor__toolbar-overflow-menu")
     this.#focusableItems = Array.from(this.querySelectorAll(":scope button, :scope > details > summary"))
     this.#toolbarItems = Array.from(this.querySelectorAll(":scope > *:not(.lexxy-editor__toolbar-overflow)"))
   }
@@ -205,8 +222,8 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
+    this.editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
         this.#updateButtonStates()
         this.#closeDropdowns()
       })
@@ -276,14 +293,14 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #setButtonPressed(name, isPressed) {
-    const button = this.#buttons.get(name)
+    const button = this.getButton(name)
     if (button) {
       button.setAttribute("aria-pressed", isPressed.toString())
     }
   }
 
   #setButtonDisabled(name, isDisabled) {
-    const button = this.#buttons.get(name)
+    const button = this.getButton(name)
     if (button) {
       button.disabled = isDisabled
       button.setAttribute("aria-disabled", isDisabled.toString())
@@ -293,42 +310,42 @@ export class LexicalToolbarElement extends HTMLElement {
   #toolbarIsOverflowing() {
     // Safari can report inconsistent clientWidth values on more than 100% window zoom level,
     // that was affecting the toolbar overflow calculation. We're adding +1 to get around this issue.
-    return (this.scrollWidth - this.#overflow.clientWidth) > this.clientWidth + 1
+    return (this.scrollWidth - this.overflow.clientWidth) > this.clientWidth + 1
   }
 
   #refreshToolbarOverflow = () => {
     this.#resetToolbarOverflow()
     this.#compactMenu()
 
-    this.#overflow.style.display = this.#overflowMenu.children.length ? "block" : "none"
-    this.#overflow.setAttribute("nonce", getNonce())
+    this.overflow.style.display = this.overflowMenu.children.length ? "block" : "none"
+    this.overflow.setAttribute("nonce", getNonce())
 
-    const isOverflowing = this.#overflowMenu.children.length > 0
+    const isOverflowing = this.overflowMenu.children.length > 0
     this.toggleAttribute("overflowing", isOverflowing)
-    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
+    this.overflowMenu.toggleAttribute("disabled", !isOverflowing)
   }
 
   #compactMenu() {
-    const buttons = [ ...this.#buttons.values() ].reverse()
+    const buttons = this.buttons.reverse()
     let movedToOverflow = false
 
     for (const button of buttons) {
       if (this.#toolbarIsOverflowing()) {
-        this.#overflowMenu.prepend(button)
+        this.overflowMenu.prepend(button)
         movedToOverflow = true
       } else {
-        if (movedToOverflow) this.#overflowMenu.prepend(button)
+        if (movedToOverflow) this.overflowMenu.prepend(button)
         break
       }
     }
   }
 
   #resetToolbarOverflow() {
-    const items = Array.from(this.#overflowMenu.children)
+    const items = Array.from(this.overflowMenu.children)
     items.sort((a, b) => this.#itemPosition(b) - this.#itemPosition(a))
 
     items.forEach((item) => {
-      const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.#overflow
+      const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.overflow
       this.insertBefore(item, nextItem)
     })
   }
@@ -346,7 +363,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #closeDropdowns() {
-   this.#dropdowns.forEach((details) => {
+   this.dropdowns.forEach((details) => {
      details.open = false
    })
  }
