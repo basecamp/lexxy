@@ -255,25 +255,12 @@ export class LexicalEditorElement extends HTMLElement {
       theme: theme,
       nodes: this.#lexicalNodes
     },
-      ...this.#lexicalExtensions
+      ...this.extensions.lexicalExtensions
     )
 
     editor.setRootElement(this.editorContentElement)
 
     return editor
-  }
-
-  get #lexicalExtensions() {
-    const extensions = []
-    const richTextExtensions = [ ]
-
-    if (this.supportsRichText) {
-      extensions.push(...richTextExtensions)
-    }
-
-    extensions.push(...this.extensions.lexicalExtensions)
-
-    return extensions
   }
 
   get #lexicalNodes() {
