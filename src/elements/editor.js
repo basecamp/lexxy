@@ -162,11 +162,31 @@ export default class LexicalEditorElement extends HTMLElement {
     this.frozenSelectionState = null
     this.editor.getEditorState().read(() => {
       const selection = $getSelection()
-      if ($isRangeSelection(selection)) {
-        this.frozenSelectionState = {
-          anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
-          focus: { key: selection.focus.key, offset: selection.focus.offset }
+      if (!$isRangeSelection(selection)) return
+
+      // If cursor is inside a link, expand to cover the full link text
+      if (selection.isCollapsed()) {
+        let node = selection.anchor.getNode()
+        while (node) {
+          if ($isLinkNode(node)) {
+            const firstDescendant = node.getFirstDescendant()
+            const lastDescendant = node.getLastDescendant()
+            if (firstDescendant && lastDescendant) {
+              this.frozenSelectionState = {
+                anchor: { key: firstDescendant.getKey(), offset: 0 },
+                focus: { key: lastDescendant.getKey(), offset: lastDescendant.getTextContent().length }
+              }
+              return
+            }
+            break
+          }
+          node = node.getParent()
         }
+      }
+
+      this.frozenSelectionState = {
+        anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
+        focus: { key: selection.focus.key, offset: selection.focus.offset }
       }
     })
   }
