@@ -233,14 +233,15 @@ export class CommandDispatcher {
   }
 
   #registerCommandHandler(command, priority, handler) {
-    this.unregisterCommands = this.unregisterCommands || []
+    this.unregisterCommands ||= []
     this.unregisterCommands.push(this.editor.registerCommand(command, handler, priority))
   }
 
   #registerKeyboardCommands() {
-    this.unregisterKeyboardCommands = this.unregisterKeyboardCommands || []
-    this.unregisterKeyboardCommands.push(this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleTabKey.bind(this), COMMAND_PRIORITY_NORMAL))
+    this.unregisterCommands ||= []
+    this.unregisterCommands.push(this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleTabKey.bind(this), COMMAND_PRIORITY_NORMAL))
   }
+
 
   #unregisterCommands() {
     this.unregisterCommands?.forEach((unregisterCommand) => {
@@ -252,20 +253,27 @@ export class CommandDispatcher {
   #registerDragAndDropHandlers() {
     if (this.editorElement.supportsAttachments) {
       this.dragCounter = 0
+      this.boundDragHandlers = {
+        dragover: this.#handleDragOver.bind(this),
+        drop: this.#handleDrop.bind(this),
+        dragenter: this.#handleDragEnter.bind(this),
+        dragleave: this.#handleDragLeave.bind(this),
+      }
       const root = this.editor.getRootElement()
-      root.addEventListener("dragover", this.#handleDragOver.bind(this))
-      root.addEventListener("drop", this.#handleDrop.bind(this))
-      root.addEventListener("dragenter", this.#handleDragEnter.bind(this))
-      root.addEventListener("dragleave", this.#handleDragLeave.bind(this))
+      for (const [ event, handler ] of Object.entries(this.boundDragHandlers)) {
+        root.addEventListener(event, handler)
+      }
     }
   }
 
   #unregisterDragAndDropHandlers() {
-    const root = this.editor.getRootElement()
-    root.removeEventListener("dragover", this.#handleDragOver.bind(this))
-    root.removeEventListener("drop", this.#handleDrop.bind(this))
-    root.removeEventListener("dragenter", this.#handleDragEnter.bind(this))
-    root.removeEventListener("dragleave", this.#handleDragLeave.bind(this))
+    if (this.boundDragHandlers) {
+      const root = this.editor.getRootElement()
+      for (const [ event, handler ] of Object.entries(this.boundDragHandlers)) {
+        root.removeEventListener(event, handler)
+      }
+      this.boundDragHandlers = null
+    }
   }
 
   #handleDragEnter(event) {
