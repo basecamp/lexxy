@@ -274,36 +274,55 @@ export default class Contents {
     }, { tag: HISTORY_MERGE_TAG })
   }
 
-  insertAttachment(attachment = {}) {
-    if (!this.editorElement.supportsAttachments) {
-      console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
-      return
-    }
+  insertPendingAttachment(file) {
+    if (!this.editorElement.supportsAttachments) return null
 
-    const attributes = this.#normalizeAttachmentAttributes(attachment)
-    if (!attributes.src && !attributes.sgid) return
-
+    let nodeKey = null
     this.editor.update(() => {
-      const node = new ActionTextAttachmentNode(attributes)
-      const selection = $getSelection()
-      const selectedNodes = selection?.getNodes()
-
-      if ($isRangeSelection(selection)) {
-        $insertNodes([ node ])
-      } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
-        const lastNode = selectedNodes[selectedNodes.length - 1]
-        lastNode.insertAfter(node)
-      } else {
-        const root = $getRoot()
-        root.append(node)
-      }
-
-      if (!node.getNextSibling()) {
-        const newParagraph = $createParagraphNode()
-        node.insertAfter(newParagraph)
-        newParagraph.selectStart()
-      }
+      const uploadNode = new ActionTextAttachmentUploadNode({
+        file,
+        uploadUrl: null,
+        blobUrlTemplate: this.editorElement.blobUrlTemplate,
+        editor: this.editor
+      })
+      this.insertAtCursor(uploadNode)
+      nodeKey = uploadNode.getKey()
     }, { tag: HISTORY_MERGE_TAG })
+
+    if (!nodeKey) return null
+
+    const editor = this.editor
+    return {
+      setAttributes(json) {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (!node) return
+
+          node.replace(new ActionTextAttachmentNode({
+            sgid: json.sgid || json.attachable_sgid,
+            src: json.url,
+            contentType: json.contentType || json.content_type,
+            fileName: json.filename,
+            fileSize: json.filesize || json.byte_size,
+            previewable: json.previewable,
+            presentation: json.presentation
+          }))
+        }, { tag: HISTORY_MERGE_TAG })
+      },
+      setUploadProgress(progress) {
+        const dom = editor.getElementByKey(nodeKey)
+        const progressBar = dom?.querySelector("progress")
+        if (progressBar) {
+          editor.update(() => { progressBar.value = progress })
+        }
+      },
+      remove() {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (node) node.remove()
+        })
+      }
+    }
   }
 
   async deleteSelectedNodes() {
@@ -770,26 +789,6 @@ export default class Contents {
   #createHtmlNodeWith(html) {
     const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
     return htmlNodes[0] || $createParagraphNode()
-  }
-
-  #normalizeAttachmentAttributes(attachment) {
-    const contentType = attachment.contentType || attachment.content_type || attachment["content-type"] || ""
-    const fileName = attachment.fileName || attachment.filename || ""
-    const src = attachment.src || attachment.url || attachment.href || ""
-    const caption = attachment.caption || fileName
-
-    return {
-      sgid: attachment.sgid || attachment.attachableSgid || attachment.attachable_sgid,
-      src,
-      previewable: attachment.previewable,
-      altText: attachment.altText || attachment.alt || fileName,
-      caption,
-      contentType,
-      fileName,
-      fileSize: attachment.fileSize || attachment.filesize,
-      width: attachment.width,
-      height: attachment.height
-    }
   }
 
   #shouldUploadFile(file) {
