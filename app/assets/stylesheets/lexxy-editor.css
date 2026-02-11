@@ -18,6 +18,15 @@
   position: relative;
   transition: opacity 150ms;
 
+  p.provisional-paragraph {
+    display: block;
+
+    &.hidden {
+      block-size: 0.5ch;
+      margin: 0;
+    }
+  }
+
   input,
   button,
   summary {

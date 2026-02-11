@@ -513,8 +513,6 @@ export default class Selection {
     if (node instanceof DecoratorNode) {
       this.#selectInLexical(node)
       return true
-    } else {
-      this.#contents.deleteSelectedNodes()
     }
 
     return false
@@ -525,8 +523,6 @@ export default class Selection {
     if (node instanceof DecoratorNode) {
       this.#selectInLexical(node)
       return true
-    } else {
-      this.#contents.deleteSelectedNodes()
     }
 
     return false

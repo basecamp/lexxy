@@ -43,7 +43,7 @@ class AttachmentsTest < ApplicationSystemTestCase
     wait_for_node_selection false
 
     assert_no_attachment content_type: "image/png"
-    assert_editor_html "<p><br></p>"
+    assert_editor_html ""
   end
 
   test "disable attachments" do
