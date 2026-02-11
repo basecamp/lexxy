@@ -24,10 +24,8 @@ class HorizontalDividerTest < ApplicationSystemTestCase
     find_editor.send "Text after"
 
     find("figure.horizontal-divider").click
-    wait_for_node_selection
 
     find_editor.send_key "Delete"
-    wait_for_node_selection false
 
     assert_no_selector "figure.horizontal-divider"
     assert_editor_html "<p>Text before</p><p>Text after</p>"

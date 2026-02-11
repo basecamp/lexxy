@@ -1,8 +1,14 @@
-import { $isTextNode, TextNode } from "lexical"
+import { $createNodeSelection, $isTextNode, TextNode } from "lexical"
 import { HISTORY_MERGE_TAG, SKIP_DOM_SELECTION_TAG, SKIP_SCROLL_INTO_VIEW_TAG } from "lexical"
 import { $isListItemNode, $isListNode } from "@lexical/list"
 
 export const SILENT_UPDATE_TAGS = [ HISTORY_MERGE_TAG, SKIP_DOM_SELECTION_TAG, SKIP_SCROLL_INTO_VIEW_TAG ]
+
+export function $createNodeSelectionWith(...nodes) {
+  const selection = $createNodeSelection()
+  nodes.forEach(node => selection.add(node.getKey()))
+  return selection
+}
 
 export function getNearestListItemNode(node) {
   let current = node

@@ -6353,6 +6353,12 @@ const Ne$1=/^(\d+(?:\.\d+)?)px$/,ve$1={BOTH:3,COLUMN:2,NO_STATUS:0,ROW:1};class 
 
 const SILENT_UPDATE_TAGS = [ Dn, zn, Kn ];
 
+function $createNodeSelectionWith(...nodes) {
+  const selection = Pr();
+  nodes.forEach(node => selection.add(node.getKey()));
+  return selection
+}
+
 function getNearestListItemNode(node) {
   let current = node;
   while (current !== null) {
@@ -6445,14 +6451,6 @@ function createAttachmentFigure(contentType, isPreviewable, fileName) {
 
 function isPreviewableImage(contentType) {
   return contentType.startsWith("image/") && !contentType.includes("svg")
-}
-
-function dispatchCustomEvent(element, name, detail) {
-  const event = new CustomEvent(name, {
-    detail: detail,
-    bubbles: true,
-  });
-  element.dispatchEvent(event);
 }
 
 function dispatch(element, eventName, detail = null, cancelable = false) {
@@ -7249,10 +7247,6 @@ class ActionTextAttachmentNode extends ki {
   createDOM() {
     const figure = this.createAttachmentFigure();
 
-    figure.addEventListener("click", () => {
-      this.#select(figure);
-    });
-
     if (this.isPreviewableAttachment) {
       figure.appendChild(this.#createDOMForImage());
       figure.appendChild(this.#createEditableCaption());
@@ -7325,6 +7319,11 @@ class ActionTextAttachmentNode extends ki {
     return createAttachmentFigure(this.contentType, this.isPreviewableAttachment, this.fileName)
   }
 
+  select() {
+    wo($createNodeSelectionWith(this));
+    return true
+  }
+
   get #isPreviewableImage() {
     return isPreviewableImage(this.contentType)
   }
@@ -7363,10 +7362,6 @@ class ActionTextAttachmentNode extends ki {
     }
 
     return figcaption
-  }
-
-  #select(figure) {
-    dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
   }
 
   #createEditableCaption() {
@@ -7703,10 +7698,6 @@ class HorizontalDividerNode extends ki {
     const figure = createElement("figure", { className: "horizontal-divider" });
     const hr = createElement("hr");
 
-    figure.addEventListener("click", (event) => {
-      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
-    });
-
     figure.appendChild(hr);
 
     return figure
@@ -7718,6 +7709,11 @@ class HorizontalDividerNode extends ki {
 
   getTextContent() {
     return "┄\n\n"
+  }
+
+  select() {
+    wo($createNodeSelectionWith(this));
+    return true
   }
 
   isInline() {
@@ -8460,20 +8456,14 @@ class Selection {
   }
 
   #listenForNodeSelections() {
-    this.editor.getRootElement().addEventListener("lexxy:internal:select-node", async (event) => {
-      await nextFrame();
+    this.editor.registerCommand(se$1, ({ target }) => {
+      if (!Ss(target)) return
 
-      const { key } = event.detail;
-      this.editor.update(() => {
-        const node = xo(key);
-        if (node) {
-          const selection = Pr();
-          selection.add(node.getKey());
-          wo(selection);
-        }
-        this.editor.focus();
-      });
-    });
+      const targetNode = vo(target);
+      if (!Ti(targetNode)) return
+
+      return targetNode.select?.()
+    }, zi);
 
     this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
       this.#selectOrAppendNextLine();
@@ -8687,13 +8677,8 @@ class Selection {
   }
 
   #selectInLexical(node) {
-    if (!node || !(node instanceof ki)) return
-
-    this.editor.update(() => {
-      const selection = Pr();
-      selection.add(node.getKey());
-      wo(selection);
-    });
+    if (node && (node instanceof ki)) node.select();
+    return true
   }
 
   #deleteSelectedOrNext() {
@@ -9007,16 +8992,17 @@ class CustomActionTextAttachmentNode extends ki {
   createDOM() {
     const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true });
 
-    figure.addEventListener("click", (event) => {
-      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
-    });
-
     figure.insertAdjacentHTML("beforeend", this.innerHtml);
 
     return figure
   }
 
   updateDOM() {
+    return false
+  }
+
+  select() {
+    wo($createNodeSelectionWith(this));
     return true
   }
 
