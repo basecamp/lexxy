@@ -10,7 +10,7 @@ import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 import { $findTableNode, $getTableCellNodeFromLexicalNode } from "@lexical/table"
 import { getListType } from "../helpers/lexical_helper"
-import { isSelectionHighlighted } from "../helpers/format_helper"
+import { isSelectionHighlighted, getHighlightStyles } from "../helpers/format_helper"
 
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
@@ -425,6 +425,7 @@ export default class LexicalEditorElement extends HTMLElement {
     let attributes = null
     let table = null
     let link = null
+    let highlight = null
 
     this.editor.getEditorState().read(() => {
       const selection = $getSelection()
@@ -469,7 +470,10 @@ export default class LexicalEditorElement extends HTMLElement {
       if (selection.hasFormat("strikethrough")) attributes.strikethrough = true
       const inCode = $isCodeNode(topLevelElement) || selection.hasFormat("code")
       if (inCode) attributes.code = true
-      if (isSelectionHighlighted(selection)) attributes.highlight = true
+      if (isSelectionHighlighted(selection)) {
+        attributes.highlight = true
+        highlight = getHighlightStyles(selection)
+      }
       if (inLink) attributes.link = true
       if (inQuote) attributes.quote = true
       if (inHeading) attributes.heading = true
@@ -482,7 +486,7 @@ export default class LexicalEditorElement extends HTMLElement {
     })
 
     if (attributes) {
-      dispatch(this, "lexxy:attributes-change", { attributes, table, link })
+      dispatch(this, "lexxy:attributes-change", { attributes, table, link, highlight })
     }
   }
 
