@@ -110,6 +110,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   async #startUpload(progressBar, figure) {
+    if (!this.uploadUrl) return  // Bridge-managed upload — skip DirectUpload
+
     const { DirectUpload } = await import("@rails/activestorage")
     const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads")
 

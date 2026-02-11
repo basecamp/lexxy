@@ -274,6 +274,62 @@ export default class Contents {
     }, { tag: HISTORY_MERGE_TAG })
   }
 
+  insertPendingAttachment(file) {
+    if (!this.editorElement.supportsAttachments) return null
+
+    let nodeKey = null
+    this.editor.update(() => {
+      const uploadNode = new ActionTextAttachmentUploadNode({
+        file,
+        uploadUrl: null,
+        blobUrlTemplate: this.editorElement.blobUrlTemplate,
+        editor: this.editor
+      })
+      this.insertAtCursor(uploadNode)
+      nodeKey = uploadNode.getKey()
+    }, { tag: HISTORY_MERGE_TAG })
+
+    if (!nodeKey) return null
+
+    const editor = this.editor
+    return {
+      setAttributes(json) {
+        console.log("[lexxy-contents] setAttributes (materialize):", JSON.stringify(json))
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (!node) {
+            console.warn("[lexxy-contents] setAttributes: node not found for key:", nodeKey)
+            return
+          }
+          const attrs = {
+            sgid: json.sgid || json.attachable_sgid,
+            src: json.url,
+            contentType: json.contentType || json.content_type,
+            fileName: json.filename,
+            fileSize: json.filesize || json.byte_size,
+            previewable: json.previewable,
+            presentation: json.presentation
+          }
+          console.log("[lexxy-contents] replacing upload node with ActionTextAttachmentNode:", JSON.stringify(attrs))
+          node.replace(new ActionTextAttachmentNode(attrs))
+        }, { tag: HISTORY_MERGE_TAG })
+      },
+      setUploadProgress(progress) {
+        const dom = editor.getElementByKey(nodeKey)
+        const progressBar = dom?.querySelector("progress")
+        if (progressBar) {
+          editor.update(() => { progressBar.value = progress })
+        }
+      },
+      remove() {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (node) node.remove()
+        })
+      }
+    }
+  }
+
   insertAttachment(attachment = {}) {
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
