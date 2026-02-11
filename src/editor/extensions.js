@@ -22,8 +22,16 @@ export default class Extensions {
     return this.lexxyElement.toolbar
   }
 
+  get #baseExtensions() {
+    return this.lexxyElement.baseExtensions
+  }
+
+  get #configuredExtensions() {
+    return Lexxy.global.get("extensions")
+  }
+
   #initializeExtensions() {
-    const extensionDefinitions = Lexxy.global.get("extensions")
+    const extensionDefinitions = this.#baseExtensions.concat(this.#configuredExtensions)
 
     return extensionDefinitions.map(
       extension => new extension(this.lexxyElement)
