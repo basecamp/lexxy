@@ -24,7 +24,7 @@ class LoadHtmlTest < ApplicationSystemTestCase
     person = people(:james)
 
     find_editor.value = <<~HTML
-    <div>Hello World <bc-attachment sgid="#{person.attachable_sgid}" content-type="#{person.content_type}" content="&quot;#{person.name}&quot;"></bc-attachment></div>
+    Hello World <bc-attachment sgid="#{person.attachable_sgid}" content-type="#{person.content_type}" content="&quot;#{person.name}&quot;"></bc-attachment>
     HTML
 
     assert_editor_html do

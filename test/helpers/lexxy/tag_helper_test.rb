@@ -9,10 +9,10 @@ class Lexxy::TagHelperTest < ActionView::TestCase
     ERB
 
     assert_dom "lexxy-editor", count: 1 do |lexxy_editor, *|
-      assert_dom fragment(lexxy_editor["value"]), "div" do |div|
-        attachment = div.at("action-text-attachment")
+      assert_dom fragment(lexxy_editor["value"]), "*" do |value|
+        attachment = value.at("action-text-attachment")
 
-        assert_equal "Hello ", div.text
+        assert_equal "Hello ", value.text
         assert_equal "<em>James Anderson</em> (<strong>JA</strong>)", JSON.parse(attachment["content"])
       end
     end
@@ -23,9 +23,7 @@ class Lexxy::TagHelperTest < ActionView::TestCase
       <%= lexxy_rich_textarea_tag :body, "<p>Sample Content</p>" %>
     ERB
     assert_dom "lexxy-editor", count: 1 do |lexxy_editor, *|
-      assert_dom fragment(lexxy_editor["value"]), "div" do |div|
-        assert_equal "<p>Sample Content</p>", div.inner_html
-      end
+      assert_equal "<p>Sample Content</p>", lexxy_editor["value"]
     end
   end
 end
