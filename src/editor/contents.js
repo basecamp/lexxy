@@ -1,16 +1,16 @@
 import {
-  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $getSiblingCaret, $insertNodes,
+  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
   $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection
  } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
-import { $createActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode, ListItemNode } from "@lexical/list"
-import { FormatEscaper } from "./format_escaper"
 import { $getNearestNodeOfType } from "@lexical/utils"
+import { FormatEscaper } from "./format_escaper"
+import Uploader from "./contents/uploader"
 
 export default class Contents {
   constructor(editorElement) {
@@ -256,48 +256,17 @@ export default class Contents {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
       return
     }
-    let attachmentNodes
-
-    const filesArray = Array.from(files)
-
-    // Filter to only valid files
-    const validFiles = filesArray.filter(file => this. #shouldUploadFile(file))
-    if (validFiles.length === 0) return
-
-
-    const uploadUrl = this.editorElement.directUploadUrl
-    const blobUrlTemplate = this.editorElement.blobUrlTemplate
+    const validFiles = Array.from(files).filter(this.#shouldUploadFile.bind(this))
 
     this.editor.update(() => {
-      attachmentNodes = validFiles.map(file => {
-        return $createActionTextAttachmentUploadNode({
-          file: file,
-          uploadUrl: uploadUrl,
-          blobUrlTemplate: blobUrlTemplate,
-          editor: this.editor
-        })
-      })
+      const uploader = Uploader.for(this.editorElement, validFiles)
+      uploader.$uploadFiles()
 
       if (selectLast && uploader.nodes?.length) {
         const lastNode = uploader.nodes.at(-1)
         lastNode.select()
       }
-
-      if (imageSelected && otherUploads.length) {
-        const { node } = this.#selection.selectedNodeWithOffset()
-        const topLevelNode = node.getTopLevelElementOrThrow()
-        const caret = $getSiblingCaret(topLevelNode, "next")
-        for (const fileUpload of otherUploads) {
-          caret.insert(fileUpload)
-          caret.getAdjacentCaret()
-        }
-      } else {
-        otherUploads.forEach(fileUpload => this.insertAtCursor(fileUpload))
-      }
-
     })
-
-    return attachmentNodes
   }
 
   replaceNodeWithHTML(nodeKey, html, options = {}) {
