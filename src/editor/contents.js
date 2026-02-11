@@ -1,10 +1,9 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
-  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
-} from "lexical"
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection
+ } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
-import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
@@ -12,6 +11,7 @@ import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
 import { FormatEscaper } from "./format_escaper"
 import { $getNextSiblingOrParentSibling } from "@lexical/utils"
+import Uploader from "./contents/uploader"
 
 export default class Contents {
   constructor(editorElement) {
@@ -252,23 +252,22 @@ export default class Contents {
     }
   }
 
-  uploadFile(file) {
+  uploadFiles(files, { selectLast } = {}) {
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
       return
     }
-
-    if (!this.#shouldUploadFile(file)) {
-      return
-    }
-
-    const uploadUrl = this.editorElement.directUploadUrl
-    const blobUrlTemplate = this.editorElement.blobUrlTemplate
+    const validFiles = Array.from(files).filter(this.#shouldUploadFile.bind(this))
 
     this.editor.update(() => {
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate })
-      this.insertAtCursor(uploadedImageNode)
-    }, { tag: HISTORY_MERGE_TAG })
+      const uploader = Uploader.for(this.editorElement, validFiles)
+      uploader.$uploadFiles()
+
+      if (selectLast && uploader.nodes?.length) {
+        const lastNode = uploader.nodes.at(-1)
+        lastNode.select()
+      }
+    })
   }
 
   deleteSelectedNodes() {
