@@ -294,14 +294,11 @@ export default class Contents {
     const editor = this.editor
     return {
       setAttributes(json) {
-        console.log("[lexxy-contents] setAttributes (materialize):", JSON.stringify(json))
         editor.update(() => {
           const node = $getNodeByKey(nodeKey)
-          if (!node) {
-            console.warn("[lexxy-contents] setAttributes: node not found for key:", nodeKey)
-            return
-          }
-          const attrs = {
+          if (!node) return
+
+          node.replace(new ActionTextAttachmentNode({
             sgid: json.sgid || json.attachable_sgid,
             src: json.url,
             contentType: json.contentType || json.content_type,
@@ -309,9 +306,7 @@ export default class Contents {
             fileSize: json.filesize || json.byte_size,
             previewable: json.previewable,
             presentation: json.presentation
-          }
-          console.log("[lexxy-contents] replacing upload node with ActionTextAttachmentNode:", JSON.stringify(attrs))
-          node.replace(new ActionTextAttachmentNode(attrs))
+          }))
         }, { tag: HISTORY_MERGE_TAG })
       },
       setUploadProgress(progress) {
