@@ -196,13 +196,18 @@ export class LexicalEditorElement extends HTMLElement {
     this.frozenSelectionState = null
     if (!frozenSelectionState) return this.focus()
 
-    // If the original nodes were removed (e.g., content cleared), restoring the
-    // frozen selection can leave Lexical in a broken state. Only restore when valid.
+    // If the original nodes were removed (e.g., content cleared) or their content
+    // was truncated (e.g., text node split by link creation), restoring the frozen
+    // selection can leave Lexical in a broken state. Only restore when valid.
     let canRestore = false
     this.editor.getEditorState().read(() => {
       const anchorNode = $getNodeByKey(frozenSelectionState.anchor.key)
       const focusNode = $getNodeByKey(frozenSelectionState.focus.key)
-      canRestore = Boolean(anchorNode?.isAttached() && focusNode?.isAttached())
+      canRestore = Boolean(
+        anchorNode?.isAttached() && focusNode?.isAttached() &&
+        frozenSelectionState.anchor.offset <= anchorNode.getTextContentSize() &&
+        frozenSelectionState.focus.offset <= focusNode.getTextContentSize()
+      )
     })
 
     if (canRestore) {
