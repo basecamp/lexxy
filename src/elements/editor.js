@@ -194,18 +194,35 @@ export class LexicalEditorElement extends HTMLElement {
   thawSelection() {
     const frozenSelectionState = this.frozenSelectionState
     this.frozenSelectionState = null
-    if (!frozenSelectionState) return this.focus()
+    if (!frozenSelectionState) return
 
-    // If the original nodes were removed (e.g., content cleared), restoring the
-    // frozen selection can leave Lexical in a broken state. Only restore when valid.
-    let canRestore = false
+    let shouldRestore = false
     this.editor.getEditorState().read(() => {
       const anchorNode = $getNodeByKey(frozenSelectionState.anchor.key)
       const focusNode = $getNodeByKey(frozenSelectionState.focus.key)
-      canRestore = Boolean(anchorNode?.isAttached() && focusNode?.isAttached())
+
+      // Skip if nodes were removed or content was truncated (e.g., text node
+      // split by link creation) — restoring would leave Lexical in a broken state.
+      if (!anchorNode?.isAttached() || !focusNode?.isAttached()) return
+      if (frozenSelectionState.anchor.offset > anchorNode.getTextContentSize()) return
+      if (frozenSelectionState.focus.offset > focusNode.getTextContentSize()) return
+
+      // Skip if the selection hasn't actually changed — an unnecessary
+      // editor.update() triggers DOM reconciliation that can disrupt Android
+      // WebView's input connection.
+      const selection = $getSelection()
+      if ($isRangeSelection(selection)) {
+        shouldRestore =
+          selection.anchor.key !== frozenSelectionState.anchor.key ||
+          selection.anchor.offset !== frozenSelectionState.anchor.offset ||
+          selection.focus.key !== frozenSelectionState.focus.key ||
+          selection.focus.offset !== frozenSelectionState.focus.offset
+      } else {
+        shouldRestore = true
+      }
     })
 
-    if (canRestore) {
+    if (shouldRestore) {
       this.editor.update(() => {
         const selection = $getSelection()
         if ($isRangeSelection(selection)) {
@@ -214,8 +231,6 @@ export class LexicalEditorElement extends HTMLElement {
         }
       })
     }
-
-    this.focus()
   }
 
   // TODO: Deprecate `single-line` attribute
