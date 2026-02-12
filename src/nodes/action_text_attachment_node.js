@@ -1,5 +1,5 @@
 import Lexxy from "../config/lexxy"
-import { DecoratorNode } from "lexical"
+import { $getEditor, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 
@@ -88,6 +88,8 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     this.fileSize = fileSize
     this.width = width
     this.height = height
+
+    this.editor = $getEditor()
   }
 
   createDOM() {
@@ -108,8 +110,13 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return figure
   }
 
-  updateDOM() {
-    return true
+  updateDOM(_prevNode, dom) {
+    const caption = dom.querySelector("figcaption textarea")
+    if (caption && this.caption) {
+      caption.value = this.caption
+    }
+
+    return false
   }
 
   getTextContent() {
@@ -217,8 +224,8 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     })
 
     input.addEventListener("focusin", () => input.placeholder = "Add caption...")
-    input.addEventListener("blur", this.#handleCaptionInputBlurred.bind(this))
-    input.addEventListener("keydown", this.#handleCaptionInputKeydown.bind(this))
+    input.addEventListener("blur", (event) => this.#handleCaptionInputBlurred(event))
+    input.addEventListener("keydown", (event) => this.#handleCaptionInputKeydown(event))
 
     caption.appendChild(input)
 
@@ -226,21 +233,24 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #handleCaptionInputBlurred(event) {
-    const input = event.target
-
-    input.placeholder = this.fileName
-    this.#updateCaptionValueFromInput(input)
+    this.#updateCaptionValueFromInput(event.target)
   }
 
   #updateCaptionValueFromInput(input) {
-    dispatchCustomEvent(input, "lexxy:internal:invalidate-node", { key: this.getKey(), values: { caption: input.value } })
+    input.placeholder = this.fileName
+    this.editor.update(() => {
+      this.getWritable().caption = input.value
+    })
   }
 
   #handleCaptionInputKeydown(event) {
     if (event.key === "Enter") {
       this.#updateCaptionValueFromInput(event.target)
-      dispatchCustomEvent(event.target, "lexxy:internal:move-to-next-line")
       event.preventDefault()
+
+      this.editor.update(() => {
+        this.selectNext()
+      }, { tag: HISTORY_MERGE_TAG })
     }
     event.stopPropagation()
   }

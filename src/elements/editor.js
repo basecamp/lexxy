@@ -32,7 +32,7 @@ import { TrixContentExtension } from "../extensions/trix_content_extension"
 
 import { TablesLexicalExtension } from "../extensions/tables_lexical_extension"
 
-export default class LexicalEditorElement extends HTMLElement {
+export class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = false
   static commands = [ "bold", "italic", "strikethrough" ]
@@ -284,7 +284,6 @@ export default class LexicalEditorElement extends HTMLElement {
   #initialize() {
     this.#synchronizeWithChanges()
     this.#registerComponents()
-    this.#listenForInvalidatedNodes()
     this.#handleEnter()
     this.#registerFocusEvents()
     this.#attachDebugHooks()
@@ -297,11 +296,11 @@ export default class LexicalEditorElement extends HTMLElement {
     this.editorContentElement ||= this.#createEditorContentElement()
 
     const editor = buildEditorFromExtensions({
-        name: "lexxy/core",
-        namespace: "Lexxy",
-        theme: theme,
-        nodes: this.#lexicalNodes
-      },
+      name: "lexxy/core",
+      namespace: "Lexxy",
+      theme: theme,
+      nodes: this.#lexicalNodes
+    },
       ...this.#lexicalExtensions
     )
 
@@ -311,7 +310,7 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 
   get #lexicalExtensions() {
-    const extensions = [ ]
+    const extensions = []
     const richTextExtensions = [
       this.highlighter.lexicalExtension,
       TrixContentExtension,
@@ -534,21 +533,6 @@ export default class LexicalEditorElement extends HTMLElement {
     this.append(this.codeLanguagePicker)
   }
 
-  #listenForInvalidatedNodes() {
-    this.editor.getRootElement().addEventListener("lexxy:internal:invalidate-node", (event) => {
-      const { key, values } = event.detail
-
-      this.editor.update(() => {
-        const node = $getNodeByKey(key)
-
-        if (node instanceof ActionTextAttachmentNode) {
-          const updatedNode = node.getWritable()
-          Object.assign(updatedNode, values)
-        }
-      })
-    })
-  }
-
   #handleEnter() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
     this.editor.registerCommand(
@@ -700,4 +684,4 @@ export default class LexicalEditorElement extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-editor", LexicalEditorElement)
+export default LexicalEditorElement

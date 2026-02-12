@@ -1,8 +1,6 @@
 import {
   $getSelection,
   $isRangeSelection,
-  COMMAND_PRIORITY_HIGH,
-  SELECTION_CHANGE_COMMAND,
   SKIP_DOM_SELECTION_TAG
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
@@ -15,7 +13,7 @@ import { getListType } from "../helpers/lexical_helper"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 
-export default class LexicalToolbarElement extends HTMLElement {
+export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
 
   constructor() {
@@ -108,7 +106,7 @@ export default class LexicalToolbarElement extends HTMLElement {
 
     this.editor.update(() => {
       this.editor.dispatchCommand(command, payload)
-    }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined } )
+    }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined })
   }
 
   #bindHotkeys() {
@@ -175,13 +173,12 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.editor.registerCommand(
-      SELECTION_CHANGE_COMMAND,
-      () => {
-        this.#closeDropdowns()
+    this.editor.registerUpdateListener(() => {
+      this.editor.getEditorState().read(() => {
         this.#updateButtonStates()
-        return false
-      }, COMMAND_PRIORITY_HIGH)
+        this.#closeDropdowns()
+      })
+    })
   }
 
   #monitorHistoryChanges() {
@@ -445,4 +442,4 @@ export default class LexicalToolbarElement extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-toolbar", LexicalToolbarElement)
+export default LexicalToolbarElement

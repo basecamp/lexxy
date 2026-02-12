@@ -3,7 +3,7 @@ import { $getSelection, $isRangeSelection } from "lexical"
 import { createElement } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
 
-export default class CodeLanguagePicker extends HTMLElement {
+export class CodeLanguagePicker extends HTMLElement {
   connectedCallback() {
     this.editorElement = this.closest("lexxy-editor")
     this.editor = this.editorElement.editor
@@ -135,4 +135,4 @@ export default class CodeLanguagePicker extends HTMLElement {
   }
 }
 
-customElements.define("lexxy-code-language-picker", CodeLanguagePicker)
+export default CodeLanguagePicker
