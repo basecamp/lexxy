@@ -9537,38 +9537,6 @@ class Contents {
     }
   }
 
-  insertAttachment(attachment = {}) {
-    if (!this.editorElement.supportsAttachments) {
-      console.warn("This editor does not supports attachments (it's configured with [attachments=false])");
-      return
-    }
-
-    const attributes = this.#normalizeAttachmentAttributes(attachment);
-    if (!attributes.src && !attributes.sgid) return
-
-    this.editor.update(() => {
-      const node = new ActionTextAttachmentNode(attributes);
-      const selection = Lr();
-      const selectedNodes = selection?.getNodes();
-
-      if (yr(selection)) {
-        jr([ node ]);
-      } else if (xr(selection) && selectedNodes && selectedNodes.length > 0) {
-        const lastNode = selectedNodes[selectedNodes.length - 1];
-        lastNode.insertAfter(node);
-      } else {
-        const root = No();
-        root.append(node);
-      }
-
-      if (!node.getNextSibling()) {
-        const newParagraph = Li();
-        node.insertAfter(newParagraph);
-        newParagraph.selectStart();
-      }
-    }, { tag: Dn });
-  }
-
   async deleteSelectedNodes() {
     let focusNode = null;
 
@@ -10033,26 +10001,6 @@ class Contents {
   #createHtmlNodeWith(html) {
     const htmlNodes = m$1(this.editor, parseHtml(html));
     return htmlNodes[0] || Li()
-  }
-
-  #normalizeAttachmentAttributes(attachment) {
-    const contentType = attachment.contentType || attachment.content_type || attachment["content-type"] || "";
-    const fileName = attachment.fileName || attachment.filename || "";
-    const src = attachment.src || attachment.url || attachment.href || "";
-    const caption = attachment.caption || fileName;
-
-    return {
-      sgid: attachment.sgid || attachment.attachableSgid || attachment.attachable_sgid,
-      src,
-      previewable: attachment.previewable,
-      altText: attachment.altText || attachment.alt || fileName,
-      caption,
-      contentType,
-      fileName,
-      fileSize: attachment.fileSize || attachment.filesize,
-      width: attachment.width,
-      height: attachment.height
-    }
   }
 
   #shouldUploadFile(file) {
