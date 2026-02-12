@@ -194,7 +194,7 @@ export class LexicalEditorElement extends HTMLElement {
   thawSelection() {
     const frozenSelectionState = this.frozenSelectionState
     this.frozenSelectionState = null
-    if (!frozenSelectionState) return this.focus()
+    if (!frozenSelectionState) return
 
     // If the original nodes were removed (e.g., content cleared) or their content
     // was truncated (e.g., text node split by link creation), restoring the frozen
@@ -219,8 +219,6 @@ export class LexicalEditorElement extends HTMLElement {
         }
       })
     }
-
-    this.focus()
   }
 
   // TODO: Deprecate `single-line` attribute
