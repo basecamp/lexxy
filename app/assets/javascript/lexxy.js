@@ -10688,18 +10688,35 @@ class LexicalEditorElement extends HTMLElement {
   thawSelection() {
     const frozenSelectionState = this.frozenSelectionState;
     this.frozenSelectionState = null;
-    if (!frozenSelectionState) return this.focus()
+    if (!frozenSelectionState) return
 
-    // If the original nodes were removed (e.g., content cleared), restoring the
-    // frozen selection can leave Lexical in a broken state. Only restore when valid.
-    let canRestore = false;
+    let shouldRestore = false;
     this.editor.getEditorState().read(() => {
       const anchorNode = xo(frozenSelectionState.anchor.key);
       const focusNode = xo(frozenSelectionState.focus.key);
-      canRestore = Boolean(anchorNode?.isAttached() && focusNode?.isAttached());
+
+      // Skip if nodes were removed or content was truncated (e.g., text node
+      // split by link creation) — restoring would leave Lexical in a broken state.
+      if (!anchorNode?.isAttached() || !focusNode?.isAttached()) return
+      if (frozenSelectionState.anchor.offset > anchorNode.getTextContentSize()) return
+      if (frozenSelectionState.focus.offset > focusNode.getTextContentSize()) return
+
+      // Skip if the selection hasn't actually changed — an unnecessary
+      // editor.update() triggers DOM reconciliation that can disrupt Android
+      // WebView's input connection.
+      const selection = Lr();
+      if (yr(selection)) {
+        shouldRestore =
+          selection.anchor.key !== frozenSelectionState.anchor.key ||
+          selection.anchor.offset !== frozenSelectionState.anchor.offset ||
+          selection.focus.key !== frozenSelectionState.focus.key ||
+          selection.focus.offset !== frozenSelectionState.focus.offset;
+      } else {
+        shouldRestore = true;
+      }
     });
 
-    if (canRestore) {
+    if (shouldRestore) {
       this.editor.update(() => {
         const selection = Lr();
         if (yr(selection)) {
@@ -10708,8 +10725,6 @@ class LexicalEditorElement extends HTMLElement {
         }
       });
     }
-
-    this.focus();
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -10916,7 +10931,6 @@ class LexicalEditorElement extends HTMLElement {
 
   #dispatchAttributesChange() {
     let attributes = null;
-    let table = null;
     let link = null;
     let highlight = null;
 
@@ -10948,13 +10962,6 @@ class LexicalEditorElement extends HTMLElement {
       // Get list type
       const listType = getListType(anchorNode);
 
-      // Get table info
-      const tableCellNode = Be$1(anchorNode);
-      const tableNode = tableCellNode ? Qt(tableCellNode) : null;
-      const inTable = tableNode !== null;
-      const tableRows = tableNode?.getChildrenSize() ?? null;
-      const tableColumns = tableNode?.getFirstChild()?.getChildrenSize() ?? null;
-
       // Only include truthy attributes - false/undefined values mean "enabled but not active"
       // iOS interprets false as "disabled", so we must omit inactive attributes
       attributes = {};
@@ -10972,14 +10979,11 @@ class LexicalEditorElement extends HTMLElement {
       if (inHeading) attributes.heading = true;
       if (listType === "bullet") attributes["unordered-list"] = true;
       if (listType === "number") attributes["ordered-list"] = true;
-      if (inTable) attributes.table = true;
-
-      table = inTable ? { rows: tableRows, columns: tableColumns } : null;
       link = inLink && linkHref ? { href: linkHref } : null;
     });
 
     if (attributes) {
-      dispatch(this, "lexxy:attributes-change", { attributes, table, link, highlight });
+      dispatch(this, "lexxy:attributes-change", { attributes, link, highlight });
     }
   }
 
@@ -12509,15 +12513,12 @@ var TableIcons = {
 };
 
 class TableTools extends HTMLElement {
-  #isExternallyHidden = false
-
   connectedCallback() {
     this.tableController = new TableController(this.#editorElement);
 
     this.#setUpButtons();
     this.#monitorForTableSelection();
     this.#registerKeyboardShortcuts();
-    this.#registerExternalEvents();
   }
 
   disconnectedCallback() {
@@ -12527,7 +12528,6 @@ class TableTools extends HTMLElement {
     this.unregisterUpdateListener = null;
 
     this.removeEventListener("keydown", this.#handleToolsKeydown);
-    this.#unregisterExternalEvents();
 
     this.tableController?.destroy();
     this.tableController = null;
@@ -12666,40 +12666,6 @@ class TableTools extends HTMLElement {
     }
   }
 
-  #registerExternalEvents() {
-    this.#editorElement.addEventListener("lexxy:table-command", this.#handleTableCommandEvent);
-    this.#editorElement.addEventListener("lexxy:table-tools-visibility", this.#handleVisibilityEvent);
-  }
-
-  #unregisterExternalEvents() {
-    this.#editorElement.removeEventListener("lexxy:table-command", this.#handleTableCommandEvent);
-    this.#editorElement.removeEventListener("lexxy:table-tools-visibility", this.#handleVisibilityEvent);
-  }
-
-  #handleTableCommandEvent = (event) => {
-    const { command, customIndex } = event.detail || {};
-    if (!command || !this.tableController.currentTableNode) return
-
-    this.tableController.executeTableCommand(command, customIndex ?? null);
-    if (!this.#isExternallyHidden) {
-      this.#update();
-    }
-  }
-
-  #handleVisibilityEvent = (event) => {
-    const visible = event.detail?.visible !== false;
-    this.#isExternallyHidden = !visible;
-
-    if (this.#isExternallyHidden) {
-      this.#hide();
-      return
-    }
-
-    if (this.tableController.currentTableNode) {
-      this.#show();
-    }
-  }
-
   #handleEscapeKey() {
     const cell = this.tableController.currentCell;
     if (!cell) return
@@ -12770,10 +12736,6 @@ class TableTools extends HTMLElement {
   }
 
   #show() {
-    if (this.#isExternallyHidden) {
-      this.style.display = "none";
-      return
-    }
     this.style.display = "flex";
     this.#update();
   }
