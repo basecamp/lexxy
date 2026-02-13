@@ -8,7 +8,7 @@ import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { $isCodeNode, CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
-import { $findTableNode, $getTableCellNodeFromLexicalNode } from "@lexical/table"
+
 import { getListType } from "../helpers/lexical_helper"
 import { isSelectionHighlighted, getHighlightStyles } from "../helpers/format_helper"
 
@@ -437,7 +437,6 @@ export class LexicalEditorElement extends HTMLElement {
 
   #dispatchAttributesChange() {
     let attributes = null
-    let table = null
     let link = null
     let highlight = null
 
@@ -469,13 +468,6 @@ export class LexicalEditorElement extends HTMLElement {
       // Get list type
       const listType = getListType(anchorNode)
 
-      // Get table info
-      const tableCellNode = $getTableCellNodeFromLexicalNode(anchorNode)
-      const tableNode = tableCellNode ? $findTableNode(tableCellNode) : null
-      const inTable = tableNode !== null
-      const tableRows = tableNode?.getChildrenSize() ?? null
-      const tableColumns = tableNode?.getFirstChild()?.getChildrenSize() ?? null
-
       // Only include truthy attributes - false/undefined values mean "enabled but not active"
       // iOS interprets false as "disabled", so we must omit inactive attributes
       attributes = {}
@@ -493,14 +485,11 @@ export class LexicalEditorElement extends HTMLElement {
       if (inHeading) attributes.heading = true
       if (listType === "bullet") attributes["unordered-list"] = true
       if (listType === "number") attributes["ordered-list"] = true
-      if (inTable) attributes.table = true
-
-      table = inTable ? { rows: tableRows, columns: tableColumns } : null
       link = inLink && linkHref ? { href: linkHref } : null
     })
 
     if (attributes) {
-      dispatch(this, "lexxy:attributes-change", { attributes, table, link, highlight })
+      dispatch(this, "lexxy:attributes-change", { attributes, link, highlight })
     }
   }
 
