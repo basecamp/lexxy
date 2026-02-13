@@ -9,7 +9,7 @@ import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
-import { FormatEscaper } from "./format_escaper"
+import { FormatEscaper } from "./contents/format_escaper"
 import { $getNextSiblingOrParentSibling } from "@lexical/utils"
 import Uploader from "./contents/uploader"
 
