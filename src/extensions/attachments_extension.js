@@ -1,4 +1,4 @@
-import { $createParagraphNode, $getSelection, $isNodeSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
+import { $createParagraphNode, $getSelection, $isNodeSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, KEY_ENTER_COMMAND, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
 import { $getNearestNodeOfType, mergeRegister } from "@lexical/utils"
 import { $isAtNodeEnd } from "@lexical/selection"
 
@@ -24,8 +24,9 @@ export class AttachmentsExtension extends LexxyExtension {
       ],
       register(editor) {
         return mergeRegister(
-          editor.registerCommand(KEY_ENTER_COMMAND, $splitGallery, COMMAND_PRIORITY_HIGH),
-          editor.registerCommand(KEY_BACKSPACE_COMMAND, $collapseIntoGallery(), COMMAND_PRIORITY_HIGH),
+          //editor.registerCommand(KEY_ENTER_COMMAND, $splitGallery, COMMAND_PRIORITY_HIGH),
+          editor.registerCommand(KEY_BACKSPACE_COMMAND, $collapseIntoGallery, COMMAND_PRIORITY_HIGH),
+          editor.registerCommand(KEY_DELETE_COMMAND, $collapseIntoGallery, COMMAND_PRIORITY_HIGH),
           editor.registerCommand(KEY_ARROW_UP_COMMAND, () => $selectSibling("up"), COMMAND_PRIORITY_HIGH),
           editor.registerCommand(KEY_ARROW_DOWN_COMMAND, () => $selectSibling("down"), COMMAND_PRIORITY_HIGH),
           editor.registerCommand(KEY_ARROW_LEFT_COMMAND, () => $selectSiblingAtEdge("start"), COMMAND_PRIORITY_HIGH),

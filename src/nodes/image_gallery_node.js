@@ -106,6 +106,12 @@ export class ImageGalleryNode extends ElementNode {
     return $splitNode(this, index)
   }
 
+  insertNewAfter(_selection, restoreSelection) {
+    const newGallery = $createImageGalleryNode()
+    this.insertAfter(newGallery, restoreSelection)
+    return newGallery
+  }
+
   get #galleryClassNames () {
     return "attachment-gallery attachment-gallery--${this.getChildrenSize()}"
   }
