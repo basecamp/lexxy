@@ -8204,6 +8204,52 @@ class Selection {
     }
   }
 
+  // Selection preservation for native bridge dialogs
+  freeze() {
+    this.#expandLinkSelection();
+    this.editorContentElement.contentEditable = "false";
+  }
+
+  thaw() {
+    this.editorContentElement.contentEditable = "true";
+  }
+
+  #expandLinkSelection() {
+    let linkExpansion = null;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection) || !selection.isCollapsed()) return
+
+      let node = selection.anchor.getNode();
+      while (node) {
+        if (w$2(node)) {
+          const firstDescendant = node.getFirstDescendant();
+          const lastDescendant = node.getLastDescendant();
+          if (firstDescendant && lastDescendant) {
+            linkExpansion = {
+              anchorKey: firstDescendant.getKey(),
+              focusKey: lastDescendant.getKey(),
+              focusOffset: lastDescendant.getTextContent().length
+            };
+          }
+          return
+        }
+        node = node.getParent();
+      }
+    });
+
+    if (linkExpansion) {
+      this.editor.update(() => {
+        const selection = Lr();
+        if (yr(selection)) {
+          selection.anchor.set(linkExpansion.anchorKey, 0, "text");
+          selection.focus.set(linkExpansion.focusKey, linkExpansion.focusOffset, "text");
+        }
+      });
+    }
+  }
+
   get hasSelectedWordsInSingleLine() {
     const selection = Lr();
     if (!yr(selection)) return false
@@ -10374,6 +10420,97 @@ class Highlighter {
   }
 }
 
+class Native {
+  constructor(editorElement) {
+    this.editorElement = editorElement;
+    this.editor = editorElement.editor;
+  }
+
+  dispatchHighlightColors() {
+    const buttons = this.editorElement.config.get("highlight.buttons");
+    if (!buttons) return
+
+    dispatch(this.editorElement, "lexxy:highlight-colors", {
+      colors: this.#resolveColors("color", buttons.color || []),
+      backgroundColors: this.#resolveColors("background-color", buttons["background-color"] || [])
+    });
+  }
+
+  #resolveColors(property, cssValues) {
+    const resolver = document.createElement("span");
+    resolver.style.display = "none";
+    this.editorElement.appendChild(resolver);
+
+    const resolved = cssValues.map(cssValue => {
+      resolver.style.setProperty(property, cssValue);
+      const value = getComputedStyle(resolver).getPropertyValue(property);
+      resolver.style.removeProperty(property);
+      return { name: cssValue, value }
+    });
+
+    resolver.remove();
+    return resolved
+  }
+
+  dispatchAttributesChange() {
+    let attributes = null;
+    let link = null;
+    let highlight = null;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const anchorNode = selection.anchor.getNode();
+      if (!anchorNode.getParent()) return
+
+      // Get link info
+      let inLink = false;
+      let linkHref = null;
+      let node = anchorNode;
+      while (node) {
+        if (w$2(node)) {
+          inLink = true;
+          linkHref = node.getURL();
+          break
+        }
+        node = node.getParent();
+      }
+
+      // Get block-level info
+      const topLevelElement = anchorNode.getTopLevelElementOrThrow();
+      const inQuote = Ot$2(topLevelElement);
+      const inHeading = It$2(topLevelElement);
+
+      // Get list type
+      const listType = getListType(anchorNode);
+
+      // Only include truthy attributes - false/undefined values mean "enabled but not active"
+      // iOS interprets false as "disabled", so we must omit inactive attributes
+      attributes = {};
+      if (selection.hasFormat("bold")) attributes.bold = true;
+      if (selection.hasFormat("italic")) attributes.italic = true;
+      if (selection.hasFormat("strikethrough")) attributes.strikethrough = true;
+      const inCode = X$1(topLevelElement) || selection.hasFormat("code");
+      if (inCode) attributes.code = true;
+      if (isSelectionHighlighted(selection)) {
+        attributes.highlight = true;
+        highlight = getHighlightStyles(selection);
+      }
+      if (inLink) attributes.link = true;
+      if (inQuote) attributes.quote = true;
+      if (inHeading) attributes.heading = true;
+      if (listType === "bullet") attributes["unordered-list"] = true;
+      if (listType === "number") attributes["ordered-list"] = true;
+      link = inLink && linkHref ? { href: linkHref } : null;
+    });
+
+    if (attributes) {
+      dispatch(this.editorElement, "lexxy:attributes-change", { attributes, link, highlight });
+    }
+  }
+}
+
 const TRIX_LANGUAGE_ATTR = "language";
 
 const TrixContentExtension = Kl({
@@ -10568,11 +10705,15 @@ class LexicalEditorElement extends HTMLElement {
     this.contents = new Contents(this);
     this.selection = new Selection(this);
     this.clipboard = new Clipboard(this);
+    this.native = new Native(this);
 
     CommandDispatcher.configureFor(this);
     this.#initialize();
 
-    requestAnimationFrame(() => dispatch(this, "lexxy:initialize"));
+    requestAnimationFrame(() => {
+      dispatch(this, "lexxy:initialize");
+      this.native.dispatchHighlightColors();
+    });
     this.toggleAttribute("connected", true);
 
     this.#handleAutofocus();
@@ -10666,80 +10807,12 @@ class LexicalEditorElement extends HTMLElement {
     return this.config.get("richText")
   }
 
-  // Selection preservation for native bridge dialogs
   freezeSelection() {
-    this.frozenSelectionState = null;
-    this.editor.getEditorState().read(() => {
-      const selection = Lr();
-      if (!yr(selection)) return
-
-      // If cursor is inside a link, expand to cover the full link text
-      if (selection.isCollapsed()) {
-        let node = selection.anchor.getNode();
-        while (node) {
-          if (w$2(node)) {
-            const firstDescendant = node.getFirstDescendant();
-            const lastDescendant = node.getLastDescendant();
-            if (firstDescendant && lastDescendant) {
-              this.frozenSelectionState = {
-                anchor: { key: firstDescendant.getKey(), offset: 0 },
-                focus: { key: lastDescendant.getKey(), offset: lastDescendant.getTextContent().length }
-              };
-              return
-            }
-            break
-          }
-          node = node.getParent();
-        }
-      }
-
-      this.frozenSelectionState = {
-        anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
-        focus: { key: selection.focus.key, offset: selection.focus.offset }
-      };
-    });
+    this.selection.freeze();
   }
 
   thawSelection() {
-    const frozenSelectionState = this.frozenSelectionState;
-    this.frozenSelectionState = null;
-    if (!frozenSelectionState) return
-
-    let shouldRestore = false;
-    this.editor.getEditorState().read(() => {
-      const anchorNode = xo(frozenSelectionState.anchor.key);
-      const focusNode = xo(frozenSelectionState.focus.key);
-
-      // Skip if nodes were removed or content was truncated (e.g., text node
-      // split by link creation) — restoring would leave Lexical in a broken state.
-      if (!anchorNode?.isAttached() || !focusNode?.isAttached()) return
-      if (frozenSelectionState.anchor.offset > anchorNode.getTextContentSize()) return
-      if (frozenSelectionState.focus.offset > focusNode.getTextContentSize()) return
-
-      // Skip if the selection hasn't actually changed — an unnecessary
-      // editor.update() triggers DOM reconciliation that can disrupt Android
-      // WebView's input connection.
-      const selection = Lr();
-      if (yr(selection)) {
-        shouldRestore =
-          selection.anchor.key !== frozenSelectionState.anchor.key ||
-          selection.anchor.offset !== frozenSelectionState.anchor.offset ||
-          selection.focus.key !== frozenSelectionState.focus.key ||
-          selection.focus.offset !== frozenSelectionState.focus.offset;
-      } else {
-        shouldRestore = true;
-      }
-    });
-
-    if (shouldRestore) {
-      this.editor.update(() => {
-        const selection = Lr();
-        if (yr(selection)) {
-          selection.anchor.set(frozenSelectionState.anchor.key, frozenSelectionState.anchor.offset, "text");
-          selection.focus.set(frozenSelectionState.focus.key, frozenSelectionState.focus.offset, "text");
-        }
-      });
-    }
+    this.selection.thaw();
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -10766,8 +10839,6 @@ class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
-    // Clearing/replacing content can invalidate any preserved selection keys.
-    this.frozenSelectionState = null;
     this.editor.update(() => {
       ns(zn);
       const root = No();
@@ -10940,66 +11011,8 @@ class LexicalEditorElement extends HTMLElement {
       this.#internalFormValue = this.value;
       this.#toggleEmptyStatus();
       this.#setValidity();
-      this.#dispatchAttributesChange();
+      this.native.dispatchAttributesChange();
     }));
-  }
-
-  #dispatchAttributesChange() {
-    let attributes = null;
-    let link = null;
-    let highlight = null;
-
-    this.editor.getEditorState().read(() => {
-      const selection = Lr();
-      if (!yr(selection)) return
-
-      const anchorNode = selection.anchor.getNode();
-      if (!anchorNode.getParent()) return
-
-      // Get link info
-      let inLink = false;
-      let linkHref = null;
-      let node = anchorNode;
-      while (node) {
-        if (w$2(node)) {
-          inLink = true;
-          linkHref = node.getURL();
-          break
-        }
-        node = node.getParent();
-      }
-
-      // Get block-level info
-      const topLevelElement = anchorNode.getTopLevelElementOrThrow();
-      const inQuote = Ot$2(topLevelElement);
-      const inHeading = It$2(topLevelElement);
-
-      // Get list type
-      const listType = getListType(anchorNode);
-
-      // Only include truthy attributes - false/undefined values mean "enabled but not active"
-      // iOS interprets false as "disabled", so we must omit inactive attributes
-      attributes = {};
-      if (selection.hasFormat("bold")) attributes.bold = true;
-      if (selection.hasFormat("italic")) attributes.italic = true;
-      if (selection.hasFormat("strikethrough")) attributes.strikethrough = true;
-      const inCode = X$1(topLevelElement) || selection.hasFormat("code");
-      if (inCode) attributes.code = true;
-      if (isSelectionHighlighted(selection)) {
-        attributes.highlight = true;
-        highlight = getHighlightStyles(selection);
-      }
-      if (inLink) attributes.link = true;
-      if (inQuote) attributes.quote = true;
-      if (inHeading) attributes.heading = true;
-      if (listType === "bullet") attributes["unordered-list"] = true;
-      if (listType === "number") attributes["ordered-list"] = true;
-      link = inLink && linkHref ? { href: linkHref } : null;
-    });
-
-    if (attributes) {
-      dispatch(this, "lexxy:attributes-change", { attributes, link, highlight });
-    }
   }
 
   #clearCachedValues() {
@@ -11076,7 +11089,7 @@ class LexicalEditorElement extends HTMLElement {
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
-      this.#dispatchAttributesChange();
+      this.native.dispatchAttributesChange();
       dispatch(this, "lexxy:focus");
       this.currentlyFocused = true;
     }
@@ -11153,7 +11166,6 @@ class LexicalEditorElement extends HTMLElement {
 
   #reset() {
     this.#unregisterHandlers();
-    this.frozenSelectionState = null;
 
     if (this.editorContentElement) {
       this.editorContentElement.remove();
@@ -11179,6 +11191,7 @@ class LexicalEditorElement extends HTMLElement {
     }
 
     this.selection = null;
+    this.native = null;
 
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache);
   }
