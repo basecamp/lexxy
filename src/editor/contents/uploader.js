@@ -1,7 +1,8 @@
-import { $getSiblingCaret } from "lexical"
+import { $getSelection, $getSiblingCaret } from "lexical"
 import { isPreviewableImage } from "../../helpers/html_helper"
 import { $createActionTextAttachmentUploadNode } from "../../nodes/action_text_attachment_upload_node"
-import { $createImageGalleryNode, $findOrCreateGalleryFor } from "../../nodes/image_gallery_node"
+import { $createImageGalleryNode, $findOrCreateGalleryFor, ImageGalleryNode } from "../../nodes/image_gallery_node"
+import { $getNearestNodeOfType } from "@lexical/utils"
 
 export default class Uploader {
   #files
@@ -95,8 +96,11 @@ class GalleryUploader extends Uploader {
   }
 
   get #galleryInsertPosition() {
-    const node = this.#selectedNode
-    const childIndex = this.#gallery?.isParentOf(node) && node.getIndexWithinParent()
+    const galleryHasElementSelection = $getSelection().anchor?.getNode().is(this.#gallery)
+    if (galleryHasElementSelection) return $getSelection().anchor.offset
+
+    const selectedNode = this.#selectedNode
+    const childIndex = this.#gallery?.isParentOf(selectedNode) && selectedNode.getIndexWithinParent()
     return childIndex ? (childIndex + 1) : 0
   }
 
