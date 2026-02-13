@@ -7779,6 +7779,7 @@ const COMMANDS = [
   "insertOrderedList",
   "insertQuoteBlock",
   "insertCodeBlock",
+  "setCodeLanguage",
   "insertHorizontalDivider",
   "uploadAttachments",
 
@@ -7886,6 +7887,20 @@ class CommandDispatcher {
         this.editor.dispatchCommand(_e$1, "code");
       } else {
         this.contents.toggleNodeWrappingAllSelectedLines((node) => X$1(node), () => new q$2("plain"));
+      }
+    });
+  }
+
+  dispatchSetCodeLanguage(language) {
+    this.editor.update(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const anchorNode = selection.anchor.getNode();
+      const topLevelElement = anchorNode.getTopLevelElementOrThrow();
+
+      if (X$1(topLevelElement)) {
+        topLevelElement.setLanguage(language);
       }
     });
   }
@@ -11996,6 +12011,17 @@ class CodeLanguagePicker extends HTMLElement {
       this.#updateCodeBlockLanguage(this.languagePickerElement.value);
     });
 
+    this.languagePickerElement.addEventListener("mousedown", (event) => {
+      const handled = !dispatch(this.editorElement, "lexxy:code-language-picker-open", {
+        languages: this.#bridgeLanguages,
+        currentLanguage: this.languagePickerElement.value
+      }, true);
+
+      if (handled) {
+        event.preventDefault();
+      }
+    });
+
     this.languagePickerElement.setAttribute("nonce", getNonce());
     this.appendChild(this.languagePickerElement);
   }
@@ -12030,6 +12056,10 @@ class CodeLanguagePicker extends HTMLElement {
     const plainIndex = sortedEntries.findIndex(([ key ]) => key === "plain");
     const plainEntry = sortedEntries.splice(plainIndex, 1)[0];
     return Object.fromEntries([ plainEntry, ...sortedEntries ])
+  }
+
+  get #bridgeLanguages() {
+    return Object.entries(this.#languages).map(([key, name]) => ({ key, name }))
   }
 
   #updateCodeBlockLanguage(language) {
