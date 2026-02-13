@@ -1,7 +1,7 @@
 import { $getSelection, $getSiblingCaret } from "lexical"
 import { isPreviewableImage } from "../../helpers/html_helper"
 import { $createActionTextAttachmentUploadNode } from "../../nodes/action_text_attachment_upload_node"
-import { $createImageGalleryNode, $findOrCreateGalleryFor, ImageGalleryNode } from "../../nodes/image_gallery_node"
+import { $createImageGalleryNode, $findOrCreateGalleryForImage, ImageGalleryNode } from "../../nodes/image_gallery_node"
 import { $getNearestNodeOfType } from "@lexical/utils"
 
 export default class Uploader {
@@ -83,7 +83,7 @@ class GalleryUploader extends Uploader {
 
   #findOrCreateGallery() {
     if (this.selection.isOnPreviewableImage) {
-      this.#gallery = $findOrCreateGalleryFor(this.#selectedNode)
+      this.#gallery = $findOrCreateGalleryForImage(this.#selectedNode)
     } else {
       this.#gallery = $createImageGalleryNode()
       this.contents.insertAtCursor(this.#gallery)

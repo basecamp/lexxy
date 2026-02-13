@@ -123,7 +123,7 @@ export function $isImageGalleryNode(node) {
   return node instanceof ImageGalleryNode
 }
 
-export function $findOrCreateGalleryFor(node) {
+export function $findOrCreateGalleryForImage(node) {
   const existingGallery = $getNearestNodeOfType(node, ImageGalleryNode)
   return existingGallery || $wrapNodeInElement(node, $createImageGalleryNode)
 }
