@@ -96,9 +96,8 @@ export class ImageGalleryNode extends ElementNode {
     return "attachment-gallery"
   }
 
-  #hasSelectionWithin(selection = null) {
-    const targetSelection = selection || $getSelection()
-    return targetSelection?.getNodes().some(node => node.is(this) || this.isParentOf(node))
+  #hasSelectionWithin(selection = $getSelection()) {
+    return selection?.getNodes().some(node => node.is(this) || this.isParentOf(node))
   }
 }
 
