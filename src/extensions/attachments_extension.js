@@ -1,12 +1,13 @@
-import { $createParagraphNode, $getSelection, $isNodeSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
+import { $createParagraphNode, $getSelection, $isNodeSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_BACKSPACE_COMMAND, KEY_ENTER_COMMAND, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
 import { $getNearestNodeOfType, mergeRegister } from "@lexical/utils"
 import { $isAtNodeEnd } from "@lexical/selection"
 
-import { $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
-import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { $findOrCreateGalleryForImage, $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
+import { $isActionTextAttachmentNode, ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node.js"
 
 import LexxyExtension from "./lexxy_extension"
+import { $isProvisionalParagraphNode } from "../nodes/provisional_paragraph_node.js"
 
 export class AttachmentsExtension extends LexxyExtension {
   get enabled() {
@@ -24,6 +25,7 @@ export class AttachmentsExtension extends LexxyExtension {
       register(editor) {
         return mergeRegister(
           editor.registerCommand(KEY_ENTER_COMMAND, $splitGallery, COMMAND_PRIORITY_HIGH),
+          editor.registerCommand(KEY_BACKSPACE_COMMAND, $collapseIntoGallery(), COMMAND_PRIORITY_HIGH),
           editor.registerCommand(KEY_ARROW_UP_COMMAND, () => $selectSibling("up"), COMMAND_PRIORITY_HIGH),
           editor.registerCommand(KEY_ARROW_DOWN_COMMAND, () => $selectSibling("down"), COMMAND_PRIORITY_HIGH),
           editor.registerCommand(KEY_ARROW_LEFT_COMMAND, () => $selectSiblingAtEdge("start"), COMMAND_PRIORITY_HIGH),
@@ -47,6 +49,25 @@ function $insertParagraphAfterNode() {
     paragraph.selectStart()
     return true
   }
+}
+
+function $collapseIntoGallery() {
+  const selectedNode = $getSelection()?.anchor?.getNode()
+  if (!selectedNode) return false
+
+  const isWithinProvisionalParagraph = $isProvisionalParagraphNode(selectedNode)
+  const siblings = [ selectedNode.getPreviousSibling(), selectedNode.getNextSibling() ]
+  const isBetweenImagesOrGalleries = siblings.every(node => $isImageGalleryNode(node) || ($isActionTextAttachmentNode(node) && node.isPreviewableImage))
+
+  if (isWithinProvisionalParagraph && isBetweenImagesOrGalleries) {
+    const [ topGallery, bottomGallery ] = siblings.map($findOrCreateGalleryForImage)
+    const selectionIndex = topGallery.getChildrenSize()
+    topGallery.merge(bottomGallery)
+    topGallery.select(selectionIndex)
+    return true
+  }
+
+  return false
 }
 
 function $splitGallery() {

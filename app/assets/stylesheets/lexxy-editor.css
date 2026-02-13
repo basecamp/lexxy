@@ -736,10 +736,6 @@
   .attachment__caption {
     padding: 0;
   }
-
-  &.attachment {
-    display: inline-block;
-  }
 }
 
 :where(.attachment__caption) {
