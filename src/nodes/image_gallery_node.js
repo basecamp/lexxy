@@ -28,13 +28,17 @@ export class ImageGalleryNode extends ElementNode {
           conversion: () => {
             return {
               node: $createImageGalleryNode(),
-              after: children => $descendantsMatching(children, $isActionTextAttachmentNode)
+              after: children => $descendantsMatching(children, this.isValidChild)
             }
           },
           priority: 2
         }
       }
     }
+  }
+
+  static isValidChild(node) {
+    return $isActionTextAttachmentNode(node) && node.isPreviewableAttachment
   }
 
   static get #attachmentTags() {
@@ -78,7 +82,7 @@ export class ImageGalleryNode extends ElementNode {
 
   splitAroundInvalidChild() {
     for (const child of $firstToLastIterator(this)) {
-      if (!this.isValidChild(child)) {
+      if (!this.constructor.isValidChild(child)) {
         const poppedNode = $makeSafeForRoot(child)
         const [ topGallery ] = $splitNode(this, poppedNode.getIndexWithinParent())
         topGallery.insertAfter(poppedNode)
@@ -86,10 +90,6 @@ export class ImageGalleryNode extends ElementNode {
         break
       }
     }
-  }
-
-  isValidChild(node) {
-    return $isActionTextAttachmentNode(node) && node.isPreviewableAttachment
   }
 
   get #galleryClassNames () {
