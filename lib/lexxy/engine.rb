@@ -29,7 +29,7 @@ module Lexxy
     initializer "lexxy.assets" do |app|
       if Rails.application.config.respond_to?(:assets)
         app.config.assets.paths << root.join("app/assets/stylesheets")
-        app.config.assets.paths << root.join("app/javascript")
+        app.config.assets.paths << root.join("app/assets/javascript")
       end
     end
 
