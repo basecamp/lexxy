@@ -1,5 +1,5 @@
-import { $createParagraphNode, $getSelection, $isNodeSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
-import { $getNearestNodeOfType, mergeRegister } from "@lexical/utils"
+import { $getSelection, $isNodeSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
+import { mergeRegister } from "@lexical/utils"
 import { $isAtNodeEnd } from "@lexical/selection"
 
 import { $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
@@ -23,7 +23,6 @@ export class AttachmentsExtension extends LexxyExtension {
       ],
       register(editor) {
         return mergeRegister(
-          editor.registerCommand(SELECTION_CHANGE_COMMAND, $ensureGalleryChildSelection, COMMAND_PRIORITY_HIGH),
           editor.registerCommand(KEY_ENTER_COMMAND, $insertParagraphAfterNode, COMMAND_PRIORITY_HIGH),
           editor.registerCommand(KEY_ARROW_UP_COMMAND, () => $selectSibling("up"), COMMAND_PRIORITY_HIGH),
           editor.registerCommand(KEY_ARROW_DOWN_COMMAND, () => $selectSibling("down"), COMMAND_PRIORITY_HIGH),
@@ -32,21 +31,6 @@ export class AttachmentsExtension extends LexxyExtension {
         )
       }
     })
-  }
-}
-
-function $ensureGalleryChildSelection() {
-  const selection = $getSelection()
-  if (!$isRangeSelection(selection) || selection.anchor.type !== "element") return false
-
-  const { anchor, focus } = selection
-  const topElement = anchor.getNode().getTopLevelElement()
-
-  if ($isImageGalleryNode(topElement)) {
-    topElement.select(anchor.offset, focus.offset)
-    return true
-  } else {
-    return false
   }
 }
 

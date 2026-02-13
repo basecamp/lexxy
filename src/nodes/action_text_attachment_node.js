@@ -1,5 +1,5 @@
 import Lexxy from "../config/lexxy"
-import { $getEditor, $setSelection, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
+import { $getEditor, $getNearestRootOrShadowRoot, $getRoot, $setSelection, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 import { $createNodeSelectionWith } from "../helpers/lexical_helper"
@@ -126,7 +126,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   isInline() {
-    return false
+    return this.isAttached() && !this.getParent().is($getNearestRootOrShadowRoot(this))
   }
 
   exportDOM() {

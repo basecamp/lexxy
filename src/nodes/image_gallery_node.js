@@ -1,4 +1,4 @@
-import { $createParagraphNode, $getSelection, $splitNode, ElementNode } from "lexical"
+import { $createParagraphNode, $getSelection, $isTextNode, $splitNode, ElementNode } from "lexical"
 import { $descendantsMatching, $firstToLastIterator, $getNearestNodeOfType, $unwrapNode, $wrapNodeInElement } from "@lexical/utils"
 
 import { $isActionTextAttachmentNode, ActionTextAttachmentNode } from "./action_text_attachment_node"
@@ -47,30 +47,8 @@ export class ImageGalleryNode extends ElementNode {
     return false
   }
 
-  select(anchorOffset, _focusOffset) {
-    if (anchorOffset === undefined) {
-      return this.selectNext(0, 0)
-    } else if (anchorOffset === 0) {
-      return this.selectPrevious()
-    } else {
-      // adjust so we can select forwards/backwards
-      const targetChild = this.getChildAtIndex(anchorOffset) ?? this.getLastChild()
-      const selectionTarget = targetChild.isSelected($getSelection()) ? targetChild.getPreviousSibling() : targetChild
-      return selectionTarget.select()
-    }
-  }
-
-  canInsertTextBefore() {
-    return false
-  }
-
-  canInsertTextAfter() {
-    return false
-  }
-
   canBeEmpty() {
-    // lying to get the right behavior: a transform handles clean-up
-    return true
+    return false
   }
 
   getImageAttachments() {
@@ -96,7 +74,7 @@ export class ImageGalleryNode extends ElementNode {
   splitAroundInvalidChild() {
     for (const child of $firstToLastIterator(this)) {
       if (!this.isValidChild(child)) {
-        const poppedNode = child.isParentRequired() ? $wrapNodeInElement(child, $createParagraphNode) : child
+        const poppedNode = $isTextNode(child) ? $wrapNodeInElement(child, $createParagraphNode) : child
         const [ topGallery ] = $splitNode(this, poppedNode.getIndexWithinParent())
         topGallery.insertAfter(poppedNode)
         poppedNode.selectEnd()
