@@ -118,82 +118,48 @@ export default class Selection {
 
   // Selection preservation for native bridge dialogs
   freeze() {
-    this.frozenState = null
-    this.editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      // If cursor is inside a link, expand to cover the full link text
-      if (selection.isCollapsed()) {
-        let node = selection.anchor.getNode()
-        while (node) {
-          if ($isLinkNode(node)) {
-            const firstDescendant = node.getFirstDescendant()
-            const lastDescendant = node.getLastDescendant()
-            if (firstDescendant && lastDescendant) {
-              this.frozenState = {
-                anchor: { key: firstDescendant.getKey(), offset: 0 },
-                focus: { key: lastDescendant.getKey(), offset: lastDescendant.getTextContent().length }
-              }
-              return
-            }
-            break
-          }
-          node = node.getParent()
-        }
-      }
-
-      this.frozenState = {
-        anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
-        focus: { key: selection.focus.key, offset: selection.focus.offset }
-      }
-    })
+    this.#expandLinkSelection()
+    this.editorContentElement.contentEditable = "false"
   }
 
   thaw() {
-    const frozenState = this.frozenState
-    this.frozenState = null
-    if (!frozenState) return
+    this.editorContentElement.contentEditable = "true"
+  }
 
-    let shouldRestore = false
+  #expandLinkSelection() {
+    let linkExpansion = null
+
     this.editor.getEditorState().read(() => {
-      const anchorNode = $getNodeByKey(frozenState.anchor.key)
-      const focusNode = $getNodeByKey(frozenState.focus.key)
-
-      // Skip if nodes were removed or content was truncated (e.g., text node
-      // split by link creation) — restoring would leave Lexical in a broken state.
-      if (!anchorNode?.isAttached() || !focusNode?.isAttached()) return
-      if (frozenState.anchor.offset > anchorNode.getTextContentSize()) return
-      if (frozenState.focus.offset > focusNode.getTextContentSize()) return
-
-      // Skip if the selection hasn't actually changed — an unnecessary
-      // editor.update() triggers DOM reconciliation that can disrupt Android
-      // WebView's input connection.
       const selection = $getSelection()
-      if ($isRangeSelection(selection)) {
-        shouldRestore =
-          selection.anchor.key !== frozenState.anchor.key ||
-          selection.anchor.offset !== frozenState.anchor.offset ||
-          selection.focus.key !== frozenState.focus.key ||
-          selection.focus.offset !== frozenState.focus.offset
-      } else {
-        shouldRestore = true
+      if (!$isRangeSelection(selection) || !selection.isCollapsed()) return
+
+      let node = selection.anchor.getNode()
+      while (node) {
+        if ($isLinkNode(node)) {
+          const firstDescendant = node.getFirstDescendant()
+          const lastDescendant = node.getLastDescendant()
+          if (firstDescendant && lastDescendant) {
+            linkExpansion = {
+              anchorKey: firstDescendant.getKey(),
+              focusKey: lastDescendant.getKey(),
+              focusOffset: lastDescendant.getTextContent().length
+            }
+          }
+          return
+        }
+        node = node.getParent()
       }
     })
 
-    if (shouldRestore) {
+    if (linkExpansion) {
       this.editor.update(() => {
         const selection = $getSelection()
         if ($isRangeSelection(selection)) {
-          selection.anchor.set(frozenState.anchor.key, frozenState.anchor.offset, "text")
-          selection.focus.set(frozenState.focus.key, frozenState.focus.offset, "text")
+          selection.anchor.set(linkExpansion.anchorKey, 0, "text")
+          selection.focus.set(linkExpansion.focusKey, linkExpansion.focusOffset, "text")
         }
       })
     }
-  }
-
-  invalidateFrozenState() {
-    this.frozenState = null
   }
 
   get hasSelectedWordsInSingleLine() {

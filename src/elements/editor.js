@@ -191,8 +191,6 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
-    // Clearing/replacing content can invalidate any preserved selection keys.
-    this.selection?.invalidateFrozenState()
     this.editor.update(() => {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       const root = $getRoot()
@@ -527,7 +525,6 @@ export class LexicalEditorElement extends HTMLElement {
 
   #reset() {
     this.#unregisterHandlers()
-    this.selection?.invalidateFrozenState()
 
     if (this.editorContentElement) {
       this.editorContentElement.remove()
