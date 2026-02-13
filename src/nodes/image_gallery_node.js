@@ -60,6 +60,16 @@ export class ImageGalleryNode extends ElementNode {
     return false
   }
 
+  collapseAtStart(selection) {
+    const shouldCollapse = true
+
+    if (shouldCollapse) {
+
+    }
+
+    return false
+  }
+
   getImageAttachments() {
     const children = this.getChildren()
     return children.filter($isActionTextAttachmentNode)
@@ -84,12 +94,16 @@ export class ImageGalleryNode extends ElementNode {
     for (const child of $firstToLastIterator(this)) {
       if (!this.constructor.isValidChild(child)) {
         const poppedNode = $makeSafeForRoot(child)
-        const [ topGallery ] = $splitNode(this, poppedNode.getIndexWithinParent())
+        const [ topGallery ] = this.splitAtIndex(poppedNode.getIndexWithinParent())
         topGallery.insertAfter(poppedNode)
         poppedNode.selectEnd()
         break
       }
     }
+  }
+
+  splitAtIndex(index) {
+    return $splitNode(this, index)
   }
 
   get #galleryClassNames () {
