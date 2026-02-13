@@ -1,7 +1,8 @@
-import { $createParagraphNode, $getSelection, $isTextNode, $splitNode, ElementNode } from "lexical"
+import { $getSelection, $splitNode, ElementNode } from "lexical"
 import { $descendantsMatching, $firstToLastIterator, $getNearestNodeOfType, $unwrapNode, $wrapNodeInElement } from "@lexical/utils"
 
 import { $isActionTextAttachmentNode, ActionTextAttachmentNode } from "./action_text_attachment_node"
+import { $makeSafeForRoot } from "../helpers/lexical_helper"
 
 export class ImageGalleryNode extends ElementNode {
   $config() {
@@ -74,7 +75,7 @@ export class ImageGalleryNode extends ElementNode {
   splitAroundInvalidChild() {
     for (const child of $firstToLastIterator(this)) {
       if (!this.isValidChild(child)) {
-        const poppedNode = $isTextNode(child) ? $wrapNodeInElement(child, $createParagraphNode) : child
+        const poppedNode = $makeSafeForRoot(child)
         const [ topGallery ] = $splitNode(this, poppedNode.getIndexWithinParent())
         topGallery.insertAfter(poppedNode)
         poppedNode.selectEnd()
