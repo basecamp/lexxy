@@ -1,16 +1,13 @@
-import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, $getSelection, $isRangeSelection, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
-import { $isLinkNode, AutoLinkNode, LinkNode } from "@lexical/link"
+import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { registerPlainText } from "@lexical/plain-text"
-import { $isHeadingNode, $isQuoteNode, HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
+import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
-import { $isCodeNode, CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
+import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
-
-import { getListType } from "../helpers/lexical_helper"
-import { isSelectionHighlighted, getHighlightStyles } from "../helpers/format_helper"
 
 import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
@@ -26,6 +23,7 @@ import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
 import Highlighter from "../editor/highlighter"
+import Native from "../editor/native"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
@@ -59,11 +57,15 @@ export class LexicalEditorElement extends HTMLElement {
     this.contents = new Contents(this)
     this.selection = new Selection(this)
     this.clipboard = new Clipboard(this)
+    this.native = new Native(this)
 
     CommandDispatcher.configureFor(this)
     this.#initialize()
 
-    requestAnimationFrame(() => dispatch(this, "lexxy:initialize"))
+    requestAnimationFrame(() => {
+      dispatch(this, "lexxy:initialize")
+      this.native.dispatchHighlightColors()
+    })
     this.toggleAttribute("connected", true)
 
     this.#handleAutofocus()
@@ -157,80 +159,12 @@ export class LexicalEditorElement extends HTMLElement {
     return this.config.get("richText")
   }
 
-  // Selection preservation for native bridge dialogs
   freezeSelection() {
-    this.frozenSelectionState = null
-    this.editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      // If cursor is inside a link, expand to cover the full link text
-      if (selection.isCollapsed()) {
-        let node = selection.anchor.getNode()
-        while (node) {
-          if ($isLinkNode(node)) {
-            const firstDescendant = node.getFirstDescendant()
-            const lastDescendant = node.getLastDescendant()
-            if (firstDescendant && lastDescendant) {
-              this.frozenSelectionState = {
-                anchor: { key: firstDescendant.getKey(), offset: 0 },
-                focus: { key: lastDescendant.getKey(), offset: lastDescendant.getTextContent().length }
-              }
-              return
-            }
-            break
-          }
-          node = node.getParent()
-        }
-      }
-
-      this.frozenSelectionState = {
-        anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
-        focus: { key: selection.focus.key, offset: selection.focus.offset }
-      }
-    })
+    this.selection.freeze()
   }
 
   thawSelection() {
-    const frozenSelectionState = this.frozenSelectionState
-    this.frozenSelectionState = null
-    if (!frozenSelectionState) return
-
-    let shouldRestore = false
-    this.editor.getEditorState().read(() => {
-      const anchorNode = $getNodeByKey(frozenSelectionState.anchor.key)
-      const focusNode = $getNodeByKey(frozenSelectionState.focus.key)
-
-      // Skip if nodes were removed or content was truncated (e.g., text node
-      // split by link creation) — restoring would leave Lexical in a broken state.
-      if (!anchorNode?.isAttached() || !focusNode?.isAttached()) return
-      if (frozenSelectionState.anchor.offset > anchorNode.getTextContentSize()) return
-      if (frozenSelectionState.focus.offset > focusNode.getTextContentSize()) return
-
-      // Skip if the selection hasn't actually changed — an unnecessary
-      // editor.update() triggers DOM reconciliation that can disrupt Android
-      // WebView's input connection.
-      const selection = $getSelection()
-      if ($isRangeSelection(selection)) {
-        shouldRestore =
-          selection.anchor.key !== frozenSelectionState.anchor.key ||
-          selection.anchor.offset !== frozenSelectionState.anchor.offset ||
-          selection.focus.key !== frozenSelectionState.focus.key ||
-          selection.focus.offset !== frozenSelectionState.focus.offset
-      } else {
-        shouldRestore = true
-      }
-    })
-
-    if (shouldRestore) {
-      this.editor.update(() => {
-        const selection = $getSelection()
-        if ($isRangeSelection(selection)) {
-          selection.anchor.set(frozenSelectionState.anchor.key, frozenSelectionState.anchor.offset, "text")
-          selection.focus.set(frozenSelectionState.focus.key, frozenSelectionState.focus.offset, "text")
-        }
-      })
-    }
+    this.selection.thaw()
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -257,8 +191,6 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
-    // Clearing/replacing content can invalidate any preserved selection keys.
-    this.frozenSelectionState = null
     this.editor.update(() => {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       const root = $getRoot()
@@ -431,66 +363,8 @@ export class LexicalEditorElement extends HTMLElement {
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
       this.#setValidity()
-      this.#dispatchAttributesChange()
+      this.native.dispatchAttributesChange()
     }))
-  }
-
-  #dispatchAttributesChange() {
-    let attributes = null
-    let link = null
-    let highlight = null
-
-    this.editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const anchorNode = selection.anchor.getNode()
-      if (!anchorNode.getParent()) return
-
-      // Get link info
-      let inLink = false
-      let linkHref = null
-      let node = anchorNode
-      while (node) {
-        if ($isLinkNode(node)) {
-          inLink = true
-          linkHref = node.getURL()
-          break
-        }
-        node = node.getParent()
-      }
-
-      // Get block-level info
-      const topLevelElement = anchorNode.getTopLevelElementOrThrow()
-      const inQuote = $isQuoteNode(topLevelElement)
-      const inHeading = $isHeadingNode(topLevelElement)
-
-      // Get list type
-      const listType = getListType(anchorNode)
-
-      // Only include truthy attributes - false/undefined values mean "enabled but not active"
-      // iOS interprets false as "disabled", so we must omit inactive attributes
-      attributes = {}
-      if (selection.hasFormat("bold")) attributes.bold = true
-      if (selection.hasFormat("italic")) attributes.italic = true
-      if (selection.hasFormat("strikethrough")) attributes.strikethrough = true
-      const inCode = $isCodeNode(topLevelElement) || selection.hasFormat("code")
-      if (inCode) attributes.code = true
-      if (isSelectionHighlighted(selection)) {
-        attributes.highlight = true
-        highlight = getHighlightStyles(selection)
-      }
-      if (inLink) attributes.link = true
-      if (inQuote) attributes.quote = true
-      if (inHeading) attributes.heading = true
-      if (listType === "bullet") attributes["unordered-list"] = true
-      if (listType === "number") attributes["ordered-list"] = true
-      link = inLink && linkHref ? { href: linkHref } : null
-    })
-
-    if (attributes) {
-      dispatch(this, "lexxy:attributes-change", { attributes, link, highlight })
-    }
   }
 
   #clearCachedValues() {
@@ -567,7 +441,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
-      this.#dispatchAttributesChange()
+      this.native.dispatchAttributesChange()
       dispatch(this, "lexxy:focus")
       this.currentlyFocused = true
     }
@@ -651,7 +525,6 @@ export class LexicalEditorElement extends HTMLElement {
 
   #reset() {
     this.#unregisterHandlers()
-    this.frozenSelectionState = null
 
     if (this.editorContentElement) {
       this.editorContentElement.remove()
@@ -677,6 +550,7 @@ export class LexicalEditorElement extends HTMLElement {
     }
 
     this.selection = null
+    this.native = null
 
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
   }
