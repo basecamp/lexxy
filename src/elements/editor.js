@@ -62,7 +62,10 @@ export class LexicalEditorElement extends HTMLElement {
     CommandDispatcher.configureFor(this)
     this.#initialize()
 
-    requestAnimationFrame(() => dispatch(this, "lexxy:initialize"))
+    requestAnimationFrame(() => {
+      dispatch(this, "lexxy:initialize")
+      this.native.dispatchHighlightColors()
+    })
     this.toggleAttribute("connected", true)
 
     this.#handleAutofocus()

@@ -13,6 +13,32 @@ export default class Native {
     this.editor = editorElement.editor
   }
 
+  dispatchHighlightColors() {
+    const buttons = this.editorElement.config.get("highlight.buttons")
+    if (!buttons) return
+
+    dispatch(this.editorElement, "lexxy:highlight-colors", {
+      colors: this.#resolveColors("color", buttons.color || []),
+      backgroundColors: this.#resolveColors("background-color", buttons["background-color"] || [])
+    })
+  }
+
+  #resolveColors(property, cssValues) {
+    const resolver = document.createElement("span")
+    resolver.style.display = "none"
+    this.editorElement.appendChild(resolver)
+
+    const resolved = cssValues.map(cssValue => {
+      resolver.style.setProperty(property, cssValue)
+      const value = getComputedStyle(resolver).getPropertyValue(property)
+      resolver.style.removeProperty(property)
+      return { name: cssValue, value }
+    })
+
+    resolver.remove()
+    return resolved
+  }
+
   dispatchAttributesChange() {
     let attributes = null
     let link = null
