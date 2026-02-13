@@ -36,6 +36,7 @@ const COMMANDS = [
   "insertOrderedList",
   "insertQuoteBlock",
   "insertCodeBlock",
+  "setCodeLanguage",
   "insertHorizontalDivider",
   "uploadAttachments",
 
@@ -143,6 +144,20 @@ export class CommandDispatcher {
         this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
       } else {
         this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new CodeNode("plain"))
+      }
+    })
+  }
+
+  dispatchSetCodeLanguage(language) {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const anchorNode = selection.anchor.getNode()
+      const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+
+      if ($isCodeNode(topLevelElement)) {
+        topLevelElement.setLanguage(language)
       }
     })
   }
