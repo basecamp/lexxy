@@ -52,7 +52,7 @@ export class ImageGalleryNode extends ElementNode {
   }
 
   updateDOM(_prevNode, dom) {
-    dom.classList = this.#galleryClassNames
+    dom.className = this.#galleryClassNames
     return false
   }
 
@@ -107,7 +107,7 @@ export class ImageGalleryNode extends ElementNode {
   }
 
   get #galleryClassNames () {
-    return "attachment-gallery"
+    return "attachment-gallery attachment-gallery--${this.getChildrenSize()}"
   }
 
   #hasSelectionWithin(selection = $getSelection()) {
