@@ -274,8 +274,8 @@ export default class Contents {
     let focusNode = null
     let focusIsPreviousSibling
 
-    this.editor.update(() => {
-      if (this.#selection.hasNodeSelection) {
+    if (this.#selection.$hasNodeSelection) {
+      this.editor.update(() => {
         const nodesToRemove = $getSelection().getNodes()
         if (nodesToRemove.length === 0) return
 
@@ -284,8 +284,8 @@ export default class Contents {
 
         this.#selectAfterDeletion(focusNode, focusIsPreviousSibling)
         this.editor.focus()
-      }
-    })
+      })
+    }
   }
 
   replaceNodeWithHTML(nodeKey, html, options = {}) {
