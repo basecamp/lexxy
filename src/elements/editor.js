@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getNodeByKey, $getRoot, $getSelection, $isRangeSelection, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isRangeSelection, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { $isLinkNode, AutoLinkNode, LinkNode } from "@lexical/link"
@@ -157,80 +157,12 @@ export class LexicalEditorElement extends HTMLElement {
     return this.config.get("richText")
   }
 
-  // Selection preservation for native bridge dialogs
   freezeSelection() {
-    this.frozenSelectionState = null
-    this.editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      // If cursor is inside a link, expand to cover the full link text
-      if (selection.isCollapsed()) {
-        let node = selection.anchor.getNode()
-        while (node) {
-          if ($isLinkNode(node)) {
-            const firstDescendant = node.getFirstDescendant()
-            const lastDescendant = node.getLastDescendant()
-            if (firstDescendant && lastDescendant) {
-              this.frozenSelectionState = {
-                anchor: { key: firstDescendant.getKey(), offset: 0 },
-                focus: { key: lastDescendant.getKey(), offset: lastDescendant.getTextContent().length }
-              }
-              return
-            }
-            break
-          }
-          node = node.getParent()
-        }
-      }
-
-      this.frozenSelectionState = {
-        anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
-        focus: { key: selection.focus.key, offset: selection.focus.offset }
-      }
-    })
+    this.selection.freeze()
   }
 
   thawSelection() {
-    const frozenSelectionState = this.frozenSelectionState
-    this.frozenSelectionState = null
-    if (!frozenSelectionState) return
-
-    let shouldRestore = false
-    this.editor.getEditorState().read(() => {
-      const anchorNode = $getNodeByKey(frozenSelectionState.anchor.key)
-      const focusNode = $getNodeByKey(frozenSelectionState.focus.key)
-
-      // Skip if nodes were removed or content was truncated (e.g., text node
-      // split by link creation) — restoring would leave Lexical in a broken state.
-      if (!anchorNode?.isAttached() || !focusNode?.isAttached()) return
-      if (frozenSelectionState.anchor.offset > anchorNode.getTextContentSize()) return
-      if (frozenSelectionState.focus.offset > focusNode.getTextContentSize()) return
-
-      // Skip if the selection hasn't actually changed — an unnecessary
-      // editor.update() triggers DOM reconciliation that can disrupt Android
-      // WebView's input connection.
-      const selection = $getSelection()
-      if ($isRangeSelection(selection)) {
-        shouldRestore =
-          selection.anchor.key !== frozenSelectionState.anchor.key ||
-          selection.anchor.offset !== frozenSelectionState.anchor.offset ||
-          selection.focus.key !== frozenSelectionState.focus.key ||
-          selection.focus.offset !== frozenSelectionState.focus.offset
-      } else {
-        shouldRestore = true
-      }
-    })
-
-    if (shouldRestore) {
-      this.editor.update(() => {
-        const selection = $getSelection()
-        if ($isRangeSelection(selection)) {
-          selection.anchor.set(frozenSelectionState.anchor.key, frozenSelectionState.anchor.offset, "text")
-          selection.focus.set(frozenSelectionState.focus.key, frozenSelectionState.focus.offset, "text")
-        }
-      })
-    }
+    this.selection.thaw()
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -258,7 +190,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   set value(html) {
     // Clearing/replacing content can invalidate any preserved selection keys.
-    this.frozenSelectionState = null
+    this.selection?.invalidateFrozenState()
     this.editor.update(() => {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       const root = $getRoot()
@@ -651,7 +583,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #reset() {
     this.#unregisterHandlers()
-    this.frozenSelectionState = null
+    this.selection?.invalidateFrozenState()
 
     if (this.editorContentElement) {
       this.editorContentElement.remove()
