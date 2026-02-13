@@ -12672,10 +12672,182 @@ class LexxyExtension {
   }
 }
 
+const SoftBreakExtensionDefinition = Kl({
+  name: "lexxy/soft-break",
+  register(editor) {
+    editor.registerCommand(
+      Ne$2,
+      (event) => handleEnterKey(event),
+      Ri
+    );
+
+    editor.registerCommand(
+      we$1,
+      (event) => handleBackspaceKey(event),
+      Ri
+    );
+  }
+});
+
+function handleEnterKey(event) {
+  const selection = Lr();
+  if (!yr(selection) || !selection.isCollapsed()) {
+    return false
+  }
+
+  const anchor = selection.anchor;
+  const anchorNode = anchor.getNode();
+  const paragraph = $findParagraphNode(anchorNode);
+
+  if (!paragraph) {
+    return false
+  }
+
+  if ($isAtDoubleEnterPosition(anchor, paragraph)) {
+    event.preventDefault();
+    $handleDoubleEnter(paragraph);
+    return true
+  }
+
+  event.preventDefault();
+  $insertLineBreak(selection);
+  return true
+}
+
+function handleBackspaceKey(event) {
+  const selection = Lr();
+  if (!yr(selection) || !selection.isCollapsed()) {
+    return false
+  }
+
+  const anchor = selection.anchor;
+  const anchorNode = anchor.getNode();
+  const paragraph = $findParagraphNode(anchorNode);
+
+  if (!paragraph) {
+    return false
+  }
+
+  if ($isAtParagraphStart(anchor, paragraph)) {
+    const previousSibling = paragraph.getPreviousSibling();
+    if (previousSibling && Ii(previousSibling)) {
+      event.preventDefault();
+      $mergeParagraphsWithLineBreak(previousSibling, paragraph);
+      return true
+    }
+  }
+
+  return false
+}
+
+function $findParagraphNode(node) {
+  let currentNode = node;
+  while (currentNode) {
+    if (Ii(currentNode)) {
+      return currentNode
+    }
+    currentNode = currentNode.getParent();
+  }
+  return null
+}
+
+function $isAtDoubleEnterPosition(anchor, paragraph) {
+  const node = anchor.getNode();
+
+  if (node === paragraph) {
+    const offset = anchor.offset;
+    const children = paragraph.getChildren();
+
+    if (offset === children.length && offset > 0) {
+      const lastChild = children[offset - 1];
+      return jn(lastChild)
+    }
+  }
+
+  if (lr(node)) {
+    const offset = anchor.offset;
+    if (offset === node.getTextContent().length) {
+      const nextSibling = node.getNextSibling();
+      if (nextSibling && jn(nextSibling)) {
+        const afterLineBreak = nextSibling.getNextSibling();
+        return !afterLineBreak
+      }
+    }
+  }
+
+  if (jn(node)) {
+    const nextSibling = node.getNextSibling();
+    return !nextSibling
+  }
+
+  return false
+}
+
+function $handleDoubleEnter(paragraph) {
+  const children = paragraph.getChildren();
+  const lastChild = children[children.length - 1];
+
+  if (lastChild && jn(lastChild)) {
+    lastChild.remove();
+  }
+
+  const newParagraph = Li();
+  paragraph.insertAfter(newParagraph);
+  newParagraph.selectStart();
+}
+
+function $insertLineBreak(selection) {
+  const lineBreak = Jn();
+  selection.insertNodes([ lineBreak ]);
+}
+
+function $isAtParagraphStart(anchor, paragraph) {
+  const node = anchor.getNode();
+  const offset = anchor.offset;
+
+  if (node === paragraph) {
+    return offset === 0
+  }
+
+  if (lr(node)) {
+    if (offset > 0) {
+      return false
+    }
+
+    const previousSibling = node.getPreviousSibling();
+    return !previousSibling
+  }
+
+  return false
+}
+
+function $mergeParagraphsWithLineBreak(firstParagraph, secondParagraph) {
+  const lineBreak = Jn();
+  firstParagraph.append(lineBreak);
+
+  const secondChildren = secondParagraph.getChildren();
+  secondChildren.forEach(child => {
+    firstParagraph.append(child);
+  });
+
+  secondParagraph.remove();
+
+  const selection = Lr();
+  if (yr(selection)) {
+    lineBreak.selectNext();
+  }
+}
+
+class SoftBreakExtension extends LexxyExtension {
+  get lexicalExtension() {
+    return SoftBreakExtensionDefinition
+  }
+}
+
 const configure = Lexxy.configure;
 
 // Pushing elements definition to after the current call stack to allow global configuration to take place first
 setTimeout(defineElements, 0);
 
-export { ActionTextAttachmentNode, ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, configure, highlightCode as highlightAll, highlightCode };
+export { ActionTextAttachmentNode, ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, SoftBreakExtension, configure, highlightCode as highlightAll, highlightCode };
 //# sourceMappingURL=lexxy.js.map

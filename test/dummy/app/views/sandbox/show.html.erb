@@ -1,5 +1,12 @@
 <% content_for :title, "Lexxy Sandbox" %>
 
+<% if params[:line_breaks] == "soft" %>
+  <script type="module">
+    import { configure, SoftBreakExtension } from "lexxy"
+    configure({ global: { extensions: [SoftBreakExtension] }})
+  </script>
+<% end %>
+
 <main data-controller="lexxy-output" data-action="lexxy:change->lexxy-output#refresh">
   <section>
     <h2>Editor</h2>
@@ -100,6 +107,13 @@
     </div>
 
     <p><small>Use @ and : to see a remote and local prompt implementation.</small></p>
+    <p><small>
+      <% if params[:line_breaks] == "soft" %>
+        Line breaks: <strong>soft</strong> (<%= link_to "change to hard", sandbox_path, style: "color: var(--lexxy-color-accent-dark, #2563eb)", data: { turbo: false } %>)
+      <% else %>
+        Line breaks: <strong>hard</strong> (<%= link_to "change to soft", sandbox_path(line_breaks: "soft"), style: "color: var(--lexxy-color-accent-dark, #2563eb)", data: { turbo: false } %>)
+      <% end %>
+    </small></p>
   </section>
 
   <section class="output">
