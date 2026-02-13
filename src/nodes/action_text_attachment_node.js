@@ -1,5 +1,5 @@
 import Lexxy from "../config/lexxy"
-import { $getEditor, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
+import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 import { extractFileName } from "../helpers/storage_helper"
@@ -125,7 +125,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   isInline() {
-    return false
+    return this.isAttached() && !this.getParent().is($getNearestRootOrShadowRoot(this))
   }
 
   exportDOM() {
@@ -173,10 +173,10 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   get isPreviewableAttachment() {
-    return this.#isPreviewableImage || this.previewable
+    return this.isPreviewableImage || this.previewable
   }
 
-  get #isPreviewableImage() {
+  get isPreviewableImage() {
     return isPreviewableImage(this.contentType)
   }
 

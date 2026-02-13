@@ -1,7 +1,8 @@
-import { $createParagraphNode, $getSelection, $splitNode, ElementNode } from "lexical"
-import { $descendantsMatching, $firstToLastIterator, $getNearestNodeOfType, $unwrapNode, $wrapNodeInElement } from "@lexical/utils"
+import { $createParagraphNode, $splitNode, ElementNode } from "lexical"
+import { $descendantsMatching, $firstToLastIterator, $getNearestNodeOfType, $insertFirst, $unwrapAndFilterDescendants, $wrapNodeInElement } from "@lexical/utils"
 
 import { $isActionTextAttachmentNode, ActionTextAttachmentNode } from "./action_text_attachment_node"
+import { $makeSafeForRoot } from "../helpers/lexical_helper"
 
 export class ImageGalleryNode extends ElementNode {
   $config() {
@@ -12,8 +13,9 @@ export class ImageGalleryNode extends ElementNode {
 
   static transform() {
     return (gallery) => {
-      gallery.unwrapEmptyOrSingleChildNode()
-      gallery.splitAroundInvalidChild()
+      gallery.unwrapEmptyNode()
+        || gallery.replaceWithSingularChild()
+        || gallery.splitAroundInvalidChild()
     }
   }
 
@@ -27,13 +29,21 @@ export class ImageGalleryNode extends ElementNode {
           conversion: () => {
             return {
               node: $createImageGalleryNode(),
-              after: children => $descendantsMatching(children, $isActionTextAttachmentNode)
+              after: children => $descendantsMatching(children, this.isValidChild)
             }
           },
           priority: 2
         }
       }
     }
+  }
+
+  static canCollapseWith(node) {
+    return $isImageGalleryNode(node) || this.isValidChild(node)
+  }
+
+  static isValidChild(node) {
+    return $isActionTextAttachmentNode(node) && node.isPreviewableImage
   }
 
   createDOM() {
@@ -43,34 +53,35 @@ export class ImageGalleryNode extends ElementNode {
   }
 
   updateDOM(_prevNode, dom) {
-    dom.classList = this.#galleryClassNames
-    return false
-  }
-
-  select(anchorOffset, _focusOffset) {
-    if (anchorOffset === undefined) {
-      return this.selectNext(0, 0)
-    } else if (anchorOffset === 0) {
-      return this.selectPrevious()
-    } else {
-      // adjust so we can select forwards/backwards
-      const targetChild = this.getChildAtIndex(anchorOffset) ?? this.getLastChild()
-      const selectionTarget = targetChild.isSelected($getSelection()) ? targetChild.getPreviousSibling() : targetChild
-      return selectionTarget.select()
-    }
-  }
-
-  canInsertTextBefore() {
-    return false
-  }
-
-  canInsertTextAfter() {
+    dom.className = this.#galleryClassNames
     return false
   }
 
   canBeEmpty() {
-    // lying to get the right behavior: a transform handles clean-up
+    // Return `true` to conform to `$isBlock(node)`
+    // We clean-up empty galleries with a transform
     return true
+  }
+
+  collapseAtStart(_selection) {
+    return true
+  }
+
+  insertNewAfter(selection, restoreSelection) {
+    const selectionAtLastChild = selection.anchor.offset == this.getChildrenSize() - 1
+    if (selectionAtLastChild) {
+      const paragraph = $createParagraphNode()
+      this.insertAfter(paragraph, false)
+      paragraph.insertAfter(this.getLastChild(), false)
+      paragraph.selectEnd()
+
+      // return null as selection has been managed
+      return null
+    }
+
+    const newNode = $createImageGalleryNode()
+    this.insertAfter(newNode, restoreSelection)
+    return newNode
   }
 
   getImageAttachments() {
@@ -84,38 +95,60 @@ export class ImageGalleryNode extends ElementNode {
     return { element: div }
   }
 
-  unwrapEmptyOrSingleChildNode() {
-    if (this.getChildrenSize() <= 1) {
-      const wasSelected = this.#hasSelectionWithin()
+  collapseWith(node, backwards) {
+    if (!ImageGalleryNode.canCollapseWith(node)) return false
+
+    if (backwards) {
+      $insertFirst(this, node)
+    } else {
+      this.append(node)
+    }
+
+    $unwrapAndFilterDescendants(this, ImageGalleryNode.isValidChild)
+
+    return true
+  }
+
+  unwrapEmptyNode() {
+    if (this.isEmpty()) {
+      const paragraph = $createParagraphNode()
+      return this.replace(paragraph)
+    }
+  }
+
+  replaceWithSingularChild() {
+    if (this.#hasSingularChild) {
       const child = this.getFirstChild()
-      $unwrapNode(this)
-      if (wasSelected && child) child.select()
+      return this.replace(child)
     }
   }
 
   splitAroundInvalidChild() {
     for (const child of $firstToLastIterator(this)) {
-      if (!this.isValidChild(child)) {
-        const poppedNode = child.isParentRequired() ? $wrapNodeInElement(child, $createParagraphNode) : child
-        const [ topGallery ] = $splitNode(this, poppedNode.getIndexWithinParent())
-        topGallery.insertAfter(poppedNode)
-        poppedNode.selectEnd()
-        break
-      }
+      if (ImageGalleryNode.isValidChild(child)) continue
+
+      const poppedNode = $makeSafeForRoot(child)
+      const [ topGallery, secondGallery ] = this.splitAtIndex(poppedNode.getIndexWithinParent())
+      topGallery.insertAfter(poppedNode)
+      poppedNode.selectEnd()
+
+      // remove an empty gallery rather than let it unwrap to a paragraph
+      if (secondGallery.isEmpty()) secondGallery.remove()
+
+      break
     }
   }
 
-  isValidChild(node) {
-    return $isActionTextAttachmentNode(node) && node.isPreviewableAttachment
+  splitAtIndex(index) {
+    return $splitNode(this, index)
   }
 
-  get #galleryClassNames () {
-    return "attachment-gallery"
+  get #hasSingularChild() {
+    return this.getChildrenSize() === 1
   }
 
-  #hasSelectionWithin(selection = null) {
-    const targetSelection = selection || $getSelection()
-    return targetSelection?.getNodes().some(node => node.is(this) || this.isParentOf(node))
+  get #galleryClassNames() {
+    return `attachment-gallery attachment-gallery--${this.getChildrenSize()}`
   }
 }
 
@@ -127,7 +160,9 @@ export function $isImageGalleryNode(node) {
   return node instanceof ImageGalleryNode
 }
 
-export function $findOrCreateGalleryFor(node) {
+export function $findOrCreateGalleryForImage(node) {
+  if (!ImageGalleryNode.canCollapseWith(node)) return null
+
   const existingGallery = $getNearestNodeOfType(node, ImageGalleryNode)
-  return existingGallery || $wrapNodeInElement(node, $createImageGalleryNode)
+  return existingGallery ?? $wrapNodeInElement(node, $createImageGalleryNode)
 }

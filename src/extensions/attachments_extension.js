@@ -1,8 +1,8 @@
-import { $createParagraphNode, $getSelection, $isNodeSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
-import { $getNearestNodeOfType, mergeRegister } from "@lexical/utils"
+import { $getSelection, $isDecoratorNode, $isParagraphNode, COMMAND_PRIORITY_NORMAL, DELETE_CHARACTER_COMMAND, defineExtension } from "lexical"
+import { mergeRegister } from "@lexical/utils"
 import { $isAtNodeEnd } from "@lexical/selection"
 
-import { $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
+import { $findOrCreateGalleryForImage, $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node.js"
 
@@ -23,79 +23,85 @@ export class AttachmentsExtension extends LexxyExtension {
       ],
       register(editor) {
         return mergeRegister(
-          editor.registerCommand(SELECTION_CHANGE_COMMAND, $ensureGalleryChildSelection, COMMAND_PRIORITY_HIGH),
-          editor.registerCommand(KEY_ENTER_COMMAND, $insertParagraphAfterNode, COMMAND_PRIORITY_HIGH),
-          editor.registerCommand(KEY_ARROW_UP_COMMAND, () => $selectSibling("up"), COMMAND_PRIORITY_HIGH),
-          editor.registerCommand(KEY_ARROW_DOWN_COMMAND, () => $selectSibling("down"), COMMAND_PRIORITY_HIGH),
-          editor.registerCommand(KEY_ARROW_LEFT_COMMAND, () => $selectSiblingAtEdge("start"), COMMAND_PRIORITY_HIGH),
-          editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, () => $selectSiblingAtEdge("end"), COMMAND_PRIORITY_HIGH)
+          editor.registerCommand(DELETE_CHARACTER_COMMAND, $collapseIntoGallery, COMMAND_PRIORITY_NORMAL)
         )
       }
     })
   }
 }
 
-function $ensureGalleryChildSelection() {
-  const selection = $getSelection()
-  if (!$isRangeSelection(selection) || selection.anchor.type !== "element") return false
+function $collapseIntoGallery(backwards) {
+  const anchor = $getSelection()?.anchor
+  if (!anchor) return false
 
-  const { anchor, focus } = selection
-  const topElement = anchor.getNode().getTopLevelElement()
+  if ($collapseAtGalleryEdge(anchor, backwards)) {
+    return true
+  } else if (backwards) {
+    return $collapseAroundEmptyParagraph(anchor)
+      || $moveSelectionBeforeGallery(anchor)
+  }
+}
 
-  if ($isImageGalleryNode(topElement)) {
-    topElement.select(anchor.offset, focus.offset)
+function $collapseAroundEmptyParagraph(anchor) {
+  const anchorNode = anchor.getNode()
+  if (!anchorNode) return false
+
+  const isWithinEmptyParagraph = $isParagraphNode(anchorNode) && anchorNode.isEmpty()
+  const previousSibling = anchorNode.getPreviousSibling()
+  const topGallery = $findOrCreateGalleryForImage(previousSibling)
+  const seletionIndex = topGallery?.getChildrenSize()
+
+  if (isWithinEmptyParagraph && topGallery?.collapseWith(anchorNode.getNextSibling())) {
+    topGallery.select(seletionIndex, seletionIndex)
+    anchorNode.remove()
     return true
   } else {
     return false
   }
 }
 
-function $insertParagraphAfterNode() {
-  const selection = $getSelection()
-  if (!$isNodeSelection(selection)) return false
+function $collapseAtGalleryEdge(anchor, backwards) {
+  const anchorNode = anchor.getNode()
+  if (!$isImageGalleryNode(anchorNode)) return false
 
-  const focusNode = selection.getNodes()?.at(0)
-  const isAttachment = $getNearestNodeOfType(focusNode, ActionTextAttachmentNode)
+  const isAtGalleryEdge = $isAtNodeEdge(anchor, backwards)
+  const sibling = backwards ? anchorNode.getPreviousSibling() : anchorNode.getNextSibling()
 
-  if (isAttachment) {
-    const paragraph = $createParagraphNode()
-    focusNode.insertAfter(paragraph)
-    paragraph.selectStart()
-    return true
-  }
-}
-
-function $selectSibling(direction, select = "start") {
-  const selection = $getSelection()
-  const [ focusNode ] = selection?.getNodes() || []
-  const topLevelFocus = focusNode?.getTopLevelElement()
-  const topLevelSibling = direction === "up" ? topLevelFocus.getPreviousSibling() : topLevelFocus.getNextSibling()
-
-  if (topLevelSibling && $isImageGalleryNode(topLevelSibling)) {
-    const target = select === "start" ? topLevelSibling.getFirstChild() : topLevelSibling.getLastChild()
-    target.select()
+  if (isAtGalleryEdge && anchorNode.collapseWith(sibling, backwards)) {
+    const selectionOffset = backwards ? 1 : anchorNode.getChildrenSize() - 1
+    anchorNode.select(selectionOffset, selectionOffset)
     return true
   } else {
     return false
   }
 }
 
-function $selectSiblingAtEdge(edge = "start") {
-  const selection = $getSelection()
-  const isNodeSelection = $isNodeSelection(selection)
-  if (!$isRangeSelection(selection) && !isNodeSelection) {
+// Due to Lexical attemping to merge the gallery into the previous node, move the selection out
+// otherwise the gallery is unwrapped
+function $moveSelectionBeforeGallery(anchor) {
+  const previousNode = anchor.getNode().getPreviousSibling()
+  if (!$isImageGalleryNode(anchor.getNode()) || !$isAtNodeEdge(anchor, true) || !previousNode) return false
+
+  if ($isDecoratorNode(previousNode)) {
+    // Will be handled by Lexxy decorator selection behavior
     return false
-  }
-
-  const focusNode = isNodeSelection ? selection.getNodes()[0] : (edge === "start") ? selection.anchor.getNode() : selection.focus.getNode()
-  const focusParent = focusNode?.getTopLevelElement()
-  const isEdgeNode = focusNode && focusParent && (focusNode.is(focusParent) || focusNode.is(edge === "start" ? focusParent.getFirstChild() : focusParent.getLastChild()))
-  const isAtEdge = isNodeSelection || isEdgeNode && (edge === "start" ? selection.anchor.offset === 0 : $isAtNodeEnd(selection.anchor))
-
-  if (isAtEdge) {
-    const args = edge === "start" ? [ "up", "end" ] : [ "down", "start" ]
-    return $selectSibling(...args)
+  } else if (previousNode.isEmpty()) {
+    previousNode.remove()
   } else {
-    return false
+    previousNode.selectEnd()
   }
+
+  return true
+}
+
+function $isAtNodeEdge(point, atStart = null) {
+  if (atStart === null) {
+    return $isAtNodeEdge(point, true) || $isAtNodeEdge(point, false)
+  } else {
+    return atStart ? $isAtNodeStart(point) : $isAtNodeEnd(point)
+  }
+}
+
+function $isAtNodeStart(point) {
+  return point.offset === 0
 }
