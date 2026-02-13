@@ -1,6 +1,6 @@
 import { $isCodeNode, CODE_LANGUAGE_FRIENDLY_NAME_MAP, normalizeCodeLang } from "@lexical/code"
 import { $getSelection, $isRangeSelection } from "lexical"
-import { createElement } from "../helpers/html_helper"
+import { createElement, dispatch } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
 
 export class CodeLanguagePicker extends HTMLElement {
@@ -17,6 +17,17 @@ export class CodeLanguagePicker extends HTMLElement {
 
     this.languagePickerElement.addEventListener("change", () => {
       this.#updateCodeBlockLanguage(this.languagePickerElement.value)
+    })
+
+    this.languagePickerElement.addEventListener("mousedown", (event) => {
+      const handled = !dispatch(this.editorElement, "lexxy:code-language-picker-open", {
+        languages: this.#bridgeLanguages,
+        currentLanguage: this.languagePickerElement.value
+      }, true)
+
+      if (handled) {
+        event.preventDefault()
+      }
     })
 
     this.languagePickerElement.setAttribute("nonce", getNonce())
@@ -53,6 +64,10 @@ export class CodeLanguagePicker extends HTMLElement {
     const plainIndex = sortedEntries.findIndex(([ key ]) => key === "plain")
     const plainEntry = sortedEntries.splice(plainIndex, 1)[0]
     return Object.fromEntries([ plainEntry, ...sortedEntries ])
+  }
+
+  get #bridgeLanguages() {
+    return Object.entries(this.#languages).map(([key, name]) => ({ key, name }))
   }
 
   #updateCodeBlockLanguage(language) {
