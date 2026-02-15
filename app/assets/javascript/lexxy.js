@@ -7025,6 +7025,10 @@ class LexicalToolbarElement extends HTMLElement {
         <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.2041 2.01074C21.2128 2.113 22 2.96435 22 4V20L21.9893 20.2041C21.8938 21.1457 21.1457 21.8938 20.2041 21.9893L20 22H4C2.96435 22 2.113 21.2128 2.01074 20.2041L2 20V4C2 2.89543 2.89543 2 4 2H20L20.2041 2.01074ZM4 13V20H11V13H4ZM13 13V20H20V13H13ZM4 11H11V4H4V11ZM13 11H20V4H13V11Z"/></svg>
       </button>
 
+      <button class="lexxy-editor__toolbar-button" type="button" name="gallery" data-command="insertGallery" title="Insert image gallery">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 3h7v7H3V3zm0 11h7v7H3v-7zm11-11h7v7h-7V3zm0 11h7v7h-7v-7z"/></svg>
+      </button>
+
       <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 12C0 11.4477 0.447715 11 1 11H23C23.5523 11 24 11.4477 24 12C24 12.5523 23.5523 13 23 13H1C0.447716 13 0 12.5523 0 12Z"/><path d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5C20 6.10457 19.1046 7 18 7H6C4.89543 7 4 6.10457 4 5Z"/><path d="M4 19C4 17.8954 4.89543 17 6 17H18C19.1046 17 20 17.8954 20 19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19Z"/></svg>
       </button>
@@ -7741,6 +7745,150 @@ class HorizontalDividerNode extends ki {
   }
 }
 
+class GalleryImageNode extends ki {
+  static getType() {
+    return "gallery_image"
+  }
+
+  static clone(node) {
+    return new GalleryImageNode({ src: node.__src, altText: node.__altText }, node.__key)
+  }
+
+  static importJSON(serializedNode) {
+    return new GalleryImageNode({ src: serializedNode.src, altText: serializedNode.altText })
+  }
+
+  constructor({ src, altText }, key) {
+    super(key);
+    this.__src = src || "";
+    this.__altText = altText || "";
+  }
+
+  createDOM() {
+    const figure = createElement("figure", { className: "gallery__image" });
+    const img = createElement("img", { src: this.__src, alt: this.__altText });
+    figure.appendChild(img);
+
+    figure.addEventListener("click", () => {
+      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
+    });
+
+    return figure
+  }
+
+  updateDOM() {
+    return false
+  }
+
+  getTextContent() {
+    return ""
+  }
+
+  isInline() {
+    return false
+  }
+
+  exportDOM() {
+    const img = createElement("img", { src: this.__src, alt: this.__altText });
+    return { element: img }
+  }
+
+  exportJSON() {
+    return {
+      type: "gallery_image",
+      version: 1,
+      src: this.__src,
+      altText: this.__altText
+    }
+  }
+
+  decorate() {
+    return null
+  }
+}
+
+const COLUMNS = 3;
+
+class GalleryNode extends Ci {
+  static getType() {
+    return "gallery"
+  }
+
+  static clone(node) {
+    return new GalleryNode(node.__key)
+  }
+
+  static importJSON(serializedNode) {
+    return new GalleryNode()
+  }
+
+  static importDOM() {
+    return null
+  }
+
+  constructor(key) {
+    super(key);
+  }
+
+  static get COLUMNS() {
+    return COLUMNS
+  }
+
+  createDOM() {
+    const div = createElement("div", { className: `gallery gallery--columns-${COLUMNS}` });
+    return div
+  }
+
+  updateDOM() {
+    return false
+  }
+
+  isInline() {
+    return false
+  }
+
+  canBeEmpty() {
+    return false
+  }
+
+  canInsertTextBefore() {
+    return false
+  }
+
+  canInsertTextAfter() {
+    return false
+  }
+
+  canIndent() {
+    return false
+  }
+
+  collapseAtStart() {
+    return true
+  }
+
+  exportDOM() {
+    const div = createElement("div", { className: `gallery gallery--columns-${COLUMNS}` });
+
+    for (const child of this.getChildren()) {
+      if (child instanceof GalleryImageNode) {
+        const { element } = child.exportDOM();
+        if (element) div.appendChild(element);
+      }
+    }
+
+    return { element: div }
+  }
+
+  exportJSON() {
+    return {
+      ...super.exportJSON(),
+      type: "gallery",
+      version: 1
+    }
+  }
+}
+
 const COMMANDS = [
   "bold",
   "italic",
@@ -7755,6 +7903,7 @@ const COMMANDS = [
   "insertQuoteBlock",
   "insertCodeBlock",
   "insertHorizontalDivider",
+  "insertGallery",
   "uploadAttachments",
 
   "insertTable",
@@ -7867,6 +8016,27 @@ class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode());
+
+    this.editor.focus();
+  }
+
+  dispatchInsertGallery() {
+    const sampleImages = [
+      { src: "https://picsum.photos/seed/gallery1/600/400", altText: "Sample image 1" },
+      { src: "https://picsum.photos/seed/gallery2/600/400", altText: "Sample image 2" },
+      { src: "https://picsum.photos/seed/gallery3/600/400", altText: "Sample image 3" },
+      { src: "https://picsum.photos/seed/gallery4/600/400", altText: "Sample image 4" },
+      { src: "https://picsum.photos/seed/gallery5/600/400", altText: "Sample image 5" },
+      { src: "https://picsum.photos/seed/gallery6/600/400", altText: "Sample image 6" }
+    ];
+
+    this.editor.update(() => {
+      const galleryNode = new GalleryNode();
+      for (const image of sampleImages) {
+        galleryNode.append(new GalleryImageNode(image));
+      }
+      this.contents.insertAtCursorEnsuringLineBelow(galleryNode);
+    });
 
     this.editor.focus();
   }
@@ -8314,6 +8484,7 @@ class Selection {
     this.editor.registerCommand(ke$2, this.#selectPreviousTopLevelNode.bind(this), zi);
     this.editor.registerCommand(Te$2, this.#selectNextTopLevelNode.bind(this), zi);
 
+    this.editor.registerCommand(Ne$2, this.#splitGalleryOnEnter.bind(this), Ri);
     this.editor.registerCommand(Oe$2, this.#deleteSelectedOrNext.bind(this), zi);
     this.editor.registerCommand(we$1, this.#deletePreviousOrNext.bind(this), zi);
 
@@ -8355,6 +8526,13 @@ class Selection {
           if (yr(selection) && selection.isCollapsed()) {
             const anchorNode = selection.anchor.getNode();
             const offset = selection.anchor.offset;
+
+            // When cursor is between gallery images, split the gallery and type in a new paragraph
+            if (anchorNode instanceof GalleryNode) {
+              event.preventDefault();
+              this.#splitGalleryAtOffset(anchorNode, offset, event.key);
+              return
+            }
 
             const nodeBefore = this.#getNodeBeforePosition(anchorNode, offset);
             const nodeAfter = this.#getNodeAfterPosition(anchorNode, offset);
@@ -8460,7 +8638,7 @@ class Selection {
     if (this.hasNodeSelection) {
       await this.#withCurrentNode((currentNode) => currentNode.selectPrevious());
     } else {
-      this.#selectInLexical(this.nodeBeforeCursor);
+      this.#selectNodeOrEnterGallery(this.nodeBeforeCursor, "last");
     }
   }
 
@@ -8468,23 +8646,35 @@ class Selection {
     if (this.hasNodeSelection) {
       await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0));
     } else {
-      this.#selectInLexical(this.nodeAfterCursor);
+      this.#selectNodeOrEnterGallery(this.nodeAfterCursor, "first");
     }
   }
 
   async #selectPreviousTopLevelNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectPrevious());
+      await this.#withCurrentNode((currentNode) => {
+        if (currentNode instanceof GalleryImageNode) {
+          this.#galleryNavigateUp(currentNode);
+        } else {
+          currentNode.getTopLevelElement().selectPrevious();
+        }
+      });
     } else {
-      this.#selectInLexical(this.topLevelNodeBeforeCursor);
+      this.#selectNodeOrEnterGallery(this.topLevelNodeBeforeCursor, "last");
     }
   }
 
   async #selectNextTopLevelNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0));
+      await this.#withCurrentNode((currentNode) => {
+        if (currentNode instanceof GalleryImageNode) {
+          this.#galleryNavigateDown(currentNode);
+        } else {
+          currentNode.getTopLevelElement().selectNext(0, 0);
+        }
+      });
     } else {
-      this.#selectInLexical(this.topLevelNodeAfterCursor);
+      this.#selectNodeOrEnterGallery(this.topLevelNodeAfterCursor, "first");
     }
   }
 
@@ -8559,6 +8749,163 @@ class Selection {
     });
   }
 
+  #selectNodeOrEnterGallery(node, position) {
+    if (!node) return
+
+    if (node instanceof GalleryNode) {
+      const child = position === "first" ? node.getFirstChild() : node.getLastChild();
+      if (child instanceof GalleryImageNode) {
+        this.#selectInLexical(child);
+      }
+      return
+    }
+
+    if (node instanceof ki) {
+      this.#selectInLexical(node);
+      return
+    }
+
+    if (Si(node)) {
+      this.editor.update(() => {
+        if (position === "first") {
+          node.selectStart();
+        } else {
+          node.selectEnd();
+        }
+      });
+    }
+  }
+
+  // Gallery navigation: Up arrow from a selected gallery image
+  #galleryNavigateUp(imageNode) {
+    const gallery = imageNode.getParent();
+    if (!(gallery instanceof GalleryNode)) {
+      imageNode.selectPrevious();
+      return
+    }
+
+    const index = imageNode.getIndexWithinParent();
+    const columns = GalleryNode.COLUMNS;
+    const targetIndex = index - columns;
+
+    if (targetIndex < 0) {
+      gallery.selectPrevious();
+    } else {
+      const targetNode = gallery.getChildAtIndex(targetIndex);
+      if (targetNode) {
+        const selection = Pr();
+        selection.add(targetNode.getKey());
+        wo(selection);
+      }
+    }
+  }
+
+  // Gallery navigation: Down arrow from a selected gallery image
+  #galleryNavigateDown(imageNode) {
+    const gallery = imageNode.getParent();
+    if (!(gallery instanceof GalleryNode)) {
+      imageNode.selectNext(0, 0);
+      return
+    }
+
+    const index = imageNode.getIndexWithinParent();
+    const columns = GalleryNode.COLUMNS;
+    const childCount = gallery.getChildrenSize();
+    const targetIndex = index + columns;
+
+    if (targetIndex >= childCount) {
+      gallery.selectNext(0, 0);
+    } else {
+      const targetNode = gallery.getChildAtIndex(targetIndex);
+      if (targetNode) {
+        const selection = Pr();
+        selection.add(targetNode.getKey());
+        wo(selection);
+      }
+    }
+  }
+
+  // Split a gallery at the given child offset, inserting a paragraph with the typed character
+  #splitGalleryAtOffset(galleryNode, offset, text) {
+    const children = galleryNode.getChildren();
+
+    // Images after the cursor go into a new gallery
+    const imagesAfter = children.slice(offset);
+
+    if (imagesAfter.length > 0) {
+      const newGallery = new GalleryNode();
+      galleryNode.insertAfter(newGallery);
+      for (const image of imagesAfter) {
+        newGallery.append(image);
+      }
+    }
+
+    // Remove images before cursor if gallery would be at end (offset === childCount means cursor after last)
+    // Images before the cursor stay in the original gallery
+    // If offset is 0, original gallery is now empty and will be auto-removed (canBeEmpty=false)
+    // If offset is childCount, we already moved nothing — but cursor shouldn't be there in normal flow
+
+    // Insert a paragraph between the two galleries (or after the original if no second gallery)
+    const paragraph = Li();
+    const textNode = sr(text);
+    paragraph.append(textNode);
+
+    if (imagesAfter.length > 0) {
+      // Insert paragraph before the new gallery
+      const newGallery = galleryNode.getNextSibling();
+      newGallery.insertBefore(paragraph);
+    } else {
+      galleryNode.insertAfter(paragraph);
+    }
+
+    paragraph.select(1, 1);
+  }
+
+  // Split a gallery on Enter when cursor is between images
+  #splitGalleryOnEnter(event) {
+    const selection = Lr();
+    if (!yr(selection) || !selection.isCollapsed()) return false
+
+    const anchorNode = selection.anchor.getNode();
+    if (!(anchorNode instanceof GalleryNode)) return false
+
+    const offset = selection.anchor.offset;
+    const children = anchorNode.getChildren();
+    const imagesAfter = children.slice(offset);
+
+    if (imagesAfter.length > 0) {
+      const newGallery = new GalleryNode();
+      anchorNode.insertAfter(newGallery);
+      for (const image of imagesAfter) {
+        newGallery.append(image);
+      }
+    }
+
+    const paragraph = Li();
+    if (imagesAfter.length > 0) {
+      const newGallery = anchorNode.getNextSibling();
+      newGallery.insertBefore(paragraph);
+    } else {
+      anchorNode.insertAfter(paragraph);
+    }
+
+    paragraph.selectStart();
+
+    event.preventDefault();
+    return true
+  }
+
+  // Merge the next gallery's images into the previous gallery, removing the next gallery
+  #mergeAdjacentGalleries(previousGallery, nextGallery) {
+    const children = nextGallery.getChildren();
+    for (const child of children) {
+      previousGallery.append(child);
+    }
+    // nextGallery is now empty and canBeEmpty()=false, so it will auto-remove on splice,
+    // but since we moved all children manually, we need to remove it explicitly
+    nextGallery.remove();
+  }
+
   #deleteSelectedOrNext() {
     const node = this.nodeAfterCursor;
     if (node instanceof ki) {
@@ -8572,6 +8919,8 @@ class Selection {
   }
 
   #deletePreviousOrNext() {
+    if (this.#tryMergeAdjacentGalleries()) return true
+
     const node = this.nodeBeforeCursor;
     if (node instanceof ki) {
       this.#selectInLexical(node);
@@ -8581,6 +8930,68 @@ class Selection {
     }
 
     return false
+  }
+
+  // When backspace is pressed in an empty paragraph between two galleries, merge them
+  #tryMergeAdjacentGalleries() {
+    let merged = false;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection) || !selection.isCollapsed()) return
+
+      const anchorNode = selection.anchor.getNode();
+      const offset = selection.anchor.offset;
+
+      // Check if we're at offset 0 of a paragraph (or the paragraph itself as element)
+      let paragraph = null;
+      if (lr(anchorNode) && offset === 0) {
+        paragraph = anchorNode.getTopLevelElement();
+      } else if (Si(anchorNode) && offset === 0) {
+        paragraph = anchorNode;
+      }
+
+      if (!paragraph) return
+
+      const prevSibling = paragraph.getPreviousSibling();
+      const nextSibling = paragraph.getNextSibling();
+
+      if (prevSibling instanceof GalleryNode && nextSibling instanceof GalleryNode) {
+        // Only merge if the paragraph is empty
+        if (paragraph.getTextContent().trim() === "") {
+          merged = true;
+        }
+      }
+    });
+
+    if (merged) {
+      this.editor.update(() => {
+        const selection = Lr();
+        if (!yr(selection)) return
+
+        const anchorNode = selection.anchor.getNode();
+        const paragraph = lr(anchorNode) ? anchorNode.getTopLevelElement() : anchorNode;
+
+        const prevGallery = paragraph.getPreviousSibling();
+        const nextGallery = paragraph.getNextSibling();
+
+        if (prevGallery instanceof GalleryNode && nextGallery instanceof GalleryNode) {
+          // Select the last image in the first gallery before merging
+          const lastImage = prevGallery.getLastChild();
+
+          this.#mergeAdjacentGalleries(prevGallery, nextGallery);
+          paragraph.remove();
+
+          if (lastImage) {
+            const nodeSelection = Pr();
+            nodeSelection.add(lastImage.getKey());
+            wo(nodeSelection);
+          }
+        }
+      });
+    }
+
+    return merged
   }
 
   #getValidSelectionRange() {
@@ -10694,7 +11105,9 @@ class LexicalEditorElement extends HTMLElement {
         et$1,
         y$1,
         A,
-        HorizontalDividerNode
+        HorizontalDividerNode,
+        GalleryNode,
+        GalleryImageNode
       );
     }
 
