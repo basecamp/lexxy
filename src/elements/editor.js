@@ -13,6 +13,8 @@ import theme from "../config/theme"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import { GalleryNode } from "../nodes/gallery_node"
+import { GalleryImageNode } from "../nodes/gallery_image_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
@@ -273,7 +275,9 @@ export class LexicalEditorElement extends HTMLElement {
         CodeHighlightNode,
         LinkNode,
         AutoLinkNode,
-        HorizontalDividerNode
+        HorizontalDividerNode,
+        GalleryNode,
+        GalleryImageNode
       )
     }
 

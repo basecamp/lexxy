@@ -167,6 +167,34 @@
   action-text-attachment {
     cursor: pointer;
   }
+
+  .gallery {
+    display: block;
+    gap: 4px;
+    margin: 0;
+
+    [data-lexical-cursor="true"] {
+      display: inline-block;
+    }
+
+    .gallery__image {
+      border-radius: var(--lexxy-radius);
+      cursor: pointer;
+      display: inline-block;
+      overflow: hidden;
+      padding: 0;
+      inline-size: 30%;
+      margin: 1ch;
+
+      img {
+        aspect-ratio: 3 / 2;
+        display: block;
+        block-size: auto;
+        inline-size: 100%;
+        object-fit: cover;
+      }
+    }
+  }
 }
 
 /* Placeholder */

@@ -1,8 +1,9 @@
 import {
-  $createNodeSelection, $createParagraphNode, $getNodeByKey, $getRoot, $getSelection, $isElementNode,
-  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, COMMAND_PRIORITY_LOW, DecoratorNode,
+  $createNodeSelection, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $isElementNode,
+  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection,
+  COMMAND_PRIORITY_LOW, COMMAND_PRIORITY_NORMAL, DecoratorNode,
   KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
-  KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, SELECTION_CHANGE_COMMAND
+  KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, KEY_ENTER_COMMAND, SELECTION_CHANGE_COMMAND
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListNode } from "@lexical/list"
@@ -11,6 +12,8 @@ import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
 import { getNonce } from "../helpers/csp_helper"
 import { getNearestListItemNode, isPrintableCharacter } from "../helpers/lexical_helper"
+import { GalleryNode } from "../nodes/gallery_node"
+import { GalleryImageNode } from "../nodes/gallery_image_node"
 
 export default class Selection {
   constructor(editorElement) {
@@ -265,6 +268,7 @@ export default class Selection {
     this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
     this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
 
+    this.editor.registerCommand(KEY_ENTER_COMMAND, this.#splitGalleryOnEnter.bind(this), COMMAND_PRIORITY_NORMAL)
     this.editor.registerCommand(KEY_DELETE_COMMAND, this.#deleteSelectedOrNext.bind(this), COMMAND_PRIORITY_LOW)
     this.editor.registerCommand(KEY_BACKSPACE_COMMAND, this.#deletePreviousOrNext.bind(this), COMMAND_PRIORITY_LOW)
 
@@ -306,6 +310,13 @@ export default class Selection {
           if ($isRangeSelection(selection) && selection.isCollapsed()) {
             const anchorNode = selection.anchor.getNode()
             const offset = selection.anchor.offset
+
+            // When cursor is between gallery images, split the gallery and type in a new paragraph
+            if (anchorNode instanceof GalleryNode) {
+              event.preventDefault()
+              this.#splitGalleryAtOffset(anchorNode, offset, event.key)
+              return
+            }
 
             const nodeBefore = this.#getNodeBeforePosition(anchorNode, offset)
             const nodeAfter = this.#getNodeAfterPosition(anchorNode, offset)
@@ -411,7 +422,7 @@ export default class Selection {
     if (this.hasNodeSelection) {
       await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
     } else {
-      this.#selectInLexical(this.nodeBeforeCursor)
+      this.#selectNodeOrEnterGallery(this.nodeBeforeCursor, "last")
     }
   }
 
@@ -419,23 +430,35 @@ export default class Selection {
     if (this.hasNodeSelection) {
       await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
     } else {
-      this.#selectInLexical(this.nodeAfterCursor)
+      this.#selectNodeOrEnterGallery(this.nodeAfterCursor, "first")
     }
   }
 
   async #selectPreviousTopLevelNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
+      await this.#withCurrentNode((currentNode) => {
+        if (currentNode instanceof GalleryImageNode) {
+          this.#galleryNavigateUp(currentNode)
+        } else {
+          currentNode.getTopLevelElement().selectPrevious()
+        }
+      })
     } else {
-      this.#selectInLexical(this.topLevelNodeBeforeCursor)
+      this.#selectNodeOrEnterGallery(this.topLevelNodeBeforeCursor, "last")
     }
   }
 
   async #selectNextTopLevelNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
+      await this.#withCurrentNode((currentNode) => {
+        if (currentNode instanceof GalleryImageNode) {
+          this.#galleryNavigateDown(currentNode)
+        } else {
+          currentNode.getTopLevelElement().selectNext(0, 0)
+        }
+      })
     } else {
-      this.#selectInLexical(this.topLevelNodeAfterCursor)
+      this.#selectNodeOrEnterGallery(this.topLevelNodeAfterCursor, "first")
     }
   }
 
@@ -510,6 +533,163 @@ export default class Selection {
     })
   }
 
+  #selectNodeOrEnterGallery(node, position) {
+    if (!node) return
+
+    if (node instanceof GalleryNode) {
+      const child = position === "first" ? node.getFirstChild() : node.getLastChild()
+      if (child instanceof GalleryImageNode) {
+        this.#selectInLexical(child)
+      }
+      return
+    }
+
+    if (node instanceof DecoratorNode) {
+      this.#selectInLexical(node)
+      return
+    }
+
+    if ($isElementNode(node)) {
+      this.editor.update(() => {
+        if (position === "first") {
+          node.selectStart()
+        } else {
+          node.selectEnd()
+        }
+      })
+    }
+  }
+
+  // Gallery navigation: Up arrow from a selected gallery image
+  #galleryNavigateUp(imageNode) {
+    const gallery = imageNode.getParent()
+    if (!(gallery instanceof GalleryNode)) {
+      imageNode.selectPrevious()
+      return
+    }
+
+    const index = imageNode.getIndexWithinParent()
+    const columns = GalleryNode.COLUMNS
+    const targetIndex = index - columns
+
+    if (targetIndex < 0) {
+      gallery.selectPrevious()
+    } else {
+      const targetNode = gallery.getChildAtIndex(targetIndex)
+      if (targetNode) {
+        const selection = $createNodeSelection()
+        selection.add(targetNode.getKey())
+        $setSelection(selection)
+      }
+    }
+  }
+
+  // Gallery navigation: Down arrow from a selected gallery image
+  #galleryNavigateDown(imageNode) {
+    const gallery = imageNode.getParent()
+    if (!(gallery instanceof GalleryNode)) {
+      imageNode.selectNext(0, 0)
+      return
+    }
+
+    const index = imageNode.getIndexWithinParent()
+    const columns = GalleryNode.COLUMNS
+    const childCount = gallery.getChildrenSize()
+    const targetIndex = index + columns
+
+    if (targetIndex >= childCount) {
+      gallery.selectNext(0, 0)
+    } else {
+      const targetNode = gallery.getChildAtIndex(targetIndex)
+      if (targetNode) {
+        const selection = $createNodeSelection()
+        selection.add(targetNode.getKey())
+        $setSelection(selection)
+      }
+    }
+  }
+
+  // Split a gallery at the given child offset, inserting a paragraph with the typed character
+  #splitGalleryAtOffset(galleryNode, offset, text) {
+    const children = galleryNode.getChildren()
+
+    // Images after the cursor go into a new gallery
+    const imagesAfter = children.slice(offset)
+
+    if (imagesAfter.length > 0) {
+      const newGallery = new GalleryNode()
+      galleryNode.insertAfter(newGallery)
+      for (const image of imagesAfter) {
+        newGallery.append(image)
+      }
+    }
+
+    // Remove images before cursor if gallery would be at end (offset === childCount means cursor after last)
+    // Images before the cursor stay in the original gallery
+    // If offset is 0, original gallery is now empty and will be auto-removed (canBeEmpty=false)
+    // If offset is childCount, we already moved nothing — but cursor shouldn't be there in normal flow
+
+    // Insert a paragraph between the two galleries (or after the original if no second gallery)
+    const paragraph = $createParagraphNode()
+    const textNode = $createTextNode(text)
+    paragraph.append(textNode)
+
+    if (imagesAfter.length > 0) {
+      // Insert paragraph before the new gallery
+      const newGallery = galleryNode.getNextSibling()
+      newGallery.insertBefore(paragraph)
+    } else {
+      galleryNode.insertAfter(paragraph)
+    }
+
+    paragraph.select(1, 1)
+  }
+
+  // Split a gallery on Enter when cursor is between images
+  #splitGalleryOnEnter(event) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+
+    const anchorNode = selection.anchor.getNode()
+    if (!(anchorNode instanceof GalleryNode)) return false
+
+    const offset = selection.anchor.offset
+    const children = anchorNode.getChildren()
+    const imagesAfter = children.slice(offset)
+
+    if (imagesAfter.length > 0) {
+      const newGallery = new GalleryNode()
+      anchorNode.insertAfter(newGallery)
+      for (const image of imagesAfter) {
+        newGallery.append(image)
+      }
+    }
+
+    const paragraph = $createParagraphNode()
+    if (imagesAfter.length > 0) {
+      const newGallery = anchorNode.getNextSibling()
+      newGallery.insertBefore(paragraph)
+    } else {
+      anchorNode.insertAfter(paragraph)
+    }
+
+    paragraph.selectStart()
+
+    event.preventDefault()
+    return true
+  }
+
+  // Merge the next gallery's images into the previous gallery, removing the next gallery
+  #mergeAdjacentGalleries(previousGallery, nextGallery) {
+    const children = nextGallery.getChildren()
+    for (const child of children) {
+      previousGallery.append(child)
+    }
+    // nextGallery is now empty and canBeEmpty()=false, so it will auto-remove on splice,
+    // but since we moved all children manually, we need to remove it explicitly
+    nextGallery.remove()
+  }
+
   #deleteSelectedOrNext() {
     const node = this.nodeAfterCursor
     if (node instanceof DecoratorNode) {
@@ -523,6 +703,8 @@ export default class Selection {
   }
 
   #deletePreviousOrNext() {
+    if (this.#tryMergeAdjacentGalleries()) return true
+
     const node = this.nodeBeforeCursor
     if (node instanceof DecoratorNode) {
       this.#selectInLexical(node)
@@ -532,6 +714,68 @@ export default class Selection {
     }
 
     return false
+  }
+
+  // When backspace is pressed in an empty paragraph between two galleries, merge them
+  #tryMergeAdjacentGalleries() {
+    let merged = false
+
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection) || !selection.isCollapsed()) return
+
+      const anchorNode = selection.anchor.getNode()
+      const offset = selection.anchor.offset
+
+      // Check if we're at offset 0 of a paragraph (or the paragraph itself as element)
+      let paragraph = null
+      if ($isTextNode(anchorNode) && offset === 0) {
+        paragraph = anchorNode.getTopLevelElement()
+      } else if ($isElementNode(anchorNode) && offset === 0) {
+        paragraph = anchorNode
+      }
+
+      if (!paragraph) return
+
+      const prevSibling = paragraph.getPreviousSibling()
+      const nextSibling = paragraph.getNextSibling()
+
+      if (prevSibling instanceof GalleryNode && nextSibling instanceof GalleryNode) {
+        // Only merge if the paragraph is empty
+        if (paragraph.getTextContent().trim() === "") {
+          merged = true
+        }
+      }
+    })
+
+    if (merged) {
+      this.editor.update(() => {
+        const selection = $getSelection()
+        if (!$isRangeSelection(selection)) return
+
+        const anchorNode = selection.anchor.getNode()
+        const paragraph = $isTextNode(anchorNode) ? anchorNode.getTopLevelElement() : anchorNode
+
+        const prevGallery = paragraph.getPreviousSibling()
+        const nextGallery = paragraph.getNextSibling()
+
+        if (prevGallery instanceof GalleryNode && nextGallery instanceof GalleryNode) {
+          // Select the last image in the first gallery before merging
+          const lastImage = prevGallery.getLastChild()
+
+          this.#mergeAdjacentGalleries(prevGallery, nextGallery)
+          paragraph.remove()
+
+          if (lastImage) {
+            const nodeSelection = $createNodeSelection()
+            nodeSelection.add(lastImage.getKey())
+            $setSelection(nodeSelection)
+          }
+        }
+      })
+    }
+
+    return merged
   }
 
   #getValidSelectionRange() {

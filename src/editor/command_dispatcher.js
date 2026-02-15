@@ -22,6 +22,8 @@ import { INSERT_TABLE_COMMAND } from "@lexical/table"
 import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import { GalleryNode } from "../nodes/gallery_node"
+import { GalleryImageNode } from "../nodes/gallery_image_node"
 
 const COMMANDS = [
   "bold",
@@ -37,6 +39,7 @@ const COMMANDS = [
   "insertQuoteBlock",
   "insertCodeBlock",
   "insertHorizontalDivider",
+  "insertGallery",
   "uploadAttachments",
 
   "insertTable",
@@ -149,6 +152,27 @@ export class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
+
+    this.editor.focus()
+  }
+
+  dispatchInsertGallery() {
+    const sampleImages = [
+      { src: "https://picsum.photos/seed/gallery1/600/400", altText: "Sample image 1" },
+      { src: "https://picsum.photos/seed/gallery2/600/400", altText: "Sample image 2" },
+      { src: "https://picsum.photos/seed/gallery3/600/400", altText: "Sample image 3" },
+      { src: "https://picsum.photos/seed/gallery4/600/400", altText: "Sample image 4" },
+      { src: "https://picsum.photos/seed/gallery5/600/400", altText: "Sample image 5" },
+      { src: "https://picsum.photos/seed/gallery6/600/400", altText: "Sample image 6" }
+    ]
+
+    this.editor.update(() => {
+      const galleryNode = new GalleryNode()
+      for (const image of sampleImages) {
+        galleryNode.append(new GalleryImageNode(image))
+      }
+      this.contents.insertAtCursorEnsuringLineBelow(galleryNode)
+    })
 
     this.editor.focus()
   }
