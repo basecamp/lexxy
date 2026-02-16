@@ -1,8 +1,7 @@
 import {
   $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
-  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DecoratorNode,
-  KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
-  KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
+  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND, DecoratorNode,
+  KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListNode } from "@lexical/list"
@@ -263,8 +262,7 @@ export default class Selection {
     this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
     this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
 
-    this.editor.registerCommand(KEY_DELETE_COMMAND, this.#deleteSelectedOrNext.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_BACKSPACE_COMMAND, this.#deletePreviousOrNext.bind(this), COMMAND_PRIORITY_LOW)
+    this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW)
 
     this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
       this.current = $getSelection()
@@ -500,24 +498,15 @@ export default class Selection {
     }
   }
 
-  #deleteSelectedOrNext() {
-    const node = this.nodeAfterCursor
+  #selectDecoratorNodeBeforeDeletion(backwards) {
+    const node = backwards ? this.nodeBeforeCursor : this.nodeAfterCursor
     if (node instanceof DecoratorNode) {
       this.#selectInLexical(node)
+
       return true
+    } else {
+      return false
     }
-
-    return false
-  }
-
-  #deletePreviousOrNext() {
-    const node = this.nodeBeforeCursor
-    if (node instanceof DecoratorNode) {
-      this.#selectInLexical(node)
-      return true
-    }
-
-    return false
   }
 
   #getValidSelectionRange() {
