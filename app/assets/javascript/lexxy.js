@@ -6474,6 +6474,24 @@ function isSelectionHighlighted(selection) {
   }
 }
 
+function getHighlightStyles(selection) {
+  if (!yr(selection)) return null
+
+  let styles = b$3(selection.style);
+  if (!styles.color && !styles["background-color"]) {
+    const anchorNode = selection.anchor.getNode();
+    if (lr(anchorNode)) {
+      styles = b$3(anchorNode.getStyle());
+    }
+  }
+
+  const color = styles.color || null;
+  const backgroundColor = styles["background-color"] || null;
+  if (!color && !backgroundColor) return null
+
+  return { color, backgroundColor }
+}
+
 function hasHighlightStyles(cssOrStyles) {
   const styles = typeof cssOrStyles === "string" ? b$3(cssOrStyles) : cssOrStyles;
   return !!(styles.color || styles["background-color"])
@@ -7464,9 +7482,14 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     // node is reloaded from saved state such as from history.
     this.#startUploadIfNeeded();
 
-    const figure = this.createAttachmentFigure();
+    // Bridge-managed uploads (uploadUrl is null) don't have file data to show
+    // an image preview, so always show the file icon during upload.
+    const canPreviewFile = this.isPreviewableAttachment && this.uploadUrl != null;
+    const figure = canPreviewFile
+      ? this.createAttachmentFigure()
+      : createAttachmentFigure(this.contentType, false, this.fileName);
 
-    if (this.isPreviewableAttachment) {
+    if (canPreviewFile) {
       const img = figure.appendChild(this.#createDOMForImage());
 
       // load file locally to set dimensions and prevent vertical shifting
@@ -7567,8 +7590,10 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   async #startUploadIfNeeded() {
     if (this.#uploadStarted) return
+    if (!this.uploadUrl) return  // Bridge-managed upload — skip DirectUpload
 
     this.#setUploadStarted();
+
 
     const { DirectUpload } = await import('@rails/activestorage');
 
@@ -7754,6 +7779,7 @@ const COMMANDS = [
   "insertOrderedList",
   "insertQuoteBlock",
   "insertCodeBlock",
+  "setCodeLanguage",
   "insertHorizontalDivider",
   "uploadAttachments",
 
@@ -7861,6 +7887,20 @@ class CommandDispatcher {
         this.editor.dispatchCommand(_e$1, "code");
       } else {
         this.contents.toggleNodeWrappingAllSelectedLines((node) => X$1(node), () => new q$2("plain"));
+      }
+    });
+  }
+
+  dispatchSetCodeLanguage(language) {
+    this.editor.update(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const anchorNode = selection.anchor.getNode();
+      const topLevelElement = anchorNode.getTopLevelElementOrThrow();
+
+      if (X$1(topLevelElement)) {
+        topLevelElement.setLanguage(language);
       }
     });
   }
@@ -8159,6 +8199,52 @@ class Selection {
         if (selection && yr(selection)) {
           selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text");
           selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text");
+        }
+      });
+    }
+  }
+
+  // Selection preservation for native bridge dialogs
+  freeze() {
+    this.#expandLinkSelection();
+    this.editorContentElement.contentEditable = "false";
+  }
+
+  thaw() {
+    this.editorContentElement.contentEditable = "true";
+  }
+
+  #expandLinkSelection() {
+    let linkExpansion = null;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection) || !selection.isCollapsed()) return
+
+      let node = selection.anchor.getNode();
+      while (node) {
+        if (w$2(node)) {
+          const firstDescendant = node.getFirstDescendant();
+          const lastDescendant = node.getLastDescendant();
+          if (firstDescendant && lastDescendant) {
+            linkExpansion = {
+              anchorKey: firstDescendant.getKey(),
+              focusKey: lastDescendant.getKey(),
+              focusOffset: lastDescendant.getTextContent().length
+            };
+          }
+          return
+        }
+        node = node.getParent();
+      }
+    });
+
+    if (linkExpansion) {
+      this.editor.update(() => {
+        const selection = Lr();
+        if (yr(selection)) {
+          selection.anchor.set(linkExpansion.anchorKey, 0, "text");
+          selection.focus.set(linkExpansion.focusKey, linkExpansion.focusOffset, "text");
         }
       });
     }
@@ -9461,6 +9547,57 @@ class Contents {
     }, { tag: Dn });
   }
 
+  insertPendingAttachment(file) {
+    if (!this.editorElement.supportsAttachments) return null
+
+    let nodeKey = null;
+    this.editor.update(() => {
+      const uploadNode = new ActionTextAttachmentUploadNode({
+        file,
+        uploadUrl: null,
+        blobUrlTemplate: this.editorElement.blobUrlTemplate,
+        editor: this.editor
+      });
+      this.insertAtCursor(uploadNode);
+      nodeKey = uploadNode.getKey();
+    }, { tag: Dn });
+
+    if (!nodeKey) return null
+
+    const editor = this.editor;
+    return {
+      setAttributes(json) {
+        editor.update(() => {
+          const node = xo(nodeKey);
+          if (!node) return
+
+          node.replace(new ActionTextAttachmentNode({
+            sgid: json.sgid || json.attachable_sgid,
+            src: json.url,
+            contentType: json.contentType || json.content_type,
+            fileName: json.filename,
+            fileSize: json.filesize || json.byte_size,
+            previewable: json.previewable,
+            presentation: json.presentation
+          }));
+        }, { tag: Dn });
+      },
+      setUploadProgress(progress) {
+        const dom = editor.getElementByKey(nodeKey);
+        const progressBar = dom?.querySelector("progress");
+        if (progressBar) {
+          editor.update(() => { progressBar.value = progress; });
+        }
+      },
+      remove() {
+        editor.update(() => {
+          const node = xo(nodeKey);
+          if (node) node.remove();
+        });
+      }
+    }
+  }
+
   async deleteSelectedNodes() {
     let focusNode = null;
 
@@ -10283,6 +10420,97 @@ class Highlighter {
   }
 }
 
+class Native {
+  constructor(editorElement) {
+    this.editorElement = editorElement;
+    this.editor = editorElement.editor;
+  }
+
+  dispatchHighlightColors() {
+    const buttons = this.editorElement.config.get("highlight.buttons");
+    if (!buttons) return
+
+    dispatch(this.editorElement, "lexxy:highlight-colors", {
+      colors: this.#resolveColors("color", buttons.color || []),
+      backgroundColors: this.#resolveColors("background-color", buttons["background-color"] || [])
+    });
+  }
+
+  #resolveColors(property, cssValues) {
+    const resolver = document.createElement("span");
+    resolver.style.display = "none";
+    this.editorElement.appendChild(resolver);
+
+    const resolved = cssValues.map(cssValue => {
+      resolver.style.setProperty(property, cssValue);
+      const value = getComputedStyle(resolver).getPropertyValue(property);
+      resolver.style.removeProperty(property);
+      return { name: cssValue, value }
+    });
+
+    resolver.remove();
+    return resolved
+  }
+
+  dispatchAttributesChange() {
+    let attributes = null;
+    let link = null;
+    let highlight = null;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const anchorNode = selection.anchor.getNode();
+      if (!anchorNode.getParent()) return
+
+      // Get link info
+      let inLink = false;
+      let linkHref = null;
+      let node = anchorNode;
+      while (node) {
+        if (w$2(node)) {
+          inLink = true;
+          linkHref = node.getURL();
+          break
+        }
+        node = node.getParent();
+      }
+
+      // Get block-level info
+      const topLevelElement = anchorNode.getTopLevelElementOrThrow();
+      const inQuote = Ot$2(topLevelElement);
+      const inHeading = It$2(topLevelElement);
+
+      // Get list type
+      const listType = getListType(anchorNode);
+
+      // Only include truthy attributes - false/undefined values mean "enabled but not active"
+      // iOS interprets false as "disabled", so we must omit inactive attributes
+      attributes = {};
+      if (selection.hasFormat("bold")) attributes.bold = true;
+      if (selection.hasFormat("italic")) attributes.italic = true;
+      if (selection.hasFormat("strikethrough")) attributes.strikethrough = true;
+      const inCode = X$1(topLevelElement) || selection.hasFormat("code");
+      if (inCode) attributes.code = true;
+      if (isSelectionHighlighted(selection)) {
+        attributes.highlight = true;
+        highlight = getHighlightStyles(selection);
+      }
+      if (inLink) attributes.link = true;
+      if (inQuote) attributes.quote = true;
+      if (inHeading) attributes.heading = true;
+      if (listType === "bullet") attributes["unordered-list"] = true;
+      if (listType === "number") attributes["ordered-list"] = true;
+      link = inLink && linkHref ? { href: linkHref } : null;
+    });
+
+    if (attributes) {
+      dispatch(this.editorElement, "lexxy:attributes-change", { attributes, link, highlight });
+    }
+  }
+}
+
 const TRIX_LANGUAGE_ATTR = "language";
 
 const TrixContentExtension = Kl({
@@ -10477,11 +10705,15 @@ class LexicalEditorElement extends HTMLElement {
     this.contents = new Contents(this);
     this.selection = new Selection(this);
     this.clipboard = new Clipboard(this);
+    this.native = new Native(this);
 
     CommandDispatcher.configureFor(this);
     this.#initialize();
 
-    requestAnimationFrame(() => dispatch(this, "lexxy:initialize"));
+    requestAnimationFrame(() => {
+      dispatch(this, "lexxy:initialize");
+      this.native.dispatchHighlightColors();
+    });
     this.toggleAttribute("connected", true);
 
     this.#handleAutofocus();
@@ -10573,6 +10805,14 @@ class LexicalEditorElement extends HTMLElement {
 
   get supportsRichText() {
     return this.config.get("richText")
+  }
+
+  freezeSelection() {
+    this.selection.freeze();
+  }
+
+  thawSelection() {
+    this.selection.thaw();
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -10771,6 +11011,7 @@ class LexicalEditorElement extends HTMLElement {
       this.#internalFormValue = this.value;
       this.#toggleEmptyStatus();
       this.#setValidity();
+      this.native.dispatchAttributesChange();
     }));
   }
 
@@ -10848,6 +11089,7 @@ class LexicalEditorElement extends HTMLElement {
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
+      this.native.dispatchAttributesChange();
       dispatch(this, "lexxy:focus");
       this.currentlyFocused = true;
     }
@@ -10949,6 +11191,7 @@ class LexicalEditorElement extends HTMLElement {
     }
 
     this.selection = null;
+    this.native = null;
 
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache);
   }
@@ -11781,6 +12024,17 @@ class CodeLanguagePicker extends HTMLElement {
       this.#updateCodeBlockLanguage(this.languagePickerElement.value);
     });
 
+    this.languagePickerElement.addEventListener("mousedown", (event) => {
+      const handled = !dispatch(this.editorElement, "lexxy:code-language-picker-open", {
+        languages: this.#bridgeLanguages,
+        currentLanguage: this.languagePickerElement.value
+      }, true);
+
+      if (handled) {
+        event.preventDefault();
+      }
+    });
+
     this.languagePickerElement.setAttribute("nonce", getNonce());
     this.appendChild(this.languagePickerElement);
   }
@@ -11815,6 +12069,10 @@ class CodeLanguagePicker extends HTMLElement {
     const plainIndex = sortedEntries.findIndex(([ key ]) => key === "plain");
     const plainEntry = sortedEntries.splice(plainIndex, 1)[0];
     return Object.fromEntries([ plainEntry, ...sortedEntries ])
+  }
+
+  get #bridgeLanguages() {
+    return Object.entries(this.#languages).map(([key, name]) => ({ key, name }))
   }
 
   #updateCodeBlockLanguage(language) {
