@@ -33,6 +33,25 @@ Fired when a file is dropped or inserted into the editor.
 - Access the file via `event.detail.file`.
 - Call `event.preventDefault()` to cancel the upload and prevent attaching the file.
 
+## `lexxy:upload-start`
+
+Fired when a file upload begins.
+Access the file via `event.detail.file`.
+
+## `lexxy:upload-progress`
+
+Fired as an upload progresses.
+
+- `event.detail.file` – the file being uploaded.
+- `event.detail.progress` – a number from 0 to 100.
+
+## `lexxy:upload-end`
+
+Fired when an upload succeeds or fails.
+
+- `event.detail.file` – the file that was uploaded.
+- `event.detail.error` – `null` on success, or the error on failure.
+
 ## `lexxy:insert-link`
 
 Fired when a plain text link is pasted into the editor.
