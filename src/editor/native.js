@@ -4,7 +4,7 @@ import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode } from "@lexical/code"
 
 import { getListType } from "../helpers/lexical_helper"
-import { isSelectionHighlighted, getHighlightStyles } from "../helpers/format_helper"
+import { getHighlightStyles, isSelectionHighlighted } from "../helpers/format_helper"
 import { dispatch } from "../helpers/html_helper"
 
 export default class Native {
@@ -30,7 +30,7 @@ export default class Native {
 
     const resolved = cssValues.map(cssValue => {
       resolver.style.setProperty(property, cssValue)
-      const value = getComputedStyle(resolver).getPropertyValue(property)
+      const value = window.getComputedStyle(resolver).getPropertyValue(property)
       resolver.style.removeProperty(property)
       return { name: cssValue, value }
     })

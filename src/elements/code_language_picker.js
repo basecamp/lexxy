@@ -67,7 +67,7 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   get #bridgeLanguages() {
-    return Object.entries(this.#languages).map(([key, name]) => ({ key, name }))
+    return Object.entries(this.#languages).map(([ key, name ]) => ({ key, name }))
   }
 
   #updateCodeBlockLanguage(language) {

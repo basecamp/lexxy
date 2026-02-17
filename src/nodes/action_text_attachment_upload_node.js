@@ -151,7 +151,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   async #startUploadIfNeeded() {
     if (this.#uploadStarted) return
-    if (!this.uploadUrl) return  // Bridge-managed upload — skip DirectUpload
+    if (!this.uploadUrl) return // Bridge-managed upload — skip DirectUpload
 
     this.#setUploadStarted()
 
