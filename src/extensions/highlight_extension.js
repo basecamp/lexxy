@@ -2,7 +2,7 @@ import { $getState, $hasUpdateTag, $setState, COMMAND_PRIORITY_NORMAL, PASTE_TAG
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty, $patchStyleText, getCSSFromStyleObject } from "@lexical/selection"
 import { extendTextNodeConversion } from "../helpers/lexical_helper"
-import { StyleCanonicalizer } from "../helpers/format_helper"
+import { StyleCanonicalizer, applyCanonicalizers } from "../helpers/format_helper"
 import { hasHighlightStyles } from "../helpers/format_helper"
 import { RichTextExtension } from "@lexical/rich-text"
 
@@ -88,11 +88,14 @@ function $canonicalizePastedStyles(textNode, canonicalizers = []) {
   if ($hasPastedStyles(textNode)) {
     $setPastedStyles(textNode, false)
 
-    const canonicalizedCSS = canonicalizers.reduce((css, canonicalizer) => {
-      return canonicalizer.applyCanonicalization(css)
-    }, textNode.getStyle())
-
+    const canonicalizedCSS = applyCanonicalizers(textNode.getStyle(), canonicalizers)
     textNode.setStyle(canonicalizedCSS)
+
+    const selection = $getSelection()
+    if (textNode.isSelected(selection)) {
+      selection.setStyle(textNode.getStyle())
+      selection.setFormat(textNode.getFormat())
+    }
   }
 }
 
