@@ -23,6 +23,7 @@ import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
 import Highlighter from "../editor/highlighter"
+import Native from "../editor/native"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
@@ -56,11 +57,15 @@ export class LexicalEditorElement extends HTMLElement {
     this.contents = new Contents(this)
     this.selection = new Selection(this)
     this.clipboard = new Clipboard(this)
+    this.native = new Native(this)
 
     CommandDispatcher.configureFor(this)
     this.#initialize()
 
-    requestAnimationFrame(() => dispatch(this, "lexxy:initialize"))
+    requestAnimationFrame(() => {
+      dispatch(this, "lexxy:initialize")
+      this.native.dispatchHighlightColors()
+    })
     this.toggleAttribute("connected", true)
 
     this.#handleAutofocus()
@@ -152,6 +157,14 @@ export class LexicalEditorElement extends HTMLElement {
 
   get supportsRichText() {
     return this.config.get("richText")
+  }
+
+  freezeSelection() {
+    this.selection.freeze()
+  }
+
+  thawSelection() {
+    this.selection.thaw()
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -288,6 +301,7 @@ export class LexicalEditorElement extends HTMLElement {
     const editorContentElement = createElement("div", {
       classList: "lexxy-editor__content",
       contenteditable: true,
+      autocapitalize: "none",
       role: "textbox",
       "aria-multiline": true,
       "aria-label": this.#labelText,
@@ -350,6 +364,7 @@ export class LexicalEditorElement extends HTMLElement {
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
       this.#setValidity()
+      this.native.dispatchAttributesChange()
     }))
   }
 
@@ -427,6 +442,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
+      this.native.dispatchAttributesChange()
       dispatch(this, "lexxy:focus")
       this.currentlyFocused = true
     }
@@ -535,6 +551,7 @@ export class LexicalEditorElement extends HTMLElement {
     }
 
     this.selection = null
+    this.native = null
 
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
   }

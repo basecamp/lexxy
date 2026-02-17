@@ -6,6 +6,7 @@ import {
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListNode } from "@lexical/list"
+import { $isLinkNode } from "@lexical/link"
 import { TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
@@ -110,6 +111,52 @@ export default class Selection {
         if (selection && $isRangeSelection(selection)) {
           selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text")
           selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text")
+        }
+      })
+    }
+  }
+
+  // Selection preservation for native bridge dialogs
+  freeze() {
+    this.#expandLinkSelection()
+    this.editorContentElement.contentEditable = "false"
+  }
+
+  thaw() {
+    this.editorContentElement.contentEditable = "true"
+  }
+
+  #expandLinkSelection() {
+    let linkExpansion = null
+
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection) || !selection.isCollapsed()) return
+
+      let node = selection.anchor.getNode()
+      while (node) {
+        if ($isLinkNode(node)) {
+          const firstDescendant = node.getFirstDescendant()
+          const lastDescendant = node.getLastDescendant()
+          if (firstDescendant && lastDescendant) {
+            linkExpansion = {
+              anchorKey: firstDescendant.getKey(),
+              focusKey: lastDescendant.getKey(),
+              focusOffset: lastDescendant.getTextContent().length
+            }
+          }
+          return
+        }
+        node = node.getParent()
+      }
+    })
+
+    if (linkExpansion) {
+      this.editor.update(() => {
+        const selection = $getSelection()
+        if ($isRangeSelection(selection)) {
+          selection.anchor.set(linkExpansion.anchorKey, 0, "text")
+          selection.focus.set(linkExpansion.focusKey, linkExpansion.focusOffset, "text")
         }
       })
     }

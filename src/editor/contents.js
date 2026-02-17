@@ -4,6 +4,7 @@ import {
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
+import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
@@ -271,6 +272,57 @@ export default class Contents {
       const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate })
       this.insertAtCursor(uploadedImageNode)
     }, { tag: HISTORY_MERGE_TAG })
+  }
+
+  insertPendingAttachment(file) {
+    if (!this.editorElement.supportsAttachments) return null
+
+    let nodeKey = null
+    this.editor.update(() => {
+      const uploadNode = new ActionTextAttachmentUploadNode({
+        file,
+        uploadUrl: null,
+        blobUrlTemplate: this.editorElement.blobUrlTemplate,
+        editor: this.editor
+      })
+      this.insertAtCursor(uploadNode)
+      nodeKey = uploadNode.getKey()
+    }, { tag: HISTORY_MERGE_TAG })
+
+    if (!nodeKey) return null
+
+    const editor = this.editor
+    return {
+      setAttributes(json) {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (!node) return
+
+          node.replace(new ActionTextAttachmentNode({
+            sgid: json.sgid || json.attachable_sgid,
+            src: json.url,
+            contentType: json.contentType || json.content_type,
+            fileName: json.filename,
+            fileSize: json.filesize || json.byte_size,
+            previewable: json.previewable,
+            presentation: json.presentation
+          }))
+        }, { tag: HISTORY_MERGE_TAG })
+      },
+      setUploadProgress(progress) {
+        const dom = editor.getElementByKey(nodeKey)
+        const progressBar = dom?.querySelector("progress")
+        if (progressBar) {
+          editor.update(() => { progressBar.value = progress })
+        }
+      },
+      remove() {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (node) node.remove()
+        })
+      }
+    }
   }
 
   async deleteSelectedNodes() {

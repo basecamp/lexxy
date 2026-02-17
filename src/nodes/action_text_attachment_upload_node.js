@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
-import { createElement } from "../helpers/html_helper"
+import { createAttachmentFigure, createElement } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 
@@ -43,9 +43,14 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     // node is reloaded from saved state such as from history.
     this.#startUploadIfNeeded()
 
-    const figure = this.createAttachmentFigure()
+    // Bridge-managed uploads (uploadUrl is null) don't have file data to show
+    // an image preview, so always show the file icon during upload.
+    const canPreviewFile = this.isPreviewableAttachment && this.uploadUrl != null
+    const figure = canPreviewFile
+      ? this.createAttachmentFigure()
+      : createAttachmentFigure(this.contentType, false, this.fileName)
 
-    if (this.isPreviewableAttachment) {
+    if (canPreviewFile) {
       const img = figure.appendChild(this.#createDOMForImage())
 
       // load file locally to set dimensions and prevent vertical shifting
@@ -146,8 +151,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   async #startUploadIfNeeded() {
     if (this.#uploadStarted) return
+    if (!this.uploadUrl) return // Bridge-managed upload — skip DirectUpload
 
     this.#setUploadStarted()
+
 
     const { DirectUpload } = await import("@rails/activestorage")
 
