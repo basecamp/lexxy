@@ -54,4 +54,21 @@ class PasteTest < ApplicationSystemTestCase
 
     assert_editor_html "<p>Hello **there**</p>"
   end
+
+  test "markdownPasteTransforms are applied in left-to-right order" do
+    visit edit_post_path(posts(:empty), markdown_paste_transforms: "testPipeline")
+    find_editor.paste "Hello"
+    assert_editor_html "<p>B:A:Hello</p>"
+  end
+
+  test "markdownPasteTransforms are not applied when not configured" do
+    find_editor.paste "Paragraph one.\n\nParagraph two."
+    assert_editor_html "<p>Paragraph one.</p><p>Paragraph two.</p>"
+  end
+
+  test "addBlockSpacers inserts spacers between pasted paragraphs" do
+    visit edit_post_path(posts(:empty), markdown_paste_transforms: "addBlockSpacers")
+    find_editor.paste "Paragraph one.\n\nParagraph two."
+    assert_editor_html "<p>Paragraph one.</p><p><br></p><p>Paragraph two.</p>"
+  end
 end

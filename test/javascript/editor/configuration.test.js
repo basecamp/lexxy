@@ -36,3 +36,20 @@ test("overrides defaults", () => {
   const config = new EditorConfiguration(element)
   expect(config.get("richText")).toBe(false)
 })
+
+test("markdownPasteTransforms defaults to null", () => {
+  const element = createElement("<lexxy-editor></lexxy-editor>")
+  const config = new EditorConfiguration(element)
+  expect(config.get("markdownPasteTransforms")).toBeNull()
+})
+
+test("markdownPasteTransforms can be set to an array of functions", () => {
+  const fn1 = () => {}
+  const fn2 = () => {}
+  configure({ default: { markdownPasteTransforms: [fn1, fn2] } })
+
+  const element = createElement("<lexxy-editor></lexxy-editor>")
+  const config = new EditorConfiguration(element)
+  const transforms = config.get("markdownPasteTransforms")
+  expect(transforms).toEqual([fn1, fn2])
+})

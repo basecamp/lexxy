@@ -15,6 +15,7 @@ const presets = new Configuration({
     multiLine: true,
     richText: true,
     toolbar: true,
+    markdownPasteTransforms: null,
     highlight: {
       buttons: {
         color: range(1, 9).map(n => `var(--highlight-${n})`),

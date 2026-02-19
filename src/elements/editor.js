@@ -154,6 +154,10 @@ export class LexicalEditorElement extends HTMLElement {
     return this.config.get("richText")
   }
 
+  get markdownPasteTransforms() {
+    return this.config.get("markdownPasteTransforms")
+  }
+
   // TODO: Deprecate `single-line` attribute
   get isSingleLineMode() {
     return this.hasAttribute("single-line")

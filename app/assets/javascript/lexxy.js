@@ -4652,6 +4652,7 @@ const presets = new Configuration({
     multiLine: true,
     richText: true,
     toolbar: true,
+    markdownPasteTransforms: null,
     highlight: {
       buttons: {
         color: range(1, 9).map(n => `var(--highlight-${n})`),
@@ -6462,6 +6463,22 @@ function dispatch(element, eventName, detail = null, cancelable = false) {
 function generateDomId(prefix) {
   const randomPart = Math.random().toString(36).slice(2, 10);
   return `${prefix}-${randomPart}`
+}
+
+const HEADING_TAGS = new Set([ "H1", "H2", "H3", "H4", "H5", "H6" ]);
+
+function addBlockSpacers(doc) {
+  let child = doc.body.firstElementChild;
+  while (child) {
+    const next = child.nextElementSibling;
+    if (next && !HEADING_TAGS.has(child.tagName)) {
+      // Mimics an empty Lexical ParagraphNode, which serializes to <p><br></p>
+      const spacer = doc.createElement("p");
+      spacer.appendChild(doc.createElement("br"));
+      doc.body.insertBefore(spacer, next);
+    }
+    child = next;
+  }
 }
 
 function isSelectionHighlighted(selection) {
@@ -9210,11 +9227,15 @@ class Contents {
   }
 
   insertHtml(html, { tag } = {}) {
+    this.insertDom(parseHtml(html), { tag });
+  }
+
+  insertDom(dom, { tag } = {}) {
     this.editor.update(() => {
       const selection = Lr();
       if (!yr(selection)) return
 
-      const nodes = m$1(this.editor, parseHtml(html));
+      const nodes = m$1(this.editor, dom);
       selection.insertNodes(nodes);
     }, { tag });
   }
@@ -10091,7 +10112,16 @@ class Clipboard {
 
   #pasteMarkdown(text) {
     const html = k(text);
-    this.contents.insertHtml(html, { tag: [ Fn ] });
+    const dom = parseHtml(html);
+    this.#applyMarkdownPasteTransforms(dom);
+    this.contents.insertDom(dom, { tag: [ Fn ] });
+  }
+
+  #applyMarkdownPasteTransforms(dom) {
+    const transforms = this.editorElement.markdownPasteTransforms;
+    if (transforms) {
+      transforms.forEach(fn => fn(dom));
+    }
   }
 
   #pasteRichText(clipboardData) {
@@ -10573,6 +10603,10 @@ class LexicalEditorElement extends HTMLElement {
 
   get supportsRichText() {
     return this.config.get("richText")
+  }
+
+  get markdownPasteTransforms() {
+    return this.config.get("markdownPasteTransforms")
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -12677,5 +12711,5 @@ const configure = Lexxy.configure;
 // Pushing elements definition to after the current call stack to allow global configuration to take place first
 setTimeout(defineElements, 0);
 
-export { ActionTextAttachmentNode, ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, configure, highlightCode as highlightAll, highlightCode };
+export { ActionTextAttachmentNode, ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, addBlockSpacers, configure, highlightCode as highlightAll, highlightCode };
 //# sourceMappingURL=lexxy.js.map

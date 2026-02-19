@@ -22,11 +22,15 @@ export default class Contents {
   }
 
   insertHtml(html, { tag } = {}) {
+    this.insertDom(parseHtml(html), { tag })
+  }
+
+  insertDom(dom, { tag } = {}) {
     this.editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
-      const nodes = $generateNodesFromDOM(this.editor, parseHtml(html))
+      const nodes = $generateNodesFromDOM(this.editor, dom)
       selection.insertNodes(nodes)
     }, { tag })
   }

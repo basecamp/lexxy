@@ -47,4 +47,18 @@ export function generateDomId(prefix) {
   return `${prefix}-${randomPart}`
 }
 
+const HEADING_TAGS = new Set([ "H1", "H2", "H3", "H4", "H5", "H6" ])
 
+export function addBlockSpacers(doc) {
+  let child = doc.body.firstElementChild
+  while (child) {
+    const next = child.nextElementSibling
+    if (next && !HEADING_TAGS.has(child.tagName)) {
+      // Mimics an empty Lexical ParagraphNode, which serializes to <p><br></p>
+      const spacer = doc.createElement("p")
+      spacer.appendChild(doc.createElement("br"))
+      doc.body.insertBefore(spacer, next)
+    }
+    child = next
+  }
+}
