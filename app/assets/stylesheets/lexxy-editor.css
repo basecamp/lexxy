@@ -221,7 +221,7 @@
 /* Toolbar */
 
 :where(lexxy-toolbar) {
-  --lexxy-toolbar-icon-size: 1em;
+  --lexxy-toolbar-icon-size: 1.125em;
 
   border-block-end: 1px solid var(--lexxy-color-ink-lighter);
   color: currentColor;
@@ -265,6 +265,23 @@
     grid-area: 1/1;
     inline-size: var(--lexxy-toolbar-icon-size);
     user-select: none;
+  }
+
+  &.lexxy-editor__toolbar-group-end {
+    position: relative;
+    margin-inline-end: calc(var(--lexxy-toolbar-spacing) + 1px);
+
+    &:after {
+      background-color: var(--lexxy-color-ink-lighter);
+      content: "";
+      display: block;
+      width: 1px;
+      height: 60%;
+      inset-inline-end: calc(-1 * var(--lexxy-toolbar-spacing));
+      inset-block-start: 20%;
+      position: absolute;
+      pointer-events: none;
+    }
   }
 }
 
