@@ -6353,24 +6353,9 @@ const Ne$1=/^(\d+(?:\.\d+)?)px$/,ve$1={BOTH:3,COLUMN:2,NO_STATUS:0,ROW:1};class 
 
 const SILENT_UPDATE_TAGS = [ Dn, zn, Kn ];
 
-function getNearestListItemNode(node) {
-  let current = node;
-  while (current !== null) {
-    if (ot$3(current)) return current
-    current = current.getParent();
-  }
-  return null
-}
-
 function getListType(node) {
-  let current = node;
-  while (current) {
-    if (dt$2(current)) {
-      return current.getListType()
-    }
-    current = current.getParent();
-  }
-  return null
+  const list = wt$5(node, lt$3);
+  return list?.getType() ?? null
 }
 
 function isPrintableCharacter(event) {
@@ -8170,6 +8155,11 @@ class Selection {
     }
   }
 
+  nearestNodeOfType(nodeType) {
+    const anchorNode = Lr()?.anchor?.getNode();
+    return wt$5(anchorNode, nodeType)
+  }
+
   get hasSelectedWordsInSingleLine() {
     const selection = Lr();
     if (!yr(selection)) return false
@@ -8197,42 +8187,20 @@ class Selection {
   }
 
   get isInsideList() {
-    const selection = Lr();
-    if (!yr(selection)) return false
-
-    const anchorNode = selection.anchor.getNode();
-    return getNearestListItemNode(anchorNode) !== null
+    return this.nearestNodeOfType(nt$2)
   }
 
   get isIndentedList() {
-    const selection = Lr();
-    if (!yr(selection)) return false
-
-    const nodes = selection.getNodes();
-    for (const node of nodes) {
-      const closestListNode = wt$5(node, lt$3);
-      if (closestListNode && W$5(closestListNode) > 1) {
-        return true
-      }
-    }
-
-    return false
+    const closestListNode = this.nearestNodeOfType(lt$3);
+    return closestListNode && (W$5(closestListNode) > 1)
   }
 
   get isInsideCodeBlock() {
-    const selection = Lr();
-    if (!yr(selection)) return false
-
-    const anchorNode = selection.anchor.getNode();
-    return wt$5(anchorNode, q$2) !== null
+    return this.nearestNodeOfType(q$2) !== null
   }
 
   get isTableCellSelected() {
-    const selection = Lr();
-    if (!yr(selection)) return false
-
-    const anchorNode = selection.anchor.getNode();
-    return wt$5(anchorNode, xe) !== null
+    return this.nearestNodeOfType(xe) !== null
   }
 
   get nodeAfterCursor() {
@@ -9771,7 +9739,7 @@ class Contents {
     const parentLists = new Set();
 
     for (const node of nodes) {
-      const listItem = getNearestListItemNode(node);
+      const listItem = wt$5(node, nt$2);
       if (listItem) {
         listItems.add(listItem);
         const parentList = listItem.getParent();
