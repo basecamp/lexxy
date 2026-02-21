@@ -6479,6 +6479,12 @@ function hasHighlightStyles(cssOrStyles) {
   return !!(styles.color || styles["background-color"])
 }
 
+function applyCanonicalizers(styles, canonicalizers = []) {
+  return canonicalizers.reduce((css, canonicalizer) => {
+    return canonicalizer.applyCanonicalization(css)
+  }, styles)
+}
+
 class StyleCanonicalizer {
   constructor(property, allowedValues= []) {
     this._property = property;
@@ -10244,11 +10250,14 @@ function $canonicalizePastedStyles(textNode, canonicalizers = []) {
   if ($hasPastedStyles(textNode)) {
     $setPastedStyles(textNode, false);
 
-    const canonicalizedCSS = canonicalizers.reduce((css, canonicalizer) => {
-      return canonicalizer.applyCanonicalization(css)
-    }, textNode.getStyle());
-
+    const canonicalizedCSS = applyCanonicalizers(textNode.getStyle(), canonicalizers);
     textNode.setStyle(canonicalizedCSS);
+
+    const selection = Lr();
+    if (textNode.isSelected(selection)) {
+      selection.setStyle(textNode.getStyle());
+      selection.setFormat(textNode.getFormat());
+    }
   }
 }
 
