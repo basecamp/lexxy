@@ -8,9 +8,9 @@ import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
-import { $isListNode } from "@lexical/list"
-import { getNearestListItemNode } from "../helpers/lexical_helper"
+import { $isListNode, ListItemNode } from "@lexical/list"
 import { FormatEscaper } from "./format_escaper"
+import { $getNearestNodeOfType } from "@lexical/utils"
 
 export default class Contents {
   constructor(editorElement) {
@@ -510,7 +510,7 @@ export default class Contents {
     const parentLists = new Set()
 
     for (const node of nodes) {
-      const listItem = getNearestListItemNode(node)
+      const listItem = $getNearestNodeOfType(node, ListItemNode)
       if (listItem) {
         listItems.add(listItem)
         const parentList = listItem.getParent()
