@@ -1,5 +1,5 @@
 import {
-  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
+  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection,
   $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection
  } from "lexical"
 
@@ -31,19 +31,18 @@ export default class Contents {
   }
 
   insertAtCursor(node) {
-    const selection = $getSelection()
+    const selection = $getSelection() ?? $getRoot().selectEnd()
     const selectedNodes = selection?.getNodes()
 
     if ($isRangeSelection(selection)) {
-      $insertNodes([ node ])
-    } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
+      selection.insertNodes([ node ])
+    } else if ($isNodeSelection(selection) && selectedNodes.length > 0) {
+      // Overrides Lexical's default behavior of _removing_ the currently selected nodes
+      // https://github.com/facebook/lexical/blob/v0.38.2/packages/lexical/src/LexicalSelection.ts#L412
       const lastNode = selectedNodes.at(-1)
       lastNode.insertAfter(node)
-    } else {
-      const root = $getRoot()
-      root.append(node)
     }
-  }
+}
 
   insertAtCursorEnsuringLineBelow(node) {
     this.insertAtCursor(node)
@@ -426,7 +425,7 @@ export default class Contents {
       wrappingNode.append(...topLevelElement.getChildren())
       topLevelElement.replace(wrappingNode)
     } else {
-      $insertNodes([ newNodeFn() ])
+      selection.insertNodes([ newNodeFn() ])
     }
   }
 
