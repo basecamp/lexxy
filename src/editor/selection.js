@@ -4,12 +4,15 @@ import {
   KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
-import { $getListDepth, ListNode } from "@lexical/list"
-import { TableCellNode } from "@lexical/table"
+import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
+import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
+import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $createNodeSelectionWith, getNearestListItemNode, isPrintableCharacter } from "../helpers/lexical_helper"
+import { $createNodeSelectionWith, getListType, isPrintableCharacter } from "../helpers/lexical_helper"
+import { LinkNode } from "@lexical/link"
+import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 
 export default class Selection {
   constructor(editorElement) {
@@ -112,6 +115,36 @@ export default class Selection {
     }
   }
 
+  getFormat() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return {}
+
+    const anchorNode = selection.anchor.getNode()
+    if (!anchorNode.getParent()) return {}
+
+    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+    const listType = getListType(anchorNode)
+
+    return {
+      isBold: selection.hasFormat("bold"),
+      isItalic: selection.hasFormat("italic"),
+      isStrikethrough: selection.hasFormat("strikethrough"),
+      isHighlight: isSelectionHighlighted(selection),
+      isInLink: $getNearestNodeOfType(anchorNode, LinkNode) !== null,
+      isInQuote: $isQuoteNode(topLevelElement),
+      isInHeading: $isHeadingNode(topLevelElement),
+      isInCode: selection.hasFormat("code") || $getNearestNodeOfType(anchorNode, CodeNode) !== null,
+      isInList: listType !== null,
+      listType,
+      isInTable: $getTableCellNodeFromLexicalNode(anchorNode) !== null
+    }
+  }
+
+  nearestNodeOfType(nodeType) {
+    const anchorNode = $getSelection()?.anchor?.getNode()
+    return $getNearestNodeOfType(anchorNode, nodeType)
+  }
+
   get hasSelectedWordsInSingleLine() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return false
@@ -139,42 +172,20 @@ export default class Selection {
   }
 
   get isInsideList() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return false
-
-    const anchorNode = selection.anchor.getNode()
-    return getNearestListItemNode(anchorNode) !== null
+    return this.nearestNodeOfType(ListItemNode)
   }
 
   get isIndentedList() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return false
-
-    const nodes = selection.getNodes()
-    for (const node of nodes) {
-      const closestListNode = $getNearestNodeOfType(node, ListNode)
-      if (closestListNode && $getListDepth(closestListNode) > 1) {
-        return true
-      }
-    }
-
-    return false
+    const closestListNode = this.nearestNodeOfType(ListNode)
+    return closestListNode && ($getListDepth(closestListNode) > 1)
   }
 
   get isInsideCodeBlock() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return false
-
-    const anchorNode = selection.anchor.getNode()
-    return $getNearestNodeOfType(anchorNode, CodeNode) !== null
+    return this.nearestNodeOfType(CodeNode) !== null
   }
 
   get isTableCellSelected() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return false
-
-    const anchorNode = selection.anchor.getNode()
-    return $getNearestNodeOfType(anchorNode, TableCellNode) !== null
+    return this.nearestNodeOfType(TableCellNode) !== null
   }
 
   get nodeAfterCursor() {
