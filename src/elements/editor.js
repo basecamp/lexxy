@@ -24,6 +24,7 @@ import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { ProvisionalParagraphExtension } from "../extensions/provisional_paragraph_extension"
 import { HighlightExtension } from "../extensions/highlight_extension"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 import { TablesExtension } from "../extensions/tables_extension"
@@ -114,6 +115,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   get baseExtensions() {
     return [
+      ProvisionalParagraphExtension,
       HighlightExtension,
       TrixContentExtension,
       TablesExtension
@@ -203,10 +205,6 @@ export class LexicalEditorElement extends HTMLElement {
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>"
     const nodes = $generateNodesFromDOM(this.editor, parseHtml(`${html}`))
-
-    if (nodes.length === 0) {
-      return [ $createParagraphNode() ]
-    }
 
     return nodes
       .map(this.#wrapTextNode)
