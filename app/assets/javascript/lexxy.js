@@ -6353,6 +6353,12 @@ const Ne$1=/^(\d+(?:\.\d+)?)px$/,ve$1={BOTH:3,COLUMN:2,NO_STATUS:0,ROW:1};class 
 
 const SILENT_UPDATE_TAGS = [ Dn, zn, Kn ];
 
+function $createNodeSelectionWith(...nodes) {
+  const selection = Pr();
+  nodes.forEach(node => selection.add(node.getKey()));
+  return selection
+}
+
 function getNearestListItemNode(node) {
   let current = node;
   while (current !== null) {
@@ -6445,14 +6451,6 @@ function createAttachmentFigure(contentType, isPreviewable, fileName) {
 
 function isPreviewableImage(contentType) {
   return contentType.startsWith("image/") && !contentType.includes("svg")
-}
-
-function dispatchCustomEvent(element, name, detail) {
-  const event = new CustomEvent(name, {
-    detail: detail,
-    bubbles: true,
-  });
-  element.dispatchEvent(event);
 }
 
 function dispatch(element, eventName, detail = null, cancelable = false) {
@@ -7255,10 +7253,6 @@ class ActionTextAttachmentNode extends ki {
   createDOM() {
     const figure = this.createAttachmentFigure();
 
-    figure.addEventListener("click", () => {
-      this.#select(figure);
-    });
-
     if (this.isPreviewableAttachment) {
       figure.appendChild(this.#createDOMForImage());
       figure.appendChild(this.#createEditableCaption());
@@ -7369,10 +7363,6 @@ class ActionTextAttachmentNode extends ki {
     }
 
     return figcaption
-  }
-
-  #select(figure) {
-    dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
   }
 
   #createEditableCaption() {
@@ -7708,10 +7698,6 @@ class HorizontalDividerNode extends ki {
   createDOM() {
     const figure = createElement("figure", { className: "horizontal-divider" });
     const hr = createElement("hr");
-
-    figure.addEventListener("click", (event) => {
-      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
-    });
 
     figure.appendChild(hr);
 
@@ -8274,7 +8260,7 @@ class Selection {
         offset: selection.anchor.offset
       }
     } else if (xr(selection)) {
-      const [ node ] = selection.getNodes();
+      const [node] = selection.getNodes();
       return {
         node,
         offset: 0
@@ -8460,8 +8446,7 @@ class Selection {
     this.editor.registerCommand(ke$2, this.#selectPreviousTopLevelNode.bind(this), zi);
     this.editor.registerCommand(Te$2, this.#selectNextTopLevelNode.bind(this), zi);
 
-    this.editor.registerCommand(Oe$2, this.#deleteSelectedOrNext.bind(this), zi);
-    this.editor.registerCommand(we$1, this.#deletePreviousOrNext.bind(this), zi);
+    this.editor.registerCommand(le$2, this.#selectDecoratorNodeBeforeDeletion.bind(this), zi);
 
     this.editor.registerCommand(ie$1, () => {
       this.current = Lr();
@@ -8469,20 +8454,12 @@ class Selection {
   }
 
   #listenForNodeSelections() {
-    this.editor.getRootElement().addEventListener("lexxy:internal:select-node", async (event) => {
-      await nextFrame();
+    this.editor.registerCommand(se$1, ({ target }) => {
+      if (!Ss(target)) return false
 
-      const { key } = event.detail;
-      this.editor.update(() => {
-        const node = xo(key);
-        if (node) {
-          const selection = Pr();
-          selection.add(node.getKey());
-          wo(selection);
-        }
-        this.editor.focus();
-      });
-    });
+      const targetNode = vo(target);
+      return Ti(targetNode) && this.#selectInLexical(targetNode)
+    }, zi);
 
     this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
       this.#selectOrAppendNextLine();
@@ -8696,33 +8673,24 @@ class Selection {
   }
 
   #selectInLexical(node) {
-    if (!node || !(node instanceof ki)) return
-
-    this.editor.update(() => {
-      const selection = Pr();
-      selection.add(node.getKey());
+    if (Ti(node)) {
+      const selection = $createNodeSelectionWith(node);
       wo(selection);
-    });
+      return selection
+    } else {
+      return false
+    }
   }
 
-  #deleteSelectedOrNext() {
-    const node = this.nodeAfterCursor;
+  #selectDecoratorNodeBeforeDeletion(backwards) {
+    const node = backwards ? this.nodeBeforeCursor : this.nodeAfterCursor;
     if (node instanceof ki) {
       this.#selectInLexical(node);
+
       return true
+    } else {
+      return false
     }
-
-    return false
-  }
-
-  #deletePreviousOrNext() {
-    const node = this.nodeBeforeCursor;
-    if (node instanceof ki) {
-      this.#selectInLexical(node);
-      return true
-    }
-
-    return false
   }
 
   #getValidSelectionRange() {
@@ -9016,17 +8984,13 @@ class CustomActionTextAttachmentNode extends ki {
   createDOM() {
     const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true });
 
-    figure.addEventListener("click", (event) => {
-      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() });
-    });
-
     figure.insertAdjacentHTML("beforeend", this.innerHtml);
 
     return figure
   }
 
   updateDOM() {
-    return true
+    return false
   }
 
   getTextContent() {
