@@ -1,4 +1,4 @@
-import { marked } from "marked"
+import { Marked } from "marked"
 import { isUrl } from "../helpers/string_helper"
 import { nextFrame } from "../helpers/timing_helpers"
 import { dispatch } from "../helpers/html_helper"
@@ -92,8 +92,22 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
-    const html = marked(text)
+    console.log("markdown")
+    const html = this.#marked.parse(text)
     this.contents.insertHtml(html, { tag: [ PASTE_TAG ] })
+  }
+
+  get #marked() {
+    return new Marked({
+      breaks: true,
+      renderer: {
+        space({ raw }) {
+          const extraLines = raw.length - 1
+          if (extraLines <= 0) return ""
+          return "<p><br></p>".repeat(extraLines)
+        }
+      }
+    })
   }
 
   #pasteRichText(clipboardData) {
