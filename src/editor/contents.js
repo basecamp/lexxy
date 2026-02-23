@@ -1,6 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
-  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
+  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -11,7 +11,6 @@ import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode } from "@lexical/list"
 import { getNearestListItemNode } from "../helpers/lexical_helper"
 import { FormatEscaper } from "./format_escaper"
-import { $getNextSiblingOrParentSibling } from "@lexical/utils"
 
 export default class Contents {
   constructor(editorElement) {
@@ -271,24 +270,6 @@ export default class Contents {
     }, { tag: HISTORY_MERGE_TAG })
   }
 
-  deleteSelectedNodes() {
-    let focusNode = null
-    let focusIsPreviousSibling
-
-    this.editor.update(() => {
-      if (this.#selection.hasNodeSelection) {
-        const nodesToRemove = $getSelection().getNodes()
-        if (nodesToRemove.length === 0) return
-
-        [ focusNode, focusIsPreviousSibling ] = this.#findAdjacentNodeTo(nodesToRemove)
-        this.#deleteNodes(nodesToRemove)
-
-        this.#selectAfterDeletion(focusNode, focusIsPreviousSibling)
-        this.editor.focus()
-      }
-    })
-  }
-
   replaceNodeWithHTML(nodeKey, html, options = {}) {
     this.editor.update(() => {
       const node = $getNodeByKey(nodeKey)
@@ -325,10 +306,6 @@ export default class Contents {
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
       previousNode.insertAfter(newNode)
     })
-  }
-
-  get #selection() {
-    return this.editorElement.selection
   }
 
   #insertLineBelowIfLastNode(node) {
@@ -525,50 +502,6 @@ export default class Contents {
 
   #removeNodes(nodesToDelete) {
     nodesToDelete.forEach((node) => node.remove())
-  }
-
-  #deleteNodes(nodes) {
-    // Use splice() instead of node.remove() for proper removal and
-    // reconciliation. Would have issues with removing unintended decorator nodes
-    // with node.remove()
-    nodes.forEach((node) => {
-      const parent = node.getParent()
-      if (!$isElementNode(parent)) return
-
-      const children = parent.getChildren()
-      const index = children.indexOf(node)
-
-      if (index >= 0) {
-        parent.splice(index, 1, [])
-      }
-    })
-  }
-
-  #findAdjacentNodeTo(nodes) {
-    const firstNode = nodes[0]
-    const lastNode = nodes[nodes.length - 1]
-
-    const previousSibling = firstNode?.getPreviousSibling()
-    const isPreviousSibling = Boolean(previousSibling)
-
-    const previousOrNextSibling = previousSibling || lastNode && $getNextSiblingOrParentSibling(lastNode)?.[0]
-
-    return [ previousOrNextSibling, isPreviousSibling ]
-  }
-
-  #selectAfterDeletion(focusNode, selectEnd = true) {
-    const root = $getRoot()
-    if (root.getChildrenSize() === 0) {
-      const newParagraph = $createParagraphNode()
-      root.append(newParagraph)
-      newParagraph.selectStart()
-    } else if (focusNode) {
-      if ($isTextNode(focusNode) || $isParagraphNode(focusNode)) {
-        selectEnd ? focusNode.selectEnd() : focusNode.selectStart()
-      } else {
-        selectEnd ? focusNode.selectNext(0, 0) : focusNode.select()
-      }
-    }
   }
 
   #collectSelectedListItems(selection) {
