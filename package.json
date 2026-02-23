@@ -37,6 +37,7 @@
     "release": "yarn build:npm && yarn publish"
   },
   "dependencies": {
+    "@lexical/extension": "^0.38.2",
     "@lexical/clipboard": "^0.38.2",
     "@lexical/code": "^0.38.2",
     "@lexical/history": "^0.38.2",
@@ -49,6 +50,7 @@
     "@lexical/selection": "^0.38.2",
     "@lexical/table": "^0.38.2",
     "@lexical/utils": "^0.38.2",
+    "lexical": "^0.38.2",
     "dompurify": "^3.3.0",
     "marked": "^16.4.1",
     "prismjs": "^1.30.0"
