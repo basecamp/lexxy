@@ -10096,8 +10096,22 @@ class Clipboard {
   }
 
   #pasteMarkdown(text) {
-    const html = k(text);
+    console.log("markdown");
+    const html = this.#marked.parse(text);
     this.contents.insertHtml(html, { tag: [ Fn ] });
+  }
+
+  get #marked() {
+    return new B({
+      breaks: true,
+      renderer: {
+        space({ raw }) {
+          const extraLines = raw.length - 1;
+          if (extraLines <= 0) return ""
+          return "<p><br></p>".repeat(extraLines)
+        }
+      }
+    })
   }
 
   #pasteRichText(clipboardData) {
