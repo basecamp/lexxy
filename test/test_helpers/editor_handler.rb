@@ -59,7 +59,6 @@ class EditorHandler
       });
       this.dispatchEvent(event);
     JS
-    sleep 0.1
   end
 
   def send_tab(shift: false)
@@ -76,7 +75,6 @@ class EditorHandler
       });
       this.dispatchEvent(event);
     JS
-    sleep 0.1
   end
 
   def select(text)
@@ -99,6 +97,16 @@ class EditorHandler
           break
         }
       }
+    JS
+  end
+
+  def flush_lexical_updates
+    page.evaluate_async_script <<~JS
+      const [ done ] = arguments
+      const editor = document.querySelector('lexxy-editor').editor
+      editor.update(() => null, {
+        onUpdate: () => requestAnimationFrame(done)
+      });
     JS
   end
 
