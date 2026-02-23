@@ -7747,6 +7747,152 @@ class HorizontalDividerNode extends ki {
   }
 }
 
+class LexxyExtension {
+  #editorElement
+
+  constructor(editorElement) {
+    this.#editorElement = editorElement;
+  }
+
+  get editorElement() {
+    return this.#editorElement
+  }
+
+  get editorConfig() {
+    return this.#editorElement.config
+  }
+
+  // optional: defaults to true
+  get enabled() {
+    return true
+  }
+
+  get lexicalExtension() {
+    return null
+  }
+
+  initializeToolbar(_lexxyToolbar) {
+
+  }
+}
+
+const TOGGLE_HIGHLIGHT_COMMAND = re$1();
+const REMOVE_HIGHLIGHT_COMMAND = re$1();
+const BLANK_STYLES = { "color": null, "background-color": null };
+
+const hasPastedStylesState = ot$5("hasPastedStyles", {
+  parse: (value) => value || false
+});
+
+class HighlightExtension extends LexxyExtension {
+  get enabled() {
+    return this.editorElement.supportsRichText
+  }
+
+  get lexicalExtension() {
+    const extension = Kl({
+      dependencies: [ Wt$2 ],
+      name: "lexxy/highlight",
+      config: {
+        color: { buttons: [], permit: [] },
+        "background-color": { buttons: [], permit: [] }
+      },
+      html: {
+        import: {
+          mark: $markConversion
+        }
+      },
+      register(editor, config) {
+        // keep the ref to the canonicalizers for optimized css conversion
+        const canonicalizers = buildCanonicalizers(config);
+
+        return U$4(
+          editor.registerCommand(TOGGLE_HIGHLIGHT_COMMAND, $toggleSelectionStyles, Ri),
+          editor.registerCommand(REMOVE_HIGHLIGHT_COMMAND, () => $toggleSelectionStyles(BLANK_STYLES), Ri),
+          editor.registerNodeTransform(Xn, $syncHighlightWithStyle),
+          editor.registerNodeTransform(Xn, (textNode) => $canonicalizePastedStyles(textNode, canonicalizers))
+        )
+      }
+    });
+
+    return [ extension, this.editorConfig.get("highlight") ]
+  }
+}
+
+function $applyHighlightStyle(textNode, element) {
+  const elementStyles = {
+    color: element.style?.color,
+    "background-color": element.style?.backgroundColor
+  };
+
+  if (es(Fn)) { $setPastedStyles(textNode); }
+  const highlightStyle = R$5(elementStyles);
+
+  if (highlightStyle.length) {
+    return textNode.setStyle(textNode.getStyle() + highlightStyle)
+  }
+}
+
+function $markConversion() {
+  return {
+    conversion: extendTextNodeConversion("mark", $applyHighlightStyle),
+    priority: 1
+  }
+}
+
+function buildCanonicalizers(config) {
+  return [
+    new StyleCanonicalizer("color", [ ...config.buttons.color, ...config.permit.color ]),
+    new StyleCanonicalizer("background-color", [ ...config.buttons["background-color"], ...config.permit["background-color"] ])
+  ]
+}
+
+function $toggleSelectionStyles(styles) {
+  const selection = Lr();
+  if (!yr(selection)) return
+
+  const patch = {};
+  for (const property in styles) {
+    const oldValue = le$1(selection, property);
+    patch[property] = toggleOrReplace(oldValue, styles[property]);
+  }
+
+  U$5(selection, patch);
+}
+
+function toggleOrReplace(oldValue, newValue) {
+  return oldValue === newValue ? null : newValue
+}
+
+function $syncHighlightWithStyle(textNode) {
+  if (hasHighlightStyles(textNode.getStyle()) !== textNode.hasFormat("highlight")) {
+    textNode.toggleFormat("highlight");
+  }
+}
+
+function $canonicalizePastedStyles(textNode, canonicalizers = []) {
+  if ($hasPastedStyles(textNode)) {
+    $setPastedStyles(textNode, false);
+
+    const canonicalizedCSS = applyCanonicalizers(textNode.getStyle(), canonicalizers);
+    textNode.setStyle(canonicalizedCSS);
+
+    const selection = Lr();
+    if (textNode.isSelected(selection)) {
+      selection.setStyle(textNode.getStyle());
+      selection.setFormat(textNode.getFormat());
+    }
+  }
+}
+
+function $setPastedStyles(textNode, value = true) {
+  ct$5(textNode, hasPastedStylesState, value);
+}
+
+function $hasPastedStyles(textNode) {
+  return st$4(textNode, hasPastedStylesState)
+}
+
 const COMMANDS = [
   "bold",
   "italic",
@@ -7780,7 +7926,6 @@ class CommandDispatcher {
     this.selection = editorElement.selection;
     this.contents = editorElement.contents;
     this.clipboard = editorElement.clipboard;
-    this.highlighter = editorElement.highlighter;
 
     this.#registerCommands();
     this.#registerKeyboardCommands();
@@ -7804,11 +7949,11 @@ class CommandDispatcher {
   }
 
   dispatchToggleHighlight(styles) {
-    this.highlighter.toggle(styles);
+    this.editor.dispatchCommand(TOGGLE_HIGHLIGHT_COMMAND, styles);
   }
 
   dispatchRemoveHighlight() {
-    this.highlighter.remove();
+    this.editor.dispatchCommand(REMOVE_HIGHLIGHT_COMMAND);
   }
 
   dispatchLink(url) {
@@ -10152,8 +10297,16 @@ class Extensions {
     return this.lexxyElement.toolbar
   }
 
+  get #baseExtensions() {
+    return this.lexxyElement.baseExtensions
+  }
+
+  get #configuredExtensions() {
+    return Lexxy.global.get("extensions")
+  }
+
   #initializeExtensions() {
-    const extensionDefinitions = Lexxy.global.get("extensions");
+    const extensionDefinitions = this.#baseExtensions.concat(this.#configuredExtensions);
 
     return extensionDefinitions.map(
       extension => new extension(this.lexxyElement)
@@ -10161,159 +10314,44 @@ class Extensions {
   }
 }
 
-const TOGGLE_HIGHLIGHT_COMMAND = re$1();
+const TRIX_LANGUAGE_ATTR = "language";
 
-const hasPastedStylesState = ot$5("hasPastedStyles", {
-  parse: (value) => value || false
-});
+class TrixContentExtension extends LexxyExtension {
 
-const HighlightExtension = Kl({
-  dependencies: [ Wt$2 ],
-  name: "lexxy/highlight",
-  config: {
-    color: { buttons: [], permit: [] },
-    "background-color": { buttons: [], permit: [] }
-  },
-  html: {
-    import: {
-      mark: $markConversion
-    }
-  },
-  register(editor, config) {
-    const canonicalizers = buildCanonicalizers(config);
-
-    editor.registerCommand(TOGGLE_HIGHLIGHT_COMMAND, $toggleSelectionStyles, Ri);
-    editor.registerNodeTransform(Xn, $syncHighlightWithStyle);
-    editor.registerNodeTransform(Xn, (textNode) => $canonicalizePastedStyles(textNode, canonicalizers));
-  }
-});
-
-function $applyHighlightStyle(textNode, element) {
-  const elementStyles = {
-    color: element.style?.color,
-    "background-color": element.style?.backgroundColor
-  };
-
-  if (es(Fn)) { $setPastedStyles(textNode); }
-  const highlightStyle = R$5(elementStyles);
-
-  if (highlightStyle.length) {
-    return textNode.setStyle(textNode.getStyle() + highlightStyle)
-  }
-}
-
-function $markConversion() {
-  return {
-    conversion: extendTextNodeConversion("mark", $applyHighlightStyle),
-    priority: 1
-  }
-}
-
-function buildCanonicalizers(config) {
-  return [
-    new StyleCanonicalizer("color", [ ...config.buttons.color, ...config.permit.color ]),
-    new StyleCanonicalizer("background-color", [ ...config.buttons["background-color"], ...config.permit["background-color"] ])
-  ]
-}
-
-function $toggleSelectionStyles(styles) {
-  const selection = Lr();
-  if (!yr(selection)) return
-
-  const patch = {};
-  for (const property in styles) {
-    const oldValue = le$1(selection, property);
-    patch[property] = toggleOrReplace(oldValue, styles[property]);
-  }
-
-  U$5(selection, patch);
-}
-
-function toggleOrReplace(oldValue, newValue) {
-  return oldValue === newValue ? null : newValue
-}
-
-function $syncHighlightWithStyle(textNode) {
-  if (hasHighlightStyles(textNode.getStyle()) !== textNode.hasFormat("highlight")) {
-    textNode.toggleFormat("highlight");
-  }
-}
-
-function $canonicalizePastedStyles(textNode, canonicalizers = []) {
-  if ($hasPastedStyles(textNode)) {
-    $setPastedStyles(textNode, false);
-
-    const canonicalizedCSS = applyCanonicalizers(textNode.getStyle(), canonicalizers);
-    textNode.setStyle(canonicalizedCSS);
-
-    const selection = Lr();
-    if (textNode.isSelected(selection)) {
-      selection.setStyle(textNode.getStyle());
-      selection.setFormat(textNode.getFormat());
-    }
-  }
-}
-
-function $setPastedStyles(textNode, value = true) {
-  ct$5(textNode, hasPastedStylesState, value);
-}
-
-function $hasPastedStyles(textNode) {
-  return st$4(textNode, hasPastedStylesState)
-}
-
-class Highlighter {
-
-  constructor(editorElement) {
-    this.editorElement = editorElement;
-  }
-
-  get editor() {
-    return this.editorElement.editor
+  get enabled() {
+    return this.editorElement.supportsRichText
   }
 
   get lexicalExtension() {
-    return [ HighlightExtension, this.editorElement.config.get("highlight") ]
-  }
-
-  toggle(styles) {
-    this.editor.dispatchCommand(TOGGLE_HIGHLIGHT_COMMAND, styles);
-  }
-
-  remove() {
-    this.toggle({ "color": null, "background-color": null });
+    return Kl({
+      name: "lexxy/trix-content",
+      html: {
+        import: {
+          em: (element) => onlyStyledElements(element, {
+            conversion: extendTextNodeConversion("i", $applyHighlightStyle),
+            priority: 1
+          }),
+          span: (element) => onlyStyledElements(element, {
+            conversion: extendTextNodeConversion("mark", $applyHighlightStyle),
+            priority: 1
+          }),
+          strong: (element) => onlyStyledElements(element, {
+            conversion: extendTextNodeConversion("b", $applyHighlightStyle),
+            priority: 1
+          }),
+          del: () => ({
+            conversion: extendTextNodeConversion("s", $applyStrikethrough, $applyHighlightStyle),
+            priority: 1
+          }),
+          pre: (element) => onlyPreLanguageElements(element, {
+            conversion: extendConversion(q$2, "pre", $applyLanguage),
+            priority: 1
+          })
+        }
+      }
+    })
   }
 }
-
-const TRIX_LANGUAGE_ATTR = "language";
-
-const TrixContentExtension = Kl({
-  name: "lexxy/trix-content",
-  html: {
-    import: {
-      em: (element) => onlyStyledElements(element, {
-        conversion: extendTextNodeConversion("i", $applyHighlightStyle),
-        priority: 1
-      }),
-      span: (element) => onlyStyledElements(element, {
-        conversion: extendTextNodeConversion("mark", $applyHighlightStyle),
-        priority: 1
-      }),
-      strong: (element) => onlyStyledElements(element, {
-        conversion: extendTextNodeConversion("b", $applyHighlightStyle),
-        priority: 1
-      }),
-      del: () => ({
-        conversion: extendTextNodeConversion("s", $applyStrikethrough, $applyHighlightStyle),
-        priority: 1
-      }),
-      pre: (element) => onlyPreLanguageElements(element, {
-        conversion: extendConversion(q$2, "pre", $applyLanguage),
-        priority: 1
-      })
-    }
-  }
-});
 
 function onlyStyledElements(element, conversion) {
   const elementHighlighted = element.style.color !== "" || element.style.backgroundColor !== "";
@@ -10362,100 +10400,106 @@ class WrappedTableNode extends hn {
   }
 }
 
-const TablesLexicalExtension = Kl({
-  name: "lexxy/tables",
-  nodes: [
-    WrappedTableNode,
-    {
-      replace: hn,
-      with: () => new WrappedTableNode(),
-      withKlass: WrappedTableNode
-    },
-    xe,
-    Ee$1
-  ],
-  register(editor) {
-    // Register Lexical table plugins
-    Nn(editor);
-    yn(editor, true);
-    un(editor);
+class TablesExtension extends LexxyExtension {
 
-    // Bug fix: Prevent hardcoded background color (Lexical #8089)
-    editor.registerNodeTransform(xe, (node) => {
-      if (node.getBackgroundColor() === null) {
-        node.setBackgroundColor("");
-      }
-    });
-
-    // Bug fix: Fix column header states (Lexical #8090)
-    editor.registerNodeTransform(xe, (node) => {
-      const headerState = node.getHeaderStyles();
-
-      if (headerState !== ve$1.ROW) return
-
-      const rowParent = node.getParent();
-      const tableNode = rowParent?.getParent();
-      if (!tableNode) return
-
-      const rows = tableNode.getChildren();
-      const cellIndex = rowParent.getChildren().indexOf(node);
-
-      const cellsInRow = rowParent.getChildren();
-      const isHeaderRow = cellsInRow.every(cell =>
-        cell.getHeaderStyles() !== ve$1.NO_STATUS
-      );
-
-      const isHeaderColumn = rows.every(row => {
-        const cell = row.getChildren()[cellIndex];
-        return cell && cell.getHeaderStyles() !== ve$1.NO_STATUS
-      });
-
-      let newHeaderState = ve$1.NO_STATUS;
-
-      if (isHeaderRow) {
-        newHeaderState |= ve$1.ROW;
-      }
-
-      if (isHeaderColumn) {
-        newHeaderState |= ve$1.COLUMN;
-      }
-
-      if (newHeaderState !== headerState) {
-        node.setHeaderStyles(newHeaderState, ve$1.BOTH);
-      }
-    });
-
-    editor.registerCommand("insertTableRowAfter", () => {
-      je$1(true);
-    }, Ri);
-
-    editor.registerCommand("insertTableRowBefore", () => {
-      je$1(false);
-    }, Ri);
-
-    editor.registerCommand("insertTableColumnAfter", () => {
-      Ze$1(true);
-    }, Ri);
-
-    editor.registerCommand("insertTableColumnBefore", () => {
-      Ze$1(false);
-    }, Ri);
-
-    editor.registerCommand("deleteTableRow", () => {
-      ot$1();
-    }, Ri);
-
-    editor.registerCommand("deleteTableColumn", () => {
-      lt$1();
-    }, Ri);
-
-    editor.registerCommand("deleteTable", () => {
-      const selection = Lr();
-      if (!yr(selection)) return false
-      Qt(selection.anchor.getNode())?.remove();
-    }, Ri);
+  get enabled() {
+    return this.editorElement.supportsRichText
   }
-});
+
+  get lexicalExtension() {
+    return Kl({
+      name: "lexxy/tables",
+      nodes: [
+        WrappedTableNode,
+        {
+          replace: hn,
+          with: () => new WrappedTableNode(),
+          withKlass: WrappedTableNode
+        },
+        xe,
+        Ee$1
+      ],
+      register(editor) {
+        return U$4(
+          // Register Lexical table plugins
+          Nn(editor),
+          yn(editor, true),
+          un(editor),
+
+          // Bug fix: Prevent hardcoded background color (Lexical #8089)
+          editor.registerNodeTransform(xe, (node) => {
+            if (node.getBackgroundColor() === null) {
+              node.setBackgroundColor("");
+            }
+          }),
+
+          // Bug fix: Fix column header states (Lexical #8090)
+          editor.registerNodeTransform(xe, (node) => {
+            const headerState = node.getHeaderStyles();
+
+            if (headerState !== ve$1.ROW) return
+
+            const rowParent = node.getParent();
+            const tableNode = rowParent?.getParent();
+            if (!tableNode) return
+
+            const rows = tableNode.getChildren();
+            const cellIndex = rowParent.getChildren().indexOf(node);
+
+            const cellsInRow = rowParent.getChildren();
+            const isHeaderRow = cellsInRow.every(cell =>
+              cell.getHeaderStyles() !== ve$1.NO_STATUS
+            );
+
+            const isHeaderColumn = rows.every(row => {
+              const cell = row.getChildren()[cellIndex];
+              return cell && cell.getHeaderStyles() !== ve$1.NO_STATUS
+            });
+
+            let newHeaderState = ve$1.NO_STATUS;
+
+            if (isHeaderRow) newHeaderState |= ve$1.ROW;
+            if (isHeaderColumn) newHeaderState |= ve$1.COLUMN;
+
+            if (newHeaderState !== headerState) {
+              node.setHeaderStyles(newHeaderState, ve$1.BOTH);
+            }
+          }),
+
+          editor.registerCommand("insertTableRowAfter", () => {
+            je$1(true);
+          }, Ri),
+
+          editor.registerCommand("insertTableRowBefore", () => {
+            je$1(false);
+          }, Ri),
+
+          editor.registerCommand("insertTableColumnAfter", () => {
+            Ze$1(true);
+          }, Ri),
+
+          editor.registerCommand("insertTableColumnBefore", () => {
+            Ze$1(false);
+          }, Ri),
+
+          editor.registerCommand("deleteTableRow", () => {
+            ot$1();
+          }, Ri),
+
+          editor.registerCommand("deleteTableColumn", () => {
+            lt$1();
+          }, Ri),
+
+          editor.registerCommand("deleteTable", () => {
+            const selection = Lr();
+            if (!yr(selection)) return false
+            Qt(selection.anchor.getNode())?.remove();
+          }, Ri)
+        )
+      }
+    })
+  }
+}
 
 class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -10477,7 +10521,6 @@ class LexicalEditorElement extends HTMLElement {
     this.id ??= generateDomId("lexxy-editor");
     this.config = new EditorConfiguration(this);
     this.extensions = new Extensions(this);
-    this.highlighter = new Highlighter(this);
 
     this.editor = this.#createEditor();
 
@@ -10540,6 +10583,14 @@ class LexicalEditorElement extends HTMLElement {
 
     this.toolbar = this.toolbar || this.#findOrCreateDefaultToolbar();
     return this.toolbar
+  }
+
+  get baseExtensions() {
+    return [
+      HighlightExtension,
+      TrixContentExtension,
+      TablesExtension
+    ]
   }
 
   get directUploadUrl() {
@@ -10677,29 +10728,12 @@ class LexicalEditorElement extends HTMLElement {
       theme: theme,
       nodes: this.#lexicalNodes
     },
-      ...this.#lexicalExtensions
+      ...this.extensions.lexicalExtensions
     );
 
     editor.setRootElement(this.editorContentElement);
 
     return editor
-  }
-
-  get #lexicalExtensions() {
-    const extensions = [];
-    const richTextExtensions = [
-      this.highlighter.lexicalExtension,
-      TrixContentExtension,
-      TablesLexicalExtension
-    ];
-
-    if (this.supportsRichText) {
-      extensions.push(...richTextExtensions);
-    }
-
-    extensions.push(...this.extensions.lexicalExtensions);
-
-    return extensions
   }
 
   get #lexicalNodes() {
@@ -10907,6 +10941,7 @@ class LexicalEditorElement extends HTMLElement {
   #attachToolbar() {
     if (this.#hasToolbar) {
       this.toolbarElement.setEditor(this);
+      this.extensions.initializeToolbars();
     }
   }
 
@@ -12662,35 +12697,6 @@ function highlightElement(preElement) {
   const highlightedHtml = Prism$1.highlight(code, grammar, language);
   const codeElement = createElement("code", { "data-language": language, innerHTML: highlightedHtml });
   preElement.replaceWith(codeElement);
-}
-
-class LexxyExtension {
-  #editorElement
-
-  constructor(editorElement) {
-    this.#editorElement = editorElement;
-  }
-
-  get editorElement() {
-    return this.#editorElement
-  }
-
-  get editorConfig() {
-    return this.#editorElement.config
-  }
-
-  // optional: defaults to true
-  get enabled() {
-    return true
-  }
-
-  get lexicalExtension() {
-    return null
-  }
-
-  initializeToolbar(_lexxyToolbar) {
-
-  }
 }
 
 const configure = Lexxy.configure;

@@ -22,12 +22,11 @@ import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
-import Highlighter from "../editor/highlighter"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { HighlightExtension } from "../extensions/highlight_extension"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
-
-import { TablesLexicalExtension } from "../extensions/tables_lexical_extension"
+import { TablesExtension } from "../extensions/tables_extension"
 
 export class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -49,7 +48,6 @@ export class LexicalEditorElement extends HTMLElement {
     this.id ??= generateDomId("lexxy-editor")
     this.config = new Configuration(this)
     this.extensions = new Extensions(this)
-    this.highlighter = new Highlighter(this)
 
     this.editor = this.#createEditor()
 
@@ -112,6 +110,14 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.toolbar = this.toolbar || this.#findOrCreateDefaultToolbar()
     return this.toolbar
+  }
+
+  get baseExtensions() {
+    return [
+      HighlightExtension,
+      TrixContentExtension,
+      TablesExtension
+    ]
   }
 
   get directUploadUrl() {
@@ -249,29 +255,12 @@ export class LexicalEditorElement extends HTMLElement {
       theme: theme,
       nodes: this.#lexicalNodes
     },
-      ...this.#lexicalExtensions
+      ...this.extensions.lexicalExtensions
     )
 
     editor.setRootElement(this.editorContentElement)
 
     return editor
-  }
-
-  get #lexicalExtensions() {
-    const extensions = []
-    const richTextExtensions = [
-      this.highlighter.lexicalExtension,
-      TrixContentExtension,
-      TablesLexicalExtension
-    ]
-
-    if (this.supportsRichText) {
-      extensions.push(...richTextExtensions)
-    }
-
-    extensions.push(...this.extensions.lexicalExtensions)
-
-    return extensions
   }
 
   get #lexicalNodes() {
@@ -486,6 +475,7 @@ export class LexicalEditorElement extends HTMLElement {
   #attachToolbar() {
     if (this.#hasToolbar) {
       this.toolbarElement.setEditor(this)
+      this.extensions.initializeToolbars()
     }
   }
 
