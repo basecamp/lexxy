@@ -7489,8 +7489,7 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   exportDOM() {
-    const img = document.createElement("img");
-    return { element: img }
+    return { element: null }
   }
 
   exportJSON() {
@@ -8260,7 +8259,7 @@ class Selection {
         offset: selection.anchor.offset
       }
     } else if (xr(selection)) {
-      const [node] = selection.getNodes();
+      const [ node ] = selection.getNodes();
       return {
         node,
         offset: 0
