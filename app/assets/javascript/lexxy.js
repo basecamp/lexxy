@@ -7873,41 +7873,38 @@ class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode());
-
     this.editor.focus();
   }
 
   dispatchRotateHeadingFormat() {
-    this.editor.update(() => {
-      const selection = Lr();
-      if (!yr(selection)) return
+    const selection = Lr();
+    if (!yr(selection)) return
 
-      if (as(selection.anchor.getNode())) {
-        selection.insertNodes([ St$3("h2") ]);
-        return
-      }
+    if (as(selection.anchor.getNode())) {
+      selection.insertNodes([ St$3("h2") ]);
+      return
+    }
 
-      const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
-      let nextTag = "h2";
-      if (It$2(topLevelElement)) {
-        const currentTag = topLevelElement.getTag();
-        if (currentTag === "h2") {
-          nextTag = "h3";
-        } else if (currentTag === "h3") {
-          nextTag = "h4";
-        } else if (currentTag === "h4") {
-          nextTag = null;
-        } else {
-          nextTag = "h2";
-        }
-      }
-
-      if (nextTag) {
-        this.contents.insertNodeWrappingEachSelectedLine(() => St$3(nextTag));
+    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
+    let nextTag = "h2";
+    if (It$2(topLevelElement)) {
+      const currentTag = topLevelElement.getTag();
+      if (currentTag === "h2") {
+        nextTag = "h3";
+      } else if (currentTag === "h3") {
+        nextTag = "h4";
+      } else if (currentTag === "h4") {
+        nextTag = null;
       } else {
-        this.contents.removeFormattingFromSelectedLines();
+        nextTag = "h2";
       }
-    });
+    }
+
+    if (nextTag) {
+      this.contents.insertNodeWrappingEachSelectedLine(() => St$3(nextTag));
+    } else {
+      this.contents.removeFormattingFromSelectedLines();
+    }
   }
 
   dispatchUploadAttachments() {
@@ -8087,12 +8084,10 @@ class Selection {
   }
 
   get hasNodeSelection() {
-    let result = false;
-    this.editor.getEditorState().read(() => {
+    return this.editor.getEditorState().read(() => {
       const selection = Lr();
-      result = selection !== null && xr(selection);
-    });
-    return result
+      return selection !== null && xr(selection)
+    })
   }
 
   get cursorPosition() {
@@ -8464,33 +8459,33 @@ class Selection {
 
   async #selectPreviousNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectPrevious());
+      return await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
     } else {
-      this.#selectInLexical(this.nodeBeforeCursor);
+      return this.#selectInLexical(this.nodeBeforeCursor)
     }
   }
 
   async #selectNextNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0));
+      return await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
     } else {
-      this.#selectInLexical(this.nodeAfterCursor);
+      return this.#selectInLexical(this.nodeAfterCursor)
     }
   }
 
   async #selectPreviousTopLevelNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectPrevious());
+      return await this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectPrevious())
     } else {
-      this.#selectInLexical(this.topLevelNodeBeforeCursor);
+      return this.#selectInLexical(this.topLevelNodeBeforeCursor)
     }
   }
 
   async #selectNextTopLevelNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0));
+      return await this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectNext(0, 0))
     } else {
-      this.#selectInLexical(this.topLevelNodeAfterCursor);
+      return this.#selectInLexical(this.topLevelNodeAfterCursor)
     }
   }
 
@@ -9226,20 +9221,18 @@ class Contents {
   }
 
   insertAtCursor(node) {
-    this.editor.update(() => {
-      const selection = Lr();
-      const selectedNodes = selection?.getNodes();
+    const selection = Lr();
+    const selectedNodes = selection?.getNodes();
 
-      if (yr(selection)) {
-        jr([ node ]);
-      } else if (xr(selection) && selectedNodes && selectedNodes.length > 0) {
-        const lastNode = selectedNodes[selectedNodes.length - 1];
-        lastNode.insertAfter(node);
-      } else {
-        const root = No();
-        root.append(node);
-      }
-    });
+    if (yr(selection)) {
+      jr([ node ]);
+    } else if (xr(selection) && selectedNodes && selectedNodes.length > 0) {
+      const lastNode = selectedNodes.at(-1);
+      lastNode.insertAfter(node);
+    } else {
+      const root = No();
+      root.append(node);
+    }
   }
 
   insertAtCursorEnsuringLineBelow(node) {
@@ -10342,8 +10335,12 @@ function $applyLanguage(conversionOutput, element) {
 }
 
 class WrappedTableNode extends hn {
-  static clone(node) {
-    return new WrappedTableNode(node.__key)
+  $config() {
+    return this.config("wrapped_table_node", { extends: hn })
+  }
+
+  static importDOM() {
+    return super.importDOM()
   }
 
   exportDOM(editor) {
@@ -10371,7 +10368,8 @@ const TablesLexicalExtension = Kl({
     WrappedTableNode,
     {
       replace: hn,
-      with: () => new WrappedTableNode()
+      with: () => new WrappedTableNode(),
+      withKlass: WrappedTableNode
     },
     xe,
     Ee$1
@@ -10626,23 +10624,37 @@ class LexicalEditorElement extends HTMLElement {
 
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>";
-    const nodes = m$1(this.editor, parseHtml(`<div>${html}</div>`));
+    const nodes = m$1(this.editor, parseHtml(`${html}`));
 
     if (nodes.length === 0) {
       return [ Li() ]
     }
 
-    // Custom decorator block elements such action-text-attachments get wrapped into <p> automatically by Lexical.
-    // We flatten those.
-    return nodes.map(node => {
-      if (node.getType() === "paragraph" && node.getChildrenSize() === 1) {
-        const child = node.getFirstChild();
-        if (child instanceof ki && !child.isInline()) {
-          return child
-        }
+    return nodes
+      .map(this.#wrapTextNode)
+      .map(this.#unwrapDecoratorNode)
+  }
+
+  // Raw string values produce TextNodes which cannot be appended directly to the RootNode.
+  // We wrap those in <p>
+  #wrapTextNode(node) {
+    if (!lr(node)) return node
+
+    const paragraph = Li();
+    paragraph.append(node);
+    return paragraph
+  }
+
+  // Custom decorator block elements such as action-text-attachments get wrapped into <p> automatically by Lexical.
+  // We unwrap those.
+  #unwrapDecoratorNode(node) {
+    if (Ii(node) && node.getChildrenSize() === 1) {
+      const child = node.getFirstChild();
+      if (Ti(child) && !child.isInline()) {
+        return child
       }
-      return node
-    })
+    }
+    return node
   }
 
   #initialize() {
