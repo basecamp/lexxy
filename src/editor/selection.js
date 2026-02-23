@@ -115,7 +115,7 @@ export default class Selection {
     }
   }
 
-  get format() {
+  getFormat() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return {}
 
@@ -123,18 +123,19 @@ export default class Selection {
     if (!anchorNode.getParent()) return {}
 
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+    const listType = getListType(anchorNode)
 
     return {
       isBold: selection.hasFormat("bold"),
       isItalic: selection.hasFormat("italic"),
       isStrikethrough: selection.hasFormat("strikethrough"),
       isHighlight: isSelectionHighlighted(selection),
-      isInLink: this.nearestNodeOfType(LinkNode) !== null,
+      isInLink: $getNearestNodeOfType(anchorNode, LinkNode) !== null,
       isInQuote: $isQuoteNode(topLevelElement),
       isInHeading: $isHeadingNode(topLevelElement),
-      isInCode: selection.hasFormat("code") || this.nearestNodeOfType(CodeNode) !== null,
-      isInList: this.nearestNodeOfType(ListNode) !== null,
-      listType: getListType(anchorNode),
+      isInCode: selection.hasFormat("code") || $getNearestNodeOfType(anchorNode, CodeNode) !== null,
+      isInList: listType !== null,
+      listType,
       isInTable: $getTableCellNodeFromLexicalNode(anchorNode) !== null
     }
   }

@@ -199,7 +199,7 @@ export class LexicalToolbarElement extends HTMLElement {
     if (!anchorNode.getParent()) { return }
 
     const { isBold, isItalic, isStrikethrough, isHighlight, isInLink, isInQuote, isInHeading,
-      isInCode, isInList, listType, isInTable } = this.selection.formatting
+      isInCode, isInList, listType, isInTable } = this.selection.getFormat()
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
