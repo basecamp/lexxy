@@ -26,7 +26,7 @@ module EditorHelper
 
   def wait_until(timeout: Capybara.default_max_wait_time)
     Timeout.timeout(timeout) do
-      sleep 0.05 until yield
+      find_editor.flush_lexical_updates until yield
     end
   end
 
