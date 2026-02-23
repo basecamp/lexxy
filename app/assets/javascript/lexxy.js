@@ -7214,14 +7214,18 @@ class ActionTextAttachmentNode extends ki {
 
   #handleCaptionInputKeydown(event) {
     if (event.key === "Enter") {
-      this.#updateCaptionValueFromInput(event.target);
       event.preventDefault();
+      event.stopPropagation();
+      event.target.blur();
 
       this.editor.update(() => {
-        this.selectNext();
-      }, { tag: Dn });
+        // Place the cursor after the current image
+        this.selectNext(0, 0);
+      }, {
+        tag: Dn
+      });
     }
-    event.stopPropagation();
+
   }
 }
 
@@ -7236,17 +7240,6 @@ function $createNodeSelectionWith(...nodes) {
 function getListType(node) {
   const list = wt$5(node, lt$3);
   return list?.getListType() ?? null
-}
-
-function isPrintableCharacter(event) {
-  // Ignore if modifier keys are pressed (except Shift for uppercase)
-  if (event.ctrlKey || event.metaKey || event.altKey) return false
-
-  // Ignore special keys
-  if (event.key.length > 1 && event.key !== "Enter" && event.key !== "Space") return false
-
-  // Accept single character keys (letters, numbers, punctuation)
-  return event.key.length === 1
 }
 
 function extendTextNodeConversion(conversionName, ...callbacks) {
@@ -8160,7 +8153,6 @@ class Selection {
 
     this.#listenForNodeSelections();
     this.#processSelectionChangeCommands();
-    this.#handleInputWhenDecoratorNodesSelected();
     this.#containEditorFocus();
   }
 
@@ -8385,10 +8377,6 @@ class Selection {
     return this.#findPreviousSiblingUp(anchorNode)
   }
 
-  get #contents() {
-    return this.editorElement.contents
-  }
-
   get #currentlySelectedKeys() {
     if (this.currentlySelectedKeys) { return this.currentlySelectedKeys }
 
@@ -8428,57 +8416,6 @@ class Selection {
     this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
       this.#selectOrAppendNextLine();
     });
-  }
-
-  // In Safari, when the only node in the document is an attachment, it won't let you enter text
-  // before/below it. There is probably a better fix here, but this workaround solves the problem until
-  // we find it.
-  #handleInputWhenDecoratorNodesSelected() {
-    this.editor.getRootElement().addEventListener("keydown", (event) => {
-      if (isPrintableCharacter(event)) {
-        this.editor.update(() => {
-          const selection = Lr();
-
-          if (yr(selection) && selection.isCollapsed()) {
-            const anchorNode = selection.anchor.getNode();
-            const offset = selection.anchor.offset;
-
-            const nodeBefore = this.#getNodeBeforePosition(anchorNode, offset);
-            const nodeAfter = this.#getNodeAfterPosition(anchorNode, offset);
-
-            if (nodeBefore instanceof ki && !nodeBefore.isInline()) {
-              event.preventDefault();
-              this.#contents.createParagraphAfterNode(nodeBefore, event.key);
-              return
-            } else if (nodeAfter instanceof ki && !nodeAfter.isInline()) {
-              event.preventDefault();
-              this.#contents.createParagraphBeforeNode(nodeAfter, event.key);
-              return
-            }
-          }
-        });
-      }
-    }, true);
-  }
-
-  #getNodeBeforePosition(node, offset) {
-    if (lr(node) && offset === 0) {
-      return node.getPreviousSibling()
-    }
-    if (Si(node) && offset > 0) {
-      return node.getChildAtIndex(offset - 1)
-    }
-    return null
-  }
-
-  #getNodeAfterPosition(node, offset) {
-    if (lr(node) && offset === node.getTextContentSize()) {
-      return node.getNextSibling()
-    }
-    if (Si(node)) {
-      return node.getChildAtIndex(offset)
-    }
-    return null
   }
 
   #containEditorFocus() {
