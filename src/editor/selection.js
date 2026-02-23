@@ -5,11 +5,14 @@ import {
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
-import { TableCellNode } from "@lexical/table"
+import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
+import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $createNodeSelectionWith, isPrintableCharacter } from "../helpers/lexical_helper"
+import { $createNodeSelectionWith, getListType, isPrintableCharacter } from "../helpers/lexical_helper"
+import { LinkNode } from "@lexical/link"
+import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 
 export default class Selection {
   constructor(editorElement) {
@@ -109,6 +112,30 @@ export default class Selection {
           selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text")
         }
       })
+    }
+  }
+
+  get format() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return {}
+
+    const anchorNode = selection.anchor.getNode()
+    if (!anchorNode.getParent()) return {}
+
+    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+
+    return {
+      isBold: selection.hasFormat("bold"),
+      isItalic: selection.hasFormat("italic"),
+      isStrikethrough: selection.hasFormat("strikethrough"),
+      isHighlight: isSelectionHighlighted(selection),
+      isInLink: this.nearestNodeOfType(LinkNode) !== null,
+      isInQuote: $isQuoteNode(topLevelElement),
+      isInHeading: $isHeadingNode(topLevelElement),
+      isInCode: selection.hasFormat("code") || this.nearestNodeOfType(CodeNode) !== null,
+      isInList: this.nearestNodeOfType(ListNode) !== null,
+      listType: getListType(anchorNode),
+      isInTable: $getTableCellNodeFromLexicalNode(anchorNode) !== null
     }
   }
 

@@ -4,13 +4,6 @@ import {
   SKIP_DOM_SELECTION_TAG
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
-import { $isListItemNode, $isListNode } from "@lexical/list"
-import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
-import { $isCodeNode } from "@lexical/code"
-import { $isLinkNode } from "@lexical/link"
-import { $getTableCellNodeFromLexicalNode } from "@lexical/table"
-import { getListType } from "../helpers/lexical_helper"
-import { isSelectionHighlighted } from "../helpers/format_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 
 export class LexicalToolbarElement extends HTMLElement {
@@ -45,6 +38,7 @@ export class LexicalToolbarElement extends HTMLElement {
   setEditor(editorElement) {
     this.editorElement = editorElement
     this.editor = editorElement.editor
+    this.selection = editorElement.selection
     this.#bindButtons()
     this.#bindHotkeys()
     this.#resetTabIndexValues()
@@ -204,19 +198,8 @@ export class LexicalToolbarElement extends HTMLElement {
     const anchorNode = selection.anchor.getNode()
     if (!anchorNode.getParent()) { return }
 
-    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
-
-    const isBold = selection.hasFormat("bold")
-    const isItalic = selection.hasFormat("italic")
-    const isStrikethrough = selection.hasFormat("strikethrough")
-    const isHighlight = isSelectionHighlighted(selection)
-    const isInLink = this.#isInLink(anchorNode)
-    const isInQuote = $isQuoteNode(topLevelElement)
-    const isInHeading = $isHeadingNode(topLevelElement)
-    const isInCode = $isCodeNode(topLevelElement) || selection.hasFormat("code")
-    const isInList = this.#isInList(anchorNode)
-    const listType = getListType(anchorNode)
-    const isInTable = $getTableCellNodeFromLexicalNode(anchorNode) !== null
+    const { isBold, isItalic, isStrikethrough, isHighlight, isInLink, isInQuote, isInHeading,
+      isInCode, isInList, listType, isInTable } = this.selection.formatting
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
@@ -231,24 +214,6 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("table", isInTable)
 
     this.#updateUndoRedoButtonStates()
-  }
-
-  #isInList(node) {
-    let current = node
-    while (current) {
-      if ($isListNode(current) || $isListItemNode(current)) return true
-      current = current.getParent()
-    }
-    return false
-  }
-
-  #isInLink(node) {
-    let current = node
-    while (current) {
-      if ($isLinkNode(current)) return true
-      current = current.getParent()
-    }
-    return false
   }
 
   #setButtonPressed(name, isPressed) {
