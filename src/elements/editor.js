@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, DecoratorNode, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $isDecoratorNode, $isParagraphNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -196,23 +196,37 @@ export class LexicalEditorElement extends HTMLElement {
 
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>"
-    const nodes = $generateNodesFromDOM(this.editor, parseHtml(`<div>${html}</div>`))
+    const nodes = $generateNodesFromDOM(this.editor, parseHtml(`${html}`))
 
     if (nodes.length === 0) {
       return [ $createParagraphNode() ]
     }
 
-    // Custom decorator block elements such action-text-attachments get wrapped into <p> automatically by Lexical.
-    // We flatten those.
-    return nodes.map(node => {
-      if (node.getType() === "paragraph" && node.getChildrenSize() === 1) {
-        const child = node.getFirstChild()
-        if (child instanceof DecoratorNode && !child.isInline()) {
-          return child
-        }
+    return nodes
+      .map(this.#wrapTextNode)
+      .map(this.#unwrapDecoratorNode)
+  }
+
+  // Raw string values produce TextNodes which cannot be appended directly to the RootNode.
+  // We wrap those in <p>
+  #wrapTextNode(node) {
+    if (!$isTextNode(node)) return node
+
+    const paragraph = $createParagraphNode()
+    paragraph.append(node)
+    return paragraph
+  }
+
+  // Custom decorator block elements such as action-text-attachments get wrapped into <p> automatically by Lexical.
+  // We unwrap those.
+  #unwrapDecoratorNode(node) {
+    if ($isParagraphNode(node) && node.getChildrenSize() === 1) {
+      const child = node.getFirstChild()
+      if ($isDecoratorNode(child) && !child.isInline()) {
+        return child
       }
-      return node
-    })
+    }
+    return node
   }
 
   #initialize() {

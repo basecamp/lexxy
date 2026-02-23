@@ -22,7 +22,8 @@ export const TablesLexicalExtension = defineExtension({
     WrappedTableNode,
     {
       replace: TableNode,
-      with: () => new WrappedTableNode()
+      with: () => new WrappedTableNode(),
+      withKlass: WrappedTableNode
     },
     TableCellNode,
     TableRowNode
