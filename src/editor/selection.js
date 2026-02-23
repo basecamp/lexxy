@@ -10,7 +10,7 @@ import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $createNodeSelectionWith, getListType, isPrintableCharacter } from "../helpers/lexical_helper"
+import { $createNodeSelectionWith, getListType } from "../helpers/lexical_helper"
 import { LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 
@@ -23,7 +23,6 @@ export default class Selection {
 
     this.#listenForNodeSelections()
     this.#processSelectionChangeCommands()
-    this.#handleInputWhenDecoratorNodesSelected()
     this.#containEditorFocus()
   }
 
@@ -248,10 +247,6 @@ export default class Selection {
     return this.#findPreviousSiblingUp(anchorNode)
   }
 
-  get #contents() {
-    return this.editorElement.contents
-  }
-
   get #currentlySelectedKeys() {
     if (this.currentlySelectedKeys) { return this.currentlySelectedKeys }
 
@@ -291,57 +286,6 @@ export default class Selection {
     this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
       this.#selectOrAppendNextLine()
     })
-  }
-
-  // In Safari, when the only node in the document is an attachment, it won't let you enter text
-  // before/below it. There is probably a better fix here, but this workaround solves the problem until
-  // we find it.
-  #handleInputWhenDecoratorNodesSelected() {
-    this.editor.getRootElement().addEventListener("keydown", (event) => {
-      if (isPrintableCharacter(event)) {
-        this.editor.update(() => {
-          const selection = $getSelection()
-
-          if ($isRangeSelection(selection) && selection.isCollapsed()) {
-            const anchorNode = selection.anchor.getNode()
-            const offset = selection.anchor.offset
-
-            const nodeBefore = this.#getNodeBeforePosition(anchorNode, offset)
-            const nodeAfter = this.#getNodeAfterPosition(anchorNode, offset)
-
-            if (nodeBefore instanceof DecoratorNode && !nodeBefore.isInline()) {
-              event.preventDefault()
-              this.#contents.createParagraphAfterNode(nodeBefore, event.key)
-              return
-            } else if (nodeAfter instanceof DecoratorNode && !nodeAfter.isInline()) {
-              event.preventDefault()
-              this.#contents.createParagraphBeforeNode(nodeAfter, event.key)
-              return
-            }
-          }
-        })
-      }
-    }, true)
-  }
-
-  #getNodeBeforePosition(node, offset) {
-    if ($isTextNode(node) && offset === 0) {
-      return node.getPreviousSibling()
-    }
-    if ($isElementNode(node) && offset > 0) {
-      return node.getChildAtIndex(offset - 1)
-    }
-    return null
-  }
-
-  #getNodeAfterPosition(node, offset) {
-    if ($isTextNode(node) && offset === node.getTextContentSize()) {
-      return node.getNextSibling()
-    }
-    if ($isElementNode(node)) {
-      return node.getChildAtIndex(offset)
-    }
-    return null
   }
 
   #containEditorFocus() {
