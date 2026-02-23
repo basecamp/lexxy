@@ -74,10 +74,6 @@ module EditorHelper
     assert_css "lexxy-toolbar[connected]" if has_css?("lexxy-toolbar")
   end
 
-  def wait_for_node_selection(expected = true)
-    wait_until { expected == find_editor.has_node_selection? }
-  end
-
   def click_table_handler_button(aria_label)
     find("lexxy-table-tools button[aria-label='#{aria_label}']").click
   end
