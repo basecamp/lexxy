@@ -7580,10 +7580,15 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
     const upload = new DirectUpload(this.file, this.uploadUrl, this);
     upload.delegate = this.#createUploadDelegate();
+
+    this.#dispatchEvent("lexxy:upload-start", { file: this.file });
+
     upload.create((error, blob) => {
       if (error) {
+        this.#dispatchEvent("lexxy:upload-end", { file: this.file, error });
         this.#handleUploadError(error);
       } else {
+        this.#dispatchEvent("lexxy:upload-end", { file: this.file, error: null });
         this.#showUploadedAttachment(blob);
       }
     });
@@ -7610,7 +7615,9 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   #handleUploadProgress(event) {
-    this.#setProgress(Math.round(event.loaded / event.total * 100));
+    const progress = Math.round(event.loaded / event.total * 100);
+    this.#setProgress(progress);
+    this.#dispatchEvent("lexxy:upload-progress", { file: this.file, progress });
   }
 
   #setProgress(progress) {
@@ -7635,6 +7642,11 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   #toActionTextAttachmentNodeWith(blob) {
     const conversion = new AttachmentNodeConversion(this, blob);
     return conversion.toAttachmentNode()
+  }
+
+  #dispatchEvent(name, detail) {
+    const figure = this.editor.getElementByKey(this.getKey());
+    if (figure) dispatch(figure, name, detail);
   }
 }
 
