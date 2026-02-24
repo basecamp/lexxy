@@ -1,11 +1,11 @@
 import { $createNodeSelection, $createParagraphNode, $isTextNode, TextNode } from "lexical"
-import { HISTORY_MERGE_TAG, SKIP_DOM_SELECTION_TAG, SKIP_SCROLL_INTO_VIEW_TAG } from "lexical"
+import { HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
 import { $isAtNodeEnd } from "@lexical/selection"
 
-export const SILENT_UPDATE_TAGS = [ HISTORY_MERGE_TAG, SKIP_DOM_SELECTION_TAG, SKIP_SCROLL_INTO_VIEW_TAG ]
+export const SILENT_UPDATE_TAGS = [ HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG ]
 
 export function $createNodeSelectionWith(...nodes) {
   const selection = $createNodeSelection()
