@@ -9621,27 +9621,6 @@ class Contents {
     }
   }
 
-  async deleteSelectedNodes() {
-    let focusNode = null;
-
-    this.editor.update(() => {
-      if (this.#selection.hasNodeSelection) {
-        const nodesToRemove = Lr().getNodes();
-        if (nodesToRemove.length === 0) return
-
-        focusNode = this.#findAdjacentNodeTo(nodesToRemove);
-        this.#deleteNodes(nodesToRemove);
-      }
-    });
-
-    await nextFrame();
-
-    this.editor.update(() => {
-      this.#selectAfterDeletion(focusNode);
-      this.editor.focus();
-    });
-  }
-
   replaceNodeWithHTML(nodeKey, html, options = {}) {
     this.editor.update(() => {
       const node = xo(nodeKey);
@@ -9678,10 +9657,6 @@ class Contents {
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html);
       previousNode.insertAfter(newNode);
     });
-  }
-
-  get #selection() {
-    return this.editorElement.selection
   }
 
   #insertLineBelowIfLastNode(node) {
@@ -9878,42 +9853,6 @@ class Contents {
 
   #removeNodes(nodesToDelete) {
     nodesToDelete.forEach((node) => node.remove());
-  }
-
-  #deleteNodes(nodes) {
-    nodes.forEach((node) => {
-      const parent = node.getParent();
-      if (!Si(parent)) return
-
-      const children = parent.getChildren();
-      const index = children.indexOf(node);
-
-      if (index >= 0) {
-        parent.splice(index, 1, []);
-      }
-    });
-  }
-
-  #findAdjacentNodeTo(nodes) {
-    const firstNode = nodes[0];
-    const lastNode = nodes[nodes.length - 1];
-
-    return firstNode?.getPreviousSibling() || lastNode?.getNextSibling()
-  }
-
-  #selectAfterDeletion(focusNode) {
-    const root = No();
-    if (root.getChildrenSize() === 0) {
-      const newParagraph = Li();
-      root.append(newParagraph);
-      newParagraph.selectStart();
-    } else if (focusNode) {
-      if (lr(focusNode) || Ii(focusNode)) {
-        focusNode.selectEnd();
-      } else {
-        focusNode.selectNext(0, 0);
-      }
-    }
   }
 
   #collectSelectedListItems(selection) {
