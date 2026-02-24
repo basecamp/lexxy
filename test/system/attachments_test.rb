@@ -95,6 +95,57 @@ class AttachmentsTest < ApplicationSystemTestCase
     assert_selector "figure.attachment--error"
   end
 
+  test "caption syncs and editor has focus after Enter" do
+    attach_file file_fixture("example.png") do
+      click_on "Upload file"
+    end
+
+    find("figure.attachment figcaption textarea") do |caption|
+      caption.click
+      caption.send_keys("My caption")
+      caption.send_keys(:enter)
+    end
+
+    assert_editor_has_focus
+    assert_editor_html do
+      assert_selector %(action-text-attachment[caption="My caption"])
+    end
+  end
+
+  test "caption saves and editor has focus after click" do
+    attach_file file_fixture("example.png") do
+      click_on "Upload file"
+    end
+
+    find("figure.attachment figcaption textarea") do |caption|
+      caption.click
+      caption.send_keys("My caption")
+    end
+
+    find_editor.content_element.click
+
+    assert_editor_has_focus
+    assert_editor_html do
+      assert_selector %(action-text-attachment[caption="My caption"])
+    end
+  end
+
+  test "caption saves and editor has focus after Tab" do
+    attach_file file_fixture("example.png") do
+      click_on "Upload file"
+    end
+
+    find("figure.attachment figcaption textarea") do |caption|
+      caption.click
+      caption.send_keys("My caption")
+      caption.send_keys(:tab)
+    end
+
+    assert_editor_html do
+      assert_selector %(action-text-attachment[caption="My caption"])
+    end
+  end
+
   private
     def add_auth_cookie
       domain = ".lexxy.localhost"

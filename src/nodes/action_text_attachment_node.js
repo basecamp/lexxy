@@ -237,13 +237,17 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   #handleCaptionInputKeydown(event) {
     if (event.key === "Enter") {
-      this.#updateCaptionValueFromInput(event.target)
       event.preventDefault()
+      event.stopPropagation()
+      event.target.blur()
 
       this.editor.update(() => {
-        this.selectNext()
-      }, { tag: HISTORY_MERGE_TAG })
+        // Place the cursor after the current image
+        this.selectNext(0, 0)
+      }, {
+        tag: HISTORY_MERGE_TAG
+      })
     }
-    event.stopPropagation()
+
   }
 }

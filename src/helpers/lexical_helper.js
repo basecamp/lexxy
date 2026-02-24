@@ -16,17 +16,6 @@ export function getListType(node) {
   return list?.getListType() ?? null
 }
 
-export function isPrintableCharacter(event) {
-  // Ignore if modifier keys are pressed (except Shift for uppercase)
-  if (event.ctrlKey || event.metaKey || event.altKey) return false
-
-  // Ignore special keys
-  if (event.key.length > 1 && event.key !== "Enter" && event.key !== "Space") return false
-
-  // Accept single character keys (letters, numbers, punctuation)
-  return event.key.length === 1
-}
-
 export function extendTextNodeConversion(conversionName, ...callbacks) {
   return extendConversion(TextNode, conversionName, (conversionOutput, element) => ({
     ...conversionOutput,
