@@ -7454,7 +7454,7 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       if (error) {
         this.#handleUploadError(error);
       } else {
-        this.#showUploadedAttachment(blob);
+        this.showUploadedAttachment(blob);
       }
     });
   }
@@ -7496,7 +7496,7 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }, { tag: SILENT_UPDATE_TAGS });
   }
 
-  async #showUploadedAttachment(blob) {
+  showUploadedAttachment(blob) {
     this.editor.update(() => {
       this.replace(this.#toActionTextAttachmentNodeWith(blob));
     }, { tag: SILENT_UPDATE_TAGS });
@@ -9626,28 +9626,17 @@ class Contents {
 
     const editor = this.editor;
     return {
-      setAttributes(json) {
+      setAttributes(blob) {
         editor.update(() => {
           const node = xo(nodeKey);
-          if (!node) return
-
-          node.replace(new ActionTextAttachmentNode({
-            sgid: json.sgid || json.attachable_sgid,
-            src: json.url,
-            contentType: json.contentType || json.content_type,
-            fileName: json.filename,
-            fileSize: json.filesize || json.byte_size,
-            previewable: json.previewable,
-            presentation: json.presentation
-          }));
+          if (node) node.showUploadedAttachment(blob);
         }, { tag: Dn });
       },
       setUploadProgress(progress) {
-        const dom = editor.getElementByKey(nodeKey);
-        const progressBar = dom?.querySelector("progress");
-        if (progressBar) {
-          editor.update(() => { progressBar.value = progress; });
-        }
+        editor.update(() => {
+          const node = xo(nodeKey);
+          if (node) node.getWritable().progress = progress;
+        });
       },
       remove() {
         editor.update(() => {
