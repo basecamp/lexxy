@@ -8292,6 +8292,36 @@ class Selection {
     }
   }
 
+  getFormat() {
+    const selection = Lr();
+    if (!yr(selection)) return {}
+
+    const anchorNode = selection.anchor.getNode();
+    if (!anchorNode.getParent()) return {}
+
+    const topLevelElement = anchorNode.getTopLevelElementOrThrow();
+    const listType = getListType(anchorNode);
+
+    return {
+      isBold: selection.hasFormat("bold"),
+      isItalic: selection.hasFormat("italic"),
+      isStrikethrough: selection.hasFormat("strikethrough"),
+      isHighlight: isSelectionHighlighted(selection),
+      isInLink: wt$5(anchorNode, y$2) !== null,
+      isInQuote: Ot$2(topLevelElement),
+      isInHeading: It$2(topLevelElement),
+      isInCode: selection.hasFormat("code") || wt$5(anchorNode, q$1) !== null,
+      isInList: listType !== null,
+      listType,
+      isInTable: Be$1(anchorNode) !== null
+    }
+  }
+
+  nearestNodeOfType(nodeType) {
+    const anchorNode = Lr()?.anchor?.getNode();
+    return wt$5(anchorNode, nodeType)
+  }
+
   // Selection preservation for native bridge dialogs
   freeze() {
     this.#expandLinkSelection();
@@ -8365,7 +8395,7 @@ class Selection {
   }
 
   get isInsideList() {
-    return this.nearestNodeOfType(ListItemNode)
+    return this.nearestNodeOfType(nt$2)
   }
 
   get isIndentedList() {
@@ -9896,9 +9926,6 @@ class Contents {
   }
 
   #deleteNodes(nodes) {
-    // Use splice() instead of node.remove() for proper removal and
-    // reconciliation. Would have issues with removing unintended decorator nodes
-    // with node.remove()
     nodes.forEach((node) => {
       const parent = node.getParent();
       if (!Si(parent)) return
@@ -10386,53 +10413,42 @@ class Native {
       const selection = Lr();
       if (!yr(selection)) return
 
+      const format = this.#selection.getFormat();
+      if (Object.keys(format).length === 0) return
+
       const anchorNode = selection.anchor.getNode();
-      if (!anchorNode.getParent()) return
+      const linkNode = wt$5(anchorNode, y$2);
 
-      // Get link info
-      let inLink = false;
-      let linkHref = null;
-      let node = anchorNode;
-      while (node) {
-        if (w$3(node)) {
-          inLink = true;
-          linkHref = node.getURL();
-          break
-        }
-        node = node.getParent();
-      }
+      attributes = {
+        bold: { active: format.isBold, enabled: true },
+        italic: { active: format.isItalic, enabled: true },
+        strikethrough: { active: format.isStrikethrough, enabled: true },
+        code: { active: format.isInCode, enabled: true },
+        highlight: { active: format.isHighlight, enabled: true },
+        link: { active: format.isInLink, enabled: true },
+        quote: { active: format.isInQuote, enabled: true },
+        heading: { active: format.isInHeading, enabled: true },
+        "unordered-list": { active: format.isInList && format.listType === "bullet", enabled: true },
+        "ordered-list": { active: format.isInList && format.listType === "number", enabled: true },
+        undo: { active: false, enabled: this.#historyState?.undoStack.length > 0 },
+        redo: { active: false, enabled: this.#historyState?.redoStack.length > 0 }
+      };
 
-      // Get block-level info
-      const topLevelElement = anchorNode.getTopLevelElementOrThrow();
-      const inQuote = Ot$2(topLevelElement);
-      const inHeading = It$2(topLevelElement);
-
-      // Get list type
-      const listType = getListType(anchorNode);
-
-      // Only include truthy attributes - false/undefined values mean "enabled but not active"
-      // iOS interprets false as "disabled", so we must omit inactive attributes
-      attributes = {};
-      if (selection.hasFormat("bold")) attributes.bold = true;
-      if (selection.hasFormat("italic")) attributes.italic = true;
-      if (selection.hasFormat("strikethrough")) attributes.strikethrough = true;
-      const inCode = X$1(topLevelElement) || selection.hasFormat("code");
-      if (inCode) attributes.code = true;
-      if (isSelectionHighlighted(selection)) {
-        attributes.highlight = true;
-        highlight = getHighlightStyles(selection);
-      }
-      if (inLink) attributes.link = true;
-      if (inQuote) attributes.quote = true;
-      if (inHeading) attributes.heading = true;
-      if (listType === "bullet") attributes["unordered-list"] = true;
-      if (listType === "number") attributes["ordered-list"] = true;
-      link = inLink && linkHref ? { href: linkHref } : null;
+      link = linkNode ? { href: linkNode.getURL() } : null;
+      highlight = format.isHighlight ? getHighlightStyles(selection) : null;
     });
 
     if (attributes) {
       dispatch(this.editorElement, "lexxy:attributes-change", { attributes, link, highlight });
     }
+  }
+
+  get #selection() {
+    return this.editorElement.selection
+  }
+
+  get #historyState() {
+    return this.editorElement.historyState
   }
 }
 

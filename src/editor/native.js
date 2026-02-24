@@ -1,10 +1,8 @@
 import { $getSelection, $isRangeSelection } from "lexical"
-import { $isLinkNode } from "@lexical/link"
-import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
-import { $isCodeNode } from "@lexical/code"
+import { $getNearestNodeOfType } from "@lexical/utils"
+import { LinkNode } from "@lexical/link"
 
-import { getListType } from "../helpers/lexical_helper"
-import { getHighlightStyles, isSelectionHighlighted } from "../helpers/format_helper"
+import { getHighlightStyles } from "../helpers/format_helper"
 import { dispatch } from "../helpers/html_helper"
 
 export default class Native {
@@ -48,52 +46,41 @@ export default class Native {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
+      const format = this.#selection.getFormat()
+      if (Object.keys(format).length === 0) return
+
       const anchorNode = selection.anchor.getNode()
-      if (!anchorNode.getParent()) return
+      const linkNode = $getNearestNodeOfType(anchorNode, LinkNode)
 
-      // Get link info
-      let inLink = false
-      let linkHref = null
-      let node = anchorNode
-      while (node) {
-        if ($isLinkNode(node)) {
-          inLink = true
-          linkHref = node.getURL()
-          break
-        }
-        node = node.getParent()
+      attributes = {
+        bold: { active: format.isBold, enabled: true },
+        italic: { active: format.isItalic, enabled: true },
+        strikethrough: { active: format.isStrikethrough, enabled: true },
+        code: { active: format.isInCode, enabled: true },
+        highlight: { active: format.isHighlight, enabled: true },
+        link: { active: format.isInLink, enabled: true },
+        quote: { active: format.isInQuote, enabled: true },
+        heading: { active: format.isInHeading, enabled: true },
+        "unordered-list": { active: format.isInList && format.listType === "bullet", enabled: true },
+        "ordered-list": { active: format.isInList && format.listType === "number", enabled: true },
+        undo: { active: false, enabled: this.#historyState?.undoStack.length > 0 },
+        redo: { active: false, enabled: this.#historyState?.redoStack.length > 0 }
       }
 
-      // Get block-level info
-      const topLevelElement = anchorNode.getTopLevelElementOrThrow()
-      const inQuote = $isQuoteNode(topLevelElement)
-      const inHeading = $isHeadingNode(topLevelElement)
-
-      // Get list type
-      const listType = getListType(anchorNode)
-
-      // Only include truthy attributes - false/undefined values mean "enabled but not active"
-      // iOS interprets false as "disabled", so we must omit inactive attributes
-      attributes = {}
-      if (selection.hasFormat("bold")) attributes.bold = true
-      if (selection.hasFormat("italic")) attributes.italic = true
-      if (selection.hasFormat("strikethrough")) attributes.strikethrough = true
-      const inCode = $isCodeNode(topLevelElement) || selection.hasFormat("code")
-      if (inCode) attributes.code = true
-      if (isSelectionHighlighted(selection)) {
-        attributes.highlight = true
-        highlight = getHighlightStyles(selection)
-      }
-      if (inLink) attributes.link = true
-      if (inQuote) attributes.quote = true
-      if (inHeading) attributes.heading = true
-      if (listType === "bullet") attributes["unordered-list"] = true
-      if (listType === "number") attributes["ordered-list"] = true
-      link = inLink && linkHref ? { href: linkHref } : null
+      link = linkNode ? { href: linkNode.getURL() } : null
+      highlight = format.isHighlight ? getHighlightStyles(selection) : null
     })
 
     if (attributes) {
       dispatch(this.editorElement, "lexxy:attributes-change", { attributes, link, highlight })
     }
+  }
+
+  get #selection() {
+    return this.editorElement.selection
+  }
+
+  get #historyState() {
+    return this.editorElement.historyState
   }
 }
