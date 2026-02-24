@@ -198,7 +198,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }, { tag: SILENT_UPDATE_TAGS })
   }
 
-  async #showUploadedAttachment(blob) {
+  #showUploadedAttachment(blob) {
     this.editor.update(() => {
       this.replace(this.#toActionTextAttachmentNodeWith(blob))
     }, { tag: SILENT_UPDATE_TAGS })
