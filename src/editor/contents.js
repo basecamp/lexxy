@@ -1,6 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
-  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -11,6 +11,7 @@ import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode, ListItemNode } from "@lexical/list"
 import { FormatEscaper } from "./format_escaper"
+import { nextFrame } from "../helpers/timing_helpers.js"
 import { $getNearestNodeOfType } from "@lexical/utils"
 
 export default class Contents {
@@ -381,6 +382,10 @@ export default class Contents {
     })
   }
 
+  get #selection() {
+    return this.editorElement.selection
+  }
+
   #insertLineBelowIfLastNode(node) {
     this.editor.update(() => {
       const nextSibling = node.getNextSibling()
@@ -575,6 +580,42 @@ export default class Contents {
 
   #removeNodes(nodesToDelete) {
     nodesToDelete.forEach((node) => node.remove())
+  }
+
+  #deleteNodes(nodes) {
+    nodes.forEach((node) => {
+      const parent = node.getParent()
+      if (!$isElementNode(parent)) return
+
+      const children = parent.getChildren()
+      const index = children.indexOf(node)
+
+      if (index >= 0) {
+        parent.splice(index, 1, [])
+      }
+    })
+  }
+
+  #findAdjacentNodeTo(nodes) {
+    const firstNode = nodes[0]
+    const lastNode = nodes[nodes.length - 1]
+
+    return firstNode?.getPreviousSibling() || lastNode?.getNextSibling()
+  }
+
+  #selectAfterDeletion(focusNode) {
+    const root = $getRoot()
+    if (root.getChildrenSize() === 0) {
+      const newParagraph = $createParagraphNode()
+      root.append(newParagraph)
+      newParagraph.selectStart()
+    } else if (focusNode) {
+      if ($isTextNode(focusNode) || $isParagraphNode(focusNode)) {
+        focusNode.selectEnd()
+      } else {
+        focusNode.selectNext(0, 0)
+      }
+    }
   }
 
   #collectSelectedListItems(selection) {

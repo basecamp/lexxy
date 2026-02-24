@@ -22,7 +22,6 @@ import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
-import Highlighter from "../editor/highlighter"
 import Native from "../editor/native"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"

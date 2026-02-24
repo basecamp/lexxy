@@ -6847,751 +6847,7 @@ function I$1(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URL
  *
  */
 
-const R$1=new Set(["http:","https:","mailto:","sms:","tel:"]);let y$1 = class y extends Ci{__url;__target;__rel;__title;static getType(){return "link"}static clone(t){return new y(t.__url,{rel:t.__rel,target:t.__target,title:t.__title},t.__key)}constructor(t="",e={},n){super(n);const{target:r=null,rel:i=null,title:l=null}=e;this.__url=t,this.__target=r,this.__rel=i,this.__title=l;}createDOM(e){const n=document.createElement("a");return this.updateLinkDOM(null,n,e),lt$4(n,e.theme.link),n}updateLinkDOM(t,n,r){if(xs(n)){t&&t.__url===this.__url||(n.href=this.sanitizeUrl(this.__url));for(const e of ["target","rel","title"]){const r=`__${e}`,i=this[r];t&&t[r]===i||(i?n[e]=i:n.removeAttribute(e));}}}updateDOM(t,e,n){return this.updateLinkDOM(t,e,n),false}static importDOM(){return {a:t=>({conversion:N$1,priority:1})}}static importJSON(t){return D$1().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setURL(t.url).setRel(t.rel||null).setTarget(t.target||null).setTitle(t.title||null)}sanitizeUrl(t){t=W$3(t);try{const e=new URL(W$3(t));if(!R$1.has(e.protocol))return "about:blank"}catch(e){return t}return t}exportJSON(){return {...super.exportJSON(),rel:this.getRel(),target:this.getTarget(),title:this.getTitle(),url:this.getURL()}}getURL(){return this.getLatest().__url}setURL(t){const e=this.getWritable();return e.__url=t,e}getTarget(){return this.getLatest().__target}setTarget(t){const e=this.getWritable();return e.__target=t,e}getRel(){return this.getLatest().__rel}setRel(t){const e=this.getWritable();return e.__rel=t,e}getTitle(){return this.getLatest().__title}setTitle(t){const e=this.getWritable();return e.__title=t,e}insertNewAfter(t,e=true){const n=D$1(this.__url,{rel:this.__rel,target:this.__target,title:this.__title});return this.insertAfter(n,e),n}canInsertTextBefore(){return  false}canInsertTextAfter(){return  false}canBeEmpty(){return  false}isInline(){return  true}extractWithChild(t,e,n){if(!yr(e))return  false;const r=e.anchor.getNode(),i=e.focus.getNode();return this.isParentOf(r)&&this.isParentOf(i)&&e.getTextContent().length>0}isEmailURI(){return this.__url.startsWith("mailto:")}isWebSiteURI(){return this.__url.startsWith("https://")||this.__url.startsWith("http://")}};function N$1(t){let n=null;if(xs(t)){const e=t.textContent;(null!==e&&""!==e||t.children.length>0)&&(n=D$1(t.getAttribute("href")||"",{rel:t.getAttribute("rel"),target:t.getAttribute("target"),title:t.getAttribute("title")}));}return {node:n}}function D$1(t="",e){return fs(new y$1(t,e))}function w$2(t){return t instanceof y$1}class A extends y$1{__isUnlinked;constructor(t="",e={},n){super(t,e,n),this.__isUnlinked=void 0!==e.isUnlinked&&null!==e.isUnlinked&&e.isUnlinked;}static getType(){return "autolink"}static clone(t){return new A(t.__url,{isUnlinked:t.__isUnlinked,rel:t.__rel,target:t.__target,title:t.__title},t.__key)}getIsUnlinked(){return this.__isUnlinked}setIsUnlinked(t){const e=this.getWritable();return e.__isUnlinked=t,e}createDOM(t){return this.__isUnlinked?document.createElement("span"):super.createDOM(t)}updateDOM(t,e,n){return super.updateDOM(t,e,n)||t.__isUnlinked!==this.__isUnlinked}static importJSON(t){return I$2().updateFromJSON(t)}updateFromJSON(t){return super.updateFromJSON(t).setIsUnlinked(t.isUnlinked||false)}static importDOM(){return null}exportJSON(){return {...super.exportJSON(),isUnlinked:this.__isUnlinked}}insertNewAfter(t,e=true){const n=this.getParentOrThrow().insertNewAfter(t,e);if(Si(n)){const t=I$2(this.__url,{isUnlinked:this.__isUnlinked,rel:this.__rel,target:this.__target,title:this.__title});return n.append(t),t}return null}}function I$2(t="",e){return fs(new A(t,e))}function E$2(t){return t instanceof A}function M$1(t,e){if("element"===t.type){const n=t.getNode();Si(n)||function(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URLSearchParams;r.append("code",t);for(const t of e)r.append("v",t);throw n.search=r.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}(252);return n.getChildren()[t.offset+e]||null}return null}function J$1(t,e={}){let r;if(t&&"object"==typeof t){const{url:n,...i}=t;r=n,e={...i,...e};}else r=t;const{target:i,title:l}=e,s=void 0===e.rel?"noreferrer":e.rel,u=Lr();if(null===u||!yr(u)&&!xr(u))return;if(xr(u)){const t=u.getNodes();if(0===t.length)return;return void t.forEach(t=>{if(null===r){const e=zs(t,t=>!E$2(t)&&w$2(t));e&&(e.insertBefore(t),0===e.getChildren().length&&e.remove());}else {const e=zs(t,t=>!E$2(t)&&w$2(t));if(e)e.setURL(r),void 0!==i&&e.setTarget(i),void 0!==s&&e.setRel(s);else {const e=D$1(r,{rel:s,target:i});t.insertBefore(e),e.append(t);}}})}const h=u.extract();if(null===r){const t=new Set;return void h.forEach(e=>{const n=e.getParent();if(w$2(n)&&!E$2(n)){const e=n.getKey();if(t.has(e))return;!function(t,e){const n=new Set(e.filter(e=>t.isParentOf(e)).map(t=>t.getKey())),r=t.getChildren(),i=r.filter(t=>n.has(t.getKey()));if(i.length===r.length)return r.forEach(e=>t.insertBefore(e)),void t.remove();const l=r.findIndex(t=>n.has(t.getKey())),s=r.findLastIndex(t=>n.has(t.getKey())),o=0===l,u=s===r.length-1;if(o)i.forEach(e=>t.insertBefore(e));else if(u)for(let e=i.length-1;e>=0;e--)t.insertAfter(i[e]);else {for(let e=i.length-1;e>=0;e--)t.insertAfter(i[e]);const e=r.slice(s+1);if(e.length>0){const n=D$1(t.getURL(),{rel:t.getRel(),target:t.getTarget(),title:t.getTitle()});i[i.length-1].insertAfter(n),e.forEach(t=>n.append(t));}}}(n,h),t.add(e);}})}const p=new Set,_=t=>{p.has(t.getKey())||(p.add(t.getKey()),t.setURL(r),void 0!==i&&t.setTarget(i),void 0!==s&&t.setRel(s),void 0!==l&&t.setTitle(l));};if(1===h.length){const t=h[0],e=zs(t,w$2);if(null!==e)return _(e)}!function(t){const e=Lr();if(!yr(e))return t();const n=St$6(e),r=n.isBackward(),i=M$1(n.anchor,r?-1:0),l=M$1(n.focus,r?0:-1);t();if(i||l){const t=Lr();if(yr(t)){const e=t.clone();if(i){const t=i.getParent();t&&e.anchor.set(t.getKey(),i.getIndexWithinParent()+(r?1:0),"element");}if(l){const t=l.getParent();t&&e.focus.set(t.getKey(),l.getIndexWithinParent()+(r?0:1),"element");}wo(St$6(e));}}}(()=>{let t=null;for(const e of h){if(!e.isAttached())continue;const o=zs(e,w$2);if(o){_(o);continue}if(Si(e)){if(!e.isInline())continue;if(w$2(e)){if(!(E$2(e)||null!==t&&t.getParentOrThrow().isParentOf(e))){_(e),t=e;continue}for(const t of e.getChildren())e.insertBefore(t);e.remove();continue}}const u=e.getPreviousSibling();w$2(u)&&u.is(t)?u.append(e):(t=D$1(r,{rel:s,target:i,title:l}),e.insertAfter(t),t.append(e));}});}const K$1=/^\+?[0-9\s()-]{5,}$/;function W$3(t){return t.match(/^[a-z][a-z0-9+.-]*:/i)||t.match(/^[/#.]/)?t:t.includes("@")?`mailto:${t}`:K$1.test(t)?`tel:${t}`:`https://${t}`}
-
-/**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
-const Ne$1=/^(\d+(?:\.\d+)?)px$/,ve$1={BOTH:3,COLUMN:2,NO_STATUS:0,ROW:1};class xe extends Ci{__colSpan;__rowSpan;__headerState;__width;__backgroundColor;__verticalAlign;static getType(){return "tablecell"}static clone(e){return new xe(e.__headerState,e.__colSpan,e.__width,e.__key)}afterCloneFrom(e){super.afterCloneFrom(e),this.__rowSpan=e.__rowSpan,this.__backgroundColor=e.__backgroundColor,this.__verticalAlign=e.__verticalAlign;}static importDOM(){return {td:e=>({conversion:Re$1,priority:0}),th:e=>({conversion:Re$1,priority:0})}}static importJSON(e){return Fe$1().updateFromJSON(e)}updateFromJSON(e){return super.updateFromJSON(e).setHeaderStyles(e.headerState).setColSpan(e.colSpan||1).setRowSpan(e.rowSpan||1).setWidth(e.width||void 0).setBackgroundColor(e.backgroundColor||null).setVerticalAlign(e.verticalAlign||void 0)}constructor(e=ve$1.NO_STATUS,t=1,n,o){super(o),this.__colSpan=t,this.__rowSpan=1,this.__headerState=e,this.__width=n,this.__backgroundColor=null,this.__verticalAlign=void 0;}createDOM(t){const n=document.createElement(this.getTag());return this.__width&&(n.style.width=`${this.__width}px`),this.__colSpan>1&&(n.colSpan=this.__colSpan),this.__rowSpan>1&&(n.rowSpan=this.__rowSpan),null!==this.__backgroundColor&&(n.style.backgroundColor=this.__backgroundColor),Te$1(this.__verticalAlign)&&(n.style.verticalAlign=this.__verticalAlign),lt$4(n,t.theme.tableCell,this.hasHeader()&&t.theme.tableCellHeader),n}exportDOM(e){const t=super.exportDOM(e);if(Cs(t.element)){const e=t.element;e.setAttribute("data-temporary-table-cell-lexical-key",this.getKey()),e.style.border="1px solid black",this.__colSpan>1&&(e.colSpan=this.__colSpan),this.__rowSpan>1&&(e.rowSpan=this.__rowSpan),e.style.width=`${this.getWidth()||75}px`,e.style.verticalAlign=this.getVerticalAlign()||"top",e.style.textAlign="start",null===this.__backgroundColor&&this.hasHeader()&&(e.style.backgroundColor="#f2f3f5");}return t}exportJSON(){return {...super.exportJSON(),...Te$1(this.__verticalAlign)&&{verticalAlign:this.__verticalAlign},backgroundColor:this.getBackgroundColor(),colSpan:this.__colSpan,headerState:this.__headerState,rowSpan:this.__rowSpan,width:this.getWidth()}}getColSpan(){return this.getLatest().__colSpan}setColSpan(e){const t=this.getWritable();return t.__colSpan=e,t}getRowSpan(){return this.getLatest().__rowSpan}setRowSpan(e){const t=this.getWritable();return t.__rowSpan=e,t}getTag(){return this.hasHeader()?"th":"td"}setHeaderStyles(e,t=ve$1.BOTH){const n=this.getWritable();return n.__headerState=e&t|n.__headerState&~t,n}getHeaderStyles(){return this.getLatest().__headerState}setWidth(e){const t=this.getWritable();return t.__width=e,t}getWidth(){return this.getLatest().__width}getBackgroundColor(){return this.getLatest().__backgroundColor}setBackgroundColor(e){const t=this.getWritable();return t.__backgroundColor=e,t}getVerticalAlign(){return this.getLatest().__verticalAlign}setVerticalAlign(e){const t=this.getWritable();return t.__verticalAlign=e||void 0,t}toggleHeaderStyle(e){const t=this.getWritable();return (t.__headerState&e)===e?t.__headerState-=e:t.__headerState+=e,t}hasHeaderState(e){return (this.getHeaderStyles()&e)===e}hasHeader(){return this.getLatest().__headerState!==ve$1.NO_STATUS}updateDOM(e){return e.__headerState!==this.__headerState||e.__width!==this.__width||e.__colSpan!==this.__colSpan||e.__rowSpan!==this.__rowSpan||e.__backgroundColor!==this.__backgroundColor||e.__verticalAlign!==this.__verticalAlign}isShadowRoot(){return  true}collapseAtStart(){return  true}canBeEmpty(){return  false}canIndent(){return  false}}function Te$1(e){return "middle"===e||"bottom"===e}function Re$1(e){const t=e,n=e.nodeName.toLowerCase();let o;Ne$1.test(t.style.width)&&(o=parseFloat(t.style.width));const r=Fe$1("th"===n?ve$1.ROW:ve$1.NO_STATUS,t.colSpan,o);r.__rowSpan=t.rowSpan;const l=t.style.backgroundColor;""!==l&&(r.__backgroundColor=l);const s=t.style.verticalAlign;Te$1(s)&&(r.__verticalAlign=s);const i=t.style,c=(i&&i.textDecoration||"").split(" "),a="700"===i.fontWeight||"bold"===i.fontWeight,u=c.includes("line-through"),h="italic"===i.fontStyle,p=c.includes("underline");return {after:e=>{const t=[];let n=null;const o=()=>{if(n){const e=n.getFirstChild();jn(e)&&1===n.getChildrenSize()&&e.remove();}};for(const r of e)ls(r)||lr(r)||jn(r)?(lr(r)&&(a&&r.toggleFormat("bold"),u&&r.toggleFormat("strikethrough"),h&&r.toggleFormat("italic"),p&&r.toggleFormat("underline")),n?n.append(r):(n=Li().append(r),t.push(n))):(t.push(r),o(),n=null);return o(),0===t.length&&t.push(Li()),t},node:r}}function Fe$1(e=ve$1.NO_STATUS,t=1,n){return fs(new xe(e,t,n))}function Oe$1(e){return e instanceof xe}const Ae$1=re$1("INSERT_TABLE_COMMAND");function Ke$1(e,...t){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",e);for(const e of t)o.append("v",e);throw n.search=o.toString(),Error(`Minified Lexical error #${e}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}let Ee$1 = class Ee extends Ci{__height;static getType(){return "tablerow"}static clone(e){return new Ee(e.__height,e.__key)}static importDOM(){return {tr:e=>({conversion:ke$1,priority:0})}}static importJSON(e){return Me$1().updateFromJSON(e)}updateFromJSON(e){return super.updateFromJSON(e).setHeight(e.height)}constructor(e,t){super(t),this.__height=e;}exportJSON(){const e=this.getHeight();return {...super.exportJSON(),...void 0===e?void 0:{height:e}}}createDOM(t){const n=document.createElement("tr");return this.__height&&(n.style.height=`${this.__height}px`),lt$4(n,t.theme.tableRow),n}extractWithChild(e,t,n){return "html"===n}isShadowRoot(){return  true}setHeight(e){const t=this.getWritable();return t.__height=e,t}getHeight(){return this.getLatest().__height}updateDOM(e){return e.__height!==this.__height}canBeEmpty(){return  false}canIndent(){return  false}};function ke$1(e){const n=e;let o;return Ne$1.test(n.style.height)&&(o=parseFloat(n.style.height)),{after:e=>kt$6(e,Oe$1),node:Me$1(o)}}function Me$1(e){return fs(new Ee$1(e))}function $e$1(e){return e instanceof Ee$1}const ze$1="undefined"!=typeof window&&void 0!==window.document&&void 0!==window.document.createElement,We$1=ze$1&&"documentMode"in document?document.documentMode:null,He$1=ze$1&&/^(?!.*Seamonkey)(?=.*Firefox).*/i.test(navigator.userAgent);function Le$1(e,t,n=true){const o=gn();for(let r=0;r<e;r++){const e=Me$1();for(let o=0;o<t;o++){let t=ve$1.NO_STATUS;"object"==typeof n?(0===r&&n.rows&&(t|=ve$1.ROW),0===o&&n.columns&&(t|=ve$1.COLUMN)):n&&(0===r&&(t|=ve$1.ROW),0===o&&(t|=ve$1.COLUMN));const l=Fe$1(t),s=Li();s.append(sr()),l.append(s),e.append(l);}o.append(e);}return o}function Be$1(e){const t=zs(e,e=>Oe$1(e));return Oe$1(t)?t:null}function Pe$1(e){const t=zs(e,e=>$e$1(e));if($e$1(t))return t;throw new Error("Expected table cell to be inside of table row.")}function De$1(e){const t=zs(e,e=>mn(e));if(mn(t))return t;throw new Error("Expected table cell to be inside of table.")}function Ie$1(e){const t=Pe$1(e);return De$1(t).getChildren().findIndex(e=>e.is(t))}function Ue$1(e){return Pe$1(e).getChildren().findIndex(t=>t.is(e))}ze$1&&"InputEvent"in window&&!We$1&&new window.InputEvent("input");const qe$1=(e,t)=>e===ve$1.BOTH||e===t?t:ve$1.NO_STATUS;function je$1(e=true){const t=Lr();yr(t)||wt$1(t)||Ke$1(188);const n=t.anchor.getNode(),o=t.focus.getNode(),[r]=mt$1(n),[l,,s]=mt$1(o),[,i,c]=ft(s,l,r),{startRow:a}=c,{startRow:u}=i;return e?Ge$1(a+r.__rowSpan>u+l.__rowSpan?r:l,true):Ge$1(u<a?l:r,false)}function Ge$1(e,t=true){const[,,n]=mt$1(e),[o,r]=ft(n,e,e),l=o[0].length,{startRow:s}=r;let i=null;if(t){const t=s+e.__rowSpan-1,r=o[t],c=Me$1();for(let e=0;e<l;e++){const{cell:n,startRow:o}=r[e];if(o+n.__rowSpan-1<=t){const t=r[e].cell.__headerState,n=qe$1(t,ve$1.COLUMN);c.append(Fe$1(n).append(Li()));}else n.setRowSpan(n.__rowSpan+1);}const a=n.getChildAtIndex(t);$e$1(a)||Ke$1(256),a.insertAfter(c),i=c;}else {const e=s,t=o[e],r=Me$1();for(let n=0;n<l;n++){const{cell:o,startRow:l}=t[n];if(l===e){const e=t[n].cell.__headerState,o=qe$1(e,ve$1.COLUMN);r.append(Fe$1(o).append(Li()));}else o.setRowSpan(o.__rowSpan+1);}const c=n.getChildAtIndex(e);$e$1(c)||Ke$1(257),c.insertBefore(r),i=r;}return i}function Ze$1(e=true){const t=Lr();yr(t)||wt$1(t)||Ke$1(188);const n=t.anchor.getNode(),o=t.focus.getNode(),[r]=mt$1(n),[l,,s]=mt$1(o),[,i,c]=ft(s,l,r),{startColumn:a}=c,{startColumn:u}=i;return e?tt(a+r.__colSpan>u+l.__colSpan?r:l,true):tt(u<a?l:r,false)}function tt(e,t=true,n=true){const[,,o]=mt$1(e),[r,l]=ft(o,e,e),s=r.length,{startColumn:i}=l,c=t?i+e.__colSpan-1:i-1,a=o.getFirstChild();$e$1(a)||Ke$1(120);let u=null;function h(e=ve$1.NO_STATUS){const t=Fe$1(e).append(Li());return null===u&&(u=t),t}let d=a;e:for(let e=0;e<s;e++){if(0!==e){const e=d.getNextSibling();$e$1(e)||Ke$1(121),d=e;}const t=r[e],n=t[c<0?0:c].cell.__headerState,o=qe$1(n,ve$1.ROW);if(c<0){ct$1(d,h(o));continue}const{cell:l,startColumn:s,startRow:i}=t[c];if(s+l.__colSpan-1<=c){let n=l,r=i,s=c;for(;r!==e&&n.__rowSpan>1;){if(s-=l.__colSpan,!(s>=0)){d.append(h(o));continue e}{const{cell:e,startRow:o}=t[s];n=e,r=o;}}n.insertAfter(h(o));}else l.setColSpan(l.__colSpan+1);}null!==u&&n&&it$1(u);const f=o.getColWidths();if(f){const e=[...f],t=c<0?0:c,n=e[t];e.splice(t,0,n),o.setColWidths(e);}return u}function ot$1(){const e=Lr();yr(e)||wt$1(e)||Ke$1(188);const[t,n]=e.isBackward()?[e.focus.getNode(),e.anchor.getNode()]:[e.anchor.getNode(),e.focus.getNode()],[o,,r]=mt$1(t),[l]=mt$1(n),[s,i,c]=ft(r,o,l),{startRow:a}=i,{startRow:u}=c,h=u+l.__rowSpan-1;if(s.length===h-a+1)return void r.remove();const d=s[0].length,f=s[h+1],g=r.getChildAtIndex(h+1);for(let e=h;e>=a;e--){for(let t=d-1;t>=0;t--){const{cell:n,startRow:o,startColumn:r}=s[e][t];if(r===t){if(o<a||o+n.__rowSpan-1>h){const e=Math.max(o,a),t=Math.min(n.__rowSpan+o-1,h),r=e<=t?t-e+1:0;n.setRowSpan(n.__rowSpan-r);}if(o>=a&&o+n.__rowSpan-1>h&&e===h){null===g&&Ke$1(122);let o=null;for(let n=0;n<t;n++){const t=f[n],r=t.cell;t.startRow===e+1&&(o=r),r.__colSpan>1&&(n+=r.__colSpan-1);}null===o?ct$1(g,n):o.insertAfter(n);}}}const t=r.getChildAtIndex(e);$e$1(t)||Ke$1(206,String(e)),t.remove();}if(void 0!==f){const{cell:e}=f[0];it$1(e);}else {const e=s[a-1],{cell:t}=e[0];it$1(t);}}function lt$1(){const e=Lr();yr(e)||wt$1(e)||Ke$1(188);const t=e.anchor.getNode(),n=e.focus.getNode(),[o,,r]=mt$1(t),[l]=mt$1(n),[s,i,c]=ft(r,o,l),{startColumn:a}=i,{startRow:u,startColumn:h}=c,d=Math.min(a,h),f=Math.max(a+o.__colSpan-1,h+l.__colSpan-1),g=f-d+1;if(s[0].length===f-d+1)return r.selectPrevious(),void r.remove();const m=s.length;for(let e=0;e<m;e++)for(let t=d;t<=f;t++){const{cell:n,startColumn:o}=s[e][t];if(o<d){if(t===d){const e=d-o;n.setColSpan(n.__colSpan-Math.min(g,n.__colSpan-e));}}else if(o+n.__colSpan-1>f){if(t===f){const e=f-o+1;n.setColSpan(n.__colSpan-e);}}else n.remove();}const p=s[u],C=a>h?p[a+o.__colSpan]:p[h+l.__colSpan];if(void 0!==C){const{cell:e}=C;it$1(e);}else {const e=h<a?p[h-1]:p[a-1],{cell:t}=e;it$1(t);}const _=r.getColWidths();if(_){const e=[..._];e.splice(d,g),r.setColWidths(e);}}function it$1(e){const t=e.getFirstDescendant();null==t?e.selectStart():t.getParentOrThrow().selectStart();}function ct$1(e,t){const n=e.getFirstChild();null!==n?n.insertBefore(t):e.append(t);}function at(e){if(0===e.length)return null;const t=De$1(e[0]),[n]=gt(t,null,null);let o=1/0,r=-1/0,l=1/0,s=-1/0;const i=new Set;for(const t of n)for(const n of t){if(!n||!n.cell)continue;const t=n.cell.getKey();if(!i.has(t)&&e.some(e=>e.is(n.cell))){i.add(t);const e=n.startRow,c=n.startColumn,a=n.cell.__rowSpan||1,u=n.cell.__colSpan||1;o=Math.min(o,e),r=Math.max(r,e+a-1),l=Math.min(l,c),s=Math.max(s,c+u-1);}}if(o===1/0||l===1/0)return null;const c=r-o+1,a=s-l+1,u=n[o][l];if(!u.cell)return null;const h=u.cell;h.setColSpan(a),h.setRowSpan(c);const d=new Set([h.getKey()]);for(let e=o;e<=r;e++)for(let t=l;t<=s;t++){const o=n[e][t];if(!o.cell)continue;const r=o.cell,l=r.getKey();if(!d.has(l)){d.add(l);ut(r)||h.append(...r.getChildren()),r.remove();}}return 0===h.getChildrenSize()&&h.append(Li()),h}function ut(e){if(1!==e.getChildrenSize())return  false;const t=e.getFirstChildOrThrow();return !(!Ii(t)||!t.isEmpty())}function dt(e){const[t,n,o]=mt$1(e),r=t.__colSpan,l=t.__rowSpan;if(1===r&&1===l)return;const[s,i]=ft(o,t,t),{startColumn:c,startRow:a}=i,u=t.__headerState&ve$1.COLUMN,h=Array.from({length:r},(e,t)=>{let n=u;for(let e=0;0!==n&&e<s.length;e++)n&=s[e][t+c].cell.__headerState;return n}),d=t.__headerState&ve$1.ROW,f=Array.from({length:l},(e,t)=>{let n=d;for(let e=0;0!==n&&e<s[0].length;e++)n&=s[t+a][e].cell.__headerState;return n});if(r>1){for(let e=1;e<r;e++)t.insertAfter(Fe$1(h[e]|f[0]).append(Li()));t.setColSpan(1);}if(l>1){let e;for(let t=1;t<l;t++){const o=a+t,l=s[o];e=(e||n).getNextSibling(),$e$1(e)||Ke$1(125);let i=null;for(let e=0;e<c;e++){const t=l[e],n=t.cell;t.startRow===o&&(i=n),n.__colSpan>1&&(e+=n.__colSpan-1);}if(null===i)for(let n=r-1;n>=0;n--)ct$1(e,Fe$1(h[n]|f[t]).append(Li()));else for(let e=r-1;e>=0;e--)i.insertAfter(Fe$1(h[e]|f[t]).append(Li()));}t.setRowSpan(1);}}function ft(e,t,n){const[o,r,l]=gt(e,t,n);return null===r&&Ke$1(207),null===l&&Ke$1(208),[o,r,l]}function gt(e,t,n){const o=[];let r=null,l=null;function s(e){let t=o[e];return void 0===t&&(o[e]=t=[]),t}const i=e.getChildren();for(let e=0;e<i.length;e++){const o=i[e];$e$1(o)||Ke$1(209);const c=s(e);for(let a=o.getFirstChild(),u=0;null!=a;a=a.getNextSibling()){for(Oe$1(a)||Ke$1(147);void 0!==c[u];)u++;const o={cell:a,startColumn:u,startRow:e},{__rowSpan:h,__colSpan:d}=a;for(let t=0;t<h&&!(e+t>=i.length);t++){const n=s(e+t);for(let e=0;e<d;e++)n[u+e]=o;}null!==t&&null===r&&t.is(a)&&(r=o),null!==n&&null===l&&n.is(a)&&(l=o);}}return [o,r,l]}function mt$1(e){let t;if(e instanceof xe)t=e;else if("__type"in e){const o=zs(e,Oe$1);Oe$1(o)||Ke$1(148),t=o;}else {const o=zs(e.getNode(),Oe$1);Oe$1(o)||Ke$1(148),t=o;}const o=t.getParent();$e$1(o)||Ke$1(149);const r=o.getParent();return mn(r)||Ke$1(210),[t,o,r]}function pt(e,t,n){let o,r=Math.min(t.startColumn,n.startColumn),l=Math.min(t.startRow,n.startRow),s=Math.max(t.startColumn+t.cell.__colSpan-1,n.startColumn+n.cell.__colSpan-1),i=Math.max(t.startRow+t.cell.__rowSpan-1,n.startRow+n.cell.__rowSpan-1);do{o=false;for(let t=0;t<e.length;t++)for(let n=0;n<e[0].length;n++){const c=e[t][n];if(!c)continue;const a=c.startColumn+c.cell.__colSpan-1,u=c.startRow+c.cell.__rowSpan-1,h=c.startColumn<=s&&a>=r,d=c.startRow<=i&&u>=l;if(h&&d){const e=Math.min(r,c.startColumn),t=Math.max(s,a),n=Math.min(l,c.startRow),h=Math.max(i,u);e===r&&t===s&&n===l&&h===i||(r=e,s=t,l=n,i=h,o=true);}}}while(o);return {maxColumn:s,maxRow:i,minColumn:r,minRow:l}}function Ct$1(e){const[t,,n]=mt$1(e),o=n.getChildren(),r=o.length,l=o[0].getChildren().length,s=new Array(r);for(let e=0;e<r;e++)s[e]=new Array(l);for(let e=0;e<r;e++){const n=o[e].getChildren();let r=0;for(let o=0;o<n.length;o++){for(;s[e][r];)r++;const l=n[o],i=l.__rowSpan||1,c=l.__colSpan||1;for(let t=0;t<i;t++)for(let n=0;n<c;n++)s[e+t][r+n]=l;if(t===l)return {colSpan:c,columnIndex:r,rowIndex:e,rowSpan:i};r+=c;}}return null}function _t$1(e){const[[t,o,r,l],[s,i,c,a]]=["anchor","focus"].map(t=>{const o=e[t].getNode(),r=zs(o,Oe$1);Oe$1(r)||Ke$1(238,t,o.getKey(),o.getType());const l=r.getParent();$e$1(l)||Ke$1(239,t);const s=l.getParent();return mn(s)||Ke$1(240,t),[o,r,l,s]});return l.is(a)||Ke$1(241),{anchorCell:o,anchorNode:t,anchorRow:r,anchorTable:l,focusCell:i,focusNode:s,focusRow:c,focusTable:a}}let St$1 = class St{tableKey;anchor;focus;_cachedNodes;dirty;constructor(e,t,n){this.anchor=t,this.focus=n,t._selection=this,n._selection=this,this._cachedNodes=null,this.dirty=false,this.tableKey=e;}getStartEndPoints(){return [this.anchor,this.focus]}isValid(){if("root"===this.tableKey||"root"===this.anchor.key||"element"!==this.anchor.type||"root"===this.focus.key||"element"!==this.focus.type)return  false;const e=xo(this.tableKey),t=xo(this.anchor.key),n=xo(this.focus.key);return null!==e&&null!==t&&null!==n}isBackward(){return this.focus.isBefore(this.anchor)}getCachedNodes(){return this._cachedNodes}setCachedNodes(e){this._cachedNodes=e;}is(e){return wt$1(e)&&this.tableKey===e.tableKey&&this.anchor.is(e.anchor)&&this.focus.is(e.focus)}set(e,t,n){this.dirty=this.dirty||e!==this.tableKey||t!==this.anchor.key||n!==this.focus.key,this.tableKey=e,this.anchor.key=t,this.focus.key=n,this._cachedNodes=null;}clone(){return new St(this.tableKey,hr(this.anchor.key,this.anchor.offset,this.anchor.type),hr(this.focus.key,this.focus.offset,this.focus.type))}isCollapsed(){return  false}extract(){return this.getNodes()}insertRawText(e){}insertText(){}hasFormat(e){let t=0;this.getNodes().filter(Oe$1).forEach(e=>{const n=e.getFirstChild();Ii(n)&&(t|=n.getTextFormat());});const n=R$6[e];return 0!==(t&n)}insertNodes(e){const t=this.focus.getNode();Si(t)||Ke$1(151);St$6(t.select(0,t.getChildrenSize())).insertNodes(e);}getShape(){const{anchorCell:e,focusCell:t}=_t$1(this),n=Ct$1(e);null===n&&Ke$1(153);const o=Ct$1(t);null===o&&Ke$1(155);const r=Math.min(n.columnIndex,o.columnIndex),l=Math.max(n.columnIndex+n.colSpan-1,o.columnIndex+o.colSpan-1),s=Math.min(n.rowIndex,o.rowIndex),i=Math.max(n.rowIndex+n.rowSpan-1,o.rowIndex+o.rowSpan-1);return {fromX:Math.min(r,l),fromY:Math.min(s,i),toX:Math.max(r,l),toY:Math.max(s,i)}}getNodes(){if(!this.isValid())return [];const e=this._cachedNodes;if(null!==e)return e;const{anchorTable:t,anchorCell:n,focusCell:o}=_t$1(this),r=o.getParents()[1];if(r!==t){if(t.isParentOf(o)){const e=r.getParent();null==e&&Ke$1(159),this.set(this.tableKey,o.getKey(),e.getKey());}else {const e=t.getParent();null==e&&Ke$1(158),this.set(this.tableKey,e.getKey(),o.getKey());}return this.getNodes()}const[l,s,i]=ft(t,n,o),{minColumn:c,maxColumn:a,minRow:u,maxRow:h}=pt(l,s,i),d=new Map([[t.getKey(),t]]);let f=null;for(let e=u;e<=h;e++)for(let t=c;t<=a;t++){const{cell:n}=l[e][t],o=n.getParent();$e$1(o)||Ke$1(160),o!==f&&(d.set(o.getKey(),o),f=o),d.has(n.getKey())||Nt$1(n,e=>{d.set(e.getKey(),e);});}const g=Array.from(d.values());return ti()||(this._cachedNodes=g),g}getTextContent(){const e=this.getNodes().filter(e=>Oe$1(e));let t="";for(let n=0;n<e.length;n++){const o=e[n],r=o.__parent,l=(e[n+1]||{}).__parent;t+=o.getTextContent()+(l!==r?"\n":"\t");}return t}};function wt$1(e){return e instanceof St$1}function bt$1(){const e=hr("root",0,"element"),t=hr("root",0,"element");return new St$1("root",e,t)}function yt$1(e,t,n){e.getKey(),t.getKey(),n.getKey();const o=Lr(),r=wt$1(o)?o.clone():bt$1();return r.set(e.getKey(),t.getKey(),n.getKey()),r}function Nt$1(e,t){const n=[[e]];for(let e=n.at(-1);void 0!==e&&n.length>0;e=n.at(-1)){const o=e.pop();void 0===o?n.pop():false!==t(o)&&Si(o)&&n.push(o.getChildren());}}function vt(e,t=bs()){const n=xo(e);mn(n)||Ke$1(231,e);const o=Ft$1(n,t.getElementByKey(e));return null===o&&Ke$1(232,e),{tableElement:o,tableNode:n}}let xt$1 = class xt{focusX;focusY;listenersToRemove;table;isHighlightingCells;anchorX;anchorY;tableNodeKey;anchorCell;focusCell;anchorCellNodeKey;focusCellNodeKey;editor;tableSelection;hasHijackedSelectionStyles;isSelecting;pointerType;shouldCheckSelection;abortController;listenerOptions;nextFocus;constructor(e,t){this.isHighlightingCells=false,this.anchorX=-1,this.anchorY=-1,this.focusX=-1,this.focusY=-1,this.listenersToRemove=new Set,this.tableNodeKey=t,this.editor=e,this.table={columns:0,domRows:[],rows:0},this.tableSelection=null,this.anchorCellNodeKey=null,this.focusCellNodeKey=null,this.anchorCell=null,this.focusCell=null,this.hasHijackedSelectionStyles=false,this.isSelecting=false,this.pointerType=null,this.shouldCheckSelection=false,this.abortController=new AbortController,this.listenerOptions={signal:this.abortController.signal},this.nextFocus=null,this.trackTable();}getTable(){return this.table}removeListeners(){this.abortController.abort("removeListeners"),Array.from(this.listenersToRemove).forEach(e=>e()),this.listenersToRemove.clear();}$lookup(){return vt(this.tableNodeKey,this.editor)}trackTable(){const e=new MutationObserver(e=>{this.editor.getEditorState().read(()=>{let t=false;for(let n=0;n<e.length;n++){const o=e[n].target.nodeName;if("TABLE"===o||"TBODY"===o||"THEAD"===o||"TR"===o){t=true;break}}if(!t)return;const{tableNode:n,tableElement:o}=this.$lookup();this.table=Ht(n,o);},{editor:this.editor});});this.editor.getEditorState().read(()=>{const{tableNode:t,tableElement:n}=this.$lookup();this.table=Ht(t,n),e.observe(n,{attributes:true,childList:true,subtree:true});},{editor:this.editor});}$clearHighlight(){const e=this.editor;this.isHighlightingCells=false,this.anchorX=-1,this.anchorY=-1,this.focusX=-1,this.focusY=-1,this.tableSelection=null,this.anchorCellNodeKey=null,this.focusCellNodeKey=null,this.anchorCell=null,this.focusCell=null,this.hasHijackedSelectionStyles=false,this.$enableHighlightStyle();const{tableNode:t,tableElement:n}=this.$lookup();Lt$1(e,Ht(t,n),null),null!==Lr()&&(wo(null),e.dispatchCommand(ie$1,void 0));}$enableHighlightStyle(){const e=this.editor,{tableElement:t}=this.$lookup();ut$3(t,e._config.theme.tableSelection),t.classList.remove("disable-selection"),this.hasHijackedSelectionStyles=false;}$disableHighlightStyle(){const{tableElement:t}=this.$lookup();lt$4(t,this.editor._config.theme.tableSelection),this.hasHijackedSelectionStyles=true;}$updateTableTableSelection(e){if(null!==e){e.tableKey!==this.tableNodeKey&&Ke$1(233,e.tableKey,this.tableNodeKey);const t=this.editor;this.tableSelection=e,this.isHighlightingCells=true,this.$disableHighlightStyle(),this.updateDOMSelection(),Lt$1(t,this.table,this.tableSelection);}else this.$clearHighlight();}setShouldCheckSelection(){this.shouldCheckSelection=true;}getAndClearShouldCheckSelection(){return !!this.shouldCheckSelection&&(this.shouldCheckSelection=false,true)}setNextFocus(e){this.nextFocus=e;}getAndClearNextFocus(){const{nextFocus:e}=this;return null!==e&&(this.nextFocus=null),e}updateDOMSelection(){if(null!==this.anchorCell&&null!==this.focusCell){const e=ps(this.editor._window);e&&e.rangeCount>0&&e.removeAllRanges();}}$setFocusCellForSelection(e,t=false){const n=this.editor,{tableNode:o}=this.$lookup(),r=e.x,l=e.y;if(this.focusCell=e,this.isHighlightingCells||this.anchorX===r&&this.anchorY===l&&!t){if(r===this.focusX&&l===this.focusY)return  false}else this.isHighlightingCells=true,this.$disableHighlightStyle();if(this.focusX=r,this.focusY=l,this.isHighlightingCells){const t=ln(o,e.elem);if(null!=this.tableSelection&&null!=this.anchorCellNodeKey&&null!==t)return this.focusCellNodeKey=t.getKey(),this.tableSelection=yt$1(o,this.$getAnchorTableCellOrThrow(),t),wo(this.tableSelection),n.dispatchCommand(ie$1,void 0),Lt$1(n,this.table,this.tableSelection),true}return  false}$getAnchorTableCell(){return this.anchorCellNodeKey?xo(this.anchorCellNodeKey):null}$getAnchorTableCellOrThrow(){const e=this.$getAnchorTableCell();return null===e&&Ke$1(234),e}$getFocusTableCell(){return this.focusCellNodeKey?xo(this.focusCellNodeKey):null}$getFocusTableCellOrThrow(){const e=this.$getFocusTableCell();return null===e&&Ke$1(235),e}$setAnchorCellForSelection(e){this.isHighlightingCells=false,this.anchorCell=e,this.anchorX=e.x,this.anchorY=e.y;const{tableNode:t}=this.$lookup(),n=ln(t,e.elem);if(null!==n){const e=n.getKey();this.tableSelection=null!=this.tableSelection?this.tableSelection.clone():bt$1(),this.anchorCellNodeKey=e;}}$formatCells(e){const t=Lr();wt$1(t)||Ke$1(236);const n=Ar(),o=n.anchor,r=n.focus,l=t.getNodes().filter(Oe$1);l.length>0||Ke$1(237);const s=l[0].getFirstChild(),i=Ii(s)?s.getFormatFlags(e,null):null;l.forEach(t=>{o.set(t.getKey(),0,"element"),r.set(t.getKey(),t.getChildrenSize(),"element"),n.formatText(e,i);}),wo(t),this.editor.dispatchCommand(ie$1,void 0);}$clearText(){const{editor:e}=this,t=xo(this.tableNodeKey);if(!mn(t))throw new Error("Expected TableNode.");const n=Lr();wt$1(n)||Ke$1(253);const o=n.getNodes().filter(Oe$1),r=t.getFirstChild(),l=t.getLastChild();if(o.length>0&&null!==r&&null!==l&&$e$1(r)&&$e$1(l)&&o[0]===r.getFirstChild()&&o[o.length-1]===l.getLastChild()){t.selectPrevious();const n=t.getParent();return t.remove(),void(bi(n)&&n.isEmpty()&&e.dispatchCommand(ae$1,void 0))}o.forEach(e=>{if(Si(e)){const t=Li(),n=sr();t.append(n),e.append(t),e.getChildren().forEach(e=>{e!==t&&e.remove();});}}),Lt$1(e,this.table,null),wo(null),e.dispatchCommand(ie$1,void 0);}};const Tt$1="__lexicalTableSelection";function Rt$1(e){return Cs(e)&&"TABLE"===e.nodeName}function Ft$1(e,t){if(!t)return t;const n=Rt$1(t)?t:e.getDOMSlot(t).element;return "TABLE"!==n.nodeName&&Ke$1(245,t.nodeName),n}function Ot(e){return e._window}function At$1(e,t){for(let n=t,o=null;null!==n;n=n.getParent()){if(e.is(n))return o;Oe$1(n)&&(o=n);}return null}const Kt=[[Te$2,"down"],[ke$2,"up"],[Se$1,"backward"],[xe$1,"forward"]],Et$1=[he$1,ge$1,le$2],kt$1=[we$1,Oe$2];function Mt$1(e,t,o,l){const s=o.getRootElement(),i=Ot(o);null!==s&&null!==i||Ke$1(246);const c=new xt$1(o,e.getKey()),a=Ft$1(e,t);!function(e,t){null!==$t$1(e)&&Ke$1(205);e[Tt$1]=t;}(a,c),c.listenersToRemove.add(()=>function(e,t){$t$1(e)===t&&delete e[Tt$1];}(a,c));const u=t=>{if(c.pointerType=t.pointerType,0!==t.button||!Ss(t.target)||!i)return;const n=zt$1(t.target);null!==n&&o.update(()=>{const o=Ir();if(He$1&&t.shiftKey&&Xt(o,e)&&(yr(o)||wt$1(o))){const r=o.anchor.getNode(),l=At$1(e,o.anchor.getNode());if(l)c.$setAnchorCellForSelection(rn(c,l)),c.$setFocusCellForSelection(n),tn(t);else {(e.isBefore(r)?e.selectStart():e.selectEnd()).anchor.set(o.anchor.key,o.anchor.offset,o.anchor.type);}}else "touch"!==t.pointerType&&c.$setAnchorCellForSelection(n);}),(()=>{if(c.isSelecting)return;const e=()=>{c.isSelecting=false,i.removeEventListener("pointerup",e),i.removeEventListener("pointermove",t);},t=n=>{if(1&~n.buttons&&c.isSelecting)return c.isSelecting=false,i.removeEventListener("pointerup",e),void i.removeEventListener("pointermove",t);if(!Ss(n.target))return;let r=null;const l=!(He$1||a.contains(n.target));if(l)r=Wt$1(a,n.target);else for(const e of document.elementsFromPoint(n.clientX,n.clientY))if(r=Wt$1(a,e),r)break;!r||null!==c.focusCell&&r.elem===c.focusCell.elem||(c.setNextFocus({focusCell:r,override:l}),o.dispatchCommand(ie$1,void 0));};c.isSelecting=true,i.addEventListener("pointerup",e,c.listenerOptions),i.addEventListener("pointermove",t,c.listenerOptions);})();};a.addEventListener("pointerdown",u,c.listenerOptions),c.listenersToRemove.add(()=>{a.removeEventListener("pointerdown",u);});const h=e=>{if(e.detail>=3&&Ss(e.target)){null!==zt$1(e.target)&&e.preventDefault();}};a.addEventListener("mousedown",h,c.listenerOptions),c.listenersToRemove.add(()=>{a.removeEventListener("mousedown",h);});const d=e=>{const t=e.target;0===e.button&&Ss(t)&&o.update(()=>{const e=Lr();wt$1(e)&&e.tableKey===c.tableNodeKey&&s.contains(t)&&c.$clearHighlight();});};i.addEventListener("pointerdown",d,c.listenerOptions),c.listenersToRemove.add(()=>{i.removeEventListener("pointerdown",d);});for(const[t,n]of Kt)c.listenersToRemove.add(o.registerCommand(t,t=>en(o,t,n,e,c),Bi));c.listenersToRemove.add(o.registerCommand(Ee$2,t=>{const n=Lr();if(wt$1(n)){const o=At$1(e,n.focus.getNode());if(null!==o)return tn(t),o.selectEnd(),true}return  false},Bi));const g=t=>()=>{const o=Lr();if(!Xt(o,e))return  false;if(wt$1(o))return c.$clearText(),true;if(yr(o)){if(!Oe$1(At$1(e,o.anchor.getNode())))return  false;const r=o.anchor.getNode(),l=o.focus.getNode(),s=e.isParentOf(r),i=e.isParentOf(l);if(s&&!i||i&&!s)return c.$clearText(),true;const a=zs(o.anchor.getNode(),e=>Si(e)),u=a&&zs(a,e=>Si(e)&&Oe$1(e.getParent()));if(!Si(u)||!Si(a))return  false;if(t===ge$1&&null===u.getPreviousSibling())return  true}return  false};for(const e of Et$1)c.listenersToRemove.add(o.registerCommand(e,g(e),Bi));const p=t=>{const n=Lr();if(!wt$1(n)&&!yr(n))return  false;const o=e.isParentOf(n.anchor.getNode());if(o!==e.isParentOf(n.focus.getNode())){const t=o?"anchor":"focus",r=o?"focus":"anchor",{key:l,offset:s,type:i}=n[r];return e[n[t].isBefore(n[r])?"selectPrevious":"selectNext"]()[r].set(l,s,i),false}return !!Xt(n,e)&&(!!wt$1(n)&&(t&&(t.preventDefault(),t.stopPropagation()),c.$clearText(),true))};for(const e of kt$1)c.listenersToRemove.add(o.registerCommand(e,p,Bi));return c.listenersToRemove.add(o.registerCommand(Be$2,e=>{const t=Lr();if(t){if(!wt$1(t)&&!yr(t))return  false;F$1(o,Lt$4(e,ClipboardEvent)?e:null,_$1(t));const n=p(e);return yr(t)?(t.removeText(),true):n}return  false},Bi)),c.listenersToRemove.add(o.registerCommand(_e$1,t=>{const o=Lr();if(!Xt(o,e))return  false;if(wt$1(o))return c.$formatCells(t),true;if(yr(o)){const e=zs(o.anchor.getNode(),e=>Oe$1(e));if(!Oe$1(e))return  false}return  false},Bi)),c.listenersToRemove.add(o.registerCommand(Le$2,t=>{const n=Lr();if(!wt$1(n)||!Xt(n,e))return  false;const o=n.anchor.getNode(),r=n.focus.getNode();if(!Oe$1(o)||!Oe$1(r))return  false;if(function(e,t){if(wt$1(e)){const n=e.anchor.getNode(),o=e.focus.getNode();if(t&&n&&o){const[e]=ft(t,n,o);return n.getKey()===e[0][0].cell.getKey()&&o.getKey()===e[e.length-1].at(-1).cell.getKey()}}return  false}(n,e))return e.setFormat(t),true;const[l,s,i]=ft(e,o,r),c=Math.max(s.startRow+s.cell.__rowSpan-1,i.startRow+i.cell.__rowSpan-1),a=Math.max(s.startColumn+s.cell.__colSpan-1,i.startColumn+i.cell.__colSpan-1),u=Math.min(s.startRow,i.startRow),h=Math.min(s.startColumn,i.startColumn),d=new Set;for(let e=u;e<=c;e++)for(let n=h;n<=a;n++){const o=l[e][n].cell;if(d.has(o))continue;d.add(o),o.setFormat(t);const r=o.getChildren();for(let e=0;e<r.length;e++){const n=r[e];Si(n)&&!n.isInline()&&n.setFormat(t);}}return  true},Bi)),c.listenersToRemove.add(o.registerCommand(ue$1,t=>{const r=Lr();if(!Xt(r,e))return  false;if(wt$1(r))return c.$clearHighlight(),false;if(yr(r)){const l=zs(r.anchor.getNode(),e=>Oe$1(e));if(!Oe$1(l))return  false;if("string"==typeof t){const n=on(o,r,e);if(n)return nn(n,e,[sr(t)]),true}}return  false},Bi)),l&&c.listenersToRemove.add(o.registerCommand(Me$2,t=>{const o=Lr();if(!yr(o)||!o.isCollapsed()||!Xt(o,e))return  false;const r=Gt(o.anchor.getNode());return !(null===r||!e.is(Qt(r)))&&(tn(t),function(e,t){const o="next"===t?"getNextSibling":"getPreviousSibling",r="next"===t?"getFirstChild":"getLastChild",l=e[o]();if(Si(l))return l.selectEnd();const s=zs(e,$e$1);null===s&&Ke$1(247);for(let e=s[o]();$e$1(e);e=e[o]()){const t=e[r]();if(Si(t))return t.selectEnd()}const i=zs(s,mn);null===i&&Ke$1(248);"next"===t?i.selectNext():i.selectPrevious();}(r,t.shiftKey?"previous":"next"),true)},Bi)),c.listenersToRemove.add(o.registerCommand(Ve$1,t=>e.isSelected(),Bi)),c.listenersToRemove.add(o.registerCommand(oe$2,(e,t)=>{if(o!==t)return  false;const{nodes:r,selection:l}=e,s=l.getStartEndPoints(),i=wt$1(l),c=yr(l)&&null!==zs(l.anchor.getNode(),e=>Oe$1(e))&&null!==zs(l.focus.getNode(),e=>Oe$1(e))||i;if(1!==r.length||!mn(r[0])||!c||null===s)return  false;const[a,u]=s,[h,d,g]=mt$1(a),p=zs(u.getNode(),e=>Oe$1(e));if(!(Oe$1(h)&&Oe$1(p)&&$e$1(d)&&mn(g)))return  false;const C=r[0],[_,S,b]=ft(g,h,p),[y]=gt(C,null,null),N=_.length,v=N>0?_[0].length:0;let x=S.startRow,T=S.startColumn,R=y.length,F=R>0?y[0].length:0;if(i){const e=pt(_,S,b),t=e.maxRow-e.minRow+1,n=e.maxColumn-e.minColumn+1;x=e.minRow,T=e.minColumn,R=Math.min(R,t),F=Math.min(F,n);}let O=false;const A=Math.min(N,x+R)-1,K=Math.min(v,T+F)-1,E=new Set;for(let e=x;e<=A;e++)for(let t=T;t<=K;t++){const n=_[e][t];E.has(n.cell.getKey())||(1===n.cell.__rowSpan&&1===n.cell.__colSpan||(dt(n.cell),E.add(n.cell.getKey()),O=true));}let[k]=gt(g.getWritable(),null,null);const M=R-N+x;for(let e=0;e<M;e++){Ge$1(k[N-1][0].cell);}const $=F-v+T;for(let e=0;e<$;e++){tt(k[0][v-1].cell,true,false);}[k]=gt(g.getWritable(),null,null);for(let e=x;e<x+R;e++)for(let t=T;t<T+F;t++){const n=e-x,o=t-T,r=y[n][o];if(r.startRow!==n||r.startColumn!==o)continue;const l=r.cell;if(1!==l.__rowSpan||1!==l.__colSpan){const n=[],o=Math.min(e+l.__rowSpan,x+R)-1,r=Math.min(t+l.__colSpan,T+F)-1;for(let l=e;l<=o;l++)for(let e=t;e<=r;e++){const t=k[l][e];n.push(t.cell);}at(n),O=true;}const{cell:s}=k[e][t],i=s.getChildren();l.getChildren().forEach(e=>{if(lr(e)){Li().append(e),s.append(e);}else s.append(e);}),i.forEach(e=>e.remove());}if(i&&O){const[e]=gt(g.getWritable(),null,null);e[S.startRow][S.startColumn].cell.selectEnd();}return  true},Bi)),c.listenersToRemove.add(o.registerCommand(ie$1,()=>{const t=Lr(),r=Ir(),l=c.getAndClearNextFocus();if(null!==l){const{focusCell:n}=l;if(wt$1(t)&&t.tableKey===c.tableNodeKey)return (n.x!==c.focusX||n.y!==c.focusY)&&(c.$setFocusCellForSelection(n),true);if(n!==c.anchorCell&&Xt(t,e))return c.$setFocusCellForSelection(n),true}if(c.getAndClearShouldCheckSelection()&&yr(r)&&yr(t)&&t.isCollapsed()){const o=t.anchor.getNode(),r=e.getFirstChild(),l=Gt(o);if(null!==l&&$e$1(r)){const t=r.getFirstChild();if(Oe$1(t)&&e.is(zs(l,n=>n.is(e)||n.is(t))))return t.selectStart(),true}}if(yr(t)){const{anchor:n,focus:l}=t,s=n.getNode(),i=l.getNode(),a=Gt(s),u=Gt(i),h=!(!a||!e.is(Qt(a))),d=!(!u||!e.is(Qt(u))),f=h!==d,g=h&&d,m=t.isBackward();if(f){const n=t.clone();if(d){const[t]=ft(e,u,u),o=t[0][0].cell,r=t[t.length-1].at(-1).cell;n.focus.set(m?o.getKey():r.getKey(),m?o.getChildrenSize():r.getChildrenSize(),"element");}else if(h){const[t]=ft(e,a,a),o=t[0][0].cell,r=t[t.length-1].at(-1).cell;n.anchor.set(m?r.getKey():o.getKey(),m?r.getChildrenSize():0,"element");}wo(n),Pt$1(o,c);}else if(g&&(a.is(u)||(c.$setAnchorCellForSelection(rn(c,a)),c.$setFocusCellForSelection(rn(c,u),true)),"touch"===c.pointerType&&c.isSelecting&&t.isCollapsed()&&yr(r)&&r.isCollapsed())){const e=Gt(r.anchor.getNode());e&&!e.is(u)&&(c.$setAnchorCellForSelection(rn(c,e)),c.$setFocusCellForSelection(rn(c,u),true),c.pointerType=null);}}else if(t&&wt$1(t)&&t.is(r)&&t.tableKey===e.getKey()){const n=ps(i);if(n&&n.anchorNode&&n.focusNode){const r=vo(n.focusNode),l=r&&!e.isParentOf(r),s=vo(n.anchorNode),i=s&&e.isParentOf(s);if(l&&i&&n.rangeCount>0){const r=Dr(n,o);r&&(r.anchor.set(e.getKey(),t.isBackward()?e.getChildrenSize():0,"element"),n.removeAllRanges(),wo(r));}}}return t&&!t.is(r)&&(wt$1(t)||wt$1(r))&&c.tableSelection&&!c.tableSelection.is(r)?(wt$1(t)&&t.tableKey===c.tableNodeKey?c.$updateTableTableSelection(t):!wt$1(t)&&wt$1(r)&&r.tableKey===c.tableNodeKey&&c.$updateTableTableSelection(null),false):(c.hasHijackedSelectionStyles&&!e.isSelected()?function(e,t){t.$enableHighlightStyle(),Bt$1(t.table,t=>{const n=t.elem;t.highlighted=false,Vt(e,t),n.getAttribute("style")||n.removeAttribute("style");});}(o,c):!c.hasHijackedSelectionStyles&&e.isSelected()&&Pt$1(o,c),false)},Bi)),c.listenersToRemove.add(o.registerCommand(ae$1,()=>{const t=Lr();if(!yr(t)||!t.isCollapsed()||!Xt(t,e))return  false;const n=on(o,t,e);return !!n&&(nn(n,e),true)},Bi)),c}function $t$1(e){return e[Tt$1]||null}function zt$1(e){let t=e;for(;null!=t;){const e=t.nodeName;if("TD"===e||"TH"===e){const e=t._cell;return void 0===e?null:e}t=t.parentNode;}return null}function Wt$1(e,t){if(!e.contains(t))return null;let n=null;for(let o=t;null!=o;o=o.parentNode){if(o===e)return n;const t=o.nodeName;"TD"!==t&&"TH"!==t||(n=o._cell||null);}return null}function Ht(e,t){const n=[],o={columns:0,domRows:n,rows:0};let r=Ft$1(e,t).querySelector("tr"),l=0,s=0;for(n.length=0;null!=r;){const e=r.nodeName;if("TD"===e||"TH"===e){const e={elem:r,hasBackgroundColor:""!==r.style.backgroundColor,highlighted:false,x:l,y:s};r._cell=e;let t=n[s];void 0===t&&(t=n[s]=[]),t[l]=e;}else {const e=r.firstChild;if(null!=e){r=e;continue}}const t=r.nextSibling;if(null!=t){l++,r=t;continue}const o=r.parentNode;if(null!=o){const e=o.nextSibling;if(null==e)break;s++,l=0,r=e;}}return o.columns=l+1,o.rows=s+1,o}function Lt$1(e,t,n){const o=new Set(n?n.getNodes():[]);Bt$1(t,(t,n)=>{const r=t.elem;o.has(n)?(t.highlighted=true,jt$1(e,t)):(t.highlighted=false,Vt(e,t),r.getAttribute("style")||r.removeAttribute("style"));});}function Bt$1(e,t){const{domRows:n}=e;for(let e=0;e<n.length;e++){const o=n[e];if(o)for(let n=0;n<o.length;n++){const r=o[n];if(!r)continue;const l=vo(r.elem);null!==l&&t(r,l,{x:n,y:e});}}}function Pt$1(e,t){t.$disableHighlightStyle(),Bt$1(t.table,t=>{t.highlighted=true,jt$1(e,t);});}const Dt$1=(e,t,n,o,r)=>{const l="forward"===r;switch(r){case "backward":case "forward":return n!==(l?e.table.columns-1:0)?qt(t.getCellNodeFromCordsOrThrow(n+(l?1:-1),o,e.table),l):o!==(l?e.table.rows-1:0)?qt(t.getCellNodeFromCordsOrThrow(l?0:e.table.columns-1,o+(l?1:-1),e.table),l):l?t.selectNext():t.selectPrevious(),true;case "up":return 0!==o?qt(t.getCellNodeFromCordsOrThrow(n,o-1,e.table),false):t.selectPrevious(),true;case "down":return o!==e.table.rows-1?qt(t.getCellNodeFromCordsOrThrow(n,o+1,e.table),true):t.selectNext(),true;default:return  false}};function It$1(e,t){let n,o;if(t.startColumn===e.minColumn)n="minColumn";else {if(t.startColumn+t.cell.__colSpan-1!==e.maxColumn)return null;n="maxColumn";}if(t.startRow===e.minRow)o="minRow";else {if(t.startRow+t.cell.__rowSpan-1!==e.maxRow)return null;o="maxRow";}return [n,o]}function Ut$1([e,t]){return ["minColumn"===e?"maxColumn":"minColumn","minRow"===t?"maxRow":"minRow"]}function Jt(e,t,[n,o]){const r=t[o],l=e[r];void 0===l&&Ke$1(250,o,String(r));const s=t[n],i=l[s];return void 0===i&&Ke$1(250,n,String(s)),i}function Yt(e,t,n,o,r){const l=pt(t,n,o),s=function(e,t){const{minColumn:n,maxColumn:o,minRow:r,maxRow:l}=t;let s=1,i=1,c=1,a=1;const u=e[r],h=e[l];for(let e=n;e<=o;e++)s=Math.max(s,u[e].cell.__rowSpan),a=Math.max(a,h[e].cell.__rowSpan);for(let t=r;t<=l;t++)i=Math.max(i,e[t][n].cell.__colSpan),c=Math.max(c,e[t][o].cell.__colSpan);return {bottomSpan:a,leftSpan:i,rightSpan:c,topSpan:s}}(t,l),{topSpan:i,leftSpan:c,bottomSpan:a,rightSpan:u}=s,h=function(e,t){const n=It$1(e,t);return null===n&&Ke$1(249,t.cell.getKey()),n}(l,n),[d,f]=Ut$1(h);let g=l[d],m=l[f];"forward"===r?g+="maxColumn"===d?1:c:"backward"===r?g-="minColumn"===d?1:u:"down"===r?m+="maxRow"===f?1:i:"up"===r&&(m-="minRow"===f?1:a);const p=t[m];if(void 0===p)return  false;const C=p[g];if(void 0===C)return  false;const[_,S]=function(e,t,n){const o=pt(e,t,n),r=It$1(o,t);if(r)return [Jt(e,o,r),Jt(e,o,Ut$1(r))];const l=It$1(o,n);if(l)return [Jt(e,o,Ut$1(l)),Jt(e,o,l)];const s=["minColumn","minRow"];return [Jt(e,o,s),Jt(e,o,Ut$1(s))]}(t,n,C),w=rn(e,_.cell),b=rn(e,S.cell);return e.$setAnchorCellForSelection(w),e.$setFocusCellForSelection(b,true),true}function Xt(e,t){if(yr(e)||wt$1(e)){const n=t.isParentOf(e.anchor.getNode()),o=t.isParentOf(e.focus.getNode());return n&&o}return  false}function qt(e,t){t?e.selectStart():e.selectEnd();}function jt$1(t,n){const o=n.elem,r=t._config.theme;Oe$1(vo(o))||Ke$1(131),lt$4(o,r.tableCellSelected);}function Vt(e,t){const n=t.elem;Oe$1(vo(n))||Ke$1(131);const r=e._config.theme;ut$3(n,r.tableCellSelected);}function Gt(e){const t=zs(e,Oe$1);return Oe$1(t)?t:null}function Qt(e){const t=zs(e,mn);return mn(t)?t:null}function Zt(e,t,o,r,l,s,i){const c=xl(o.focus,l?"previous":"next");if(Ol(c))return  false;let a=c;for(const e of ul(c).iterNodeCarets("shadowRoot")){if(!Hs(e)||!Si(e.origin))return  false;a=e;}const u=a.getParentAtCaret();if(!Oe$1(u))return  false;const h=u,d=function(e){for(const t of ul(e).iterNodeCarets("root")){const{origin:n}=t;if(Oe$1(n)){if(Gs(t))return il(n,e.direction)}else if(!$e$1(n))break}return null}(tl(h,a.direction)),f=zs(h,mn);if(!f||!f.is(s))return  false;const g=e.getElementByKey(h.getKey()),m=zt$1(g);if(!g||!m)return  false;const p=dn(e,f);if(i.table=p,d)if("extend"===r){const t=zt$1(e.getElementByKey(d.origin.getKey()));if(!t)return  false;i.$setAnchorCellForSelection(m),i.$setFocusCellForSelection(t,true);}else {const e=El(d);Cl(o.anchor,e),Cl(o.focus,e);}else if("extend"===r)i.$setAnchorCellForSelection(m),i.$setFocusCellForSelection(m,true);else {const e=function(e){const t=sl(e);return Gs(t)?El(t):e}(tl(f,c.direction));Cl(o.anchor,e),Cl(o.focus,e);}return tn(t),true}function en(e,t,o,r,l){if(("up"===o||"down"===o)&&function(e){const t=e.getRootElement();if(!t)return  false;return t.hasAttribute("aria-controls")&&"typeahead-menu"===t.getAttribute("aria-controls")}(e))return  false;const s=Lr();if(!Xt(s,r)){if(yr(s)){if("backward"===o){if(s.focus.offset>0)return  false;const e=function(e){for(let t=e,n=e;null!==n;t=n,n=n.getParent())if(Si(n)){if(n!==t&&n.getFirstChild()!==t)return null;if(!n.isInline())return n}return null}(s.focus.getNode());if(!e)return  false;const n=e.getPreviousSibling();return !!mn(n)&&(tn(t),t.shiftKey?s.focus.set(n.getParentOrThrow().getKey(),n.getIndexWithinParent(),"element"):n.selectEnd(),true)}if(t.shiftKey&&("up"===o||"down"===o)){const e=s.focus.getNode();if(!s.isCollapsed()&&("up"===o&&!s.isBackward()||"down"===o&&s.isBackward())){let l=zs(e,e=>mn(e));if(Oe$1(l)&&(l=zs(l,mn)),l!==r)return  false;if(!l)return  false;const i="down"===o?l.getNextSibling():l.getPreviousSibling();if(!i)return  false;let c=0;"up"===o&&Si(i)&&(c=i.getChildrenSize());let a=i;if("up"===o&&Si(i)){const e=i.getLastChild();a=e||i,c=lr(a)?a.getTextContentSize():0;}const u=s.clone();return u.focus.set(a.getKey(),c,lr(a)?"text":"element"),wo(u),tn(t),true}if(as(e)){const e="up"===o?s.getNodes()[s.getNodes().length-1]:s.getNodes()[0];if(e){if(null!==At$1(r,e)){const e=r.getFirstDescendant(),t=r.getLastDescendant();if(!e||!t)return  false;const[n]=mt$1(e),[o]=mt$1(t),s=r.getCordsFromCellNode(n,l.table),i=r.getCordsFromCellNode(o,l.table),c=r.getDOMCellFromCordsOrThrow(s.x,s.y,l.table),a=r.getDOMCellFromCordsOrThrow(i.x,i.y,l.table);return l.$setAnchorCellForSelection(c),l.$setFocusCellForSelection(a,true),true}}return  false}{let r=zs(e,e=>Si(e)&&!e.isInline());if(Oe$1(r)&&(r=zs(r,mn)),!r)return  false;const i="down"===o?r.getNextSibling():r.getPreviousSibling();if(mn(i)&&l.tableNodeKey===i.getKey()){const e=i.getFirstDescendant(),n=i.getLastDescendant();if(!e||!n)return  false;const[r]=mt$1(e),[l]=mt$1(n),c=s.clone();return c.focus.set(("up"===o?r:l).getKey(),"up"===o?0:l.getChildrenSize(),"element"),tn(t),wo(c),true}}}}return "down"===o&&an(e)&&l.setShouldCheckSelection(),false}if(yr(s)){if("backward"===o||"forward"===o){return Zt(e,t,s,t.shiftKey?"extend":"move","backward"===o,r,l)}if(s.isCollapsed()){const{anchor:i,focus:c}=s,a=zs(i.getNode(),Oe$1),u=zs(c.getNode(),Oe$1);if(!Oe$1(a)||!a.is(u))return  false;const h=Qt(a);if(h!==r&&null!=h){const n=Ft$1(h,e.getElementByKey(h.getKey()));if(null!=n)return l.table=Ht(h,n),en(e,t,o,h,l)}const d=e.getElementByKey(a.__key),f=e.getElementByKey(i.key);if(null==f||null==d)return  false;let g;if("element"===i.type)g=f.getBoundingClientRect();else {const t=ps(Ot(e));if(null===t||0===t.rangeCount)return  false;g=t.getRangeAt(0).getBoundingClientRect();}const m="up"===o?a.getFirstChild():a.getLastChild();if(null==m)return  false;const p=e.getElementByKey(m.__key);if(null==p)return  false;const C=p.getBoundingClientRect();if("up"===o?C.top>g.top-g.height:g.bottom+g.height>C.bottom){tn(t);const e=r.getCordsFromCellNode(a,l.table);if(!t.shiftKey)return Dt$1(l,r,e.x,e.y,o);{const t=r.getDOMCellFromCordsOrThrow(e.x,e.y,l.table);l.$setAnchorCellForSelection(t),l.$setFocusCellForSelection(t,true);}return  true}}}else if(wt$1(s)){const{anchor:i,focus:c}=s,a=zs(i.getNode(),Oe$1),u=zs(c.getNode(),Oe$1),[h]=s.getNodes();mn(h)||Ke$1(251);const d=Ft$1(h,e.getElementByKey(h.getKey()));if(!Oe$1(a)||!Oe$1(u)||!mn(h)||null==d)return  false;l.$updateTableTableSelection(s);const f=Ht(h,d),g=r.getCordsFromCellNode(a,f),m=r.getDOMCellFromCordsOrThrow(g.x,g.y,f);if(l.$setAnchorCellForSelection(m),tn(t),t.shiftKey){const[e,t,n]=ft(r,a,u);return Yt(l,e,t,n,o)}return u.selectEnd(),true}return  false}function tn(e){e.preventDefault(),e.stopImmediatePropagation(),e.stopPropagation();}function nn(e,t,n){const o=Li();"first"===e?t.insertBefore(o):t.insertAfter(o),o.append(...n||[]),o.selectEnd();}function on(e,t,o){const r=o.getParent();if(!r)return;const l=ps(Ot(e));if(!l)return;const s=l.anchorNode,i=e.getElementByKey(r.getKey()),c=Ft$1(o,e.getElementByKey(o.getKey()));if(!s||!i||!c||!i.contains(s)||c.contains(s))return;const a=zs(t.anchor.getNode(),e=>Oe$1(e));if(!a)return;const u=zs(a,e=>mn(e));if(!mn(u)||!u.is(o))return;const[h,d]=ft(o,a,a),f=h[0][0],g=h[h.length-1][h[0].length-1],{startRow:m,startColumn:p}=d,C=m===f.startRow&&p===f.startColumn,_=m===g.startRow&&p===g.startColumn;return C?"first":_?"last":void 0}function rn(e,t){const{tableNode:n}=e.$lookup(),o=n.getCordsFromCellNode(t,e.table);return n.getDOMCellFromCordsOrThrow(o.x,o.y,e.table)}function ln(e,t,n){return At$1(e,vo(t,n))}function sn(t,n,r){if(!n.theme.tableAlignment)return;const l=[],s=[];for(const e of ["center","right"]){const t=n.theme.tableAlignment[e];t&&(e===r?s:l).push(t);}ut$3(t,...l),lt$4(t,...s);}const cn=new WeakSet;function an(e=bs()){return cn.has(e)}function un(e,t){cn.add(e);}class hn extends Ci{__rowStriping;__frozenColumnCount;__frozenRowCount;__colWidths;static getType(){return "table"}getColWidths(){return this.getLatest().__colWidths}setColWidths(e){const t=this.getWritable();return t.__colWidths=e,t}static clone(e){return new hn(e.__key)}afterCloneFrom(e){super.afterCloneFrom(e),this.__colWidths=e.__colWidths,this.__rowStriping=e.__rowStriping,this.__frozenColumnCount=e.__frozenColumnCount,this.__frozenRowCount=e.__frozenRowCount;}static importDOM(){return {table:e=>({conversion:fn,priority:1})}}static importJSON(e){return gn().updateFromJSON(e)}updateFromJSON(e){return super.updateFromJSON(e).setRowStriping(e.rowStriping||false).setFrozenColumns(e.frozenColumnCount||0).setFrozenRows(e.frozenRowCount||0).setColWidths(e.colWidths)}constructor(e){super(e),this.__rowStriping=false,this.__frozenColumnCount=0,this.__frozenRowCount=0,this.__colWidths=void 0;}exportJSON(){return {...super.exportJSON(),colWidths:this.getColWidths(),frozenColumnCount:this.__frozenColumnCount?this.__frozenColumnCount:void 0,frozenRowCount:this.__frozenRowCount?this.__frozenRowCount:void 0,rowStriping:this.__rowStriping?this.__rowStriping:void 0}}extractWithChild(e,t,n){return "html"===n}getDOMSlot(e){const t=Rt$1(e)?e:e.querySelector("table");return Rt$1(t)||Ke$1(229),super.getDOMSlot(e).withElement(t).withAfter(t.querySelector("colgroup"))}createDOM(t,n){const o=document.createElement("table");this.__style&&(o.style.cssText=this.__style);const r=document.createElement("colgroup");if(o.appendChild(r),Ds(r),lt$4(o,t.theme.table),this.updateTableElement(null,o,t),an(n)){const n=document.createElement("div"),r=t.theme.tableScrollableWrapper;return r?lt$4(n,r):n.style.cssText="overflow-x: auto;",n.appendChild(o),this.updateTableWrapper(null,n,o,t),n}return o}updateTableWrapper(t,n,r,l){this.__frozenColumnCount!==(t?t.__frozenColumnCount:0)&&function(t,n,r,l){l>0?(lt$4(t,r.theme.tableFrozenColumn),n.setAttribute("data-lexical-frozen-column","true")):(ut$3(t,r.theme.tableFrozenColumn),n.removeAttribute("data-lexical-frozen-column"));}(n,r,l,this.__frozenColumnCount),this.__frozenRowCount!==(t?t.__frozenRowCount:0)&&function(t,n,r,l){l>0?(lt$4(t,r.theme.tableFrozenRow),n.setAttribute("data-lexical-frozen-row","true")):(ut$3(t,r.theme.tableFrozenRow),n.removeAttribute("data-lexical-frozen-row"));}(n,r,l,this.__frozenRowCount);}updateTableElement(t,n,r){this.__style!==(t?t.__style:"")&&(n.style.cssText=this.__style),this.__rowStriping!==(!!t&&t.__rowStriping)&&function(t,n,r){r?(lt$4(t,n.theme.tableRowStriping),t.setAttribute("data-lexical-row-striping","true")):(ut$3(t,n.theme.tableRowStriping),t.removeAttribute("data-lexical-row-striping"));}(n,r,this.__rowStriping),function(e,t,n,o){const r=e.querySelector("colgroup");if(!r)return;const l=[];for(let e=0;e<n;e++){const t=document.createElement("col"),n=o&&o[e];n&&(t.style.width=`${n}px`),l.push(t);}r.replaceChildren(...l);}(n,0,this.getColumnCount(),this.getColWidths()),sn(n,r,this.getFormatType());}updateDOM(e,t,n){const o=this.getDOMSlot(t).element;return t===o===an()||(Cs(r=t)&&"DIV"===r.nodeName&&this.updateTableWrapper(e,t,o,n),this.updateTableElement(e,o,n),false);var r;}exportDOM(e){const t=super.exportDOM(e),{element:n}=t;return {after:n=>{if(t.after&&(n=t.after(n)),!Rt$1(n)&&Cs(n)&&(n=n.querySelector("table")),!Rt$1(n))return null;sn(n,e._config,this.getFormatType());const[o]=gt(this,null,null),r=new Map;for(const e of o)for(const t of e){const e=t.cell.getKey();r.has(e)||r.set(e,{colSpan:t.cell.getColSpan(),startColumn:t.startColumn});}const s=new Set;for(const e of n.querySelectorAll(":scope > tr > [data-temporary-table-cell-lexical-key]")){const t=e.getAttribute("data-temporary-table-cell-lexical-key");if(t){const n=r.get(t);if(e.removeAttribute("data-temporary-table-cell-lexical-key"),n){r.delete(t);for(let e=0;e<n.colSpan;e++)s.add(e+n.startColumn);}}}const i=n.querySelector(":scope > colgroup");if(i){const e=Array.from(n.querySelectorAll(":scope > colgroup > col")).filter((e,t)=>s.has(t));i.replaceChildren(...e);}const c=n.querySelectorAll(":scope > tr");if(c.length>0){const e=document.createElement("tbody");for(const t of c)e.appendChild(t);n.append(e);}return n},element:!Rt$1(n)&&Cs(n)?n.querySelector("table"):n}}canBeEmpty(){return  false}isShadowRoot(){return  true}getCordsFromCellNode(e,t){const{rows:n,domRows:o}=t;for(let t=0;t<n;t++){const n=o[t];if(null!=n)for(let o=0;o<n.length;o++){const r=n[o];if(null==r)continue;const{elem:l}=r,s=ln(this,l);if(null!==s&&e.is(s))return {x:o,y:t}}}throw new Error("Cell not found in table.")}getDOMCellFromCords(e,t,n){const{domRows:o}=n,r=o[t];if(null==r)return null;const l=r[e<r.length?e:r.length-1];return null==l?null:l}getDOMCellFromCordsOrThrow(e,t,n){const o=this.getDOMCellFromCords(e,t,n);if(!o)throw new Error("Cell not found at cords.");return o}getCellNodeFromCords(e,t,n){const o=this.getDOMCellFromCords(e,t,n);if(null==o)return null;const r=vo(o.elem);return Oe$1(r)?r:null}getCellNodeFromCordsOrThrow(e,t,n){const o=this.getCellNodeFromCords(e,t,n);if(!o)throw new Error("Node at cords not TableCellNode.");return o}getRowStriping(){return Boolean(this.getLatest().__rowStriping)}setRowStriping(e){const t=this.getWritable();return t.__rowStriping=e,t}setFrozenColumns(e){const t=this.getWritable();return t.__frozenColumnCount=e,t}getFrozenColumns(){return this.getLatest().__frozenColumnCount}setFrozenRows(e){const t=this.getWritable();return t.__frozenRowCount=e,t}getFrozenRows(){return this.getLatest().__frozenRowCount}canSelectBefore(){return  true}canIndent(){return  false}getColumnCount(){const e=this.getFirstChild();if(!e)return 0;let t=0;return e.getChildren().forEach(e=>{Oe$1(e)&&(t+=e.getColSpan());}),t}}function dn(e,t){const n=e.getElementByKey(t.getKey());return null===n&&Ke$1(230),Ht(t,n)}function fn(e){const n=gn();e.hasAttribute("data-lexical-row-striping")&&n.setRowStriping(true),e.hasAttribute("data-lexical-frozen-column")&&n.setFrozenColumns(1),e.hasAttribute("data-lexical-frozen-row")&&n.setFrozenRows(1);const o=e.querySelector(":scope > colgroup");if(o){let e=[];for(const t of o.querySelectorAll(":scope > col")){let n=t.style.width||"";if(!Ne$1.test(n)&&(n=t.getAttribute("width")||"",!/^\d+$/.test(n))){e=void 0;break}e.push(parseFloat(n));}e&&n.setColWidths(e);}return {after:e=>kt$6(e,$e$1),node:n}}function gn(){return fs(new hn)}function mn(e){return e instanceof hn}function pn({rows:e,columns:t,includeHeaders:n}){const o=Lr()||Ir();if(!o||!yr(o))return  false;if(Qt(o.anchor.getNode()))return  false;const r=Le$1(Number(e),Number(t),n);At$5(r);const l=r.getFirstDescendant();return lr(l)&&l.select(),true}function Cn(e){$e$1(e.getParent())?e.isEmpty()&&e.append(Li()):e.remove();}function _n(e){mn(e.getParent())?Bt$3(e,Oe$1):e.remove();}function Sn(e){Bt$3(e,$e$1);const[t]=gt(e,null,null),n=t.reduce((e,t)=>Math.max(e,t.length),0),o=e.getChildren();for(let e=0;e<t.length;++e){const r=o[e];if(!r)continue;$e$1(r)||Ke$1(254,r.constructor.name,r.getType());const l=t[e].reduce((e,t)=>t?1+e:e,0);if(l!==n)for(let e=l;e<n;++e){const e=Fe$1();e.append(Li()),r.append(e);}}}function wn(e){if(e.detail<3||!Ss(e.target))return  false;const t=vo(e.target);if(null===t)return  false;const o=zs(t,e=>Si(e)&&!e.isInline());if(null===o)return  false;return !!Oe$1(o.getParent())&&(o.select(0),true)}function yn(e,t=true){const n=new Map,o=(o,r,l)=>{const s=Ft$1(o,l),i=Mt$1(o,s,e,t);n.set(r,[i,s]);},r=e.registerMutationListener(hn,t=>{e.getEditorState().read(()=>{for(const[e,r]of t){const t=n.get(e);if("created"===r||"updated"===r){const{tableNode:r,tableElement:l}=vt(e);void 0===t?o(r,e,l):l!==t[1]&&(t[0].removeListeners(),n.delete(e),o(r,e,l));}else "destroyed"===r&&void 0!==t&&(t[0].removeListeners(),n.delete(e));}},{editor:e});},{skipInitialization:false});return ()=>{r();for(const[,[e]]of n)e.removeListeners();}}function Nn(e){return e.hasNodes([hn])||Ke$1(255),U$4(e.registerCommand(Ae$1,pn,Ki),e.registerCommand(oe$2,({nodes:t,selection:n},o)=>{if(e!==o||!yr(n))return  false;return null!==Qt(n.anchor.getNode())&&t.some(mn)},Ki),e.registerCommand(se$1,wn,Ki),e.registerNodeTransform(hn,Sn),e.registerNodeTransform(Ee$1,_n),e.registerNodeTransform(xe,Cn))}
-
-const SILENT_UPDATE_TAGS = [ Dn, zn, Kn ];
-
-function getNearestListItemNode(node) {
-  let current = node;
-  while (current !== null) {
-    if (ot$3(current)) return current
-    current = current.getParent();
-  }
-  return null
-}
-
-function getListType(node) {
-  let current = node;
-  while (current) {
-    if (dt$2(current)) {
-      return current.getListType()
-    }
-    current = current.getParent();
-  }
-  return null
-}
-
-function isPrintableCharacter(event) {
-  // Ignore if modifier keys are pressed (except Shift for uppercase)
-  if (event.ctrlKey || event.metaKey || event.altKey) return false
-
-  // Ignore special keys
-  if (event.key.length > 1 && event.key !== "Enter" && event.key !== "Space") return false
-
-  // Accept single character keys (letters, numbers, punctuation)
-  return event.key.length === 1
-}
-
-function extendTextNodeConversion(conversionName, ...callbacks) {
-  return extendConversion(Xn, conversionName, (conversionOutput, element) => ({
-    ...conversionOutput,
-    forChild: (lexicalNode, parentNode) => {
-      const originalForChild = conversionOutput?.forChild ?? (x => x);
-      let childNode = originalForChild(lexicalNode, parentNode);
-
-
-      if (lr(childNode)) {
-        childNode = callbacks.reduce(
-          (childNode, callback) => callback(childNode, element) ?? childNode,
-          childNode
-        );
-        return childNode
-      }
-    }
-  }))
-}
-
-function extendConversion(nodeKlass, conversionName, callback = (output => output)) {
-  return (element) => {
-    const converter = nodeKlass.importDOM()?.[conversionName]?.(element);
-    if (!converter) return null
-
-    const conversionOutput = converter.conversion(element);
-    if (!conversionOutput) return conversionOutput
-
-    return callback(conversionOutput, element) ?? conversionOutput
-  }
-}
-
-function createElement(name, properties, content = "") {
-  const element = document.createElement(name);
-  for (const [ key, value ] of Object.entries(properties || {})) {
-    if (key in element) {
-      element[key] = value;
-    } else if (value !== null && value !== undefined) {
-      element.setAttribute(key, value);
-    }
-  }
-  if (content) {
-    element.innerHTML = content;
-  }
-  return element
-}
-
-function parseHtml(html) {
-  const parser = new DOMParser();
-  return parser.parseFromString(html, "text/html")
-}
-
-function createAttachmentFigure(contentType, isPreviewable, fileName) {
-  const extension = fileName ? fileName.split(".").pop().toLowerCase() : "unknown";
-  return createElement("figure", {
-    className: `attachment attachment--${isPreviewable ? "preview" : "file"} attachment--${extension}`,
-    "data-content-type": contentType
-  })
-}
-
-function isPreviewableImage(contentType) {
-  return contentType.startsWith("image/") && !contentType.includes("svg")
-}
-
-function dispatchCustomEvent(element, name, detail) {
-  const event = new CustomEvent(name, {
-    detail: detail,
-    bubbles: true,
-  });
-  element.dispatchEvent(event);
-}
-
-function dispatch(element, eventName, detail = null, cancelable = false) {
-  return element.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail, cancelable }))
-}
-
-function generateDomId(prefix) {
-  const randomPart = Math.random().toString(36).slice(2, 10);
-  return `${prefix}-${randomPart}`
-}
-
-function isSelectionHighlighted(selection) {
-  if (!yr(selection)) return false
-
-  if (selection.isCollapsed()) {
-    return hasHighlightStyles(selection.style)
-  } else {
-    return selection.hasFormat("highlight")
-  }
-}
-
-function getHighlightStyles(selection) {
-  if (!yr(selection)) return null
-
-  let styles = b$3(selection.style);
-  if (!styles.color && !styles["background-color"]) {
-    const anchorNode = selection.anchor.getNode();
-    if (lr(anchorNode)) {
-      styles = b$3(anchorNode.getStyle());
-    }
-  }
-
-  const color = styles.color || null;
-  const backgroundColor = styles["background-color"] || null;
-  if (!color && !backgroundColor) return null
-
-  return { color, backgroundColor }
-}
-
-function hasHighlightStyles(cssOrStyles) {
-  const styles = typeof cssOrStyles === "string" ? b$3(cssOrStyles) : cssOrStyles;
-  return !!(styles.color || styles["background-color"])
-}
-
-class StyleCanonicalizer {
-  constructor(property, allowedValues= []) {
-    this._property = property;
-    this._allowedValues = allowedValues;
-    this._canonicalValues = this.#allowedValuesIdentityObject;
-  }
-
-  applyCanonicalization(css) {
-    const styles = { ...b$3(css) };
-
-    styles[this._property] = this.getCanonicalAllowedValue(styles[this._property]);
-    if (!styles[this._property]) {
-      delete styles[this._property];
-    }
-
-    return R$5(styles)
-  }
-
-  getCanonicalAllowedValue(value) {
-    return this._canonicalValues[value] ||= this.#resolveCannonicalValue(value)
-  }
-
-  // Private
-
-  get #allowedValuesIdentityObject() {
-    return this._allowedValues.reduce((object, value) => ({ ...object, [value]: value }), {})
-  }
-
-  #resolveCannonicalValue(value) {
-    let index = this.#computedAllowedValues.indexOf(value);
-    index ||= this.#computedAllowedValues.indexOf(getComputedStyleForProperty(this._property, value));
-    return index === -1 ? null : this._allowedValues[index]
-  }
-
-  get #computedAllowedValues() {
-    return this._computedAllowedValues ||= this._allowedValues.map(
-      value => getComputedStyleForProperty(this._property, value)
-    )
-  }
-}
-
-function getComputedStyleForProperty(property, value) {
-  const style = `${property}: ${value};`;
-
-  // the element has to be attached to the DOM have computed styles
-  const element = document.body.appendChild(createElement("span", { style: "display: none;" + style }));
-  const computedStyle = window.getComputedStyle(element).getPropertyValue(property);
-  element.remove();
-
-  return computedStyle
-}
-
-function handleRollingTabIndex(elements, event) {
-  const previousActiveElement = document.activeElement;
-
-  if (elements.includes(previousActiveElement)) {
-    const finder = new NextElementFinder(elements, event.key);
-
-    if (finder.selectNext(previousActiveElement)) {
-      event.preventDefault();
-    }
-  }
-}
-
-class NextElementFinder {
-  constructor(elements, key) {
-    this.elements = elements;
-    this.key = key;
-  }
-
-  selectNext(fromElement) {
-    const nextElement = this.#findNextElement(fromElement);
-
-    if (nextElement) {
-      const inactiveElements = this.elements.filter(element => element !== nextElement);
-      this.#unsetTabIndex(inactiveElements);
-      this.#focusWithActiveTabIndex(nextElement);
-      return true
-    }
-
-    return false
-  }
-
-  #findNextElement(fromElement) {
-    switch (this.key) {
-      case "ArrowRight":
-      case "ArrowDown":
-        return this.#findNextSibling(fromElement)
-
-      case "ArrowLeft":
-      case "ArrowUp":
-        return this.#findPreviousSibling(fromElement)
-
-      case "Home":
-        return this.#findFirst()
-
-      case "End":
-        return this.#findLast()
-    }
-  }
-
-  #findFirst(elements = this.elements) {
-    return elements.find(isActiveAndVisible)
-  }
-
-  #findLast(elements = this.elements) {
-    return elements.findLast(isActiveAndVisible)
-  }
-
-  #findNextSibling(element) {
-    const afterElements = this.elements.slice(this.#indexOf(element) + 1);
-    return this.#findFirst(afterElements)
-  }
-
-  #findPreviousSibling(element) {
-    const beforeElements = this.elements.slice(0, this.#indexOf(element));
-    return this.#findLast(beforeElements)
-  }
-
-  #indexOf(element) {
-    return this.elements.indexOf(element)
-  }
-
-  #focusWithActiveTabIndex(element) {
-    if (isActiveAndVisible(element)) {
-      element.tabIndex = 0;
-      element.focus();
-    }
-  }
-
-  #unsetTabIndex(elements) {
-    elements.forEach(element => element.tabIndex = -1);
-  }
-}
-
-function isActiveAndVisible(element) {
-  return element && !element.disabled && element.checkVisibility()
-}
-
-class LexicalToolbarElement extends HTMLElement {
-  static observedAttributes = [ "connected" ]
-
-  constructor() {
-    super();
-    this.internals = this.attachInternals();
-    this.internals.role = "toolbar";
-
-    this.#createEditorPromise();
-  }
-
-  connectedCallback() {
-    requestAnimationFrame(() => this.#refreshToolbarOverflow());
-    this.setAttribute("role", "toolbar");
-    this.#installResizeObserver();
-  }
-
-  disconnectedCallback() {
-    this.#uninstallResizeObserver();
-    this.#unbindHotkeys();
-    this.#unbindFocusListeners();
-  }
-
-  attributeChangedCallback(name, oldValue, newValue) {
-    if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
-      requestAnimationFrame(() => this.#reconnect());
-    }
-  }
-
-  setEditor(editorElement) {
-    this.editorElement = editorElement;
-    this.editor = editorElement.editor;
-    this.#bindButtons();
-    this.#bindHotkeys();
-    this.#resetTabIndexValues();
-    this.#setItemPositionValues();
-    this.#monitorSelectionChanges();
-    this.#monitorHistoryChanges();
-    this.#refreshToolbarOverflow();
-    this.#bindFocusListeners();
-
-    this.resolveEditorPromise(editorElement);
-
-    this.toggleAttribute("connected", true);
-  }
-
-  async getEditorElement() {
-    return this.editorElement || await this.editorPromise
-  }
-
-  #reconnect() {
-    this.disconnectedCallback();
-    this.connectedCallback();
-  }
-
-  #createEditorPromise() {
-    this.editorPromise = new Promise((resolve) => {
-      this.resolveEditorPromise = resolve;
-    });
-  }
-
-  #installResizeObserver() {
-    this.resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow());
-    this.resizeObserver.observe(this);
-  }
-
-  #uninstallResizeObserver() {
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-      this.resizeObserver = null;
-    }
-  }
-
-  #bindButtons() {
-    this.addEventListener("click", this.#handleButtonClicked.bind(this));
-  }
-
-  #handleButtonClicked(event) {
-    this.#handleTargetClicked(event, "[data-command]", this.#dispatchButtonCommand.bind(this));
-  }
-
-  #handleTargetClicked(event, selector, callback) {
-    const button = event.target.closest(selector);
-    if (button) {
-      callback(event, button);
-    }
-  }
-
-  #dispatchButtonCommand(event, { dataset: { command, payload } }) {
-    const isKeyboard = event instanceof PointerEvent && event.pointerId === -1;
-
-    this.editor.update(() => {
-      this.editor.dispatchCommand(command, payload);
-    }, { tag: isKeyboard ? zn : undefined });
-  }
-
-  #bindHotkeys() {
-    this.editorElement.addEventListener("keydown", this.#handleHotkey);
-  }
-
-  #unbindHotkeys() {
-    this.editorElement?.removeEventListener("keydown", this.#handleHotkey);
-  }
-
-  #handleHotkey = (event) => {
-    const buttons = this.querySelectorAll("[data-hotkey]");
-    buttons.forEach((button) => {
-      const hotkeys = button.dataset.hotkey.toLowerCase().split(/\s+/);
-      if (hotkeys.includes(this.#keyCombinationFor(event))) {
-        event.preventDefault();
-        event.stopPropagation();
-        button.click();
-      }
-    });
-  }
-
-  #keyCombinationFor(event) {
-    const pressedKey = event.key.toLowerCase();
-    const modifiers = [
-      event.ctrlKey ? "ctrl" : null,
-      event.metaKey ? "cmd" : null,
-      event.altKey ? "alt" : null,
-      event.shiftKey ? "shift" : null,
-    ].filter(Boolean);
-
-    return [ ...modifiers, pressedKey ].join("+")
-  }
-
-  #bindFocusListeners() {
-    this.editorElement.addEventListener("lexxy:focus", this.#handleEditorFocus);
-    this.editorElement.addEventListener("lexxy:blur", this.#handleEditorBlur);
-    this.addEventListener("keydown", this.#handleKeydown);
-  }
-
-  #unbindFocusListeners() {
-    this.editorElement.removeEventListener("lexxy:focus", this.#handleEditorFocus);
-    this.editorElement.removeEventListener("lexxy:blur", this.#handleEditorBlur);
-    this.removeEventListener("keydown", this.#handleKeydown);
-  }
-
-  #handleEditorFocus = () => {
-    this.#focusableItems[0].tabIndex = 0;
-  }
-
-  #handleEditorBlur = () => {
-    this.#resetTabIndexValues();
-    this.#closeDropdowns();
-  }
-
-  #handleKeydown = (event) => {
-    handleRollingTabIndex(this.#focusableItems, event);
-  }
-
-  #resetTabIndexValues() {
-    this.#focusableItems.forEach((button) => {
-      button.tabIndex = -1;
-    });
-  }
-
-  #monitorSelectionChanges() {
-    this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
-        this.#updateButtonStates();
-        this.#closeDropdowns();
-      });
-    });
-  }
-
-  #monitorHistoryChanges() {
-    this.editor.registerUpdateListener(() => {
-      this.#updateUndoRedoButtonStates();
-    });
-  }
-
-  #updateUndoRedoButtonStates() {
-    this.editor.getEditorState().read(() => {
-      const historyState = this.editorElement.historyState;
-      if (historyState) {
-        this.#setButtonDisabled("undo", historyState.undoStack.length === 0);
-        this.#setButtonDisabled("redo", historyState.redoStack.length === 0);
-      }
-    });
-  }
-
-  #updateButtonStates() {
-    const selection = Lr();
-    if (!yr(selection)) return
-
-    const anchorNode = selection.anchor.getNode();
-    if (!anchorNode.getParent()) { return }
-
-    const topLevelElement = anchorNode.getTopLevelElementOrThrow();
-
-    const isBold = selection.hasFormat("bold");
-    const isItalic = selection.hasFormat("italic");
-    const isStrikethrough = selection.hasFormat("strikethrough");
-    const isHighlight = isSelectionHighlighted(selection);
-    const isInLink = this.#isInLink(anchorNode);
-    const isInQuote = Ot$2(topLevelElement);
-    const isInHeading = It$2(topLevelElement);
-    const isInCode = X$1(topLevelElement) || selection.hasFormat("code");
-    const isInList = this.#isInList(anchorNode);
-    const listType = getListType(anchorNode);
-    const isInTable = Be$1(anchorNode) !== null;
-
-    this.#setButtonPressed("bold", isBold);
-    this.#setButtonPressed("italic", isItalic);
-    this.#setButtonPressed("strikethrough", isStrikethrough);
-    this.#setButtonPressed("highlight", isHighlight);
-    this.#setButtonPressed("link", isInLink);
-    this.#setButtonPressed("quote", isInQuote);
-    this.#setButtonPressed("heading", isInHeading);
-    this.#setButtonPressed("code", isInCode);
-    this.#setButtonPressed("unordered-list", isInList && listType === "bullet");
-    this.#setButtonPressed("ordered-list", isInList && listType === "number");
-    this.#setButtonPressed("table", isInTable);
-
-    this.#updateUndoRedoButtonStates();
-  }
-
-  #isInList(node) {
-    let current = node;
-    while (current) {
-      if (dt$2(current) || ot$3(current)) return true
-      current = current.getParent();
-    }
-    return false
-  }
-
-  #isInLink(node) {
-    let current = node;
-    while (current) {
-      if (w$2(current)) return true
-      current = current.getParent();
-    }
-    return false
-  }
-
-  #setButtonPressed(name, isPressed) {
-    const button = this.querySelector(`[name="${name}"]`);
-    if (button) {
-      button.setAttribute("aria-pressed", isPressed.toString());
-    }
-  }
-
-  #setButtonDisabled(name, isDisabled) {
-    const button = this.querySelector(`[name="${name}"]`);
-    if (button) {
-      button.disabled = isDisabled;
-      button.setAttribute("aria-disabled", isDisabled.toString());
-    }
-  }
-
-  #toolbarIsOverflowing() {
-    // Safari can report inconsistent clientWidth values on more than 100% window zoom level,
-    // that was affecting the toolbar overflow calculation. We're adding +1 to get around this issue.
-    return (this.scrollWidth - this.#overflow.clientWidth) > this.clientWidth + 1
-  }
-
-  #refreshToolbarOverflow = () => {
-    this.#resetToolbarOverflow();
-    this.#compactMenu();
-
-    this.#overflow.style.display = this.#overflowMenu.children.length ? "block" : "none";
-    this.#overflow.setAttribute("nonce", getNonce());
-
-    const isOverflowing = this.#overflowMenu.children.length > 0;
-    this.toggleAttribute("overflowing", isOverflowing);
-    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing);
-  }
-
-  #compactMenu() {
-    const buttons = this.#buttons.reverse();
-    let movedToOverflow = false;
-
-    for (const button of buttons) {
-      if (this.#toolbarIsOverflowing()) {
-        this.#overflowMenu.prepend(button);
-        movedToOverflow = true;
-      } else {
-        if (movedToOverflow) this.#overflowMenu.prepend(button);
-        break
-      }
-    }
-  }
-
-  #resetToolbarOverflow() {
-    const items = Array.from(this.#overflowMenu.children);
-    items.sort((a, b) => this.#itemPosition(b) - this.#itemPosition(a));
-
-    items.forEach((item) => {
-      const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.#overflow;
-      this.insertBefore(item, nextItem);
-    });
-  }
-
-  #itemPosition(item) {
-    return parseInt(item.dataset.position ?? "999")
-  }
-
-  #setItemPositionValues() {
-    this.#toolbarItems.forEach((item, index) => {
-      if (item.dataset.position === undefined) {
-        item.dataset.position = index;
-      }
-    });
-  }
-
-  #closeDropdowns() {
-   this.#dropdowns.forEach((details) => {
-     details.open = false;
-   });
- }
-
-  get #dropdowns() {
-    return this.querySelectorAll("details")
-  }
-
-  get #overflow() {
-    return this.querySelector(".lexxy-editor__toolbar-overflow")
-  }
-
-  get #overflowMenu() {
-    return this.querySelector(".lexxy-editor__toolbar-overflow-menu")
-  }
-
-  get #buttons() {
-    return Array.from(this.querySelectorAll(":scope > button"))
-  }
-
-  get #focusableItems() {
-    return Array.from(this.querySelectorAll(":scope button, :scope > details > summary"))
-  }
-
-  get #toolbarItems() {
-    return Array.from(this.querySelectorAll(":scope > *:not(.lexxy-editor__toolbar-overflow)"))
-  }
-
-  static get defaultTemplate() {
-    return `
-      <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="Bold">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 22V2h8.183c1.764 0 3.174.435 4.228 1.304 1.055.87 1.582 2.076 1.582 3.62 0 .8-.148 1.503-.445 2.109a3.94 3.94 0 01-1.194 1.465 4.866 4.866 0 01-1.726.806v.176c.786.078 1.51.312 2.172.703a4.293 4.293 0 011.596 1.627c.403.693.604 1.543.604 2.549 0 1.192-.292 2.207-.877 3.048-.585.84-1.39 1.484-2.416 1.934-1.026.44-2.206.659-3.538.659H5zM8.854 4.974v5.348h2.56c.873 0 1.582-.107 2.129-.322.556-.215.963-.523 1.222-.923.269-.41.403-.904.403-1.48 0-.82-.254-1.46-.762-1.92-.499-.468-1.204-.703-2.115-.703H8.854zm0 8.103v5.949h2.877c1.534 0 2.636-.245 3.307-.733.671-.498 1.007-1.221 1.007-2.168 0-.635-.134-1.178-.403-1.627-.268-.459-.666-.81-1.193-1.055-.518-.244-1.156-.366-1.913-.366H8.854z"/></svg>
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="italic" data-command="italic" title="Italic">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.1 4h-1.5l-3.2 16h1.5l-.4 2h-7l.4-2h1.5l3.2-16h-1.5l.4-2h7l-.4 2z"/></svg>
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M4.70588 16.1591C4.81459 19.7901 7.48035 22 11.6668 22C15.9854 22 18.724 19.6296 18.724 15.8779C18.724 15.5007 18.6993 15.1427 18.6474 14.8066H14.3721C14.8637 15.2085 15.0799 15.7037 15.0799 16.3471C15.0799 17.7668 13.7532 18.7984 11.8113 18.7984C9.88053 18.7984 8.38582 17.7531 8.21659 16.1591H4.70588ZM5.23953 9.31962H9.88794C9.10723 8.88889 8.75888 8.33882 8.75888 7.57339C8.75888 6.13992 9.96576 5.18793 11.7631 5.18793C13.5852 5.18793 14.8761 6.1797 14.9959 7.81344H18.4102C18.3485 4.31824 15.8038 2 11.752 2C7.867 2 5.09129 4.35802 5.09129 7.92044C5.09129 8.41838 5.14071 8.88477 5.23953 9.31962ZM2.23529 10.6914C1.90767 10.6914 1.59347 10.8359 1.36181 11.0931C1.13015 11.3504 1 11.6993 1 12.0631C1 12.4269 1.13015 12.7758 1.36181 13.0331C1.59347 13.2903 1.90767 13.4348 2.23529 13.4348H20.7647C21.0923 13.4348 21.4065 13.2903 21.6382 13.0331C21.8699 12.7758 22 12.4269 22 12.0631C22 11.6993 21.8699 11.3504 21.6382 11.0931C21.4065 10.8359 21.0923 10.6914 20.7647 10.6914H2.23529Z"/>
-        </svg>
-      </button>
-
-      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
-        <summary class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.65422 0.711575C7.1856 0.242951 6.42579 0.242951 5.95717 0.711575C5.48853 1.18021 5.48853 1.94 5.95717 2.40864L8.70864 5.16011L2.85422 11.0145C1.44834 12.4204 1.44833 14.6998 2.85422 16.1057L7.86011 21.1115C9.26599 22.5174 11.5454 22.5174 12.9513 21.1115L19.6542 14.4087C20.1228 13.94 20.1228 13.1802 19.6542 12.7115L11.8544 4.91171L11.2542 4.31158L7.65422 0.711575ZM4.55127 12.7115L10.4057 6.85716L17.1087 13.56H4.19981C4.19981 13.253 4.31696 12.9459 4.55127 12.7115ZM23.6057 20.76C23.6057 22.0856 22.5311 23.16 21.2057 23.16C19.8802 23.16 18.8057 22.0856 18.8057 20.76C18.8057 19.5408 19.8212 18.5339 20.918 17.4462C21.0135 17.3516 21.1096 17.2563 21.2057 17.16C21.3018 17.2563 21.398 17.3516 21.4935 17.4462C22.5903 18.5339 23.6057 19.5408 23.6057 20.76Z"/></svg>
-        </summary>
-        <lexxy-highlight-dropdown class="lexxy-editor__toolbar-dropdown-content">
-          <div class="lexxy-highlight-colors"></div>
-          <button data-command="removeHighlight" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset">Remove all coloring</button>
-        </lexxy-highlight-dropdown>
-      </details>
-
-      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
-        <summary class="lexxy-editor__toolbar-button" name="link" title="Link" data-hotkey="cmd+k ctrl+k">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.111 9.546a1.5 1.5 0 012.121 0 5.5 5.5 0 010 7.778l-2.828 2.828a5.5 5.5 0 01-7.778 0 5.498 5.498 0 010-7.777l2.828-2.83a1.5 1.5 0 01.355-.262 6.52 6.52 0 00.351 3.799l-1.413 1.414a2.499 2.499 0 000 3.535 2.499 2.499 0 003.535 0l2.83-2.828a2.5 2.5 0 000-3.536 1.5 1.5 0 010-2.121z"/><path d="M12.111 3.89a5.5 5.5 0 117.778 7.777l-2.828 2.829a1.496 1.496 0 01-.355.262 6.522 6.522 0 00-.351-3.8l1.413-1.412a2.5 2.5 0 10-3.536-3.535l-2.828 2.828a2.5 2.5 0 000 3.536 1.5 1.5 0 01-2.122 2.12 5.5 5.5 0 010-7.777l2.83-2.829z"/></svg>
-        </summary>
-        <lexxy-link-dropdown class="lexxy-editor__toolbar-dropdown-content">
-          <form method="dialog">
-            <input type="url" placeholder="Enter a URL…" class="input">
-            <div class="lexxy-editor__toolbar-dropdown-actions">
-              <button type="submit" class="lexxy-editor__toolbar-button" value="link">Link</button>
-              <button type="button" class="lexxy-editor__toolbar-button" value="unlink">Unlink</button>
-            </div>
-          </form>
-        </lexxy-link-dropdown>
-      </details>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="quote" data-command="insertQuoteBlock" title="Quote">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6.5 5C8.985 5 11 7.09 11 9.667c0 2.694-.962 5.005-2.187 6.644-.613.82-1.3 1.481-1.978 1.943-.668.454-1.375.746-2.022.746a.563.563 0 01-.52-.36.602.602 0 01.067-.57l.055-.066.009-.009.041-.048a4.25 4.25 0 00.168-.21c.143-.188.336-.47.53-.84a6.743 6.743 0 00.75-2.605C3.705 13.994 2 12.038 2 9.667 2 7.089 4.015 5 6.5 5zM17.5 5C19.985 5 22 7.09 22 9.667c0 2.694-.962 5.005-2.187 6.644-.613.82-1.3 1.481-1.978 1.943-.668.454-1.375.746-2.023.746a.563.563 0 01-.52-.36.602.602 0 01.068-.57l.055-.066.009-.009.041-.048c.039-.045.097-.115.168-.21a6.16 6.16 0 00.53-.84 6.745 6.745 0 00.75-2.605C14.705 13.994 13 12.038 13 9.667 13 7.089 15.015 5 17.5 5z"/></svg>
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="heading" data-command="rotateHeadingFormat" title="Heading">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15.322 5.315H9.64V22H5.684V5.315H0v-3.31h15.322v3.31z"/><path d="M23.957 11.79H19.92V22h-3.402V11.79H12.48V9.137h11.477v2.653z"/></svg>
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="code" data-command="insertCodeBlock" title="Code">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.121 6l-6 6 6 6-2.12 2.121-7.061-7.06a1.5 1.5 0 010-2.121L8 3.879 10.121 6zM23.06 10.94a1.5 1.5 0 010 2.12L16 20.121 13.88 18l6-6-6-6L16 3.879l7.06 7.06z"/></svg>
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="unordered-list" data-command="insertUnorderedList" title="Bullet list">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5 5a2 2 0 11-4 0 2 2 0 014 0zM5 12a2 2 0 11-4 0 2 2 0 014 0zM5 19a2 2 0 11-4 0 2 2 0 014 0zM7 5.25C7 4.56 7.56 4 8.25 4h13.5a1.25 1.25 0 110 2.5H8.25C7.56 6.5 7 5.94 7 5.25zM7 12.25c0-.69.56-1.25 1.25-1.25h13.5a1.25 1.25 0 110 2.5H8.25c-.69 0-1.25-.56-1.25-1.25zM7 19.25c0-.69.56-1.25 1.25-1.25h13.5a1.25 1.25 0 110 2.5H8.25c-.69 0-1.25-.56-1.25-1.25z"/></svg>
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="ordered-list" data-command="insertOrderedList" title="Numbered list">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 5.25C7 4.56 7.56 4 8.25 4h13.5a1.25 1.25 0 110 2.5H8.25C7.56 6.5 7 5.94 7 5.25zM7 12.25c0-.69.56-1.25 1.25-1.25h13.5a1.25 1.25 0 110 2.5H8.25c-.69 0-1.25-.56-1.25-1.25zM7 19.25c0-.69.56-1.25 1.25-1.25h13.5a1.25 1.25 0 110 2.5H8.25c-.69 0-1.25-.56-1.25-1.25zM4.438 8H3.39V3.684H3.34c-.133.093-.267.188-.402.285l-.407.289a129.5 129.5 0 00-.402.285v-.969l.633-.453c.21-.15.42-.302.629-.453h1.046V8zM2.672 11.258h-1v-.051c0-.206.036-.405.11-.598.075-.195.188-.37.34-.527.15-.156.339-.281.566-.375.229-.094.498-.14.808-.14.367 0 .688.065.961.195s.484.308.633.535c.15.224.226.478.226.762 0 .244-.046.463-.14.656-.091.19-.209.368-.352.535-.14.164-.289.332-.445.504L3.168 14.09v.05h2.238V15H1.723v-.656l1.949-2.102c.096-.101.19-.207.281-.316.091-.112.167-.232.227-.36a.953.953 0 00.09-.41.712.712 0 00-.387-.648.845.845 0 00-.41-.098.81.81 0 00-.43.11.75.75 0 00-.277.293.824.824 0 00-.094.386V11.258zM2.852 19.66v-.812h.562a.917.917 0 00.43-.098.742.742 0 00.293-.266.673.673 0 00.101-.379.654.654 0 00-.234-.523.87.87 0 00-.59-.2.987.987 0 00-.336.055.837.837 0 00-.258.149.712.712 0 00-.172.215.66.66 0 00-.066.25h-.98c.007-.209.053-.403.136-.582.084-.18.203-.336.36-.469.156-.135.346-.24.57-.316.227-.076.486-.115.777-.118a2.33 2.33 0 01.965.176c.271.12.48.285.63.496.15.209.227.448.23.719a1.11 1.11 0 01-.16.637 1.28 1.28 0 01-.825.586v.054c.162.016.33.07.504.164.177.094.328.232.453.415.125.18.189.411.192.695a1.37 1.37 0 01-.157.676c-.104.197-.25.365-.437.503-.188.136-.404.24-.649.313-.242.07-.5.105-.777.105-.401 0-.743-.067-1.027-.203a1.608 1.608 0 01-.649-.547 1.46 1.46 0 01-.238-.75h.969c.01.128.057.243.14.344a.885.885 0 00.332.238c.141.058.3.088.477.09.195 0 .366-.034.512-.101a.798.798 0 00.336-.29.744.744 0 00.117-.425.74.74 0 00-.446-.695 1.082 1.082 0 00-.496-.106h-.59z"/></svg>
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="upload" data-command="uploadAttachments" title="Upload file">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 8a2 2 0 110 4 2 2 0 010-4z""/><path d="M22 2a1 1 0 011 1v18a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1h20zM3 18.714L9 11l5.25 6.75L17 15l4 4V4H3v14.714z"/></svg>
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="table" data-command="insertTable" title="Insert a table">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.2041 2.01074C21.2128 2.113 22 2.96435 22 4V20L21.9893 20.2041C21.8938 21.1457 21.1457 21.8938 20.2041 21.9893L20 22H4C2.96435 22 2.113 21.2128 2.01074 20.2041L2 20V4C2 2.89543 2.89543 2 4 2H20L20.2041 2.01074ZM4 13V20H11V13H4ZM13 13V20H20V13H13ZM4 11H11V4H4V11ZM13 11H20V4H13V11Z"/></svg>
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 12C0 11.4477 0.447715 11 1 11H23C23.5523 11 24 11.4477 24 12C24 12.5523 23.5523 13 23 13H1C0.447716 13 0 12.5523 0 12Z"/><path d="M4 5C4 3.89543 4.89543 3 6 3H18C19.1046 3 20 3.89543 20 5C20 6.10457 19.1046 7 18 7H6C4.89543 7 4 6.10457 4 5Z"/><path d="M4 19C4 17.8954 4.89543 17 6 17H18C19.1046 17 20 17.8954 20 19C20 20.1046 19.1046 21 18 21H6C4.89543 21 4 20.1046 4 19Z"/></svg>
-      </button>
- 
-      <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
- 
-      <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M5.64648 8.26531C7.93911 6.56386 10.7827 5.77629 13.624 6.05535C16.4655 6.33452 19.1018 7.66079 21.0195 9.77605C22.5839 11.5016 23.5799 13.6516 23.8936 15.9352C24.0115 16.7939 23.2974 17.4997 22.4307 17.4997C21.5641 17.4997 20.8766 16.7915 20.7148 15.9401C20.4295 14.4379 19.7348 13.0321 18.6943 11.8844C17.3 10.3464 15.3835 9.38139 13.3174 9.17839C11.2514 8.97546 9.18359 9.54856 7.5166 10.7858C6.38259 11.6275 5.48981 12.7361 4.90723 13.9997H8.5C9.3283 13.9997 9.99979 14.6714 10 15.4997C10 16.3281 9.32843 16.9997 8.5 16.9997H1.5C0.671573 16.9997 0 16.3281 0 15.4997V8.49968C0.000213656 7.67144 0.671705 6.99968 1.5 6.99968C2.3283 6.99968 2.99979 7.67144 3 8.49968V11.0212C3.7166 9.9704 4.60793 9.03613 5.64648 8.26531Z"/></svg>
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.2599 8.26531C15.9672 6.56386 13.1237 5.77629 10.2823 6.05535C7.4408 6.33452 4.80455 7.66079 2.88681 9.77605C1.32245 11.5016 0.326407 13.6516 0.0127834 15.9352C-0.105117 16.7939 0.608975 17.4997 1.47567 17.4997C2.34228 17.4997 3.02969 16.7915 3.19149 15.9401C3.47682 14.4379 4.17156 13.0321 5.212 11.8844C6.60637 10.3464 8.52287 9.38139 10.589 9.17839C12.655 8.97546 14.7227 9.54856 16.3897 10.7858C17.5237 11.6275 18.4165 12.7361 18.9991 13.9997H15.4063C14.578 13.9997 13.9066 14.6714 13.9063 15.4997C13.9063 16.3281 14.5779 16.9997 15.4063 16.9997H22.4063C23.2348 16.9997 23.9063 16.3281 23.9063 15.4997V8.49968C23.9061 7.67144 23.2346 6.99968 22.4063 6.99968C21.578 6.99968 20.9066 7.67144 20.9063 8.49968V11.0212C20.1897 9.9704 19.2984 9.03613 18.2599 8.26531Z"/></svg>
-      </button>
-
-      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-overflow" name="lexxy-dropdown">
-        <summary class="lexxy-editor__toolbar-button" aria-label="Show more toolbar buttons">•••</summary>
-        <div class="lexxy-editor__toolbar-dropdown-content lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons"></div>
-      </details>
-    `
-  }
-}
-
-/**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
-const L$1="undefined"!=typeof window&&void 0!==window.document&&void 0!==window.document.createElement,S$1=L$1&&"documentMode"in document?document.documentMode:null,W$2=L$1&&/Mac|iPod|iPhone|iPad/.test(navigator.platform),B$1=!(!L$1||!("InputEvent"in window)||S$1)&&"getTargetRanges"in new window.InputEvent("input"),I$1=L$1&&/Version\/[\d.]+.*Safari/.test(navigator.userAgent),R=L$1&&/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream,V$2=L$1&&/^(?=.*Chrome).*/i.test(navigator.userAgent),j$1=L$1&&/AppleWebKit\/[\d.]+/.test(navigator.userAgent)&&W$2&&!V$2;function q$1(e,n){n.update(()=>{if(null!==e){const r=Lt$4(e,KeyboardEvent)?null:e.clipboardData,o=Lr();if(null!==o&&!o.isCollapsed()&&null!=r){e.preventDefault();const i=D$2(n);null!==i&&r.setData("text/html",i),r.setData("text/plain",o.getTextContent());}}});}function z$2(t){return U$4(t.registerCommand(le$2,e=>{const t=Lr();return !!yr(t)&&(t.deleteCharacter(e),true)},Ki),t.registerCommand(he$1,e=>{const t=Lr();return !!yr(t)&&(t.deleteWord(e),true)},Ki),t.registerCommand(ge$1,e=>{const t=Lr();return !!yr(t)&&(t.deleteLine(e),true)},Ki),t.registerCommand(ue$1,t=>{const n=Lr();if(!yr(n))return  false;if("string"==typeof t)n.insertText(t);else {const r=t.dataTransfer;if(null!=r)N$2(r,n);else {const e=t.data;e&&n.insertText(e);}}return  true},Ki),t.registerCommand(de$1,()=>{const e=Lr();return !!yr(e)&&(e.removeText(),true)},Ki),t.registerCommand(ce$1,e=>{const t=Lr();return !!yr(t)&&(t.insertLineBreak(e),true)},Ki),t.registerCommand(ae$1,()=>{const e=Lr();return !!yr(e)&&(e.insertLineBreak(),true)},Ki),t.registerCommand(Se$1,e=>{const t=Lr();if(!yr(t))return  false;const n=e,i=n.shiftKey;return !!Z$3(t,true)&&(n.preventDefault(),ne(t,i,true),true)},Ki),t.registerCommand(xe$1,e=>{const t=Lr();if(!yr(t))return  false;const n=e,i=n.shiftKey;return !!Z$3(t,false)&&(n.preventDefault(),ne(t,i,false),true)},Ki),t.registerCommand(we$1,e=>{const n=Lr();return !!yr(n)&&((!R||"ko-KR"!==navigator.language)&&(e.preventDefault(),t.dispatchCommand(le$2,true)))},Ki),t.registerCommand(Oe$2,e=>{const n=Lr();return !!yr(n)&&(e.preventDefault(),t.dispatchCommand(le$2,false))},Ki),t.registerCommand(Ne$2,e=>{const n=Lr();if(!yr(n))return  false;if(null!==e){if((R||I$1||j$1)&&B$1)return  false;e.preventDefault();}return t.dispatchCommand(ce$1,false)},Ki),t.registerCommand(We$2,()=>(jo(),true),Ki),t.registerCommand(Re$2,e=>{const n=Lr();return !!yr(n)&&(q$1(e,t),true)},Ki),t.registerCommand(Be$2,e=>{const n=Lr();return !!yr(n)&&(function(e,t){q$1(e,t),t.update(()=>{const e=Lr();yr(e)&&e.removeText();});}(e,t),true)},Ki),t.registerCommand(fe$1,n=>{const r=Lr();return !!yr(r)&&(function(t,n){t.preventDefault(),n.update(()=>{const n=Lr(),r=Lt$4(t,ClipboardEvent)?t.clipboardData:null;null!=r&&yr(n)&&N$2(r,n);},{tag:Fn});}(n,t),true)},Ki),t.registerCommand(Fe$2,e=>{const t=Lr();return !!yr(t)&&(e.preventDefault(),true)},Ki),t.registerCommand(Ie$2,e=>{const t=Lr();return !!yr(t)&&(e.preventDefault(),true)},Ki))}
-
-/**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- *
- */
-
-function z$1(t,e){const n={};for(const o of t){const t=e(o);t&&(n[t]?n[t].push(o):n[t]=[o]);}return n}function U$1(t){const e=z$1(t,t=>t.type);return {element:e.element||[],multilineElement:e["multiline-element"]||[],textFormat:e["text-format"]||[],textMatch:e["text-match"]||[]}}const W$1=/[!-/:-@[-`{-~\s]/;function V$1(t){return lr(t)&&!t.hasFormat("code")}function et(t,...e){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",t);for(const t of e)o.append("v",t);throw n.search=o.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const nt=/^(\s*)(\d{1,})\.\s/,ot=/^(\s*)[-*+]\s/,it=/^(#{1,6})\s/,st=/^>\s/,lt=/^[ \t]*```([\w-]+)?/,ct=/[ \t]*```$/,mt=ot$5("mdListMarker",{parse:t=>"string"==typeof t&&/^[-*+]$/.test(t)?t:"-"}),ht=t=>(e,n,o,r)=>{const i=t(o);i.append(...n),e.replace(i),r||i.select(0,0);};const xt=t=>(e,n,o,r)=>{const i=e.getPreviousSibling(),s=e.getNextSibling(),l=st$2("check"===t?"x"===o[3]:void 0),c=o[0].trim()[0],f="bullet"!==t&&"check"!==t||c!==mt.parse(c)?void 0:c;if(dt$2(s)&&s.getListType()===t){f&&ct$5(s,mt,f);const t=s.getFirstChild();null!==t?t.insertBefore(l):s.append(l),e.remove();}else if(dt$2(i)&&i.getListType()===t)f&&ct$5(i,mt,f),i.append(l),e.remove();else {const n=ht$3(t,"number"===t?Number(o[2]):void 0);f&&ct$5(n,mt,f),n.append(l),e.replace(n);}l.append(...n),r||l.select(0,0);const a=function(t){const e=t.match(/\t/g),n=t.match(/ /g);let o=0;return e&&(o+=e.length),n&&(o+=Math.floor(n.length/4)),o}(o[1]);a&&l.setIndent(a);},Tt=(t,e,n)=>{const o=[],r=t.getChildren();let i=0;for(const s of r)if(ot$3(s)){if(1===s.getChildrenSize()){const t=s.getFirstChild();if(dt$2(t)){o.push(Tt(t,e,n+1));continue}}const r=" ".repeat(4*n),l=t.getListType(),c=st$4(t,mt),f="number"===l?`${t.getStart()+i}. `:"check"===l?`${c} [${s.getChecked()?"x":" "}] `:c+" ";o.push(r+f+e(s)),i++;}return o.join("\n")},Et={dependencies:[Pt$3],export:(t,e)=>{if(!It$2(t))return null;const n=Number(t.getTag().slice(1));return "#".repeat(n)+" "+e(t)},regExp:it,replace:ht(t=>{const e="h"+t[1].length;return St$3(e)}),type:"element"},Ct={dependencies:[Et$3],export:(t,e)=>{if(!Ot$2(t))return null;const n=e(t).split("\n"),o=[];for(const t of n)o.push("> "+t);return o.join("\n")},regExp:st,replace:(t,e,n,o)=>{if(o){const n=t.getPreviousSibling();if(Ot$2(n))return n.splice(n.getChildrenSize(),0,[Jn(),...e]),void t.remove()}const r=_t$2();r.append(...e),t.replace(r),o||r.select(0,0);},type:"element"},yt={dependencies:[q$2],export:t=>{if(!X$1(t))return null;const e=t.getTextContent();return "```"+(t.getLanguage()||"")+(e?"\n"+e:"")+"\n```"},regExpEnd:{optional:true,regExp:ct},regExpStart:lt,replace:(t,e,n,o,r,i)=>{let s,c;if(!e&&r){if(1===r.length)o?(s=U$2(),c=n[1]+r[0]):(s=U$2(n[1]),c=r[0].startsWith(" ")?r[0].slice(1):r[0]);else {if(s=U$2(n[1]),0===r[0].trim().length)for(;r.length>0&&!r[0].length;)r.shift();else r[0]=r[0].startsWith(" ")?r[0].slice(1):r[0];for(;r.length>0&&!r[r.length-1].length;)r.pop();c=r.join("\n");}const e=sr(c);s.append(e),t.append(s);}else e&&ht(t=>U$2(t?t[1]:void 0))(t,e,n,i);},type:"multiline-element"},$t={dependencies:[lt$3,nt$2],export:(t,e)=>dt$2(t)?Tt(t,e,0):null,regExp:ot,replace:xt("bullet"),type:"element"},St={dependencies:[lt$3,nt$2],export:(t,e)=>dt$2(t)?Tt(t,e,0):null,regExp:nt,replace:xt("number"),type:"element"},bt={format:["code"],tag:"`",type:"text-format"},Ft={format:["highlight"],tag:"==",type:"text-format"},It={format:["bold","italic"],tag:"***",type:"text-format"},wt={format:["bold","italic"],intraword:false,tag:"___",type:"text-format"},Nt={format:["bold"],tag:"**",type:"text-format"},kt={format:["bold"],intraword:false,tag:"__",type:"text-format"},Rt={format:["strikethrough"],tag:"~~",type:"text-format"},Lt={format:["italic"],tag:"*",type:"text-format"},_t={format:["italic"],intraword:false,tag:"_",type:"text-format"},Pt={dependencies:[y$1],export:(t,e,n)=>{if(!w$2(t)||E$2(t))return null;const o=t.getTitle(),r=e(t);return o?`[${r}](${t.getURL()} "${o}")`:`[${r}](${t.getURL()})`},importRegExp:/(?:\[(.+?)\])(?:\((?:([^()\s]+)(?:\s"((?:[^"]*\\")*[^"]*)"\s*)?)\))/,regExp:/(?:\[(.+?)\])(?:\((?:([^()\s]+)(?:\s"((?:[^"]*\\")*[^"]*)"\s*)?)\))$/,replace:(t,e)=>{const[,n,o,r]=e,i=D$1(o,{title:r}),s=n.split("[").length-1,c=n.split("]").length-1;let f=n,a="";if(s<c)return;if(s>c){const t=n.split("[");a="["+t[0],f=t.slice(1).join("[");}const u=sr(f);return u.setFormat(t.getFormat()),i.append(u),t.replace(i),a&&i.insertBefore(sr(a)),u},trigger:")",type:"text-match"},Bt=[Et,Ct,$t,St],Mt=[yt],jt=[bt,It,wt,Nt,kt,Ft,Lt,_t,Rt],At=[Pt],zt=[...Bt,...Mt,...jt,...At];function Ut(t,e,n){const o=n.length;for(let r=e;r>=o;r--){const e=r-o;if(Wt(t,e,n,0,o)&&" "!==t[e+o])return e}return  -1}function Wt(t,e,n,o,r){for(let i=0;i<r;i++)if(t[e+i]!==n[o+i])return  false;return  true}function Dt(t,n=zt){const o=U$1(n),r=z$1(o.textFormat,({tag:t})=>t[t.length-1]),l=z$1(o.textMatch,({trigger:t})=>t);for(const e of n){const n=e.type;if("element"===n||"text-match"===n||"multiline-element"===n){const n=e.dependencies;for(const e of n)t.hasNode(e)||et(173,e.getType());}}const c=(t,n,c)=>{(function(t,e,n,o){const r=t.getParent();if(!as(r)||t.getFirstChild()!==e)return  false;const i=e.getTextContent();if(" "!==i[n-1])return  false;for(const{regExp:r,replace:s}of o){const o=i.match(r);if(o&&o[0].length===(o[0].endsWith(" ")?n:n-1)){const r=e.getNextSiblings(),[i,l]=e.splitText(n);if(false!==s(t,l?[l,...r]:r,o,false))return i.remove(),true}}return  false})(t,n,c,o.element)||function(t,e,n,o){const r=t.getParent();if(!as(r)||t.getFirstChild()!==e)return  false;const i=e.getTextContent();if(" "!==i[n-1])return  false;for(const{regExpStart:r,replace:s,regExpEnd:l}of o){if(l&&!("optional"in l)||l&&"optional"in l&&!l.optional)continue;const o=i.match(r);if(o&&o[0].length===(o[0].endsWith(" ")?n:n-1)){const r=e.getNextSiblings(),[i,l]=e.splitText(n);if(false!==s(t,l?[l,...r]:r,o,null,null,false))return i.remove(),true}}return  false}(t,n,c,o.multilineElement)||function(t,e,n){let o=t.getTextContent();const r=n[o[e-1]];if(null==r)return  false;e<o.length&&(o=o.slice(0,e));for(const e of r){if(!e.replace||!e.regExp)continue;const n=o.match(e.regExp);if(null===n)continue;const r=n.index||0,i=r+n[0].length;let s;return 0===r?[s]=t.splitText(i):[,s]=t.splitText(r,i),s.selectNext(0,0),e.replace(s,n),true}return  false}(n,c,l)||function(t,n,o){const r=t.getTextContent(),l=n-1,c=r[l],f=o[c];if(!f)return  false;for(const n of f){const{tag:o}=n,f=o.length,a=l-f+1;if(f>1&&!Wt(r,a,o,0,f))continue;if(" "===r[a-1])continue;const u=r[l+1];if(false===n.intraword&&u&&!W$1.test(u))continue;const g=t;let p=g,d=Ut(r,a,o),h=p;for(;d<0&&(h=h.getPreviousSibling())&&!jn(h);)if(lr(h)){if(h.hasFormat("code"))continue;const t=h.getTextContent();p=h,d=Ut(t,t.length,o);}if(d<0)continue;if(p===g&&d+f===a)continue;const E=p.getTextContent();if(d>0&&E[d-1]===c)continue;const C=E[d-1];if(false===n.intraword&&C&&!W$1.test(C))continue;const y=g.getTextContent(),$=y.slice(0,a)+y.slice(l+1);g.setTextContent($);const v=p===g?$:E;p.setTextContent(v.slice(0,d)+v.slice(d+f));const S=Lr(),b=Ar();wo(b);const F=l-f*(p===g?2:1)+1;b.anchor.set(p.__key,d,"text"),b.focus.set(g.__key,F,"text");for(const t of n.format)b.hasFormat(t)||b.formatText(t);b.anchor.set(b.focus.key,b.focus.offset,b.focus.type);for(const t of n.format)b.hasFormat(t)&&b.toggleFormat(t);return yr(S)&&(b.format=S.format),true}}(n,c,r);};return t.registerUpdateListener(({tags:n,dirtyLeaves:o,editorState:r,prevEditorState:i})=>{if(n.has(Ln)||n.has(An))return;if(t.isComposing())return;const l=r.read(Lr),f=i.read(Lr);if(!yr(f)||!yr(l)||!l.isCollapsed()||l.is(f))return;const a=l.anchor.key,u=l.anchor.offset,g=r._nodeMap.get(a);!lr(g)||!o.has(a)||1!==u&&u>f.anchor.offset+1||t.update(()=>{if(!V$1(g))return;const t=g.getParent();null===t||X$1(t)||c(t,g,l.anchor.offset);});})}
+function z$1(t,e){const n={};for(const o of t){const t=e(o);t&&(n[t]?n[t].push(o):n[t]=[o]);}return n}function U$1(t){const e=z$1(t,t=>t.type);return {element:e.element||[],multilineElement:e["multiline-element"]||[],textFormat:e["text-format"]||[],textMatch:e["text-match"]||[]}}const W$1=/[!-/:-@[-`{-~\s]/;function V$1(t){return lr(t)&&!t.hasFormat("code")}function et(t,...e){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",t);for(const t of e)o.append("v",t);throw n.search=o.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const nt=/^(\s*)(\d{1,})\.\s/,ot$1=/^(\s*)[-*+]\s/,it$1=/^(#{1,6})\s/,st=/^>\s/,lt$1=/^[ \t]*```([\w-]+)?/,ct$1=/[ \t]*```$/,mt$1=ot$5("mdListMarker",{parse:t=>"string"==typeof t&&/^[-*+]$/.test(t)?t:"-"}),ht=t=>(e,n,o,r)=>{const i=t(o);i.append(...n),e.replace(i),r||i.select(0,0);};const xt$1=t=>(e,n,o,r)=>{const i=e.getPreviousSibling(),s=e.getNextSibling(),l=st$2("check"===t?"x"===o[3]:void 0),c=o[0].trim()[0],f="bullet"!==t&&"check"!==t||c!==mt$1.parse(c)?void 0:c;if(dt$2(s)&&s.getListType()===t){f&&ct$5(s,mt$1,f);const t=s.getFirstChild();null!==t?t.insertBefore(l):s.append(l),e.remove();}else if(dt$2(i)&&i.getListType()===t)f&&ct$5(i,mt$1,f),i.append(l),e.remove();else {const n=ht$3(t,"number"===t?Number(o[2]):void 0);f&&ct$5(n,mt$1,f),n.append(l),e.replace(n);}l.append(...n),r||l.select(0,0);const a=function(t){const e=t.match(/\t/g),n=t.match(/ /g);let o=0;return e&&(o+=e.length),n&&(o+=Math.floor(n.length/4)),o}(o[1]);a&&l.setIndent(a);},Tt$1=(t,e,n)=>{const o=[],r=t.getChildren();let i=0;for(const s of r)if(ot$3(s)){if(1===s.getChildrenSize()){const t=s.getFirstChild();if(dt$2(t)){o.push(Tt$1(t,e,n+1));continue}}const r=" ".repeat(4*n),l=t.getListType(),c=st$4(t,mt$1),f="number"===l?`${t.getStart()+i}. `:"check"===l?`${c} [${s.getChecked()?"x":" "}] `:c+" ";o.push(r+f+e(s)),i++;}return o.join("\n")},Et$1={dependencies:[Pt$3],export:(t,e)=>{if(!It$2(t))return null;const n=Number(t.getTag().slice(1));return "#".repeat(n)+" "+e(t)},regExp:it$1,replace:ht(t=>{const e="h"+t[1].length;return St$3(e)}),type:"element"},Ct$1={dependencies:[Et$3],export:(t,e)=>{if(!Ot$2(t))return null;const n=e(t).split("\n"),o=[];for(const t of n)o.push("> "+t);return o.join("\n")},regExp:st,replace:(t,e,n,o)=>{if(o){const n=t.getPreviousSibling();if(Ot$2(n))return n.splice(n.getChildrenSize(),0,[Jn(),...e]),void t.remove()}const r=_t$2();r.append(...e),t.replace(r),o||r.select(0,0);},type:"element"},yt$1={dependencies:[q$1],export:t=>{if(!X$1(t))return null;const e=t.getTextContent();return "```"+(t.getLanguage()||"")+(e?"\n"+e:"")+"\n```"},regExpEnd:{optional:true,regExp:ct$1},regExpStart:lt$1,replace:(t,e,n,o,r,i)=>{let s,c;if(!e&&r){if(1===r.length)o?(s=U$2(),c=n[1]+r[0]):(s=U$2(n[1]),c=r[0].startsWith(" ")?r[0].slice(1):r[0]);else {if(s=U$2(n[1]),0===r[0].trim().length)for(;r.length>0&&!r[0].length;)r.shift();else r[0]=r[0].startsWith(" ")?r[0].slice(1):r[0];for(;r.length>0&&!r[r.length-1].length;)r.pop();c=r.join("\n");}const e=sr(c);s.append(e),t.append(s);}else e&&ht(t=>U$2(t?t[1]:void 0))(t,e,n,i);},type:"multiline-element"},$t$1={dependencies:[lt$3,nt$2],export:(t,e)=>dt$2(t)?Tt$1(t,e,0):null,regExp:ot$1,replace:xt$1("bullet"),type:"element"},St$1={dependencies:[lt$3,nt$2],export:(t,e)=>dt$2(t)?Tt$1(t,e,0):null,regExp:nt,replace:xt$1("number"),type:"element"},bt$1={format:["code"],tag:"`",type:"text-format"},Ft$1={format:["highlight"],tag:"==",type:"text-format"},It$1={format:["bold","italic"],tag:"***",type:"text-format"},wt$1={format:["bold","italic"],intraword:false,tag:"___",type:"text-format"},Nt$1={format:["bold"],tag:"**",type:"text-format"},kt$1={format:["bold"],intraword:false,tag:"__",type:"text-format"},Rt$1={format:["strikethrough"],tag:"~~",type:"text-format"},Lt$1={format:["italic"],tag:"*",type:"text-format"},_t$1={format:["italic"],intraword:false,tag:"_",type:"text-format"},Pt$1={dependencies:[y$2],export:(t,e,n)=>{if(!w$3(t)||E$3(t))return null;const o=t.getTitle(),r=e(t);return o?`[${r}](${t.getURL()} "${o}")`:`[${r}](${t.getURL()})`},importRegExp:/(?:\[(.+?)\])(?:\((?:([^()\s]+)(?:\s"((?:[^"]*\\")*[^"]*)"\s*)?)\))/,regExp:/(?:\[(.+?)\])(?:\((?:([^()\s]+)(?:\s"((?:[^"]*\\")*[^"]*)"\s*)?)\))$/,replace:(t,e)=>{const[,n,o,r]=e,i=D$2(o,{title:r}),s=n.split("[").length-1,c=n.split("]").length-1;let f=n,a="";if(s<c)return;if(s>c){const t=n.split("[");a="["+t[0],f=t.slice(1).join("[");}const u=sr(f);return u.setFormat(t.getFormat()),i.append(u),t.replace(i),a&&i.insertBefore(sr(a)),u},trigger:")",type:"text-match"},Bt$1=[Et$1,Ct$1,$t$1,St$1],Mt$1=[yt$1],jt$1=[bt$1,It$1,wt$1,Nt$1,kt$1,Ft$1,Lt$1,_t$1,Rt$1],At$1=[Pt$1],zt$1=[...Bt$1,...Mt$1,...jt$1,...At$1];function Ut$1(t,e,n){const o=n.length;for(let r=e;r>=o;r--){const e=r-o;if(Wt$1(t,e,n,0,o)&&" "!==t[e+o])return e}return  -1}function Wt$1(t,e,n,o,r){for(let i=0;i<r;i++)if(t[e+i]!==n[o+i])return  false;return  true}function Dt$1(t,n=zt$1){const o=U$1(n),r=z$1(o.textFormat,({tag:t})=>t[t.length-1]),l=z$1(o.textMatch,({trigger:t})=>t);for(const e of n){const n=e.type;if("element"===n||"text-match"===n||"multiline-element"===n){const n=e.dependencies;for(const e of n)t.hasNode(e)||et(173,e.getType());}}const c=(t,n,c)=>{(function(t,e,n,o){const r=t.getParent();if(!as(r)||t.getFirstChild()!==e)return  false;const i=e.getTextContent();if(" "!==i[n-1])return  false;for(const{regExp:r,replace:s}of o){const o=i.match(r);if(o&&o[0].length===(o[0].endsWith(" ")?n:n-1)){const r=e.getNextSiblings(),[i,l]=e.splitText(n);if(false!==s(t,l?[l,...r]:r,o,false))return i.remove(),true}}return  false})(t,n,c,o.element)||function(t,e,n,o){const r=t.getParent();if(!as(r)||t.getFirstChild()!==e)return  false;const i=e.getTextContent();if(" "!==i[n-1])return  false;for(const{regExpStart:r,replace:s,regExpEnd:l}of o){if(l&&!("optional"in l)||l&&"optional"in l&&!l.optional)continue;const o=i.match(r);if(o&&o[0].length===(o[0].endsWith(" ")?n:n-1)){const r=e.getNextSiblings(),[i,l]=e.splitText(n);if(false!==s(t,l?[l,...r]:r,o,null,null,false))return i.remove(),true}}return  false}(t,n,c,o.multilineElement)||function(t,e,n){let o=t.getTextContent();const r=n[o[e-1]];if(null==r)return  false;e<o.length&&(o=o.slice(0,e));for(const e of r){if(!e.replace||!e.regExp)continue;const n=o.match(e.regExp);if(null===n)continue;const r=n.index||0,i=r+n[0].length;let s;return 0===r?[s]=t.splitText(i):[,s]=t.splitText(r,i),s.selectNext(0,0),e.replace(s,n),true}return  false}(n,c,l)||function(t,n,o){const r=t.getTextContent(),l=n-1,c=r[l],f=o[c];if(!f)return  false;for(const n of f){const{tag:o}=n,f=o.length,a=l-f+1;if(f>1&&!Wt$1(r,a,o,0,f))continue;if(" "===r[a-1])continue;const u=r[l+1];if(false===n.intraword&&u&&!W$1.test(u))continue;const g=t;let p=g,d=Ut$1(r,a,o),h=p;for(;d<0&&(h=h.getPreviousSibling())&&!jn(h);)if(lr(h)){if(h.hasFormat("code"))continue;const t=h.getTextContent();p=h,d=Ut$1(t,t.length,o);}if(d<0)continue;if(p===g&&d+f===a)continue;const E=p.getTextContent();if(d>0&&E[d-1]===c)continue;const C=E[d-1];if(false===n.intraword&&C&&!W$1.test(C))continue;const y=g.getTextContent(),$=y.slice(0,a)+y.slice(l+1);g.setTextContent($);const v=p===g?$:E;p.setTextContent(v.slice(0,d)+v.slice(d+f));const S=Lr(),b=Ar();wo(b);const F=l-f*(p===g?2:1)+1;b.anchor.set(p.__key,d,"text"),b.focus.set(g.__key,F,"text");for(const t of n.format)b.hasFormat(t)||b.formatText(t);b.anchor.set(b.focus.key,b.focus.offset,b.focus.type);for(const t of n.format)b.hasFormat(t)&&b.toggleFormat(t);return yr(S)&&(b.format=S.format),true}}(n,c,r);};return t.registerUpdateListener(({tags:n,dirtyLeaves:o,editorState:r,prevEditorState:i})=>{if(n.has(Ln)||n.has(An))return;if(t.isComposing())return;const l=r.read(Lr),f=i.read(Lr);if(!yr(f)||!yr(l)||!l.isCollapsed()||l.is(f))return;const a=l.anchor.key,u=l.anchor.offset,g=r._nodeMap.get(a);!lr(g)||!o.has(a)||1!==u&&u>f.anchor.offset+1||t.update(()=>{if(!V$1(g))return;const t=g.getParent();null===t||X$1(t)||c(t,g,l.anchor.offset);});})}
 
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
@@ -8185,7 +7441,7 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   async #startUploadIfNeeded() {
     if (this.#uploadStarted) return
-    if (!this.uploadUrl) return  // Bridge-managed upload — skip DirectUpload
+    if (!this.uploadUrl) return // Bridge-managed upload — skip DirectUpload
 
     this.#setUploadStarted();
 
@@ -8375,6 +7631,24 @@ function isSelectionHighlighted(selection) {
   } else {
     return selection.hasFormat("highlight")
   }
+}
+
+function getHighlightStyles(selection) {
+  if (!yr(selection)) return null
+
+  let styles = b$3(selection.style);
+  if (!styles.color && !styles["background-color"]) {
+    const anchorNode = selection.anchor.getNode();
+    if (lr(anchorNode)) {
+      styles = b$3(anchorNode.getStyle());
+    }
+  }
+
+  const color = styles.color || null;
+  const backgroundColor = styles["background-color"] || null;
+  if (!color && !backgroundColor) return null
+
+  return { color, backgroundColor }
 }
 
 function hasHighlightStyles(cssOrStyles) {
@@ -9037,7 +8311,7 @@ class Selection {
 
       let node = selection.anchor.getNode();
       while (node) {
-        if (w$2(node)) {
+        if (w$3(node)) {
           const firstDescendant = node.getFirstDescendant();
           const lastDescendant = node.getLastDescendant();
           if (firstDescendant && lastDescendant) {
@@ -9091,7 +8365,7 @@ class Selection {
   }
 
   get isInsideList() {
-    return this.nearestNodeOfType(nt$2)
+    return this.nearestNodeOfType(ListItemNode)
   }
 
   get isIndentedList() {
@@ -10421,6 +9695,10 @@ class Contents {
     });
   }
 
+  get #selection() {
+    return this.editorElement.selection
+  }
+
   #insertLineBelowIfLastNode(node) {
     this.editor.update(() => {
       const nextSibling = node.getNextSibling();
@@ -10615,6 +9893,45 @@ class Contents {
 
   #removeNodes(nodesToDelete) {
     nodesToDelete.forEach((node) => node.remove());
+  }
+
+  #deleteNodes(nodes) {
+    // Use splice() instead of node.remove() for proper removal and
+    // reconciliation. Would have issues with removing unintended decorator nodes
+    // with node.remove()
+    nodes.forEach((node) => {
+      const parent = node.getParent();
+      if (!Si(parent)) return
+
+      const children = parent.getChildren();
+      const index = children.indexOf(node);
+
+      if (index >= 0) {
+        parent.splice(index, 1, []);
+      }
+    });
+  }
+
+  #findAdjacentNodeTo(nodes) {
+    const firstNode = nodes[0];
+    const lastNode = nodes[nodes.length - 1];
+
+    return firstNode?.getPreviousSibling() || lastNode?.getNextSibling()
+  }
+
+  #selectAfterDeletion(focusNode) {
+    const root = No();
+    if (root.getChildrenSize() === 0) {
+      const newParagraph = Li();
+      root.append(newParagraph);
+      newParagraph.selectStart();
+    } else if (focusNode) {
+      if (lr(focusNode) || Ii(focusNode)) {
+        focusNode.selectEnd();
+      } else {
+        focusNode.selectNext(0, 0);
+      }
+    }
   }
 
   #collectSelectedListItems(selection) {
@@ -11028,6 +10345,97 @@ class Extensions {
   }
 }
 
+class Native {
+  constructor(editorElement) {
+    this.editorElement = editorElement;
+    this.editor = editorElement.editor;
+  }
+
+  dispatchHighlightColors() {
+    const buttons = this.editorElement.config.get("highlight.buttons");
+    if (!buttons) return
+
+    dispatch(this.editorElement, "lexxy:highlight-colors", {
+      colors: this.#resolveColors("color", buttons.color || []),
+      backgroundColors: this.#resolveColors("background-color", buttons["background-color"] || [])
+    });
+  }
+
+  #resolveColors(property, cssValues) {
+    const resolver = document.createElement("span");
+    resolver.style.display = "none";
+    this.editorElement.appendChild(resolver);
+
+    const resolved = cssValues.map(cssValue => {
+      resolver.style.setProperty(property, cssValue);
+      const value = window.getComputedStyle(resolver).getPropertyValue(property);
+      resolver.style.removeProperty(property);
+      return { name: cssValue, value }
+    });
+
+    resolver.remove();
+    return resolved
+  }
+
+  dispatchAttributesChange() {
+    let attributes = null;
+    let link = null;
+    let highlight = null;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const anchorNode = selection.anchor.getNode();
+      if (!anchorNode.getParent()) return
+
+      // Get link info
+      let inLink = false;
+      let linkHref = null;
+      let node = anchorNode;
+      while (node) {
+        if (w$3(node)) {
+          inLink = true;
+          linkHref = node.getURL();
+          break
+        }
+        node = node.getParent();
+      }
+
+      // Get block-level info
+      const topLevelElement = anchorNode.getTopLevelElementOrThrow();
+      const inQuote = Ot$2(topLevelElement);
+      const inHeading = It$2(topLevelElement);
+
+      // Get list type
+      const listType = getListType(anchorNode);
+
+      // Only include truthy attributes - false/undefined values mean "enabled but not active"
+      // iOS interprets false as "disabled", so we must omit inactive attributes
+      attributes = {};
+      if (selection.hasFormat("bold")) attributes.bold = true;
+      if (selection.hasFormat("italic")) attributes.italic = true;
+      if (selection.hasFormat("strikethrough")) attributes.strikethrough = true;
+      const inCode = X$1(topLevelElement) || selection.hasFormat("code");
+      if (inCode) attributes.code = true;
+      if (isSelectionHighlighted(selection)) {
+        attributes.highlight = true;
+        highlight = getHighlightStyles(selection);
+      }
+      if (inLink) attributes.link = true;
+      if (inQuote) attributes.quote = true;
+      if (inHeading) attributes.heading = true;
+      if (listType === "bullet") attributes["unordered-list"] = true;
+      if (listType === "number") attributes["ordered-list"] = true;
+      link = inLink && linkHref ? { href: linkHref } : null;
+    });
+
+    if (attributes) {
+      dispatch(this.editorElement, "lexxy:attributes-change", { attributes, link, highlight });
+    }
+  }
+}
+
 class ProvisionalParagraphNode extends Di {
   $config() {
     return this.config("provisonal_paragraph", {
@@ -11149,95 +10557,14 @@ function $removeUnneededProvisionalParagraphs(rootNode) {
   }
 }
 
-class Native {
-  constructor(editorElement) {
-    this.editorElement = editorElement;
-    this.editor = editorElement.editor;
+function $markAllProvisionalParagraphsDirty() {
+  for (const provisionalParagraph of $getAllProvisionalParagraphs()) {
+    provisionalParagraph.markDirty();
   }
+}
 
-  dispatchHighlightColors() {
-    const buttons = this.editorElement.config.get("highlight.buttons");
-    if (!buttons) return
-
-    dispatch(this.editorElement, "lexxy:highlight-colors", {
-      colors: this.#resolveColors("color", buttons.color || []),
-      backgroundColors: this.#resolveColors("background-color", buttons["background-color"] || [])
-    });
-  }
-
-  #resolveColors(property, cssValues) {
-    const resolver = document.createElement("span");
-    resolver.style.display = "none";
-    this.editorElement.appendChild(resolver);
-
-    const resolved = cssValues.map(cssValue => {
-      resolver.style.setProperty(property, cssValue);
-      const value = getComputedStyle(resolver).getPropertyValue(property);
-      resolver.style.removeProperty(property);
-      return { name: cssValue, value }
-    });
-
-    resolver.remove();
-    return resolved
-  }
-
-  dispatchAttributesChange() {
-    let attributes = null;
-    let link = null;
-    let highlight = null;
-
-    this.editor.getEditorState().read(() => {
-      const selection = Lr();
-      if (!yr(selection)) return
-
-      const anchorNode = selection.anchor.getNode();
-      if (!anchorNode.getParent()) return
-
-      // Get link info
-      let inLink = false;
-      let linkHref = null;
-      let node = anchorNode;
-      while (node) {
-        if (w$2(node)) {
-          inLink = true;
-          linkHref = node.getURL();
-          break
-        }
-        node = node.getParent();
-      }
-
-      // Get block-level info
-      const topLevelElement = anchorNode.getTopLevelElementOrThrow();
-      const inQuote = Ot$2(topLevelElement);
-      const inHeading = It$2(topLevelElement);
-
-      // Get list type
-      const listType = getListType(anchorNode);
-
-      // Only include truthy attributes - false/undefined values mean "enabled but not active"
-      // iOS interprets false as "disabled", so we must omit inactive attributes
-      attributes = {};
-      if (selection.hasFormat("bold")) attributes.bold = true;
-      if (selection.hasFormat("italic")) attributes.italic = true;
-      if (selection.hasFormat("strikethrough")) attributes.strikethrough = true;
-      const inCode = X$1(topLevelElement) || selection.hasFormat("code");
-      if (inCode) attributes.code = true;
-      if (isSelectionHighlighted(selection)) {
-        attributes.highlight = true;
-        highlight = getHighlightStyles(selection);
-      }
-      if (inLink) attributes.link = true;
-      if (inQuote) attributes.quote = true;
-      if (inHeading) attributes.heading = true;
-      if (listType === "bullet") attributes["unordered-list"] = true;
-      if (listType === "number") attributes["ordered-list"] = true;
-      link = inLink && linkHref ? { href: linkHref } : null;
-    });
-
-    if (attributes) {
-      dispatch(this.editorElement, "lexxy:attributes-change", { attributes, link, highlight });
-    }
-  }
+function $getAllProvisionalParagraphs(rootNode = No()) {
+  return kt$6(rootNode.getChildren(), $isProvisionalParagraphNode)
 }
 
 const TRIX_LANGUAGE_ATTR = "language";
@@ -11699,6 +11026,7 @@ class LexicalEditorElement extends HTMLElement {
     const editorContentElement = createElement("div", {
       classList: "lexxy-editor__content",
       contenteditable: true,
+      autocapitalize: "none",
       role: "textbox",
       "aria-multiline": true,
       "aria-label": this.#labelText,
@@ -12823,7 +12151,7 @@ class CodeLanguagePicker extends HTMLElement {
   }
 
   get #bridgeLanguages() {
-    return Object.entries(this.#languages).map(([key, name]) => ({ key, name }))
+    return Object.entries(this.#languages).map(([ key, name ]) => ({ key, name }))
   }
 
   #updateCodeBlockLanguage(language) {
