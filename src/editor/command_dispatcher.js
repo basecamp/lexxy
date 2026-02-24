@@ -15,7 +15,7 @@ import {
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
-import { $isCodeNode, CodeNode } from "@lexical/code"
+import { CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
@@ -149,17 +149,9 @@ export class CommandDispatcher {
   }
 
   dispatchSetCodeLanguage(language) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const anchorNode = selection.anchor.getNode()
-      const topLevelElement = anchorNode.getTopLevelElementOrThrow()
-
-      if ($isCodeNode(topLevelElement)) {
-        topLevelElement.setLanguage(language)
-      }
-    })
+    if (this.selection.isInsideCodeBlock) {
+      this.selection.nearestNodeOfType(CodeNode).setLanguage(language)
+    }
   }
 
   dispatchInsertHorizontalDivider() {

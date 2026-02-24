@@ -7979,23 +7979,15 @@ class CommandDispatcher {
       if (this.selection.hasSelectedWordsInSingleLine) {
         this.editor.dispatchCommand(_e$1, "code");
       } else {
-        this.contents.toggleNodeWrappingAllSelectedLines((node) => X$1(node), () => new q$1("plain"));
+        this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new q$1("plain"));
       }
     });
   }
 
   dispatchSetCodeLanguage(language) {
-    this.editor.update(() => {
-      const selection = Lr();
-      if (!yr(selection)) return
-
-      const anchorNode = selection.anchor.getNode();
-      const topLevelElement = anchorNode.getTopLevelElementOrThrow();
-
-      if (X$1(topLevelElement)) {
-        topLevelElement.setLanguage(language);
-      }
-    });
+    if (this.selection.isInsideCodeBlock) {
+      this.selection.nearestNodeOfType(q$1).setLanguage(language);
+    }
   }
 
   dispatchInsertHorizontalDivider() {
