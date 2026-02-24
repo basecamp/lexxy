@@ -8325,39 +8325,13 @@ class Selection {
   }
 
   #expandLinkSelection() {
-    let linkExpansion = null;
-
-    this.editor.getEditorState().read(() => {
+    this.editor.update(() => {
       const selection = Lr();
       if (!yr(selection) || !selection.isCollapsed()) return
 
-      let node = selection.anchor.getNode();
-      while (node) {
-        if (w$3(node)) {
-          const firstDescendant = node.getFirstDescendant();
-          const lastDescendant = node.getLastDescendant();
-          if (firstDescendant && lastDescendant) {
-            linkExpansion = {
-              anchorKey: firstDescendant.getKey(),
-              focusKey: lastDescendant.getKey(),
-              focusOffset: lastDescendant.getTextContent().length
-            };
-          }
-          return
-        }
-        node = node.getParent();
-      }
+      const linkNode = wt$5(selection.anchor.getNode(), y$2);
+      if (linkNode) linkNode.select(0, undefined);
     });
-
-    if (linkExpansion) {
-      this.editor.update(() => {
-        const selection = Lr();
-        if (yr(selection)) {
-          selection.anchor.set(linkExpansion.anchorKey, 0, "text");
-          selection.focus.set(linkExpansion.focusKey, linkExpansion.focusOffset, "text");
-        }
-      });
-    }
   }
 
   get hasSelectedWordsInSingleLine() {

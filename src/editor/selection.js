@@ -5,7 +5,6 @@ import {
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
-import { $isLinkNode } from "@lexical/link"
 import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
@@ -157,39 +156,13 @@ export default class Selection {
   }
 
   #expandLinkSelection() {
-    let linkExpansion = null
-
-    this.editor.getEditorState().read(() => {
+    this.editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection) || !selection.isCollapsed()) return
 
-      let node = selection.anchor.getNode()
-      while (node) {
-        if ($isLinkNode(node)) {
-          const firstDescendant = node.getFirstDescendant()
-          const lastDescendant = node.getLastDescendant()
-          if (firstDescendant && lastDescendant) {
-            linkExpansion = {
-              anchorKey: firstDescendant.getKey(),
-              focusKey: lastDescendant.getKey(),
-              focusOffset: lastDescendant.getTextContent().length
-            }
-          }
-          return
-        }
-        node = node.getParent()
-      }
+      const linkNode = $getNearestNodeOfType(selection.anchor.getNode(), LinkNode)
+      if (linkNode) linkNode.select(0, undefined)
     })
-
-    if (linkExpansion) {
-      this.editor.update(() => {
-        const selection = $getSelection()
-        if ($isRangeSelection(selection)) {
-          selection.anchor.set(linkExpansion.anchorKey, 0, "text")
-          selection.focus.set(linkExpansion.focusKey, linkExpansion.focusOffset, "text")
-        }
-      })
-    }
   }
 
   get hasSelectedWordsInSingleLine() {
