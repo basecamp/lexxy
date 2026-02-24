@@ -268,7 +268,7 @@ export default class Contents {
 
       if (selectLast && uploader.nodes?.length) {
         const lastNode = uploader.nodes.at(-1)
-        lastNode.select()
+        lastNode.selectEnd()
       }
     })
   }
