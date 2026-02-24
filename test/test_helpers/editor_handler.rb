@@ -164,9 +164,17 @@ class EditorHandler
 
     def simulate_first_interaction_if_needed
       # Adding text or selecting text will not work otherwise
-      unless @first_interaction_simulated
+      unless @first_interaction_simulated || content_element_active?
         content_element.click
         @first_interaction_simulated = true
       end
+    end
+
+    def content_element_active?
+      active_element == content_element
+    end
+
+    def active_element
+      page.evaluate_script "document.activeElement"
     end
 end
