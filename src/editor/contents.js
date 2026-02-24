@@ -1,6 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
-  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
+  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -9,10 +9,9 @@ import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
-import { $isListNode } from "@lexical/list"
-import { getNearestListItemNode } from "../helpers/lexical_helper"
-import { nextFrame } from "../helpers/timing_helpers.js"
+import { $isListNode, ListItemNode } from "@lexical/list"
 import { FormatEscaper } from "./format_escaper"
+import { $getNearestNodeOfType } from "@lexical/utils"
 
 export default class Contents {
   constructor(editorElement) {
@@ -33,20 +32,18 @@ export default class Contents {
   }
 
   insertAtCursor(node) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      const selectedNodes = selection?.getNodes()
+    const selection = $getSelection()
+    const selectedNodes = selection?.getNodes()
 
-      if ($isRangeSelection(selection)) {
-        $insertNodes([ node ])
-      } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
-        const lastNode = selectedNodes[selectedNodes.length - 1]
-        lastNode.insertAfter(node)
-      } else {
-        const root = $getRoot()
-        root.append(node)
-      }
-    })
+    if ($isRangeSelection(selection)) {
+      $insertNodes([ node ])
+    } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
+      const lastNode = selectedNodes.at(-1)
+      lastNode.insertAfter(node)
+    } else {
+      const root = $getRoot()
+      root.append(node)
+    }
   }
 
   insertAtCursorEnsuringLineBelow(node) {
@@ -384,10 +381,6 @@ export default class Contents {
     })
   }
 
-  get #selection() {
-    return this.editorElement.selection
-  }
-
   #insertLineBelowIfLastNode(node) {
     this.editor.update(() => {
       const nextSibling = node.getNextSibling()
@@ -584,52 +577,13 @@ export default class Contents {
     nodesToDelete.forEach((node) => node.remove())
   }
 
-  #deleteNodes(nodes) {
-    // Use splice() instead of node.remove() for proper removal and
-    // reconciliation. Would have issues with removing unintended decorator nodes
-    // with node.remove()
-    nodes.forEach((node) => {
-      const parent = node.getParent()
-      if (!$isElementNode(parent)) return
-
-      const children = parent.getChildren()
-      const index = children.indexOf(node)
-
-      if (index >= 0) {
-        parent.splice(index, 1, [])
-      }
-    })
-  }
-
-  #findAdjacentNodeTo(nodes) {
-    const firstNode = nodes[0]
-    const lastNode = nodes[nodes.length - 1]
-
-    return firstNode?.getPreviousSibling() || lastNode?.getNextSibling()
-  }
-
-  #selectAfterDeletion(focusNode) {
-    const root = $getRoot()
-    if (root.getChildrenSize() === 0) {
-      const newParagraph = $createParagraphNode()
-      root.append(newParagraph)
-      newParagraph.selectStart()
-    } else if (focusNode) {
-      if ($isTextNode(focusNode) || $isParagraphNode(focusNode)) {
-        focusNode.selectEnd()
-      } else {
-        focusNode.selectNext(0, 0)
-      }
-    }
-  }
-
   #collectSelectedListItems(selection) {
     const nodes = selection.getNodes()
     const listItems = new Set()
     const parentLists = new Set()
 
     for (const node of nodes) {
-      const listItem = getNearestListItemNode(node)
+      const listItem = $getNearestNodeOfType(node, ListItemNode)
       if (listItem) {
         listItems.add(listItem)
         const parentList = listItem.getParent()

@@ -380,7 +380,7 @@
     "@lexical/extension" "0.38.2"
     lexical "0.38.2"
 
-"@lexical/extension@0.38.2":
+"@lexical/extension@0.38.2", "@lexical/extension@^0.38.2":
   version "0.38.2"
   resolved "https://registry.yarnpkg.com/@lexical/extension/-/extension-0.38.2.tgz#1df5bf49f7a178b6e28708d91539c65273ffef8c"
   integrity sha512-qbUNxEVjAC0kxp7hEMTzktj0/51SyJoIJWK6Gm790b4yNBq82fEPkksfuLkRg9VQUteD0RT1Nkjy8pho8nNamw==
@@ -1612,7 +1612,7 @@ levn@^0.4.1:
     prelude-ls "^1.2.1"
     type-check "~0.4.0"
 
-lexical@0.38.2:
+lexical@0.38.2, lexical@^0.38.2:
   version "0.38.2"
   resolved "https://registry.yarnpkg.com/lexical/-/lexical-0.38.2.tgz#1cf0c4a3d14803bdd7727229d6c50cf2732567a7"
   integrity sha512-JJmfsG3c4gwBHzUGffbV7ifMNkKAWMCnYE3xJl87gty7hjyV5f3xq7eqTjP5HFYvO4XpjJvvWO2/djHp5S10tw==

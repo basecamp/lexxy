@@ -1,6 +1,6 @@
 import Lexxy from "../config/lexxy"
 import { $getEditor, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
-import { createAttachmentFigure, createElement, dispatchCustomEvent, isPreviewableImage } from "../helpers/html_helper"
+import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 
 
@@ -94,10 +94,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   createDOM() {
     const figure = this.createAttachmentFigure()
-
-    figure.addEventListener("click", () => {
-      this.#select(figure)
-    })
 
     if (this.isPreviewableAttachment) {
       figure.appendChild(this.#createDOMForImage())
@@ -209,10 +205,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     }
 
     return figcaption
-  }
-
-  #select(figure) {
-    dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() })
   }
 
   #createEditableCaption() {

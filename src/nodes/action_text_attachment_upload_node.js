@@ -77,8 +77,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   exportDOM() {
-    const img = document.createElement("img")
-    return { element: img }
+    return { element: null }
   }
 
   exportJSON() {

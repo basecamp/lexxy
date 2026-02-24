@@ -35,6 +35,12 @@ export function hasHighlightStyles(cssOrStyles) {
   return !!(styles.color || styles["background-color"])
 }
 
+export function applyCanonicalizers(styles, canonicalizers = []) {
+  return canonicalizers.reduce((css, canonicalizer) => {
+    return canonicalizer.applyCanonicalization(css)
+  }, styles)
+}
+
 export class StyleCanonicalizer {
   constructor(property, allowedValues= []) {
     this._property = property

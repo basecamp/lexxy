@@ -5,7 +5,6 @@ module Lexxy
       form = options.delete(:form)
 
       value = render_custom_attachments_in(value)
-      value = "<div>#{value}</div>" if value
 
       options[:name] ||= name
       options[:value] ||= value

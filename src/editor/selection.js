@@ -1,8 +1,7 @@
 import {
-  $createNodeSelection, $createParagraphNode, $getNodeByKey, $getRoot, $getSelection, $isElementNode,
-  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, COMMAND_PRIORITY_LOW, DecoratorNode,
-  KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
-  KEY_BACKSPACE_COMMAND, KEY_DELETE_COMMAND, SELECTION_CHANGE_COMMAND
+  $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
+  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND, DecoratorNode,
+  KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListNode } from "@lexical/list"
@@ -10,8 +9,11 @@ import { $isLinkNode } from "@lexical/link"
 import { TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
+import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { getNearestListItemNode, isPrintableCharacter } from "../helpers/lexical_helper"
+import { $createNodeSelectionWith, getListType, isPrintableCharacter } from "../helpers/lexical_helper"
+import { LinkNode } from "@lexical/link"
+import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 
 export default class Selection {
   constructor(editorElement) {
@@ -33,12 +35,10 @@ export default class Selection {
   }
 
   get hasNodeSelection() {
-    let result = false
-    this.editor.getEditorState().read(() => {
+    return this.editor.getEditorState().read(() => {
       const selection = $getSelection()
-      result = selection !== null && $isNodeSelection(selection)
+      return selection !== null && $isNodeSelection(selection)
     })
-    return result
   }
 
   get cursorPosition() {
@@ -189,42 +189,20 @@ export default class Selection {
   }
 
   get isInsideList() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return false
-
-    const anchorNode = selection.anchor.getNode()
-    return getNearestListItemNode(anchorNode) !== null
+    return this.nearestNodeOfType(ListItemNode)
   }
 
   get isIndentedList() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return false
-
-    const nodes = selection.getNodes()
-    for (const node of nodes) {
-      const closestListNode = $getNearestNodeOfType(node, ListNode)
-      if (closestListNode && $getListDepth(closestListNode) > 1) {
-        return true
-      }
-    }
-
-    return false
+    const closestListNode = this.nearestNodeOfType(ListNode)
+    return closestListNode && ($getListDepth(closestListNode) > 1)
   }
 
   get isInsideCodeBlock() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return false
-
-    const anchorNode = selection.anchor.getNode()
-    return $getNearestNodeOfType(anchorNode, CodeNode) !== null
+    return this.nearestNodeOfType(CodeNode) !== null
   }
 
   get isTableCellSelected() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return false
-
-    const anchorNode = selection.anchor.getNode()
-    return $getNearestNodeOfType(anchorNode, TableCellNode) !== null
+    return this.nearestNodeOfType(TableCellNode) !== null
   }
 
   get nodeAfterCursor() {
@@ -312,8 +290,7 @@ export default class Selection {
     this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
     this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
 
-    this.editor.registerCommand(KEY_DELETE_COMMAND, this.#deleteSelectedOrNext.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_BACKSPACE_COMMAND, this.#deletePreviousOrNext.bind(this), COMMAND_PRIORITY_LOW)
+    this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW)
 
     this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
       this.current = $getSelection()
@@ -321,20 +298,12 @@ export default class Selection {
   }
 
   #listenForNodeSelections() {
-    this.editor.getRootElement().addEventListener("lexxy:internal:select-node", async (event) => {
-      await nextFrame()
+    this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
+      if (!isDOMNode(target)) return false
 
-      const { key } = event.detail
-      this.editor.update(() => {
-        const node = $getNodeByKey(key)
-        if (node) {
-          const selection = $createNodeSelection()
-          selection.add(node.getKey())
-          $setSelection(selection)
-        }
-        this.editor.focus()
-      })
-    })
+      const targetNode = $getNearestNodeFromDOMNode(target)
+      return $isDecoratorNode(targetNode) && this.#selectInLexical(targetNode)
+    }, COMMAND_PRIORITY_LOW)
 
     this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
       this.#selectOrAppendNextLine()
@@ -456,33 +425,33 @@ export default class Selection {
 
   async #selectPreviousNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
+      return await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
     } else {
-      this.#selectInLexical(this.nodeBeforeCursor)
+      return this.#selectInLexical(this.nodeBeforeCursor)
     }
   }
 
   async #selectNextNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
+      return await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
     } else {
-      this.#selectInLexical(this.nodeAfterCursor)
+      return this.#selectInLexical(this.nodeAfterCursor)
     }
   }
 
   async #selectPreviousTopLevelNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
+      return await this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectPrevious())
     } else {
-      this.#selectInLexical(this.topLevelNodeBeforeCursor)
+      return this.#selectInLexical(this.topLevelNodeBeforeCursor)
     }
   }
 
   async #selectNextTopLevelNode() {
     if (this.hasNodeSelection) {
-      await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
+      return await this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectNext(0, 0))
     } else {
-      this.#selectInLexical(this.topLevelNodeAfterCursor)
+      return this.#selectInLexical(this.topLevelNodeAfterCursor)
     }
   }
 
@@ -548,37 +517,24 @@ export default class Selection {
   }
 
   #selectInLexical(node) {
-    if (!node || !(node instanceof DecoratorNode)) return
-
-    this.editor.update(() => {
-      const selection = $createNodeSelection()
-      selection.add(node.getKey())
+    if ($isDecoratorNode(node)) {
+      const selection = $createNodeSelectionWith(node)
       $setSelection(selection)
-    })
+      return selection
+    } else {
+      return false
+    }
   }
 
-  #deleteSelectedOrNext() {
-    const node = this.nodeAfterCursor
+  #selectDecoratorNodeBeforeDeletion(backwards) {
+    const node = backwards ? this.nodeBeforeCursor : this.nodeAfterCursor
     if (node instanceof DecoratorNode) {
       this.#selectInLexical(node)
+
       return true
     } else {
-      this.#contents.deleteSelectedNodes()
+      return false
     }
-
-    return false
-  }
-
-  #deletePreviousOrNext() {
-    const node = this.nodeBeforeCursor
-    if (node instanceof DecoratorNode) {
-      this.#selectInLexical(node)
-      return true
-    } else {
-      this.#contents.deleteSelectedNodes()
-    }
-
-    return false
   }
 
   #getValidSelectionRange() {

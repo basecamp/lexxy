@@ -60,6 +60,13 @@ class PastesWithStylesTest < ApplicationSystemTestCase
     assert_canonicalized_to "background-color: var(--highlight-bg-1)"
   end
 
+  test "canonicalizes selection styles on paste" do
+    find_editor.paste "styled text", html: %(some <span style="color: #{highlight_1_rgb}; background-color: white;">styled text</span>)
+    find_editor.send " and more..."
+
+    assert_equal_html %(<p>some <mark style="color: var(--highlight-1);">styled text and more...</mark></p>), find_editor.value
+  end
+
   test "preserves non-canonical styles loaded from database" do
     post = posts(:empty)
     existing_styled_html = '<p>some <mark style="color: purple;">existing text</mark></p>'

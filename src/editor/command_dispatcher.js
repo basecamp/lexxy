@@ -22,6 +22,7 @@ import { INSERT_TABLE_COMMAND } from "@lexical/table"
 import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import { REMOVE_HIGHLIGHT_COMMAND, TOGGLE_HIGHLIGHT_COMMAND } from "../extensions/highlight_extension"
 
 const COMMANDS = [
   "bold",
@@ -57,7 +58,6 @@ export class CommandDispatcher {
     this.selection = editorElement.selection
     this.contents = editorElement.contents
     this.clipboard = editorElement.clipboard
-    this.highlighter = editorElement.highlighter
 
     this.#registerCommands()
     this.#registerKeyboardCommands()
@@ -81,11 +81,11 @@ export class CommandDispatcher {
   }
 
   dispatchToggleHighlight(styles) {
-    this.highlighter.toggle(styles)
+    this.editor.dispatchCommand(TOGGLE_HIGHLIGHT_COMMAND, styles)
   }
 
   dispatchRemoveHighlight() {
-    this.highlighter.remove()
+    this.editor.dispatchCommand(REMOVE_HIGHLIGHT_COMMAND)
   }
 
   dispatchLink(url) {
@@ -164,41 +164,38 @@ export class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
-
     this.editor.focus()
   }
 
   dispatchRotateHeadingFormat() {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
 
-      if ($isRootOrShadowRoot(selection.anchor.getNode())) {
-        selection.insertNodes([ $createHeadingNode("h2") ])
-        return
-      }
+    if ($isRootOrShadowRoot(selection.anchor.getNode())) {
+      selection.insertNodes([ $createHeadingNode("h2") ])
+      return
+    }
 
-      const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
-      let nextTag = "h2"
-      if ($isHeadingNode(topLevelElement)) {
-        const currentTag = topLevelElement.getTag()
-        if (currentTag === "h2") {
-          nextTag = "h3"
-        } else if (currentTag === "h3") {
-          nextTag = "h4"
-        } else if (currentTag === "h4") {
-          nextTag = null
-        } else {
-          nextTag = "h2"
-        }
-      }
-
-      if (nextTag) {
-        this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
+    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
+    let nextTag = "h2"
+    if ($isHeadingNode(topLevelElement)) {
+      const currentTag = topLevelElement.getTag()
+      if (currentTag === "h2") {
+        nextTag = "h3"
+      } else if (currentTag === "h3") {
+        nextTag = "h4"
+      } else if (currentTag === "h4") {
+        nextTag = null
       } else {
-        this.contents.removeFormattingFromSelectedLines()
+        nextTag = "h2"
       }
-    })
+    }
+
+    if (nextTag) {
+      this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
+    } else {
+      this.contents.removeFormattingFromSelectedLines()
+    }
   }
 
   dispatchUploadAttachments() {

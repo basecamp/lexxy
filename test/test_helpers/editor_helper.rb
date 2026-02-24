@@ -26,7 +26,7 @@ module EditorHelper
 
   def wait_until(timeout: Capybara.default_max_wait_time)
     Timeout.timeout(timeout) do
-      sleep 0.05 until yield
+      find_editor.flush_lexical_updates until yield
     end
   end
 
@@ -72,10 +72,6 @@ module EditorHelper
   def wait_for_editor
     assert_css "lexxy-editor[connected]"
     assert_css "lexxy-toolbar[connected]" if has_css?("lexxy-toolbar")
-  end
-
-  def wait_for_node_selection(expected = true)
-    wait_until { expected == find_editor.has_node_selection? }
   end
 
   def click_table_handler_button(aria_label)

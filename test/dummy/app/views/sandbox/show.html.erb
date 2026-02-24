@@ -1,103 +1,30 @@
 <% content_for :title, "Lexxy Sandbox" %>
 
-<main data-controller="lexxy-output" data-action="lexxy:change->lexxy-output#refresh">
-  <section>
+<main
+  data-controller="lexxy-output history" 
+  data-action="lexxy:change->lexxy-output#refresh turbo:frame-load->history#pushFromFrameLoad"
+>
+  <section class="input">
     <h2>Editor</h2>
+
     <div class="editor-value-buttons">
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="default">Default</button>
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="tables">Tables</button>
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="code_blocks">Code blocks</button>
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="lists">Lists</button>
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="highlights">Color highlights</button>
-      <button data-action="click->lexxy-output#loadContent" data-lexxy-output-partial-param="empty">Empty</button>
+      <a class="button" href="/sandbox" data-turbo-frame="editor">Default</a>
+      <a class="button" href="/sandbox/tables" data-turbo-frame="editor">Tables</a>
+      <a class="button" href="/sandbox/code" data-turbo-frame="editor">Code blocks</a>
+      <a class="button" href="/sandbox/lists" data-turbo-frame="editor">Lists</a>
+      <a class="button" href="/sandbox/highlights" data-turbo-frame="editor">Text Highlights</a>
+      <a class="button" href="/sandbox/images" data-turbo-frame="editor">Images</a>
+      <a class="button" href="/sandbox/empty" data-turbo-frame="editor">Empty</a>
     </div>
-    <div>
-      <%= rich_text_area_tag :sandbox, render("default"), placeholder: "Write something...", data: { lexxy_output_target: "editor" } do %>
-        <lexxy-prompt trigger="@" src="<%= people_path %>" name="mention"></lexxy-prompt>
-        <lexxy-prompt trigger=":" insert-editable-text>
-          <lexxy-prompt-item search="joy laughing face">
-            <template type="menu">😂 Joy</template>
-            <template type="editor">😂</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="heart red heart">
-            <template type="menu">❤️ Heart</template>
-            <template type="editor">❤️</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="thumbs up like">
-            <template type="menu">👍 Thumbs Up</template>
-            <template type="editor">👍</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="fire hot lit">
-            <template type="menu">🔥 Fire</template>
-            <template type="editor">🔥</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="party popper celebration">
-            <template type="menu">🎉 Party</template>
-            <template type="editor">🎉</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="star favorite">
-            <template type="menu">⭐ Star</template>
-            <template type="editor">⭐</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="clap applause">
-            <template type="menu">👏 Clap</template>
-            <template type="editor">👏</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="rocket launch">
-            <template type="menu">🚀 Rocket</template>
-            <template type="editor">🚀</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="100 hundred perfect">
-            <template type="menu">💯 100</template>
-            <template type="editor">💯</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="checkmark check mark">
-            <template type="menu">✅ Check</template>
-            <template type="editor">✅</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="heart eyes love">
-            <template type="menu">😍 Heart Eyes</template>
-            <template type="editor">😍</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="thinking thought">
-            <template type="menu">🤔 Thinking</template>
-            <template type="editor">🤔</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="wink wink">
-            <template type="menu">😉 Wink</template>
-            <template type="editor">😉</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="celebrate party">
-            <template type="menu">🎊 Celebrate</template>
-            <template type="editor">🎊</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="muscle flex strong">
-            <template type="menu">💪 Muscle</template>
-            <template type="editor">💪</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="lightbulb idea">
-            <template type="menu">💡 Lightbulb</template>
-            <template type="editor">💡</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="thumbs down dislike">
-            <template type="menu">👎 Thumbs Down</template>
-            <template type="editor">👎</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="pray hands thank">
-            <template type="menu">🙏 Pray</template>
-            <template type="editor">🙏</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="clown face funny">
-            <template type="menu">🤡 Clown</template>
-            <template type="editor">🤡</template>
-          </lexxy-prompt-item>
-          <lexxy-prompt-item search="crown king queen">
-            <template type="menu">👑 Crown</template>
-            <template type="editor">👑</template>
-          </lexxy-prompt-item>
-        </lexxy-prompt>
-      <% end %>
-    </div>
+
+    <turbo-frame id="editor" target="_top">
+      <div>
+        <%= rich_text_area_tag :sandbox, render(@template), placeholder: "Write something...", data: { lexxy_output_target: "editor" } do %>
+          <lexxy-prompt trigger="@" src="<%= people_path %>" name="mention"></lexxy-prompt>
+          <%= render "emoji_prompt", trigger: ":" %>
+        <% end %>
+      </div>
+    </turbo-frame>
 
     <p><small>Use @ and : to see a remote and local prompt implementation.</small></p>
   </section>

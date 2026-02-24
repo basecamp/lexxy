@@ -37,13 +37,11 @@ class AttachmentsTest < ApplicationSystemTestCase
     assert_image_figure_attachment content_type: "image/png", caption: "example.png"
 
     find("figure.attachment img").click
-    wait_for_node_selection
 
     find_editor.send_key "Delete"
-    wait_for_node_selection false
 
     assert_no_attachment content_type: "image/png"
-    assert_editor_html "<p><br></p>"
+    assert_editor_html ""
   end
 
   test "disable attachments" do

@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { $createTextNode, DecoratorNode } from "lexical"
 
-import { createElement, dispatchCustomEvent } from "../helpers/html_helper"
+import { createElement } from "../helpers/html_helper"
 
 export class CustomActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -67,17 +67,13 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   createDOM() {
     const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true })
 
-    figure.addEventListener("click", (event) => {
-      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() })
-    })
-
     figure.insertAdjacentHTML("beforeend", this.innerHtml)
 
     return figure
   }
 
   updateDOM() {
-    return true
+    return false
   }
 
   getTextContent() {

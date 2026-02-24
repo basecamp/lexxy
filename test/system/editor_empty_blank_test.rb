@@ -22,6 +22,11 @@ class EditorValueMethodsTest < ApplicationSystemTestCase
       click_on "Upload file"
     end
 
+    # give the upload a chance to happen
+    wait_until {
+      !find_editor.empty? && !find_editor.blank?
+    }
+  rescue Timeout::Error
     assert_not find_editor.empty?
     assert_not find_editor.blank?
   end
