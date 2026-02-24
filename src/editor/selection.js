@@ -145,24 +145,38 @@ export default class Selection {
     return $getNearestNodeOfType(anchorNode, nodeType)
   }
 
+  expandToNearestOfType(nodeType) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return
+
+    const node = $getNearestNodeOfType(selection.anchor.getNode(), nodeType)
+    if (!node) return
+
+    const firstDescendant = node.getFirstDescendant()
+    const lastDescendant = node.getLastDescendant()
+    if (firstDescendant && lastDescendant) {
+      selection.anchor.set(firstDescendant.getKey(), 0, "text")
+      selection.focus.set(lastDescendant.getKey(), lastDescendant.getTextContent().length, "text")
+    }
+  }
+
   // Selection preservation for native bridge dialogs
   freeze() {
-    this.#expandLinkSelection()
+    this.frozenLinkKey = null
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const linkNode = $getNearestNodeOfType(selection.anchor.getNode(), LinkNode)
+      if (linkNode) {
+        this.frozenLinkKey = linkNode.getKey()
+      }
+    })
     this.editorContentElement.contentEditable = "false"
   }
 
   thaw() {
     this.editorContentElement.contentEditable = "true"
-  }
-
-  #expandLinkSelection() {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection) || !selection.isCollapsed()) return
-
-      const linkNode = $getNearestNodeOfType(selection.anchor.getNode(), LinkNode)
-      if (linkNode) linkNode.select(0, undefined)
-    })
   }
 
   get hasSelectedWordsInSingleLine() {

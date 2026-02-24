@@ -1,5 +1,6 @@
 import {
   $createTextNode,
+  $getNodeByKey,
   $getSelection,
   $isRangeSelection,
   $isRootOrShadowRoot,
@@ -16,7 +17,7 @@ import {
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { CodeNode } from "@lexical/code"
-import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
+import { $createAutoLinkNode, $isLinkNode, $toggleLink, LinkNode } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
@@ -105,7 +106,21 @@ export class CommandDispatcher {
   }
 
   dispatchUnlink() {
-    this.#toggleLink(null)
+    this.editor.update(() => {
+      const selection = $getSelection()
+
+      if ($isRangeSelection(selection)) {
+        if (selection.isCollapsed()) {
+          this.selection.expandToNearestOfType(LinkNode)
+        }
+        $toggleLink(null)
+        return
+      }
+
+      // Fallback: selection lost during native bridge freeze/thaw cycle.
+      // Use the link node key saved before the selection was cleared.
+      this.#unlinkFrozenNode()
+    })
   }
 
   dispatchInsertUnorderedList() {
@@ -308,16 +323,20 @@ export class CommandDispatcher {
     return $isRangeSelection(selection) && selection.isCollapsed()
   }
 
-  // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
-  #toggleLink(url) {
-    this.editor.update(() => {
-      if (url === null) {
-        $toggleLink(null)
-      } else {
-        $toggleLink(url)
-      }
-    })
+  #unlinkFrozenNode() {
+    const key = this.selection.frozenLinkKey
+    if (!key) return
+
+    const linkNode = $getNodeByKey(key)
+    if (!$isLinkNode(linkNode)) return
+
+    for (const child of linkNode.getChildren()) {
+      linkNode.insertBefore(child)
+    }
+    linkNode.remove()
+    this.selection.frozenLinkKey = null
   }
+
 }
 
 function capitalize(str) {

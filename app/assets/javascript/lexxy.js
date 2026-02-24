@@ -7941,7 +7941,21 @@ class CommandDispatcher {
   }
 
   dispatchUnlink() {
-    this.#toggleLink(null);
+    this.editor.update(() => {
+      const selection = Lr();
+
+      if (yr(selection)) {
+        if (selection.isCollapsed()) {
+          this.selection.expandToNearestOfType(y$2);
+        }
+        J$2(null);
+        return
+      }
+
+      // Fallback: selection lost during native bridge freeze/thaw cycle.
+      // Use the link node key saved before the selection was cleared.
+      this.#unlinkFrozenNode();
+    });
   }
 
   dispatchInsertUnorderedList() {
@@ -8144,16 +8158,20 @@ class CommandDispatcher {
     return yr(selection) && selection.isCollapsed()
   }
 
-  // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
-  #toggleLink(url) {
-    this.editor.update(() => {
-      if (url === null) {
-        J$2(null);
-      } else {
-        J$2(url);
-      }
-    });
+  #unlinkFrozenNode() {
+    const key = this.selection.frozenLinkKey;
+    if (!key) return
+
+    const linkNode = xo(key);
+    if (!w$3(linkNode)) return
+
+    for (const child of linkNode.getChildren()) {
+      linkNode.insertBefore(child);
+    }
+    linkNode.remove();
+    this.selection.frozenLinkKey = null;
   }
+
 }
 
 function capitalize(str) {
@@ -8314,24 +8332,38 @@ class Selection {
     return wt$5(anchorNode, nodeType)
   }
 
+  expandToNearestOfType(nodeType) {
+    const selection = Lr();
+    if (!yr(selection) || !selection.isCollapsed()) return
+
+    const node = wt$5(selection.anchor.getNode(), nodeType);
+    if (!node) return
+
+    const firstDescendant = node.getFirstDescendant();
+    const lastDescendant = node.getLastDescendant();
+    if (firstDescendant && lastDescendant) {
+      selection.anchor.set(firstDescendant.getKey(), 0, "text");
+      selection.focus.set(lastDescendant.getKey(), lastDescendant.getTextContent().length, "text");
+    }
+  }
+
   // Selection preservation for native bridge dialogs
   freeze() {
-    this.#expandLinkSelection();
+    this.frozenLinkKey = null;
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const linkNode = wt$5(selection.anchor.getNode(), y$2);
+      if (linkNode) {
+        this.frozenLinkKey = linkNode.getKey();
+      }
+    });
     this.editorContentElement.contentEditable = "false";
   }
 
   thaw() {
     this.editorContentElement.contentEditable = "true";
-  }
-
-  #expandLinkSelection() {
-    this.editor.update(() => {
-      const selection = Lr();
-      if (!yr(selection) || !selection.isCollapsed()) return
-
-      const linkNode = wt$5(selection.anchor.getNode(), y$2);
-      if (linkNode) linkNode.select(0, undefined);
-    });
   }
 
   get hasSelectedWordsInSingleLine() {
