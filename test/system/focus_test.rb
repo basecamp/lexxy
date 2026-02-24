@@ -21,9 +21,4 @@ class FocusTest < ApplicationSystemTestCase
     visit edit_post_path(posts(:empty), autofocus: true)
     assert_editor_has_focus
   end
-
-  private
-    def assert_editor_has_focus
-      assert_equal active_element, find_editor.content_element, "editor should have focus"
-    end
 end
