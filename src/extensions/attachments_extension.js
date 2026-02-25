@@ -1,12 +1,12 @@
 import { $getSelection, $isDecoratorNode, $isParagraphNode, COMMAND_PRIORITY_NORMAL, DELETE_CHARACTER_COMMAND, defineExtension } from "lexical"
 import { mergeRegister } from "@lexical/utils"
-import { $isAtNodeEnd } from "@lexical/selection"
 
 import { $findOrCreateGalleryForImage, $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node.js"
 
 import LexxyExtension from "./lexxy_extension"
+import { $isAtNodeEdge } from "../helpers/lexical_helper.js"
 
 export class AttachmentsExtension extends LexxyExtension {
   get enabled() {
@@ -92,16 +92,4 @@ function $moveSelectionBeforeGallery(anchor) {
   }
 
   return true
-}
-
-function $isAtNodeEdge(point, atStart = null) {
-  if (atStart === null) {
-    return $isAtNodeEdge(point, true) || $isAtNodeEdge(point, false)
-  } else {
-    return atStart ? $isAtNodeStart(point) : $isAtNodeEnd(point)
-  }
-}
-
-function $isAtNodeStart(point) {
-  return point.offset === 0
 }
