@@ -8,21 +8,8 @@ export default class Uploader {
   #files
 
   static for(editorElement, files) {
-    const { selection } = editorElement
-
-    const isGalleryUpload = this.#isMultipleImageUpload(files) || selection.isOnPreviewableImage
-
-    const Klass = isGalleryUpload ? GalleryUploader : Uploader
-    return new Klass(editorElement, files)
-  }
-
-  static #isMultipleImageUpload(files) {
-    let imageFileCount = 0
-    for (const file of files) {
-      if (isPreviewableImage(file.type)) imageFileCount++
-      if (imageFileCount > 1) return true
-    }
-    return false
+    const UploaderKlass = GalleryUploader.handle(editorElement, files) ? GalleryUploader : Uploader
+    return new UploaderKlass(editorElement, files)
   }
 
   constructor(editorElement, files) {
@@ -66,6 +53,26 @@ export default class Uploader {
 
 class GalleryUploader extends Uploader {
   #gallery
+
+  static handle(editorElement, files) {
+    return this.#isMultipleImageUpload(files) || this.#gallerySelection(editorElement.selection)
+  }
+
+  static #isMultipleImageUpload(files) {
+    let imageFileCount = 0
+    for (const file of files) {
+      if (isPreviewableImage(file.type)) imageFileCount++
+      if (imageFileCount > 1) return true
+    }
+    return false
+  }
+
+  static #gallerySelection(selection) {
+    if (selection.isOnPreviewableImage) return true
+
+    const { node: selectedNode } = selection.selectedNodeWithOffset()
+    return $getNearestNodeOfType(selectedNode, ImageGalleryNode) !== null
+  }
 
   $uploadFiles() {
     this.$createUploadNodes()
