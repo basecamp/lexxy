@@ -22,7 +22,7 @@ export class ImageGalleryNode extends ElementNode {
   static importDOM() {
     return {
       div: (element) => {
-        const containsAttachment = element.querySelector(":scope > :is(img, video, " + ActionTextAttachmentNode.TAG_NAME + ")")
+        const containsAttachment = element.querySelector(`:scope > :is(${this.#attachmentTags.join()})`)
         if (!containsAttachment) return null
 
         return {
@@ -44,6 +44,10 @@ export class ImageGalleryNode extends ElementNode {
 
   static isValidChild(node) {
     return $isActionTextAttachmentNode(node) && node.isPreviewableImage
+  }
+
+  static get #attachmentTags() {
+    return Object.keys(ActionTextAttachmentNode.importDOM())
   }
 
   createDOM() {
