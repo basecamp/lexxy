@@ -235,58 +235,61 @@
   &[data-attachments="false"] button[name="upload"]{
     display: none;
   }
-}
+  
+  .lexxy-editor__toolbar-button {
+    aspect-ratio: 1;
+    block-size: var(--lexxy-toolbar-button-size);
+    border: 0;
+    border-radius: var(--lexxy-radius);
+    color: currentColor;
+    display: grid;
+    line-height: inherit;
+    place-items: center;
 
-:where(.lexxy-editor__toolbar-button) {
-  aspect-ratio: 1;
-  block-size: var(--lexxy-toolbar-button-size);
-  color: currentColor;
-  display: grid;
-  place-items: center;
+    &:is(:active):not([aria-disabled="true"]),
+    &[aria-pressed="true"] {
+      background-color: var(--lexxy-color-selected);
 
-  &:is(:active):not([aria-disabled="true"]),
-  &[aria-pressed="true"] {
-    background-color: var(--lexxy-color-selected);
+      &:hover {
+        background-color: var(--lexxy-color-selected-hover);
+      }
+    }
 
-    &:hover {
-      background-color: var(--lexxy-color-selected-hover);
+    &[aria-disabled="true"] {
+      cursor: default;
+      opacity: 0.3;
+    }
+
+    svg {
+      -webkit-touch-callout: none;
+      block-size: var(--lexxy-toolbar-icon-size);
+      fill: currentColor;
+      grid-area: 1/1;
+      inline-size: var(--lexxy-toolbar-icon-size);
+      user-select: none;
+    }
+
+    &.lexxy-editor__toolbar-group-end {
+      position: relative;
+      margin-inline-end: calc(var(--lexxy-toolbar-spacing) + 1px);
+
+      &:after {
+        background-color: var(--lexxy-color-ink-lighter);
+        content: "";
+        display: block;
+        width: 1px;
+        height: 60%;
+        inset-inline-end: calc(-1 * var(--lexxy-toolbar-spacing));
+        inset-block-start: 20%;
+        position: absolute;
+        pointer-events: none;
+      }
     }
   }
 
-  &[aria-disabled="true"] {
-    cursor: default;
-    opacity: 0.3;
+  .lexxy-editor__toolbar-spacer {
+    flex: 1;
   }
-
-  svg {
-    -webkit-touch-callout: none;
-    block-size: var(--lexxy-toolbar-icon-size);
-    fill: currentColor;
-    grid-area: 1/1;
-    inline-size: var(--lexxy-toolbar-icon-size);
-    user-select: none;
-  }
-
-  &.lexxy-editor__toolbar-group-end {
-    position: relative;
-    margin-inline-end: calc(var(--lexxy-toolbar-spacing) + 1px);
-
-    &:after {
-      background-color: var(--lexxy-color-ink-lighter);
-      content: "";
-      display: block;
-      width: 1px;
-      height: 60%;
-      inset-inline-end: calc(-1 * var(--lexxy-toolbar-spacing));
-      inset-block-start: 20%;
-      position: absolute;
-      pointer-events: none;
-    }
-  }
-}
-
-:where(.lexxy-editor__toolbar-spacer) {
-  flex: 1;
 }
 
 /* --------------------------------------------------------------------------
