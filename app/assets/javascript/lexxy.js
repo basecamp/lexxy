@@ -9442,6 +9442,7 @@ class Contents {
     if (!this.hasSelectedText()) return
 
     this.editor.update(() => {
+      J$2(null);
       J$2(url);
     });
   }

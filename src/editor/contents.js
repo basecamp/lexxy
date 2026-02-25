@@ -160,6 +160,7 @@ export default class Contents {
     if (!this.hasSelectedText()) return
 
     this.editor.update(() => {
+      $toggleLink(null)
       $toggleLink(url)
     })
   }
