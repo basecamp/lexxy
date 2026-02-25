@@ -160,24 +160,6 @@ export default class Selection {
     }
   }
 
-  // Selection preservation for native bridge dialogs
-  freeze() {
-    this.frozenLinkKey = null
-    this.editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const linkNode = $getNearestNodeOfType(selection.anchor.getNode(), LinkNode)
-      if (linkNode) {
-        this.frozenLinkKey = linkNode.getKey()
-      }
-    })
-    this.editorContentElement.contentEditable = "false"
-  }
-
-  thaw() {
-    this.editorContentElement.contentEditable = "true"
-  }
 
   get hasSelectedWordsInSingleLine() {
     const selection = $getSelection()

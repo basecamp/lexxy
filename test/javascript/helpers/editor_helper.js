@@ -1,5 +1,6 @@
 import { $getRoot } from "lexical"
 import { defineElements } from "../../../src/elements/index"
+import { NativeAdapter } from "../../../src/editor/native_adapter"
 
 let elementsRegistered = false
 
@@ -39,6 +40,12 @@ export async function createTestEditor(options = {}) {
   // Wait for requestAnimationFrame callbacks (lexxy:initialize, dispatchHighlightColors)
   await tick()
 
+  return element
+}
+
+export async function createTestEditorWithNativeAdapter(options = {}) {
+  const element = await createTestEditor(options)
+  element.registerAdapter(new NativeAdapter(element))
   return element
 }
 

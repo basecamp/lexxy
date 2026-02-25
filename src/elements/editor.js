@@ -1,7 +1,8 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $isDecoratorNode, $isParagraphNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isDecoratorNode, $isParagraphNode, $isRangeSelection, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
+import { $getNearestNodeOfType } from "@lexical/utils"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
@@ -22,7 +23,8 @@ import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
-import Native from "../editor/native"
+import { BrowserAdapter } from "../editor/browser_adapter"
+import { getHighlightStyles } from "../helpers/format_helper"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { ProvisionalParagraphExtension } from "../extensions/provisional_paragraph_extension"
@@ -56,14 +58,14 @@ export class LexicalEditorElement extends HTMLElement {
     this.contents = new Contents(this)
     this.selection = new Selection(this)
     this.clipboard = new Clipboard(this)
-    this.native = new Native(this)
+    this.adapter = new BrowserAdapter()
 
     CommandDispatcher.configureFor(this)
     this.#initialize()
 
     requestAnimationFrame(() => {
       dispatch(this, "lexxy:initialize")
-      this.native.dispatchHighlightColors()
+      this.#dispatchHighlightColors()
     })
     this.toggleAttribute("connected", true)
 
@@ -167,12 +169,34 @@ export class LexicalEditorElement extends HTMLElement {
     return this.config.get("richText")
   }
 
+  registerAdapter(adapter) {
+    this.adapter = adapter
+  }
+
   freezeSelection() {
-    this.selection.freeze()
+    let frozenLinkKey = null
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const linkNode = $getNearestNodeOfType(selection.anchor.getNode(), LinkNode)
+      if (linkNode) {
+        frozenLinkKey = linkNode.getKey()
+      }
+    })
+    this.adapter.freeze(frozenLinkKey)
   }
 
   thawSelection() {
-    this.selection.thaw()
+    this.adapter.thaw()
+  }
+
+  dispatchAttributesChange() {
+    this.#dispatchAttributesChange()
+  }
+
+  dispatchHighlightColors() {
+    this.#dispatchHighlightColors()
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -365,7 +389,7 @@ export class LexicalEditorElement extends HTMLElement {
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
       this.#setValidity()
-      this.native.dispatchAttributesChange()
+      this.#dispatchAttributesChange()
     }))
   }
 
@@ -443,7 +467,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
-      this.native.dispatchAttributesChange()
+      this.#dispatchAttributesChange()
       dispatch(this, "lexxy:focus")
       this.currentlyFocused = true
     }
@@ -526,6 +550,70 @@ export class LexicalEditorElement extends HTMLElement {
     }
   }
 
+  #dispatchAttributesChange() {
+    let attributes = null
+    let linkHref = null
+    let highlight = null
+
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const format = this.selection.getFormat()
+      if (Object.keys(format).length === 0) return
+
+      const anchorNode = selection.anchor.getNode()
+      const linkNode = $getNearestNodeOfType(anchorNode, LinkNode)
+
+      attributes = {
+        bold: { active: format.isBold, enabled: true },
+        italic: { active: format.isItalic, enabled: true },
+        strikethrough: { active: format.isStrikethrough, enabled: true },
+        code: { active: format.isInCode, enabled: true },
+        highlight: { active: format.isHighlight, enabled: true },
+        link: { active: format.isInLink, enabled: true },
+        quote: { active: format.isInQuote, enabled: true },
+        heading: { active: format.isInHeading, enabled: true },
+        "unordered-list": { active: format.isInList && format.listType === "bullet", enabled: true },
+        "ordered-list": { active: format.isInList && format.listType === "number", enabled: true },
+        undo: { active: false, enabled: this.historyState?.undoStack.length > 0 },
+        redo: { active: false, enabled: this.historyState?.redoStack.length > 0 }
+      }
+
+      linkHref = linkNode ? linkNode.getURL() : null
+      highlight = format.isHighlight ? getHighlightStyles(selection) : null
+    })
+
+    if (attributes) {
+      this.adapter.dispatchAttributesChange(attributes, linkHref, highlight)
+    }
+  }
+
+  #dispatchHighlightColors() {
+    const buttons = this.config.get("highlight.buttons")
+    if (!buttons) return
+
+    const colors = this.#resolveColors("color", buttons.color || [])
+    const backgroundColors = this.#resolveColors("background-color", buttons["background-color"] || [])
+    this.adapter.dispatchHighlightColors(colors, backgroundColors)
+  }
+
+  #resolveColors(property, cssValues) {
+    const resolver = document.createElement("span")
+    resolver.style.display = "none"
+    this.appendChild(resolver)
+
+    const resolved = cssValues.map(cssValue => {
+      resolver.style.setProperty(property, cssValue)
+      const value = window.getComputedStyle(resolver).getPropertyValue(property)
+      resolver.style.removeProperty(property)
+      return { name: cssValue, value }
+    })
+
+    resolver.remove()
+    return resolved
+  }
+
   #reset() {
     this.#unregisterHandlers()
 
@@ -553,7 +641,7 @@ export class LexicalEditorElement extends HTMLElement {
     }
 
     this.selection = null
-    this.native = null
+    this.adapter = null
 
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
   }

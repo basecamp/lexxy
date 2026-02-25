@@ -8166,7 +8166,7 @@ class CommandDispatcher {
   }
 
   #unlinkFrozenNode() {
-    const key = this.selection.frozenLinkKey;
+    const key = this.editorElement.adapter.frozenLinkKey;
     if (!key) return
 
     const linkNode = xo(key);
@@ -8176,7 +8176,7 @@ class CommandDispatcher {
       linkNode.insertBefore(child);
     }
     linkNode.remove();
-    this.selection.frozenLinkKey = null;
+    this.editorElement.adapter.frozenLinkKey = null;
   }
 
 }
@@ -8354,24 +8354,6 @@ class Selection {
     }
   }
 
-  // Selection preservation for native bridge dialogs
-  freeze() {
-    this.frozenLinkKey = null;
-    this.editor.getEditorState().read(() => {
-      const selection = Lr();
-      if (!yr(selection)) return
-
-      const linkNode = wt$5(selection.anchor.getNode(), y$2);
-      if (linkNode) {
-        this.frozenLinkKey = linkNode.getKey();
-      }
-    });
-    this.editorContentElement.contentEditable = "false";
-  }
-
-  thaw() {
-    this.editorContentElement.contentEditable = "true";
-  }
 
   get hasSelectedWordsInSingleLine() {
     const selection = Lr();
@@ -10305,84 +10287,13 @@ class Extensions {
   }
 }
 
-class Native {
-  constructor(editorElement) {
-    this.editorElement = editorElement;
-    this.editor = editorElement.editor;
-  }
+class BrowserAdapter {
+  frozenLinkKey = null
 
-  dispatchHighlightColors() {
-    const buttons = this.editorElement.config.get("highlight.buttons");
-    if (!buttons) return
-
-    dispatch(this.editorElement, "lexxy:highlight-colors", {
-      colors: this.#resolveColors("color", buttons.color || []),
-      backgroundColors: this.#resolveColors("background-color", buttons["background-color"] || [])
-    });
-  }
-
-  #resolveColors(property, cssValues) {
-    const resolver = document.createElement("span");
-    resolver.style.display = "none";
-    this.editorElement.appendChild(resolver);
-
-    const resolved = cssValues.map(cssValue => {
-      resolver.style.setProperty(property, cssValue);
-      const value = window.getComputedStyle(resolver).getPropertyValue(property);
-      resolver.style.removeProperty(property);
-      return { name: cssValue, value }
-    });
-
-    resolver.remove();
-    return resolved
-  }
-
-  dispatchAttributesChange() {
-    let attributes = null;
-    let link = null;
-    let highlight = null;
-
-    this.editor.getEditorState().read(() => {
-      const selection = Lr();
-      if (!yr(selection)) return
-
-      const format = this.#selection.getFormat();
-      if (Object.keys(format).length === 0) return
-
-      const anchorNode = selection.anchor.getNode();
-      const linkNode = wt$5(anchorNode, y$2);
-
-      attributes = {
-        bold: { active: format.isBold, enabled: true },
-        italic: { active: format.isItalic, enabled: true },
-        strikethrough: { active: format.isStrikethrough, enabled: true },
-        code: { active: format.isInCode, enabled: true },
-        highlight: { active: format.isHighlight, enabled: true },
-        link: { active: format.isInLink, enabled: true },
-        quote: { active: format.isInQuote, enabled: true },
-        heading: { active: format.isInHeading, enabled: true },
-        "unordered-list": { active: format.isInList && format.listType === "bullet", enabled: true },
-        "ordered-list": { active: format.isInList && format.listType === "number", enabled: true },
-        undo: { active: false, enabled: this.#historyState?.undoStack.length > 0 },
-        redo: { active: false, enabled: this.#historyState?.redoStack.length > 0 }
-      };
-
-      link = linkNode ? { href: linkNode.getURL() } : null;
-      highlight = format.isHighlight ? getHighlightStyles(selection) : null;
-    });
-
-    if (attributes) {
-      dispatch(this.editorElement, "lexxy:attributes-change", { attributes, link, highlight });
-    }
-  }
-
-  get #selection() {
-    return this.editorElement.selection
-  }
-
-  get #historyState() {
-    return this.editorElement.historyState
-  }
+  dispatchAttributesChange(attributes, linkHref, highlight) {}
+  dispatchHighlightColors(colors, backgroundColors) {}
+  freeze(frozenLinkKey) {}
+  thaw() {}
 }
 
 class ProvisionalParagraphNode extends Di {
@@ -10729,14 +10640,14 @@ class LexicalEditorElement extends HTMLElement {
     this.contents = new Contents(this);
     this.selection = new Selection(this);
     this.clipboard = new Clipboard(this);
-    this.native = new Native(this);
+    this.adapter = new BrowserAdapter();
 
     CommandDispatcher.configureFor(this);
     this.#initialize();
 
     requestAnimationFrame(() => {
       dispatch(this, "lexxy:initialize");
-      this.native.dispatchHighlightColors();
+      this.#dispatchHighlightColors();
     });
     this.toggleAttribute("connected", true);
 
@@ -10840,12 +10751,34 @@ class LexicalEditorElement extends HTMLElement {
     return this.config.get("richText")
   }
 
+  registerAdapter(adapter) {
+    this.adapter = adapter;
+  }
+
   freezeSelection() {
-    this.selection.freeze();
+    let frozenLinkKey = null;
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const linkNode = wt$5(selection.anchor.getNode(), y$2);
+      if (linkNode) {
+        frozenLinkKey = linkNode.getKey();
+      }
+    });
+    this.adapter.freeze(frozenLinkKey);
   }
 
   thawSelection() {
-    this.selection.thaw();
+    this.adapter.thaw();
+  }
+
+  dispatchAttributesChange() {
+    this.#dispatchAttributesChange();
+  }
+
+  dispatchHighlightColors() {
+    this.#dispatchHighlightColors();
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -11038,7 +10971,7 @@ class LexicalEditorElement extends HTMLElement {
       this.#internalFormValue = this.value;
       this.#toggleEmptyStatus();
       this.#setValidity();
-      this.native.dispatchAttributesChange();
+      this.#dispatchAttributesChange();
     }));
   }
 
@@ -11116,7 +11049,7 @@ class LexicalEditorElement extends HTMLElement {
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
-      this.native.dispatchAttributesChange();
+      this.#dispatchAttributesChange();
       dispatch(this, "lexxy:focus");
       this.currentlyFocused = true;
     }
@@ -11192,6 +11125,70 @@ class LexicalEditorElement extends HTMLElement {
     }
   }
 
+  #dispatchAttributesChange() {
+    let attributes = null;
+    let linkHref = null;
+    let highlight = null;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const format = this.selection.getFormat();
+      if (Object.keys(format).length === 0) return
+
+      const anchorNode = selection.anchor.getNode();
+      const linkNode = wt$5(anchorNode, y$2);
+
+      attributes = {
+        bold: { active: format.isBold, enabled: true },
+        italic: { active: format.isItalic, enabled: true },
+        strikethrough: { active: format.isStrikethrough, enabled: true },
+        code: { active: format.isInCode, enabled: true },
+        highlight: { active: format.isHighlight, enabled: true },
+        link: { active: format.isInLink, enabled: true },
+        quote: { active: format.isInQuote, enabled: true },
+        heading: { active: format.isInHeading, enabled: true },
+        "unordered-list": { active: format.isInList && format.listType === "bullet", enabled: true },
+        "ordered-list": { active: format.isInList && format.listType === "number", enabled: true },
+        undo: { active: false, enabled: this.historyState?.undoStack.length > 0 },
+        redo: { active: false, enabled: this.historyState?.redoStack.length > 0 }
+      };
+
+      linkHref = linkNode ? linkNode.getURL() : null;
+      highlight = format.isHighlight ? getHighlightStyles(selection) : null;
+    });
+
+    if (attributes) {
+      this.adapter.dispatchAttributesChange(attributes, linkHref, highlight);
+    }
+  }
+
+  #dispatchHighlightColors() {
+    const buttons = this.config.get("highlight.buttons");
+    if (!buttons) return
+
+    const colors = this.#resolveColors("color", buttons.color || []);
+    const backgroundColors = this.#resolveColors("background-color", buttons["background-color"] || []);
+    this.adapter.dispatchHighlightColors(colors, backgroundColors);
+  }
+
+  #resolveColors(property, cssValues) {
+    const resolver = document.createElement("span");
+    resolver.style.display = "none";
+    this.appendChild(resolver);
+
+    const resolved = cssValues.map(cssValue => {
+      resolver.style.setProperty(property, cssValue);
+      const value = window.getComputedStyle(resolver).getPropertyValue(property);
+      resolver.style.removeProperty(property);
+      return { name: cssValue, value }
+    });
+
+    resolver.remove();
+    return resolved
+  }
+
   #reset() {
     this.#unregisterHandlers();
 
@@ -11219,7 +11216,7 @@ class LexicalEditorElement extends HTMLElement {
     }
 
     this.selection = null;
-    this.native = null;
+    this.adapter = null;
 
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache);
   }
@@ -12929,10 +12926,40 @@ function highlightElement(preElement) {
   preElement.replaceWith(codeElement);
 }
 
+class NativeAdapter {
+  frozenLinkKey = null
+
+  constructor(editorElement) {
+    this.editorElement = editorElement;
+    this.editorContentElement = editorElement.editorContentElement;
+  }
+
+  dispatchAttributesChange(attributes, linkHref, highlight) {
+    dispatch(this.editorElement, "lexxy:attributes-change", {
+      attributes,
+      link: linkHref ? { href: linkHref } : null,
+      highlight
+    });
+  }
+
+  dispatchHighlightColors(colors, backgroundColors) {
+    dispatch(this.editorElement, "lexxy:highlight-colors", { colors, backgroundColors });
+  }
+
+  freeze(frozenLinkKey) {
+    this.frozenLinkKey = frozenLinkKey;
+    this.editorContentElement.contentEditable = "false";
+  }
+
+  thaw() {
+    this.editorContentElement.contentEditable = "true";
+  }
+}
+
 const configure = Lexxy.configure;
 
 // Pushing elements definition to after the current call stack to allow global configuration to take place first
 setTimeout(defineElements, 0);
 
-export { ActionTextAttachmentNode, ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, configure, highlightCode as highlightAll, highlightCode };
+export { ActionTextAttachmentNode, ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, NativeAdapter, configure, highlightCode as highlightAll, highlightCode };
 //# sourceMappingURL=lexxy.js.map

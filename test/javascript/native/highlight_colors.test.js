@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "vitest"
-import { createTestEditor, destroyTestEditor, captureEvent } from "../helpers/editor_helper"
+import { createTestEditorWithNativeAdapter, destroyTestEditor, captureEvent } from "../helpers/editor_helper"
 
 let editorElement
 
@@ -9,10 +9,10 @@ afterEach(async () => {
 
 describe("highlight colors event", () => {
   test("dispatches event with color and background-color arrays", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
 
     const event = await captureEvent(editorElement, "lexxy:highlight-colors", () => {
-      editorElement.native.dispatchHighlightColors()
+      editorElement.dispatchHighlightColors()
     })
 
     expect(event.detail.colors).toBeInstanceOf(Array)
@@ -20,10 +20,10 @@ describe("highlight colors event", () => {
   })
 
   test("each color entry has name and value properties", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
 
     const event = await captureEvent(editorElement, "lexxy:highlight-colors", () => {
-      editorElement.native.dispatchHighlightColors()
+      editorElement.dispatchHighlightColors()
     })
 
     for (const color of event.detail.colors) {
@@ -38,10 +38,10 @@ describe("highlight colors event", () => {
   })
 
   test("color names correspond to CSS custom properties", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
 
     const event = await captureEvent(editorElement, "lexxy:highlight-colors", () => {
-      editorElement.native.dispatchHighlightColors()
+      editorElement.dispatchHighlightColors()
     })
 
     // Default config uses var(--highlight-N) for colors

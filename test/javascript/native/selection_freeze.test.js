@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "vitest"
-import { createTestEditor, destroyTestEditor, setContent, selectAll } from "../helpers/editor_helper"
+import { createTestEditorWithNativeAdapter, destroyTestEditor, setContent, selectAll } from "../helpers/editor_helper"
 
 let editorElement
 
@@ -9,7 +9,7 @@ afterEach(async () => {
 
 describe("selection freeze and thaw", () => {
   test("freeze disables contentEditable", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p>hello</p>")
 
     editorElement.freezeSelection()
@@ -18,7 +18,7 @@ describe("selection freeze and thaw", () => {
   })
 
   test("thaw re-enables contentEditable", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p>hello</p>")
 
     editorElement.freezeSelection()
@@ -28,37 +28,37 @@ describe("selection freeze and thaw", () => {
   })
 
   test("freeze captures link node key when cursor is inside a link", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p><a href='https://example.com'>link text</a></p>")
     selectAll(editorElement)
 
     editorElement.freezeSelection()
 
-    expect(editorElement.selection.frozenLinkKey).not.toBeNull()
+    expect(editorElement.adapter.frozenLinkKey).not.toBeNull()
   })
 
   test("freeze sets frozenLinkKey to null when not inside a link", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p>plain text</p>")
     selectAll(editorElement)
 
     editorElement.freezeSelection()
 
-    expect(editorElement.selection.frozenLinkKey).toBeNull()
+    expect(editorElement.adapter.frozenLinkKey).toBeNull()
   })
 
   test("frozen link key is preserved after thaw", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p><a href='https://example.com'>link text</a></p>")
     selectAll(editorElement)
 
     editorElement.freezeSelection()
-    const frozenKey = editorElement.selection.frozenLinkKey
+    const frozenKey = editorElement.adapter.frozenLinkKey
     expect(frozenKey).not.toBeNull()
 
     editorElement.thawSelection()
 
     // The frozen key is preserved after thaw for the unlink command to use
-    expect(editorElement.selection.frozenLinkKey).toBe(frozenKey)
+    expect(editorElement.adapter.frozenLinkKey).toBe(frozenKey)
   })
 })

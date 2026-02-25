@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest"
 import { $getRoot } from "lexical"
-import { createTestEditor, destroyTestEditor, setContent, selectAll, captureEvent } from "../helpers/editor_helper"
+import { createTestEditorWithNativeAdapter, destroyTestEditor, setContent, selectAll, captureEvent } from "../helpers/editor_helper"
 
 let editorElement
 
@@ -10,12 +10,12 @@ afterEach(async () => {
 
 describe("attributes change event", () => {
   test("dispatches event with all expected attribute keys", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p>hello world</p>")
     selectAll(editorElement)
 
     const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
-      editorElement.native.dispatchAttributesChange()
+      editorElement.dispatchAttributesChange()
     })
 
     const expectedKeys = [
@@ -28,12 +28,12 @@ describe("attributes change event", () => {
   })
 
   test("each attribute has active and enabled properties", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p>hello world</p>")
     selectAll(editorElement)
 
     const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
-      editorElement.native.dispatchAttributesChange()
+      editorElement.dispatchAttributesChange()
     })
 
     for (const [key, value] of Object.entries(event.detail.attributes)) {
@@ -45,12 +45,12 @@ describe("attributes change event", () => {
   })
 
   test("reports formatting attributes as inactive for plain text", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p>hello world</p>")
     selectAll(editorElement)
 
     const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
-      editorElement.native.dispatchAttributesChange()
+      editorElement.dispatchAttributesChange()
     })
 
     expect(event.detail.attributes.bold).toEqual({ active: false, enabled: true })
@@ -65,12 +65,12 @@ describe("attributes change event", () => {
   })
 
   test("reports link as active with href when cursor is inside a link", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p><a href='https://example.com'>linked text</a></p>")
     selectAll(editorElement)
 
     const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
-      editorElement.native.dispatchAttributesChange()
+      editorElement.dispatchAttributesChange()
     })
 
     expect(event.detail.attributes.link.active).toBe(true)
@@ -78,48 +78,48 @@ describe("attributes change event", () => {
   })
 
   test("returns null link when not inside a link", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p>plain text</p>")
     selectAll(editorElement)
 
     const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
-      editorElement.native.dispatchAttributesChange()
+      editorElement.dispatchAttributesChange()
     })
 
     expect(event.detail.link).toBeNull()
   })
 
   test("reports quote as active when inside a blockquote", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<blockquote>quoted text</blockquote>")
     selectAll(editorElement)
 
     const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
-      editorElement.native.dispatchAttributesChange()
+      editorElement.dispatchAttributesChange()
     })
 
     expect(event.detail.attributes.quote.active).toBe(true)
   })
 
   test("reports heading as active when inside a heading", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<h2>heading text</h2>")
     selectAll(editorElement)
 
     const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
-      editorElement.native.dispatchAttributesChange()
+      editorElement.dispatchAttributesChange()
     })
 
     expect(event.detail.attributes.heading.active).toBe(true)
   })
 
   test("includes undo/redo state", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p>hello</p>")
     selectAll(editorElement)
 
     const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
-      editorElement.native.dispatchAttributesChange()
+      editorElement.dispatchAttributesChange()
     })
 
     expect(event.detail.attributes.undo).toEqual({ active: false, enabled: expect.any(Boolean) })
@@ -127,7 +127,7 @@ describe("attributes change event", () => {
   })
 
   test("preserves text formatting when parsing HTML", async () => {
-    editorElement = await createTestEditor()
+    editorElement = await createTestEditorWithNativeAdapter()
 
     // Bold
     await setContent(editorElement, "<p><strong>bold</strong></p>")

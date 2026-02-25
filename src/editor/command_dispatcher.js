@@ -324,7 +324,7 @@ export class CommandDispatcher {
   }
 
   #unlinkFrozenNode() {
-    const key = this.selection.frozenLinkKey
+    const key = this.editorElement.adapter.frozenLinkKey
     if (!key) return
 
     const linkNode = $getNodeByKey(key)
@@ -334,7 +334,7 @@ export class CommandDispatcher {
       linkNode.insertBefore(child)
     }
     linkNode.remove()
-    this.selection.frozenLinkKey = null
+    this.editorElement.adapter.frozenLinkKey = null
   }
 
 }
