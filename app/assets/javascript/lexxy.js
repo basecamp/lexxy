@@ -11467,16 +11467,16 @@ class LexicalPromptElement extends HTMLElement {
 
   #registerKeyListeners() {
     // We can't use a regular keydown for Enter as Lexical handles it first
-    this.keyListeners.push(this.#editor.registerCommand(Ne$2, this.#handleSelectedOption.bind(this), Bi));
-    this.keyListeners.push(this.#editor.registerCommand(Me$2, this.#handleSelectedOption.bind(this), Bi));
+    this.keyListeners.push(this.#editor.registerCommand(Ne$2, this.#handleSelectedOption.bind(this), Wi));
+    this.keyListeners.push(this.#editor.registerCommand(Me$2, this.#handleSelectedOption.bind(this), Wi));
 
     if (this.#doesSpaceSelect) {
-      this.keyListeners.push(this.#editor.registerCommand(be$1, this.#handleSelectedOption.bind(this), Bi));
+      this.keyListeners.push(this.#editor.registerCommand(be$1, this.#handleSelectedOption.bind(this), Wi));
     }
 
-    // Register arrow keys with HIGH priority to prevent Lexical's selection handlers from running
-    this.keyListeners.push(this.#editor.registerCommand(ke$2, this.#handleArrowUp.bind(this), Bi));
-    this.keyListeners.push(this.#editor.registerCommand(Te$2, this.#handleArrowDown.bind(this), Bi));
+    // Register arrow keys with CRITICAL priority to prevent Lexical's selection handlers from running
+    this.keyListeners.push(this.#editor.registerCommand(ke$2, this.#handleArrowUp.bind(this), Wi));
+    this.keyListeners.push(this.#editor.registerCommand(Te$2, this.#handleArrowDown.bind(this), Wi));
   }
 
   #handleArrowUp(event) {
