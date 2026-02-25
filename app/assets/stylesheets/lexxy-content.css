@@ -255,94 +255,98 @@
       }
     }
   }
-}
 
-/* Attachments
-/* ------------------------------------------------------------------------ */
 
-:where(p:has(.attachment)) {
-  text-align: center;
-}
+  /* Attachments
+  /* ------------------------------------------------------------------------ */
 
-:where(.attachment) {
-  block-size: auto;
-  display: block;
-  inline-size: fit-content;
-  position: relative;
-  margin-inline: auto;
-  max-inline-size: 100%;
-  text-align: center;
-
-  :where(progress) {
-    inline-size: 100%;
-    margin: auto;
+  p:has(.attachment) {
+    text-align: center;
   }
-}
 
-:where(.attachment__caption) {
-  color: var(--lexxy-color-text-subtle);
-  font-size: var(--lexxy-text-small);
-}
-
-:where(.attachment__icon) {
-  aspect-ratio: 4/5;
-  background-color: color-mix(var(--lexxy-attachment-icon-color), transparent 90%);
-  block-size: 3lh;
-  border: 2px solid var(--lexxy-attachment-icon-color);
-  border-block-start-width: 1ch;
-  border-radius: var(--lexxy-radius);
-  box-sizing: border-box;
-  color: var(--lexxy-attachment-icon-color);
-  display: grid;
-  font-size: var(--lexxy-text-small);
-  font-weight: bold;
-  inline-size: auto;
-  place-content: center;
-  text-transform: uppercase;
-}
-
-:where(.attachment--preview) {
-  --lexxy-attachment-gap: 0.75ch;
-
-  border-radius: var(--lexxy-radius);
-  padding: var(--lexxy-attachment-gap);
-
-  img, video {
-    border-radius: var(--lexxy-radius);
+  .attachment {
+    --lexxy-attachment-gap: 0.75ch;
+    
     block-size: auto;
-    display: block;
+    box-sizing: border-box;
+    border-radius: var(--lexxy-radius);
+    display: table; /* Using table to wrap the caption to fit the attachment's width */
+    inline-size: fit-content;
     margin-inline: auto;
     max-inline-size: 100%;
-    user-select: none;
+    min-inline-size: 10ch;
+    padding: var(--lexxy-attachment-gap);
+    position: relative;
+    text-align: center;
+
+    :where(progress) {
+      inline-size: 100%;
+      margin: auto;
+    }
   }
-
-  > a {
-    display: block;
-  }
-}
-
-:where(.attachment--file) {
-  --lexxy-attachment-icon-color: var(--lexxy-color-text-subtle);
-
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0;
-  inline-size: auto;
 
   .attachment__caption {
+    caption-side: bottom;
+    color: var(--lexxy-color-text-subtle);
+    display: table-caption;
+    font-size: var(--lexxy-text-small);
+  }
+
+  .attachment__icon {
+    aspect-ratio: 4/5;
+    background-color: color-mix(var(--lexxy-attachment-icon-color), transparent 90%);
+    block-size: 3lh;
+    border: 2px solid var(--lexxy-attachment-icon-color);
+    border-block-start-width: 1ch;
+    border-radius: var(--lexxy-radius);
+    box-sizing: border-box;
+    color: var(--lexxy-attachment-icon-color);
     display: grid;
-    flex: 1;
-    text-align: start;
-  }
-
-  .attachment__name {
-    color: var(--lexxy-color-ink);
+    font-size: var(--lexxy-text-small);
     font-weight: bold;
+    inline-size: auto;
+    place-content: center;
+    text-transform: uppercase;
   }
-}
 
-:where(
+  .attachment--preview {
+
+    img, video {
+      border-radius: var(--lexxy-radius);
+      block-size: auto;
+      display: block;
+      margin-inline: auto;
+      max-inline-size: 100%;
+      user-select: none;
+    }
+
+    > a {
+      display: block;
+    }
+  }
+
+  .attachment--file {
+    --lexxy-attachment-icon-color: var(--lexxy-color-text-subtle);
+
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    inline-size: auto;
+
+    .attachment__caption {
+      display: grid;
+      flex: 1;
+      text-align: start;
+    }
+
+    .attachment__name {
+      color: var(--lexxy-color-ink);
+      font-weight: bold;
+    }
+  }
+
+  .attachment--psd,
   .attachment--psd,
   .attachment--key,
   .attachment--sketch,
@@ -351,12 +355,10 @@
   .attachment--indd,
   .attachment--svg,
   .attachment--ppt,
-  .attachment--pptx
-) {
-  --lexxy-attachment-icon-color: var(--lexxy-color-red);
-}
+  .attachment--pptx {
+    --lexxy-attachment-icon-color: var(--lexxy-color-red);
+  }
 
-:where(
   .attachment--css,
   .attachment--php,
   .attachment--json,
@@ -365,98 +367,95 @@
   .attachment--rb,
   .attachment--erb,
   .attachment--ts,
-  .attachment--js
-) {
-  --lexxy-attachment-icon-color: var(--lexxy-color-purple);
-}
+  .attachment--js {
+    --lexxy-attachment-icon-color: var(--lexxy-color-purple);
+  }
 
-:where(
   .attachment--txt,
   .attachment--pages,
   .attachment--rtf,
   .attachment--md,
   .attachment--doc,
-  .attachment--docx
-) {
-  --lexxy-attachment-icon-color: var(--lexxy-color-blue);
-}
+  .attachment--docx {
+    --lexxy-attachment-icon-color: var(--lexxy-color-blue);
+  }
 
-:where(
   .attachment--csv,
   .attachment--numbers,
   .attachment--xls,
-  .attachment--xlsx
-) {
-  --lexxy-attachment-icon-color: var(--lexxy-color-green);
-}
+  .attachment--xlsx {
+    --lexxy-attachment-icon-color: var(--lexxy-color-green);
+  }
 
 
-/* Image galleries */
-/* ------------------------------------------------------------------------ */
+  /* Image galleries */
+  /* ------------------------------------------------------------------------ */
 
-:where(.attachment-gallery) {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15ch, 1fr));
-  justify-content: center;
-  position: relative;
+  .attachment-gallery {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 
-  .attachment {
-    block-size: 100%;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    gap: var(--lexxy-attachment-gap);
-    margin: 0;
-
-    img {
-      aspect-ratio: 4 / 3;
-      block-size: auto;
+    .attachment {
+      display: flex;
+      flex-direction: column;
+      gap: 1ch;
       inline-size: 100%;
-      object-fit: cover;
+    }
+
+    &:has(> :nth-child(2):last-child),
+    &:has(> :nth-child(4):last-child) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
-}
 
-/* Horizontal divider */
-:where(.horizontal-divider) {
-  margin: 0;
-  margin-block-end: .5em;
-  padding: 1.5em 0 .5em;
 
-  hr {
-    border: 0;
-    border-block-end: 1px solid currentColor;
-    inline-size: 20%;
+  /* Custom attachments such as mentions, etc. */
+  /* ------------------------------------------------------------------------ */
+
+  action-text-attachment[content-type^="application/vnd.actiontext"] {
+    --lexxy-attachment-bg-color: transparent;
+    --lexxy-attachment-image-size: 1em;
+    --lexxy-attachment-text-color: currentColor;
+
+    align-items: center;
+    background: var(--lexxy-attachment-bg-color);
+    border-radius: var(--lexxy-radius);
+    box-shadow: -0.25ch 0 0 var(--lexxy-attachment-bg-color), 0.5ch 0 0 var(--lexxy-attachment-bg-color);
+    color: var(--lexxy-attachment-text-color);
+    display: inline-flex;
+    gap: 0.25ch;
     margin: 0;
-  }
-}
+    padding: 0;
+    position: relative;
+    white-space: normal;
 
-/* Custom attachments such as mentions, etc. */
-:where(action-text-attachment[content-type^="application/vnd.actiontext"]) {
-  --lexxy-attachment-bg-color: transparent;
-  --lexxy-attachment-image-size: 1em;
-  --lexxy-attachment-text-color: currentColor;
+    img {
+      block-size: var(--lexxy-attachment-image-size);
+      border-radius: 50%;
+      inline-size: var(--lexxy-attachment-image-size);
+    }
 
-  align-items: center;
-  background: var(--lexxy-attachment-bg-color);
-  border-radius: var(--lexxy-radius);
-  box-shadow: -0.25ch 0 0 var(--lexxy-attachment-bg-color), 0.5ch 0 0 var(--lexxy-attachment-bg-color);
-  color: var(--lexxy-attachment-text-color);
-  display: inline-flex;
-  gap: 0.25ch;
-  margin: 0;
-  padding: 0;
-  position: relative;
-  white-space: normal;
-
-  img {
-    block-size: var(--lexxy-attachment-image-size);
-    border-radius: 50%;
-    inline-size: var(--lexxy-attachment-image-size);
+    &.node--selected {
+      --lexxy-attachment-bg-color: var(--lexxy-color-accent-dark);
+      --lexxy-attachment-text-color: var(--lexxy-color-ink-inverted);
+    }
   }
 
-  &.node--selected {
-    --lexxy-attachment-bg-color: var(--lexxy-color-accent-dark);
-    --lexxy-attachment-text-color: var(--lexxy-color-ink-inverted);
+
+  /* Horizontal divider */
+  /* ------------------------------------------------------------------------ */
+
+  .horizontal-divider {
+    margin: 0;
+    margin-block-end: .5em;
+    padding: 1.5em 0 .5em;
+
+    hr {
+      border: 0;
+      border-block-end: 1px solid currentColor;
+      inline-size: 20%;
+      margin: 0;
+    }
   }
+
 }
