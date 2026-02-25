@@ -16,7 +16,7 @@ import {
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
-import { CodeNode } from "@lexical/code"
+import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $isLinkNode, $toggleLink, LinkNode } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 

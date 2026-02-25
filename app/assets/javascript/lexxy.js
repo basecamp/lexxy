@@ -8000,7 +8000,7 @@ class CommandDispatcher {
       if (this.selection.hasSelectedWordsInSingleLine) {
         this.editor.dispatchCommand(_e$1, "code");
       } else {
-        this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new q$1("plain"));
+        this.contents.toggleNodeWrappingAllSelectedLines((node) => X$1(node), () => new q$1("plain"));
       }
     });
   }
