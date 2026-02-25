@@ -1,7 +1,8 @@
 import Lexxy from "../config/lexxy"
-import { $getEditor, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
+import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
+import { extractFileName } from "../helpers/storage_helper"
 
 
 export class ActionTextAttachmentNode extends DecoratorNode {
@@ -39,15 +40,19 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       },
       "img": () => {
         return {
-          conversion: (img) => ({
-            node: new ActionTextAttachmentNode({
-              src: img.getAttribute("src"),
-              caption: img.getAttribute("alt") || "",
-              contentType: "image/*",
-              width: img.getAttribute("width"),
-              height: img.getAttribute("height")
-            })
-          }), priority: 1
+          conversion: (img) => {
+            const fileName = extractFileName(img.getAttribute("src")) || ""
+            return {
+              node: new ActionTextAttachmentNode({
+                src: img.getAttribute("src"),
+                fileName: fileName,
+                caption: img.getAttribute("alt") || "",
+                contentType: "image/*",
+                width: img.getAttribute("width"),
+                height: img.getAttribute("height")
+              })
+            }
+          }, priority: 1
         }
       },
       "video": () => {
@@ -120,7 +125,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   isInline() {
-    return false
+    return this.isAttached() && !this.getParent().is($getNearestRootOrShadowRoot(this))
   }
 
   exportDOM() {
@@ -167,16 +172,19 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return createAttachmentFigure(this.contentType, this.isPreviewableAttachment, this.fileName)
   }
 
-  get #isPreviewableImage() {
+  get isPreviewableAttachment() {
+    return this.isPreviewableImage || this.previewable
+  }
+
+  get isPreviewableImage() {
     return isPreviewableImage(this.contentType)
   }
 
-  get isPreviewableAttachment() {
-    return this.#isPreviewableImage || this.previewable
-  }
-
-  #createDOMForImage() {
-    return createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions })
+  #createDOMForImage(options = {}) {
+    const img = createElement("img", { src: this.src, alt: this.altText, ...this.#imageDimensions, ...options })
+    const container = createElement("div", { className: "attachment__container" })
+    container.appendChild(img)
+    return container
   }
 
   get #imageDimensions() {
@@ -250,4 +258,12 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     }
 
   }
+}
+
+export function $createActionTextAttachmentNode(...args) {
+  return new ActionTextAttachmentNode(...args)
+}
+
+export function $isActionTextAttachmentNode(node) {
+  return node instanceof ActionTextAttachmentNode
 }
