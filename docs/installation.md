@@ -52,6 +52,20 @@ Then import it in your JavaScript entry point:
 import "@37signals/lexxy"
 ```
 
+## With CDNs such as esm.sh
+
+Like the ["Try it"](try-it) page, Lexxy's js can be included directly from [esm.sh](https://esm.sh). This will load all of Lexxy's dependencies.
+
+```javascript
+<link rel="stylesheet" href="https://unpkg.com/@37signals/lexxy@latest/dist/stylesheets/lexxy.css">
+<script type="module">
+  import * as Lexxy from "https://esm.sh/@37signals/lexxy@latest";
+</script>
+
+<lexxy-editor class="lexxy-content" placeholder="Write something…">
+</lexxy-editor>
+```
+
 ## Override Action Text defaults
 
 By default, the gem overrides Action Text form helpers, so that if you use `form.rich_text_area`, it will render a Lexxy editor instead of the default Trix editor.
