@@ -59,7 +59,9 @@ Like the ["Try it"](try-it) page, Lexxy's js can be included directly from [esm.
 ```javascript
 <link rel="stylesheet" href="https://unpkg.com/@37signals/lexxy@latest/dist/stylesheets/lexxy.css">
 <script type="module">
-  import * as Lexxy from "https://esm.sh/@37signals/lexxy@latest";
+  import * as Lexxy from "https://esm.sh/@37signals/lexxy@latest"; /* <-- consider pinning to a stable version */
+  // You can also configure Lexxy with:
+  // Lexxy.configure(...)
 </script>
 
 <lexxy-editor class="lexxy-content" placeholder="Write something…">
