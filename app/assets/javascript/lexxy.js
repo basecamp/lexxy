@@ -7498,7 +7498,14 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   showUploadedAttachment(blob) {
     this.editor.update(() => {
-      this.replace(this.#toActionTextAttachmentNodeWith(blob));
+      const attachmentNode = this.#toActionTextAttachmentNodeWith(blob);
+      this.replace(attachmentNode);
+
+      if (!attachmentNode.getNextSibling()) {
+        const paragraph = Li();
+        attachmentNode.insertAfter(paragraph);
+        paragraph.selectStart();
+      }
     }, { tag: SILENT_UPDATE_TAGS });
   }
 

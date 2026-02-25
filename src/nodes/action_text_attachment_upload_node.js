@@ -1,3 +1,4 @@
+import { $createParagraphNode } from "lexical"
 import Lexxy from "../config/lexxy"
 import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
@@ -207,7 +208,14 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   showUploadedAttachment(blob) {
     this.editor.update(() => {
-      this.replace(this.#toActionTextAttachmentNodeWith(blob))
+      const attachmentNode = this.#toActionTextAttachmentNodeWith(blob)
+      this.replace(attachmentNode)
+
+      if (!attachmentNode.getNextSibling()) {
+        const paragraph = $createParagraphNode()
+        attachmentNode.insertAfter(paragraph)
+        paragraph.selectStart()
+      }
     }, { tag: SILENT_UPDATE_TAGS })
   }
 
