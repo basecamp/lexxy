@@ -462,13 +462,17 @@ export default class Selection {
 
   #selectDecoratorNodeBeforeDeletion(backwards) {
     const node = backwards ? this.nodeBeforeCursor : this.nodeAfterCursor
-    if (node instanceof DecoratorNode) {
-      this.#selectInLexical(node)
+    if (!$isDecoratorNode(node)) return false
 
-      return true
-    } else {
-      return false
-    }
+    this.#removeEmptyElementAnchorNode()
+
+    const selection = this.#selectInLexical(node)
+    return Boolean(selection)
+  }
+
+  #removeEmptyElementAnchorNode(anchor = $getSelection()?.anchor) {
+    const anchorNode = anchor?.getNode()
+    if ($isElementNode(anchorNode) && anchorNode?.isEmpty()) anchorNode.remove()
   }
 
   #getValidSelectionRange() {
