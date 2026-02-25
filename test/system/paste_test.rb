@@ -46,7 +46,7 @@ class PasteTest < ApplicationSystemTestCase
     find_editor.send :arrow_right
     find_editor.send " everyone"
 
-    find_editor.select("Hello everyone")
+    find_editor.select_all
     find_editor.paste "https://37signals.com"
 
     assert_editor_html do
