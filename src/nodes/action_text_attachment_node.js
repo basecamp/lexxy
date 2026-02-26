@@ -166,7 +166,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   createAttachmentFigure() {
     const figure = createAttachmentFigure(this.contentType, this.isPreviewableAttachment, this.fileName)
 
-    const deleteButton = createElement("lexxy-attachment-delete-button", { nodeKey: this.getKey() })
+    const deleteButton = createElement("lexxy-node-delete-button", { nodeKey: this.getKey() })
     figure.appendChild(deleteButton)
 
     return figure
