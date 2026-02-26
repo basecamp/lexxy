@@ -439,6 +439,8 @@
   }
 
   .lexxy-heading-option {
+    aspect-ratio: auto;
+    inline-size: 100%;
     text-align: start;
     padding-inline: 1ch;
     white-space: nowrap;
