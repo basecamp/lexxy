@@ -288,10 +288,10 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #closeDropdowns() {
-   this.#dropdowns.forEach((details) => {
-     details.open = false
-   })
- }
+    this.#dropdowns.forEach((details) => {
+      details.open = false
+    })
+  }
 
   get #dropdowns() {
     return this.querySelectorAll("details")

@@ -132,6 +132,9 @@ export default class Selection {
       isInLink: $getNearestNodeOfType(anchorNode, LinkNode) !== null,
       isInQuote: $isQuoteNode(topLevelElement),
       isInHeading: $isHeadingNode(topLevelElement),
+      headingTag: $isHeadingNode(topLevelElement)
+        ? topLevelElement.getTag()
+        : null,
       isInCode: selection.hasFormat("code") || $getNearestNodeOfType(anchorNode, CodeNode) !== null,
       isInList: listType !== null,
       listType,

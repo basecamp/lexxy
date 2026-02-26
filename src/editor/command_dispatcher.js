@@ -152,27 +152,35 @@ export class CommandDispatcher {
     this.editor.focus()
   }
 
+  get #configuredHeadings() {
+    const configured = this.editorElement.config.get("headings")
+    const headings = Array.isArray(configured) ? configured : [ "h2", "h3", "h4" ]
+    return headings.filter((heading) => /^h[1-6]$/.test(heading))
+  }
+
   dispatchRotateHeadingFormat() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
+    const headings = this.#configuredHeadings
+    if (headings.length === 0) return
+
     if ($isRootOrShadowRoot(selection.anchor.getNode())) {
-      selection.insertNodes([ $createHeadingNode("h2") ])
+      selection.insertNodes([ $createHeadingNode(headings[0]) ])
       return
     }
 
     const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
-    let nextTag = "h2"
+    let nextTag = headings[0]
     if ($isHeadingNode(topLevelElement)) {
       const currentTag = topLevelElement.getTag()
-      if (currentTag === "h2") {
-        nextTag = "h3"
-      } else if (currentTag === "h3") {
-        nextTag = "h4"
-      } else if (currentTag === "h4") {
+      const currentIndex = headings.indexOf(currentTag)
+      if (currentIndex >= 0 && currentIndex < headings.length - 1) {
+        nextTag = headings[currentIndex + 1]
+      } else if (currentIndex === headings.length - 1) {
         nextTag = null
       } else {
-        nextTag = "h2"
+        nextTag = headings[0]
       }
     }
 

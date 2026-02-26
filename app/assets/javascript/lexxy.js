@@ -4652,6 +4652,7 @@ const presets = new Configuration({
     multiLine: true,
     richText: true,
     toolbar: true,
+    headings: [ "h2", "h3", "h4" ],
     highlight: {
       buttons: {
         color: range(1, 9).map(n => `var(--highlight-${n})`),
@@ -5182,10 +5183,10 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #closeDropdowns() {
-   this.#dropdowns.forEach((details) => {
-     details.open = false;
-   });
- }
+    this.#dropdowns.forEach((details) => {
+      details.open = false;
+    });
+  }
 
   get #dropdowns() {
     return this.querySelectorAll("details")
@@ -8042,27 +8043,35 @@ class CommandDispatcher {
     this.editor.focus();
   }
 
+  get #configuredHeadings() {
+    const configured = this.editorElement.config.get("headings");
+    const headings = Array.isArray(configured) ? configured : [ "h2", "h3", "h4" ];
+    return headings.filter((heading) => /^h[1-6]$/.test(heading))
+  }
+
   dispatchRotateHeadingFormat() {
     const selection = Lr();
     if (!yr(selection)) return
 
+    const headings = this.#configuredHeadings;
+    if (headings.length === 0) return
+
     if (as(selection.anchor.getNode())) {
-      selection.insertNodes([ St$3("h2") ]);
+      selection.insertNodes([ St$3(headings[0]) ]);
       return
     }
 
     const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
-    let nextTag = "h2";
+    let nextTag = headings[0];
     if (It$2(topLevelElement)) {
       const currentTag = topLevelElement.getTag();
-      if (currentTag === "h2") {
-        nextTag = "h3";
-      } else if (currentTag === "h3") {
-        nextTag = "h4";
-      } else if (currentTag === "h4") {
+      const currentIndex = headings.indexOf(currentTag);
+      if (currentIndex >= 0 && currentIndex < headings.length - 1) {
+        nextTag = headings[currentIndex + 1];
+      } else if (currentIndex === headings.length - 1) {
         nextTag = null;
       } else {
-        nextTag = "h2";
+        nextTag = headings[0];
       }
     }
 
@@ -8348,6 +8357,9 @@ class Selection {
       isInLink: wt$5(anchorNode, y$2) !== null,
       isInQuote: Ot$2(topLevelElement),
       isInHeading: It$2(topLevelElement),
+      headingTag: It$2(topLevelElement)
+        ? topLevelElement.getTag()
+        : null,
       isInCode: selection.hasFormat("code") || wt$5(anchorNode, q$1) !== null,
       isInList: listType !== null,
       listType,
