@@ -56,7 +56,7 @@
     "prismjs": "^1.30.0"
   },
   "peerDependencies": {
-    "@rails/activestorage": "^7.0.0"
+    "@rails/activestorage": ">= 7.0.0"
   },
   "peerDependenciesMeta": {
     "@rails/activestorage": {
