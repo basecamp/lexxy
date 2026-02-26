@@ -21,6 +21,16 @@ export class AttachmentDeleteButton extends HTMLElement {
     }
   }
 
+  disconnectedCallback() {
+    if (this.deleteButton && this.handleDeleteClick) {
+      this.deleteButton.removeEventListener("click", this.handleDeleteClick)
+    }
+
+    this.handleDeleteClick = null
+    this.deleteButton = null
+    this.editor = null
+    this.editorElement = null
+  }
   #attachDeleteButton() {
     const container = createElement("div", { className: "lexxy-floating-controls__group" })
 
