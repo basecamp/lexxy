@@ -37,6 +37,9 @@ export class HorizontalDividerNode extends DecoratorNode {
 
     figure.appendChild(hr)
 
+    const deleteButton = createElement("lexxy-attachment-delete-button", { nodeKey: this.getKey() })
+    figure.appendChild(deleteButton)
+
     return figure
   }
 

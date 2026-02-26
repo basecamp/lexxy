@@ -69,6 +69,9 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
     figure.insertAdjacentHTML("beforeend", this.innerHtml)
 
+    const deleteButton = createElement("lexxy-attachment-delete-button", { nodeKey: this.getKey() })
+    figure.appendChild(deleteButton)
+
     return figure
   }
 

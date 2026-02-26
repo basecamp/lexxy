@@ -645,6 +645,27 @@
 
 
   /* --------------------------------------------------------------------------
+  /* Attachment delete button */
+
+  &:is(lexxy-attachment-delete-button) {
+    inset-block-start: 0.5ch;
+    inset-inline-end: 0.5ch;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease-in-out;
+
+    .node--selected & {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .lexxy-attachment-delete:hover {
+      background-color: var(--lexxy-color-red);
+    }
+  }
+
+
+  /* --------------------------------------------------------------------------
   /* Language picker */
 
   &:is(lexxy-code-language-picker) {
