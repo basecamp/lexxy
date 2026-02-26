@@ -85,6 +85,7 @@
   object {
     inline-size: auto;
     margin-inline: auto;
+    min-block-size: 3em;
     max-block-size: 32rem;
     object-fit: contain;
 
