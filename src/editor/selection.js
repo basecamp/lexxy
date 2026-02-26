@@ -274,21 +274,21 @@ export default class Selection {
     this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW)
 
     this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
-        this.current = $getSelection()
-      }, COMMAND_PRIORITY_LOW)
+      this.current = $getSelection()
+    }, COMMAND_PRIORITY_LOW)
   }
 
   #listenForNodeSelections() {
     this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
-        if (!isDOMNode(target)) return false
+      if (!isDOMNode(target)) return false
 
-        const targetNode = $getNearestNodeFromDOMNode(target)
-        return $isDecoratorNode(targetNode) && this.#selectInLexical(targetNode)
-      }, COMMAND_PRIORITY_LOW)
+      const targetNode = $getNearestNodeFromDOMNode(target)
+      return $isDecoratorNode(targetNode) && this.#selectInLexical(targetNode)
+    }, COMMAND_PRIORITY_LOW)
 
     this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
-        this.#selectOrAppendNextLine()
-      })
+      this.#selectOrAppendNextLine()
+    })
   }
 
   #containEditorFocus() {

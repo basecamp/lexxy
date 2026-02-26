@@ -4995,8 +4995,8 @@ class LexicalToolbarElement extends HTMLElement {
     const isKeyboard = event instanceof PointerEvent && event.pointerId === -1;
 
     this.editor.update(() => {
-        this.editor.dispatchCommand(command, payload);
-      }, { tag: isKeyboard ? zn : undefined });
+      this.editor.dispatchCommand(command, payload);
+    }, { tag: isKeyboard ? zn : undefined });
   }
 
   #bindHotkeys() {
@@ -8522,21 +8522,21 @@ class Selection {
     this.editor.registerCommand(le$2, this.#selectDecoratorNodeBeforeDeletion.bind(this), zi);
 
     this.editor.registerCommand(ie$1, () => {
-        this.current = Lr();
-      }, zi);
+      this.current = Lr();
+    }, zi);
   }
 
   #listenForNodeSelections() {
     this.editor.registerCommand(se$1, ({ target }) => {
-        if (!Ss(target)) return false
+      if (!Ss(target)) return false
 
-        const targetNode = vo(target);
-        return Ti(targetNode) && this.#selectInLexical(targetNode)
-      }, zi);
+      const targetNode = vo(target);
+      return Ti(targetNode) && this.#selectInLexical(targetNode)
+    }, zi);
 
     this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
-        this.#selectOrAppendNextLine();
-      });
+      this.#selectOrAppendNextLine();
+    });
   }
 
   #containEditorFocus() {

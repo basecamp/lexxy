@@ -100,8 +100,8 @@ export class LexicalToolbarElement extends HTMLElement {
     const isKeyboard = event instanceof PointerEvent && event.pointerId === -1
 
     this.editor.update(() => {
-        this.editor.dispatchCommand(command, payload)
-      }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined })
+      this.editor.dispatchCommand(command, payload)
+    }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined })
   }
 
   #bindHotkeys() {
