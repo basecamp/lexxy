@@ -44,6 +44,21 @@ class AttachmentsTest < ApplicationSystemTestCase
     assert_editor_html ""
   end
 
+  test "delete attachments with the delete button" do
+    attach_file file_fixture("example.png") do
+      click_on "Upload file"
+    end
+
+    assert_image_figure_attachment content_type: "image/png", caption: "example.png"
+
+    find("figure.attachment img").click
+
+    find("lexxy-attachment-delete-button button[aria-label='Delete attachment']").click
+
+    assert_no_attachment content_type: "image/png"
+    assert_editor_html ""
+  end
+
   test "disable attachments" do
     visit edit_post_path(posts(:empty))
     assert_button "Upload file"
