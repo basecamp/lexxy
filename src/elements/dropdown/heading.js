@@ -1,5 +1,7 @@
 import { ToolbarDropdown } from "../toolbar_dropdown"
 
+const VALID_HEADINGS = new Set([ "h1", "h2", "h3", "h4", "h5", "h6" ])
+
 const HEADING_LABELS = {
   h1: "Heading 1",
   h2: "Heading 2",
@@ -25,7 +27,7 @@ export class HeadingDropdown extends ToolbarDropdown {
   }
 
   #populateOptions() {
-    const headings = this.editorElement.config.get("headings") || [
+    const configured = this.editorElement.config.get("headings") || [
       "h1",
       "h2",
       "h3",
@@ -33,6 +35,7 @@ export class HeadingDropdown extends ToolbarDropdown {
       "h5",
       "h6",
     ]
+    const headings = configured.filter((heading) => VALID_HEADINGS.has(heading))
     const container = this.querySelector(".lexxy-heading-options")
 
     headings.forEach((heading) => {

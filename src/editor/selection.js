@@ -295,36 +295,36 @@ export default class Selection {
     // Workaround for a bizarre Chrome bug where the cursor abandons the editor to focus on not-focusable elements
     // above when navigating UP/DOWN when Lexical shows its fake cursor on custom decorator nodes.
     this.editorContentElement.addEventListener("keydown", (event) => {
-        if (event.key === "ArrowUp") {
-          const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
+      if (event.key === "ArrowUp") {
+        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
 
-          if (lexicalCursor) {
-            let currentElement = lexicalCursor.previousElementSibling
-            while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
-              currentElement = currentElement.previousElementSibling
-            }
+        if (lexicalCursor) {
+          let currentElement = lexicalCursor.previousElementSibling
+          while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
+            currentElement = currentElement.previousElementSibling
+          }
 
-            if (!currentElement) {
-              event.preventDefault()
-            }
+          if (!currentElement) {
+            event.preventDefault()
           }
         }
+      }
 
-        if (event.key === "ArrowDown") {
-          const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
+      if (event.key === "ArrowDown") {
+        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
 
-          if (lexicalCursor) {
-            let currentElement = lexicalCursor.nextElementSibling
-            while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
-              currentElement = currentElement.nextElementSibling
-            }
+        if (lexicalCursor) {
+          let currentElement = lexicalCursor.nextElementSibling
+          while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
+            currentElement = currentElement.nextElementSibling
+          }
 
-            if (!currentElement) {
-              event.preventDefault()
-            }
+          if (!currentElement) {
+            event.preventDefault()
           }
         }
-      }, true)
+      }
+    }, true)
   }
 
   #syncSelectedClasses() {

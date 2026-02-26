@@ -8050,7 +8050,8 @@ class CommandDispatcher {
   }
 
   get #configuredHeadings() {
-    return this.editorElement.config.get("headings") || [ "h1", "h2", "h3", "h4", "h5", "h6" ]
+    const configured = this.editorElement.config.get("headings") || [ "h1", "h2", "h3", "h4", "h5", "h6" ];
+    return configured.filter((h) => /^h[1-6]$/.test(h))
   }
 
   // TODO: If the heading dropdown is sufficient, this method can be removed as it's no longer used in the toolbar
@@ -8542,36 +8543,36 @@ class Selection {
     // Workaround for a bizarre Chrome bug where the cursor abandons the editor to focus on not-focusable elements
     // above when navigating UP/DOWN when Lexical shows its fake cursor on custom decorator nodes.
     this.editorContentElement.addEventListener("keydown", (event) => {
-        if (event.key === "ArrowUp") {
-          const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]");
+      if (event.key === "ArrowUp") {
+        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]");
 
-          if (lexicalCursor) {
-            let currentElement = lexicalCursor.previousElementSibling;
-            while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
-              currentElement = currentElement.previousElementSibling;
-            }
+        if (lexicalCursor) {
+          let currentElement = lexicalCursor.previousElementSibling;
+          while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
+            currentElement = currentElement.previousElementSibling;
+          }
 
-            if (!currentElement) {
-              event.preventDefault();
-            }
+          if (!currentElement) {
+            event.preventDefault();
           }
         }
+      }
 
-        if (event.key === "ArrowDown") {
-          const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]");
+      if (event.key === "ArrowDown") {
+        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]");
 
-          if (lexicalCursor) {
-            let currentElement = lexicalCursor.nextElementSibling;
-            while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
-              currentElement = currentElement.nextElementSibling;
-            }
+        if (lexicalCursor) {
+          let currentElement = lexicalCursor.nextElementSibling;
+          while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
+            currentElement = currentElement.nextElementSibling;
+          }
 
-            if (!currentElement) {
-              event.preventDefault();
-            }
+          if (!currentElement) {
+            event.preventDefault();
           }
         }
-      }, true);
+      }
+    }, true);
   }
 
   #syncSelectedClasses() {
@@ -11294,6 +11295,8 @@ class HighlightDropdown extends ToolbarDropdown {
   }
 }
 
+const VALID_HEADINGS = new Set([ "h1", "h2", "h3", "h4", "h5", "h6" ]);
+
 const HEADING_LABELS = {
   h1: "Heading 1",
   h2: "Heading 2",
@@ -11319,7 +11322,7 @@ class HeadingDropdown extends ToolbarDropdown {
   }
 
   #populateOptions() {
-    const headings = this.editorElement.config.get("headings") || [
+    const configured = this.editorElement.config.get("headings") || [
       "h1",
       "h2",
       "h3",
@@ -11327,6 +11330,7 @@ class HeadingDropdown extends ToolbarDropdown {
       "h5",
       "h6",
     ];
+    const headings = configured.filter((heading) => VALID_HEADINGS.has(heading));
     const container = this.querySelector(".lexxy-heading-options");
 
     headings.forEach((heading) => {

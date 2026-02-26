@@ -154,7 +154,8 @@ export class CommandDispatcher {
   }
 
   get #configuredHeadings() {
-    return this.editorElement.config.get("headings") || [ "h1", "h2", "h3", "h4", "h5", "h6" ]
+    const configured = this.editorElement.config.get("headings") || [ "h1", "h2", "h3", "h4", "h5", "h6" ]
+    return configured.filter((h) => /^h[1-6]$/.test(h))
   }
 
   // TODO: If the heading dropdown is sufficient, this method can be removed as it's no longer used in the toolbar

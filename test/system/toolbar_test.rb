@@ -68,6 +68,7 @@ class ToolbarTest < ApplicationSystemTestCase
     within "lexxy-heading-dropdown" do
       click_on "Heading 1"
     end
+    assert_editor_html "<h1>Hello everyone</h1>"
 
     find("[name='heading']").click
     within "lexxy-heading-dropdown" do
