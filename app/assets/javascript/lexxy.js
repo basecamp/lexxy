@@ -4877,7 +4877,7 @@ var ToolbarIcons = {
 
   "table":
   `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-    <path d="M13.5 1.5C15.1569 1.5 16.5 2.84315 16.5 4.5V13.5C16.5 15.1569 15.1569 16.5 13.5 16.5H4.5C2.84314 16.5 1.5 15.1569 1.5 13.5V4.5C1.5 2.84314 2.84315 1.5 4.5 1.5H13.5ZM10 10V14.5H13.5L13.6025 14.4951C14.1067 14.4438 14.5 14.0177 14.5 13.5V10H10ZM3.5 13.5L3.50488 13.6025C3.55278 14.073 3.92703 14.4472 4.39746 14.4951L4.5 14.5H8V10H3.5V13.5ZM10 3.5V8H14.5V4.5C14.5 3.94772 14.0523 3.5 13.5 3.5H10ZM4.5 3.5C3.94772 3.5 3.5 3.94772 3.5 4.5V8H8V3.5H4.5Z"/>
+    <path d="M15 1C16.1046 1 17 1.89543 17 3V15C17 16.1046 16.1046 17 15 17H3C1.89543 17 1 16.1046 1 15V3C1 1.89543 1.89543 1 3 1H15ZM3 15H8V10H3V15ZM10 10V15H15V10H10ZM10 8H15V3H10V8ZM3 8H8V3H3V8Z"/>
   </svg>`,
 
   "hr":
@@ -7227,7 +7227,12 @@ class ActionTextAttachmentNode extends ki {
   }
 
   createAttachmentFigure() {
-    return createAttachmentFigure(this.contentType, this.isPreviewableAttachment, this.fileName)
+    const figure = createAttachmentFigure(this.contentType, this.isPreviewableAttachment, this.fileName);
+
+    const deleteButton = createElement("lexxy-node-delete-button");
+    figure.appendChild(deleteButton);
+
+    return figure
   }
 
   get #isPreviewableImage() {
@@ -7652,6 +7657,9 @@ class HorizontalDividerNode extends ki {
     const hr = createElement("hr");
 
     figure.appendChild(hr);
+
+    const deleteButton = createElement("lexxy-node-delete-button");
+    figure.appendChild(deleteButton);
 
     return figure
   }
@@ -8972,6 +8980,9 @@ class CustomActionTextAttachmentNode extends ki {
     const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true });
 
     figure.insertAdjacentHTML("beforeend", this.innerHtml);
+
+    const deleteButton = createElement("lexxy-node-delete-button");
+    figure.appendChild(deleteButton);
 
     return figure
   }
@@ -11837,9 +11848,16 @@ class CodeLanguagePicker extends HTMLElement {
   connectedCallback() {
     this.editorElement = this.closest("lexxy-editor");
     this.editor = this.editorElement.editor;
+    this.classList.add("lexxy-floating-controls");
 
     this.#attachLanguagePicker();
+    this.#hide();
     this.#monitorForCodeBlockSelection();
+  }
+
+  disconnectedCallback() {
+    this.unregisterUpdateListener?.();
+    this.unregisterUpdateListener = null;
   }
 
   #attachLanguagePicker() {
@@ -11896,14 +11914,14 @@ class CodeLanguagePicker extends HTMLElement {
   }
 
   #monitorForCodeBlockSelection() {
-    this.editor.registerUpdateListener(() => {
+    this.unregisterUpdateListener = this.editor.registerUpdateListener(() => {
       this.editor.getEditorState().read(() => {
         const codeNode = this.#getCurrentCodeNode();
 
         if (codeNode) {
           this.#codeNodeWasSelected(codeNode);
         } else {
-          this.#hideLanguagePicker();
+          this.#hide();
         }
       });
     });
@@ -11932,7 +11950,7 @@ class CodeLanguagePicker extends HTMLElement {
     const language = codeNode.getLanguage();
 
     this.#updateLanguagePickerWith(language);
-    this.#showLanguagePicker();
+    this.#show();
     this.#positionLanguagePicker(codeNode);
   }
 
@@ -11956,12 +11974,63 @@ class CodeLanguagePicker extends HTMLElement {
     this.style.right = `${relativeRight}px`;
   }
 
-  #showLanguagePicker() {
+  #show() {
     this.hidden = false;
   }
 
-  #hideLanguagePicker() {
+  #hide() {
     this.hidden = true;
+  }
+}
+
+const DELETE_ICON = `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+  <path d="M11.2041 1.01074C12.2128 1.113 13 1.96435 13 3V4H15L15.1025 4.00488C15.6067 4.05621 16 4.48232 16 5C16 5.55228 15.5523 6 15 6H14.8457L14.1416 15.1533C14.0614 16.1953 13.1925 17 12.1475 17H5.85254L5.6582 16.9902C4.76514 16.9041 4.03607 16.2296 3.88184 15.3457L3.8584 15.1533L3.1543 6H3C2.44772 6 2 5.55228 2 5C2 4.44772 2.44772 4 3 4H5V3C5 1.89543 5.89543 1 7 1H11L11.2041 1.01074ZM5.85254 15H12.1475L12.8398 6H5.16016L5.85254 15ZM7 4H11V3H7V4Z"/>
+</svg>`;
+
+class NodeDeleteButton extends HTMLElement {
+  connectedCallback() {
+    this.editorElement = this.closest("lexxy-editor");
+    this.editor = this.editorElement.editor;
+    this.classList.add("lexxy-floating-controls");
+
+    if (!this.deleteButton) {
+      this.#attachDeleteButton();
+    }
+  }
+
+  disconnectedCallback() {
+    if (this.deleteButton && this.handleDeleteClick) {
+      this.deleteButton.removeEventListener("click", this.handleDeleteClick);
+    }
+
+    this.handleDeleteClick = null;
+    this.deleteButton = null;
+    this.editor = null;
+    this.editorElement = null;
+  }
+  #attachDeleteButton() {
+    const container = createElement("div", { className: "lexxy-floating-controls__group" });
+
+    this.deleteButton = createElement("button", {
+      className: "lexxy-node-delete",
+      type: "button",
+      "aria-label": "Remove"
+    });
+    this.deleteButton.tabIndex = -1;
+    this.deleteButton.innerHTML = DELETE_ICON;
+
+    this.handleDeleteClick = () => this.#deleteNode();
+    this.deleteButton.addEventListener("click", this.handleDeleteClick);
+    container.appendChild(this.deleteButton);
+
+    this.appendChild(container);
+  }
+
+  #deleteNode() {
+    this.editor.update(() => {
+      const node = vo(this);
+      node?.remove();
+    });
   }
 }
 
@@ -12356,20 +12425,22 @@ var TableIcons = {
 
   "toggle-column":
     `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M13.6533 17.9922C14.4097 17.9154 15 17.2767 15 16.5L15 3L14.9922 2.84668C14.9205 2.14069 14.3593 1.57949 13.6533 1.50781L13.5 1.5L4.5 1.5L4.34668 1.50781C3.59028 1.58461 3 2.22334 3 3L3 16.5C3 17.2767 3.59028 17.9154 4.34668 17.9922L4.5 18L13.5 18L13.6533 17.9922ZM9 3L13.5 3L13.5 16.5L9 16.5L9 3Z" />
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M13.6533 17.9922C14.4097 17.9154 15 17.2767 15 16.5L15 3L14.9922 2.84668C14.9205 2.14069 14.3593 1.57949 13.6533 1.50781L13.5 1.5L4.5 1.5L4.34668 1.50781C3.59028 1.58461 3 2.22334 3 3L3 16.5C3 17.2767 3.59028 17.9154 4.34668 17.9922L4.5 18L13.5 18L13.6533 17.9922ZM9 3L13.5 3L13.5 16.5L9 16.5L9 3Z"/>
     </svg>`,
 
   "delete-table":
-    `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path d="M18.2129 19.2305C18.0925 20.7933 16.7892 22 15.2217 22H7.77832C6.21084 22 4.90753 20.7933 4.78711 19.2305L4 9H19L18.2129 19.2305Z"/><path d="M13 2C14.1046 2 15 2.89543 15 4H19C19.5523 4 20 4.44772 20 5V6C20 6.55228 19.5523 7 19 7H4C3.44772 7 3 6.55228 3 6V5C3 4.44772 3.44772 4 4 4H8C8 2.89543 8.89543 2 10 2H13Z"/>
+    `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+      <path d="M11.2041 1.01074C12.2128 1.113 13 1.96435 13 3V4H15L15.1025 4.00488C15.6067 4.05621 16 4.48232 16 5C16 5.55228 15.5523 6 15 6H14.8457L14.1416 15.1533C14.0614 16.1953 13.1925 17 12.1475 17H5.85254L5.6582 16.9902C4.76514 16.9041 4.03607 16.2296 3.88184 15.3457L3.8584 15.1533L3.1543 6H3C2.44772 6 2 5.55228 2 5C2 4.44772 2.44772 4 3 4H5V3C5 1.89543 5.89543 1 7 1H11L11.2041 1.01074ZM5.85254 15H12.1475L12.8398 6H5.16016L5.85254 15ZM7 4H11V3H7V4Z"/>
     </svg>`
 };
 
 class TableTools extends HTMLElement {
   connectedCallback() {
     this.tableController = new TableController(this.#editorElement);
+    this.classList.add("lexxy-floating-controls");
 
     this.#setUpButtons();
+    this.#hide();
     this.#monitorForTableSelection();
     this.#registerKeyboardShortcuts();
   }
@@ -12407,7 +12478,7 @@ class TableTools extends HTMLElement {
   }
 
   #createButtonsContainer(childType, setCountProperty, moreMenu) {
-    const container = createElement("div", { className: `lexxy-table-control lexxy-table-control--${childType}` });
+    const container = createElement("div", { className: `lexxy-floating-controls__group lexxy-table-control lexxy-table-control--${childType}` });
 
     const plusButton = this.#createButton(`Add ${childType}`, { action: "insert", childType, direction: "after" }, "+");
     const minusButton = this.#createButton(`Remove ${childType}`, { action: "delete", childType }, "−");
@@ -12446,7 +12517,7 @@ class TableTools extends HTMLElement {
   }
 
   #createMoreMenuSection(childType) {
-    const section = createElement("div", { className: "lexxy-table-control__more-menu-details" });
+    const section = createElement("div", { className: "lexxy-floating-controls__group lexxy-table-control__more-menu-details" });
     const addBeforeButton = this.#createButton(`Add ${childType} before`, { action: "insert", childType, direction: "before" });
     const addAfterButton = this.#createButton(`Add ${childType} after`, { action: "insert", childType, direction: "after" });
     const toggleStyleButton = this.#createButton(`Toggle ${childType} style`, { action: "toggle", childType });
@@ -12461,7 +12532,7 @@ class TableTools extends HTMLElement {
   }
 
   #createDeleteTableButton() {
-    const container = createElement("div", { className: "lexxy-table-control" });
+    const container = createElement("div", { className: "lexxy-table-control lexxy-floating-controls__group" });
 
     const deleteTableButton = this.#createButton("Delete this table?", { action: "delete", childType: "table" });
     deleteTableButton.classList.add("lexxy-table-control__button--delete-table");
@@ -12680,6 +12751,7 @@ function defineElements() {
     "lexxy-highlight-dropdown": HighlightDropdown,
     "lexxy-prompt": LexicalPromptElement,
     "lexxy-code-language-picker": CodeLanguagePicker,
+    "lexxy-node-delete-button": NodeDeleteButton,
     "lexxy-table-tools": TableTools,
   };
 
