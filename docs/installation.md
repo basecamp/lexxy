@@ -54,7 +54,7 @@ import "@37signals/lexxy"
 
 ## With CDNs such as esm.sh
 
-Like the ["Try it"](try-it) page, Lexxy's js can be included directly from [esm.sh](https://esm.sh). This will load all of Lexxy's dependencies.
+Like the ["Try it"](try-it) page, Lexxy's JavaScript can be included directly from [esm.sh](https://esm.sh). This will load all of Lexxy's dependencies.
 
 ```html
 <link rel="stylesheet" href="https://unpkg.com/@37signals/lexxy@latest/dist/stylesheets/lexxy.css">
