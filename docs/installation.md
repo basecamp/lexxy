@@ -25,7 +25,7 @@ If you are using [propshaft](https://github.com/rails/propshaft) and [import map
 
 ```ruby
 # importmap.rb
-pin "lexxy", to: "lexxy.js"
+pin "@37signals/lexxy", to: "lexxy.js"
 pin "@rails/activestorage", to: "activestorage.esm.js" # to support attachments
 ```
 
