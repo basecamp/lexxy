@@ -56,7 +56,7 @@ import "@37signals/lexxy"
 
 Like the ["Try it"](try-it) page, Lexxy's js can be included directly from [esm.sh](https://esm.sh). This will load all of Lexxy's dependencies.
 
-```javascript
+```html
 <link rel="stylesheet" href="https://unpkg.com/@37signals/lexxy@latest/dist/stylesheets/lexxy.css">
 <script type="module">
   import * as Lexxy from "https://esm.sh/@37signals/lexxy@latest"; /* <-- consider pinning to a stable version */
