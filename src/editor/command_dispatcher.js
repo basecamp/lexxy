@@ -33,6 +33,7 @@ const COMMANDS = [
   "toggleHighlight",
   "removeHighlight",
   "rotateHeadingFormat",
+  "setHeading",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -152,27 +153,34 @@ export class CommandDispatcher {
     this.editor.focus()
   }
 
+  get #configuredHeadings() {
+    return this.editorElement.config.get("headings") || [ "h1", "h2", "h3", "h4", "h5", "h6" ]
+  }
+
+  // TODO: If the heading dropdown is sufficient, this method can be removed as it's no longer used in the toolbar
   dispatchRotateHeadingFormat() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
+    const headings = this.#configuredHeadings
+    if (headings.length === 0) return
+
     if ($isRootOrShadowRoot(selection.anchor.getNode())) {
-      selection.insertNodes([ $createHeadingNode("h2") ])
+      selection.insertNodes([ $createHeadingNode(headings[0]) ])
       return
     }
 
     const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
-    let nextTag = "h2"
+    let nextTag = headings[0]
     if ($isHeadingNode(topLevelElement)) {
       const currentTag = topLevelElement.getTag()
-      if (currentTag === "h2") {
-        nextTag = "h3"
-      } else if (currentTag === "h3") {
-        nextTag = "h4"
-      } else if (currentTag === "h4") {
+      const currentIndex = headings.indexOf(currentTag)
+      if (currentIndex >= 0 && currentIndex < headings.length - 1) {
+        nextTag = headings[currentIndex + 1]
+      } else if (currentIndex === headings.length - 1) {
         nextTag = null
       } else {
-        nextTag = "h2"
+        nextTag = headings[0]
       }
     }
 
@@ -181,6 +189,23 @@ export class CommandDispatcher {
     } else {
       this.contents.removeFormattingFromSelectedLines()
     }
+  }
+
+  dispatchSetHeading(tag) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    if (!tag) {
+      this.contents.removeFormattingFromSelectedLines()
+      return
+    }
+
+    if ($isRootOrShadowRoot(selection.anchor.getNode())) {
+      selection.insertNodes([ $createHeadingNode(tag) ])
+      return
+    }
+
+    this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(tag))
   }
 
   dispatchUploadAttachments() {

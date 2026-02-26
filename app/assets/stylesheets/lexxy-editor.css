@@ -35,7 +35,7 @@
       outline-offset: var(--lexxy-focus-ring-offset);
     }
   }
-    
+
   summary {
     list-style: none;
 
@@ -145,7 +145,7 @@
         }
         &[data-action="toggle"] {
           background-color: var(--lexxy-color-table-cell-toggle);
-          
+
           &:after { box-shadow: 0 0 0 0 transparent; }
         }
       }
@@ -235,7 +235,7 @@
   &[data-attachments="false"] button[name="upload"]{
     display: none;
   }
-  
+
   .lexxy-editor__toolbar-button {
     aspect-ratio: 1;
     block-size: var(--lexxy-toolbar-button-size);
@@ -323,7 +323,7 @@
       background-color: var(--lexxy-color-selected-hover);
     }
   }
-  
+
   [overflowing] &:not(.lexxy-editor__toolbar-overflow) summary ~ * {
     inset-inline-end: var(--lexxy-toolbar-spacing);
     inset-inline-start: var(--lexxy-toolbar-spacing);
@@ -344,7 +344,7 @@
     display: none;
     justify-self: flex-end;
     z-index: 1;
-    
+
     summary ~ * {
       border-start-end-radius: 0;
       display: grid;
@@ -413,6 +413,42 @@
   }
 
   /* --------------------------------------------------------------------------
+  /* Heading dropdown */
+
+  &:has(lexxy-heading-dropdown) {
+    position: relative;
+
+    [overflowing] & {
+      position: static;
+    }
+  }
+
+  lexxy-heading-dropdown {
+    border-start-start-radius: 0;
+    display: flex;
+    flex-direction: column;
+    font-size: var(--lexxy-text-small);
+    inset-inline-start: 0;
+    min-inline-size: max-content;
+  }
+
+  .lexxy-heading-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lexxy-toolbar-gap);
+  }
+
+  .lexxy-heading-option {
+    text-align: start;
+    padding-inline: 1ch;
+    white-space: nowrap;
+
+    &[aria-pressed="true"] {
+      background-color: var(--lexxy-color-selected-hover);
+    }
+  }
+
+  /* --------------------------------------------------------------------------
   /* Color dropdown */
 
   &:has(lexxy-highlight-dropdown) {
@@ -462,7 +498,7 @@
         &[aria-pressed="true"] {
           background-color: transparent;
           box-shadow: 0 0 0 2px currentColor inset;
-  
+
           &:after {
             content: "✓";
           }
@@ -477,7 +513,7 @@
         display: none;
       }
     }
-    
+
     [overflowing] & {
       .lexxy-highlight-colors {
         button {
@@ -566,7 +602,7 @@
     .lexxy-table-control__more-menu {
       gap: 0;
       position: relative;
-  
+
       .lexxy-table-control__more-menu-details {
         background: var(--lexxy-color-ink);
         border-radius: var(--table-tools-radius);
@@ -578,7 +614,7 @@
         padding: 0.25ch;
         position: absolute;
         transform: translateX(-50%);
-  
+
         button {
           aspect-ratio: unset;
           flex-direction: row;
@@ -588,11 +624,11 @@
           padding: 0.75ch;
           padding-inline-end: 1.5ch;
           white-space: nowrap;
-  
+
           span {
             display: inline-block;
           }
-  
+
           svg {
             block-size: 1.3lh;
             inline-size: 1.3lh;
@@ -601,7 +637,7 @@
         }
       }
     }
-  
+
     .lexxy-table-control__button--delete-table {
       align-items: center;
       aspect-ratio: unset;

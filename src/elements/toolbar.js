@@ -100,8 +100,8 @@ export class LexicalToolbarElement extends HTMLElement {
     const isKeyboard = event instanceof PointerEvent && event.pointerId === -1
 
     this.editor.update(() => {
-      this.editor.dispatchCommand(command, payload)
-    }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined })
+        this.editor.dispatchCommand(command, payload)
+      }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined })
   }
 
   #bindHotkeys() {
@@ -288,10 +288,10 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #closeDropdowns() {
-   this.#dropdowns.forEach((details) => {
-     details.open = false
-   })
- }
+    this.#dropdowns.forEach((details) => {
+      details.open = false
+    })
+  }
 
   get #dropdowns() {
     return this.querySelectorAll("details")
@@ -331,9 +331,14 @@ export class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.strikethrough}
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="heading" data-command="rotateHeadingFormat" title="Heading">
-        ${ToolbarIcons.heading}
-      </button>
+      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
+        <summary class="lexxy-editor__toolbar-button" name="heading" title="Heading">
+          ${ToolbarIcons.heading}
+        </summary>
+        <lexxy-heading-dropdown class="lexxy-editor__toolbar-dropdown-content">
+          <div class="lexxy-heading-options"></div>
+        </lexxy-heading-dropdown>
+      </details>
 
       <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">

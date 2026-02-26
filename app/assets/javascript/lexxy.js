@@ -4652,6 +4652,7 @@ const presets = new Configuration({
     multiLine: true,
     richText: true,
     toolbar: true,
+    headings: [ "h1", "h2", "h3", "h4", "h5", "h6" ],
     highlight: {
       buttons: {
         color: range(1, 9).map(n => `var(--highlight-${n})`),
@@ -4994,8 +4995,8 @@ class LexicalToolbarElement extends HTMLElement {
     const isKeyboard = event instanceof PointerEvent && event.pointerId === -1;
 
     this.editor.update(() => {
-      this.editor.dispatchCommand(command, payload);
-    }, { tag: isKeyboard ? zn : undefined });
+        this.editor.dispatchCommand(command, payload);
+      }, { tag: isKeyboard ? zn : undefined });
   }
 
   #bindHotkeys() {
@@ -5182,10 +5183,10 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #closeDropdowns() {
-   this.#dropdowns.forEach((details) => {
-     details.open = false;
-   });
- }
+    this.#dropdowns.forEach((details) => {
+      details.open = false;
+    });
+  }
 
   get #dropdowns() {
     return this.querySelectorAll("details")
@@ -5225,9 +5226,14 @@ class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.strikethrough}
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="heading" data-command="rotateHeadingFormat" title="Heading">
-        ${ToolbarIcons.heading}
-      </button>
+      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
+        <summary class="lexxy-editor__toolbar-button" name="heading" title="Heading">
+          ${ToolbarIcons.heading}
+        </summary>
+        <lexxy-heading-dropdown class="lexxy-editor__toolbar-dropdown-content">
+          <div class="lexxy-heading-options"></div>
+        </lexxy-heading-dropdown>
+      </details>
 
       <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">
@@ -7923,6 +7929,7 @@ const COMMANDS = [
   "toggleHighlight",
   "removeHighlight",
   "rotateHeadingFormat",
+  "setHeading",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -8042,27 +8049,34 @@ class CommandDispatcher {
     this.editor.focus();
   }
 
+  get #configuredHeadings() {
+    return this.editorElement.config.get("headings") || [ "h1", "h2", "h3", "h4", "h5", "h6" ]
+  }
+
+  // TODO: If the heading dropdown is sufficient, this method can be removed as it's no longer used in the toolbar
   dispatchRotateHeadingFormat() {
     const selection = Lr();
     if (!yr(selection)) return
 
+    const headings = this.#configuredHeadings;
+    if (headings.length === 0) return
+
     if (as(selection.anchor.getNode())) {
-      selection.insertNodes([ St$3("h2") ]);
+      selection.insertNodes([ St$3(headings[0]) ]);
       return
     }
 
     const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
-    let nextTag = "h2";
+    let nextTag = headings[0];
     if (It$2(topLevelElement)) {
       const currentTag = topLevelElement.getTag();
-      if (currentTag === "h2") {
-        nextTag = "h3";
-      } else if (currentTag === "h3") {
-        nextTag = "h4";
-      } else if (currentTag === "h4") {
+      const currentIndex = headings.indexOf(currentTag);
+      if (currentIndex >= 0 && currentIndex < headings.length - 1) {
+        nextTag = headings[currentIndex + 1];
+      } else if (currentIndex === headings.length - 1) {
         nextTag = null;
       } else {
-        nextTag = "h2";
+        nextTag = headings[0];
       }
     }
 
@@ -8071,6 +8085,23 @@ class CommandDispatcher {
     } else {
       this.contents.removeFormattingFromSelectedLines();
     }
+  }
+
+  dispatchSetHeading(tag) {
+    const selection = Lr();
+    if (!yr(selection)) return
+
+    if (!tag) {
+      this.contents.removeFormattingFromSelectedLines();
+      return
+    }
+
+    if (as(selection.anchor.getNode())) {
+      selection.insertNodes([ St$3(tag) ]);
+      return
+    }
+
+    this.contents.insertNodeWrappingEachSelectedLine(() => St$3(tag));
   }
 
   dispatchUploadAttachments() {
@@ -8348,6 +8379,9 @@ class Selection {
       isInLink: wt$5(anchorNode, y$2) !== null,
       isInQuote: Ot$2(topLevelElement),
       isInHeading: It$2(topLevelElement),
+      headingTag: It$2(topLevelElement)
+        ? topLevelElement.getTag()
+        : null,
       isInCode: selection.hasFormat("code") || wt$5(anchorNode, q$1) !== null,
       isInList: listType !== null,
       listType,
@@ -8487,57 +8521,57 @@ class Selection {
     this.editor.registerCommand(le$2, this.#selectDecoratorNodeBeforeDeletion.bind(this), zi);
 
     this.editor.registerCommand(ie$1, () => {
-      this.current = Lr();
-    }, zi);
+        this.current = Lr();
+      }, zi);
   }
 
   #listenForNodeSelections() {
     this.editor.registerCommand(se$1, ({ target }) => {
-      if (!Ss(target)) return false
+        if (!Ss(target)) return false
 
-      const targetNode = vo(target);
-      return Ti(targetNode) && this.#selectInLexical(targetNode)
-    }, zi);
+        const targetNode = vo(target);
+        return Ti(targetNode) && this.#selectInLexical(targetNode)
+      }, zi);
 
     this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
-      this.#selectOrAppendNextLine();
-    });
+        this.#selectOrAppendNextLine();
+      });
   }
 
   #containEditorFocus() {
     // Workaround for a bizarre Chrome bug where the cursor abandons the editor to focus on not-focusable elements
     // above when navigating UP/DOWN when Lexical shows its fake cursor on custom decorator nodes.
     this.editorContentElement.addEventListener("keydown", (event) => {
-      if (event.key === "ArrowUp") {
-        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]");
+        if (event.key === "ArrowUp") {
+          const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]");
 
-        if (lexicalCursor) {
-          let currentElement = lexicalCursor.previousElementSibling;
-          while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
-            currentElement = currentElement.previousElementSibling;
-          }
+          if (lexicalCursor) {
+            let currentElement = lexicalCursor.previousElementSibling;
+            while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
+              currentElement = currentElement.previousElementSibling;
+            }
 
-          if (!currentElement) {
-            event.preventDefault();
-          }
-        }
-      }
-
-      if (event.key === "ArrowDown") {
-        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]");
-
-        if (lexicalCursor) {
-          let currentElement = lexicalCursor.nextElementSibling;
-          while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
-            currentElement = currentElement.nextElementSibling;
-          }
-
-          if (!currentElement) {
-            event.preventDefault();
+            if (!currentElement) {
+              event.preventDefault();
+            }
           }
         }
-      }
-    }, true);
+
+        if (event.key === "ArrowDown") {
+          const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]");
+
+          if (lexicalCursor) {
+            let currentElement = lexicalCursor.nextElementSibling;
+            while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
+              currentElement = currentElement.nextElementSibling;
+            }
+
+            if (!currentElement) {
+              event.preventDefault();
+            }
+          }
+        }
+      }, true);
   }
 
   #syncSelectedClasses() {
@@ -11260,6 +11294,102 @@ class HighlightDropdown extends ToolbarDropdown {
   }
 }
 
+const HEADING_LABELS = {
+  h1: "Heading 1",
+  h2: "Heading 2",
+  h3: "Heading 3",
+  h4: "Heading 4",
+  h5: "Heading 5",
+  h6: "Heading 6",
+};
+
+class HeadingDropdown extends ToolbarDropdown {
+  connectedCallback() {
+    super.connectedCallback();
+    this.#registerToggleHandler();
+  }
+
+  initialize() {
+    this.#populateOptions();
+    this.#registerButtonHandlers();
+  }
+
+  #registerToggleHandler() {
+    this.container.addEventListener("toggle", this.#handleToggle.bind(this));
+  }
+
+  #populateOptions() {
+    const headings = this.editorElement.config.get("headings") || [
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+    ];
+    const container = this.querySelector(".lexxy-heading-options");
+
+    headings.forEach((heading) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.classList.add(
+        "lexxy-editor__toolbar-button",
+        "lexxy-heading-option",
+      );
+      button.dataset.tag = heading;
+      button.textContent = HEADING_LABELS[heading] || heading.toUpperCase();
+      container.appendChild(button);
+    });
+
+    const textButton = document.createElement("button");
+    textButton.type = "button";
+    textButton.classList.add(
+      "lexxy-editor__toolbar-button",
+      "lexxy-heading-option",
+    );
+    textButton.dataset.tag = "";
+    textButton.textContent = "Text";
+    container.appendChild(textButton);
+  }
+
+  #registerButtonHandlers() {
+    this.querySelectorAll(".lexxy-heading-option").forEach((button) => {
+      button.addEventListener("click", this.#handleOptionClick.bind(this));
+    });
+  }
+
+  #handleToggle({ newState }) {
+    if (newState === "open") {
+      this.#updateActiveState();
+    }
+  }
+
+  #handleOptionClick(event) {
+    event.preventDefault();
+
+    const button = event.target.closest(".lexxy-heading-option");
+    if (!button) return
+
+    const tag = button.dataset.tag || null;
+    this.editor.update(() => {
+      this.editor.dispatchCommand("setHeading", tag);
+    });
+    this.close();
+  }
+
+  #updateActiveState() {
+    this.editor.getEditorState().read(() => {
+      const format = this.editorElement.selection.getFormat();
+      const currentTag = format.headingTag;
+
+      this.querySelectorAll(".lexxy-heading-option").forEach((button) => {
+        const isActive = button.dataset.tag === (currentTag || "");
+        button.setAttribute("aria-pressed", isActive);
+      });
+    });
+  }
+}
+
 class BaseSource {
   // Template method to override
   async buildListItems(filter = "") {
@@ -12678,6 +12808,7 @@ function defineElements() {
     "lexxy-editor": LexicalEditorElement,
     "lexxy-link-dropdown": LinkDropdown,
     "lexxy-highlight-dropdown": HighlightDropdown,
+    "lexxy-heading-dropdown": HeadingDropdown,
     "lexxy-prompt": LexicalPromptElement,
     "lexxy-code-language-picker": CodeLanguagePicker,
     "lexxy-table-tools": TableTools,
