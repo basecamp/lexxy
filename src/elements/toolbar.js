@@ -331,14 +331,9 @@ export class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.strikethrough}
       </button>
 
-      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
-        <summary class="lexxy-editor__toolbar-button" name="heading" title="Heading">
-          ${ToolbarIcons.heading}
-        </summary>
-        <lexxy-heading-dropdown class="lexxy-editor__toolbar-dropdown-content">
-          <div class="lexxy-heading-options"></div>
-        </lexxy-heading-dropdown>
-      </details>
+      <button class="lexxy-editor__toolbar-button" type="button" name="heading" data-command="rotateHeadingFormat" title="Heading">
+        ${ToolbarIcons.heading}
+      </button>
 
       <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">

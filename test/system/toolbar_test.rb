@@ -61,63 +61,20 @@ class ToolbarTest < ApplicationSystemTestCase
     assert_editor_html "<p>Hello <b><mark style=\"color: var(--highlight-1);\"><strong>everyone</strong></mark></b></p>"
   end
 
-  test "heading dropdown selects specific heading levels" do
+  test "rotate headers" do
     find_editor.select("everyone")
 
-    find("[name='heading']").click
-    within "lexxy-heading-dropdown" do
-      click_on "Heading 2"
-    end
+    click_on "Heading"
     assert_editor_html "<h2>Hello everyone</h2>"
 
-    find("[name='heading']").click
-    within "lexxy-heading-dropdown" do
-      click_on "Heading 3"
-    end
+    click_on "Heading"
     assert_editor_html "<h3>Hello everyone</h3>"
 
-    find("[name='heading']").click
-    within "lexxy-heading-dropdown" do
-      click_on "Heading 4"
-    end
+    click_on "Heading"
     assert_editor_html "<h4>Hello everyone</h4>"
 
-    find("[name='heading']").click
-    within "lexxy-heading-dropdown" do
-      click_on "Text"
-    end
+    click_on "Heading"
     assert_editor_html "<p>Hello everyone</p>"
-  end
-
-  test "heading dropdown highlights active heading level" do
-    find_editor.select("everyone")
-
-    find("[name='heading']").click
-    within "lexxy-heading-dropdown" do
-      assert_css "[data-tag=''][aria-pressed='true']"
-      click_on "Heading 2"
-    end
-
-    find("[name='heading']").click
-    within "lexxy-heading-dropdown" do
-      assert_css "[data-tag='h2'][aria-pressed='true']"
-      assert_css "[data-tag='h3'][aria-pressed='false']"
-      assert_css "[data-tag=''][aria-pressed='false']"
-      click_on "Heading 4"
-    end
-
-    find("[name='heading']").click
-    within "lexxy-heading-dropdown" do
-      assert_css "[data-tag='h4'][aria-pressed='true']"
-      assert_css "[data-tag='h2'][aria-pressed='false']"
-      click_on "Text"
-    end
-
-    find("[name='heading']").click
-    within "lexxy-heading-dropdown" do
-      assert_css "[data-tag=''][aria-pressed='true']"
-      assert_css "[data-tag='h2'][aria-pressed='false']"
-    end
   end
 
   test "bullet list" do

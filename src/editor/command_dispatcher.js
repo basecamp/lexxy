@@ -33,7 +33,6 @@ const COMMANDS = [
   "toggleHighlight",
   "removeHighlight",
   "rotateHeadingFormat",
-  "setHeading",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -159,7 +158,6 @@ export class CommandDispatcher {
     return headings.filter((heading) => /^h[1-6]$/.test(heading))
   }
 
-  // TODO: If the heading dropdown is sufficient, this method can be removed as it's no longer used in the toolbar
   dispatchRotateHeadingFormat() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
@@ -191,23 +189,6 @@ export class CommandDispatcher {
     } else {
       this.contents.removeFormattingFromSelectedLines()
     }
-  }
-
-  dispatchSetHeading(tag) {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return
-
-    if (!tag) {
-      this.contents.removeFormattingFromSelectedLines()
-      return
-    }
-
-    if ($isRootOrShadowRoot(selection.anchor.getNode())) {
-      selection.insertNodes([ $createHeadingNode(tag) ])
-      return
-    }
-
-    this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(tag))
   }
 
   dispatchUploadAttachments() {

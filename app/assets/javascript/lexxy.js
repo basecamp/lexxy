@@ -5226,14 +5226,9 @@ class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.strikethrough}
       </button>
 
-      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
-        <summary class="lexxy-editor__toolbar-button" name="heading" title="Heading">
-          ${ToolbarIcons.heading}
-        </summary>
-        <lexxy-heading-dropdown class="lexxy-editor__toolbar-dropdown-content">
-          <div class="lexxy-heading-options"></div>
-        </lexxy-heading-dropdown>
-      </details>
+      <button class="lexxy-editor__toolbar-button" type="button" name="heading" data-command="rotateHeadingFormat" title="Heading">
+        ${ToolbarIcons.heading}
+      </button>
 
       <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">
@@ -7929,7 +7924,6 @@ const COMMANDS = [
   "toggleHighlight",
   "removeHighlight",
   "rotateHeadingFormat",
-  "setHeading",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -8055,7 +8049,6 @@ class CommandDispatcher {
     return headings.filter((heading) => /^h[1-6]$/.test(heading))
   }
 
-  // TODO: If the heading dropdown is sufficient, this method can be removed as it's no longer used in the toolbar
   dispatchRotateHeadingFormat() {
     const selection = Lr();
     if (!yr(selection)) return
@@ -8087,23 +8080,6 @@ class CommandDispatcher {
     } else {
       this.contents.removeFormattingFromSelectedLines();
     }
-  }
-
-  dispatchSetHeading(tag) {
-    const selection = Lr();
-    if (!yr(selection)) return
-
-    if (!tag) {
-      this.contents.removeFormattingFromSelectedLines();
-      return
-    }
-
-    if (as(selection.anchor.getNode())) {
-      selection.insertNodes([ St$3(tag) ]);
-      return
-    }
-
-    this.contents.insertNodeWrappingEachSelectedLine(() => St$3(tag));
   }
 
   dispatchUploadAttachments() {
@@ -11296,99 +11272,6 @@ class HighlightDropdown extends ToolbarDropdown {
   }
 }
 
-const VALID_HEADINGS = new Set([ "h1", "h2", "h3", "h4", "h5", "h6" ]);
-
-const HEADING_LABELS = {
-  h1: "Heading 1",
-  h2: "Heading 2",
-  h3: "Heading 3",
-  h4: "Heading 4",
-  h5: "Heading 5",
-  h6: "Heading 6",
-};
-
-class HeadingDropdown extends ToolbarDropdown {
-  connectedCallback() {
-    super.connectedCallback();
-    this.#registerToggleHandler();
-  }
-
-  initialize() {
-    this.#populateOptions();
-    this.#registerButtonHandlers();
-  }
-
-  #registerToggleHandler() {
-    this.container.addEventListener("toggle", this.#handleToggle.bind(this));
-  }
-
-  #populateOptions() {
-    const configured = this.editorElement.config.get("headings");
-    const headings = (Array.isArray(configured) ? configured : [ "h2", "h3", "h4" ])
-      .filter((heading) => VALID_HEADINGS.has(heading));
-    const container = this.querySelector(".lexxy-heading-options");
-
-    headings.forEach((heading) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.classList.add(
-        "lexxy-editor__toolbar-button",
-        "lexxy-heading-option",
-      );
-      button.dataset.tag = heading;
-      button.textContent = HEADING_LABELS[heading] || heading.toUpperCase();
-      container.appendChild(button);
-    });
-
-    const textButton = document.createElement("button");
-    textButton.type = "button";
-    textButton.classList.add(
-      "lexxy-editor__toolbar-button",
-      "lexxy-heading-option",
-    );
-    textButton.dataset.tag = "";
-    textButton.textContent = "Text";
-    container.appendChild(textButton);
-  }
-
-  #registerButtonHandlers() {
-    this.querySelectorAll(".lexxy-heading-option").forEach((button) => {
-      button.addEventListener("click", this.#handleOptionClick.bind(this));
-    });
-  }
-
-  #handleToggle({ newState }) {
-    if (newState === "open") {
-      this.#updateActiveState();
-    }
-  }
-
-  #handleOptionClick(event) {
-    event.preventDefault();
-
-    const button = event.target.closest(".lexxy-heading-option");
-    if (!button) return
-
-    const tag = button.dataset.tag || null;
-    this.editor.update(() => {
-      this.editor.dispatchCommand("setHeading", tag);
-    });
-    this.close();
-  }
-
-  #updateActiveState() {
-    this.editor.getEditorState().read(() => {
-      const format = this.editorElement.selection.getFormat();
-      const currentTag = format.headingTag;
-
-      this.querySelectorAll(".lexxy-heading-option").forEach((button) => {
-        const isActive = button.dataset.tag === (currentTag || "");
-        button.setAttribute("aria-pressed", isActive);
-      });
-    });
-  }
-}
-
 class BaseSource {
   // Template method to override
   async buildListItems(filter = "") {
@@ -12807,7 +12690,6 @@ function defineElements() {
     "lexxy-editor": LexicalEditorElement,
     "lexxy-link-dropdown": LinkDropdown,
     "lexxy-highlight-dropdown": HighlightDropdown,
-    "lexxy-heading-dropdown": HeadingDropdown,
     "lexxy-prompt": LexicalPromptElement,
     "lexxy-code-language-picker": CodeLanguagePicker,
     "lexxy-table-tools": TableTools,
