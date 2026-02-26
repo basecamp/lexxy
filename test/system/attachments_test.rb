@@ -53,6 +53,7 @@ class AttachmentsTest < ApplicationSystemTestCase
 
     find("figure.attachment img").click
 
+    assert_selector "lexxy-node-delete-button"
     find("lexxy-node-delete-button button[aria-label='Remove']").click
 
     assert_no_attachment content_type: "image/png"
