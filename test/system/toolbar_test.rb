@@ -66,12 +66,6 @@ class ToolbarTest < ApplicationSystemTestCase
 
     find("[name='heading']").click
     within "lexxy-heading-dropdown" do
-      click_on "Heading 1"
-    end
-    assert_editor_html "<h1>Hello everyone</h1>"
-
-    find("[name='heading']").click
-    within "lexxy-heading-dropdown" do
       click_on "Heading 2"
     end
     assert_editor_html "<h2>Hello everyone</h2>"
@@ -87,18 +81,6 @@ class ToolbarTest < ApplicationSystemTestCase
       click_on "Heading 4"
     end
     assert_editor_html "<h4>Hello everyone</h4>"
-
-    find("[name='heading']").click
-    within "lexxy-heading-dropdown" do
-      click_on "Heading 5"
-    end
-    assert_editor_html "<h5>Hello everyone</h5>"
-
-    find("[name='heading']").click
-    within "lexxy-heading-dropdown" do
-      click_on "Heading 6"
-    end
-    assert_editor_html "<h6>Hello everyone</h6>"
 
     find("[name='heading']").click
     within "lexxy-heading-dropdown" do

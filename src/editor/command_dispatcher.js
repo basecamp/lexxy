@@ -155,7 +155,7 @@ export class CommandDispatcher {
 
   get #configuredHeadings() {
     const configured = this.editorElement.config.get("headings")
-    const headings = Array.isArray(configured) ? configured : [ "h1", "h2", "h3", "h4", "h5", "h6" ]
+    const headings = Array.isArray(configured) ? configured : [ "h2", "h3", "h4" ]
     return headings.filter((heading) => /^h[1-6]$/.test(heading))
   }
 

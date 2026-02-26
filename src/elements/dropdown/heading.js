@@ -28,7 +28,7 @@ export class HeadingDropdown extends ToolbarDropdown {
 
   #populateOptions() {
     const configured = this.editorElement.config.get("headings")
-    const headings = (Array.isArray(configured) ? configured : [ "h1", "h2", "h3", "h4", "h5", "h6" ])
+    const headings = (Array.isArray(configured) ? configured : [ "h2", "h3", "h4" ])
       .filter((heading) => VALID_HEADINGS.has(heading))
     const container = this.querySelector(".lexxy-heading-options")
 

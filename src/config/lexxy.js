@@ -15,7 +15,7 @@ const presets = new Configuration({
     multiLine: true,
     richText: true,
     toolbar: true,
-    headings: [ "h1", "h2", "h3", "h4", "h5", "h6" ],
+    headings: [ "h2", "h3", "h4" ],
     highlight: {
       buttons: {
         color: range(1, 9).map(n => `var(--highlight-${n})`),
