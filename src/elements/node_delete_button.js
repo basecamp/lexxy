@@ -10,7 +10,6 @@ export class NodeDeleteButton extends HTMLElement {
     this.editorElement = this.closest("lexxy-editor")
     this.editor = this.editorElement.editor
     this.classList.add("lexxy-floating-controls")
-    this.nodeKey = this.getAttribute("nodeKey")
 
     if (!this.deleteButton) {
       this.#attachDeleteButton()
