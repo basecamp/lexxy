@@ -11,6 +11,7 @@ import { $isListNode, ListItemNode } from "@lexical/list"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import FormatEscaper from "./contents/format_escaper"
 import Uploader from "./contents/uploader"
+import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 
 export default class Contents {
   constructor(editorElement) {
@@ -30,7 +31,9 @@ export default class Contents {
       if (!$isRangeSelection(selection)) return
 
       const nodes = $generateNodesFromDOM(this.editor, doc)
-      selection.insertNodes(nodes)
+      if (!this.#insertUploadNodes(nodes)) {
+        selection.insertNodes(nodes)
+      }
     }, { tag })
   }
 
@@ -309,6 +312,15 @@ export default class Contents {
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
       previousNode.insertAfter(newNode)
     })
+  }
+
+  #insertUploadNodes(nodes) {
+    if (nodes.every($isActionTextAttachmentNode)) {
+      const uploader = Uploader.for(this.editorElement, [])
+      uploader.nodes = nodes
+      uploader.$insertUploadNodes()
+      return true
+    }
   }
 
   #insertLineBelowIfLastNode(node) {

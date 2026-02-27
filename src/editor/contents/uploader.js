@@ -74,8 +74,7 @@ class GalleryUploader extends Uploader {
     return $getNearestNodeOfType(selectedNode, ImageGalleryNode) !== null
   }
 
-  $uploadFiles() {
-    this.$createUploadNodes()
+  $insertUploadNodes() {
     this.#findOrCreateGallery()
     this.#insertImagesInGallery()
     this.#insertNonImagesAfterGallery()
