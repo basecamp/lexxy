@@ -50,7 +50,7 @@
     "@lexical/selection": "^0.38.2",
     "@lexical/table": "^0.38.2",
     "@lexical/utils": "^0.38.2",
-    "lexical": "^0.38.2",
+    "lexical": "^0.40.0",
     "dompurify": "^3.3.0",
     "marked": "^16.4.1",
     "prismjs": "^1.30.0"
