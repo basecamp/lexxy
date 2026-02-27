@@ -72,8 +72,8 @@ export class ImageGalleryNode extends ElementNode {
   }
 
   insertNewAfter(selection, restoreSelection) {
-    const selectionAtLastChild = selection.anchor.offset == this.getChildrenSize() - 1
-    if (selectionAtLastChild) {
+    const selectionBeforeLastChild = selection.anchor.getNode().is(this) && selection.anchor.offset == this.getChildrenSize() - 1
+    if (selectionBeforeLastChild) {
       const paragraph = $createParagraphNode()
       this.insertAfter(paragraph, false)
       paragraph.insertAfter(this.getLastChild(), false)
