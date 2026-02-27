@@ -37,7 +37,7 @@
     "release": "yarn build:npm && yarn publish"
   },
   "dependencies": {
-    "@lexical/extension": "^0.38.2",
+    "@lexical/extension": "^0.40.0",
     "@lexical/clipboard": "^0.38.2",
     "@lexical/code": "^0.38.2",
     "@lexical/history": "^0.38.2",
