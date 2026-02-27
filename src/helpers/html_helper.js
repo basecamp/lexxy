@@ -42,6 +42,15 @@ export function dispatch(element, eventName, detail = null, cancelable = false) 
   return element.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail, cancelable }))
 }
 
+export function addBlockSpacing(doc) {
+  const blocks = doc.querySelectorAll("body > :not(h1, h2, h3, h4, h5, h6) + *")
+  for (const block of blocks) {
+    const spacer = doc.createElement("p")
+    spacer.appendChild(doc.createElement("br"))
+    block.before(spacer)
+  }
+}
+
 export function generateDomId(prefix) {
   const randomPart = Math.random().toString(36).slice(2, 10)
   return `${prefix}-${randomPart}`
