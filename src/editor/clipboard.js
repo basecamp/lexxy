@@ -22,6 +22,8 @@ export default class Clipboard {
     if (paster?.paste()) {
       event.preventDefault()
       return true
+    } else {
+      return false
     }
   }
 
@@ -32,7 +34,16 @@ export default class Clipboard {
 
 class Paster {
   static for(clipboardData, editorElement) {
-    return new Paster(clipboardData, editorElement)
+    const pasterKlass = this.#pasters.find(paster => paster.handles(clipboardData, editorElement))
+    return new pasterKlass(clipboardData, editorElement)
+  }
+
+  static handles(clipboardData) {
+    return Boolean(clipboardData)
+  }
+
+  static get #pasters() {
+    return [ PlainTextOrUrlPaster, Paster ]
   }
 
   constructor(clipboardData, editorElement) {
@@ -44,29 +55,66 @@ class Paster {
   }
 
   paste() {
-    if (this.#isPlainTextOrURLPasted()) {
-      this.#pastePlainText()
-      return true
-    }
-
     return this.#handlePastedFiles()
   }
 
-  #isPlainTextOrURLPasted() {
-    return this.#isOnlyPlainTextPasted() || this.#isOnlyURLPasted()
+  #handlePastedFiles() {
+    if (!this.editorElement.supportsAttachments) return
+
+    const html = this.clipboardData.getData("text/html")
+    if (html) {
+      this.contents.insertHtml(html, { tag: PASTE_TAG })
+      return true
+    }
+
+    this.#preservingScrollPosition(() => {
+      const files = this.clipboardData.files
+      if (files.length) {
+        this.contents.uploadFiles(files, { selectLast: true })
+      }
+    })
+
+    return true
   }
 
-  #isOnlyPlainTextPasted() {
-    const types = Array.from(this.clipboardData.types)
+  // Deals with an issue in Safari where it scrolls to the tops after pasting attachments
+  async #preservingScrollPosition(callback) {
+    const scrollY = window.scrollY
+    const scrollX = window.scrollX
+
+    callback()
+
+    await nextFrame()
+
+    window.scrollTo(scrollX, scrollY)
+    this.editor.focus()
+  }
+}
+
+class PlainTextOrUrlPaster extends Paster {
+  static handles(clipboardData) {
+    return this.#isPlainTextOrURLPasted(clipboardData)
+  }
+
+  static #isPlainTextOrURLPasted(clipboardData) {
+    return this.#isOnlyPlainTextPasted(clipboardData) || this.#isOnlyURLPasted(clipboardData)
+  }
+
+  static #isOnlyPlainTextPasted(clipboardData) {
+    const types = Array.from(clipboardData.types)
     return types.length === 1 && types[0] === "text/plain"
   }
 
-  #isOnlyURLPasted() {
+  static #isOnlyURLPasted(clipboardData) {
     // Safari URLs are copied as a text/plain + text/uri-list object
-    const types = Array.from(this.clipboardData.types)
+    const types = Array.from(clipboardData.types)
     return types.length === 2 && types.includes("text/uri-list") && types.includes("text/plain")
   }
 
+  paste() {
+    this.#pastePlainText()
+    return true
+  }
 
   #pastePlainText() {
     const item = this.clipboardData.items[0]
@@ -106,34 +154,5 @@ class Paster {
       const selection = $getSelection()
       $insertDataTransferForRichText(this.clipboardData, selection, this.editor)
     }, { tag: PASTE_TAG })
-  }
-
-  #handlePastedFiles() {
-    if (!this.editorElement.supportsAttachments) return
-
-    const html = clipboardData.getData("text/html")
-    if (html) return // Ignore if image copied from browser since we will load it as a remote image
-
-    this.#preservingScrollPosition(() => {
-      for (const item of clipboardData.items) {
-        const file = item.getAsFile()
-        if (!file) continue
-
-        this.contents.uploadFile(file)
-      }
-    })
-  }
-
-  // Deals with an issue in Safari where it scrolls to the tops after pasting attachments
-  async #preservingScrollPosition(callback) {
-    const scrollY = window.scrollY
-    const scrollX = window.scrollX
-
-    callback()
-
-    await nextFrame()
-
-    window.scrollTo(scrollX, scrollY)
-    this.editor.focus()
   }
 }
