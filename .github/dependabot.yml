@@ -1,3 +1,5 @@
+# https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference
+# https://docs.github.com/en/code-security/tutorials/secure-your-dependencies/optimizing-pr-creation-version-updates
 version: 2
 updates:
 - package-ecosystem: bundler
@@ -5,8 +7,24 @@ updates:
   schedule:
     interval: daily
   open-pull-requests-limit: 10
+  cooldown:
+    default-days: 10
+    semver-major-days: 30
+- package-ecosystem: npm
+  directory: "/"
+  allow:
+    - dependency-name: "lexical"
+    - dependency-name: "@lexical/*"
+  schedule:
+    interval: weekly
+  open-pull-requests-limit: 10
+  cooldown:
+    default-days: 10
+    semver-major-days: 30
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
     interval: daily
   open-pull-requests-limit: 10
+  cooldown:
+    default-days: 10
