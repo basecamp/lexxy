@@ -43,7 +43,11 @@ class Paster {
   }
 
   static get #pasters() {
-    return [ PlainTextOrUrlPaster, Paster ]
+    return [
+      UrlPaster,
+      PlainTextPaster,
+      Paster
+    ]
   }
 
   constructor(clipboardData, editorElement) {
@@ -91,18 +95,9 @@ class Paster {
   }
 }
 
-class PlainTextOrUrlPaster extends Paster {
+class UrlPaster extends Paster {
   static handles(clipboardData) {
-    return this.#isPlainTextOrURLPasted(clipboardData)
-  }
-
-  static #isPlainTextOrURLPasted(clipboardData) {
-    return this.#isOnlyPlainTextPasted(clipboardData) || this.#isOnlyURLPasted(clipboardData)
-  }
-
-  static #isOnlyPlainTextPasted(clipboardData) {
-    const types = Array.from(clipboardData.types)
-    return types.length === 1 && types[0] === "text/plain"
+    return this.#isOnlyURLPasted(clipboardData)
   }
 
   static #isOnlyURLPasted(clipboardData) {
@@ -112,24 +107,19 @@ class PlainTextOrUrlPaster extends Paster {
   }
 
   paste() {
-    this.#pastePlainText()
+    const item = this.clipboardData.items[0]
+    item.getAsString(linkText => this.pasteLink(linkText))
+
     return true
   }
 
-  #pastePlainText() {
-    const item = this.clipboardData.items[0]
-    item.getAsString((text) => {
-      if (isUrl(text) && this.contents.hasSelectedText()) {
-        this.contents.createLinkWithSelectedText(text)
-      } else if (isUrl(text)) {
-        const nodeKey = this.contents.createLink(text)
-        this.#dispatchLinkInsertEvent(nodeKey, { url: text })
-      } else if (this.editorElement.supportsMarkdown) {
-        this.#pasteMarkdown(text)
-      } else {
-        this.#pasteRichText()
-      }
-    })
+  pasteLink(linkText) {
+    if (this.contents.hasSelectedText()) {
+      this.contents.createLinkWithSelectedText(linkText)
+    } else {
+      const nodeKey = this.contents.createLink(linkText)
+      this.#dispatchLinkInsertEvent(nodeKey, { url: linkText })
+    }
   }
 
   #dispatchLinkInsertEvent(nodeKey, payload) {
@@ -142,6 +132,48 @@ class PlainTextOrUrlPaster extends Paster {
       ...payload,
       ...linkManipulationMethods
     })
+  }
+}
+
+class PlainTextPaster extends Paster {
+  static handles(clipboardData) {
+    return this.#isOnlyPlainTextPasted(clipboardData)
+  }
+
+  static #isOnlyPlainTextPasted(clipboardData) {
+    const types = Array.from(clipboardData.types)
+    return types.length === 1 && types[0] === "text/plain"
+  }
+
+  paste() {
+    this.withItemText(text => {
+      if (this.editorElement.supportsMarkdown) {
+        this.#pasteMarkdown(text)
+      } else {
+        this.#pasteRichText()
+      }
+    })
+
+    return true
+  }
+
+  withItemText(callback) {
+    const item = this.clipboardData.items[0]
+
+    item.getAsString(text => {
+      if (this.#pasteAsUrl(text)) return
+
+      callback(text)
+    })
+  }
+
+  #pasteAsUrl(text) {
+    if (!isUrl(text)) return false
+
+    const urlPaster = new UrlPaster(null, this.editorElement)
+    urlPaster.pasteLink(text)
+
+    return true
   }
 
   #pasteMarkdown(text) {
