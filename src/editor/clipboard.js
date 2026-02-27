@@ -45,6 +45,7 @@ class Paster {
   static get #pasters() {
     return [
       UrlPaster,
+      MarkdownPaster,
       PlainTextPaster,
       Paster
     ]
@@ -137,22 +138,16 @@ class UrlPaster extends Paster {
 
 class PlainTextPaster extends Paster {
   static handles(clipboardData) {
-    return this.#isOnlyPlainTextPasted(clipboardData)
+    return this.isOnlyPlainTextPasted(clipboardData)
   }
 
-  static #isOnlyPlainTextPasted(clipboardData) {
+  static isOnlyPlainTextPasted(clipboardData) {
     const types = Array.from(clipboardData.types)
     return types.length === 1 && types[0] === "text/plain"
   }
 
   paste() {
-    this.withItemText(text => {
-      if (this.editorElement.supportsMarkdown) {
-        this.#pasteMarkdown(text)
-      } else {
-        this.#pasteRichText()
-      }
-    })
+    this.withItemText(() => this.#pasteRichText())
 
     return true
   }
@@ -176,15 +171,25 @@ class PlainTextPaster extends Paster {
     return true
   }
 
-  #pasteMarkdown(text) {
-    const html = marked(text)
-    this.contents.insertHtml(html, { tag: PASTE_TAG })
-  }
-
   #pasteRichText() {
     this.editor.update(() => {
       const selection = $getSelection()
       $insertDataTransferForRichText(this.clipboardData, selection, this.editor)
     }, { tag: PASTE_TAG })
+  }
+}
+
+class MarkdownPaster extends PlainTextPaster {
+  static handles(clipboardData, editorElement) {
+    return editorElement.supportsMarkdown && super.handles(clipboardData)
+  }
+
+  paste() {
+    this.withItemText(text => {
+      const html = marked(text)
+      this.contents.insertHtml(html, { tag: PASTE_TAG })
+    })
+
+    return true
   }
 }
