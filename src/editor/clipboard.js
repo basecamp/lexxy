@@ -10,7 +10,6 @@ export default class Clipboard {
   constructor(editorElement) {
     this.editorElement = editorElement
     this.editor = editorElement.editor
-    this.contents = editorElement.contents
   }
 
   paste(event) {
@@ -18,28 +17,11 @@ export default class Clipboard {
 
     if (!clipboardData) return false
 
-    if (this.#isPlainTextOrURLPasted(clipboardData) && !this.#isPastingIntoCodeBlock()) {
-      this.#pastePlainText(clipboardData)
+    const paster = Paster.for(clipboardData, this.editorElement)
+    if (paster?.paste()) {
       event.preventDefault()
       return true
     }
-
-    this.#handlePastedFiles(clipboardData)
-  }
-
-  #isPlainTextOrURLPasted(clipboardData) {
-    return this.#isOnlyPlainTextPasted(clipboardData) || this.#isOnlyURLPasted(clipboardData)
-  }
-
-  #isOnlyPlainTextPasted(clipboardData) {
-    const types = Array.from(clipboardData.types)
-    return types.length === 1 && types[0] === "text/plain"
-  }
-
-  #isOnlyURLPasted(clipboardData) {
-    // Safari URLs are copied as a text/plain + text/uri-list object
-    const types = Array.from(clipboardData.types)
-    return types.length === 2 && types.includes("text/uri-list") && types.includes("text/plain")
   }
 
   #isPastingIntoCodeBlock() {
@@ -62,9 +44,48 @@ export default class Clipboard {
 
     return result
   }
+}
 
-  #pastePlainText(clipboardData) {
-    const item = clipboardData.items[0]
+class Paster {
+  static for(clipboardData, editorElement) {
+    return new Paster(clipboardData, editorElement)
+  }
+
+  constructor(clipboardData, editorElement) {
+    this.clipboardData = clipboardData
+
+    this.editorElement = editorElement
+    this.editor = editorElement.editor
+    this.contents = editorElement.contents
+  }
+
+  paste() {
+    if (this.#isPlainTextOrURLPasted()) {
+      this.#pastePlainText()
+      return true
+    }
+
+    return this.#handlePastedFiles()
+  }
+
+  #isPlainTextOrURLPasted() {
+    return this.#isOnlyPlainTextPasted() || this.#isOnlyURLPasted()
+  }
+
+  #isOnlyPlainTextPasted() {
+    const types = Array.from(this.clipboardData.types)
+    return types.length === 1 && types[0] === "text/plain"
+  }
+
+  #isOnlyURLPasted() {
+    // Safari URLs are copied as a text/plain + text/uri-list object
+    const types = Array.from(this.clipboardData.types)
+    return types.length === 2 && types.includes("text/uri-list") && types.includes("text/plain")
+  }
+
+
+  #pastePlainText() {
+    const item = this.clipboardData.items[0]
     item.getAsString((text) => {
       if (isUrl(text) && this.contents.hasSelectedText()) {
         this.contents.createLinkWithSelectedText(text)
@@ -74,7 +95,7 @@ export default class Clipboard {
       } else if (this.editorElement.supportsMarkdown) {
         this.#pasteMarkdown(text)
       } else {
-        this.#pasteRichText(clipboardData)
+        this.#pasteRichText()
       }
     })
   }
@@ -93,17 +114,17 @@ export default class Clipboard {
 
   #pasteMarkdown(text) {
     const html = marked(text)
-    this.contents.insertHtml(html, { tag: [ PASTE_TAG ] })
+    this.contents.insertHtml(html, { tag: PASTE_TAG })
   }
 
-  #pasteRichText(clipboardData) {
+  #pasteRichText() {
     this.editor.update(() => {
       const selection = $getSelection()
-      $insertDataTransferForRichText(clipboardData, selection, this.editor)
+      $insertDataTransferForRichText(this.clipboardData, selection, this.editor)
     }, { tag: PASTE_TAG })
   }
 
-  #handlePastedFiles(clipboardData) {
+  #handlePastedFiles() {
     if (!this.editorElement.supportsAttachments) return
 
     const html = clipboardData.getData("text/html")
