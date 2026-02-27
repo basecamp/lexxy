@@ -2,20 +2,21 @@ import { marked } from "marked"
 import { isUrl } from "../helpers/string_helper"
 import { nextFrame } from "../helpers/timing_helpers"
 import { dispatch } from "../helpers/html_helper"
-import { $isCodeNode } from "@lexical/code"
-import { $getSelection, $isRangeSelection, PASTE_TAG } from "lexical"
+import { $getSelection, PASTE_TAG } from "lexical"
 import { $insertDataTransferForRichText } from "@lexical/clipboard"
 
 export default class Clipboard {
   constructor(editorElement) {
     this.editorElement = editorElement
     this.editor = editorElement.editor
+    this.selection = editorElement.selection
   }
 
   paste(event) {
     const clipboardData = event.clipboardData
 
-    if (!clipboardData) return false
+    // Allow default Lexical paste behavior in code blocks
+    if (!clipboardData || this.#isPastingIntoCodeBlock) return false
 
     const paster = Paster.for(clipboardData, this.editorElement)
     if (paster?.paste()) {
@@ -24,25 +25,8 @@ export default class Clipboard {
     }
   }
 
-  #isPastingIntoCodeBlock() {
-    let result = false
-
-    this.editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      let currentNode = selection.anchor.getNode()
-
-      while (currentNode) {
-        if ($isCodeNode(currentNode)) {
-          result = true
-          return
-        }
-        currentNode = currentNode.getParent()
-      }
-    })
-
-    return result
+  get #isPastingIntoCodeBlock() {
+    return this.selection.isInsideCodeBlock
   }
 }
 
