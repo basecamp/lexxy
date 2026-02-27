@@ -47,6 +47,7 @@ class Paster {
       UrlPaster,
       MarkdownPaster,
       PlainTextPaster,
+      HtmlPaster,
       Paster
     ]
   }
@@ -60,18 +61,12 @@ class Paster {
   }
 
   paste() {
+    if (!this.editorElement.supportsAttachments) return
+
     return this.#handlePastedFiles()
   }
 
   #handlePastedFiles() {
-    if (!this.editorElement.supportsAttachments) return
-
-    const html = this.clipboardData.getData("text/html")
-    if (html) {
-      this.contents.insertHtml(html, { tag: PASTE_TAG })
-      return true
-    }
-
     this.#preservingScrollPosition(() => {
       const files = this.clipboardData.files
       if (files.length) {
@@ -190,6 +185,22 @@ class MarkdownPaster extends PlainTextPaster {
       this.contents.insertHtml(html, { tag: PASTE_TAG })
     })
 
+    return true
+  }
+}
+
+class HtmlPaster extends Paster {
+  static handles(clipboardData, editorElement) {
+    return editorElement.supportsAttachments && this.#hasHtmlDataType(clipboardData)
+  }
+
+  static #hasHtmlDataType(clipboardData) {
+    return clipboardData.types.includes("text/html")
+  }
+
+  paste() {
+    const html = this.clipboardData.getData("text/html")
+    this.contents.insertHtml(html, { tag: PASTE_TAG })
     return true
   }
 }
