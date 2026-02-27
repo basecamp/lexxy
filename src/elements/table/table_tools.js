@@ -11,8 +11,10 @@ import { nextFrame } from "../../helpers/timing_helpers"
 export class TableTools extends HTMLElement {
   connectedCallback() {
     this.tableController = new TableController(this.#editorElement)
+    this.classList.add("lexxy-floating-controls")
 
     this.#setUpButtons()
+    this.#hide()
     this.#monitorForTableSelection()
     this.#registerKeyboardShortcuts()
   }
@@ -50,7 +52,7 @@ export class TableTools extends HTMLElement {
   }
 
   #createButtonsContainer(childType, setCountProperty, moreMenu) {
-    const container = createElement("div", { className: `lexxy-table-control lexxy-table-control--${childType}` })
+    const container = createElement("div", { className: `lexxy-floating-controls__group lexxy-table-control lexxy-table-control--${childType}` })
 
     const plusButton = this.#createButton(`Add ${childType}`, { action: "insert", childType, direction: "after" }, "+")
     const minusButton = this.#createButton(`Remove ${childType}`, { action: "delete", childType }, "−")
@@ -89,7 +91,7 @@ export class TableTools extends HTMLElement {
   }
 
   #createMoreMenuSection(childType) {
-    const section = createElement("div", { className: "lexxy-table-control__more-menu-details" })
+    const section = createElement("div", { className: "lexxy-floating-controls__group lexxy-table-control__more-menu-details" })
     const addBeforeButton = this.#createButton(`Add ${childType} before`, { action: "insert", childType, direction: "before" })
     const addAfterButton = this.#createButton(`Add ${childType} after`, { action: "insert", childType, direction: "after" })
     const toggleStyleButton = this.#createButton(`Toggle ${childType} style`, { action: "toggle", childType })
@@ -104,7 +106,7 @@ export class TableTools extends HTMLElement {
   }
 
   #createDeleteTableButton() {
-    const container = createElement("div", { className: "lexxy-table-control" })
+    const container = createElement("div", { className: "lexxy-table-control lexxy-floating-controls__group" })
 
     const deleteTableButton = this.#createButton("Delete this table?", { action: "delete", childType: "table" })
     deleteTableButton.classList.add("lexxy-table-control__button--delete-table")
