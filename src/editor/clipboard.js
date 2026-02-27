@@ -38,8 +38,8 @@ class Paster {
     return new pasterKlass(clipboardData, editorElement)
   }
 
-  static handles(clipboardData) {
-    return Boolean(clipboardData)
+  static handles(_clipboardData, _editorElement) {
+    return true
   }
 
   static get #pasters() {
@@ -48,6 +48,7 @@ class Paster {
       MarkdownPaster,
       PlainTextPaster,
       HtmlPaster,
+      FilesPaster,
       Paster
     ]
   }
@@ -61,33 +62,7 @@ class Paster {
   }
 
   paste() {
-    if (!this.editorElement.supportsAttachments) return
-
-    return this.#handlePastedFiles()
-  }
-
-  #handlePastedFiles() {
-    this.#preservingScrollPosition(() => {
-      const files = this.clipboardData.files
-      if (files.length) {
-        this.contents.uploadFiles(files, { selectLast: true })
-      }
-    })
-
-    return true
-  }
-
-  // Deals with an issue in Safari where it scrolls to the tops after pasting attachments
-  async #preservingScrollPosition(callback) {
-    const scrollY = window.scrollY
-    const scrollX = window.scrollX
-
-    callback()
-
-    await nextFrame()
-
-    window.scrollTo(scrollX, scrollY)
-    this.editor.focus()
+    return false
   }
 }
 
@@ -202,5 +177,35 @@ class HtmlPaster extends Paster {
     const html = this.clipboardData.getData("text/html")
     this.contents.insertHtml(html, { tag: PASTE_TAG })
     return true
+  }
+}
+
+class FilesPaster extends Paster {
+  static handles(clipboardData, editorElement) {
+    return editorElement.supportsAttachments && clipboardData.files.length > 0
+  }
+
+  paste() {
+    this.#preservingScrollPosition(() => {
+      const { files } = this.clipboardData
+      for (const file of files) {
+        this.contents.uploadFile(file)
+      }
+    })
+
+    return true
+  }
+
+  // Deals with an issue in Safari where it scrolls to the top after pasting attachments
+  async #preservingScrollPosition(callback) {
+    const scrollY = window.scrollY
+    const scrollX = window.scrollX
+
+    callback()
+
+    await nextFrame()
+
+    window.scrollTo(scrollX, scrollY)
+    this.editor.focus()
   }
 }
