@@ -154,8 +154,12 @@ export class LexicalPromptElement extends HTMLElement {
 
   async #showPopover() {
     this.popoverElement ??= await this.#buildPopover()
+    if (!this.#isTriggerPresent()) return
+
     this.#resetPopoverPosition()
     await this.#filterOptions()
+    if (!this.#isTriggerPresent()) return
+
     this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", true)
     this.#selectFirstOption()
 
@@ -444,6 +448,10 @@ export class LexicalPromptElement extends HTMLElement {
   #reconnect() {
     this.disconnectedCallback()
     this.connectedCallback()
+  }
+
+  #isTriggerPresent() {
+    return this.#editorContents.containsTextBackUntil(this.trigger)
   }
 }
 
