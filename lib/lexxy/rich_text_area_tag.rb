@@ -2,7 +2,6 @@ module Lexxy
   module TagHelper
     def lexxy_rich_textarea_tag(name, value = nil, options = {}, &block)
       options = options.symbolize_keys
-      form = options.delete(:form)
 
       value = render_custom_attachments_in(value)
       # remove the html_safe attribute to preserve attribute escape
