@@ -1,4 +1,4 @@
-import { $getSelection, $getSiblingCaret } from "lexical"
+import { $getSelection } from "lexical"
 import { isPreviewableImage } from "../../helpers/html_helper"
 import { $createActionTextAttachmentUploadNode } from "../../nodes/action_text_attachment_upload_node"
 import { $createImageGalleryNode, $findOrCreateGalleryForImage, ImageGalleryNode } from "../../nodes/image_gallery_node"
@@ -117,11 +117,11 @@ class GalleryUploader extends Uploader {
   }
 
   #insertNonImagesAfterGallery() {
-    const caret = $getSiblingCaret(this.#gallery, "next")
+    let beforeNode = this.#gallery
 
     for (const node of this.#nonImageNodes) {
-      caret.insert(node)
-      caret.getAdjacentCaret()
+      beforeNode.insertAfter(node)
+      beforeNode = node
     }
   }
 }
