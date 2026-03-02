@@ -1,7 +1,7 @@
 import { marked } from "marked"
 import { isUrl } from "../helpers/string_helper"
 import { nextFrame } from "../helpers/timing_helpers"
-import { dispatch } from "../helpers/html_helper"
+import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
 import { $getSelection, $isRangeSelection, PASTE_TAG } from "lexical"
 import { $insertDataTransferForRichText } from "@lexical/clipboard"
@@ -93,7 +93,15 @@ export default class Clipboard {
 
   #pasteMarkdown(text) {
     const html = marked(text)
-    this.contents.insertHtml(html, { tag: [ PASTE_TAG ] })
+    const doc = parseHtml(html)
+    const detail = Object.freeze({
+      markdown: text,
+      document: doc,
+      addBlockSpacing: () => addBlockSpacing(doc)
+    })
+
+    dispatch(this.editorElement, "lexxy:insert-markdown", detail)
+    this.contents.insertDOM(doc, { tag: PASTE_TAG })
   }
 
   #pasteRichText(clipboardData) {

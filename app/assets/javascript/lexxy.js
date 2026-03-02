@@ -7054,6 +7054,15 @@ function dispatch(element, eventName, detail = null, cancelable = false) {
   return element.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail, cancelable }))
 }
 
+function addBlockSpacing(doc) {
+  const blocks = doc.querySelectorAll("body > :not(h1, h2, h3, h4, h5, h6) + *");
+  for (const block of blocks) {
+    const spacer = doc.createElement("p");
+    spacer.appendChild(doc.createElement("br"));
+    block.before(spacer);
+  }
+}
+
 function generateDomId(prefix) {
   const randomPart = Math.random().toString(36).slice(2, 10);
   return `${prefix}-${randomPart}`
@@ -9314,11 +9323,15 @@ class Contents {
   }
 
   insertHtml(html, { tag } = {}) {
+    this.insertDOM(parseHtml(html), { tag });
+  }
+
+  insertDOM(doc, { tag } = {}) {
     this.editor.update(() => {
       const selection = Lr();
       if (!yr(selection)) return
 
-      const nodes = m$1(this.editor, parseHtml(html));
+      const nodes = m$1(this.editor, doc);
       selection.insertNodes(nodes);
     }, { tag });
   }
@@ -10130,7 +10143,15 @@ class Clipboard {
 
   #pasteMarkdown(text) {
     const html = k(text);
-    this.contents.insertHtml(html, { tag: [ Fn ] });
+    const doc = parseHtml(html);
+    const detail = Object.freeze({
+      markdown: text,
+      document: doc,
+      addBlockSpacing: () => addBlockSpacing(doc)
+    });
+
+    dispatch(this.editorElement, "lexxy:insert-markdown", detail);
+    this.contents.insertDOM(doc, { tag: Fn });
   }
 
   #pasteRichText(clipboardData) {

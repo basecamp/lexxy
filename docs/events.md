@@ -91,3 +91,32 @@ export default class extends Controller {
   }
 }
 ```
+
+## `lexxy:insert-markdown`
+
+Fired when markdown text is pasted into the editor, before the converted HTML is inserted.
+Access the original markdown via `event.detail.markdown` and the parsed DOM via `event.detail.document`.
+
+The `document` is a live DOM `Document` — mutate it to change what gets inserted.
+The `event.detail` object is frozen, but the document itself is open to mutation.
+Only synchronous handlers can mutate before insertion.
+
+You also get a helper on `event.detail`:
+
+- **`addBlockSpacing()`** – insert `<p><br></p>` between top-level elements, but not after headings. Use this if your app CSS removes margins between paragraphs and you need visual spacing in the editor.
+
+### Example: Removing Images
+
+```javascript
+editor.addEventListener("lexxy:insert-markdown", (event) => {
+  event.detail.document.querySelectorAll("img").forEach((img) => img.remove())
+})
+```
+
+### Example: Adding Block Spacing
+
+```javascript
+editor.addEventListener("lexxy:insert-markdown", (event) => {
+  event.detail.addBlockSpacing()
+})
+```
