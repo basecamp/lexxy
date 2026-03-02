@@ -12,6 +12,7 @@ const presets = new Configuration({
   default: {
     attachments: true,
     markdown: true,
+    math: true,
     multiLine: true,
     richText: true,
     toolbar: true,

@@ -1,4 +1,5 @@
 import "./config/prism"
+import "./config/katex"
 import "./config/dom_purify"
 
 import { defineElements } from "./elements/index"
@@ -7,6 +8,7 @@ import Lexxy from "./config/lexxy"
 
 export * from "./nodes"
 export { highlightCode } from "./helpers/code_highlighting_helper"
+export { renderContentMath } from "./helpers/math_content_helper"
 
 export const configure = Lexxy.configure
 export { default as Extension } from "./extensions/lexxy_extension"

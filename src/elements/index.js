@@ -7,6 +7,7 @@ import Prompt from "./prompt"
 import CodeLanguagePicker from "./code_language_picker"
 import NodeDeleteButton from "./node_delete_button"
 import TableTools from "./table/table_tools"
+import MathEditor from "./math_editor"
 
 export function defineElements() {
   const elements = {
@@ -18,6 +19,7 @@ export function defineElements() {
     "lexxy-code-language-picker": CodeLanguagePicker,
     "lexxy-node-delete-button": NodeDeleteButton,
     "lexxy-table-tools": TableTools,
+    "lexxy-math-editor": MathEditor,
   }
 
   Object.entries(elements).forEach(([ name, element ]) => {

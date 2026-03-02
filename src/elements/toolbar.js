@@ -387,6 +387,10 @@ export class LexicalToolbarElement extends HTMLElement {
       <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
         ${ToolbarIcons.hr}
       </button>
+
+      <button class="lexxy-editor__toolbar-button" type="button" name="math" data-command="insertMathBlock" title="Insert math formula">
+        ${ToolbarIcons.math}
+      </button>
  
       <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
  

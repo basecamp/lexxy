@@ -23,6 +23,7 @@ import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { REMOVE_HIGHLIGHT_COMMAND, TOGGLE_HIGHLIGHT_COMMAND } from "../extensions/highlight_extension"
+import { INSERT_BLOCK_MATH_COMMAND, INSERT_INLINE_MATH_COMMAND } from "../extensions/math_extension"
 
 const COMMANDS = [
   "bold",
@@ -41,6 +42,9 @@ const COMMANDS = [
   "uploadAttachments",
 
   "insertTable",
+
+  "insertMathBlock",
+  "insertInlineMath",
 
   "undo",
   "redo"
@@ -197,6 +201,14 @@ export class CommandDispatcher {
     this.editorElement.appendChild(input)
     input.click()
     setTimeout(() => input.remove(), 1000)
+  }
+
+  dispatchInsertMathBlock() {
+    this.editor.dispatchCommand(INSERT_BLOCK_MATH_COMMAND, undefined)
+  }
+
+  dispatchInsertInlineMath() {
+    this.editor.dispatchCommand(INSERT_INLINE_MATH_COMMAND, undefined)
   }
 
   dispatchInsertTable() {

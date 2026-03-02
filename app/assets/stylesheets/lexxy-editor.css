@@ -272,6 +272,86 @@
       }
     }
   }
+
+  /* Math nodes */
+  .lexxy-math-inline {
+    cursor: pointer;
+    border-radius: var(--lexxy-radius);
+    padding: 0 0.25ch;
+
+    &:hover {
+      background: var(--lexxy-color-ink-lightest);
+    }
+  }
+
+  .lexxy-math-block {
+    cursor: pointer;
+    margin: 0;
+    padding: 1em;
+    position: relative;
+    text-align: center;
+
+    &:hover {
+      background: var(--lexxy-color-ink-lightest);
+      border-radius: var(--lexxy-radius);
+    }
+  }
+
+  .lexxy-math-block__preview--empty {
+    color: var(--lexxy-color-ink-medium);
+    font-style: italic;
+  }
+
+  .lexxy-math-error {
+    color: var(--lexxy-color-red);
+    font-family: var(--lexxy-font-mono);
+    font-size: 0.9em;
+  }
+}
+
+/* Math Editor */
+:where(lexxy-math-editor) {
+  background-color: var(--lexxy-color-canvas);
+  border: 2px solid var(--lexxy-color-selected-hover);
+  border-radius: calc(var(--lexxy-radius) + 2px);
+  box-shadow: var(--lexxy-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5ch;
+  padding: 1ch;
+  position: absolute;
+  z-index: 3;
+  min-inline-size: 20ch;
+  max-inline-size: calc(100% - 2ch);
+
+  &[hidden] {
+    display: none;
+  }
+
+  .lexxy-math-editor__input {
+    background-color: var(--lexxy-color-ink-lightest);
+    border: 1px solid var(--lexxy-color-ink-lighter);
+    border-radius: var(--lexxy-radius);
+    color: var(--lexxy-color-ink);
+    font-family: var(--lexxy-font-mono);
+    font-size: 0.9em;
+    padding: 1ch;
+    resize: vertical;
+    width: 100%;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
+      outline-offset: var(--lexxy-focus-ring-offset);
+    }
+  }
+
+  .lexxy-math-editor__preview {
+    min-block-size: 2em;
+    overflow-x: auto;
+    padding: 0.5ch;
+    text-align: center;
+  }
 }
 
 /* Placeholder */
