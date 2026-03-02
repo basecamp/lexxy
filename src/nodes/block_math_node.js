@@ -56,7 +56,7 @@ export class BlockMathNode extends DecoratorNode {
       event.stopPropagation()
       figure.dispatchEvent(new CustomEvent("lexxy:edit-math", {
         bubbles: true,
-        detail: { nodeKey: this.getKey(), latex: this.__latex, displayMode: true }
+        detail: { nodeKey: this.getKey(), latex: this.__latex, displayMode: true, targetElement: figure }
       }))
     })
 

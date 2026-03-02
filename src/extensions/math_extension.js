@@ -1,4 +1,4 @@
-import { $createParagraphNode, $getNodeByKey, $getSelection, $isRangeSelection, $isParagraphNode, $isTextNode, COMMAND_PRIORITY_NORMAL, TextNode, createCommand, defineExtension, KEY_ENTER_COMMAND } from "lexical"
+import { $createParagraphNode, $getNodeByKey, $getSelection, $isRangeSelection, $isParagraphNode, COMMAND_PRIORITY_NORMAL, TextNode, createCommand, defineExtension, KEY_ENTER_COMMAND } from "lexical"
 import { mergeRegister } from "@lexical/utils"
 import LexxyExtension from "./lexxy_extension"
 import { InlineMathNode } from "../nodes/inline_math_node"
@@ -7,7 +7,7 @@ import { BlockMathNode } from "../nodes/block_math_node"
 export const INSERT_BLOCK_MATH_COMMAND = createCommand()
 export const INSERT_INLINE_MATH_COMMAND = createCommand()
 
-const INLINE_MATH_REGEX = /(?<!\$)\$([^$\n]+)\$(?!\$)/
+export const INLINE_MATH_REGEX = /(?<!\$)\$([^$\n]+)\$(?!\$)/
 
 export class MathExtension extends LexxyExtension {
   get enabled() {
@@ -153,8 +153,8 @@ function $insertInlineMath(editor) {
 
 function registerMathEditorListener(editor, editorElement) {
   const handler = (event) => {
-    const { nodeKey, latex, displayMode } = event.detail
-    openMathEditor(editor, editorElement, nodeKey, latex, displayMode)
+    const { nodeKey, latex, displayMode, targetElement } = event.detail
+    openMathEditor(editor, editorElement, nodeKey, latex, displayMode, targetElement)
   }
 
   editorElement.addEventListener("lexxy:edit-math", handler)
@@ -164,18 +164,12 @@ function registerMathEditorListener(editor, editorElement) {
   }
 }
 
-function openMathEditor(editor, editorElement, nodeKey, latex, displayMode) {
+function openMathEditor(editor, editorElement, nodeKey, latex, displayMode, targetElement) {
   let mathEditor = editorElement.querySelector("lexxy-math-editor")
   if (!mathEditor) {
     mathEditor = document.createElement("lexxy-math-editor")
     editorElement.appendChild(mathEditor)
   }
-
-  // Find the DOM element for positioning
-  const rootElement = editor.getRootElement()
-  const targetElement = rootElement?.querySelector(`[data-lexxy-decorator]`)
-    ? findDOMNodeForKey(rootElement, nodeKey)
-    : null
 
   mathEditor.show(latex, targetElement, {
     displayMode,
@@ -209,9 +203,4 @@ function openMathEditor(editor, editorElement, nodeKey, latex, displayMode) {
       editor.focus()
     }
   })
-}
-
-function findDOMNodeForKey(rootElement, nodeKey) {
-  // Lexical decorates DOM elements with data attributes we can search
-  return rootElement?.querySelector(`[data-lexical-decorator="true"]`) || null
 }

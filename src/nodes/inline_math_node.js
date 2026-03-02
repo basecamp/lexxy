@@ -53,7 +53,7 @@ export class InlineMathNode extends DecoratorNode {
       event.stopPropagation()
       span.dispatchEvent(new CustomEvent("lexxy:edit-math", {
         bubbles: true,
-        detail: { nodeKey: this.getKey(), latex: this.__latex, displayMode: false }
+        detail: { nodeKey: this.getKey(), latex: this.__latex, displayMode: false, targetElement: span }
       }))
     })
 

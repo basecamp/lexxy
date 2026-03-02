@@ -22,6 +22,10 @@ export default class MathEditor extends HTMLElement {
 
     requestAnimationFrame(() => this.#input.focus())
 
+    // Remove any existing listener before adding a new one
+    if (this.#handleOutsideClick) {
+      document.removeEventListener("mousedown", this.#handleOutsideClick, true)
+    }
     this.#handleOutsideClick = (event) => {
       if (!this.contains(event.target)) {
         this.#confirm()

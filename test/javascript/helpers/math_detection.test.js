@@ -1,7 +1,5 @@
 import { expect, test, describe } from "vitest"
-
-// Test the regex used for inline math detection
-const INLINE_MATH_REGEX = /(?<!\$)\$([^$\n]+)\$(?!\$)/
+import { INLINE_MATH_REGEX } from "../../../src/extensions/math_extension"
 
 describe("inline math detection regex", () => {
   test("matches simple inline math", () => {

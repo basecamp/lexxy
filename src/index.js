@@ -1,5 +1,4 @@
 import "./config/prism"
-import "./config/katex"
 import "./config/dom_purify"
 
 import { defineElements } from "./elements/index"
