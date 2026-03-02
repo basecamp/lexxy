@@ -41,7 +41,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       "img": () => {
         return {
           conversion: (img) => {
-            const fileName = extractFileName(img.getAttribute("src")) || ""
+            const fileName = extractFileName(img.getAttribute("src") ?? "")
             return {
               node: new ActionTextAttachmentNode({
                 src: img.getAttribute("src"),
