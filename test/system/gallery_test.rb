@@ -11,6 +11,11 @@ class GalleryTest < ApplicationSystemTestCase
     end
 
     assert_gallery_with_images(count: 2)
+
+    click_on "Update Post"
+
+    visit post_path(posts(:empty))
+    assert_gallery_with_images(count: 2)
   end
 
   test "uploading an image with an image selected creates a gallery" do
