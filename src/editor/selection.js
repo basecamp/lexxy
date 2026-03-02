@@ -190,7 +190,7 @@ export default class Selection {
 
   get isOnPreviewableImage() {
     const selection = $getSelection()
-    const firstNode = selection.getNodes().at(0)
+    const firstNode = selection?.getNodes().at(0)
     return $isActionTextAttachmentNode(firstNode) && firstNode.isPreviewableImage
   }
 
