@@ -112,7 +112,7 @@ export default class Clipboard {
   }
 
   #handlePastedFiles(clipboardData) {
-    if (!this.editorElement.supportsAttachments) return
+    if (!this.editorElement.supportsAttachments) return false
 
     const html = clipboardData.getData("text/html")
     if (html) {
