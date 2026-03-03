@@ -198,7 +198,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }, { tag: SILENT_UPDATE_TAGS })
   }
 
-  async #showUploadedAttachment(blob) {
+  #showUploadedAttachment(blob) {
     this.editor.update(() => {
       this.replace(this.#toActionTextAttachmentNodeWith(blob))
     }, { tag: SILENT_UPDATE_TAGS })
@@ -245,4 +245,8 @@ class AttachmentNodeConversion {
       .replace(":signed_id", this.blob.signed_id)
       .replace(":filename", encodeURIComponent(this.blob.filename))
   }
+}
+
+export function $createActionTextAttachmentUploadNode(...args) {
+  return new ActionTextAttachmentUploadNode(...args)
 }

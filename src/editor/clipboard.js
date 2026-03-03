@@ -16,15 +16,15 @@ export default class Clipboard {
   paste(event) {
     const clipboardData = event.clipboardData
 
-    if (!clipboardData) return false
+    if (!clipboardData || this.#isPastingIntoCodeBlock()) return false
 
-    if (this.#isPlainTextOrURLPasted(clipboardData) && !this.#isPastingIntoCodeBlock()) {
+    if (this.#isPlainTextOrURLPasted(clipboardData)) {
       this.#pastePlainText(clipboardData)
       event.preventDefault()
       return true
     }
 
-    this.#handlePastedFiles(clipboardData)
+    return this.#handlePastedFiles(clipboardData)
   }
 
   #isPlainTextOrURLPasted(clipboardData) {
@@ -112,19 +112,22 @@ export default class Clipboard {
   }
 
   #handlePastedFiles(clipboardData) {
-    if (!this.editorElement.supportsAttachments) return
+    if (!this.editorElement.supportsAttachments) return false
 
     const html = clipboardData.getData("text/html")
-    if (html) return // Ignore if image copied from browser since we will load it as a remote image
+    if (html) {
+      this.contents.insertHtml(html, { tag: PASTE_TAG })
+      return true
+    }
 
     this.#preservingScrollPosition(() => {
-      for (const item of clipboardData.items) {
-        const file = item.getAsFile()
-        if (!file) continue
-
-        this.contents.uploadFile(file)
+      const files = clipboardData.files
+      if (files.length) {
+        this.contents.uploadFiles(files, { selectLast: true })
       }
     })
+
+    return true
   }
 
   // Deals with an issue in Safari where it scrolls to the tops after pasting attachments

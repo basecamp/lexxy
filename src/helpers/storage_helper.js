@@ -6,6 +6,10 @@ export function bytesToHumanSize(bytes) {
   return `${ value.toFixed(2) } ${ sizes[i] }`
 }
 
+export function extractFileName(string) {
+  return string.split("/").pop()
+}
+
 export function mimeTypeToExtension(mimeType) {
   if (!mimeType) return null
 
