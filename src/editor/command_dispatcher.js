@@ -161,6 +161,11 @@ export class CommandDispatcher {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
+    if ($isRootOrShadowRoot(selection.anchor.getNode())) {
+      if (tag) selection.insertNodes([ $createHeadingNode(tag) ])
+      return
+    }
+
     if (tag) {
       this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(tag))
     } else {

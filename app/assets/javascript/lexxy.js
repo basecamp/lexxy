@@ -7590,6 +7590,11 @@ class CommandDispatcher {
     const selection = Lr();
     if (!yr(selection)) return
 
+    if (as(selection.anchor.getNode())) {
+      if (tag) selection.insertNodes([ St$3(tag) ]);
+      return
+    }
+
     if (tag) {
       this.contents.insertNodeWrappingEachSelectedLine(() => St$3(tag));
     } else {
@@ -11728,8 +11733,14 @@ class HeadingDropdown extends ToolbarDropdown {
     if (!yr(selection)) return
 
     const anchorNode = selection.anchor.getNode();
-    const topLevelElement = anchorNode.getTopLevelElementOrThrow();
-    const currentTag = It$2(topLevelElement) ? topLevelElement.getTag() : null;
+    let currentTag = null;
+
+    if (anchorNode.getParent() !== null) {
+      const topLevelElement = anchorNode.getTopLevelElementOrThrow();
+      if (It$2(topLevelElement)) {
+        currentTag = topLevelElement.getTag();
+      }
+    }
 
     this.#headingButtons.forEach(button => {
       button.setAttribute("aria-pressed", button.dataset.heading === currentTag);

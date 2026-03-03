@@ -70,8 +70,14 @@ export class HeadingDropdown extends ToolbarDropdown {
     if (!$isRangeSelection(selection)) return
 
     const anchorNode = selection.anchor.getNode()
-    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
-    const currentTag = $isHeadingNode(topLevelElement) ? topLevelElement.getTag() : null
+    let currentTag = null
+
+    if (anchorNode.getParent() !== null) {
+      const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+      if ($isHeadingNode(topLevelElement)) {
+        currentTag = topLevelElement.getTag()
+      }
+    }
 
     this.#headingButtons.forEach(button => {
       button.setAttribute("aria-pressed", button.dataset.heading === currentTag)

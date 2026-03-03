@@ -48,7 +48,7 @@ Editors support the following options, configurable using presets and element at
 - `markdown`: Pass `false` to disable Markdown support.
 - `multiLine`: Pass `false` to force single line editing.
 - `richText`: Pass `false` to disable rich text editing.
-- `headings`: Pass an array of heading tags to configure which heading levels are available. The toolbar heading button will cycle through the configured levels. Defaults to `["h2", "h3", "h4"]`. Pass an empty array to disable headings entirely.
+- `headings`: Pass an array of heading tags to configure which heading levels are available. The toolbar displays a dropdown for selecting among the configured levels, and you can optionally cycle through them via `rotateHeadingFormat` (for example, using a keyboard shortcut or API call). Defaults to `["h2", "h3", "h4"]`. Pass an empty array to disable headings entirely.
 
   ```js
   // Via preset
