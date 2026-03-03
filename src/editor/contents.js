@@ -1,16 +1,17 @@
 import {
-  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $insertNodes,
-  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection, HISTORY_MERGE_TAG
-} from "lexical"
+  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection,
+  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection
+ } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
-import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $isListNode, ListItemNode } from "@lexical/list"
-import { FormatEscaper } from "./format_escaper"
 import { $getNearestNodeOfType } from "@lexical/utils"
+import FormatEscaper from "./contents/format_escaper"
+import Uploader from "./contents/uploader"
+import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 
 export default class Contents {
   constructor(editorElement) {
@@ -21,29 +22,34 @@ export default class Contents {
   }
 
   insertHtml(html, { tag } = {}) {
+    this.insertDOM(parseHtml(html), { tag })
+  }
+
+  insertDOM(doc, { tag } = {}) {
     this.editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
-      const nodes = $generateNodesFromDOM(this.editor, parseHtml(html))
-      selection.insertNodes(nodes)
+      const nodes = $generateNodesFromDOM(this.editor, doc)
+      if (!this.#insertUploadNodes(nodes)) {
+        selection.insertNodes(nodes)
+      }
     }, { tag })
   }
 
   insertAtCursor(node) {
-    const selection = $getSelection()
+    const selection = $getSelection() ?? $getRoot().selectEnd()
     const selectedNodes = selection?.getNodes()
 
     if ($isRangeSelection(selection)) {
-      $insertNodes([ node ])
-    } else if ($isNodeSelection(selection) && selectedNodes && selectedNodes.length > 0) {
+      selection.insertNodes([ node ])
+    } else if ($isNodeSelection(selection) && selectedNodes.length > 0) {
+      // Overrides Lexical's default behavior of _removing_ the currently selected nodes
+      // https://github.com/facebook/lexical/blob/v0.38.2/packages/lexical/src/LexicalSelection.ts#L412
       const lastNode = selectedNodes.at(-1)
       lastNode.insertAfter(node)
-    } else {
-      const root = $getRoot()
-      root.append(node)
     }
-  }
+}
 
   insertAtCursorEnsuringLineBelow(node) {
     this.insertAtCursor(node)
@@ -252,23 +258,22 @@ export default class Contents {
     }
   }
 
-  uploadFile(file) {
+  uploadFiles(files, { selectLast } = {}) {
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
       return
     }
-
-    if (!this.#shouldUploadFile(file)) {
-      return
-    }
-
-    const uploadUrl = this.editorElement.directUploadUrl
-    const blobUrlTemplate = this.editorElement.blobUrlTemplate
+    const validFiles = Array.from(files).filter(this.#shouldUploadFile.bind(this))
 
     this.editor.update(() => {
-      const uploadedImageNode = new ActionTextAttachmentUploadNode({ file: file, uploadUrl: uploadUrl, blobUrlTemplate: blobUrlTemplate })
-      this.insertAtCursor(uploadedImageNode)
-    }, { tag: HISTORY_MERGE_TAG })
+      const uploader = Uploader.for(this.editorElement, validFiles)
+      uploader.$uploadFiles()
+
+      if (selectLast && uploader.nodes?.length) {
+        const lastNode = uploader.nodes.at(-1)
+        lastNode.selectEnd()
+      }
+    })
   }
 
   replaceNodeWithHTML(nodeKey, html, options = {}) {
@@ -307,6 +312,15 @@ export default class Contents {
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
       previousNode.insertAfter(newNode)
     })
+  }
+
+  #insertUploadNodes(nodes) {
+    if (nodes.every($isActionTextAttachmentNode)) {
+      const uploader = Uploader.for(this.editorElement, [])
+      uploader.nodes = nodes
+      uploader.$insertUploadNodes()
+      return true
+    }
   }
 
   #insertLineBelowIfLastNode(node) {
@@ -428,7 +442,7 @@ export default class Contents {
       wrappingNode.append(...topLevelElement.getChildren())
       topLevelElement.replace(wrappingNode)
     } else {
-      $insertNodes([ newNodeFn() ])
+      selection.insertNodes([ newNodeFn() ])
     }
   }
 

@@ -2,7 +2,7 @@ import { $createParagraphNode, $getSelection, $isLineBreakNode, $isParagraphNode
 import { $createListNode, $isListItemNode, $isListNode } from "@lexical/list"
 import { $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
 
-export class FormatEscaper {
+export default class FormatEscaper {
   constructor(editorElement) {
     this.editorElement = editorElement
     this.editor = editorElement.editor

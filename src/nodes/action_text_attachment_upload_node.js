@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
-import { createElement } from "../helpers/html_helper"
+import { createElement, dispatch } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 
@@ -152,10 +152,15 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
     const upload = new DirectUpload(this.file, this.uploadUrl, this)
     upload.delegate = this.#createUploadDelegate()
+
+    this.#dispatchEvent("lexxy:upload-start", { file: this.file })
+
     upload.create((error, blob) => {
       if (error) {
+        this.#dispatchEvent("lexxy:upload-end", { file: this.file, error })
         this.#handleUploadError(error)
       } else {
+        this.#dispatchEvent("lexxy:upload-end", { file: this.file, error: null })
         this.#showUploadedAttachment(blob)
       }
     })
@@ -182,7 +187,9 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   #handleUploadProgress(event) {
-    this.#setProgress(Math.round(event.loaded / event.total * 100))
+    const progress = Math.round(event.loaded / event.total * 100)
+    this.#setProgress(progress)
+    this.#dispatchEvent("lexxy:upload-progress", { file: this.file, progress })
   }
 
   #setProgress(progress) {
@@ -198,7 +205,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }, { tag: SILENT_UPDATE_TAGS })
   }
 
-  async #showUploadedAttachment(blob) {
+  #showUploadedAttachment(blob) {
     this.editor.update(() => {
       this.replace(this.#toActionTextAttachmentNodeWith(blob))
     }, { tag: SILENT_UPDATE_TAGS })
@@ -207,6 +214,11 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   #toActionTextAttachmentNodeWith(blob) {
     const conversion = new AttachmentNodeConversion(this, blob)
     return conversion.toAttachmentNode()
+  }
+
+  #dispatchEvent(name, detail) {
+    const figure = this.editor.getElementByKey(this.getKey())
+    if (figure) dispatch(figure, name, detail)
   }
 }
 
@@ -245,4 +257,8 @@ class AttachmentNodeConversion {
       .replace(":signed_id", this.blob.signed_id)
       .replace(":filename", encodeURIComponent(this.blob.filename))
   }
+}
+
+export function $createActionTextAttachmentUploadNode(...args) {
+  return new ActionTextAttachmentUploadNode(...args)
 }
