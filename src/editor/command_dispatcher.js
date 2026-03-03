@@ -14,7 +14,7 @@ import {
   UNDO_COMMAND
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
-import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode, HeadingNode } from "@lexical/rich-text"
+import { $createHeadingNode, $createQuoteNode, $isQuoteNode, HeadingNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
@@ -171,9 +171,13 @@ export class CommandDispatcher {
     const currentHeading = this.selection.nearestNodeOfType(HeadingNode)
     const currentTag = currentHeading?.getTag()
     const currentIndex = headings.indexOf(currentTag)
-    const nextTag = headings[currentIndex + 1] ?? headings[0]
+    const nextTag = headings[currentIndex + 1]
 
-    this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
+    if (nextTag) {
+      this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
+    } else {
+      this.contents.removeFormattingFromSelectedLines()
+    }
   }
 
   dispatchUploadAttachments() {

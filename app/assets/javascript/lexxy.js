@@ -7583,9 +7583,13 @@ class CommandDispatcher {
     const currentHeading = this.selection.nearestNodeOfType(Pt$3);
     const currentTag = currentHeading?.getTag();
     const currentIndex = headings.indexOf(currentTag);
-    const nextTag = headings[currentIndex + 1] ?? headings[0];
+    const nextTag = headings[currentIndex + 1];
 
-    this.contents.insertNodeWrappingEachSelectedLine(() => St$3(nextTag));
+    if (nextTag) {
+      this.contents.insertNodeWrappingEachSelectedLine(() => St$3(nextTag));
+    } else {
+      this.contents.removeFormattingFromSelectedLines();
+    }
   }
 
   dispatchUploadAttachments() {
