@@ -55,6 +55,11 @@
       <lexxy-prompt trigger="2" src="<%= people_path %>" name="mention">
       </lexxy-prompt>
 
+      <% if params[:slow_prompt] %>
+        <lexxy-prompt trigger="4" src="<%= people_path(delay: 2) %>" name="mention">
+        </lexxy-prompt>
+      <% end %>
+
       <lexxy-prompt trigger="3" src="<%= people_path %>" name="mention" remote-filtering insert-editable-text supports-space-in-searches>
       </lexxy-prompt>
 
