@@ -5094,7 +5094,7 @@ class LexicalToolbarElement extends HTMLElement {
     const anchorNode = selection.anchor.getNode();
     if (!anchorNode.getParent()) { return }
 
-    const { isBold, isItalic, isStrikethrough, isHighlight, isInLink, isInQuote, isInHeading,
+    const { isBold, isItalic, isStrikethrough, isHighlight, isInLink, isInQuote, isInHeading, headingTag,
       isInCode, isInList, listType, isInTable } = this.selection.getFormat();
 
     this.#setButtonPressed("bold", isBold);
@@ -5104,6 +5104,7 @@ class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("link", isInLink);
     this.#setButtonPressed("quote", isInQuote);
     this.#setButtonPressed("heading", isInHeading);
+    this.#updateHeadingLabel(headingTag);
     this.#setButtonPressed("code", isInCode);
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet");
     this.#setButtonPressed("ordered-list", isInList && listType === "number");
@@ -5124,6 +5125,16 @@ class LexicalToolbarElement extends HTMLElement {
     if (button) {
       button.disabled = isDisabled;
       button.setAttribute("aria-disabled", isDisabled.toString());
+    }
+  }
+
+  #updateHeadingLabel(headingTag) {
+    const summary = this.querySelector(`[name="heading"]`);
+    if (!summary) return
+
+    const label = summary.querySelector(".lexxy-heading-label");
+    if (label) {
+      label.textContent = headingTag ? headingTag.toUpperCase() : "";
     }
   }
 
@@ -5226,9 +5237,15 @@ class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.strikethrough}
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="heading" data-command="rotateHeadingFormat" title="Heading">
-        ${ToolbarIcons.heading}
-      </button>
+      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
+        <summary class="lexxy-editor__toolbar-button" name="heading" title="Heading">
+          ${ToolbarIcons.heading}<span class="lexxy-heading-label"></span>
+        </summary>
+        <lexxy-heading-dropdown class="lexxy-editor__toolbar-dropdown-content">
+          <div class="lexxy-heading-options"></div>
+          <button type="button" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset lexxy-heading-remove">Remove heading</button>
+        </lexxy-heading-dropdown>
+      </details>
 
       <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">
@@ -7445,6 +7462,7 @@ const COMMANDS = [
   "toggleHighlight",
   "removeHighlight",
   "rotateHeadingFormat",
+  "applyHeadingFormat",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -7566,6 +7584,17 @@ class CommandDispatcher {
 
   get #configuredHeadings() {
     return this.editorElement.config.get("headings")
+  }
+
+  dispatchApplyHeadingFormat(tag) {
+    const selection = Lr();
+    if (!yr(selection)) return
+
+    if (tag) {
+      this.contents.insertNodeWrappingEachSelectedLine(() => St$3(tag));
+    } else {
+      this.contents.removeFormattingFromSelectedLines();
+    }
   }
 
   dispatchRotateHeadingFormat() {
@@ -11631,6 +11660,102 @@ class LinkDropdown extends ToolbarDropdown {
   }
 }
 
+class HeadingDropdown extends ToolbarDropdown {
+  connectedCallback() {
+    super.connectedCallback();
+    this.#registerToggleHandler();
+  }
+
+  initialize() {
+    this.#setUpButtons();
+    this.#registerButtonHandlers();
+  }
+
+  #registerToggleHandler() {
+    this.container.addEventListener("toggle", this.#handleToggle.bind(this));
+  }
+
+  #registerButtonHandlers() {
+    this.#headingButtons.forEach(button => button.addEventListener("click", this.#handleHeadingClick.bind(this)));
+    this.querySelector(".lexxy-heading-remove")?.addEventListener("click", this.#handleRemoveHeadingClick.bind(this));
+  }
+
+  #setUpButtons() {
+    const headings = this.#configuredHeadings;
+
+    headings.forEach((tag) => {
+      this.#buttonContainer.appendChild(this.#createButton(tag));
+    });
+  }
+
+  #createButton(tag) {
+    const button = document.createElement("button");
+    button.dataset.heading = tag;
+    button.classList.add("lexxy-editor__toolbar-button", "lexxy-heading-button");
+    button.name = tag;
+    button.textContent = tag.toUpperCase();
+    button.type = "button";
+    return button
+  }
+
+  #handleToggle({ newState }) {
+    if (newState === "open") {
+      this.editor.getEditorState().read(() => {
+        this.#updateHeadingButtonStates(Lr());
+      });
+    }
+  }
+
+  #handleHeadingClick(event) {
+    event.preventDefault();
+
+    const button = event.target.closest(".lexxy-heading-button");
+    if (!button) return
+
+    const tag = button.dataset.heading;
+    this.editor.dispatchCommand("applyHeadingFormat", tag);
+    this.close();
+  }
+
+  #handleRemoveHeadingClick(event) {
+    event.preventDefault();
+
+    this.editor.dispatchCommand("applyHeadingFormat", null);
+    this.close();
+  }
+
+  #updateHeadingButtonStates(selection) {
+    if (!yr(selection)) return
+
+    const anchorNode = selection.anchor.getNode();
+    const topLevelElement = anchorNode.getTopLevelElementOrThrow();
+    const currentTag = It$2(topLevelElement) ? topLevelElement.getTag() : null;
+
+    this.#headingButtons.forEach(button => {
+      button.setAttribute("aria-pressed", button.dataset.heading === currentTag);
+    });
+
+    const removeButton = this.querySelector(".lexxy-heading-remove");
+    if (removeButton) {
+      removeButton.disabled = currentTag === null;
+    }
+  }
+
+  get #configuredHeadings() {
+    const configured = this.editorElement.config.get("headings");
+    const headings = Array.isArray(configured) ? configured : [ "h2", "h3", "h4" ];
+    return headings.filter((heading) => /^h[1-6]$/.test(heading))
+  }
+
+  get #buttonContainer() {
+    return this.querySelector(".lexxy-heading-options")
+  }
+
+  get #headingButtons() {
+    return Array.from(this.querySelectorAll(".lexxy-heading-button"))
+  }
+}
+
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button";
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']";
 
@@ -13215,6 +13340,7 @@ function defineElements() {
     "lexxy-toolbar": LexicalToolbarElement,
     "lexxy-editor": LexicalEditorElement,
     "lexxy-link-dropdown": LinkDropdown,
+    "lexxy-heading-dropdown": HeadingDropdown,
     "lexxy-highlight-dropdown": HighlightDropdown,
     "lexxy-prompt": LexicalPromptElement,
     "lexxy-code-language-picker": CodeLanguagePicker,

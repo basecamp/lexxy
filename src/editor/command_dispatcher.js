@@ -33,6 +33,7 @@ const COMMANDS = [
   "toggleHighlight",
   "removeHighlight",
   "rotateHeadingFormat",
+  "applyHeadingFormat",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -154,6 +155,17 @@ export class CommandDispatcher {
 
   get #configuredHeadings() {
     return this.editorElement.config.get("headings")
+  }
+
+  dispatchApplyHeadingFormat(tag) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    if (tag) {
+      this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(tag))
+    } else {
+      this.contents.removeFormattingFromSelectedLines()
+    }
   }
 
   dispatchRotateHeadingFormat() {
