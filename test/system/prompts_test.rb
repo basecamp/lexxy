@@ -142,7 +142,7 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     # Editor should remain functional after deleting the trigger mid-load
     # No console errors should occur, and we should be able to type and see the text in the editor
-    sleep 1
+    wait_until { !find_editor.open_prompt? }
     find_editor.send "Hello"
     find_editor.within_contents { assert_text "Hello" }
   end

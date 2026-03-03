@@ -154,11 +154,17 @@ export class LexicalPromptElement extends HTMLElement {
 
   async #showPopover() {
     this.popoverElement ??= await this.#buildPopover()
-    if (!this.#isTriggerPresent()) return
+    if (!this.#isTriggerPresent()) {
+      this.#addTriggerListener()
+      return
+    }
 
     this.#resetPopoverPosition()
     await this.#filterOptions()
-    if (!this.#isTriggerPresent()) return
+    if (!this.#isTriggerPresent()) {
+      this.#addTriggerListener()
+      return
+    }
 
     this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", true)
     this.#selectFirstOption()
