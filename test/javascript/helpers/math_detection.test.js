@@ -39,7 +39,7 @@ describe("inline math detection regex", () => {
     const match = INLINE_MATH_REGEX.exec("before $\\alpha$ after")
     expect(match).not.toBeNull()
     expect(match[1]).toBe("\\alpha")
-    expect(match.index).toBe(7)
+    expect(match.index).toBe(6)
   })
 
   test("matches LaTeX commands", () => {
@@ -48,6 +48,3 @@ describe("inline math detection regex", () => {
     expect(match[1]).toBe("\\frac{a}{b}")
   })
 })
-
-// Note: Node serialization tests require an active Lexical editor context.
-// These are best tested via integration tests in the dummy Rails app.

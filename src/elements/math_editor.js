@@ -7,8 +7,12 @@ export default class MathEditor extends HTMLElement {
   #handleOutsideClick = null
 
   connectedCallback() {
-    this.#buildUI()
+    if (!this.#input) this.#buildUI()
     this.hidden = true
+  }
+
+  disconnectedCallback() {
+    this.hide()
   }
 
   show(latex, targetElement, { displayMode = false, callback }) {
@@ -22,7 +26,6 @@ export default class MathEditor extends HTMLElement {
 
     requestAnimationFrame(() => this.#input.focus())
 
-    // Remove any existing listener before adding a new one
     if (this.#handleOutsideClick) {
       document.removeEventListener("mousedown", this.#handleOutsideClick, true)
     }

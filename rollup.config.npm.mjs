@@ -24,6 +24,7 @@ export default {
     /^@lexical\//,
     'lexical',
     'dompurify',
+    'katex',
     'marked',
     'prismjs',
     /^prismjs\//,

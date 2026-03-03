@@ -1,4 +1,4 @@
-import { $createParagraphNode, $getNodeByKey, $getSelection, $isRangeSelection, $isParagraphNode, COMMAND_PRIORITY_NORMAL, TextNode, createCommand, defineExtension, KEY_ENTER_COMMAND } from "lexical"
+import { $createParagraphNode, $getNodeByKey, $getSelection, $isRangeSelection, $isParagraphNode, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, TextNode, createCommand, defineExtension, KEY_ENTER_COMMAND } from "lexical"
 import { mergeRegister } from "@lexical/utils"
 import LexxyExtension from "./lexxy_extension"
 import { InlineMathNode } from "../nodes/inline_math_node"
@@ -7,7 +7,7 @@ import { BlockMathNode } from "../nodes/block_math_node"
 export const INSERT_BLOCK_MATH_COMMAND = createCommand()
 export const INSERT_INLINE_MATH_COMMAND = createCommand()
 
-export const INLINE_MATH_REGEX = /(?<!\$)\$([^$\n]+)\$(?!\$)/
+export const INLINE_MATH_REGEX = /(?:^|[^$])\$([^$\n]+)\$(?!\$)/
 
 export class MathExtension extends LexxyExtension {
   get enabled() {
@@ -30,7 +30,7 @@ export class MathExtension extends LexxyExtension {
           // Block math: detect $$ at start of paragraph + Enter
           editor.registerCommand(KEY_ENTER_COMMAND, (event) => {
             return $handleBlockMathTrigger(editor, editorElement, event)
-          }, COMMAND_PRIORITY_NORMAL),
+          }, COMMAND_PRIORITY_HIGH),
 
           // Command: insert block math
           editor.registerCommand(INSERT_BLOCK_MATH_COMMAND, () => {
@@ -59,8 +59,8 @@ function $detectInlineMath(textNode) {
   if (!match) return
 
   const latex = match[1]
-  const matchStart = match.index
-  const matchEnd = matchStart + match[0].length
+  const matchStart = match[0].startsWith("$") ? match.index : match.index + 1
+  const matchEnd = match.index + match[0].length
 
   // Split: [before] [mathNode] [after]
   let nodeToSplit = textNode
@@ -92,25 +92,32 @@ function $handleBlockMathTrigger(editor, editorElement, event) {
 
   if (!$isParagraphNode(topElement)) return false
 
-  const text = topElement.getTextContent()
+  const text = topElement.getTextContent().trim()
   if (text !== "$$") return false
 
   event.preventDefault()
 
   const blockMathNode = new BlockMathNode({ latex: "" })
+
+  // Ensure paragraph below before replacing, so selection can move there
+  let nextParagraph = topElement.getNextSibling()
+  if (!nextParagraph || !$isParagraphNode(nextParagraph)) {
+    nextParagraph = $createParagraphNode()
+    topElement.insertAfter(nextParagraph)
+  }
+
+  // Move selection to the next paragraph BEFORE replacing
+  nextParagraph.selectStart()
+
+  // Now safe to replace — selection no longer references the removed paragraph
   topElement.replace(blockMathNode)
 
-  // Ensure paragraph below
-  editor.update(() => {
-    if (!blockMathNode.getNextSibling()) {
-      const paragraph = $createParagraphNode()
-      blockMathNode.insertAfter(paragraph)
-    }
-  })
+  const nodeKey = blockMathNode.getKey()
 
   // Open editor after DOM updates
   requestAnimationFrame(() => {
-    openMathEditor(editor, editorElement, blockMathNode.getKey(), "", true)
+    const targetElement = editor.getElementByKey(nodeKey)
+    openMathEditor(editor, editorElement, nodeKey, "", true, targetElement)
   })
 
   return true
@@ -139,7 +146,8 @@ function $insertBlockMath(editor, editorElement) {
   }
 
   requestAnimationFrame(() => {
-    openMathEditor(editor, editorElement, node.getKey(), "", true)
+    const targetElement = editor.getElementByKey(node.getKey())
+    openMathEditor(editor, editorElement, node.getKey(), "", true, targetElement)
   })
 }
 
@@ -190,13 +198,14 @@ function openMathEditor(editor, editorElement, nodeKey, latex, displayMode, targ
           return
         }
 
-        // Replace with a new node containing updated latex
         if (node instanceof BlockMathNode) {
           const newNode = new BlockMathNode({ latex: newLatex })
-          node.replace(newNode)
+          node.insertAfter(newNode)
+          node.remove()
         } else if (node instanceof InlineMathNode) {
           const newNode = new InlineMathNode({ latex: newLatex })
-          node.replace(newNode)
+          node.insertAfter(newNode)
+          node.remove()
         }
       })
 
