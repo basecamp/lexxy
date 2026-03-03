@@ -15,7 +15,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ruby-3.3.7
+          ruby-version: .ruby-version
           bundler-cache: true
 
       - name: Set up Node.js
@@ -52,7 +52,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ruby-3.3.7
+          ruby-version: .ruby-version
           bundler-cache: true
 
       - name: Set up Node.js
