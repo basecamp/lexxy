@@ -7,9 +7,6 @@ configure({
   default: {
     headings: ["h2", "h3", "h4"]
   },
-  blog: {
-    headings: ["h2", "h3", "h4"],
-  },
   minimal: {
     headings: ["h2"],
   },
@@ -38,12 +35,6 @@ test("overrides headings with attribute to include h1 and h5", () => {
   )
   const config = new EditorConfiguration(element)
   expect(config.get("headings")).toEqual(["h1", "h2", "h5"])
-})
-
-test("overrides headings with preset", () => {
-  const element = createElement("<lexxy-editor preset='blog'></lexxy-editor>")
-  const config = new EditorConfiguration(element)
-  expect(config.get("headings")).toEqual(["h2", "h3", "h4"])
 })
 
 test("restricts headings to a subset", () => {

@@ -8052,42 +8052,27 @@ class CommandDispatcher {
   }
 
   get #configuredHeadings() {
-    const configured = this.editorElement.config.get("headings");
-    const headings = Array.isArray(configured) ? configured : [ "h2", "h3", "h4" ];
-    return headings.filter((heading) => /^h[1-6]$/.test(heading))
+    return this.editorElement.config.get("headings")
   }
 
   dispatchRotateHeadingFormat() {
     const selection = Lr();
-    if (!yr(selection)) return
+    if (!yr(selection)) return false
 
     const headings = this.#configuredHeadings;
-    if (headings.length === 0) return
+    if (headings.length === 0) return false
 
     if (as(selection.anchor.getNode())) {
       selection.insertNodes([ St$3(headings[0]) ]);
       return
     }
 
-    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
-    let nextTag = headings[0];
-    if (It$2(topLevelElement)) {
-      const currentTag = topLevelElement.getTag();
-      const currentIndex = headings.indexOf(currentTag);
-      if (currentIndex >= 0 && currentIndex < headings.length - 1) {
-        nextTag = headings[currentIndex + 1];
-      } else if (currentIndex === headings.length - 1) {
-        nextTag = null;
-      } else {
-        nextTag = headings[0];
-      }
-    }
+    const currentHeading = this.selection.nearestNodeOfType(Pt$3);
+    const currentTag = currentHeading?.getTag();
+    const currentIndex = headings.indexOf(currentTag);
+    const nextTag = headings[currentIndex + 1] ?? headings[0];
 
-    if (nextTag) {
-      this.contents.insertNodeWrappingEachSelectedLine(() => St$3(nextTag));
-    } else {
-      this.contents.removeFormattingFromSelectedLines();
-    }
+    this.contents.insertNodeWrappingEachSelectedLine(() => St$3(nextTag));
   }
 
   dispatchUploadAttachments() {
@@ -8365,9 +8350,7 @@ class Selection {
       isInLink: wt$5(anchorNode, y$2) !== null,
       isInQuote: Ot$2(topLevelElement),
       isInHeading: It$2(topLevelElement),
-      headingTag: It$2(topLevelElement)
-        ? topLevelElement.getTag()
-        : null,
+      headingTag: wt$5(anchorNode, Pt$3)?.getTag(),
       isInCode: selection.hasFormat("code") || wt$5(anchorNode, q$1) !== null,
       isInList: listType !== null,
       listType,

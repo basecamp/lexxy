@@ -12,7 +12,7 @@ import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
 import { $createNodeSelectionWith, getListType } from "../helpers/lexical_helper"
 import { LinkNode } from "@lexical/link"
-import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
+import { $isHeadingNode, $isQuoteNode, HeadingNode } from "@lexical/rich-text"
 
 export default class Selection {
   constructor(editorElement) {
@@ -132,9 +132,7 @@ export default class Selection {
       isInLink: $getNearestNodeOfType(anchorNode, LinkNode) !== null,
       isInQuote: $isQuoteNode(topLevelElement),
       isInHeading: $isHeadingNode(topLevelElement),
-      headingTag: $isHeadingNode(topLevelElement)
-        ? topLevelElement.getTag()
-        : null,
+      headingTag: $getNearestNodeOfType(anchorNode, HeadingNode)?.getTag(),
       isInCode: selection.hasFormat("code") || $getNearestNodeOfType(anchorNode, CodeNode) !== null,
       isInList: listType !== null,
       listType,

@@ -14,7 +14,7 @@ import {
   UNDO_COMMAND
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
-import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
+import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode, HeadingNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
@@ -153,42 +153,27 @@ export class CommandDispatcher {
   }
 
   get #configuredHeadings() {
-    const configured = this.editorElement.config.get("headings")
-    const headings = Array.isArray(configured) ? configured : [ "h2", "h3", "h4" ]
-    return headings.filter((heading) => /^h[1-6]$/.test(heading))
+    return this.editorElement.config.get("headings")
   }
 
   dispatchRotateHeadingFormat() {
     const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return
+    if (!$isRangeSelection(selection)) return false
 
     const headings = this.#configuredHeadings
-    if (headings.length === 0) return
+    if (headings.length === 0) return false
 
     if ($isRootOrShadowRoot(selection.anchor.getNode())) {
       selection.insertNodes([ $createHeadingNode(headings[0]) ])
       return
     }
 
-    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
-    let nextTag = headings[0]
-    if ($isHeadingNode(topLevelElement)) {
-      const currentTag = topLevelElement.getTag()
-      const currentIndex = headings.indexOf(currentTag)
-      if (currentIndex >= 0 && currentIndex < headings.length - 1) {
-        nextTag = headings[currentIndex + 1]
-      } else if (currentIndex === headings.length - 1) {
-        nextTag = null
-      } else {
-        nextTag = headings[0]
-      }
-    }
+    const currentHeading = this.selection.nearestNodeOfType(HeadingNode)
+    const currentTag = currentHeading?.getTag()
+    const currentIndex = headings.indexOf(currentTag)
+    const nextTag = headings[currentIndex + 1] ?? headings[0]
 
-    if (nextTag) {
-      this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
-    } else {
-      this.contents.removeFormattingFromSelectedLines()
-    }
+    this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
   }
 
   dispatchUploadAttachments() {
