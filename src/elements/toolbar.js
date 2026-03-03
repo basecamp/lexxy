@@ -199,7 +199,7 @@ export class LexicalToolbarElement extends HTMLElement {
     const anchorNode = selection.anchor.getNode()
     if (!anchorNode.getParent()) { return }
 
-    const { isBold, isItalic, isStrikethrough, isHighlight, isInLink, isInQuote, isInHeading,
+    const { isBold, isItalic, isStrikethrough, isHighlight, isInLink, isInQuote, isInHeading, headingTag,
       isInCode, isInList, listType, isInTable } = this.selection.getFormat()
 
     this.#setButtonPressed("bold", isBold)
@@ -209,6 +209,7 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("link", isInLink)
     this.#setButtonPressed("quote", isInQuote)
     this.#setButtonPressed("heading", isInHeading)
+    this.#updateHeadingLabel(headingTag)
     this.#setButtonPressed("code", isInCode)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
     this.#setButtonPressed("ordered-list", isInList && listType === "number")
@@ -229,6 +230,16 @@ export class LexicalToolbarElement extends HTMLElement {
     if (button) {
       button.disabled = isDisabled
       button.setAttribute("aria-disabled", isDisabled.toString())
+    }
+  }
+
+  #updateHeadingLabel(headingTag) {
+    const summary = this.querySelector(`[name="heading"]`)
+    if (!summary) return
+
+    const label = summary.querySelector(".lexxy-heading-label")
+    if (label) {
+      label.textContent = headingTag ? headingTag.toUpperCase() : ""
     }
   }
 
@@ -288,10 +299,10 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #closeDropdowns() {
-   this.#dropdowns.forEach((details) => {
-     details.open = false
-   })
- }
+    this.#dropdowns.forEach((details) => {
+      details.open = false
+    })
+  }
 
   get #dropdowns() {
     return this.querySelectorAll("details")
@@ -331,9 +342,15 @@ export class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.strikethrough}
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="heading" data-command="rotateHeadingFormat" title="Heading">
-        ${ToolbarIcons.heading}
-      </button>
+      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
+        <summary class="lexxy-editor__toolbar-button" name="heading" title="Heading">
+          ${ToolbarIcons.heading}<span class="lexxy-heading-label"></span>
+        </summary>
+        <lexxy-heading-dropdown class="lexxy-editor__toolbar-dropdown-content">
+          <div class="lexxy-heading-options"></div>
+          <button type="button" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset lexxy-heading-remove">Remove heading</button>
+        </lexxy-heading-dropdown>
+      </details>
 
       <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">

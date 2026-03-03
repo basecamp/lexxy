@@ -14,7 +14,7 @@ import {
   UNDO_COMMAND
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
-import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
+import { $createHeadingNode, $createQuoteNode, $isQuoteNode, HeadingNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
@@ -33,6 +33,7 @@ const COMMANDS = [
   "toggleHighlight",
   "removeHighlight",
   "rotateHeadingFormat",
+  "applyHeadingFormat",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -152,29 +153,42 @@ export class CommandDispatcher {
     this.editor.focus()
   }
 
-  dispatchRotateHeadingFormat() {
+  get #configuredHeadings() {
+    return this.editorElement.config.get("headings")
+  }
+
+  dispatchApplyHeadingFormat(tag) {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
     if ($isRootOrShadowRoot(selection.anchor.getNode())) {
-      selection.insertNodes([ $createHeadingNode("h2") ])
+      if (tag) selection.insertNodes([ $createHeadingNode(tag) ])
       return
     }
 
-    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
-    let nextTag = "h2"
-    if ($isHeadingNode(topLevelElement)) {
-      const currentTag = topLevelElement.getTag()
-      if (currentTag === "h2") {
-        nextTag = "h3"
-      } else if (currentTag === "h3") {
-        nextTag = "h4"
-      } else if (currentTag === "h4") {
-        nextTag = null
-      } else {
-        nextTag = "h2"
-      }
+    if (tag) {
+      this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(tag))
+    } else {
+      this.contents.removeFormattingFromSelectedLines()
     }
+  }
+
+  dispatchRotateHeadingFormat() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return false
+
+    const headings = this.#configuredHeadings
+    if (headings.length === 0) return false
+
+    if ($isRootOrShadowRoot(selection.anchor.getNode())) {
+      selection.insertNodes([ $createHeadingNode(headings[0]) ])
+      return
+    }
+
+    const currentHeading = this.selection.nearestNodeOfType(HeadingNode)
+    const currentTag = currentHeading?.getTag()
+    const currentIndex = headings.indexOf(currentTag)
+    const nextTag = headings[currentIndex + 1]
 
     if (nextTag) {
       this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
