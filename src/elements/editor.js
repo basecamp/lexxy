@@ -11,8 +11,6 @@ import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 
 import theme from "../config/theme"
-import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
-import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
@@ -31,6 +29,8 @@ import { ProvisionalParagraphExtension } from "../extensions/provisional_paragra
 import { HighlightExtension } from "../extensions/highlight_extension"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 import { TablesExtension } from "../extensions/tables_extension"
+import { AttachmentsExtension } from "../extensions/attachments_extension.js"
+
 
 export class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -125,7 +125,8 @@ export class LexicalEditorElement extends HTMLElement {
       ProvisionalParagraphExtension,
       HighlightExtension,
       TrixContentExtension,
-      TablesExtension
+      TablesExtension,
+      AttachmentsExtension
     ]
   }
 
@@ -313,10 +314,6 @@ export class LexicalEditorElement extends HTMLElement {
         AutoLinkNode,
         HorizontalDividerNode
       )
-    }
-
-    if (this.supportsAttachments) {
-      nodes.push(ActionTextAttachmentNode, ActionTextAttachmentUploadNode)
     }
 
     return nodes

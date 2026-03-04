@@ -6,7 +6,6 @@
   @supports (min-block-size: attr(rows lh)) {
     --lexxy-editor-rows: attr(rows lh, 8lh);
   }
-
   --lexxy-toolbar-gap: 2px;
   --lexxy-toolbar-spacing: 0.5ch;
 
@@ -35,7 +34,7 @@
       outline-offset: var(--lexxy-focus-ring-offset);
     }
   }
-    
+
   summary {
     list-style: none;
 
@@ -65,12 +64,12 @@
   }
 
   .node--selected {
-    &:has(img) img,
-    &:not(:has(img)) {
-      outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
-      outline-offset: var(--lexxy-focus-ring-offset);
-    }
+    outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
+    outline-offset: var(--lexxy-focus-ring-offset);
   }
+
+  /* Tables */
+  /* ------------------------------------------------------------------------ */
 
   table {
     th, td {
@@ -145,7 +144,7 @@
         }
         &[data-action="toggle"] {
           background-color: var(--lexxy-color-table-cell-toggle);
-          
+
           &:after { box-shadow: 0 0 0 0 transparent; }
         }
       }
@@ -173,8 +172,105 @@
     }
   }
 
+  [data-lexical-linebreak] {
+    block-size: 0;
+    display: contents;
+    inline-size: 0;
+  }
+
+  /* Attachments */
+  /* ------------------------------------------------------------------------ */
+
   action-text-attachment {
     cursor: pointer;
+  }
+
+  .attachment:hover:not(.node--selected) {
+    outline: var(--lexxy-focus-ring-size) solid color-mix(in oklch, var(--lexxy-focus-ring-color) 30%, transparent);
+    outline-offset: var(--lexxy-focus-ring-offset);
+  }
+
+  /* Image galleries */
+  /* ------------------------------------------------------------------------ */
+
+  .attachment-gallery {
+    --lexxy-attachment-gallery-columns: 3;
+    --lexxy-attachment-gallery-gap: 0.4ch;
+    --lexxy-focus-ring-offset: -6px;
+
+    display: block;
+    padding: 0;
+
+    .attachment {
+      box-sizing: border-box;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 0;
+      inline-size: calc(100% / var(--lexxy-attachment-gallery-columns) - var(--lexxy-attachment-gallery-gap) * 2);
+      margin: var(--lexxy-attachment-gallery-gap);
+      padding: 0;
+      padding-block-end: var(--lexxy-attachment-gap);
+      vertical-align: top;
+
+      .attachment__container {
+        display: block;
+        margin: 0;
+        padding: 1ch;
+        padding-block-end: 0;
+      }
+
+      img {
+        block-size: auto;
+        box-sizing: border-box;
+        inline-size: auto;
+        margin: auto;
+        max-block-size: 50rem;
+        max-inline-size: 100%;
+        object-fit: contain;
+      }
+    }
+
+    &:has(> .attachment:nth-child(2):last-of-type),
+    &:has(> .attachment:nth-child(4):last-of-type) {
+      --lexxy-attachment-gallery-columns: 2;
+    }
+  }
+
+  .attachment__caption {
+    padding: 0 1ch;
+
+    textarea {
+      background: transparent;
+      block-size: fit-content;
+      border: 0;
+      border-radius: var(--lexxy-radius);
+      box-sizing: border-box;
+      color: inherit;
+      display: block;
+      font-size: inherit;
+      font-family: inherit;
+      inline-size: 100%;
+      max-inline-size: 100%;
+      resize: none;
+      text-align: center;
+      padding: 1ch 0;
+
+      &:focus {
+        background: var(--lexxy-color-canvas);
+        outline: 0;
+      }
+
+      &:placeholder-shown {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      @supports (field-sizing: content) {
+        field-sizing: content;
+        inline-size: 100%;
+      }
+    }
   }
 }
 
@@ -221,7 +317,7 @@
 /* Toolbar */
 
 :where(lexxy-toolbar) {
-  --lexxy-toolbar-icon-size: 1em;
+  --lexxy-toolbar-icon-size: 1.125em;
 
   border-block-end: 1px solid var(--lexxy-color-ink-lighter);
   color: currentColor;
@@ -235,41 +331,61 @@
   &[data-attachments="false"] button[name="upload"]{
     display: none;
   }
-}
+  
+  .lexxy-editor__toolbar-button {
+    aspect-ratio: 1;
+    block-size: var(--lexxy-toolbar-button-size);
+    border: 0;
+    border-radius: var(--lexxy-radius);
+    color: currentColor;
+    display: grid;
+    line-height: inherit;
+    place-items: center;
 
-:where(.lexxy-editor__toolbar-button) {
-  aspect-ratio: 1;
-  block-size: var(--lexxy-toolbar-button-size);
-  color: currentColor;
-  display: grid;
-  place-items: center;
+    &:is(:active):not([aria-disabled="true"]),
+    &[aria-pressed="true"] {
+      background-color: var(--lexxy-color-selected);
 
-  &:is(:active):not([aria-disabled="true"]),
-  &[aria-pressed="true"] {
-    background-color: var(--lexxy-color-selected);
+      &:hover {
+        background-color: var(--lexxy-color-selected-hover);
+      }
+    }
 
-    &:hover {
-      background-color: var(--lexxy-color-selected-hover);
+    &[aria-disabled="true"] {
+      cursor: default;
+      opacity: 0.3;
+    }
+
+    svg {
+      -webkit-touch-callout: none;
+      block-size: var(--lexxy-toolbar-icon-size);
+      fill: currentColor;
+      grid-area: 1/1;
+      inline-size: var(--lexxy-toolbar-icon-size);
+      user-select: none;
+    }
+
+    &.lexxy-editor__toolbar-group-end {
+      position: relative;
+      margin-inline-end: calc(var(--lexxy-toolbar-spacing) + 1px);
+
+      &:after {
+        background-color: var(--lexxy-color-ink-lighter);
+        content: "";
+        display: block;
+        width: 1px;
+        height: 60%;
+        inset-inline-end: calc(-1 * var(--lexxy-toolbar-spacing));
+        inset-block-start: 20%;
+        position: absolute;
+        pointer-events: none;
+      }
     }
   }
 
-  &[aria-disabled="true"] {
-    cursor: default;
-    opacity: 0.3;
+  .lexxy-editor__toolbar-spacer {
+    flex: 1;
   }
-
-  svg {
-    -webkit-touch-callout: none;
-    block-size: var(--lexxy-toolbar-icon-size);
-    fill: currentColor;
-    grid-area: 1/1;
-    inline-size: var(--lexxy-toolbar-icon-size);
-    user-select: none;
-  }
-}
-
-:where(.lexxy-editor__toolbar-spacer) {
-  flex: 1;
 }
 
 /* --------------------------------------------------------------------------
@@ -303,7 +419,7 @@
       background-color: var(--lexxy-color-selected-hover);
     }
   }
-  
+
   [overflowing] &:not(.lexxy-editor__toolbar-overflow) summary ~ * {
     inset-inline-end: var(--lexxy-toolbar-spacing);
     inset-inline-start: var(--lexxy-toolbar-spacing);
@@ -317,6 +433,7 @@
     }
   }
 
+
   /* --------------------------------------------------------------------------
   /* Overflow menu */
 
@@ -324,7 +441,7 @@
     display: none;
     justify-self: flex-end;
     z-index: 1;
-    
+
     summary ~ * {
       border-start-end-radius: 0;
       display: grid;
@@ -332,6 +449,7 @@
       inset-inline-end: var(--lexxy-toolbar-gap);
     }
   }
+
 
   /* --------------------------------------------------------------------------
   /* Link dropdown */
@@ -392,6 +510,7 @@
     }
   }
 
+
   /* --------------------------------------------------------------------------
   /* Color dropdown */
 
@@ -442,7 +561,7 @@
         &[aria-pressed="true"] {
           background-color: transparent;
           box-shadow: 0 0 0 2px currentColor inset;
-  
+
           &:after {
             content: "✓";
           }
@@ -457,211 +576,237 @@
         display: none;
       }
     }
-    
-    [overflowing] & {
-      .lexxy-highlight-colors {
-        button {
-        }
-      }
-    }
   }
 }
 
-/* Table Tools
-/* -------------------------------------------------------------------------- */
-
-:where(lexxy-table-tools) {
+/* --------------------------------------------------------------------------
+/* Floating controls */
+:where(.lexxy-floating-controls) {
   --button-size: 2.3lh;
   --table-tools-radius: calc(var(--lexxy-radius) * 1.5);
 
   color: var(--lexxy-color-ink-inverted);
-  display: none;
-  flex-direction: row;
   font-size: var(--lexxy-text-small);
-  gap: 0.25ch;
-  inset-inline-start: var(--lexxy-editor-padding);
   line-height: 1;
   position: absolute;
-  transform: translate(-50%, -120%);
   z-index: 2;
 
-  .lexxy-table-control {
-    align-items: stretch;
-    background-color: var(--lexxy-color-ink);
-    border-radius: var(--table-tools-radius);
+  button,
+  summary {
+    align-items: center;
+    background: transparent;
+    block-size: var(--button-size);
+    color: var(--lexxy-color-ink-inverted);
     display: flex;
-    flex-direction: row;
-    gap: 0.25ch;
-    padding: 0.25ch;
-    white-space: nowrap;
+    justify-content: center;
+    line-height: 1;
+    min-block-size: var(--button-size);
+    min-inline-size: var(--button-size);
+    user-select: none;
+    -webkit-user-select: none;
 
-    button,
-    summary {
-      align-items: center;
-      background-color: transparent;
-      border: 0;
-      border-radius: var(--lexxy-radius);
-      color: var(--lexxy-color-ink-inverted);
-      cursor: pointer;
-      display: flex;
-      justify-content: center;
-      line-height: 1;
-      min-block-size: var(--button-size);
-      min-inline-size: var(--button-size);
-      user-select: none;
-      -webkit-user-select: none;
-
-      &:hover,
+    @media(any-hover: hover) {
+      &:hover:not([aria-disabled="true"]),
       [open] &:is(summary) {
-        background-color: var(--lexxy-color-ink-medium);
+        background: var(--lexxy-color-ink-medium);
+
+        svg {
+          opacity: 1;
+        }
       }
 
       &:focus-visible {
         outline-color: var(--lexxy-focus-ring-color);
       }
     }
+  }
 
-    button {
-      aspect-ratio: 1 / 1;
-      font-weight: bold;
+  button {
+    aspect-ratio: 1 / 1;
+    font-weight: bold;
 
-      svg {
-        block-size: 1em;
-        inline-size: 1em;
-        fill: currentColor;
-        opacity: 0.8;
-        padding: 1px; /* Fixes weird Safari SVG clipping issue */
-      }
-
-      span {
-        display: none;
-      }
+    svg {
+      block-size: 1.125em;
+      inline-size: 1.125em;
+      fill: currentColor;
+      opacity: 0.8;
+      padding: 1px; /* Fixes weird Safari SVG clipping issue */
     }
 
-    summary {
-      border: 1px solid var(--lexxy-color-ink-medium);
-      padding: 0 1.25ch;
+    span {
+      display: none;
     }
+  }
 
-    .lexxy-table-control__more-menu {
-      gap: 0;
-      position: relative;
-  
-      .lexxy-table-control__more-menu-details {
-        background: var(--lexxy-color-ink);
-        border-radius: var(--table-tools-radius);
-        display: flex;
-        flex-direction: column;
-        gap: 0.25ch;
-        inset-block-start: 110%;
-        inset-inline-start: 50%;
-        padding: 0.25ch;
-        position: absolute;
-        transform: translateX(-50%);
-  
-        button {
-          aspect-ratio: unset;
-          flex-direction: row;
-          font-weight: normal;
-          gap: 1ch;
-          justify-content: flex-start;
-          padding: 0.75ch;
-          padding-inline-end: 1.5ch;
-          white-space: nowrap;
-  
-          span {
-            display: inline-block;
-          }
-  
-          svg {
-            block-size: 1.3lh;
-            inline-size: 1.3lh;
-            fill: currentColor;
+  summary {
+    box-shadow: 0 0 0 1px inset rgba(128, 128, 128, 0.3);
+    padding: 0 1.25ch;
+  }
+
+  .lexxy-floating-controls__group {
+    background-color: var(--lexxy-color-ink);
+    border-radius: var(--table-tools-radius);
+    padding: 0.25ch;
+  }
+
+
+  /* --------------------------------------------------------------------------
+  /* Table Tools */
+
+  &:is(lexxy-table-tools) {
+    flex-direction: row;
+    gap: 0.25ch;
+    inset-inline-start: var(--lexxy-editor-padding);
+    transform: translate(-50%, -120%);
+
+    .lexxy-table-control {
+      align-items: stretch;
+      display: flex;
+      flex-direction: row;
+      gap: 0.25ch;
+      white-space: nowrap;
+
+      .lexxy-table-control__more-menu {
+        gap: 0;
+        position: relative;
+
+        .lexxy-table-control__more-menu-details {
+          background: var(--lexxy-color-ink);
+          border-radius: var(--table-tools-radius);
+          display: flex;
+          flex-direction: column;
+          gap: 0.25ch;
+          inset-block-start: 110%;
+          inset-inline-start: 50%;
+          padding: 0.25ch;
+          position: absolute;
+          transform: translateX(-50%);
+
+          button {
+            aspect-ratio: unset;
+            flex-direction: row;
+            font-weight: normal;
+            gap: 1ch;
+            justify-content: flex-start;
+            padding: 0.75ch;
+            padding-inline-end: 1.5ch;
+            white-space: nowrap;
+
+            span {
+              display: inline-block;
+            }
+
+            svg {
+              block-size: 1.3lh;
+              inline-size: 1.3lh;
+              fill: currentColor;
+            }
           }
         }
       }
-    }
-  
-    .lexxy-table-control__button--delete-table {
-      align-items: center;
-      aspect-ratio: unset;
-      block-size: auto;
-      font-weight: normal;
-      justify-content: center;
-      padding: 0 1ch;
 
-      svg {
-        min-block-size: 1em;
-        min-inline-size: 1em;
-      }
-
-      span {
+      .lexxy-table-control__button--delete-table {
         align-items: center;
-        background: var(--lexxy-color-ink);
-        border-radius: var(--table-tools-radius);
-        color: color-mix(in srgb, var(--lexxy-color-ink-inverted) 80%, transparent);
-        display: flex;
-        inset-inline-end: calc(var(--button-size) + 1ch);
-        inset-block-start: 0;
-        inset-block-end: 0;
-        inset-inline-start: 0;
+        block-size: auto;
+        font-weight: normal;
         justify-content: center;
-        padding: 0.5ch 1ch;
-        position: absolute;
-        transition: all 0.2s ease-out;
-        opacity: 0;
-        pointer-events: none;
-        white-space: nowrap;
-      }
 
-      &:hover {
-        background-color: var(--lexxy-color-red);
-
-        svg { color: var(--lexxy-color-ink-inverted); }
+        svg {
+          block-size: 1.125em;
+          inline-size: 1.125em;
+          min-block-size: 1.125em;
+          min-inline-size: 1.125em;
+        }
 
         span {
-          opacity: 1;
+          align-items: center;
+          background: var(--lexxy-color-ink);
+          border-radius: var(--table-tools-radius);
+          color: color-mix(in srgb, var(--lexxy-color-ink-inverted) 80%, transparent);
+          display: flex;
+          inset-inline-end: calc(var(--button-size) + 1ch);
+          inset-block-start: 0;
+          inset-block-end: 0;
+          inset-inline-start: 0;
+          justify-content: center;
+          padding: 0.5ch 1ch;
+          position: absolute;
+          transition: all 0.2s ease-out;
+          opacity: 0;
+          pointer-events: none;
+          white-space: nowrap;
         }
+
+        &:hover {
+          background-color: var(--lexxy-color-red);
+
+          svg { color: var(--lexxy-color-ink-inverted); }
+
+          span {
+            opacity: 1;
+          }
+        }
+      }
+    }
+  }
+
+
+  /* --------------------------------------------------------------------------
+  /* Attachment delete button */
+
+  &:is(lexxy-node-delete-button) {
+    inset-block-start: 0.5ch;
+    inset-inline-end: 0.5ch;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.1s ease-in-out;
+
+    .node--selected & {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .lexxy-node-delete:hover {
+      background-color: var(--lexxy-color-red);
+    }
+  }
+
+
+  /* --------------------------------------------------------------------------
+  /* Language picker */
+
+  &:is(lexxy-code-language-picker) {
+    inset-inline-end: var(--lexxy-editor-padding);
+
+    select {
+      -webkit-appearance: none;
+      appearance: none;
+      background-color: var(--lexxy-color-canvas);
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m12 19.5c-.7 0-1.3-.3-1.7-.8l-9.8-11.1c-.7-.8-.6-1.9.2-2.6.8-.6 1.9-.6 2.5.2l8.6 9.8c0 .1.2.1.4 0l8.6-9.8c.7-.8 1.8-.9 2.6-.2s.9 1.8.2 2.6l-9.8 11.1c-.4.5-1.1.8-1.7.8z' fill='%23000'/%3E%3C/svg%3E");
+      background-position: center right 1ch;
+      background-repeat: no-repeat;
+      background-size: 1ch;
+      block-size: 1.5lh;
+      border: 1px solid var(--lexxy-color-ink-lighter);
+      border-radius: var(--lexxy-radius);
+      color: var(--lexxy-color-ink);
+      font-family: var(--lexxy-font-base);
+      font-size: var(--lexxy-text-small);
+      font-weight: normal;
+      margin: 0.5ch 0.5ch 0 -0.5ch;
+      padding: 0 2ch 0 1ch;
+      text-align: start;
+
+      @media (prefers-color-scheme: dark) {
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m12 19.5c-.7 0-1.3-.3-1.7-.8l-9.8-11.1c-.7-.8-.6-1.9.2-2.6.8-.6 1.9-.6 2.5.2l8.6 9.8c0 .1.2.1.4 0l8.6-9.8c.7-.8 1.8-.9 2.6-.2s.9 1.8.2 2.6l-9.8 11.1c-.4.5-1.1.8-1.7.8z' fill='%23fff'/%3E%3C/svg%3E");
       }
     }
   }
 }
 
 
-/* Language picker
-/* -------------------------------------------------------------------------- */
-
-:where(lexxy-code-language-picker) {
-  inset-inline-end: var(--lexxy-editor-padding);
-  position: absolute;
-
-  select {
-    -webkit-appearance: none;
-    appearance: none;
-    background-color: var(--lexxy-color-canvas);
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m12 19.5c-.7 0-1.3-.3-1.7-.8l-9.8-11.1c-.7-.8-.6-1.9.2-2.6.8-.6 1.9-.6 2.5.2l8.6 9.8c0 .1.2.1.4 0l8.6-9.8c.7-.8 1.8-.9 2.6-.2s.9 1.8.2 2.6l-9.8 11.1c-.4.5-1.1.8-1.7.8z' fill='%23000'/%3E%3C/svg%3E");
-    background-position: center right 1ch;
-    background-repeat: no-repeat;
-    background-size: 1ch;
-    block-size: 1.5lh;
-    border: 1px solid var(--lexxy-color-ink-lighter);
-    border-radius: var(--lexxy-radius);
-    color: var(--lexxy-color-ink);
-    font-family: var(--lexxy-font-base);
-    font-size: var(--lexxy-text-small);
-    font-weight: normal;
-    margin: 0.5ch 0.5ch 0 -0.5ch;
-    padding: 0 2ch 0 1ch;
-    text-align: start;
-
-    @media (prefers-color-scheme: dark) {
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m12 19.5c-.7 0-1.3-.3-1.7-.8l-9.8-11.1c-.7-.8-.6-1.9.2-2.6.8-.6 1.9-.6 2.5.2l8.6 9.8c0 .1.2.1.4 0l8.6-9.8c.7-.8 1.8-.9 2.6-.2s.9 1.8.2 2.6l-9.8 11.1c-.4.5-1.1.8-1.7.8z' fill='%23fff'/%3E%3C/svg%3E");
-    }
-  }
-}
-
-/* Prompt
-/* ------------------------------------------------------------------------ */
+/* --------------------------------------------------------------------------
+/* Prompt */
 
 :where(.lexxy-prompt-menu) {
   --lexxy-prompt-avatar-size: 24px;

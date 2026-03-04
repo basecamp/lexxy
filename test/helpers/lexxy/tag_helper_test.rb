@@ -26,4 +26,18 @@ class Lexxy::TagHelperTest < ActionView::TestCase
       assert_equal "<p>Sample Content</p>", lexxy_editor["value"]
     end
   end
+
+  test "#lexxy_rich_textarea_tag preserves HTML entities in code blocks" do
+    code_html = '<pre data-language="html">&lt;div&gt;test&lt;/div&gt;</pre>'.html_safe
+
+    render inline: <<~ERB, locals: { code_html: code_html }
+      <%= lexxy_rich_textarea_tag :body, code_html %>
+    ERB
+
+    assert_dom "lexxy-editor", count: 1 do |lexxy_editor, *|
+      value = lexxy_editor["value"]
+      assert_includes value, "&lt;div&gt;"
+      assert_not_includes value, "<div>"
+    end
+  end
 end

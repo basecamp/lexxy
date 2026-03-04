@@ -31,6 +31,20 @@ class HorizontalDividerTest < ApplicationSystemTestCase
     assert_editor_html "<p>Text before</p><p>Text after</p>"
   end
 
+  test "delete horizontal divider with the delete button" do
+    find_editor.send "Text before"
+    click_on "Insert a divider"
+    find_editor.send "Text after"
+
+    find("figure.horizontal-divider").click
+
+    assert_selector "lexxy-node-delete-button"
+    find("lexxy-node-delete-button button[aria-label='Remove']").click
+
+    assert_no_selector "figure.horizontal-divider"
+    assert_editor_html "<p>Text before</p><p>Text after</p>"
+  end
+
   test "horizontal divider with surrounding content" do
     find_editor.send "Before divider"
     click_on "Insert a divider"

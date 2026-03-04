@@ -1,9 +1,11 @@
-import { $createNodeSelection, $isTextNode, TextNode } from "lexical"
-import { HISTORY_MERGE_TAG, SKIP_DOM_SELECTION_TAG, SKIP_SCROLL_INTO_VIEW_TAG } from "lexical"
+import { $createNodeSelection, $createParagraphNode, $isTextNode, TextNode } from "lexical"
+import { HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType } from "@lexical/utils"
+import { $wrapNodeInElement } from "@lexical/utils"
+import { $isAtNodeEnd } from "@lexical/selection"
 
-export const SILENT_UPDATE_TAGS = [ HISTORY_MERGE_TAG, SKIP_DOM_SELECTION_TAG, SKIP_SCROLL_INTO_VIEW_TAG ]
+export const SILENT_UPDATE_TAGS = [ HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG ]
 
 export function $createNodeSelectionWith(...nodes) {
   const selection = $createNodeSelection()
@@ -11,20 +13,32 @@ export function $createNodeSelectionWith(...nodes) {
   return selection
 }
 
+export function $makeSafeForRoot(node) {
+  if ($isTextNode(node)) {
+    return $wrapNodeInElement(node, $createParagraphNode)
+  } else if (node.isParentRequired()) {
+    const parent = node.createRequiredParent()
+    return $wrapNodeInElement(node, parent)
+  } else {
+    return node
+  }
+}
+
 export function getListType(node) {
   const list = $getNearestNodeOfType(node, ListNode)
   return list?.getListType() ?? null
 }
 
-export function isPrintableCharacter(event) {
-  // Ignore if modifier keys are pressed (except Shift for uppercase)
-  if (event.ctrlKey || event.metaKey || event.altKey) return false
+export function $isAtNodeEdge(point, atStart = null) {
+  if (atStart === null) {
+    return $isAtNodeEdge(point, true) || $isAtNodeEdge(point, false)
+  } else {
+    return atStart ? $isAtNodeStart(point) : $isAtNodeEnd(point)
+  }
+}
 
-  // Ignore special keys
-  if (event.key.length > 1 && event.key !== "Enter" && event.key !== "Space") return false
-
-  // Accept single character keys (letters, numbers, punctuation)
-  return event.key.length === 1
+export function $isAtNodeStart(point) {
+  return point.offset === 0
 }
 
 export function extendTextNodeConversion(conversionName, ...callbacks) {

@@ -17,7 +17,7 @@ class TableTest < ApplicationSystemTestCase
     find_editor.send "Test Cell"
 
     within_table do
-      assert_selector "td", text: "Test Cell"
+      assert_selector "th", text: "Test Cell"
     end
   end
 

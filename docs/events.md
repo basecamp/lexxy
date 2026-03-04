@@ -1,7 +1,7 @@
 ---
 title: Events
 layout: default
-nav_order: 4
+nav_order: 6
 ---
 
 # Events
@@ -32,6 +32,25 @@ Fired when a file is dropped or inserted into the editor.
 
 - Access the file via `event.detail.file`.
 - Call `event.preventDefault()` to cancel the upload and prevent attaching the file.
+
+## `lexxy:upload-start`
+
+Fired when a file upload begins.
+Access the file via `event.detail.file`.
+
+## `lexxy:upload-progress`
+
+Fired as an upload progresses.
+
+- `event.detail.file` – the file being uploaded.
+- `event.detail.progress` – a number from 0 to 100.
+
+## `lexxy:upload-end`
+
+Fired when an upload succeeds or fails.
+
+- `event.detail.file` – the file that was uploaded.
+- `event.detail.error` – `null` on success, or the error on failure.
 
 ## `lexxy:insert-link`
 
@@ -90,4 +109,33 @@ export default class extends Controller {
     return `<a href="${link.canonical_url}">${link.title}</a>`
   }
 }
+```
+
+## `lexxy:insert-markdown`
+
+Fired when markdown text is pasted into the editor, before the converted HTML is inserted.
+Access the original markdown via `event.detail.markdown` and the parsed DOM via `event.detail.document`.
+
+The `document` is a live DOM `Document` — mutate it to change what gets inserted.
+The `event.detail` object is frozen, but the document itself is open to mutation.
+Only synchronous handlers can mutate before insertion.
+
+You also get a helper on `event.detail`:
+
+- **`addBlockSpacing()`** – insert `<p><br></p>` between top-level elements, but not after headings. Use this if your app CSS removes margins between paragraphs and you need visual spacing in the editor.
+
+### Example: Removing Images
+
+```javascript
+editor.addEventListener("lexxy:insert-markdown", (event) => {
+  event.detail.document.querySelectorAll("img").forEach((img) => img.remove())
+})
+```
+
+### Example: Adding Block Spacing
+
+```javascript
+editor.addEventListener("lexxy:insert-markdown", (event) => {
+  event.detail.addBlockSpacing()
+})
 ```

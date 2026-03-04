@@ -7,9 +7,16 @@ export class CodeLanguagePicker extends HTMLElement {
   connectedCallback() {
     this.editorElement = this.closest("lexxy-editor")
     this.editor = this.editorElement.editor
+    this.classList.add("lexxy-floating-controls")
 
     this.#attachLanguagePicker()
+    this.#hide()
     this.#monitorForCodeBlockSelection()
+  }
+
+  disconnectedCallback() {
+    this.unregisterUpdateListener?.()
+    this.unregisterUpdateListener = null
   }
 
   #attachLanguagePicker() {
@@ -85,14 +92,14 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   #monitorForCodeBlockSelection() {
-    this.editor.registerUpdateListener(() => {
+    this.unregisterUpdateListener = this.editor.registerUpdateListener(() => {
       this.editor.getEditorState().read(() => {
         const codeNode = this.#getCurrentCodeNode()
 
         if (codeNode) {
           this.#codeNodeWasSelected(codeNode)
         } else {
-          this.#hideLanguagePicker()
+          this.#hide()
         }
       })
     })
@@ -121,7 +128,7 @@ export class CodeLanguagePicker extends HTMLElement {
     const language = codeNode.getLanguage()
 
     this.#updateLanguagePickerWith(language)
-    this.#showLanguagePicker()
+    this.#show()
     this.#positionLanguagePicker(codeNode)
   }
 
@@ -145,11 +152,11 @@ export class CodeLanguagePicker extends HTMLElement {
     this.style.right = `${relativeRight}px`
   }
 
-  #showLanguagePicker() {
+  #show() {
     this.hidden = false
   }
 
-  #hideLanguagePicker() {
+  #hide() {
     this.hidden = true
   }
 }

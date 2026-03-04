@@ -15,7 +15,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ruby-3.3.7
+          ruby-version: .ruby-version
           bundler-cache: true
 
       - name: Set up Node.js
@@ -52,7 +52,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ruby-3.3.7
+          ruby-version: .ruby-version
           bundler-cache: true
 
       - name: Set up Node.js
@@ -76,7 +76,7 @@ jobs:
           bin/rails test:all
 
       - name: Keep screenshots from failed system tests
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: screenshots
