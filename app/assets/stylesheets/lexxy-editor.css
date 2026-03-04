@@ -79,7 +79,7 @@
 
 /* Placeholder */
 :where(.lexxy-editor--empty) {
-  .lexxy-editor__content:not(:has(ul, ol))::before {
+  .lexxy-editor__content:not(:has(figure, ul, ol))::before {
     content: attr(placeholder);
     color: currentColor;
     cursor: text;
