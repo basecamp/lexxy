@@ -20,14 +20,7 @@ export class CodeLanguagePicker extends HTMLElement {
     })
 
     this.languagePickerElement.addEventListener("mousedown", (event) => {
-      const handled = !dispatch(this.editorElement, "lexxy:code-language-picker-open", {
-        languages: this.#bridgeLanguages,
-        currentLanguage: this.languagePickerElement.value
-      }, true)
-
-      if (handled) {
-        event.preventDefault()
-      }
+      this.#dispatchOpenEvent(event)
     })
 
     this.languagePickerElement.setAttribute("nonce", getNonce())
@@ -64,6 +57,17 @@ export class CodeLanguagePicker extends HTMLElement {
     const plainIndex = sortedEntries.findIndex(([ key ]) => key === "plain")
     const plainEntry = sortedEntries.splice(plainIndex, 1)[0]
     return Object.fromEntries([ plainEntry, ...sortedEntries ])
+  }
+
+  #dispatchOpenEvent(event) {
+    const handled = !dispatch(this.editorElement, "lexxy:code-language-picker-open", {
+      languages: this.#bridgeLanguages,
+      currentLanguage: this.languagePickerElement.value
+    }, true)
+
+    if (handled) {
+      event.preventDefault()
+    }
   }
 
   get #bridgeLanguages() {
