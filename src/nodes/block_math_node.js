@@ -63,8 +63,21 @@ export class BlockMathNode extends DecoratorNode {
     return figure
   }
 
-  updateDOM() {
-    return true
+  updateDOM(prevNode, dom) {
+    if (this.__latex === prevNode.__latex) return false
+
+    const preview = dom.querySelector(".lexxy-math-block__preview")
+    if (!preview) return true
+
+    if (this.__latex) {
+      preview.classList.remove("lexxy-math-block__preview--empty")
+      preview.innerHTML = renderMath(this.__latex, { displayMode: true })
+    } else {
+      preview.textContent = "Click to add math formula"
+      preview.classList.add("lexxy-math-block__preview--empty")
+    }
+
+    return false
   }
 
   getTextContent() {
