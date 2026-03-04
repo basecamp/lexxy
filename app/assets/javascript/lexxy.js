@@ -9177,7 +9177,7 @@ async function loadFileIntoImage(file, image) {
   })
 }
 
-let ActionTextAttachmentUploadNode$1 = class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
+class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   static getType() {
     return "action_text_attachment_upload"
   }
@@ -9406,7 +9406,7 @@ let ActionTextAttachmentUploadNode$1 = class ActionTextAttachmentUploadNode exte
     const figure = this.editor.getElementByKey(this.getKey());
     if (figure) dispatch(figure, name, detail);
   }
-};
+}
 
 class AttachmentNodeConversion {
   constructor(uploadNode, blob) {
@@ -9446,7 +9446,7 @@ class AttachmentNodeConversion {
 }
 
 function $createActionTextAttachmentUploadNode(...args) {
-  return new ActionTextAttachmentUploadNode$1(...args)
+  return new ActionTextAttachmentUploadNode(...args)
 }
 
 class ImageGalleryNode extends Ci {
@@ -10014,7 +10014,7 @@ class Contents {
       });
       this.insertAtCursor(uploadNode);
       nodeKey = uploadNode.getKey();
-    }, { tag: HISTORY_MERGE_TAG });
+    }, { tag: Dn });
 
     if (!nodeKey) return null
 
@@ -10024,7 +10024,7 @@ class Contents {
         editor.update(() => {
           const node = xo(nodeKey);
           if (node) node.showUploadedAttachment(blob);
-        }, { tag: HISTORY_MERGE_TAG });
+        }, { tag: Dn });
       },
       setUploadProgress(progress) {
         editor.update(() => {
@@ -11043,7 +11043,7 @@ class AttachmentsExtension extends LexxyExtension {
       name: "lexxy/action-text-attachments",
       nodes: [
         ActionTextAttachmentNode,
-        ActionTextAttachmentUploadNode$1,
+        ActionTextAttachmentUploadNode,
         ImageGalleryNode
       ],
       register(editor) {
@@ -13535,5 +13535,5 @@ const configure = Lexxy.configure;
 // Pushing elements definition to after the current call stack to allow global configuration to take place first
 setTimeout(defineElements, 0);
 
-export { $createActionTextAttachmentNode, $createActionTextAttachmentUploadNode, $isActionTextAttachmentNode, ActionTextAttachmentNode, ActionTextAttachmentUploadNode$1 as ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, NativeAdapter, configure, highlightCode as highlightAll, highlightCode };
+export { $createActionTextAttachmentNode, $createActionTextAttachmentUploadNode, $isActionTextAttachmentNode, ActionTextAttachmentNode, ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, NativeAdapter, configure, highlightCode as highlightAll, highlightCode };
 //# sourceMappingURL=lexxy.js.map

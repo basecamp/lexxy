@@ -1,6 +1,7 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection,
-  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection
+  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection,
+  HISTORY_MERGE_TAG
  } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -12,6 +13,7 @@ import { $getNearestNodeOfType } from "@lexical/utils"
 import FormatEscaper from "./contents/format_escaper"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 
 export default class Contents {
   constructor(editorElement) {
