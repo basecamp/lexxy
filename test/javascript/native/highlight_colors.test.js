@@ -7,31 +7,31 @@ afterEach(async () => {
   await destroyTestEditor(editorElement)
 })
 
-describe("highlight colors event", () => {
-  test("dispatches event with color and background-color arrays", async () => {
+describe("editor initialized event", () => {
+  test("dispatches event with highlight colors", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
 
-    const event = await captureEvent(editorElement, "lexxy:highlight-colors", () => {
-      editorElement.dispatchHighlightColors()
+    const event = await captureEvent(editorElement, "lexxy:editor-initialized", () => {
+      editorElement.dispatchEditorInitialized()
     })
 
-    expect(event.detail.colors).toBeInstanceOf(Array)
-    expect(event.detail.backgroundColors).toBeInstanceOf(Array)
+    expect(event.detail.highlightColors.colors).toBeInstanceOf(Array)
+    expect(event.detail.highlightColors.backgroundColors).toBeInstanceOf(Array)
   })
 
   test("each color entry has name and value properties", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
 
-    const event = await captureEvent(editorElement, "lexxy:highlight-colors", () => {
-      editorElement.dispatchHighlightColors()
+    const event = await captureEvent(editorElement, "lexxy:editor-initialized", () => {
+      editorElement.dispatchEditorInitialized()
     })
 
-    for (const color of event.detail.colors) {
+    for (const color of event.detail.highlightColors.colors) {
       expect(color).toHaveProperty("name")
       expect(color).toHaveProperty("value")
     }
 
-    for (const color of event.detail.backgroundColors) {
+    for (const color of event.detail.highlightColors.backgroundColors) {
       expect(color).toHaveProperty("name")
       expect(color).toHaveProperty("value")
     }
@@ -40,17 +40,17 @@ describe("highlight colors event", () => {
   test("color names correspond to CSS custom properties", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
 
-    const event = await captureEvent(editorElement, "lexxy:highlight-colors", () => {
-      editorElement.dispatchHighlightColors()
+    const event = await captureEvent(editorElement, "lexxy:editor-initialized", () => {
+      editorElement.dispatchEditorInitialized()
     })
 
     // Default config uses var(--highlight-N) for colors
-    for (const color of event.detail.colors) {
+    for (const color of event.detail.highlightColors.colors) {
       expect(color.name).toMatch(/^var\(--highlight-\d+\)$/)
     }
 
     // Default config uses var(--highlight-bg-N) for background colors
-    for (const color of event.detail.backgroundColors) {
+    for (const color of event.detail.highlightColors.backgroundColors) {
       expect(color.name).toMatch(/^var\(--highlight-bg-\d+\)$/)
     }
   })

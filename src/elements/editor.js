@@ -65,7 +65,7 @@ export class LexicalEditorElement extends HTMLElement {
 
     requestAnimationFrame(() => {
       dispatch(this, "lexxy:initialize")
-      this.#dispatchHighlightColors()
+      this.#dispatchEditorInitialized()
     })
     this.toggleAttribute("connected", true)
 
@@ -195,8 +195,8 @@ export class LexicalEditorElement extends HTMLElement {
     this.#dispatchAttributesChange()
   }
 
-  dispatchHighlightColors() {
-    this.#dispatchHighlightColors()
+  dispatchEditorInitialized() {
+    this.#dispatchEditorInitialized()
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -589,13 +589,19 @@ export class LexicalEditorElement extends HTMLElement {
     }
   }
 
-  #dispatchHighlightColors() {
+  #dispatchEditorInitialized() {
+    this.adapter.dispatchEditorInitialized({
+      highlightColors: this.#resolvedHighlightColors
+    })
+  }
+
+  get #resolvedHighlightColors() {
     const buttons = this.config.get("highlight.buttons")
-    if (!buttons) return
+    if (!buttons) return null
 
     const colors = this.#resolveColors("color", buttons.color || [])
     const backgroundColors = this.#resolveColors("background-color", buttons["background-color"] || [])
-    this.adapter.dispatchHighlightColors(colors, backgroundColors)
+    return { colors, backgroundColors }
   }
 
   #resolveColors(property, cssValues) {

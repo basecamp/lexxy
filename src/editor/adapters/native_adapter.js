@@ -16,8 +16,8 @@ export class NativeAdapter {
     })
   }
 
-  dispatchHighlightColors(colors, backgroundColors) {
-    dispatch(this.editorElement, "lexxy:highlight-colors", { colors, backgroundColors })
+  dispatchEditorInitialized(detail) {
+    dispatch(this.editorElement, "lexxy:editor-initialized", detail)
   }
 
   freeze(frozenLinkKey) {
