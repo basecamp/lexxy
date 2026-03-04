@@ -2,6 +2,7 @@ import { $createParagraphNode } from "lexical"
 import Lexxy from "../config/lexxy"
 import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
+import { $isImageGalleryNode } from "./image_gallery_node"
 import { createAttachmentFigure, createElement, dispatch } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
@@ -218,7 +219,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       const attachmentNode = this.#toActionTextAttachmentNodeWith(blob)
       this.replace(attachmentNode)
 
-      if (!attachmentNode.getNextSibling()) {
+      if (!attachmentNode.getNextSibling() && !$isImageGalleryNode(attachmentNode.getParent())) {
         const paragraph = $createParagraphNode()
         attachmentNode.insertAfter(paragraph)
         paragraph.selectStart()
