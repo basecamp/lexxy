@@ -27,5 +27,6 @@ module Dummy
     # config.eager_load_paths << Rails.root.join("extras")
 
     config.hosts = []
+    config.action_text.editor = :lexxy if defined?(ActionText::Editor)
   end
 end

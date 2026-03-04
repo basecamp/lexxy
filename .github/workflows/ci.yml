@@ -36,6 +36,18 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "Rails 8.1 (no adapter)"
+            use_legacy_rails: "true"
+          - name: "Rails main (with adapter)"
+            use_legacy_rails: ""
+
+    env:
+      USE_RAILS_WITHOUT_ACTION_TEXT_ADAPTER: ${{ matrix.use_legacy_rails }}
+
     # services:
     #  redis:
     #    image: redis
@@ -79,6 +91,6 @@ jobs:
         uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: screenshots
+          name: screenshots-${{ matrix.name }}
           path: ${{ github.workspace }}/test/dummy/tmp/screenshots
           if-no-files-found: ignore
