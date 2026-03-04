@@ -3,38 +3,30 @@ import { createElement } from "../helpers/html_helper"
 import { renderMath } from "../helpers/math_helper"
 
 export class InlineMathNode extends DecoratorNode {
-  static getType() {
-    return "inline_math"
-  }
+  $config() {
+    return this.config("inline_math", {
+      $importJSON: (serialized) => new InlineMathNode({ latex: serialized.latex }),
+      importDOM: {
+        span: (element) => {
+          if (!element.classList.contains("math-inline") || !element.hasAttribute("data-math")) return null
 
-  static clone(node) {
-    return new InlineMathNode({ latex: node.__latex }, node.__key)
-  }
-
-  static importJSON(serializedNode) {
-    return new InlineMathNode({ latex: serializedNode.latex })
-  }
-
-  static importDOM() {
-    return {
-      span: (element) => {
-        if (!element.classList.contains("math-inline") || !element.hasAttribute("data-math")) {
-          return null
-        }
-
-        return {
-          conversion: (span) => ({
-            node: new InlineMathNode({ latex: span.getAttribute("data-math") })
-          }),
-          priority: 2
+          return {
+            conversion: (span) => ({ node: new InlineMathNode({ latex: span.getAttribute("data-math") }) }),
+            priority: 2
+          }
         }
       }
-    }
+    })
   }
 
   constructor({ latex = "" } = {}, key) {
     super(key)
     this.__latex = latex
+  }
+
+  afterCloneFrom(prevNode) {
+    super.afterCloneFrom(prevNode)
+    this.__latex = prevNode.__latex
   }
 
   createDOM() {
@@ -49,18 +41,18 @@ export class InlineMathNode extends DecoratorNode {
       span.textContent = "$\\ldots$"
     }
 
-    span.addEventListener("click", (event) => {
-      event.stopPropagation()
-      span.dispatchEvent(new CustomEvent("lexxy:edit-math", {
-        bubbles: true,
-        detail: { nodeKey: this.getKey(), latex: this.__latex, displayMode: false, targetElement: span }
-      }))
-    })
-
     return span
   }
 
-  updateDOM() {
+  updateDOM(prevNode, dom) {
+    if (this.__latex === prevNode.__latex) return false
+
+    if (this.__latex) {
+      dom.innerHTML = renderMath(this.__latex)
+    } else {
+      dom.textContent = "$\\ldots$"
+    }
+
     return false
   }
 
@@ -93,7 +85,16 @@ export class InlineMathNode extends DecoratorNode {
     return this.__latex
   }
 
+  setLatex(latex) {
+    const writable = this.getWritable()
+    writable.__latex = latex
+  }
+
   decorate() {
     return null
   }
+}
+
+export function $isInlineMathNode(node) {
+  return node instanceof InlineMathNode
 }

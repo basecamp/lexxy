@@ -3,38 +3,30 @@ import { createElement } from "../helpers/html_helper"
 import { renderMath } from "../helpers/math_helper"
 
 export class BlockMathNode extends DecoratorNode {
-  static getType() {
-    return "block_math"
-  }
+  $config() {
+    return this.config("block_math", {
+      $importJSON: (serialized) => new BlockMathNode({ latex: serialized.latex }),
+      importDOM: {
+        div: (element) => {
+          if (!element.classList.contains("math-block") || !element.hasAttribute("data-math")) return null
 
-  static clone(node) {
-    return new BlockMathNode({ latex: node.__latex }, node.__key)
-  }
-
-  static importJSON(serializedNode) {
-    return new BlockMathNode({ latex: serializedNode.latex })
-  }
-
-  static importDOM() {
-    return {
-      div: (element) => {
-        if (!element.classList.contains("math-block") || !element.hasAttribute("data-math")) {
-          return null
-        }
-
-        return {
-          conversion: (div) => ({
-            node: new BlockMathNode({ latex: div.getAttribute("data-math") })
-          }),
-          priority: 2
+          return {
+            conversion: (div) => ({ node: new BlockMathNode({ latex: div.getAttribute("data-math") }) }),
+            priority: 2
+          }
         }
       }
-    }
+    })
   }
 
   constructor({ latex = "" } = {}, key) {
     super(key)
     this.__latex = latex
+  }
+
+  afterCloneFrom(prevNode) {
+    super.afterCloneFrom(prevNode)
+    this.__latex = prevNode.__latex
   }
 
   createDOM() {
@@ -51,14 +43,6 @@ export class BlockMathNode extends DecoratorNode {
 
     const deleteButton = createElement("lexxy-node-delete-button")
     figure.appendChild(deleteButton)
-
-    preview.addEventListener("click", (event) => {
-      event.stopPropagation()
-      figure.dispatchEvent(new CustomEvent("lexxy:edit-math", {
-        bubbles: true,
-        detail: { nodeKey: this.getKey(), latex: this.__latex, displayMode: true, targetElement: figure }
-      }))
-    })
 
     return figure
   }
@@ -109,7 +93,16 @@ export class BlockMathNode extends DecoratorNode {
     return this.__latex
   }
 
+  setLatex(latex) {
+    const writable = this.getWritable()
+    writable.__latex = latex
+  }
+
   decorate() {
     return null
   }
+}
+
+export function $isBlockMathNode(node) {
+  return node instanceof BlockMathNode
 }

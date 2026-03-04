@@ -1,8 +1,8 @@
-import { $createParagraphNode, $getNodeByKey, $getSelection, $isRangeSelection, $isParagraphNode, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, TextNode, createCommand, defineExtension, KEY_ENTER_COMMAND } from "lexical"
+import { $createParagraphNode, $getNodeByKey, $getSelection, $getNearestNodeFromDOMNode, $isRangeSelection, $isParagraphNode, CLICK_COMMAND, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, TextNode, createCommand, defineExtension, isDOMNode, KEY_ENTER_COMMAND } from "lexical"
 import { mergeRegister } from "@lexical/utils"
 import LexxyExtension from "./lexxy_extension"
-import { InlineMathNode } from "../nodes/inline_math_node"
-import { BlockMathNode } from "../nodes/block_math_node"
+import { InlineMathNode, $isInlineMathNode } from "../nodes/inline_math_node"
+import { BlockMathNode, $isBlockMathNode } from "../nodes/block_math_node"
 
 export const INSERT_BLOCK_MATH_COMMAND = createCommand()
 export const INSERT_INLINE_MATH_COMMAND = createCommand()
@@ -22,30 +22,24 @@ export class MathExtension extends LexxyExtension {
       nodes: [InlineMathNode, BlockMathNode],
       register(editor) {
         return mergeRegister(
-          // Auto-detect $...$ inline math
-          editor.registerNodeTransform(TextNode, (textNode) => {
-            $detectInlineMath(textNode)
-          }),
+          editor.registerNodeTransform(TextNode, $detectInlineMath),
 
-          // Block math: detect $$ at start of paragraph + Enter
           editor.registerCommand(KEY_ENTER_COMMAND, (event) => {
             return $handleBlockMathTrigger(editor, editorElement, event)
           }, COMMAND_PRIORITY_HIGH),
 
-          // Command: insert block math
           editor.registerCommand(INSERT_BLOCK_MATH_COMMAND, () => {
             $insertBlockMath(editor, editorElement)
             return true
           }, COMMAND_PRIORITY_NORMAL),
 
-          // Command: insert inline math
-          editor.registerCommand(INSERT_INLINE_MATH_COMMAND, () => {
-            $insertInlineMath(editor)
-            return true
-          }, COMMAND_PRIORITY_NORMAL),
+          editor.registerCommand(INSERT_INLINE_MATH_COMMAND, () => (
+            $insertInlineMath(editor), true
+          ), COMMAND_PRIORITY_NORMAL),
 
-          // Listen for edit-math events from nodes
-          registerMathEditorListener(editor, editorElement)
+          editor.registerCommand(CLICK_COMMAND, ({ target }) => {
+            return $handleMathClick(editor, editorElement, target)
+          }, COMMAND_PRIORITY_NORMAL),
         )
       }
     })
@@ -62,7 +56,6 @@ function $detectInlineMath(textNode) {
   const matchStart = match[0].startsWith("$") ? match.index : match.index + 1
   const matchEnd = match.index + match[0].length
 
-  // Split: [before] [mathNode] [after]
   let nodeToSplit = textNode
   let currentOffset = 0
 
@@ -89,7 +82,6 @@ function $handleBlockMathTrigger(editor, editorElement, event) {
 
   const anchorNode = selection.anchor.getNode()
   const topElement = anchorNode.getTopLevelElementOrThrow()
-
   if (!$isParagraphNode(topElement)) return false
 
   const text = topElement.getTextContent().trim()
@@ -106,15 +98,12 @@ function $handleBlockMathTrigger(editor, editorElement, event) {
     topElement.insertAfter(nextParagraph)
   }
 
-  // Move selection to the next paragraph BEFORE replacing
+  // Move selection BEFORE replacing to avoid Lexical error #19
   nextParagraph.selectStart()
-
-  // Now safe to replace — selection no longer references the removed paragraph
   topElement.replace(blockMathNode)
 
   const nodeKey = blockMathNode.getKey()
 
-  // Open editor after DOM updates
   requestAnimationFrame(() => {
     const targetElement = editor.getElementByKey(nodeKey)
     openMathEditor(editor, editorElement, nodeKey, "", true, targetElement)
@@ -123,26 +112,52 @@ function $handleBlockMathTrigger(editor, editorElement, event) {
   return true
 }
 
+function $handleMathClick(editor, editorElement, target) {
+  if (!isDOMNode(target)) return false
+
+  const targetNode = $getNearestNodeFromDOMNode(target)
+  if (!targetNode) return false
+
+  if ($isBlockMathNode(targetNode)) {
+    const nodeKey = targetNode.getKey()
+    const latex = targetNode.getLatex()
+    requestAnimationFrame(() => {
+      const targetElement = editor.getElementByKey(nodeKey)
+      openMathEditor(editor, editorElement, nodeKey, latex, true, targetElement)
+    })
+    return true
+  }
+
+  if ($isInlineMathNode(targetNode)) {
+    const nodeKey = targetNode.getKey()
+    const latex = targetNode.getLatex()
+    requestAnimationFrame(() => {
+      const targetElement = editor.getElementByKey(nodeKey)
+      openMathEditor(editor, editorElement, nodeKey, latex, false, targetElement)
+    })
+    return true
+  }
+
+  return false
+}
+
 function $insertBlockMath(editor, editorElement) {
-  const node = new BlockMathNode({ latex: "" })
-
   const selection = $getSelection()
-  if ($isRangeSelection(selection)) {
-    const anchorNode = selection.anchor.getNode()
-    const topElement = anchorNode.getTopLevelElementOrThrow()
+  if (!$isRangeSelection(selection)) return
 
-    // If current line is empty paragraph, replace it
-    if ($isParagraphNode(topElement) && topElement.getTextContent() === "") {
-      topElement.replace(node)
-    } else {
-      topElement.insertAfter(node)
-    }
+  const node = new BlockMathNode({ latex: "" })
+  const anchorNode = selection.anchor.getNode()
+  const topElement = anchorNode.getTopLevelElementOrThrow()
 
-    // Ensure paragraph below
-    if (!node.getNextSibling()) {
-      const paragraph = $createParagraphNode()
-      node.insertAfter(paragraph)
-    }
+  if ($isParagraphNode(topElement) && topElement.isEmpty()) {
+    topElement.replace(node)
+  } else {
+    topElement.insertAfter(node)
+  }
+
+  if (!node.getNextSibling()) {
+    const paragraph = $createParagraphNode()
+    node.insertAfter(paragraph)
   }
 
   requestAnimationFrame(() => {
@@ -153,23 +168,11 @@ function $insertBlockMath(editor, editorElement) {
 
 function $insertInlineMath(editor) {
   const selection = $getSelection()
-  if (!$isRangeSelection(selection)) return
+  if (!$isRangeSelection(selection)) return false
 
   const node = new InlineMathNode({ latex: "" })
   selection.insertNodes([node])
-}
-
-function registerMathEditorListener(editor, editorElement) {
-  const handler = (event) => {
-    const { nodeKey, latex, displayMode, targetElement } = event.detail
-    openMathEditor(editor, editorElement, nodeKey, latex, displayMode, targetElement)
-  }
-
-  editorElement.addEventListener("lexxy:edit-math", handler)
-
-  return () => {
-    editorElement.removeEventListener("lexxy:edit-math", handler)
-  }
+  return true
 }
 
 function openMathEditor(editor, editorElement, nodeKey, latex, displayMode, targetElement) {
@@ -187,8 +190,7 @@ function openMathEditor(editor, editorElement, nodeKey, latex, displayMode, targ
         if (!node) return
 
         if (!newLatex) {
-          // Empty math — remove the node
-          if (node instanceof BlockMathNode) {
+          if ($isBlockMathNode(node)) {
             const paragraph = $createParagraphNode()
             node.replace(paragraph)
             paragraph.selectStart()
@@ -198,15 +200,7 @@ function openMathEditor(editor, editorElement, nodeKey, latex, displayMode, targ
           return
         }
 
-        if (node instanceof BlockMathNode) {
-          const newNode = new BlockMathNode({ latex: newLatex })
-          node.insertAfter(newNode)
-          node.remove()
-        } else if (node instanceof InlineMathNode) {
-          const newNode = new InlineMathNode({ latex: newLatex })
-          node.insertAfter(newNode)
-          node.remove()
-        }
+        node.setLatex(newLatex)
       })
 
       editor.focus()
