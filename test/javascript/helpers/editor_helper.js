@@ -1,6 +1,6 @@
 import { $getRoot } from "lexical"
 import { defineElements } from "../../../src/elements/index"
-import { NativeAdapter } from "../../../src/editor/native_adapter"
+import { NativeAdapter } from "../../../src/editor/adapters/native_adapter"
 
 let elementsRegistered = false
 

@@ -1,4 +1,4 @@
-import { dispatch } from "../helpers/html_helper"
+import { dispatch } from "../../helpers/html_helper"
 
 export class NativeAdapter {
   frozenLinkKey = null

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest"
 import { createTestEditor, destroyTestEditor } from "../helpers/editor_helper"
-import { BrowserAdapter } from "../../../src/editor/browser_adapter"
+import { BrowserAdapter } from "../../../src/editor/adapters/browser_adapter"
 
 let editorElement
 

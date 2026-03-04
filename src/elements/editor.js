@@ -23,7 +23,7 @@ import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
-import { BrowserAdapter } from "../editor/browser_adapter"
+import { BrowserAdapter } from "../editor/adapters/browser_adapter"
 import { getHighlightStyles } from "../helpers/format_helper"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
