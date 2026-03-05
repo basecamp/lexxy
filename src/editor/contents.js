@@ -1,6 +1,7 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection,
-  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection
+  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection,
+  HISTORY_MERGE_TAG
  } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -12,6 +13,7 @@ import { $getNearestNodeOfType } from "@lexical/utils"
 import FormatEscaper from "./contents/format_escaper"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 
 export default class Contents {
   constructor(editorElement) {
@@ -274,6 +276,46 @@ export default class Contents {
         lastNode.selectEnd()
       }
     })
+  }
+
+  insertPendingAttachment(file) {
+    if (!this.editorElement.supportsAttachments) return null
+
+    let nodeKey = null
+    this.editor.update(() => {
+      const uploadNode = new ActionTextAttachmentUploadNode({
+        file,
+        uploadUrl: null,
+        blobUrlTemplate: this.editorElement.blobUrlTemplate,
+        editor: this.editor
+      })
+      this.insertAtCursor(uploadNode)
+      nodeKey = uploadNode.getKey()
+    }, { tag: HISTORY_MERGE_TAG })
+
+    if (!nodeKey) return null
+
+    const editor = this.editor
+    return {
+      setAttributes(blob) {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (node) node.showUploadedAttachment(blob)
+        }, { tag: HISTORY_MERGE_TAG })
+      },
+      setUploadProgress(progress) {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (node) node.getWritable().progress = progress
+        }, { tag: HISTORY_MERGE_TAG })
+      },
+      remove() {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (node) node.remove()
+        })
+      }
+    }
   }
 
   replaceNodeWithHTML(nodeKey, html, options = {}) {

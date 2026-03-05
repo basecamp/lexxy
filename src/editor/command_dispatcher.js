@@ -1,5 +1,6 @@
 import {
   $createTextNode,
+  $getNodeByKey,
   $getSelection,
   $isRangeSelection,
   $isRootOrShadowRoot,
@@ -16,7 +17,7 @@ import {
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
-import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
+import { $createAutoLinkNode, $isLinkNode, $toggleLink, LinkNode } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
@@ -37,6 +38,7 @@ const COMMANDS = [
   "insertOrderedList",
   "insertQuoteBlock",
   "insertCodeBlock",
+  "setCodeLanguage",
   "insertHorizontalDivider",
   "uploadAttachments",
 
@@ -104,7 +106,24 @@ export class CommandDispatcher {
   }
 
   dispatchUnlink() {
-    this.#toggleLink(null)
+    this.editor.update(() => {
+      // Prefer the frozen link key saved during the native bridge freeze/thaw
+      // cycle. After contentEditable is toggled off and back on, Lexical retains
+      // a stale internal selection that $toggleLink cannot act on reliably.
+      if (this.editorElement.adapter.frozenLinkKey) {
+        this.#unlinkFrozenNode()
+        return
+      }
+
+      const selection = $getSelection()
+
+      if ($isRangeSelection(selection)) {
+        if (selection.isCollapsed()) {
+          this.selection.expandToNearestOfType(LinkNode)
+        }
+        $toggleLink(null)
+      }
+    })
   }
 
   dispatchInsertUnorderedList() {
@@ -145,6 +164,12 @@ export class CommandDispatcher {
         this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new CodeNode("plain"))
       }
     })
+  }
+
+  dispatchSetCodeLanguage(language) {
+    if (this.selection.isInsideCodeBlock) {
+      this.selection.nearestNodeOfType(CodeNode).setLanguage(language)
+    }
   }
 
   dispatchInsertHorizontalDivider() {
@@ -295,16 +320,33 @@ export class CommandDispatcher {
     return $isRangeSelection(selection) && selection.isCollapsed()
   }
 
-  // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
-  #toggleLink(url) {
-    this.editor.update(() => {
-      if (url === null) {
-        $toggleLink(null)
-      } else {
-        $toggleLink(url)
+  #unlinkFrozenNode() {
+    const key = this.editorElement.adapter.frozenLinkKey
+    if (!key) return
+
+    const linkNode = $getNodeByKey(key)
+    if (!$isLinkNode(linkNode)) return
+
+    const children = linkNode.getChildren()
+    for (const child of children) {
+      linkNode.insertBefore(child)
+    }
+    linkNode.remove()
+
+    // Select the former link text so a follow-up createLink can re-wrap it
+    const first = children.at(0)
+    const last = children.at(-1)
+    if (first && last) {
+      const selection = $getSelection()
+      if ($isRangeSelection(selection)) {
+        selection.anchor.set(first.getKey(), 0, "text")
+        selection.focus.set(last.getKey(), last.getTextContent().length, "text")
       }
-    })
+    }
+
+    this.editorElement.adapter.frozenLinkKey = null
   }
+
 }
 
 function capitalize(str) {

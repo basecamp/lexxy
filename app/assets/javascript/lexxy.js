@@ -7226,6 +7226,24 @@ function isSelectionHighlighted(selection) {
   }
 }
 
+function getHighlightStyles(selection) {
+  if (!yr(selection)) return null
+
+  let styles = b$3(selection.style);
+  if (!styles.color && !styles["background-color"]) {
+    const anchorNode = selection.anchor.getNode();
+    if (lr(anchorNode)) {
+      styles = b$3(anchorNode.getStyle());
+    }
+  }
+
+  const color = styles.color || null;
+  const backgroundColor = styles["background-color"] || null;
+  if (!color && !backgroundColor) return null
+
+  return { color, backgroundColor }
+}
+
 function hasHighlightStyles(cssOrStyles) {
   const styles = typeof cssOrStyles === "string" ? b$3(cssOrStyles) : cssOrStyles;
   return !!(styles.color || styles["background-color"])
@@ -7448,6 +7466,7 @@ const COMMANDS = [
   "insertOrderedList",
   "insertQuoteBlock",
   "insertCodeBlock",
+  "setCodeLanguage",
   "insertHorizontalDivider",
   "uploadAttachments",
 
@@ -7515,7 +7534,24 @@ class CommandDispatcher {
   }
 
   dispatchUnlink() {
-    this.#toggleLink(null);
+    this.editor.update(() => {
+      // Prefer the frozen link key saved during the native bridge freeze/thaw
+      // cycle. After contentEditable is toggled off and back on, Lexical retains
+      // a stale internal selection that $toggleLink cannot act on reliably.
+      if (this.editorElement.adapter.frozenLinkKey) {
+        this.#unlinkFrozenNode();
+        return
+      }
+
+      const selection = Lr();
+
+      if (yr(selection)) {
+        if (selection.isCollapsed()) {
+          this.selection.expandToNearestOfType(y$2);
+        }
+        J$2(null);
+      }
+    });
   }
 
   dispatchInsertUnorderedList() {
@@ -7556,6 +7592,12 @@ class CommandDispatcher {
         this.contents.toggleNodeWrappingAllSelectedLines((node) => X$1(node), () => new q$1("plain"));
       }
     });
+  }
+
+  dispatchSetCodeLanguage(language) {
+    if (this.selection.isInsideCodeBlock) {
+      this.selection.nearestNodeOfType(q$1).setLanguage(language);
+    }
   }
 
   dispatchInsertHorizontalDivider() {
@@ -7706,16 +7748,33 @@ class CommandDispatcher {
     return yr(selection) && selection.isCollapsed()
   }
 
-  // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
-  #toggleLink(url) {
-    this.editor.update(() => {
-      if (url === null) {
-        J$2(null);
-      } else {
-        J$2(url);
+  #unlinkFrozenNode() {
+    const key = this.editorElement.adapter.frozenLinkKey;
+    if (!key) return
+
+    const linkNode = xo(key);
+    if (!w$3(linkNode)) return
+
+    const children = linkNode.getChildren();
+    for (const child of children) {
+      linkNode.insertBefore(child);
+    }
+    linkNode.remove();
+
+    // Select the former link text so a follow-up createLink can re-wrap it
+    const first = children.at(0);
+    const last = children.at(-1);
+    if (first && last) {
+      const selection = Lr();
+      if (yr(selection)) {
+        selection.anchor.set(first.getKey(), 0, "text");
+        selection.focus.set(last.getKey(), last.getTextContent().length, "text");
       }
-    });
+    }
+
+    this.editorElement.adapter.frozenLinkKey = null;
   }
+
 }
 
 function capitalize(str) {
@@ -7920,8 +7979,8 @@ class ActionTextAttachmentNode extends ki {
     return null
   }
 
-  createAttachmentFigure() {
-    const figure = createAttachmentFigure(this.contentType, this.isPreviewableAttachment, this.fileName);
+  createAttachmentFigure(previewable = this.isPreviewableAttachment) {
+    const figure = createAttachmentFigure(this.contentType, previewable, this.fileName);
 
     const deleteButton = createElement("lexxy-node-delete-button");
     figure.appendChild(deleteButton);
@@ -8154,6 +8213,22 @@ class Selection {
     const anchorNode = Lr()?.anchor?.getNode();
     return wt$5(anchorNode, nodeType)
   }
+
+  expandToNearestOfType(nodeType) {
+    const selection = Lr();
+    if (!yr(selection) || !selection.isCollapsed()) return
+
+    const node = wt$5(selection.anchor.getNode(), nodeType);
+    if (!node) return
+
+    const firstDescendant = node.getFirstDescendant();
+    const lastDescendant = node.getLastDescendant();
+    if (firstDescendant && lastDescendant) {
+      selection.anchor.set(firstDescendant.getKey(), 0, "text");
+      selection.focus.set(lastDescendant.getKey(), lastDescendant.getTextContent().length, "text");
+    }
+  }
+
 
   get hasSelectedWordsInSingleLine() {
     const selection = Lr();
@@ -9102,280 +9177,6 @@ class FormatEscaper {
   }
 }
 
-async function loadFileIntoImage(file, image) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-
-    image.addEventListener("load", () => {
-      resolve(image);
-    });
-
-    reader.onload = (event) => {
-      image.src = event.target.result || null;
-    };
-
-    reader.readAsDataURL(file);
-  })
-}
-
-class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
-  static getType() {
-    return "action_text_attachment_upload"
-  }
-
-  static clone(node) {
-    return new ActionTextAttachmentUploadNode({ ...node }, node.__key)
-  }
-
-  static importJSON(serializedNode) {
-    return new ActionTextAttachmentUploadNode({ ...serializedNode })
-  }
-
-  // Should never run since this is a transient node. Defined to remove console warning.
-  static importDOM() {
-    return null
-  }
-
-  constructor(node, key) {
-    const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError } = node;
-    super({ ...node, contentType: file.type }, key);
-    this.file = file;
-    this.uploadUrl = uploadUrl;
-    this.blobUrlTemplate = blobUrlTemplate;
-    this.progress = progress ?? null;
-    this.width = width;
-    this.height = height;
-    this.uploadError = uploadError;
-  }
-
-  createDOM() {
-    if (this.uploadError) return this.#createDOMForError()
-
-    // This side-effect is trigged on DOM load to fire only once and avoid multiple
-    // uploads through cloning. The upload is guarded from restarting in case the
-    // node is reloaded from saved state such as from history.
-    this.#startUploadIfNeeded();
-
-    const figure = this.createAttachmentFigure();
-
-    if (this.isPreviewableAttachment) {
-      const img = figure.appendChild(this.#createDOMForImage());
-
-      // load file locally to set dimensions and prevent vertical shifting
-      loadFileIntoImage(this.file, img).then(img => this.#setDimensionsFromImage(img));
-    } else {
-      figure.appendChild(this.#createDOMForFile());
-    }
-
-    figure.appendChild(this.#createCaption());
-    figure.appendChild(this.#createProgressBar());
-
-    return figure
-  }
-
-  updateDOM(prevNode, dom) {
-    if (this.uploadError !== prevNode.uploadError) return true
-
-    if (prevNode.progress !== this.progress) {
-      const progress = dom.querySelector("progress");
-      progress.value = this.progress ?? 0;
-    }
-
-    return false
-  }
-
-  exportDOM() {
-    return { element: null }
-  }
-
-  exportJSON() {
-    return {
-      ...super.exportJSON(),
-      type: "action_text_attachment_upload",
-      version: 1,
-      uploadUrl: this.uploadUrl,
-      blobUrlTemplate: this.blobUrlTemplate,
-      progress: this.progress,
-      width: this.width,
-      height: this.height,
-      uploadError: this.uploadError
-    }
-  }
-
-  get #uploadStarted() {
-    return this.progress !== null
-  }
-
-  #createDOMForError() {
-    const figure = this.createAttachmentFigure();
-    figure.classList.add("attachment--error");
-    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "file"}` }));
-    return figure
-  }
-
-  #createDOMForImage() {
-    return createElement("img")
-  }
-
-  #createDOMForFile() {
-    const extension = this.#getFileExtension();
-    const span = createElement("span", { className: "attachment__icon", textContent: extension });
-    return span
-  }
-
-  #getFileExtension() {
-    return this.file.name.split(".").pop().toLowerCase()
-  }
-
-  #createCaption() {
-    const figcaption = createElement("figcaption", { className: "attachment__caption" });
-
-    const nameSpan = createElement("span", { className: "attachment__name", textContent: this.file.name || "" });
-    const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.file.size) });
-    figcaption.appendChild(nameSpan);
-    figcaption.appendChild(sizeSpan);
-
-    return figcaption
-  }
-
-  #createProgressBar() {
-    return createElement("progress", { value: this.progress ?? 0, max: 100 })
-  }
-
-  #setDimensionsFromImage({ width, height }) {
-    if (this.#hasDimensions) return
-
-    this.editor.update(() => {
-      const writable = this.getWritable();
-      writable.width = width;
-      writable.height = height;
-    }, { tag: SILENT_UPDATE_TAGS });
-  }
-
-  get #hasDimensions() {
-    return Boolean(this.width && this.height)
-  }
-
-  async #startUploadIfNeeded() {
-    if (this.#uploadStarted) return
-
-    this.#setUploadStarted();
-
-    const { DirectUpload } = await import('@rails/activestorage');
-
-    const upload = new DirectUpload(this.file, this.uploadUrl, this);
-    upload.delegate = this.#createUploadDelegate();
-
-    this.#dispatchEvent("lexxy:upload-start", { file: this.file });
-
-    upload.create((error, blob) => {
-      if (error) {
-        this.#dispatchEvent("lexxy:upload-end", { file: this.file, error });
-        this.#handleUploadError(error);
-      } else {
-        this.#dispatchEvent("lexxy:upload-end", { file: this.file, error: null });
-        this.#showUploadedAttachment(blob);
-      }
-    });
-  }
-
-  #createUploadDelegate() {
-    const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads");
-
-    return {
-      directUploadWillCreateBlobWithXHR: (request) => {
-        if (shouldAuthenticateUploads) request.withCredentials = true;
-      },
-      directUploadWillStoreFileWithXHR: (request) => {
-        if (shouldAuthenticateUploads) request.withCredentials = true;
-
-        const uploadProgressHandler = (event) => this.#handleUploadProgress(event);
-        request.upload.addEventListener("progress", uploadProgressHandler);
-      }
-    }
-  }
-
-  #setUploadStarted() {
-    this.#setProgress(1);
-  }
-
-  #handleUploadProgress(event) {
-    const progress = Math.round(event.loaded / event.total * 100);
-    this.#setProgress(progress);
-    this.#dispatchEvent("lexxy:upload-progress", { file: this.file, progress });
-  }
-
-  #setProgress(progress) {
-    this.editor.update(() => {
-      this.getWritable().progress = progress;
-    }, { tag: SILENT_UPDATE_TAGS });
-  }
-
-  #handleUploadError(error) {
-    console.warn(`Upload error for ${this.file?.name ?? "file"}: ${error}`);
-    this.editor.update(() => {
-      this.getWritable().uploadError = true;
-    }, { tag: SILENT_UPDATE_TAGS });
-  }
-
-  #showUploadedAttachment(blob) {
-    this.editor.update(() => {
-      this.replace(this.#toActionTextAttachmentNodeWith(blob));
-    }, { tag: SILENT_UPDATE_TAGS });
-  }
-
-  #toActionTextAttachmentNodeWith(blob) {
-    const conversion = new AttachmentNodeConversion(this, blob);
-    return conversion.toAttachmentNode()
-  }
-
-  #dispatchEvent(name, detail) {
-    const figure = this.editor.getElementByKey(this.getKey());
-    if (figure) dispatch(figure, name, detail);
-  }
-}
-
-class AttachmentNodeConversion {
-  constructor(uploadNode, blob) {
-    this.uploadNode = uploadNode;
-    this.blob = blob;
-  }
-
-  toAttachmentNode() {
-    return new ActionTextAttachmentNode({
-      ...this.uploadNode,
-      ...this.#propertiesFromBlob,
-      src: this.#src
-    })
-  }
-
-  get #propertiesFromBlob() {
-    const { blob } = this;
-    return {
-      sgid: blob.attachable_sgid,
-      altText: blob.filename,
-      contentType: blob.content_type,
-      fileName: blob.filename,
-      fileSize: blob.byte_size,
-      previewable: blob.previewable,
-    }
-  }
-
-  get #src() {
-    return this.blob.previewable ? this.blob.url : this.#blobSrc
-  }
-
-  get #blobSrc() {
-    return this.uploadNode.blobUrlTemplate
-      .replace(":signed_id", this.blob.signed_id)
-      .replace(":filename", encodeURIComponent(this.blob.filename))
-  }
-}
-
-function $createActionTextAttachmentUploadNode(...args) {
-  return new ActionTextAttachmentUploadNode(...args)
-}
-
 class ImageGalleryNode extends Ci {
   $config() {
     return this.config("image_gallery", {
@@ -9541,6 +9342,292 @@ function $findOrCreateGalleryForImage(node) {
 
   const existingGallery = wt$5(node, ImageGalleryNode);
   return existingGallery ?? bt$6(node, $createImageGalleryNode)
+}
+
+async function loadFileIntoImage(file, image) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+
+    image.addEventListener("load", () => {
+      resolve(image);
+    });
+
+    reader.onload = (event) => {
+      image.src = event.target.result || null;
+    };
+
+    reader.readAsDataURL(file);
+  })
+}
+
+class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
+  static getType() {
+    return "action_text_attachment_upload"
+  }
+
+  static clone(node) {
+    return new ActionTextAttachmentUploadNode({ ...node }, node.__key)
+  }
+
+  static importJSON(serializedNode) {
+    return new ActionTextAttachmentUploadNode({ ...serializedNode })
+  }
+
+  // Should never run since this is a transient node. Defined to remove console warning.
+  static importDOM() {
+    return null
+  }
+
+  constructor(node, key) {
+    const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError } = node;
+    super({ ...node, contentType: file.type }, key);
+    this.file = file;
+    this.uploadUrl = uploadUrl;
+    this.blobUrlTemplate = blobUrlTemplate;
+    this.progress = progress ?? null;
+    this.width = width;
+    this.height = height;
+    this.uploadError = uploadError;
+  }
+
+  createDOM() {
+    if (this.uploadError) return this.#createDOMForError()
+
+    // This side-effect is trigged on DOM load to fire only once and avoid multiple
+    // uploads through cloning. The upload is guarded from restarting in case the
+    // node is reloaded from saved state such as from history.
+    this.#startUploadIfNeeded();
+
+    // Bridge-managed uploads (uploadUrl is null) don't have file data to show
+    // an image preview, so always show the file icon during upload.
+    const canPreviewFile = this.isPreviewableAttachment && this.uploadUrl != null;
+    const figure = this.createAttachmentFigure(canPreviewFile);
+
+    if (canPreviewFile) {
+      const img = figure.appendChild(this.#createDOMForImage());
+
+      // load file locally to set dimensions and prevent vertical shifting
+      loadFileIntoImage(this.file, img).then(img => this.#setDimensionsFromImage(img));
+    } else {
+      figure.appendChild(this.#createDOMForFile());
+    }
+
+    figure.appendChild(this.#createCaption());
+    figure.appendChild(this.#createProgressBar());
+
+    return figure
+  }
+
+  updateDOM(prevNode, dom) {
+    if (this.uploadError !== prevNode.uploadError) return true
+
+    if (prevNode.progress !== this.progress) {
+      const progress = dom.querySelector("progress");
+      progress.value = this.progress ?? 0;
+    }
+
+    return false
+  }
+
+  exportDOM() {
+    return { element: null }
+  }
+
+  exportJSON() {
+    return {
+      ...super.exportJSON(),
+      type: "action_text_attachment_upload",
+      version: 1,
+      uploadUrl: this.uploadUrl,
+      blobUrlTemplate: this.blobUrlTemplate,
+      progress: this.progress,
+      width: this.width,
+      height: this.height,
+      uploadError: this.uploadError
+    }
+  }
+
+  get #uploadStarted() {
+    return this.progress !== null
+  }
+
+  #createDOMForError() {
+    const figure = this.createAttachmentFigure();
+    figure.classList.add("attachment--error");
+    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "file"}` }));
+    return figure
+  }
+
+  #createDOMForImage() {
+    return createElement("img")
+  }
+
+  #createDOMForFile() {
+    const extension = this.#getFileExtension();
+    const span = createElement("span", { className: "attachment__icon", textContent: extension });
+    return span
+  }
+
+  #getFileExtension() {
+    return this.file.name.split(".").pop().toLowerCase()
+  }
+
+  #createCaption() {
+    const figcaption = createElement("figcaption", { className: "attachment__caption" });
+
+    const nameSpan = createElement("span", { className: "attachment__name", textContent: this.file.name || "" });
+    const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.file.size) });
+    figcaption.appendChild(nameSpan);
+    figcaption.appendChild(sizeSpan);
+
+    return figcaption
+  }
+
+  #createProgressBar() {
+    return createElement("progress", { value: this.progress ?? 0, max: 100 })
+  }
+
+  #setDimensionsFromImage({ width, height }) {
+    if (this.#hasDimensions) return
+
+    this.editor.update(() => {
+      const writable = this.getWritable();
+      writable.width = width;
+      writable.height = height;
+    }, { tag: SILENT_UPDATE_TAGS });
+  }
+
+  get #hasDimensions() {
+    return Boolean(this.width && this.height)
+  }
+
+  async #startUploadIfNeeded() {
+    if (this.#uploadStarted) return
+    if (!this.uploadUrl) return // Bridge-managed upload — skip DirectUpload
+
+    this.#setUploadStarted();
+
+
+    const { DirectUpload } = await import('@rails/activestorage');
+
+    const upload = new DirectUpload(this.file, this.uploadUrl, this);
+    upload.delegate = this.#createUploadDelegate();
+
+    this.#dispatchEvent("lexxy:upload-start", { file: this.file });
+
+    upload.create((error, blob) => {
+      if (error) {
+        this.#dispatchEvent("lexxy:upload-end", { file: this.file, error });
+        this.#handleUploadError(error);
+      } else {
+        this.#dispatchEvent("lexxy:upload-end", { file: this.file, error: null });
+        this.editor.update(() => {
+          this.showUploadedAttachment(blob);
+        }, { tag: SILENT_UPDATE_TAGS });
+      }
+    });
+  }
+
+  #createUploadDelegate() {
+    const shouldAuthenticateUploads = Lexxy.global.get("authenticatedUploads");
+
+    return {
+      directUploadWillCreateBlobWithXHR: (request) => {
+        if (shouldAuthenticateUploads) request.withCredentials = true;
+      },
+      directUploadWillStoreFileWithXHR: (request) => {
+        if (shouldAuthenticateUploads) request.withCredentials = true;
+
+        const uploadProgressHandler = (event) => this.#handleUploadProgress(event);
+        request.upload.addEventListener("progress", uploadProgressHandler);
+      }
+    }
+  }
+
+  #setUploadStarted() {
+    this.#setProgress(1);
+  }
+
+  #handleUploadProgress(event) {
+    const progress = Math.round(event.loaded / event.total * 100);
+    this.#setProgress(progress);
+    this.#dispatchEvent("lexxy:upload-progress", { file: this.file, progress });
+  }
+
+  #setProgress(progress) {
+    this.editor.update(() => {
+      this.getWritable().progress = progress;
+    }, { tag: SILENT_UPDATE_TAGS });
+  }
+
+  #handleUploadError(error) {
+    console.warn(`Upload error for ${this.file?.name ?? "file"}: ${error}`);
+    this.editor.update(() => {
+      this.getWritable().uploadError = true;
+    }, { tag: SILENT_UPDATE_TAGS });
+  }
+
+  showUploadedAttachment(blob) {
+    const attachmentNode = this.#toActionTextAttachmentNodeWith(blob);
+    this.replace(attachmentNode);
+
+    if (!attachmentNode.getNextSibling() && !$isImageGalleryNode(attachmentNode.getParent())) {
+      const paragraph = Li();
+      attachmentNode.insertAfter(paragraph);
+      paragraph.selectStart();
+    }
+  }
+
+  #toActionTextAttachmentNodeWith(blob) {
+    const conversion = new AttachmentNodeConversion(this, blob);
+    return conversion.toAttachmentNode()
+  }
+
+  #dispatchEvent(name, detail) {
+    const figure = this.editor.getElementByKey(this.getKey());
+    if (figure) dispatch(figure, name, detail);
+  }
+}
+
+class AttachmentNodeConversion {
+  constructor(uploadNode, blob) {
+    this.uploadNode = uploadNode;
+    this.blob = blob;
+  }
+
+  toAttachmentNode() {
+    return new ActionTextAttachmentNode({
+      ...this.uploadNode,
+      ...this.#propertiesFromBlob,
+      src: this.#src
+    })
+  }
+
+  get #propertiesFromBlob() {
+    const { blob } = this;
+    return {
+      sgid: blob.attachable_sgid,
+      altText: blob.filename,
+      contentType: blob.content_type,
+      fileName: blob.filename,
+      fileSize: blob.byte_size,
+      previewable: blob.previewable,
+    }
+  }
+
+  get #src() {
+    return this.blob.previewable ? this.blob.url : this.#blobSrc
+  }
+
+  get #blobSrc() {
+    return this.uploadNode.blobUrlTemplate
+      .replace(":signed_id", this.blob.signed_id)
+      .replace(":filename", encodeURIComponent(this.blob.filename))
+  }
+}
+
+function $createActionTextAttachmentUploadNode(...args) {
+  return new ActionTextAttachmentUploadNode(...args)
 }
 
 class Uploader {
@@ -9926,6 +10013,46 @@ class Contents {
         lastNode.selectEnd();
       }
     });
+  }
+
+  insertPendingAttachment(file) {
+    if (!this.editorElement.supportsAttachments) return null
+
+    let nodeKey = null;
+    this.editor.update(() => {
+      const uploadNode = new ActionTextAttachmentUploadNode({
+        file,
+        uploadUrl: null,
+        blobUrlTemplate: this.editorElement.blobUrlTemplate,
+        editor: this.editor
+      });
+      this.insertAtCursor(uploadNode);
+      nodeKey = uploadNode.getKey();
+    }, { tag: Dn });
+
+    if (!nodeKey) return null
+
+    const editor = this.editor;
+    return {
+      setAttributes(blob) {
+        editor.update(() => {
+          const node = xo(nodeKey);
+          if (node) node.showUploadedAttachment(blob);
+        }, { tag: Dn });
+      },
+      setUploadProgress(progress) {
+        editor.update(() => {
+          const node = xo(nodeKey);
+          if (node) node.getWritable().progress = progress;
+        }, { tag: Dn });
+      },
+      remove() {
+        editor.update(() => {
+          const node = xo(nodeKey);
+          if (node) node.remove();
+        });
+      }
+    }
   }
 
   replaceNodeWithHTML(nodeKey, html, options = {}) {
@@ -10593,6 +10720,15 @@ class Extensions {
   }
 }
 
+class BrowserAdapter {
+  frozenLinkKey = null
+
+  dispatchAttributesChange(attributes, linkHref, highlight) {}
+  dispatchEditorInitialized(detail) {}
+  freeze(frozenLinkKey) {}
+  thaw() {}
+}
+
 class ProvisionalParagraphNode extends Di {
   $config() {
     return this.config("provisonal_paragraph", {
@@ -11024,11 +11160,15 @@ class LexicalEditorElement extends HTMLElement {
     this.contents = new Contents(this);
     this.selection = new Selection(this);
     this.clipboard = new Clipboard(this);
+    this.adapter = new BrowserAdapter();
 
     CommandDispatcher.configureFor(this);
     this.#initialize();
 
-    requestAnimationFrame(() => dispatch(this, "lexxy:initialize"));
+    requestAnimationFrame(() => {
+      dispatch(this, "lexxy:initialize");
+      this.#dispatchEditorInitialized();
+    });
     this.toggleAttribute("connected", true);
 
     this.#handleAutofocus();
@@ -11130,6 +11270,36 @@ class LexicalEditorElement extends HTMLElement {
 
   get supportsRichText() {
     return this.config.get("richText")
+  }
+
+  registerAdapter(adapter) {
+    this.adapter = adapter;
+  }
+
+  freezeSelection() {
+    let frozenLinkKey = null;
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const linkNode = wt$5(selection.anchor.getNode(), y$2);
+      if (linkNode) {
+        frozenLinkKey = linkNode.getKey();
+      }
+    });
+    this.adapter.freeze(frozenLinkKey);
+  }
+
+  thawSelection() {
+    this.adapter.thaw();
+  }
+
+  dispatchAttributesChange() {
+    this.#dispatchAttributesChange();
+  }
+
+  dispatchEditorInitialized() {
+    this.#dispatchEditorInitialized();
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -11255,6 +11425,7 @@ class LexicalEditorElement extends HTMLElement {
     const editorContentElement = createElement("div", {
       classList: "lexxy-editor__content",
       contenteditable: true,
+      autocapitalize: "none",
       role: "textbox",
       "aria-multiline": true,
       "aria-label": this.#labelText,
@@ -11317,6 +11488,7 @@ class LexicalEditorElement extends HTMLElement {
       this.#internalFormValue = this.value;
       this.#toggleEmptyStatus();
       this.#setValidity();
+      this.#dispatchAttributesChange();
     }));
   }
 
@@ -11394,6 +11566,7 @@ class LexicalEditorElement extends HTMLElement {
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
+      this.#dispatchAttributesChange();
       dispatch(this, "lexxy:focus");
       this.currentlyFocused = true;
     }
@@ -11469,6 +11642,76 @@ class LexicalEditorElement extends HTMLElement {
     }
   }
 
+  #dispatchAttributesChange() {
+    let attributes = null;
+    let linkHref = null;
+    let highlight = null;
+
+    this.editor.getEditorState().read(() => {
+      const selection = Lr();
+      if (!yr(selection)) return
+
+      const format = this.selection.getFormat();
+      if (Object.keys(format).length === 0) return
+
+      const anchorNode = selection.anchor.getNode();
+      const linkNode = wt$5(anchorNode, y$2);
+
+      attributes = {
+        bold: { active: format.isBold, enabled: true },
+        italic: { active: format.isItalic, enabled: true },
+        strikethrough: { active: format.isStrikethrough, enabled: true },
+        code: { active: format.isInCode, enabled: true },
+        highlight: { active: format.isHighlight, enabled: true },
+        link: { active: format.isInLink, enabled: true },
+        quote: { active: format.isInQuote, enabled: true },
+        heading: { active: format.isInHeading, enabled: true },
+        "unordered-list": { active: format.isInList && format.listType === "bullet", enabled: true },
+        "ordered-list": { active: format.isInList && format.listType === "number", enabled: true },
+        undo: { active: false, enabled: this.historyState?.undoStack.length > 0 },
+        redo: { active: false, enabled: this.historyState?.redoStack.length > 0 }
+      };
+
+      linkHref = linkNode ? linkNode.getURL() : null;
+      highlight = format.isHighlight ? getHighlightStyles(selection) : null;
+    });
+
+    if (attributes) {
+      this.adapter.dispatchAttributesChange(attributes, linkHref, highlight);
+    }
+  }
+
+  #dispatchEditorInitialized() {
+    this.adapter.dispatchEditorInitialized({
+      highlightColors: this.#resolvedHighlightColors
+    });
+  }
+
+  get #resolvedHighlightColors() {
+    const buttons = this.config.get("highlight.buttons");
+    if (!buttons) return null
+
+    const colors = this.#resolveColors("color", buttons.color || []);
+    const backgroundColors = this.#resolveColors("background-color", buttons["background-color"] || []);
+    return { colors, backgroundColors }
+  }
+
+  #resolveColors(property, cssValues) {
+    const resolver = document.createElement("span");
+    resolver.style.display = "none";
+    this.appendChild(resolver);
+
+    const resolved = cssValues.map(cssValue => {
+      resolver.style.setProperty(property, cssValue);
+      const value = window.getComputedStyle(resolver).getPropertyValue(property);
+      resolver.style.removeProperty(property);
+      return { name: cssValue, value }
+    });
+
+    resolver.remove();
+    return resolved
+  }
+
   #reset() {
     this.#unregisterHandlers();
 
@@ -11496,6 +11739,7 @@ class LexicalEditorElement extends HTMLElement {
     }
 
     this.selection = null;
+    this.adapter = null;
 
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache);
   }
@@ -12335,6 +12579,10 @@ class CodeLanguagePicker extends HTMLElement {
       this.#updateCodeBlockLanguage(this.languagePickerElement.value);
     });
 
+    this.languagePickerElement.addEventListener("mousedown", (event) => {
+      this.#dispatchOpenEvent(event);
+    });
+
     this.languagePickerElement.setAttribute("nonce", getNonce());
     this.appendChild(this.languagePickerElement);
   }
@@ -12369,6 +12617,21 @@ class CodeLanguagePicker extends HTMLElement {
     const plainIndex = sortedEntries.findIndex(([ key ]) => key === "plain");
     const plainEntry = sortedEntries.splice(plainIndex, 1)[0];
     return Object.fromEntries([ plainEntry, ...sortedEntries ])
+  }
+
+  #dispatchOpenEvent(event) {
+    const handled = !dispatch(this.editorElement, "lexxy:code-language-picker-open", {
+      languages: this.#bridgeLanguages,
+      currentLanguage: this.languagePickerElement.value
+    }, true);
+
+    if (handled) {
+      event.preventDefault();
+    }
+  }
+
+  get #bridgeLanguages() {
+    return Object.entries(this.#languages).map(([ key, name ]) => ({ key, name }))
   }
 
   #updateCodeBlockLanguage(language) {
@@ -13251,10 +13514,40 @@ function highlightElement(preElement) {
   preElement.replaceWith(codeElement);
 }
 
+class NativeAdapter {
+  frozenLinkKey = null
+
+  constructor(editorElement) {
+    this.editorElement = editorElement;
+    this.editorContentElement = editorElement.editorContentElement;
+  }
+
+  dispatchAttributesChange(attributes, linkHref, highlight) {
+    dispatch(this.editorElement, "lexxy:attributes-change", {
+      attributes,
+      link: linkHref ? { href: linkHref } : null,
+      highlight
+    });
+  }
+
+  dispatchEditorInitialized(detail) {
+    dispatch(this.editorElement, "lexxy:editor-initialized", detail);
+  }
+
+  freeze(frozenLinkKey) {
+    this.frozenLinkKey = frozenLinkKey;
+    this.editorContentElement.contentEditable = "false";
+  }
+
+  thaw() {
+    this.editorContentElement.contentEditable = "true";
+  }
+}
+
 const configure = Lexxy.configure;
 
 // Pushing elements definition to after the current call stack to allow global configuration to take place first
 setTimeout(defineElements, 0);
 
-export { $createActionTextAttachmentNode, $createActionTextAttachmentUploadNode, $isActionTextAttachmentNode, ActionTextAttachmentNode, ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, configure, highlightCode as highlightAll, highlightCode };
+export { $createActionTextAttachmentNode, $createActionTextAttachmentUploadNode, $isActionTextAttachmentNode, ActionTextAttachmentNode, ActionTextAttachmentUploadNode, CustomActionTextAttachmentNode, LexxyExtension as Extension, HorizontalDividerNode, NativeAdapter, configure, highlightCode as highlightAll, highlightCode };
 //# sourceMappingURL=lexxy.js.map
