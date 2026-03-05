@@ -307,7 +307,7 @@ export default class Contents {
         editor.update(() => {
           const node = $getNodeByKey(nodeKey)
           if (node) node.getWritable().progress = progress
-        })
+        }, { tag: HISTORY_MERGE_TAG })
       },
       remove() {
         editor.update(() => {
