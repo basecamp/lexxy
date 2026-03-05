@@ -7963,8 +7963,8 @@ class ActionTextAttachmentNode extends ki {
     return null
   }
 
-  createAttachmentFigure() {
-    const figure = createAttachmentFigure(this.contentType, this.isPreviewableAttachment, this.fileName);
+  createAttachmentFigure(previewable = this.isPreviewableAttachment) {
+    const figure = createAttachmentFigure(this.contentType, previewable, this.fileName);
 
     const deleteButton = createElement("lexxy-node-delete-button");
     figure.appendChild(deleteButton);
@@ -9385,9 +9385,7 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     // Bridge-managed uploads (uploadUrl is null) don't have file data to show
     // an image preview, so always show the file icon during upload.
     const canPreviewFile = this.isPreviewableAttachment && this.uploadUrl != null;
-    const figure = canPreviewFile
-      ? this.createAttachmentFigure()
-      : createAttachmentFigure(this.contentType, false, this.fileName);
+    const figure = this.createAttachmentFigure(canPreviewFile);
 
     if (canPreviewFile) {
       const img = figure.appendChild(this.#createDOMForImage());
