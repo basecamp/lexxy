@@ -170,7 +170,9 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
         this.#handleUploadError(error)
       } else {
         this.#dispatchEvent("lexxy:upload-end", { file: this.file, error: null })
-        this.showUploadedAttachment(blob)
+        this.editor.update(() => {
+          this.showUploadedAttachment(blob)
+        }, { tag: SILENT_UPDATE_TAGS })
       }
     })
   }
@@ -215,16 +217,14 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   showUploadedAttachment(blob) {
-    this.editor.update(() => {
-      const attachmentNode = this.#toActionTextAttachmentNodeWith(blob)
-      this.replace(attachmentNode)
+    const attachmentNode = this.#toActionTextAttachmentNodeWith(blob)
+    this.replace(attachmentNode)
 
-      if (!attachmentNode.getNextSibling() && !$isImageGalleryNode(attachmentNode.getParent())) {
-        const paragraph = $createParagraphNode()
-        attachmentNode.insertAfter(paragraph)
-        paragraph.selectStart()
-      }
-    }, { tag: SILENT_UPDATE_TAGS })
+    if (!attachmentNode.getNextSibling() && !$isImageGalleryNode(attachmentNode.getParent())) {
+      const paragraph = $createParagraphNode()
+      attachmentNode.insertAfter(paragraph)
+      paragraph.selectStart()
+    }
   }
 
   #toActionTextAttachmentNodeWith(blob) {
