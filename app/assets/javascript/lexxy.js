@@ -9507,7 +9507,9 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
         this.#handleUploadError(error);
       } else {
         this.#dispatchEvent("lexxy:upload-end", { file: this.file, error: null });
-        this.showUploadedAttachment(blob);
+        this.editor.update(() => {
+          this.showUploadedAttachment(blob);
+        }, { tag: SILENT_UPDATE_TAGS });
       }
     });
   }
@@ -9552,16 +9554,14 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   showUploadedAttachment(blob) {
-    this.editor.update(() => {
-      const attachmentNode = this.#toActionTextAttachmentNodeWith(blob);
-      this.replace(attachmentNode);
+    const attachmentNode = this.#toActionTextAttachmentNodeWith(blob);
+    this.replace(attachmentNode);
 
-      if (!attachmentNode.getNextSibling() && !$isImageGalleryNode(attachmentNode.getParent())) {
-        const paragraph = Li();
-        attachmentNode.insertAfter(paragraph);
-        paragraph.selectStart();
-      }
-    }, { tag: SILENT_UPDATE_TAGS });
+    if (!attachmentNode.getNextSibling() && !$isImageGalleryNode(attachmentNode.getParent())) {
+      const paragraph = Li();
+      attachmentNode.insertAfter(paragraph);
+      paragraph.selectStart();
+    }
   }
 
   #toActionTextAttachmentNodeWith(blob) {
@@ -10030,7 +10030,7 @@ class Contents {
         editor.update(() => {
           const node = xo(nodeKey);
           if (node) node.getWritable().progress = progress;
-        });
+        }, { tag: Dn });
       },
       remove() {
         editor.update(() => {
