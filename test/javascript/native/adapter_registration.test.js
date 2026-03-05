@@ -20,8 +20,8 @@ describe("adapter registration", () => {
 
     const customAdapter = {
       frozenLinkKey: null,
+      dispatchEditorInitialized() {},
       dispatchAttributesChange() {},
-      dispatchHighlightColors() {},
       freeze() {},
       thaw() {}
     }
