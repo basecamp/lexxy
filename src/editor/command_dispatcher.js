@@ -327,10 +327,23 @@ export class CommandDispatcher {
     const linkNode = $getNodeByKey(key)
     if (!$isLinkNode(linkNode)) return
 
-    for (const child of linkNode.getChildren()) {
+    const children = linkNode.getChildren()
+    for (const child of children) {
       linkNode.insertBefore(child)
     }
     linkNode.remove()
+
+    // Select the former link text so a follow-up createLink can re-wrap it
+    const first = children.at(0)
+    const last = children.at(-1)
+    if (first && last) {
+      const selection = $getSelection()
+      if ($isRangeSelection(selection)) {
+        selection.anchor.set(first.getKey(), 0, "text")
+        selection.focus.set(last.getKey(), last.getTextContent().length, "text")
+      }
+    }
+
     this.editorElement.adapter.frozenLinkKey = null
   }
 
