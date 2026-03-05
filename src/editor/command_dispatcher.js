@@ -107,6 +107,14 @@ export class CommandDispatcher {
 
   dispatchUnlink() {
     this.editor.update(() => {
+      // Prefer the frozen link key saved during the native bridge freeze/thaw
+      // cycle. After contentEditable is toggled off and back on, Lexical retains
+      // a stale internal selection that $toggleLink cannot act on reliably.
+      if (this.editorElement.adapter.frozenLinkKey) {
+        this.#unlinkFrozenNode()
+        return
+      }
+
       const selection = $getSelection()
 
       if ($isRangeSelection(selection)) {
@@ -114,12 +122,7 @@ export class CommandDispatcher {
           this.selection.expandToNearestOfType(LinkNode)
         }
         $toggleLink(null)
-        return
       }
-
-      // Fallback: selection lost during native bridge freeze/thaw cycle.
-      // Use the link node key saved before the selection was cleared.
-      this.#unlinkFrozenNode()
     })
   }
 
