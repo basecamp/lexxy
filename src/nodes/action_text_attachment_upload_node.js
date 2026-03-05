@@ -3,7 +3,7 @@ import Lexxy from "../config/lexxy"
 import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { $isImageGalleryNode } from "./image_gallery_node"
-import { createAttachmentFigure, createElement, dispatch } from "../helpers/html_helper"
+import { createElement, dispatch } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 
@@ -48,9 +48,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     // Bridge-managed uploads (uploadUrl is null) don't have file data to show
     // an image preview, so always show the file icon during upload.
     const canPreviewFile = this.isPreviewableAttachment && this.uploadUrl != null
-    const figure = canPreviewFile
-      ? this.createAttachmentFigure()
-      : createAttachmentFigure(this.contentType, false, this.fileName)
+    const figure = this.createAttachmentFigure(canPreviewFile)
 
     if (canPreviewFile) {
       const img = figure.appendChild(this.#createDOMForImage())
