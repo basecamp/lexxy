@@ -8,10 +8,10 @@
         <%= post.title %>
       </p>
 
-      <p>
+      <div data-controller="code-highlight math-content">
         <strong>Body:</strong>
         <%= post.body %>
-      </p>
+      </div>
 
       <p>
         <%= link_to post.title, post %>

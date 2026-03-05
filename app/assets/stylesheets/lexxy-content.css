@@ -239,6 +239,18 @@
     color: var(--lexxy-color-code-token-punctuation);
   }
 
+  /* Math */
+  .math-inline {
+    display: inline;
+  }
+
+  .math-block {
+    display: flex;
+    justify-content: center;
+    margin: 1em 0;
+    overflow-x: auto;
+  }
+
   /* Tables */
   :where(.lexxy-content__table-wrapper) {
     margin: 0;

@@ -27,7 +27,7 @@ import { HighlightExtension } from "../extensions/highlight_extension"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 import { TablesExtension } from "../extensions/tables_extension"
 import { AttachmentsExtension } from "../extensions/attachments_extension.js"
-
+import { MathExtension } from "../extensions/math_extension"
 
 export class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -119,7 +119,8 @@ export class LexicalEditorElement extends HTMLElement {
       HighlightExtension,
       TrixContentExtension,
       TablesExtension,
-      AttachmentsExtension
+      AttachmentsExtension,
+      MathExtension
     ]
   }
 
