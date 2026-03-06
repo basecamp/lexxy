@@ -189,7 +189,6 @@
     progress {
       max-inline-size: 10ch;
       margin: auto;
-      margin-inline-end: 5ch;
     }
 
     &.attachment--preview {
@@ -197,7 +196,6 @@
         inset-block-start: 2ch;
         inset-inline-start: 0;
         inset-inline-end: 0;
-        margin: auto;
         position: absolute;
       }
     }
