@@ -287,7 +287,7 @@
 
 /* Placeholder */
 :where(.lexxy-editor--empty) {
-  .lexxy-editor__content:not(:has(ul, ol))::before {
+  .lexxy-editor__content:not(:has(h1, h2, h3, h4, h5, h6, table, ul, ol, figure, .attachment-gallery))::before {
     content: attr(placeholder);
     color: currentColor;
     cursor: text;
