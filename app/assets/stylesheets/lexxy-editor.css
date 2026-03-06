@@ -247,6 +247,11 @@
         padding: 1ch;
         padding-block-end: 0;
       }
+
+      lexxy-node-delete-button {
+        inset-block-start: 1.5ch;
+        inset-inline-end: 1.5ch;
+      }
     }
 
     &:has(> .attachment:nth-child(2):last-of-type),
@@ -256,8 +261,6 @@
   }
 
   .attachment__caption {
-    padding: 0 1ch;
-
     textarea {
       background: transparent;
       block-size: fit-content;
@@ -270,9 +273,9 @@
       font-family: inherit;
       inline-size: 100%;
       max-inline-size: 100%;
+      padding: 0;
       resize: none;
       text-align: center;
-      padding: 1ch 0;
 
       &:focus {
         background: var(--lexxy-color-canvas);
@@ -774,8 +777,8 @@
   /* Attachment delete button */
 
   &:is(lexxy-node-delete-button) {
-    inset-block-start: 0.5ch;
-    inset-inline-end: 0.5ch;
+    inset-block-start: 1.5ch;
+    inset-inline-end: 1.5ch;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.1s ease-in-out;

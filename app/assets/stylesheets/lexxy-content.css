@@ -292,7 +292,7 @@
     block-size: auto;
     box-sizing: border-box;
     border-radius: var(--lexxy-radius);
-    display: table; /* Using table to wrap the caption to fit the attachment's width */
+    display: block;
     inline-size: fit-content;
     margin-inline: auto;
     max-inline-size: 100%;
@@ -303,10 +303,10 @@
   }
 
   .attachment__caption {
-    caption-side: bottom;
     color: var(--lexxy-color-text-subtle);
-    display: table-caption;
+    display: block;
     font-size: var(--lexxy-text-small);
+    padding: 1ch;
   }
 
   .attachment__icon {
@@ -322,8 +322,10 @@
     font-size: var(--lexxy-text-small);
     font-weight: bold;
     inline-size: auto;
+    overflow: hidden;
     place-content: center;
     text-transform: uppercase;
+    white-space: nowrap;
   }
 
   .attachment--preview {
@@ -339,6 +341,10 @@
     > a {
       display: block;
     }
+
+    .attachment__caption {
+      padding-block-end: 0.5ch;
+    }
   }
 
   .attachment--file {
@@ -347,7 +353,6 @@
     align-items: center;
     display: flex;
     flex-wrap: wrap;
-    gap: 0;
     inline-size: auto;
 
     .attachment__caption {
@@ -417,8 +422,11 @@
     .attachment {
       display: flex;
       flex-direction: column;
-      gap: 1ch;
       inline-size: 100%;
+
+      .attachment__caption {
+        padding-block-end: 1ch;
+      }
     }
 
     &:has(> :nth-child(2):last-child),
