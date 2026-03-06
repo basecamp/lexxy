@@ -76,7 +76,7 @@
       position: relative;
       transition: all 0.1s ease-in-out;
 
-      /* Used for column and row adding visualisations */
+      /* Used for column and row adding visualizations */
       &:after {
         box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent inset;
         content: "";
@@ -185,9 +185,35 @@
     cursor: pointer;
   }
 
+  .attachment {
+    progress {
+      max-inline-size: 10ch;
+      margin: auto;
+      margin-inline-end: 5ch;
+    }
+
+    &.attachment--preview {
+      progress {
+        inset-block-start: 2ch;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
+        margin: auto;
+        position: absolute;
+      }
+    }
+  }
+
   .attachment:hover:not(.node--selected) {
     outline: var(--lexxy-focus-ring-size) solid color-mix(in oklch, var(--lexxy-focus-ring-color) 30%, transparent);
     outline-offset: var(--lexxy-focus-ring-offset);
+  }
+
+  .attachment--file {
+    lexxy-node-delete-button {
+      inset-block-start: 50%;
+      inset-inline-end: 1ch;
+      transform: translate(0, -50%);
+    }
   }
 
   /* Image galleries */
@@ -212,21 +238,14 @@
       padding-block-end: var(--lexxy-attachment-gap);
       vertical-align: top;
 
-      .attachment__container {
-        display: block;
-        margin: 0;
-        padding: 1ch;
-        padding-block-end: 0;
+      &.attachment--error {
+        padding: 2ch;
       }
 
       img {
-        block-size: auto;
         box-sizing: border-box;
-        inline-size: auto;
-        margin: auto;
-        max-block-size: 50rem;
-        max-inline-size: 100%;
-        object-fit: contain;
+        padding: 1ch;
+        padding-block-end: 0;
       }
     }
 
@@ -331,7 +350,7 @@
   &[data-attachments="false"] button[name="upload"]{
     display: none;
   }
-  
+
   .lexxy-editor__toolbar-button {
     aspect-ratio: 1;
     block-size: var(--lexxy-toolbar-button-size);
