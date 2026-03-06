@@ -416,22 +416,30 @@
   /* ------------------------------------------------------------------------ */
 
   .attachment-gallery {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: block;
+    text-align: center;
 
     .attachment {
-      display: flex;
-      flex-direction: column;
-      inline-size: 100%;
+      display: inline-block;
+      inline-size: calc(33.333% - 0.8ch);
+      vertical-align: top;
+
+      img {
+        margin: auto;
+        max-block-size: 50rem;
+        object-fit: contain;
+      }
 
       .attachment__caption {
         padding-block-end: 1ch;
       }
     }
 
-    &:has(> :nth-child(2):last-child),
-    &:has(> :nth-child(4):last-child) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+    &.attachment-gallery--2,
+    &.attachment-gallery--4 {
+      .attachment {
+        inline-size: calc(50% - 0.8ch);
+      }
     }
   }
 
