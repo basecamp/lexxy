@@ -12,6 +12,8 @@
 /node_modules/
 /app/assets/javascript/*.js.map
 
+Gemfile.lock
+
 # Jekyll docs
 /docs/_site/
 /docs/.jekyll-cache/

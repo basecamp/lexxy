@@ -3,6 +3,10 @@ require "test_helper"
 class Lexxy::TagHelperTest < ActionView::TestCase
   helper ActionText::ContentHelper
 
+  setup do
+    skip "lexxy_rich_textarea_tag is not available when using the ActionText::Editor adapter" if defined?(ActionText::Editor)
+  end
+
   test "#lexxy_rich_textarea_tag renders <action-text-attachment> elements" do
     render inline: <<~ERB, locals: { post: posts(:hello_james) }
       <%= lexxy_rich_textarea_tag :body, post.body %>
