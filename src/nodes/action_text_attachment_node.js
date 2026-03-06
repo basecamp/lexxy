@@ -129,6 +129,10 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   exportDOM() {
+    if (!this.sgid) {
+      return { element: createElement("img", { src: this.src, alt: this.altText, width: this.width, height: this.height }) }
+    }
+
     const attachment = createElement(this.tagName, {
       sgid: this.sgid,
       previewable: this.previewable || null,
