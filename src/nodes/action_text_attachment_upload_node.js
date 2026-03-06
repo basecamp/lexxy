@@ -27,6 +27,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError } = node
     super({ ...node, contentType: file.type }, key)
     this.file = file
+    this.fileName = file.name
     this.uploadUrl = uploadUrl
     this.blobUrlTemplate = blobUrlTemplate
     this.progress = progress ?? null
