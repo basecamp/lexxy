@@ -4652,6 +4652,7 @@ const presets = new Configuration({
     multiLine: true,
     richText: true,
     toolbar: true,
+    headings: [ "h2", "h3", "h4" ],
     highlight: {
       buttons: {
         color: range(1, 9).map(n => `var(--highlight-${n})`),
@@ -5182,10 +5183,10 @@ class LexicalToolbarElement extends HTMLElement {
   }
 
   #closeDropdowns() {
-   this.#dropdowns.forEach((details) => {
-     details.open = false;
-   });
- }
+    this.#dropdowns.forEach((details) => {
+      details.open = false;
+    });
+  }
 
   get #dropdowns() {
     return this.querySelectorAll("details")
@@ -7563,29 +7564,26 @@ class CommandDispatcher {
     this.editor.focus();
   }
 
+  get #configuredHeadings() {
+    return this.editorElement.config.get("headings")
+  }
+
   dispatchRotateHeadingFormat() {
     const selection = Lr();
-    if (!yr(selection)) return
+    if (!yr(selection)) return false
+
+    const headings = this.#configuredHeadings;
+    if (headings.length === 0) return false
 
     if (as(selection.anchor.getNode())) {
-      selection.insertNodes([ St$3("h2") ]);
+      selection.insertNodes([ St$3(headings[0]) ]);
       return
     }
 
-    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow();
-    let nextTag = "h2";
-    if (It$2(topLevelElement)) {
-      const currentTag = topLevelElement.getTag();
-      if (currentTag === "h2") {
-        nextTag = "h3";
-      } else if (currentTag === "h3") {
-        nextTag = "h4";
-      } else if (currentTag === "h4") {
-        nextTag = null;
-      } else {
-        nextTag = "h2";
-      }
-    }
+    const currentHeading = this.selection.nearestNodeOfType(Pt$3);
+    const currentTag = currentHeading?.getTag();
+    const currentIndex = headings.indexOf(currentTag);
+    const nextTag = headings[currentIndex + 1];
 
     if (nextTag) {
       this.contents.insertNodeWrappingEachSelectedLine(() => St$3(nextTag));
@@ -8143,6 +8141,7 @@ class Selection {
       isInLink: wt$5(anchorNode, y$2) !== null,
       isInQuote: Ot$2(topLevelElement),
       isInHeading: It$2(topLevelElement),
+      headingTag: wt$5(anchorNode, Pt$3)?.getTag(),
       isInCode: selection.hasFormat("code") || wt$5(anchorNode, q$1) !== null,
       isInList: listType !== null,
       listType,
