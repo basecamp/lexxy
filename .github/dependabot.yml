@@ -21,6 +21,11 @@ updates:
   cooldown:
     default-days: 10
     semver-major-days: 30
+  groups:
+    lexical:
+      patterns:
+        - "lexical"
+        - "@lexical/*"
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
