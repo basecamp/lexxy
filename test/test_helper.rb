@@ -11,6 +11,7 @@ if ActiveSupport::TestCase.respond_to?(:fixture_paths=)
   ActiveSupport::TestCase.fixture_paths = [ File.expand_path("fixtures", __dir__) ]
   ActionDispatch::IntegrationTest.fixture_paths = ActiveSupport::TestCase.fixture_paths
   ActiveSupport::TestCase.file_fixture_path = File.expand_path("fixtures", __dir__) + "/files"
+  ActiveStorage::FixtureSet.file_fixture_path = ActiveSupport::TestCase.file_fixture_path
   ActiveSupport::TestCase.fixtures :all
 end
 
