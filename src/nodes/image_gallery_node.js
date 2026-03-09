@@ -22,14 +22,12 @@ export class ImageGalleryNode extends ElementNode {
   static importDOM() {
     return {
       div: (element) => {
-        const containsAttachment = element.querySelector(`:scope > :is(${this.#attachmentTags.join()})`)
-        if (!containsAttachment) return null
+        if (!this.#isGalleryElement(element)) return null
 
         return {
           conversion: () => {
             return {
-              node: $createImageGalleryNode(),
-              after: children => children
+              node: $createImageGalleryNode()
             }
           },
           priority: 2
@@ -44,6 +42,13 @@ export class ImageGalleryNode extends ElementNode {
 
   static isValidChild(node) {
     return $isActionTextAttachmentNode(node) && node.isPreviewableImage
+  }
+
+  static #isGalleryElement(element) {
+    const attachmentChildren = element.querySelectorAll(`:scope > :is(${this.#attachmentTags.join()})`)
+    return element.textContent.trim() === ""
+      && attachmentChildren.length > 0
+      && element.children.length === attachmentChildren.length
   }
 
   static get #attachmentTags() {
