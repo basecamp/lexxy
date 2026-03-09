@@ -87,7 +87,6 @@
   object {
     inline-size: auto;
     margin-inline: auto;
-    min-block-size: 3em;
     max-block-size: 32rem;
     object-fit: contain;
 
@@ -119,7 +118,7 @@
     }
   }
 
-  ol, ul {
+  ol, ul:not(.lexxy-prompt-menu) {
     margin-inline-start: calc(var(--lexxy-content-margin) * 1.5);
     padding: 0;
   }
