@@ -11950,6 +11950,8 @@ class LexicalPromptElement extends HTMLElement {
   #addTriggerListener() {
     const unregister = this.#editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
+        if (this.#selection.isInsideCodeBlock) return
+
         const { node, offset } = this.#selection.selectedNodeWithOffset();
         if (!node) return
 
@@ -11980,10 +11982,15 @@ class LexicalPromptElement extends HTMLElement {
   }
 
   #addCursorPositionListener() {
-    this.cursorPositionListener = this.#editor.registerUpdateListener(() => {
+    this.cursorPositionListener = this.#editor.registerUpdateListener(({ editorState }) => {
       if (this.closed) return
 
-      this.#editor.read(() => {
+      editorState.read(() => {
+        if (this.#selection.isInsideCodeBlock) {
+          this.#hidePopover();
+          return
+        }
+
         const { node, offset } = this.#selection.selectedNodeWithOffset();
         if (!node) return
 
@@ -12106,25 +12113,34 @@ class LexicalPromptElement extends HTMLElement {
     const verticalOffset = contentRect.top - editorRect.top;
 
     if (!this.popoverElement.hasAttribute("data-anchored")) {
-      this.popoverElement.style.left = `${x}px`;
+      this.#setPopoverOffsetX(x);
+      this.#setPopoverOffsetY(y + verticalOffset);
       this.popoverElement.toggleAttribute("data-anchored", true);
     }
 
-    this.popoverElement.style.top = `${y + verticalOffset}px`;
-    this.popoverElement.style.bottom = "auto";
-
     const popoverRect = this.popoverElement.getBoundingClientRect();
-    const isClippedAtBottom = popoverRect.bottom > window.innerHeight;
 
-    if (isClippedAtBottom || this.popoverElement.hasAttribute("data-clipped-at-bottom")) {
-      this.popoverElement.style.top = `${y + verticalOffset - popoverRect.height - fontSize}px`;
-      this.popoverElement.style.bottom = "auto";
+    if (popoverRect.right > window.innerWidth) {
+      this.popoverElement.toggleAttribute("data-clipped-at-right", true);
+    }
+
+    if (popoverRect.bottom > window.innerHeight) {
+      this.#setPopoverOffsetY(contentRect.height - y + fontSize);
       this.popoverElement.toggleAttribute("data-clipped-at-bottom", true);
     }
   }
 
+  #setPopoverOffsetX(value) {
+    this.popoverElement.style.setProperty("--lexxy-prompt-offset-x", `${value}px`);
+  }
+
+  #setPopoverOffsetY(value) {
+    this.popoverElement.style.setProperty("--lexxy-prompt-offset-y", `${value}px`);
+  }
+
   #resetPopoverPosition() {
     this.popoverElement.removeAttribute("data-clipped-at-bottom");
+    this.popoverElement.removeAttribute("data-clipped-at-right");
     this.popoverElement.removeAttribute("data-anchored");
   }
 
