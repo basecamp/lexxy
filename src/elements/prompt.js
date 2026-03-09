@@ -110,10 +110,10 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   #addCursorPositionListener() {
-    this.cursorPositionListener = this.#editor.registerUpdateListener(() => {
+    this.cursorPositionListener = this.#editor.registerUpdateListener(({ editorState }) => {
       if (this.closed) return
 
-      this.#editor.read(() => {
+      editorState.read(() => {
         if (this.#selection.isInsideCodeBlock) {
           this.#hidePopover()
           return
