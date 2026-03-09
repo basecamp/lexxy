@@ -454,7 +454,6 @@
     align-items: center;
     background: var(--lexxy-attachment-bg-color);
     border-radius: var(--lexxy-radius);
-    box-shadow: -0.25ch 0 0 var(--lexxy-attachment-bg-color), 0.5ch 0 0 var(--lexxy-attachment-bg-color);
     color: var(--lexxy-attachment-text-color);
     display: inline-flex;
     gap: 0.25ch;
@@ -467,11 +466,6 @@
       block-size: var(--lexxy-attachment-image-size);
       border-radius: 50%;
       inline-size: var(--lexxy-attachment-image-size);
-    }
-
-    &.node--selected {
-      --lexxy-attachment-bg-color: var(--lexxy-color-accent-dark);
-      --lexxy-attachment-text-color: var(--lexxy-color-ink-inverted);
     }
   }
 
@@ -491,5 +485,4 @@
       margin: 0;
     }
   }
-
 }
