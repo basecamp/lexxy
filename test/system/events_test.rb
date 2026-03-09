@@ -224,7 +224,7 @@ class EventsTest < ApplicationSystemTestCase
 
     find_editor.paste "some text"
     find_editor.toggle_command "insertCodeBlock"
-    page.execute_script 'document.querySelector("#events").innerHTML = ""'
+    page.execute_script 'document.querySelector(".events").innerHTML = ""'
     find_editor.paste "Hello **there**"
 
     assert_no_dispatched_event "lexxy:insert-markdown"

@@ -1,9 +1,10 @@
 import Lexxy from "../config/lexxy"
-import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
+import { $createNodeSelectionWith, SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { createElement, dispatch } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
+import { $setSelection } from "lexical"
 
 export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   static getType() {
@@ -27,6 +28,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError } = node
     super({ ...node, contentType: file.type }, key)
     this.file = file
+    this.fileName = file.name
     this.uploadUrl = uploadUrl
     this.blobUrlTemplate = blobUrlTemplate
     this.progress = progress ?? null
@@ -207,7 +209,15 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   #showUploadedAttachment(blob) {
     this.editor.update(() => {
-      this.replace(this.#toActionTextAttachmentNodeWith(blob))
+      const shouldTransferNodeSelection = this.isSelected()
+
+      const replacementNode = this.#toActionTextAttachmentNodeWith(blob)
+      this.replace(replacementNode)
+
+      if (shouldTransferNodeSelection) {
+        const nodeSelection = $createNodeSelectionWith(replacementNode)
+        $setSelection(nodeSelection)
+      }
     }, { tag: SILENT_UPDATE_TAGS })
   }
 
