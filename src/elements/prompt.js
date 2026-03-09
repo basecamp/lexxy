@@ -78,6 +78,8 @@ export class LexicalPromptElement extends HTMLElement {
   #addTriggerListener() {
     const unregister = this.#editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
+        if (this.#selection.isInsideCodeBlock) return
+
         const { node, offset } = this.#selection.selectedNodeWithOffset()
         if (!node) return
 
@@ -112,6 +114,11 @@ export class LexicalPromptElement extends HTMLElement {
       if (this.closed) return
 
       this.#editor.read(() => {
+        if (this.#selection.isInsideCodeBlock) {
+          this.#hidePopover()
+          return
+        }
+
         const { node, offset } = this.#selection.selectedNodeWithOffset()
         if (!node) return
 
