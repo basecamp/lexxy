@@ -56,4 +56,22 @@ class TrixHtmlTest < ApplicationSystemTestCase
       assert_editor_html "<p>#{lexxy_html}</p>"
     end
   end
+
+  test "load trix html with image attachment" do
+    # allow blob load error message
+    allow_console_messages
+
+    attachment = active_storage_attachments(:trix_attachment)
+    attachment_tag = %(<bc-attachment sgid="#{attachment.attachable_sgid}" content-type="image/png" url="#{rails_blob_url(attachment.blob)}"></bc-attachment>)
+    post = Post.create! body: "<div>Hello Trix #{attachment_tag}</div>"
+
+    visit edit_post_path(post, attachment_tag_name: "bc-attachment")
+
+    assert_editor_html do
+      assert_selector "p", text: "Hello Trix" do |p|
+        p.assert_no_selector "action-text-attachment"
+      end
+      assert_selector %(bc-attachment[content-type="image/png"])
+    end
+  end
 end
