@@ -16,7 +16,7 @@ module EditorHelper
 
   def assert_editor_html(expected = nil, &block)
     if block
-      Capybara.string(find_editor.value).instance_exec(&block)
+      assert Capybara.string(find_editor.value).instance_exec(&block)
     else
       wait_until { normalize_html(find_editor.value) == normalize_html(expected) }
     end
