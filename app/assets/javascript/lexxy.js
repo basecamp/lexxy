@@ -7939,9 +7939,7 @@ class ActionTextAttachmentNode extends ki {
 
   #createDOMForImage(options = {}) {
     const img = createElement("img", { src: this.src, draggable: false, alt: this.altText, ...this.#imageDimensions, ...options });
-    const container = createElement("div", { className: "attachment__container" });
-    container.appendChild(img);
-    return container
+    return img
   }
 
   get #imageDimensions() {
@@ -9140,6 +9138,7 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError } = node;
     super({ ...node, contentType: file.type }, key);
     this.file = file;
+    this.fileName = file.name;
     this.uploadUrl = uploadUrl;
     this.blobUrlTemplate = blobUrlTemplate;
     this.progress = progress ?? null;
@@ -9320,7 +9319,15 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   #showUploadedAttachment(blob) {
     this.editor.update(() => {
-      this.replace(this.#toActionTextAttachmentNodeWith(blob));
+      const shouldTransferNodeSelection = this.isSelected();
+
+      const replacementNode = this.#toActionTextAttachmentNodeWith(blob);
+      this.replace(replacementNode);
+
+      if (shouldTransferNodeSelection) {
+        const nodeSelection = $createNodeSelectionWith(replacementNode);
+        wo(nodeSelection);
+      }
     }, { tag: SILENT_UPDATE_TAGS });
   }
 
