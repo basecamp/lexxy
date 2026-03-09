@@ -1,6 +1,6 @@
 require "application_system_test_case"
 
-class ActionTextLoadTest < ApplicationSystemTestCase
+class FormTest < ApplicationSystemTestCase
   test "can create new records" do
     visit posts_path
     click_on "New post"
