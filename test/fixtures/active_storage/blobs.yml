@@ -1,0 +1,1 @@
+example_blob: <%= ActiveStorage::FixtureSet.blob filename: "example.png", content_type: "image/png" %>

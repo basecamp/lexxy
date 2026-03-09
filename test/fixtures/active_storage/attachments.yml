@@ -1,0 +1,4 @@
+trix_attachment:
+  name: example attachment
+  record: trix_attachment (ActionText::RichText)
+  blob: example_blob
