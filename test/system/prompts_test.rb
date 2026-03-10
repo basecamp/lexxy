@@ -81,6 +81,13 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_no_css ".lexxy-prompt-menu--visible"
   end
 
+  test "prompt does not trigger inside code block" do
+    find_editor.toggle_command("insertCodeBlock")
+    find_editor.send "1"
+
+    assert_no_css ".lexxy-prompt-menu--visible"
+  end
+
   test "space support in multichar triggers" do
     find_editor.send "person:"
     find_editor.send "peter johnson"

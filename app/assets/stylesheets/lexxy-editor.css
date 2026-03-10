@@ -198,6 +198,12 @@
         inset-inline-end: 0;
         position: absolute;
       }
+
+      lexxy-node-delete-button {
+        inset-block-start: 1.5ch;
+        inset-inline-end: 1.5ch;
+        inset-inline-start: unset;
+      }
     }
   }
 
@@ -210,6 +216,7 @@
     lexxy-node-delete-button {
       inset-block-start: 50%;
       inset-inline-end: 1ch;
+      inset-inline-start: unset;
       transform: translate(0, -50%);
     }
   }
@@ -238,11 +245,6 @@
         box-sizing: border-box;
         padding: 1ch;
         padding-block-end: 0;
-      }
-
-      lexxy-node-delete-button {
-        inset-block-start: 1.5ch;
-        inset-inline-end: 1.5ch;
       }
     }
   }
@@ -592,7 +594,7 @@
 /* Floating controls */
 :where(.lexxy-floating-controls) {
   --button-size: 2.3lh;
-  --table-tools-radius: calc(var(--lexxy-radius) * 1.5);
+  --floating-tools-radius: calc(var(--lexxy-radius) * 1.5);
 
   color: var(--lexxy-color-ink-inverted);
   font-size: var(--lexxy-text-small);
@@ -608,7 +610,7 @@
     color: var(--lexxy-color-ink-inverted);
     display: flex;
     justify-content: center;
-    line-height: 1;
+    line-height: inherit;
     min-block-size: var(--button-size);
     min-inline-size: var(--button-size);
     user-select: none;
@@ -654,7 +656,7 @@
 
   .lexxy-floating-controls__group {
     background-color: var(--lexxy-color-ink);
-    border-radius: var(--table-tools-radius);
+    border-radius: var(--floating-tools-radius);
     padding: 0.25ch;
   }
 
@@ -681,7 +683,7 @@
 
         .lexxy-table-control__more-menu-details {
           background: var(--lexxy-color-ink);
-          border-radius: var(--table-tools-radius);
+          border-radius: var(--floating-tools-radius);
           display: flex;
           flex-direction: column;
           gap: 0.25ch;
@@ -730,7 +732,7 @@
         span {
           align-items: center;
           background: var(--lexxy-color-ink);
-          border-radius: var(--table-tools-radius);
+          border-radius: var(--floating-tools-radius);
           color: color-mix(in srgb, var(--lexxy-color-ink-inverted) 80%, transparent);
           display: flex;
           inset-inline-end: calc(var(--button-size) + 1ch);
@@ -764,11 +766,10 @@
   /* Attachment delete button */
 
   &:is(lexxy-node-delete-button) {
-    inset-block-start: 1.5ch;
-    inset-inline-end: 1.5ch;
+    inset-block-start: 0;
+    inset-inline-start: 100%;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.1s ease-in-out;
 
     .node--selected & {
       opacity: 1;
@@ -819,8 +820,10 @@
 
 :where(.lexxy-prompt-menu) {
   --lexxy-prompt-avatar-size: 24px;
-  --lexxy-prompt-min-width: 20ch;
   --lexxy-prompt-padding: 0.5ch;
+
+  --lexxy-prompt-offset-x: 0;
+  --lexxy-prompt-offset-y: 0;
 
   background-color: var(--lexxy-color-canvas);
   border-radius: calc(var(--lexxy-prompt-padding) * 2);
@@ -829,13 +832,27 @@
   font-family: var(--lexxy-font-base);
   font-size: var(--lexxy-text-small);
   list-style: none;
+  inset-block-start: var(--lexxy-prompt-offset-y);
+  inset-inline-start: var(--lexxy-prompt-offset-x);
   margin: 0;
   max-block-size: 200px;
-  min-inline-size: var(--lexxy-prompt-min-width);
+  max-inline-size: min(20ch, calc(100% - var(--lexxy-prompt-offset-x)));
+  min-inline-size: 20ch;
   overflow: auto;
   padding: var(--lexxy-prompt-padding);
+  position: absolute;
   visibility: hidden;
   z-index: var(--lexxy-z-popup);
+
+  &[data-clipped-at-right] {
+    inset-inline-start: unset;
+    inset-inline-end: 1ch;
+  }
+
+  &[data-clipped-at-bottom] {
+    inset-block-start: unset;
+    inset-block-end: var(--lexxy-prompt-offset-y);
+  }
 }
 
 :where(.lexxy-prompt-menu--visible) {
@@ -849,7 +866,6 @@
   display: flex;
   gap: var(--lexxy-prompt-padding);
   padding: var(--lexxy-prompt-padding);
-  white-space: nowrap;
 
   &:hover {
     background-color: var(--lexxy-color-ink-lightest);
@@ -875,4 +891,35 @@
 :where(.lexxy-prompt-menu__item--empty) {
   color: var(--lexxy-color-ink-medium);
   padding: var(--lexxy-prompt-padding);
+}
+
+
+/* --------------------------------------------------------------------------
+/* Custom attachments */
+action-text-attachment[content-type^="application/vnd.actiontext"] {
+  &.node--selected {
+    --lexxy-attachment-bg-color: var(--lexxy-color-accent-dark);
+    --lexxy-attachment-text-color: var(--lexxy-color-ink-inverted);
+
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+    outline: none;
+  }
+
+  lexxy-node-delete-button {
+    line-height: 1lh;
+
+    .lexxy-floating-controls__group {
+      --button-size: 1lh;
+
+      background-color: var(--lexxy-color-accent-dark);
+      border-start-start-radius: 0;
+      border-end-start-radius: 0;
+      padding: 0;
+
+      button {
+        border-radius: var(--floating-tools-radius);
+      }
+    }
+  }
 }
