@@ -1,12 +1,9 @@
 :root {
-  --sandbox-background-color: oklch(98% 0 0);
   --sandbox-text-color: oklch(20% 0 0);
   --sandbox-code-color: #2d3748;
 
   /* Dark mode colors */
   @media (prefers-color-scheme: dark) {
-    --sandbox-background-color: oklch(15% 0 0);
-    --sandbox-text-color: oklch(96% 0 0);
     --sandbox-code-color: #f7fafc;
 
     /* Lexxy dark mode colors */
@@ -55,8 +52,8 @@ html {
 }
 
 body {
-  background-color: var(--sandbox-background-color);
-  color: var(--sandbox-text-color);
+  background-color: var(--lexxy-color-ink-lightest);
+  color: var(--lexxy-color-ink);
   margin: 0;
   padding: 0;
 }
@@ -190,7 +187,7 @@ section > h2 {
     border: 1px solid var(--lexxy-color-ink-lighter);
     border-radius: 0.25rem;
     text-decoration: none;
-    color: var(--sandbox-text-color);
+    color: inherit;
     padding: 0.5rem 1rem;
     cursor: pointer;
     font-size: 0.8em;
@@ -245,7 +242,7 @@ div.container {
   input[type="submit"] {
     background: var(--lexxy-color-accent-dark);
     border-color: var(--lexxy-color-accent-dark);
-    color: var(--lexxy-color-ink-inverted);
+    color: white;
   }
 }
 
@@ -259,7 +256,7 @@ header {
 }
 
 article.post {
-  background: white;
+  background: var(--lexxy-color-ink-inverted);
   border: 1px solid rgba(128, 128, 128, 0.2);
   border-radius: 0.5em;
   padding: 2em;
@@ -291,6 +288,7 @@ div.actions {
 
 div.title {
   input {
+    background: transparent;
     border: 1px solid var(--lexxy-color-ink-lighter);
     border-radius: 8px;
     box-sizing: border-box;
