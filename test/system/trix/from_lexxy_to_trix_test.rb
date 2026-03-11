@@ -16,7 +16,7 @@ class Trix::FromLexxyToTrixTest < ApplicationSystemTestCase
 
     visit edit_trix_post_path(Post.last)
 
-    enter_trix_text " and Trix"
+    fill_trix_editor with: " and Trix"
     click_on "Update Post"
 
     assert_text "Post was successfully updated."
@@ -41,7 +41,7 @@ class Trix::FromLexxyToTrixTest < ApplicationSystemTestCase
     # Edit with Trix and save
     visit edit_trix_post_path(Post.last)
 
-    enter_trix_text " edited"
+    fill_trix_editor with: " edited"
     click_on "Update Post"
 
     assert_text "Post was successfully updated."

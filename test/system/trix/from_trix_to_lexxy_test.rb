@@ -9,7 +9,7 @@ class Trix::FromTrixToLexxyTest < ApplicationSystemTestCase
     visit new_trix_post_path
 
     fill_in "Post title", with: "Trix to Lexxy"
-    enter_trix_text "Hello from Trix"
+    fill_trix_editor with: "Hello from Trix"
     click_on "Create Post"
 
     assert_text "Post was successfully created."

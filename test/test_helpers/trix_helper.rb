@@ -1,7 +1,7 @@
 module TrixHelper
-  def enter_trix_text(text)
+  def fill_trix_editor(with:)
     find("trix-editor")
-    page.execute_script <<~JS, text
+    page.execute_script <<~JS, with
       const editor = document.querySelector("trix-editor").editor
       const position = editor.getDocument().toString().trimEnd().length
       editor.setSelectedRange([position, position])
