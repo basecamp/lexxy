@@ -5,6 +5,7 @@ const global = new Configuration({
   attachmentTagName: "action-text-attachment",
   attachmentContentTypeNamespace: "actiontext",
   authenticatedUploads: false,
+  remoteImages: true,
   extensions: []
 })
 

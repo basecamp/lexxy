@@ -1,9 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
-import { bytesToHumanSize } from "../helpers/storage_helper"
-import { extractFileName } from "../helpers/storage_helper"
-
+import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
 
 export class ActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -22,30 +20,42 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return {
       [this.TAG_NAME]: () => {
         return {
-          conversion: (attachment) => ({
-            node: new ActionTextAttachmentNode({
-              sgid: attachment.getAttribute("sgid"),
-              src: attachment.getAttribute("url"),
-              previewable: attachment.getAttribute("previewable"),
-              altText: attachment.getAttribute("alt"),
-              caption: attachment.getAttribute("caption"),
-              contentType: attachment.getAttribute("content-type"),
-              fileName: attachment.getAttribute("filename"),
-              fileSize: attachment.getAttribute("filesize"),
-              width: attachment.getAttribute("width"),
-              height: attachment.getAttribute("height")
-            })
-          }), priority: 1
+          conversion: (attachment) => {
+            const sgid = attachment.getAttribute("sgid")
+            const contentType = attachment.getAttribute("content-type") || ""
+            const isRemoteImage = !sgid && contentType.startsWith("image/")
+
+            if (isRemoteImage && !Lexxy.global.get("remoteImages")) {
+              return { node: null }
+            }
+
+            return {
+              node: new ActionTextAttachmentNode({
+                sgid,
+                src: attachment.getAttribute("url"),
+                previewable: attachment.getAttribute("previewable"),
+                altText: attachment.getAttribute("alt"),
+                caption: attachment.getAttribute("caption"),
+                contentType,
+                fileName: attachment.getAttribute("filename"),
+                fileSize: attachment.getAttribute("filesize"),
+                width: attachment.getAttribute("width"),
+                height: attachment.getAttribute("height")
+              })
+            }
+          }, priority: 1
         }
       },
       "img": () => {
         return {
           conversion: (img) => {
+            if (!Lexxy.global.get("remoteImages")) return { node: null }
+
             const fileName = extractFileName(img.getAttribute("src") ?? "")
             return {
               node: new ActionTextAttachmentNode({
                 src: img.getAttribute("src"),
-                fileName: fileName,
+                fileName,
                 caption: img.getAttribute("alt") || "",
                 contentType: "image/*",
                 width: img.getAttribute("width"),
@@ -65,8 +75,8 @@ export class ActionTextAttachmentNode extends DecoratorNode {
             return {
               node: new ActionTextAttachmentNode({
                 src: videoSource,
-                fileName: fileName,
-                contentType: contentType
+                fileName,
+                contentType
               })
             }
           }, priority: 1
