@@ -1,0 +1,21 @@
+<% content_for :head do %>
+  <link rel="stylesheet" href="https://unpkg.com/trix@2.1.12/dist/trix.css">
+  <script src="https://unpkg.com/trix@2.1.12/dist/trix.umd.min.js"></script>
+<% end %>
+
+<%= form_with model: post, url: (post.persisted? ? trix_post_path(post) : trix_posts_path), data: { turbo: false } do |form| %>
+  <div class="title">
+    <%= form.text_field :title, placeholder: "Post title", "aria-label": "Post title" %>
+  </div>
+
+  <div class="body">
+    <input type="hidden" id="trix_post_body_input" name="post[body]" value="<%= post.body.to_trix_html %>">
+    <trix-editor input="trix_post_body_input"
+      data-direct-upload-url="<%= main_app.rails_direct_uploads_url %>"
+      data-blob-url-template="<%= main_app.rails_service_blob_url(":signed_id", ":filename") %>"></trix-editor>
+  </div>
+
+  <div class="actions">
+    <%= form.submit %>
+  </div>
+<% end %>
