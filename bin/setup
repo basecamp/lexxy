@@ -8,7 +8,7 @@ echo "== Installing JavaScript dependencies =="
 yarn install
 
 echo "== Installing Playwright browsers =="
-npx playwright install --with-deps
+npx playwright install
 
 echo "== Preparing database =="
 bin/rails db:prepare
