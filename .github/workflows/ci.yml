@@ -75,10 +75,24 @@ jobs:
           bin/rails db:test:prepare
           bin/rails test:all
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: yarn test:browser:chromium
+
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: screenshots
           path: ${{ github.workspace }}/test/dummy/tmp/screenshots
+          if-no-files-found: ignore
+
+      - name: Keep Playwright report
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: ${{ github.workspace }}/test/browser/playwright-report/
           if-no-files-found: ignore

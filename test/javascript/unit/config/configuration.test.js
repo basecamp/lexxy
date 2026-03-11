@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import Configuration from "../../../src/config/configuration"
+import Configuration from "src/config/configuration"
 
 const config = new Configuration({
   default: { richText: true },

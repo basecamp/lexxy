@@ -1,7 +1,7 @@
 import { expect, test } from "vitest"
 import { createElement } from "../helpers/dom_helper"
-import EditorConfiguration from "../../../src/editor/configuration"
-import { configure } from "../../../src/index"
+import EditorConfiguration from "src/editor/configuration"
+import { configure } from "src/index"
 
 configure({
   default: {

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { addBlockSpacing, parseHtml } from "../../../src/helpers/html_helper"
+import { addBlockSpacing, parseHtml } from "src/helpers/html_helper"
 
 function bodyHtml(doc) {
   return doc.body.innerHTML
