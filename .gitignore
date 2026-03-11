@@ -12,6 +12,11 @@
 /node_modules/
 /app/assets/javascript/*.js.map
 
+# Playwright
+/test/browser/test-results/
+/test/browser/playwright-report/
+/test/browser/blob-report/
+
 # Jekyll docs
 /docs/_site/
 /docs/.jekyll-cache/

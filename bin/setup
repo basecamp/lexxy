@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "== Installing Ruby dependencies =="
+bundle install
+
+echo "== Installing JavaScript dependencies =="
+yarn install
+
+echo "== Installing Playwright browsers =="
+npx playwright install
+
+echo "== Preparing database =="
+bin/rails db:prepare
+
+echo "== Setup complete! =="

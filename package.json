@@ -16,6 +16,8 @@
   "license": "MIT",
   "devDependencies": {
     "@eslint/js": "^9.15.0",
+    "@playwright/test": "^1.52.0",
+    "@rails/activestorage": "^8.1.200",
     "@rollup/plugin-commonjs": "^29.0.0",
     "@rollup/plugin-inject": "^5.0.5",
     "@rollup/plugin-node-resolve": "^16.0.1",
@@ -25,6 +27,7 @@
     "rollup": "^4.44.1",
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-gzip": "^4.1.1",
+    "vite": "^7.3.1",
     "vitest": "^4.0.16"
   },
   "scripts": {
@@ -32,7 +35,13 @@
     "build:npm": "rollup -c rollup.config.npm.mjs",
     "watch": "rollup -wc --watch.onEnd=\"rails restart\"",
     "lint": "eslint",
-    "test": "vitest --environment=jsdom",
+    "test": "vitest",
+    "test:browser": "npx playwright test --config test/browser/playwright.config.js",
+    "test:browser:chromium": "npx playwright test --config test/browser/playwright.config.js --project=chromium",
+    "test:browser:firefox": "npx playwright test --config test/browser/playwright.config.js --project=firefox",
+    "test:browser:webkit": "npx playwright test --config test/browser/playwright.config.js --project=webkit",
+    "test:browser:headed": "npx playwright test --config test/browser/playwright.config.js --headed",
+    "test:browser:debug": "npx playwright test --config test/browser/playwright.config.js --debug",
     "prerelease": "yarn build:npm",
     "release": "yarn build:npm && yarn publish"
   },

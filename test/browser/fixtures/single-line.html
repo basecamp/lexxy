@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — Single Line</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <form>
+    <div class="title">
+      <input type="text" name="post[title]" placeholder="Post title" aria-label="Post title">
+    </div>
+
+    <div class="body">
+      <lexxy-editor class="lexxy-content" placeholder="Write something..." single-line="true" required></lexxy-editor>
+    </div>
+
+    <div class="events"></div>
+  </form>
+
+  <script type="module" src="/editor.js"></script>
+</body>
+</html>
