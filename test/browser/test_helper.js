@@ -6,5 +6,3 @@ export const test = base.extend({
     await use(new EditorHandle(page))
   },
 })
-
-export { expect } from "@playwright/test"

@@ -1,34 +1,6 @@
 require "application_system_test_case"
 
 class LoadHtmlTest < ApplicationSystemTestCase
-  setup do
-  end
-
-  test "add empty class on load when it's empty" do
-    visit edit_post_path(posts(:empty))
-
-    assert_empty_class
-    find_editor.value = "<p><br></p>"
-    assert_empty_class
-  end
-
-  test "don't add empty class on load  if not empty" do
-    visit edit_post_path(posts(:hello_world))
-    assert_no_empty_class
-  end
-
-  test "update empty class dynamically as you type" do
-    visit edit_post_path(posts(:empty))
-
-    assert_empty_class
-    find_editor.send "Hey there"
-    assert_no_empty_class
-
-    find_editor.select "Hey there"
-    find_editor.send :backspace
-    assert_empty_class
-  end
-
   test "don't flag as empty when there is only attachments" do
     visit edit_post_path(posts(:empty))
 

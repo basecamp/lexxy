@@ -1,4 +1,5 @@
-import { test, expect } from "../fixtures.js"
+import { test } from "../test_helper.js"
+import { expect } from "@playwright/test"
 import { assertEditorHtml, assertEditorContent } from "../helpers/assertions.js"
 
 test.describe("Paste", () => {

@@ -1,4 +1,5 @@
-import { test, expect } from "../fixtures.js"
+import { test } from "../test_helper.js"
+import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../helpers/assertions.js"
 
 const HELLO_EVERYONE = "<p>Hello everyone</p>"

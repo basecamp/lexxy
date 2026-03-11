@@ -32,6 +32,10 @@ export class EditorHandle {
     return this.locator.evaluate((el) => el.isBlank)
   }
 
+  async focus() {
+    await this.content.focus()
+  }
+
   async click() {
     await this.content.click()
   }
