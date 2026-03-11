@@ -19,7 +19,7 @@ class Trix::FromTrixToLexxyTest < ApplicationSystemTestCase
 
     assert_editor_html "<p>Hello from Trix</p>"
 
-    find_editor.send [:end]
+    find_editor.send [ :end ]
     find_editor.send " and Lexxy"
     click_on "Update Post"
 
