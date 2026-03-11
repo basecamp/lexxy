@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — External Toolbar</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <form>
+    <div class="title">
+      <input type="text" name="post[title]" placeholder="Post title" aria-label="Post title">
+    </div>
+
+    <div class="body">
+      <lexxy-toolbar id="external_toolbar">
+        <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="Bold">bold</button>
+        <details class="lexxy-editor__toolbar-overflow">
+          <summary class="lexxy-editor__toolbar-button" aria-label="Show more toolbar buttons">&bull;&bull;&bull;</summary>
+          <div class="lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons"></div>
+        </details>
+      </lexxy-toolbar>
+
+      <lexxy-editor class="lexxy-content" placeholder="Write something..." toolbar="external_toolbar" required></lexxy-editor>
+    </div>
+
+    <div class="events"></div>
+  </form>
+
+  <script type="module" src="/editor.js"></script>
+</body>
+</html>

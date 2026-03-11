@@ -75,12 +75,6 @@ jobs:
           bin/rails db:test:prepare
           bin/rails test:all
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Run Playwright tests
-        run: yarn test:browser:chromium
-
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@v7
         if: failure()
@@ -89,10 +83,35 @@ jobs:
           path: ${{ github.workspace }}/test/dummy/tmp/screenshots
           if-no-files-found: ignore
 
+  browser-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run Playwright tests
+        run: yarn test:browser:${{ matrix.browser }}
+
       - name: Keep Playwright report
         uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.browser }}
           path: ${{ github.workspace }}/test/browser/playwright-report/
           if-no-files-found: ignore

@@ -4,7 +4,7 @@ import { assertEditorHtml } from "../helpers/assertions.js"
 
 test.describe("Focus", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await page.waitForSelector("lexxy-editor[connected]")
   })
 
@@ -21,7 +21,7 @@ test.describe("Focus", () => {
   })
 
   test("autofocus attribute", async ({ page, editor }) => {
-    await page.goto("/posts/new?autofocus=true")
+    await page.goto("/autofocus.html")
     await editor.waitForConnected()
 
     await expect(editor.content).toBeFocused()

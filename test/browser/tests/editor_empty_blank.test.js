@@ -3,7 +3,7 @@ import { expect } from "@playwright/test"
 
 test.describe("Editor empty and blank", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await page.waitForSelector("lexxy-editor[connected]")
   })
 

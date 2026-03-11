@@ -50,6 +50,7 @@ export class EditorHandle {
       } else {
         await this.content.pressSequentially(key)
       }
+      await this.flush()
     }
   }
 

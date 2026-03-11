@@ -4,7 +4,7 @@ import { assertEditorHtml, assertEditorContent } from "../helpers/assertions.js"
 
 test.describe("Paste", () => {
   test("convert to markdown on paste", async ({ page, editor }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await editor.paste("Hello **there**")
@@ -12,7 +12,7 @@ test.describe("Paste", () => {
   })
 
   test("create links when pasting URLs", async ({ page, editor }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
     await editor.setValue("<p>Hello everyone</p>")
 
@@ -27,7 +27,7 @@ test.describe("Paste", () => {
   })
 
   test("keep content when pasting URLs", async ({ page, editor }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
     await editor.setValue("<p>Hello everyone</p>")
 
@@ -43,7 +43,7 @@ test.describe("Paste", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
     await editor.setValue("<p>Hello everyone</p>")
 
@@ -61,7 +61,7 @@ test.describe("Paste", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await editor.send("Hello")
@@ -92,7 +92,7 @@ test.describe("Paste", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await editor.paste("some text")
@@ -106,7 +106,7 @@ test.describe("Paste", () => {
   })
 
   test("don't convert markdown when disabled", async ({ page, editor }) => {
-    await page.goto("/posts/new?markdown_disabled=true")
+    await page.goto("/markdown-disabled.html")
     await editor.waitForConnected()
 
     await editor.click()

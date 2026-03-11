@@ -3,7 +3,7 @@ import { assertEditorHtml } from "../helpers/assertions.js"
 
 test.describe("Single line", () => {
   test("disable multi-line", async ({ page, editor }) => {
-    await page.goto("/posts/new?multi_line_disabled=true")
+    await page.goto("/single-line.html")
     await editor.waitForConnected()
 
     await editor.send("Hello")

@@ -4,7 +4,7 @@ import { assertEditorHtml, assertEditorContent } from "../helpers/assertions.js"
 
 test.describe("Horizontal divider", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await page.waitForSelector("lexxy-editor[connected]")
     await page.waitForSelector("lexxy-toolbar[connected]")
   })

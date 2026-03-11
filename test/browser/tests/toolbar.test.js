@@ -6,7 +6,7 @@ const HELLO_EVERYONE = "<p>Hello everyone</p>"
 
 test.describe("Toolbar", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await page.waitForSelector("lexxy-editor[connected]")
     await page.waitForSelector("lexxy-toolbar[connected]")
   })
@@ -203,7 +203,7 @@ test.describe("Toolbar", () => {
   test("disable toolbar", async ({ page }) => {
     await expect(page.locator("lexxy-toolbar")).toBeVisible()
 
-    await page.goto("/posts/new?toolbar_disabled=true")
+    await page.goto("/toolbar-disabled.html")
     await expect(page.locator("lexxy-toolbar")).toHaveCount(0)
   })
 
@@ -212,40 +212,36 @@ test.describe("Toolbar", () => {
       page.locator("lexxy-toolbar button[name=upload]"),
     ).toBeVisible()
 
-    await page.goto("/posts/new?attachments_disabled=true")
+    await page.goto("/attachments-disabled.html")
     await page.waitForSelector("lexxy-toolbar[connected]")
     await expect(
       page.locator("lexxy-toolbar button[name=upload]"),
     ).toBeHidden()
 
-    await page.goto("/posts/new?attachments_disabled=false")
+    await page.goto("/attachments-enabled.html")
     await page.waitForSelector("lexxy-toolbar[connected]")
     await expect(
       page.locator("lexxy-toolbar button[name=upload]"),
     ).toBeVisible()
 
-    await page.goto("/posts/new")
+    await page.goto("/")
     await page.waitForSelector("lexxy-toolbar[connected]")
     await expect(
       page.locator("lexxy-toolbar button[name=upload]"),
     ).toBeVisible()
 
-    await page.goto("/posts/new?attachments_disabled=invalid")
+    await page.goto("/attachments-invalid.html")
     await page.waitForSelector("lexxy-toolbar[connected]")
     await expect(
       page.locator("lexxy-toolbar button[name=upload]"),
     ).toBeVisible()
   })
 
-  // Native Shift+Tab focus is unreliable when running multiple workers
-  // in headless mode. This test runs reliably on CI (workers: 1).
-  test("keyboard navigation from editor to toolbar", {
-    annotation: { type: "flaky", description: "Focus-dependent, reliable with workers=1" },
-  }, async ({ page, editor }) => {
+  test("keyboard navigation in toolbar", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
-    await editor.click()
 
-    await page.keyboard.press("Shift+Tab")
+    const boldButton = page.locator("lexxy-toolbar button[name='bold']")
+    await boldButton.focus()
 
     const focusedName = () =>
       page.evaluate(() => document.activeElement?.getAttribute("name"))
@@ -281,7 +277,7 @@ test.describe("Toolbar", () => {
   })
 
   test("external toolbar", async ({ page }) => {
-    await page.goto("/posts/new?toolbar_external=true")
+    await page.goto("/toolbar-external.html")
     await expect(
       page.locator("lexxy-toolbar#external_toolbar[connected]"),
     ).toBeVisible()

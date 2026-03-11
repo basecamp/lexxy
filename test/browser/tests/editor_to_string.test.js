@@ -3,7 +3,7 @@ import { assertEditorPlainText } from "../helpers/assertions.js"
 
 test.describe("Editor toString", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await page.waitForSelector("lexxy-editor[connected]")
   })
 
@@ -25,19 +25,16 @@ test.describe("Editor toString", () => {
   })
 
   test("toString demo value", async ({ editor }) => {
-    await editor.setValue(`
-    <h3>Lexxy</h3>
-    <p>Introducing <a href="https://github.com/basecamp/lexxy">Lexxy</a></p>
-    <pre data-language="html" data-highlight-language="html">
-    &lt;lexxy-editor placeholder="It all starts here..."&gt;<br>&lt;/lexxy-editor&gt;</pre>
-    <h4>Features</h4>
-    <ul>
-      <li>Built on top of Lexical</li>
-     <li>Text <mark style="color: var(--highlight-1);">highlights</mark></li>
-    </ul>
-    <blockquote>Quote block</blockquote>
-    <hr />
-    `)
+    await editor.setValue(`<h3>Lexxy</h3>
+<p>Introducing <a href="https://github.com/basecamp/lexxy">Lexxy</a></p>
+<pre data-language="html" data-highlight-language="html">&lt;lexxy-editor placeholder="It all starts here..."&gt;<br>&lt;/lexxy-editor&gt;</pre>
+<h4>Features</h4>
+<ul>
+  <li>Built on top of Lexical</li>
+  <li>Text <mark style="color: var(--highlight-1);">highlights</mark></li>
+</ul>
+<blockquote>Quote block</blockquote>
+<hr />`)
 
     await assertEditorPlainText(
       editor,

@@ -13,7 +13,7 @@ export default defineConfig({
     : [["list"], ["html", { open: "on-failure", outputFolder: "./playwright-report" }]],
 
   use: {
-    baseURL: "http://lexxy.localhost:45678",
+    baseURL: "http://localhost:5173",
     trace: "on-first-retry",
     video: "on-first-retry",
     screenshot: "only-on-failure",
@@ -25,14 +25,11 @@ export default defineConfig({
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
   ],
 
-  globalSetup: "./global-setup.js",
-
   webServer: {
-    command: "bundle exec rails server -p 45678 -e test",
-    url: "http://lexxy.localhost:45678",
+    command: `npx vite --config ${import.meta.dirname}/vite.config.js`,
+    url: "http://localhost:5173",
     reuseExistingServer: !isCI,
-    cwd: `${import.meta.dirname}/../dummy`,
-    timeout: 30_000,
+    timeout: 15_000,
   },
 
   outputDir: "./test-results",

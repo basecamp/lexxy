@@ -5,7 +5,7 @@ const EMPTY_SELECTOR = "lexxy-editor.lexxy-editor--empty"
 
 test.describe("Empty status", () => {
   test("add empty class on load when it's empty", async ({ page, editor }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await expect(page.locator(EMPTY_SELECTOR)).toBeVisible()
@@ -18,7 +18,7 @@ test.describe("Empty status", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
     await editor.setValue("<p>Hello everyone</p>")
 
@@ -29,7 +29,7 @@ test.describe("Empty status", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await expect(page.locator(EMPTY_SELECTOR)).toBeVisible()

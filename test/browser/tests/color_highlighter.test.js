@@ -3,7 +3,7 @@ import { assertEditorHtml } from "../helpers/assertions.js"
 
 test.describe("Color highlighter", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await page.waitForSelector("lexxy-editor[connected]")
     await page.waitForSelector("lexxy-toolbar[connected]")
   })

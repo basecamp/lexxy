@@ -4,7 +4,7 @@ import { assertEditorHtml, assertEditorContent } from "../helpers/assertions.js"
 
 test.describe("Events", () => {
   test("no lexxy:change event on initial load", async ({ page, editor }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await expect(page.locator("[data-event='lexxy:change']")).toHaveCount(0)
@@ -14,7 +14,7 @@ test.describe("Events", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await editor.focus()
@@ -25,7 +25,7 @@ test.describe("Events", () => {
   })
 
   test("using toolbar dispatches lexxy:focus", async ({ page, editor }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await page.locator("input[name='post[title]']").click()
@@ -40,7 +40,7 @@ test.describe("Events", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await editor.focus()
@@ -54,7 +54,7 @@ test.describe("Events", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await editor.focus()
@@ -73,7 +73,7 @@ test.describe("Events", () => {
   })
 
   test("dispatch lexxy:change event on edits", async ({ page, editor }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await editor.send("Y")
@@ -85,7 +85,7 @@ test.describe("Events", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await expect(
@@ -103,7 +103,7 @@ test.describe("Events", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await editor.paste("Hello **there**")
@@ -121,7 +121,7 @@ test.describe("Events", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await page.evaluate(() => {
@@ -159,7 +159,7 @@ test.describe("Events", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await page.evaluate(() => {
@@ -184,7 +184,7 @@ test.describe("Events", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await page.evaluate(() => {
@@ -209,7 +209,7 @@ test.describe("Events", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await page.evaluate(() => {
@@ -232,7 +232,7 @@ test.describe("Events", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await editor.paste("https://37signals.com")
@@ -249,7 +249,7 @@ test.describe("Events", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new?markdown_disabled=true")
+    await page.goto("/markdown-disabled.html")
     await editor.waitForConnected()
 
     await editor.click()
@@ -265,7 +265,7 @@ test.describe("Events", () => {
     page,
     editor,
   }) => {
-    await page.goto("/posts/new")
+    await page.goto("/")
     await editor.waitForConnected()
 
     await editor.paste("some text")

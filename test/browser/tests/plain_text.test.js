@@ -4,7 +4,7 @@ import { assertEditorHtml } from "../helpers/assertions.js"
 
 test.describe("Plain text", () => {
   test.beforeEach(async ({ page, editor }) => {
-    await page.goto("/posts/new?rich_text_disabled=true")
+    await page.goto("/rich-text-disabled.html")
     await editor.waitForConnected()
   })
 
