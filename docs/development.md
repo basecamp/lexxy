@@ -61,6 +61,8 @@ yarn lint
 
 Most editor behavior is tested in Playwright (`test/browser/tests/`). The remaining Rails system tests (`test/system/`) only cover what genuinely needs Rails: Action Text rendering, Active Storage uploads, authenticated storage, and SGID resolution.
 
+**Note:** Playwright's bundled WebKit is built for Ubuntu and may not work on other Linux distributions (e.g. Arch) due to system library version mismatches. Chromium and Firefox work everywhere. WebKit coverage is guaranteed by CI.
+
 ## Documentation
 
 To run the documentation site locally:
