@@ -6,6 +6,14 @@ nav_order: 7
 
 # Development
 
+## Setup
+
+Install all dependencies (Ruby gems, Node packages, Playwright browsers, and database):
+
+```bash
+bin/setup
+```
+
 ## Local development
 
 To build the JS source when it changes, run:
@@ -44,7 +52,6 @@ yarn test:browser:webkit
 yarn test:browser:headed
 
 # Rails system tests
-bin/rails db:test:prepare
 bin/rails test:all
 
 # Lint

@@ -113,6 +113,10 @@ test.describe("Attachments", () => {
 
     await caption.click()
     await caption.pressSequentially("My caption")
+
+    // Blur the caption first to trigger the save, then press Tab
+    await caption.evaluate((el) => el.blur())
+    await editor.flush()
     await caption.press("Tab")
 
     await assertEditorValueContains(editor, 'caption="My caption"')
