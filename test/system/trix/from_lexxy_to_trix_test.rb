@@ -70,15 +70,4 @@ class Trix::FromLexxyToTrixTest < ApplicationSystemTestCase
     assert_text "Post was successfully updated."
     assert_selector "action-text-attachment[content-type='image/png']", count: 2
   end
-
-  private
-    def enter_trix_text(text)
-      find("trix-editor")
-      page.execute_script <<~JS, text
-        const editor = document.querySelector("trix-editor").editor
-        const position = editor.getDocument().toString().trimEnd().length
-        editor.setSelectedRange([position, position])
-        editor.insertString(arguments[0])
-      JS
-    end
 end
