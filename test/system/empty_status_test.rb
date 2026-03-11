@@ -1,6 +1,6 @@
 require "application_system_test_case"
 
-class LoadHtmlTest < ApplicationSystemTestCase
+class EmptyStatusTest < ApplicationSystemTestCase
   test "don't flag as empty when there is only attachments" do
     visit edit_post_path(posts(:empty))
 
