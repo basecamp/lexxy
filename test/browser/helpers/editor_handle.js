@@ -117,6 +117,14 @@ export class EditorHandle {
     }, shift)
   }
 
+  async uploadFile(filePath) {
+    const [fileChooser] = await Promise.all([
+      this.page.waitForEvent("filechooser"),
+      this.locator.locator("lexxy-toolbar button[name='upload']").click(),
+    ])
+    await fileChooser.setFiles(filePath)
+  }
+
   async clickToolbarButton(command, toolbarSelector = "lexxy-toolbar") {
     await this.page
       .locator(`${toolbarSelector} [data-command="${command}"]`)

@@ -21,45 +21,6 @@ class AttachmentsTest < ApplicationSystemTestCase
     assert_image_figure_attachment content_type: "application/pdf", caption: "dummy.pdf"
   end
 
-  test "upload non previewable attachment" do
-    attach_file file_fixture("note.txt") do
-      click_on "Upload file"
-    end
-
-    assert_not_image_figure_attachment content_type: "text/plain", caption: "note.txt"
-  end
-
-  test "delete attachments with the keyboard" do
-    attach_file file_fixture("example.png") do
-      click_on "Upload file"
-    end
-
-    assert_image_figure_attachment content_type: "image/png", caption: "example.png"
-
-    find("figure.attachment img").click
-
-    find_editor.send_key "Delete"
-
-    assert_no_attachment content_type: "image/png"
-    assert_editor_html ""
-  end
-
-  test "delete attachments with the delete button" do
-    attach_file file_fixture("example.png") do
-      click_on "Upload file"
-    end
-
-    assert_image_figure_attachment content_type: "image/png", caption: "example.png"
-
-    find("figure.attachment img").click
-
-    assert_selector "lexxy-node-delete-button"
-    find("lexxy-node-delete-button button[aria-label='Remove']").click
-
-    assert_no_attachment content_type: "image/png"
-    assert_editor_html ""
-  end
-
   test "disable attachments" do
     visit edit_post_path(posts(:empty))
     assert_button "Upload file"
@@ -109,57 +70,6 @@ class AttachmentsTest < ApplicationSystemTestCase
     end
 
     assert_selector "figure.attachment--error"
-  end
-
-  test "caption syncs and editor has focus after Enter" do
-    attach_file file_fixture("example.png") do
-      click_on "Upload file"
-    end
-
-    find("figure.attachment figcaption textarea") do |caption|
-      caption.click
-      caption.send_keys("My caption")
-      caption.send_keys(:enter)
-    end
-
-    assert_editor_has_focus
-    assert_editor_html do
-      assert_selector %(action-text-attachment[caption="My caption"])
-    end
-  end
-
-  test "caption saves and editor has focus after click" do
-    attach_file file_fixture("example.png") do
-      click_on "Upload file"
-    end
-
-    find("figure.attachment figcaption textarea") do |caption|
-      caption.click
-      caption.send_keys("My caption")
-    end
-
-    find_editor.content_element.click
-
-    assert_editor_has_focus
-    assert_editor_html do
-      assert_selector %(action-text-attachment[caption="My caption"])
-    end
-  end
-
-  test "caption saves and editor has focus after Tab" do
-    attach_file file_fixture("example.png") do
-      click_on "Upload file"
-    end
-
-    find("figure.attachment figcaption textarea") do |caption|
-      caption.click
-      caption.send_keys("My caption")
-      caption.send_keys(:tab)
-    end
-
-    assert_editor_html do
-      assert_selector %(action-text-attachment[caption="My caption"])
-    end
   end
 
   test "load attachment with custom tag" do
