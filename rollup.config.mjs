@@ -26,7 +26,7 @@ export default [
       }
     ],
     external: [
-      '@rails/activestorage'
+      "@rails/activestorage"
     ],
     plugins: [
       nodeResolve(),
