@@ -25,6 +25,9 @@ export default [
         plugins: [ terser() ]
       }
     ],
+    external: [
+      '@rails/activestorage'
+    ],
     plugins: [
       nodeResolve(),
       commonjs(),
