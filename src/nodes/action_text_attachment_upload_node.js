@@ -119,7 +119,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   #createCaption() {
     const figcaption = createElement("figcaption", { className: "attachment__caption" })
 
-    const nameSpan = createElement("span", { className: "attachment__name", textContent: this.file.name || "" })
+    const nameSpan = createElement("span", { className: "attachment__name", textContent: this.caption || this.file.name || "" })
     const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.file.size) })
     figcaption.appendChild(nameSpan)
     figcaption.appendChild(sizeSpan)
