@@ -195,7 +195,9 @@ done
 
 ### 4a. Reproduce with Playwright (preferred)
 
-Write test files in `test/browser/tests/` following the project's existing patterns.
+**Prefer extending existing test files** over creating new ones. If the bug relates to an area that already has a test file (e.g., paste bugs → `paste.test.js`, toolbar bugs → `toolbar.test.js`), add the reproduction test there. Only create a new test file when the bug is in a genuinely new area with no existing coverage.
+
+Follow the project's existing patterns in `test/browser/tests/`.
 
 **Test pattern:**
 
@@ -389,7 +391,7 @@ These are areas where bugs tend to cluster, based on the architecture:
 
 **Gallery transforms** — `ImageGalleryNode` auto-collapses adjacent images, splits around non-image children, and unwraps when left with a single child. The transform runs per-pass, so multiple non-images embedded may need multiple passes.
 
-**Paste handling edge cases** — The clipboard handler has separate code paths for: only plain text, HTML with attachments, URLs (including Safari's `text/uri-list`), markdown, files, and content inside code blocks (bypasses Lexxy entirely). Bugs often appear at the boundary between these paths.
+**Paste handling edge cases** — The clipboard handler has separate code paths for: only plain text, HTML with attachments, URLs (including Safari's `text/uri-list`), markdown, files, and content inside code blocks (bypasses Lexxy entirely). Bugs often appear at the boundary between these paths. The markdown path uses `marked` with `breaks: true` — without this option, single newlines in pasted plain text are swallowed (CommonMark default). If paste loses whitespace or structure, check the `marked` configuration first.
 
 **Highlight style sync** — The `HighlightExtension` keeps Lexical's `highlight` format bit in sync with inline CSS styles. Two TextNode transforms run on every mutation: one for sync, one for canonical palette enforcement. Infinite loop risk if the sync logic disagrees with Lexical's internal state.
 

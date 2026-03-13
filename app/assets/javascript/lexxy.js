@@ -10509,7 +10509,7 @@ class Clipboard {
   }
 
   #pasteMarkdown(text) {
-    const html = k(text);
+    const html = k(text, { breaks: true });
     const doc = parseHtml(html);
     const detail = Object.freeze({
       markdown: text,
