@@ -403,7 +403,7 @@ These are areas where bugs tend to cluster, based on the architecture:
 
 **Format escaping** — The `FormatEscaper` (`src/editor/contents/format_escaper.js`) is the subsystem responsible for escaping block-level formats via Enter key: blockquotes, lists, and code blocks. All escape-on-Enter behavior belongs here, NOT in `CommandDispatcher`. It registers `KEY_ENTER_COMMAND` at `COMMAND_PRIORITY_HIGH` and `KEY_ARROW_DOWN_COMMAND` at `COMMAND_PRIORITY_NORMAL`.
 
-**Event propagation from non-Lexical elements** — Elements like caption `<textarea>`s live inside Lexical's contenteditable root but are outside Lexical's content model. Events from these elements bubble up to the root where Lexical intercepts them. Stop propagation of `keydown` and clipboard events from such elements to prevent Lexical from interfering.
+**Event propagation from non-Lexical elements** — Elements like caption `<textarea>`s live inside Lexical's contenteditable root but are outside Lexical's content model. Keyboard and clipboard events from it bubble up to the root, where Lexical's handlers intercept them (e.g., `Ctrl+A` triggers `SELECT_ALL_COMMAND`, `Ctrl+X` triggers `CUT_COMMAND`). Any non-Lexical interactive element inside the root must `stopPropagation()` on `keydown`, `copy`, `cut`, and `paste` events to prevent Lexical from hijacking them.
 
 **Trix vs Lexxy `content` attribute** — `<action-text-attachment>` elements have a `content` attribute. Lexxy exports it as JSON-stringified HTML; Trix stores raw HTML. `importDOM()` must handle both formats gracefully (try JSON.parse, fall back to raw string).
 

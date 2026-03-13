@@ -121,6 +121,69 @@ test.describe("Attachments", () => {
 
     await assertEditorValueContains(editor, 'caption="My caption"')
   })
+
+  test("Ctrl+A selects text in caption without affecting editor", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+
+    const caption = figure.locator("figcaption textarea")
+    await caption.click()
+    await caption.pressSequentially("Hello world")
+
+    const modifier = process.platform === "darwin" ? "Meta" : "Control"
+    await caption.press(`${modifier}+a`)
+
+    const selectionLength = await caption.evaluate((textarea) => {
+      return textarea.selectionEnd - textarea.selectionStart
+    })
+    expect(selectionLength).toBe("Hello world".length)
+    await expect(figure).toBeVisible()
+  })
+
+  test("Ctrl+X in caption cuts text, doesn't remove image", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+
+    const caption = figure.locator("figcaption textarea")
+    await caption.click()
+    await caption.pressSequentially("Cut me")
+
+    const modifier = process.platform === "darwin" ? "Meta" : "Control"
+    await caption.press(`${modifier}+a`)
+    await caption.press(`${modifier}+x`)
+
+    await expect(caption).toHaveValue("")
+    await expect(figure).toBeVisible()
+  })
+
+  test("Ctrl+C in caption copies text without losing focus", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+
+    const caption = figure.locator("figcaption textarea")
+    await caption.click()
+    await caption.pressSequentially("Copy me")
+
+    const modifier = process.platform === "darwin" ? "Meta" : "Control"
+    await caption.press(`${modifier}+a`)
+    await caption.press(`${modifier}+c`)
+
+    const captionHasFocus = await caption.evaluate((textarea) => {
+      return document.activeElement === textarea
+    })
+    expect(captionHasFocus).toBe(true)
+    await expect(caption).toHaveValue("Copy me")
+    await expect(figure).toBeVisible()
+  })
 })
 
 async function assertEditorHasFocus(editor) {
