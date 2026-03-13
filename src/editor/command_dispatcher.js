@@ -136,7 +136,9 @@ export class CommandDispatcher {
   }
 
   dispatchInsertQuoteBlock() {
-    this.contents.toggleNodeWrappingAllSelectedNodes((node) => $isQuoteNode(node), () => $createQuoteNode())
+    if (!this.contents.wrapSelectedSoftBreakLines(() => $createQuoteNode())) {
+      this.contents.toggleNodeWrappingAllSelectedNodes((node) => $isQuoteNode(node), () => $createQuoteNode())
+    }
   }
 
   dispatchInsertCodeBlock() {
