@@ -24,6 +24,15 @@ bin/dev
 
 The sandbox app is available at http://lexxy.localhost:3000. There is also a CRUD example at http://lexxy.localhost:3000/posts.
 
+To run multiple worktrees in parallel, give each worktree its own port:
+
+```bash
+PORT=3100 bin/dev
+PORT=3200 bin/dev
+```
+
+Use the matching URL for that worktree, for example `http://lexxy.localhost:3100/posts`.
+
 ## Tests
 
 CI runs the full suite on every pull request and push to `main` via GitHub Actions (see `.github/workflows/ci.yml`). It runs four jobs in parallel: lint, JS unit tests, Rails system tests, and Playwright browser tests (across Chromium, Firefox, and WebKit).

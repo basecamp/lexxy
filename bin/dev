@@ -1,5 +1,16 @@
 #!/usr/bin/env bash
 
+root_dir="$(cd "$(dirname "$0")/.." && pwd)"
+search_dir="$root_dir"
+
+while [ "$search_dir" != "/" ]; do
+  if [ -d "$search_dir/node_modules/.bin" ]; then
+    export PATH="$search_dir/node_modules/.bin:$PATH"
+    break
+  fi
+  search_dir="$(dirname "$search_dir")"
+done
+
 # Kill any previous Rails server
 if [ -f tmp/pids/server.pid ]; then
   pid=$(cat tmp/pids/server.pid)
@@ -11,4 +22,6 @@ if [ -f tmp/pids/server.pid ]; then
   rm -f tmp/pids/server.pid
 fi
 
-exec foreman start -f Procfile.dev -p 3000 "$@"
+port="${PORT:-3000}"
+
+exec foreman start -f Procfile.dev -p "$port" "$@"
