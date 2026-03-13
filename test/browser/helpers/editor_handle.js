@@ -85,20 +85,52 @@ export class EditorHandle {
     })
   }
 
-  async paste(text, { html } = {}) {
+  async paste(text, { html, files = [] } = {}) {
     await this.#ensureFirstInteraction()
     await this.content.evaluate(
-      (el, { text, html }) => {
-        const event = new ClipboardEvent("paste", {
-          bubbles: true,
-          cancelable: true,
-          clipboardData: new DataTransfer(),
-        })
-        event.clipboardData.setData("text/plain", text)
-        if (html) event.clipboardData.setData("text/html", html)
+      (el, { text, html, files }) => {
+        const buildFiles = () => {
+          return files.map(({ base64, name, type }) => {
+            const binary = atob(base64)
+            const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
+            return new File([ bytes ], name, { type })
+          })
+        }
+
+        let event
+
+        if (files.length > 0) {
+          const clipboardFiles = buildFiles()
+          const clipboardData = {
+            files: clipboardFiles,
+            items: [],
+            types: [
+              ...(html ? [ "text/html" ] : []),
+              ...(typeof text === "string" ? [ "text/plain" ] : []),
+              "Files",
+            ],
+            getData(type) {
+              if (type === "text/plain") return text ?? ""
+              if (type === "text/html") return html ?? ""
+              return ""
+            },
+          }
+
+          event = new Event("paste", { bubbles: true, cancelable: true })
+          Object.defineProperty(event, "clipboardData", { value: clipboardData })
+        } else {
+          event = new ClipboardEvent("paste", {
+            bubbles: true,
+            cancelable: true,
+            clipboardData: new DataTransfer(),
+          })
+          event.clipboardData.setData("text/plain", text)
+          if (html) event.clipboardData.setData("text/html", html)
+        }
+
         el.dispatchEvent(event)
       },
-      { text, html },
+      { text, html, files },
     )
   }
 
