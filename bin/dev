@@ -5,10 +5,17 @@ if [ -f tmp/pids/server.pid ]; then
   pid=$(cat tmp/pids/server.pid)
   if kill -0 "$pid" 2>/dev/null; then
     echo "Killing previous Rails server (PID: $pid)..."
-    kill "$pid"
+    kill -9 "$pid" 2>/dev/null
     wait "$pid" 2>/dev/null
   fi
   rm -f tmp/pids/server.pid
+fi
+
+# Kill anything still listening on port 3000
+port_pid=$(lsof -ti tcp:3000 2>/dev/null)
+if [ -n "$port_pid" ]; then
+  echo "Killing process on port 3000 (PID: $port_pid)..."
+  kill -9 $port_pid 2>/dev/null
 fi
 
 exec foreman start -f Procfile.dev -p 3000 "$@"
