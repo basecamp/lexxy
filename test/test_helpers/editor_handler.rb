@@ -100,6 +100,16 @@ class EditorHandler
     JS
   end
 
+  def place_cursor_at_end
+    simulate_first_interaction_if_needed
+
+    page.execute_script <<~JS
+      const lexxy = document.querySelector('lexxy-editor')
+      lexxy.selection.placeCursorAtTheEnd()
+    JS
+    flush_lexical_updates
+  end
+
   def flush_lexical_updates
     page.evaluate_async_script <<~JS
       const [ done ] = arguments
