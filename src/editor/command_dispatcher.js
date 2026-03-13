@@ -1,12 +1,17 @@
 import {
+  $createParagraphNode,
   $createTextNode,
   $getSelection,
+  $isLineBreakNode,
   $isRangeSelection,
+  $isTextNode,
   $isRootOrShadowRoot,
   COMMAND_PRIORITY_LOW,
   COMMAND_PRIORITY_NORMAL,
   FORMAT_TEXT_COMMAND,
   INDENT_CONTENT_COMMAND,
+  KEY_ARROW_DOWN_COMMAND,
+  KEY_ENTER_COMMAND,
   KEY_TAB_COMMAND,
   OUTDENT_CONTENT_COMMAND,
   PASTE_COMMAND,
@@ -16,6 +21,7 @@ import {
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
+import { $getNearestNodeOfType } from "@lexical/utils"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
@@ -226,6 +232,8 @@ export class CommandDispatcher {
 
   #registerKeyboardCommands() {
     this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleTabKey.bind(this), COMMAND_PRIORITY_NORMAL)
+    this.editor.registerCommand(KEY_ENTER_COMMAND, this.#handleEnterInCodeBlock.bind(this), COMMAND_PRIORITY_NORMAL)
+    this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#handleArrowDownInCodeBlock.bind(this), COMMAND_PRIORITY_NORMAL)
   }
 
   #registerDragAndDropHandlers() {
@@ -293,6 +301,111 @@ export class CommandDispatcher {
   #handleTabForCode() {
     const selection = $getSelection()
     return $isRangeSelection(selection) && selection.isCollapsed()
+  }
+
+  #handleEnterInCodeBlock(event) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+
+    const codeNode = this.#getCodeNodeFromSelection(selection)
+    if (!codeNode) return false
+
+    if (this.#isCursorOnEmptyLastLineOfCodeBlock(selection, codeNode)) {
+      event?.preventDefault()
+      this.#exitCodeBlock(codeNode)
+      return true
+    }
+
+    return false
+  }
+
+  #handleArrowDownInCodeBlock(event) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+
+    const codeNode = this.#getCodeNodeFromSelection(selection)
+    if (!codeNode) return false
+
+    if (this.#isCursorOnLastLineOfCodeBlock(selection, codeNode) && !codeNode.getNextSibling()) {
+      event?.preventDefault()
+      const paragraph = $createParagraphNode()
+      codeNode.insertAfter(paragraph)
+      paragraph.selectStart()
+      return true
+    }
+
+    return false
+  }
+
+  #getCodeNodeFromSelection(selection) {
+    const anchorNode = selection.anchor.getNode()
+    return $getNearestNodeOfType(anchorNode, CodeNode) || ($isCodeNode(anchorNode) ? anchorNode : null)
+  }
+
+  #isCursorOnEmptyLastLineOfCodeBlock(selection, codeNode) {
+    const children = codeNode.getChildren()
+    if (children.length === 0) return true
+
+    const anchorNode = selection.anchor.getNode()
+    const anchorOffset = selection.anchor.offset
+
+    // Chromium: cursor on the CodeNode element after the last child (a line break).
+    // After pressing Enter at a line end, the cursor lands on the CodeNode at
+    // offset === children.length, right after the trailing LineBreakNode.
+    if ($isCodeNode(anchorNode) && anchorOffset === children.length) {
+      return $isLineBreakNode(children[children.length - 1])
+    }
+
+    // Firefox: cursor on an empty text node that follows a line break at the end.
+    // Firefox creates or lands on a zero-length text child after the line break,
+    // so we check for an empty text node whose previous sibling is a LineBreakNode.
+    if ($isTextNode(anchorNode) && anchorNode.getTextContentSize() === 0 && anchorOffset === 0) {
+      const previousSibling = anchorNode.getPreviousSibling()
+      return $isLineBreakNode(previousSibling) && anchorNode.getNextSibling() === null
+    }
+
+    return false
+  }
+
+  #isCursorOnLastLineOfCodeBlock(selection, codeNode) {
+    const anchorNode = selection.anchor.getNode()
+    const children = codeNode.getChildren()
+    if (children.length === 0) return true
+
+    const lastChild = children[children.length - 1]
+
+    // Cursor is on the CodeNode itself at the end
+    if ($isCodeNode(anchorNode) && selection.anchor.offset === children.length) {
+      return true
+    }
+
+    // Cursor is on the last child (text or line break)
+    if (anchorNode === lastChild) return true
+
+    // Cursor is on a node that comes after the last line break (i.e., on the last line)
+    const lastLineBreakIndex = children.findLastIndex(child => $isLineBreakNode(child))
+    if (lastLineBreakIndex === -1) return true // No line breaks means single line
+
+    const anchorIndex = children.indexOf(anchorNode)
+    return anchorIndex > lastLineBreakIndex
+  }
+
+  #exitCodeBlock(codeNode) {
+    // Remove trailing empty content: an empty text node and/or a line break node
+    const children = codeNode.getChildren()
+    const lastChild = children[children.length - 1]
+
+    if ($isTextNode(lastChild) && lastChild.getTextContentSize() === 0) {
+      const previousSibling = lastChild.getPreviousSibling()
+      lastChild.remove()
+      if ($isLineBreakNode(previousSibling)) previousSibling.remove()
+    } else if ($isLineBreakNode(lastChild)) {
+      lastChild.remove()
+    }
+
+    const paragraph = $createParagraphNode()
+    codeNode.insertAfter(paragraph)
+    paragraph.selectStart()
   }
 
   // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
