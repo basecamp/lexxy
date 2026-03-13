@@ -391,6 +391,8 @@ These are areas where bugs tend to cluster, based on the architecture:
 
 **Paste handling edge cases** — The clipboard handler has separate code paths for: only plain text, HTML with attachments, URLs (including Safari's `text/uri-list`), markdown, files, and content inside code blocks (bypasses Lexxy entirely). Bugs often appear at the boundary between these paths.
 
+**Soft line break selections** — `Shift+Enter` produces `LineBreakNode`s inside a single paragraph. Formatting actions that work on top-level elements can accidentally treat multiple visible lines as one block, so reproduce selection bugs with real soft line breaks (or `<br>` setup) whenever the report mentions composer line breaks.
+
 **Highlight style sync** — The `HighlightExtension` keeps Lexical's `highlight` format bit in sync with inline CSS styles. Two TextNode transforms run on every mutation: one for sync, one for canonical palette enforcement. Infinite loop risk if the sync logic disagrees with Lexical's internal state.
 
 **Trix HTML import** — The `TrixContentExtension` converts Trix's HTML output (`<em>`, `<del>`, `<span style>`, `<pre language>`) to Lexxy's model. Bugs here affect every migrated document.
