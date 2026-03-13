@@ -16,16 +16,10 @@ bin/setup
 
 ## Local development
 
-To build the JS source when it changes, run:
+To start both the Rails server and the JS watcher:
 
 ```bash
-yarn build -w
-```
-
-To the sandbox app:
-
-```bash
-bin/rails server
+bin/dev
 ```
 
 The sandbox app is available at http://lexxy.localhost:3000. There is also a CRUD example at http://lexxy.localhost:3000/posts.
