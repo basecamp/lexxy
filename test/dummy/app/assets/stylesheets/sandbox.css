@@ -147,15 +147,23 @@ section > h2 {
 
 .person {
   display: inline;
-  align-items: center;
-  gap: 0.25rem;
 
   .person--avatar {
+    aspect-ratio: 1;
+    background-color: var(--lexxy-color-accent-dark);
+    block-size: 1lh;
     border-radius: 50%;
-    display: inline;
-    height: 1lh;
+    display: inline-flex;
+    inline-size: 1lh;
     vertical-align: text-bottom;
-    width: 1lh;
+  }
+
+  .person--avatar:not(img) {
+    align-items: center;
+    color: var(--lexxy-color-ink-inverted);
+    font-weight: 600;
+    justify-content: center;
+    text-align: center;
   }
 
   &.person--inline {
