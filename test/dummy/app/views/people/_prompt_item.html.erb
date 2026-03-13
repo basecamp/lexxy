@@ -1,12 +1,14 @@
 <lexxy-prompt-item search="<%= "#{person.name} #{person.initials}" %>" sgid="<%= person.attachable_sgid %>">
+  <% id = 1 + rand(5); %>
   <template type="menu">
     <span class="person person--prompt-item">
-      <span class="person--avatar"><%= person.initials %></span>
+      <img src="https://www.loremfaces.net/24/id/<%= id %>.jpg" class="person--avatar">
       <span class="person--name"><%= person.name %></span>
     </span>
   </template>
   <template type="editor">
   <span class="person person--inline">
+    <img src="https://www.loremfaces.net/24/id/<%= id %>.jpg" class="person--avatar">
     <span class="person--name"><%= person.name %></span>
   </span>
   </template>
