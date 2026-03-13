@@ -92,7 +92,7 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
-    const html = marked(text)
+    const html = marked(text, { breaks: true })
     const doc = parseHtml(html)
     const detail = Object.freeze({
       markdown: text,

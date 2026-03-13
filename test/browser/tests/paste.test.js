@@ -105,6 +105,22 @@ test.describe("Paste", () => {
     })
   })
 
+  test("preserve single newlines as line breaks when pasting plain text", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("Line 1\nLine 2\nLine 3")
+    await assertEditorHtml(editor, "<p>Line 1<br>Line 2<br>Line 3</p>")
+  })
+
+  test("preserve double newlines as separate paragraphs when pasting plain text", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("Paragraph 1\n\nParagraph 2")
+    await assertEditorHtml(editor, "<p>Paragraph 1</p><p>Paragraph 2</p>")
+  })
+
   test("don't convert markdown when disabled", async ({ page, editor }) => {
     await page.goto("/markdown-disabled.html")
     await editor.waitForConnected()
