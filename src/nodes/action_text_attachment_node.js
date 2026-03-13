@@ -229,6 +229,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     input.addEventListener("focusin", () => input.placeholder = "Add caption...")
     input.addEventListener("blur", (event) => this.#handleCaptionInputBlurred(event))
     input.addEventListener("keydown", (event) => this.#handleCaptionInputKeydown(event))
+    input.addEventListener("copy", (event) => event.stopPropagation())
+    input.addEventListener("cut", (event) => event.stopPropagation())
+    input.addEventListener("paste", (event) => event.stopPropagation())
 
     caption.appendChild(input)
 
@@ -249,7 +252,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   #handleCaptionInputKeydown(event) {
     if (event.key === "Enter") {
       event.preventDefault()
-      event.stopPropagation()
       event.target.blur()
 
       this.editor.update(() => {
@@ -260,6 +262,10 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       })
     }
 
+    // Stop all keydown events from bubbling to the Lexical root element.
+    // The caption textarea is outside Lexical's content model and should
+    // handle its own keyboard events natively (Ctrl+A, Ctrl+C, Ctrl+X, etc.).
+    event.stopPropagation()
   }
 }
 
