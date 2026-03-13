@@ -138,11 +138,13 @@ export class CommandDispatcher {
   }
 
   dispatchInsertCodeBlock() {
-    if (this.selection.hasSelectedWordsInSingleLine) {
-      this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
-    } else {
-      this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new CodeNode("plain"))
-    }
+    this.editor.update(() => {
+      if (this.selection.hasSelectedWordsInSingleLine) {
+        this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
+      } else {
+        this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new CodeNode("plain"))
+      }
+    })
   }
 
   dispatchInsertHorizontalDivider() {
@@ -266,7 +268,7 @@ export class CommandDispatcher {
     const files = Array.from(dataTransfer.files)
     if (!files.length) return
 
-    this.contents.uploadFiles(files, { selectLast: true })
+    this.contents.dropFiles(files, { clientX: event.clientX, clientY: event.clientY })
 
     this.editor.focus()
   }

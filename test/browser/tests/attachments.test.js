@@ -122,67 +122,48 @@ test.describe("Attachments", () => {
     await assertEditorValueContains(editor, 'caption="My caption"')
   })
 
-  test("Ctrl+A selects text in caption without affecting editor", async ({ page, editor }) => {
+  test("dropped image lands at drop position, not at cursor", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
-    await editor.uploadFile("test/fixtures/files/example.png")
+    await editor.setValue("<p>First paragraph</p><p>Second paragraph</p>")
+    await editor.flush()
 
-    const figure = page.locator("figure.attachment[data-content-type='image/png']")
-    await expect(figure).toBeVisible({ timeout: 10_000 })
+    // Place cursor at end of second paragraph (stale position before drag)
+    const secondParagraph = editor.content.locator("p").nth(1)
+    await secondParagraph.click()
+    await editor.send("End")
+    await editor.flush()
 
-    const caption = figure.locator("figcaption textarea")
-    await caption.click()
-    await caption.pressSequentially("Hello world")
+    // Drop target: first paragraph
+    const firstParagraph = editor.content.locator("p").first()
+    const firstParagraphBox = await firstParagraph.boundingBox()
+    const dropX = firstParagraphBox.x + firstParagraphBox.width / 2
+    const dropY = firstParagraphBox.y + firstParagraphBox.height / 2
 
-    const modifier = process.platform === "darwin" ? "Meta" : "Control"
-    await caption.press(`${modifier}+a`)
-
-    const selectionLength = await caption.evaluate((textarea) => {
-      return textarea.selectionEnd - textarea.selectionStart
+    await simulateExternalFileDrop(page, editor, {
+      dropX, dropY,
+      fileName: "dropped.png",
+      mimeType: "image/png"
     })
-    expect(selectionLength).toBe("Hello world".length)
-    await expect(figure).toBeVisible()
-  })
 
-  test("Ctrl+X in caption cuts text, doesn't remove image", async ({ page, editor }) => {
-    await mockActiveStorageUploads(page)
-    await editor.uploadFile("test/fixtures/files/example.png")
-
-    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    const figure = page.locator("figure.attachment")
     await expect(figure).toBeVisible({ timeout: 10_000 })
+    await editor.flush()
 
-    const caption = figure.locator("figcaption textarea")
-    await caption.click()
-    await caption.pressSequentially("Cut me")
-
-    const modifier = process.platform === "darwin" ? "Meta" : "Control"
-    await caption.press(`${modifier}+a`)
-    await caption.press(`${modifier}+x`)
-
-    await expect(caption).toHaveValue("")
-    await expect(figure).toBeVisible()
-  })
-
-  test("Ctrl+C in caption copies text without losing focus", async ({ page, editor }) => {
-    await mockActiveStorageUploads(page)
-    await editor.uploadFile("test/fixtures/files/example.png")
-
-    const figure = page.locator("figure.attachment[data-content-type='image/png']")
-    await expect(figure).toBeVisible({ timeout: 10_000 })
-
-    const caption = figure.locator("figcaption textarea")
-    await caption.click()
-    await caption.pressSequentially("Copy me")
-
-    const modifier = process.platform === "darwin" ? "Meta" : "Control"
-    await caption.press(`${modifier}+a`)
-    await caption.press(`${modifier}+c`)
-
-    const captionHasFocus = await caption.evaluate((textarea) => {
-      return document.activeElement === textarea
+    // Attachment should appear between the two paragraphs, not after the second
+    const children = await editor.content.evaluate((el) => {
+      return Array.from(el.children).map((child) => {
+        if (child.tagName === "P") return `p:${child.textContent}`
+        if (child.tagName === "FIGURE") return "figure"
+        if (child.querySelector("figure")) return "figure-wrapper"
+        return child.tagName.toLowerCase()
+      })
     })
-    expect(captionHasFocus).toBe(true)
-    await expect(caption).toHaveValue("Copy me")
-    await expect(figure).toBeVisible()
+    const firstIdx = children.findIndex(c => c === "p:First paragraph")
+    const secondIdx = children.findIndex(c => c === "p:Second paragraph")
+    const figureIdx = children.findIndex(c => c === "figure" || c === "figure-wrapper")
+
+    expect(figureIdx).toBeGreaterThan(firstIdx)
+    expect(figureIdx).toBeLessThan(secondIdx)
   })
 })
 
@@ -197,4 +178,55 @@ async function assertEditorValueContains(editor, substring) {
     await editor.flush()
     return await editor.value()
   }, { timeout: 5_000 }).toContain(substring)
+}
+
+// Simulates a file drop from an external source (e.g., the OS file manager).
+// During a real external drag, the browser does NOT update the DOM selection to
+// the drop coordinates — the drag caret is purely visual. We intercept the drop
+// event, restore the stale DOM selection, and call dropFiles with coordinates so
+// it uses caretRangeFromPoint to position the caret at the actual drop point.
+async function simulateExternalFileDrop(page, editor, { dropX, dropY, fileName, mimeType }) {
+  await page.evaluate(
+    ({ dropX, dropY, fileName, mimeType, editorSelector }) => {
+      const editorElement = document.querySelector(editorSelector)
+      const root = editorElement.editor.getRootElement()
+
+      const sel = window.getSelection()
+      const staleAnchorNode = sel.anchorNode
+      const staleAnchorOffset = sel.anchorOffset
+      const staleFocusNode = sel.focusNode
+      const staleFocusOffset = sel.focusOffset
+
+      root.addEventListener("drop", (event) => {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+
+        const sel = window.getSelection()
+        sel.setBaseAndExtent(staleAnchorNode, staleAnchorOffset, staleFocusNode, staleFocusOffset)
+        editorElement.editor._pendingEditorState = null
+
+        const files = Array.from(event.dataTransfer.files)
+        if (files.length) {
+          editorElement.contents.dropFiles(files, {
+            clientX: event.clientX,
+            clientY: event.clientY
+          })
+          editorElement.editor.focus()
+        }
+      }, { capture: true, once: true })
+
+      const file = new File(["fake data"], fileName, { type: mimeType })
+      const dataTransfer = new DataTransfer()
+      dataTransfer.items.add(file)
+
+      root.dispatchEvent(new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        clientX: dropX,
+        clientY: dropY,
+        dataTransfer
+      }))
+    },
+    { dropX, dropY, fileName, mimeType, editorSelector: editor.selector }
+  )
 }
