@@ -2,6 +2,7 @@ import Lexxy from "../config/lexxy"
 import { $createTextNode, DecoratorNode } from "lexical"
 
 import { createElement } from "../helpers/html_helper"
+import { parseAttachmentContent } from "../helpers/storage_helper"
 
 export class CustomActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -35,7 +36,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
             nodes.push(new CustomActionTextAttachmentNode({
               sgid: attachment.getAttribute("sgid"),
-              innerHtml: JSON.parse(attachment.getAttribute("content")),
+              innerHtml: parseAttachmentContent(attachment.getAttribute("content")),
               contentType: attachment.getAttribute("content-type")
             }))
 
@@ -111,4 +112,5 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   decorate() {
     return null
   }
+
 }

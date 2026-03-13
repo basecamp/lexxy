@@ -195,9 +195,7 @@ done
 
 ### 4a. Reproduce with Playwright (preferred)
 
-**Prefer extending existing test files** over creating new ones. If the bug relates to an area that already has a test file (e.g., paste bugs → `paste.test.js`, toolbar bugs → `toolbar.test.js`), add the reproduction test there. Only create a new test file when the bug is in a genuinely new area with no existing coverage.
-
-Follow the project's existing patterns in `test/browser/tests/`.
+Write test files in `test/browser/tests/` following the project's existing patterns.
 
 **Test pattern:**
 
@@ -364,22 +362,15 @@ try {
 - <which browsers reproduce: all, or specific>
 ```
 
-### 6. If Reproduced — Add the Test to the Existing Suite
+### 6. If Reproduced — Leave the Test
 
-**Do NOT create standalone `bug_*.test.js` files.** Instead, add the reproduction test to the most relevant existing test file. The test suite must stay cohesive and well-organized — a reproduction test is a regression test, and it belongs alongside related tests:
+When reproduced via Playwright, **keep the test file** in `test/browser/tests/`. It serves as both evidence and a regression test for the eventual fix. Name it descriptively:
 
-- Paste bugs → `test/browser/tests/paste.test.js` or `paste_with_styles.test.js`
-- Format escape bugs (exiting code blocks, blockquotes, lists) → `test/browser/tests/escape_format.test.js`
-- Attachment bugs → `test/browser/tests/attachments.test.js`
-- Toolbar bugs → `test/browser/tests/toolbar.test.js`
-- Gallery bugs → `test/browser/tests/gallery.test.js`
-- Table bugs → `test/browser/tests/tables.test.js`
-- Code highlighting bugs → `test/browser/tests/code_highlighting.test.js`
-- Focus bugs → `test/browser/tests/focus.test.js`
+```
+test/browser/tests/bug_<short_description>.test.js
+```
 
-Only create a new test file if the bug genuinely doesn't fit any existing file, and name it after the feature area, not the bug number.
-
-For Capybara, add to the relevant file in `test/system/`. For Selenium fallback scripts, keep them in `/tmp/` and note the path in the verdict.
+When reproduced via Capybara, keep the test in `test/system/`. When reproduced via Selenium, keep the script in `/tmp/` and note the path in the verdict.
 
 ## Common Bug Patterns in Lexxy
 
@@ -391,7 +382,7 @@ These are areas where bugs tend to cluster, based on the architecture:
 
 **Gallery transforms** — `ImageGalleryNode` auto-collapses adjacent images, splits around non-image children, and unwraps when left with a single child. The transform runs per-pass, so multiple non-images embedded may need multiple passes.
 
-**Paste handling edge cases** — The clipboard handler has separate code paths for: only plain text, HTML with attachments, URLs (including Safari's `text/uri-list`), markdown, files, and content inside code blocks (bypasses Lexxy entirely). Bugs often appear at the boundary between these paths. The markdown path uses `marked` with `breaks: true` — without this option, single newlines in pasted plain text are swallowed (CommonMark default). If paste loses whitespace or structure, check the `marked` configuration first.
+**Paste handling edge cases** — The clipboard handler has separate code paths for: only plain text, HTML with attachments, URLs (including Safari's `text/uri-list`), markdown, files, and content inside code blocks (bypasses Lexxy entirely). Bugs often appear at the boundary between these paths. Cross-app paste (Trix → Lexxy) is a key variant: Trix stores raw HTML in the `content` attribute of `<action-text-attachment>`, while Lexxy stores JSON-stringified HTML. Any code that parses `content` must handle both formats.
 
 **Highlight style sync** — The `HighlightExtension` keeps Lexical's `highlight` format bit in sync with inline CSS styles. Two TextNode transforms run on every mutation: one for sync, one for canonical palette enforcement. Infinite loop risk if the sync logic disagrees with Lexical's internal state.
 
@@ -400,13 +391,3 @@ These are areas where bugs tend to cluster, based on the architecture:
 **Turbo reconnection** — The `<lexxy-editor>` watches its `connected` attribute. Rapid Turbo morphs can stack reconnections. `valueBeforeDisconnect` can be null if timing is wrong.
 
 **Upload lifecycle** — `ActionTextAttachmentUploadNode.createDOM()` starts the upload as a side effect. Lexical can call `createDOM()` multiple times (history restore). Guard logic prevents re-upload but can falsely block.
-
-**Format escaping** — The `FormatEscaper` (`src/editor/contents/format_escaper.js`) is the subsystem responsible for escaping block-level formats via Enter key: blockquotes, lists, and code blocks. All escape-on-Enter behavior belongs here, NOT in `CommandDispatcher`. It registers `KEY_ENTER_COMMAND` at `COMMAND_PRIORITY_HIGH` and `KEY_ARROW_DOWN_COMMAND` at `COMMAND_PRIORITY_NORMAL`.
-
-**Event propagation from non-Lexical elements** — Elements like caption `<textarea>`s live inside Lexical's contenteditable root but are outside Lexical's content model. Keyboard and clipboard events from it bubble up to the root, where Lexical's handlers intercept them (e.g., `Ctrl+A` triggers `SELECT_ALL_COMMAND`, `Ctrl+X` triggers `CUT_COMMAND`). Any non-Lexical interactive element inside the root must `stopPropagation()` on `keydown`, `copy`, `cut`, and `paste` events to prevent Lexical from hijacking them.
-
-**Trix vs Lexxy `content` attribute** — `<action-text-attachment>` elements have a `content` attribute. Lexxy exports it as JSON-stringified HTML; Trix stores raw HTML. `importDOM()` must handle both formats gracefully (try JSON.parse, fall back to raw string).
-
-**Cross-browser drop positioning** — `document.caretRangeFromPoint()` is Chromium/WebKit-only. Firefox uses `document.caretPositionFromPoint()`. Always provide a fallback when positioning the caret from mouse/drop coordinates.
-
-**Nested `editor.update()` calls** — Command handlers dispatched from toolbar buttons already run inside an `editor.update()` context. Adding another `editor.update()` wrapper creates a nested update that's deferred via `$processNestedUpdates`. This can break undo history. Keep dispatch methods consistent — if other format dispatchers (bold, italic) run directly, new ones should too.

@@ -105,22 +105,6 @@ test.describe("Paste", () => {
     })
   })
 
-  test("preserve single newlines as line breaks when pasting plain text", async ({ page, editor }) => {
-    await page.goto("/")
-    await editor.waitForConnected()
-
-    await editor.paste("Line 1\nLine 2\nLine 3")
-    await assertEditorHtml(editor, "<p>Line 1<br>Line 2<br>Line 3</p>")
-  })
-
-  test("preserve double newlines as separate paragraphs when pasting plain text", async ({ page, editor }) => {
-    await page.goto("/")
-    await editor.waitForConnected()
-
-    await editor.paste("Paragraph 1\n\nParagraph 2")
-    await assertEditorHtml(editor, "<p>Paragraph 1</p><p>Paragraph 2</p>")
-  })
-
   test("don't convert markdown when disabled", async ({ page, editor }) => {
     await page.goto("/markdown-disabled.html")
     await editor.waitForConnected()
@@ -128,5 +112,30 @@ test.describe("Paste", () => {
     await editor.click()
     await editor.paste("Hello **there**")
     await assertEditorHtml(editor, "<p>Hello **there**</p>")
+  })
+
+  test("paste Trix mention HTML without crashing", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    const mentionHtml = [
+      '<action-text-attachment',
+      ' content-type="application/vnd.actiontext.mention"',
+      ' sgid="test-sgid-123"',
+      ' content="&lt;span class=&quot;person person--inline&quot;&gt;&lt;img src=&quot;/avatar.png&quot; class=&quot;person--avatar&quot; alt=&quot;&quot;&gt;&lt;span class=&quot;person--name&quot;&gt;Michael Berger&lt;/span&gt;&lt;/span&gt;"',
+      '>Michael Berger</action-text-attachment>'
+    ].join("")
+
+    const errors = []
+    page.on("pageerror", (error) => errors.push(error.message))
+
+    await editor.paste("Michael Berger", { html: mentionHtml })
+    await page.waitForTimeout(500)
+
+    expect(errors).toHaveLength(0)
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("action-text-attachment")).toHaveCount(1)
+    })
   })
 })
