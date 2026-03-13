@@ -185,6 +185,10 @@ export default class Selection {
   }
 
   get isTableCellSelected() {
+    const selection = $getSelection()
+    const { anchor, focus } = selection
+    if (!$isRangeSelection(selection) || anchor.key !== focus.key) return false
+
     return this.nearestNodeOfType(TableCellNode) !== null
   }
 
