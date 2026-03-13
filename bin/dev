@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 
 # Kill any previous Rails server
-if [ -f tmp/pids/server.pid ]; then
-  pid=$(cat tmp/pids/server.pid)
-  if kill -0 "$pid" 2>/dev/null; then
-    echo "Killing previous Rails server (PID: $pid)..."
-    kill -9 "$pid" 2>/dev/null
-    wait "$pid" 2>/dev/null
+for pidfile in tmp/pids/server.pid test/dummy/tmp/pids/server.pid; do
+  if [ -f "$pidfile" ]; then
+    pid=$(cat "$pidfile")
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "Killing previous Rails server (PID: $pid)..."
+      kill -9 "$pid" 2>/dev/null
+      wait "$pid" 2>/dev/null
+    fi
+    rm -f "$pidfile"
   fi
-  rm -f tmp/pids/server.pid
-fi
+done
 
 # Kill anything still listening on port 3000
 port_pid=$(lsof -ti tcp:3000 2>/dev/null)
