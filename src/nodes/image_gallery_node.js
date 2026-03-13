@@ -1,5 +1,5 @@
 import { $createParagraphNode, $splitNode, ElementNode } from "lexical"
-import { $descendantsMatching, $firstToLastIterator, $getNearestNodeOfType, $insertFirst, $unwrapAndFilterDescendants, $wrapNodeInElement } from "@lexical/utils"
+import { $firstToLastIterator, $getNearestNodeOfType, $insertFirst, $unwrapAndFilterDescendants, $wrapNodeInElement } from "@lexical/utils"
 
 import { $isActionTextAttachmentNode, ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { $makeSafeForRoot } from "../helpers/lexical_helper"
@@ -29,7 +29,7 @@ export class ImageGalleryNode extends ElementNode {
           conversion: () => {
             return {
               node: $createImageGalleryNode(),
-              after: children => $descendantsMatching(children, this.isValidChild)
+              after: children => children
             }
           },
           priority: 2

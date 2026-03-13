@@ -389,6 +389,8 @@ These are areas where bugs tend to cluster, based on the architecture:
 
 **Gallery transforms** — `ImageGalleryNode` auto-collapses adjacent images, splits around non-image children, and unwraps when left with a single child. The transform runs per-pass, so multiple non-images embedded may need multiple passes.
 
+**Gallery import wrappers** — `ImageGalleryNode.importDOM()` can over-eagerly treat a wrapper `<div>` as a gallery during load. Reproductions should cover mixed children such as previewable images plus a previewable video, because filtering during import can silently drop the non-image attachment before transforms get a chance to split it back out.
+
 **Paste handling edge cases** — The clipboard handler has separate code paths for: only plain text, HTML with attachments, URLs (including Safari's `text/uri-list`), markdown, files, and content inside code blocks (bypasses Lexxy entirely). Bugs often appear at the boundary between these paths.
 
 **Highlight style sync** — The `HighlightExtension` keeps Lexical's `highlight` format bit in sync with inline CSS styles. Two TextNode transforms run on every mutation: one for sync, one for canonical palette enforcement. Infinite loop risk if the sync logic disagrees with Lexical's internal state.
