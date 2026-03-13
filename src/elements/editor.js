@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $isDecoratorNode, $isParagraphNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -209,7 +209,6 @@ export class LexicalEditorElement extends HTMLElement {
 
     return nodes
       .map(this.#wrapTextNode)
-      .map(this.#unwrapDecoratorNode)
   }
 
   // Raw string values produce TextNodes which cannot be appended directly to the RootNode.
@@ -220,18 +219,6 @@ export class LexicalEditorElement extends HTMLElement {
     const paragraph = $createParagraphNode()
     paragraph.append(node)
     return paragraph
-  }
-
-  // Custom decorator block elements such as action-text-attachments get wrapped into <p> automatically by Lexical.
-  // We unwrap those.
-  #unwrapDecoratorNode(node) {
-    if ($isParagraphNode(node) && node.getChildrenSize() === 1) {
-      const child = node.getFirstChild()
-      if ($isDecoratorNode(child) && !child.isInline()) {
-        return child
-      }
-    }
-    return node
   }
 
   #initialize() {

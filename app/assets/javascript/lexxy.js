@@ -9401,14 +9401,12 @@ class ImageGalleryNode extends Ai {
   static importDOM() {
     return {
       div: (element) => {
-        const containsAttachment = element.querySelector(`:scope > :is(${this.#attachmentTags.join()})`);
-        if (!containsAttachment) return null
+        if (!this.#isGalleryElement(element)) return null
 
         return {
           conversion: () => {
             return {
-              node: $createImageGalleryNode(),
-              after: children => _t$4(children, this.isValidChild)
+              node: $createImageGalleryNode()
             }
           },
           priority: 2
@@ -9423,6 +9421,13 @@ class ImageGalleryNode extends Ai {
 
   static isValidChild(node) {
     return $isActionTextAttachmentNode(node) && node.isPreviewableImage
+  }
+
+  static #isGalleryElement(element) {
+    const attachmentChildren = element.querySelectorAll(`:scope > :is(${this.#attachmentTags.join()})`);
+    return element.textContent.trim() === ""
+      && attachmentChildren.length > 0
+      && element.children.length === attachmentChildren.length
   }
 
   static get #attachmentTags() {
@@ -10933,10 +10938,30 @@ class AttachmentsExtension extends LexxyExtension {
       ],
       register(editor) {
         return ec(
+          editor.registerNodeTransform(ActionTextAttachmentNode, $extractAttachmentFromParagraph),
           editor.registerCommand(ue$2, $collapseIntoGallery, Gi)
         )
       }
     })
+  }
+}
+
+// Decorator nodes can be wrapped in a Paragraph Node by Lexical when contained in a <div>
+// We remove them, splitting the node as needed
+function $extractAttachmentFromParagraph(attachmentNode) {
+  const parentNode = attachmentNode.getParent();
+  if (!Yi(parentNode)) return
+
+  if (parentNode.getChildrenSize() === 1) {
+    parentNode.replace(attachmentNode);
+  } else {
+    const index = attachmentNode.getIndexWithinParent();
+    const [ topParagraph, bottomParagraph ] = Es(parentNode, index);
+    topParagraph.insertAfter(attachmentNode);
+
+    for (const p of [ topParagraph, bottomParagraph ]) {
+      if (p.isEmpty()) p.remove();
+    }
   }
 }
 
@@ -11185,7 +11210,6 @@ class LexicalEditorElement extends HTMLElement {
 
     return nodes
       .map(this.#wrapTextNode)
-      .map(this.#unwrapDecoratorNode)
   }
 
   // Raw string values produce TextNodes which cannot be appended directly to the RootNode.
@@ -11196,18 +11220,6 @@ class LexicalEditorElement extends HTMLElement {
     const paragraph = Vi();
     paragraph.append(node);
     return paragraph
-  }
-
-  // Custom decorator block elements such as action-text-attachments get wrapped into <p> automatically by Lexical.
-  // We unwrap those.
-  #unwrapDecoratorNode(node) {
-    if (Yi(node) && node.getChildrenSize() === 1) {
-      const child = node.getFirstChild();
-      if (Li(child) && !child.isInline()) {
-        return child
-      }
-    }
-    return node
   }
 
   #initialize() {
