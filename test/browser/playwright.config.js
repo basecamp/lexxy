@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test"
-import { existsSync } from "fs";
+import { existsSync } from "fs"
 
 const isCI = !!process.env.CI
 
