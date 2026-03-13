@@ -391,3 +391,5 @@ These are areas where bugs tend to cluster, based on the architecture:
 **Turbo reconnection** — The `<lexxy-editor>` watches its `connected` attribute. Rapid Turbo morphs can stack reconnections. `valueBeforeDisconnect` can be null if timing is wrong.
 
 **Upload lifecycle** — `ActionTextAttachmentUploadNode.createDOM()` starts the upload as a side effect. Lexical can call `createDOM()` multiple times (history restore). Guard logic prevents re-upload but can falsely block.
+
+**Toolbar focus after commands** — Clicking a toolbar button with the mouse moves focus to the button. If focus isn't returned to the editor, keyboard shortcuts like Ctrl+Z go to the browser instead of Lexical. The toolbar calls `editor.focus()` after mouse-click commands to prevent this.

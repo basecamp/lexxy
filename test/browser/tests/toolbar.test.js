@@ -282,6 +282,78 @@ test.describe("Toolbar", () => {
       page.locator("lexxy-toolbar#external_toolbar[connected]"),
     ).toBeVisible()
   })
+
+  test("undo inline code formatting with Ctrl+Z", async ({ page, editor }) => {
+    await editor.send("Hello world")
+    await editor.flush()
+
+    await editor.select("Hello world")
+    await editor.flush()
+
+    await page.getByRole("button", { name: "Code" }).click()
+    await assertEditorHtml(editor, "<p><code>Hello world</code></p>")
+
+    await editor.send("Control+z")
+
+    await assertEditorHtml(editor, "<p>Hello world</p>")
+  })
+
+  test("undo inline code formatting on partial selection", async ({ page, editor }) => {
+    await editor.send("Hello world")
+    await editor.flush()
+
+    await editor.select("world")
+    await editor.flush()
+
+    await page.getByRole("button", { name: "Code" }).click()
+    await assertEditorHtml(editor, "<p>Hello <code>world</code></p>")
+
+    await editor.send("Control+z")
+
+    await assertEditorHtml(editor, "<p>Hello world</p>")
+  })
+
+  test("undo code block formatting with Ctrl+Z", async ({ page, editor }) => {
+    await editor.send("Hello world")
+    await editor.flush()
+
+    await editor.click()
+    await editor.flush()
+
+    await page.getByRole("button", { name: "Code" }).click()
+    await assertEditorHtml(
+      editor,
+      '<pre data-language="plain" data-highlight-language="plain">Hello world</pre>',
+    )
+
+    await editor.send("Control+z")
+
+    await assertEditorHtml(editor, "<p>Hello world</p>")
+  })
+
+  test("undo multi-line code block formatting with Ctrl+Z", async ({ page, editor }) => {
+    await editor.send("Line one")
+    await editor.send("Enter")
+    await editor.send("Line two")
+    await editor.send("Enter")
+    await editor.send("Line three")
+    await editor.flush()
+
+    await editor.send("Control+a")
+    await editor.flush()
+
+    await page.getByRole("button", { name: "Code" }).click()
+    await assertEditorHtml(
+      editor,
+      '<pre data-language="plain" data-highlight-language="plain">Line one<br>Line two<br>Line three</pre>',
+    )
+
+    // Press Ctrl+Z on the page (not via editor.send) to simulate real usage:
+    // after clicking the toolbar button, focus is on the toolbar, not the editor
+    await page.keyboard.press("Control+z")
+
+    await assertEditorHtml(editor, "<p>Line one</p><p>Line two</p><p>Line three</p>")
+  })
 })
 
 // Helper: mirrors ToolbarHelper#apply_highlight_option
