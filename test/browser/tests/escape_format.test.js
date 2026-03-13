@@ -1,5 +1,6 @@
 import { test } from "../test_helper.js"
-import { assertEditorHtml } from "../helpers/assertions.js"
+import { expect } from "@playwright/test"
+import { assertEditorHtml, assertEditorContent } from "../helpers/assertions.js"
 
 test.describe("Escape format", () => {
   test.beforeEach(async ({ page }) => {
@@ -111,5 +112,36 @@ test.describe("Escape format", () => {
       editor,
       "<blockquote><ul><li>Item one</li></ul></blockquote><p>After escape</p>",
     )
+  })
+
+  test("exit code block by pressing Enter on empty last line", async ({ page, editor }) => {
+    await editor.setValue("<pre><code>line one</code></pre>")
+    await editor.click()
+
+    await editor.send("End")
+    await editor.send("Enter")
+    await editor.send("Enter")
+
+    await editor.send("outside text")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code")).toContainText("line one")
+      await expect(content.locator("p")).toContainText("outside text")
+    })
+  })
+
+  test("exit code block with ArrowDown when code block is last element", async ({ page, editor }) => {
+    await editor.setValue("<pre><code>some code</code></pre>")
+    await editor.click()
+
+    await editor.send("End")
+    await editor.send("ArrowDown")
+
+    await editor.send("after code")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code")).toContainText("some code")
+      await expect(content.locator("p")).toContainText("after code")
+    })
   })
 })
