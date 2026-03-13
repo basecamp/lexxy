@@ -9408,7 +9408,7 @@ class ImageGalleryNode extends Ai {
           conversion: () => {
             return {
               node: $createImageGalleryNode(),
-              after: children => _t$4(children, this.isValidChild)
+              after: children => children
             }
           },
           priority: 2
