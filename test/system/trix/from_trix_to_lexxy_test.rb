@@ -31,8 +31,10 @@ class Trix::FromTrixToLexxyTest < ApplicationSystemTestCase
 
     fill_in "Post title", with: "Trix attachment"
     upload_trix_file file_fixture("example.png")
+    fill_trix_editor with: "Hello from Trix"
 
     within "trix-editor" do
+      assert_text "Hello from Trix"
       assert_selector "figure.attachment", wait: 5
     end
 
@@ -44,6 +46,7 @@ class Trix::FromTrixToLexxyTest < ApplicationSystemTestCase
     visit edit_post_path(Post.last)
 
     assert_editor_html do
+      assert_text "Hello from Trix"
       assert_selector "action-text-attachment[content-type='image/png']"
     end
   end
@@ -52,10 +55,12 @@ class Trix::FromTrixToLexxyTest < ApplicationSystemTestCase
     visit new_trix_post_path
 
     fill_in "Post title", with: "Trix gallery"
+    fill_trix_editor with: "Hello from Trix"
     upload_trix_file file_fixture("example.png")
     upload_trix_file file_fixture("example2.png")
 
     within "trix-editor" do
+      assert_text "Hello from Trix"
       assert_selector "figure.attachment", count: 2, wait: 5
     end
 
@@ -67,6 +72,7 @@ class Trix::FromTrixToLexxyTest < ApplicationSystemTestCase
     visit edit_post_path(Post.last)
 
     assert_editor_html do
+      assert_text "Hello from Trix"
       assert_selector "action-text-attachment[content-type='image/png']", count: 2
     end
   end
