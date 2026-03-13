@@ -901,24 +901,21 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
     --lexxy-attachment-bg-color: var(--lexxy-color-accent-dark);
     --lexxy-attachment-text-color: var(--lexxy-color-ink-inverted);
 
-    border-start-end-radius: 0;
-    border-end-end-radius: 0;
     outline: none;
   }
 
   lexxy-node-delete-button {
+    inset-inline-start: 0;
     line-height: 1lh;
 
     .lexxy-floating-controls__group {
       --button-size: 1lh;
 
       background-color: var(--lexxy-color-accent-dark);
-      border-start-start-radius: 0;
-      border-end-start-radius: 0;
       padding: 0;
 
       button {
-        border-radius: var(--floating-tools-radius);
+        border-radius: 50%;
       }
     }
   }
