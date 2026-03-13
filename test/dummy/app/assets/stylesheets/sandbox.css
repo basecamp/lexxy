@@ -156,19 +156,19 @@ section > h2 {
     display: inline-flex;
     inline-size: 1lh;
     vertical-align: text-bottom;
-  }
 
-  .person--avatar:not(img) {
-    align-items: center;
-    color: var(--lexxy-color-ink-inverted);
-    font-weight: 600;
-    justify-content: center;
-    text-align: center;
+    &:not(img) {
+      align-items: center;
+      color: var(--lexxy-color-ink-inverted);
+      font-weight: 600;
+      justify-content: center;
+      text-align: center;
+    }
   }
 
   &.person--inline {
     background-color: oklch(50% 0 0 / 0.1);
-    border-radius: var(--lexxy-radius);
+    border-radius: 20px;
     box-shadow: 0 0 0 2px oklch(50% 0 0 / 0.1);
     padding-inline-end: 0.25ch;
 
