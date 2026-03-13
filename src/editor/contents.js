@@ -223,15 +223,14 @@ export default class Contents {
   replaceTextBackUntil(stringToReplace, replacementNodes) {
     replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ]
 
-    this.editor.update(() => {
-      const { anchorNode, offset } = this.#getTextAnchorData()
-      if (!anchorNode) return
+    const selection = $getSelection()
+    const { anchorNode, offset } = this.#getTextAnchorData()
+    if (!anchorNode) return
 
-      const lastIndex = this.#findLastIndexBeforeCursor(anchorNode, offset, stringToReplace)
-      if (lastIndex === -1) return
+    const lastIndex = this.#findLastIndexBeforeCursor(anchorNode, offset, stringToReplace)
+    if (lastIndex === -1) return
 
-      this.#performTextReplacement(anchorNode, offset, lastIndex, replacementNodes)
-    })
+    this.#performTextReplacement(anchorNode, selection, offset, lastIndex, replacementNodes)
   }
 
   createParagraphAfterNode(node, text) {
@@ -633,13 +632,13 @@ export default class Contents {
     return textBeforeCursor.lastIndexOf(stringToReplace)
   }
 
-  #performTextReplacement(anchorNode, offset, lastIndex, replacementNodes) {
+  #performTextReplacement(anchorNode, selection, offset, lastIndex, replacementNodes) {
     const fullText = anchorNode.getTextContent()
     const textBeforeString = fullText.slice(0, lastIndex)
     const textAfterCursor = fullText.slice(offset)
 
-    const textNodeBefore = $createTextNode(textBeforeString)
-    const textNodeAfter = $createTextNode(textAfterCursor || " ")
+    const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, selection, textBeforeString)
+    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, selection, textAfterCursor || " ")
 
     anchorNode.replace(textNodeBefore)
 
@@ -649,6 +648,20 @@ export default class Contents {
     this.#appendLineBreakIfNeeded(textNodeAfter.getParentOrThrow())
     const cursorOffset = textAfterCursor ? 0 : 1
     textNodeAfter.select(cursorOffset, cursorOffset)
+  }
+
+  #cloneTextNodeFormatting(anchorNode, selection, text) {
+    const parent = anchorNode.getParent()
+    const fallbackFormat = parent?.getTextFormat?.() || 0
+    const fallbackStyle = parent?.getTextStyle?.() || ""
+    const format = $isRangeSelection(selection) && selection.format ? selection.format : (anchorNode.getFormat() || fallbackFormat)
+    const style = $isRangeSelection(selection) && selection.style ? selection.style : (anchorNode.getStyle() || fallbackStyle)
+
+    return $createTextNode(text)
+      .setFormat(format)
+      .setDetail(anchorNode.getDetail())
+      .setMode(anchorNode.getMode())
+      .setStyle(style)
   }
 
   #insertReplacementNodes(startNode, replacementNodes) {
