@@ -102,6 +102,8 @@ export class LexicalToolbarElement extends HTMLElement {
     this.editor.update(() => {
       this.editor.dispatchCommand(command, payload)
     }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined })
+
+    if (!isKeyboard) this.editor.focus()
   }
 
   #bindHotkeys() {

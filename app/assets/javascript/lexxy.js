@@ -4996,6 +4996,8 @@ class LexicalToolbarElement extends HTMLElement {
     this.editor.update(() => {
       this.editor.dispatchCommand(command, payload);
     }, { tag: isKeyboard ? Vn : undefined });
+
+    if (!isKeyboard) this.editor.focus();
   }
 
   #bindHotkeys() {
@@ -7549,13 +7551,11 @@ class CommandDispatcher {
   }
 
   dispatchInsertCodeBlock() {
-    this.editor.update(() => {
-      if (this.selection.hasSelectedWordsInSingleLine) {
-        this.editor.dispatchCommand(me$2, "code");
-      } else {
-        this.contents.toggleNodeWrappingAllSelectedLines((node) => Q$1(node), () => new U$1("plain"));
-      }
-    });
+    if (this.selection.hasSelectedWordsInSingleLine) {
+      this.editor.dispatchCommand(me$2, "code");
+    } else {
+      this.contents.toggleNodeWrappingAllSelectedLines((node) => Q$1(node), () => new U$1("plain"));
+    }
   }
 
   dispatchInsertHorizontalDivider() {
