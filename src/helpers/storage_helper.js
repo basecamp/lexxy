@@ -10,6 +10,16 @@ export function extractFileName(string) {
   return string.split("/").pop()
 }
 
+// Lexxy exports the content attribute as a JSON string (via JSON.stringify),
+// but Trix/ActionText stores it as raw HTML. Try JSON first, fall back to raw.
+export function parseAttachmentContent(content) {
+  try {
+    return JSON.parse(content)
+  } catch {
+    return content
+  }
+}
+
 export function mimeTypeToExtension(mimeType) {
   if (!mimeType) return null
 

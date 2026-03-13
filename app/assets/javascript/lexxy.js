@@ -7757,6 +7757,16 @@ function extractFileName(string) {
   return string.split("/").pop()
 }
 
+// Lexxy exports the content attribute as a JSON string (via JSON.stringify),
+// but Trix/ActionText stores it as raw HTML. Try JSON first, fall back to raw.
+function parseAttachmentContent(content) {
+  try {
+    return JSON.parse(content)
+  } catch {
+    return content
+  }
+}
+
 class ActionTextAttachmentNode extends Fi {
   static getType() {
     return "action_text_attachment"
@@ -7981,6 +7991,9 @@ class ActionTextAttachmentNode extends Fi {
     input.addEventListener("focusin", () => input.placeholder = "Add caption...");
     input.addEventListener("blur", (event) => this.#handleCaptionInputBlurred(event));
     input.addEventListener("keydown", (event) => this.#handleCaptionInputKeydown(event));
+    input.addEventListener("copy", (event) => event.stopPropagation());
+    input.addEventListener("cut", (event) => event.stopPropagation());
+    input.addEventListener("paste", (event) => event.stopPropagation());
 
     caption.appendChild(input);
 
@@ -8001,7 +8014,6 @@ class ActionTextAttachmentNode extends Fi {
   #handleCaptionInputKeydown(event) {
     if (event.key === "Enter") {
       event.preventDefault();
-      event.stopPropagation();
       event.target.blur();
 
       this.editor.update(() => {
@@ -8012,6 +8024,10 @@ class ActionTextAttachmentNode extends Fi {
       });
     }
 
+    // Stop all keydown events from bubbling to the Lexical root element.
+    // The caption textarea is outside Lexical's content model and should
+    // handle its own keyboard events natively (Ctrl+A, Ctrl+C, Ctrl+X, etc.).
+    event.stopPropagation();
   }
 }
 
@@ -8742,7 +8758,7 @@ class CustomActionTextAttachmentNode extends Fi {
 
             nodes.push(new CustomActionTextAttachmentNode({
               sgid: attachment.getAttribute("sgid"),
-              innerHtml: JSON.parse(attachment.getAttribute("content")),
+              innerHtml: parseAttachmentContent(attachment.getAttribute("content")),
               contentType: attachment.getAttribute("content-type")
             }));
 
@@ -8818,6 +8834,7 @@ class CustomActionTextAttachmentNode extends Fi {
   decorate() {
     return null
   }
+
 }
 
 class FormatEscaper {
@@ -8832,11 +8849,19 @@ class FormatEscaper {
       (event) => this.#handleEnterKey(event),
       Xi
     );
+
+    this.editor.registerCommand(
+      we$1,
+      (event) => this.#handleArrowDownInCodeBlock(event),
+      Gi
+    );
   }
 
   #handleEnterKey(event) {
     const selection = $r();
     if (!wr(selection)) return false
+
+    if (this.#handleCodeBlocks(event, selection)) return true
 
     const anchorNode = selection.anchor.getNode();
 
@@ -9097,6 +9122,101 @@ class FormatEscaper {
     this.#removeTrailingEmptyNodes(newBlockquote);
 
     newParagraph.selectStart();
+  }
+
+  // Code blocks
+
+  #handleCodeBlocks(event, selection) {
+    if (!selection.isCollapsed()) return false
+
+    const codeNode = this.#getCodeNodeFromSelection(selection);
+    if (!codeNode) return false
+
+    if (this.#isCursorOnEmptyLastLineOfCodeBlock(selection, codeNode)) {
+      event?.preventDefault();
+      this.#exitCodeBlock(codeNode);
+      return true
+    }
+
+    return false
+  }
+
+  #handleArrowDownInCodeBlock(event) {
+    const selection = $r();
+    if (!wr(selection) || !selection.isCollapsed()) return false
+
+    const codeNode = this.#getCodeNodeFromSelection(selection);
+    if (!codeNode) return false
+
+    if (this.#isCursorOnLastLineOfCodeBlock(selection, codeNode) && !codeNode.getNextSibling()) {
+      event?.preventDefault();
+      const paragraph = Vi();
+      codeNode.insertAfter(paragraph);
+      paragraph.selectStart();
+      return true
+    }
+
+    return false
+  }
+
+  #getCodeNodeFromSelection(selection) {
+    const anchorNode = selection.anchor.getNode();
+    return vt$4(anchorNode, U$1) || (Q$1(anchorNode) ? anchorNode : null)
+  }
+
+  #isCursorOnEmptyLastLineOfCodeBlock(selection, codeNode) {
+    const children = codeNode.getChildren();
+    if (children.length === 0) return true
+
+    const anchorNode = selection.anchor.getNode();
+    const anchorOffset = selection.anchor.offset;
+
+    // Chromium: cursor on the CodeNode element after the last child (a line break)
+    if (Q$1(anchorNode) && anchorOffset === children.length) {
+      return Zn(children[children.length - 1])
+    }
+
+    // Firefox: cursor on an empty text node that follows a line break at the end
+    if (yr(anchorNode) && anchorNode.getTextContentSize() === 0 && anchorOffset === 0) {
+      const previousSibling = anchorNode.getPreviousSibling();
+      return Zn(previousSibling) && anchorNode.getNextSibling() === null
+    }
+
+    return false
+  }
+
+  #isCursorOnLastLineOfCodeBlock(selection, codeNode) {
+    const anchorNode = selection.anchor.getNode();
+    const children = codeNode.getChildren();
+    if (children.length === 0) return true
+
+    const lastChild = children[children.length - 1];
+
+    if (Q$1(anchorNode) && selection.anchor.offset === children.length) return true
+    if (anchorNode === lastChild) return true
+
+    const lastLineBreakIndex = children.findLastIndex(child => Zn(child));
+    if (lastLineBreakIndex === -1) return true
+
+    const anchorIndex = children.indexOf(anchorNode);
+    return anchorIndex > lastLineBreakIndex
+  }
+
+  #exitCodeBlock(codeNode) {
+    const children = codeNode.getChildren();
+    const lastChild = children[children.length - 1];
+
+    if (yr(lastChild) && lastChild.getTextContentSize() === 0) {
+      const previousSibling = lastChild.getPreviousSibling();
+      lastChild.remove();
+      if (Zn(previousSibling)) previousSibling.remove();
+    } else if (Zn(lastChild)) {
+      lastChild.remove();
+    }
+
+    const paragraph = Vi();
+    codeNode.insertAfter(paragraph);
+    paragraph.selectStart();
   }
 }
 
