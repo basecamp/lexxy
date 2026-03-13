@@ -3,10 +3,12 @@ import {
   $getSelection,
   $isRangeSelection,
   $isRootOrShadowRoot,
+  $isTextNode,
   COMMAND_PRIORITY_LOW,
   COMMAND_PRIORITY_NORMAL,
   FORMAT_TEXT_COMMAND,
   INDENT_CONTENT_COMMAND,
+  KEY_ARROW_RIGHT_COMMAND,
   KEY_TAB_COMMAND,
   OUTDENT_CONTENT_COMMAND,
   PASTE_COMMAND,
@@ -225,7 +227,22 @@ export class CommandDispatcher {
   }
 
   #registerKeyboardCommands() {
+    this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#handleArrowRightKey.bind(this), COMMAND_PRIORITY_NORMAL)
     this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleTabKey.bind(this), COMMAND_PRIORITY_NORMAL)
+  }
+
+  #handleArrowRightKey(event) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+    if (this.selection.isInsideCodeBlock || !selection.hasFormat("code")) return false
+
+    const anchorNode = selection.anchor.getNode()
+    if (!$isTextNode(anchorNode) || selection.anchor.offset !== anchorNode.getTextContentSize()) return false
+    if (this.selection.nodeAfterCursor !== null) return false
+
+    event.preventDefault()
+    selection.toggleFormat("code")
+    return true
   }
 
   #registerDragAndDropHandlers() {
@@ -268,7 +285,7 @@ export class CommandDispatcher {
     const files = Array.from(dataTransfer.files)
     if (!files.length) return
 
-    this.contents.dropFiles(files, { clientX: event.clientX, clientY: event.clientY })
+    this.contents.uploadFiles(files, { selectLast: true })
 
     this.editor.focus()
   }
