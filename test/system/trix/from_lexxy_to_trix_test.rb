@@ -32,10 +32,12 @@ class Trix::FromLexxyToTrixTest < ApplicationSystemTestCase
     end
     assert_image_figure_attachment content_type: "image/png", caption: "example.png"
 
+    find_editor.place_cursor_at_end
     find_editor.send "With image"
     click_on "Create Post"
 
     assert_text "Post was successfully created."
+    assert_text "With image"
     assert_selector "action-text-attachment[content-type='image/png']"
 
     # Edit with Trix and save
@@ -45,6 +47,7 @@ class Trix::FromLexxyToTrixTest < ApplicationSystemTestCase
     click_on "Update Post"
 
     assert_text "Post was successfully updated."
+    assert_text "With image edited"
     assert_selector "action-text-attachment[content-type='image/png']"
   end
 
@@ -56,18 +59,22 @@ class Trix::FromLexxyToTrixTest < ApplicationSystemTestCase
       click_on "Upload file"
     end
     assert_selector ".attachment-gallery"
+    find_editor.send "With gallery"
 
     click_on "Create Post"
 
     assert_text "Post was successfully created."
+    assert_text "With gallery"
     assert_selector "action-text-attachment[content-type='image/png']", count: 2
 
     # Edit with Trix and save
     visit edit_trix_post_path(Post.last)
 
+    fill_trix_editor with: " edited"
     click_on "Update Post"
 
     assert_text "Post was successfully updated."
+    assert_text "With gallery edited"
     assert_selector "action-text-attachment[content-type='image/png']", count: 2
   end
 end
