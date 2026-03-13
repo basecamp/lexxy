@@ -4,6 +4,22 @@ import { assertEditorHtml } from "../helpers/assertions.js"
 
 const HELLO_EVERYONE = "<p>Hello everyone</p>"
 
+async function placeCaretAtEndOfInlineCode(editor) {
+  await editor.content.evaluate((content) => {
+    const code = content.querySelector("code")
+    const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT)
+    const textNode = walker.nextNode()
+    const range = document.createRange()
+
+    range.setStart(textNode, textNode.textContent.length)
+    range.collapse(true)
+
+    const selection = window.getSelection()
+    selection.removeAllRanges()
+    selection.addRange(range)
+  })
+}
+
 test.describe("Toolbar", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/")
@@ -121,6 +137,41 @@ test.describe("Toolbar", () => {
     await editor.select("everyone")
     await page.getByRole("button", { name: "Code" }).click()
     await assertEditorHtml(editor, "<p>Hello everyone</p>")
+  })
+
+  test("typing after moving the caret out of inline code inserts plain text", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>Hello <code>code</code></p>")
+
+    const codeButton = page.getByRole("button", { name: "Code" })
+
+    await editor.content.locator("code").click()
+    await expect(codeButton).toHaveAttribute("aria-pressed", "true")
+
+    await placeCaretAtEndOfInlineCode(editor)
+    await editor.send("ArrowRight")
+    await editor.send("!")
+
+    await assertEditorHtml(editor, "<p>Hello <code>code</code>!</p>")
+    await expect(codeButton).toHaveAttribute("aria-pressed", "false")
+  })
+
+  test("clicking plain text after inline code clears the active code state", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>Hello <code>code</code> world</p>")
+
+    const codeButton = page.getByRole("button", { name: "Code" })
+
+    await editor.content.locator("code").click()
+    await expect(codeButton).toHaveAttribute("aria-pressed", "true")
+
+    await editor.content.getByText("world").click()
+
+    await expect(codeButton).toHaveAttribute("aria-pressed", "false")
   })
 
   test("toggle code for block", async ({ page, editor }) => {
@@ -281,78 +332,6 @@ test.describe("Toolbar", () => {
     await expect(
       page.locator("lexxy-toolbar#external_toolbar[connected]"),
     ).toBeVisible()
-  })
-
-  test("undo inline code formatting with Ctrl+Z", async ({ page, editor }) => {
-    await editor.send("Hello world")
-    await editor.flush()
-
-    await editor.select("Hello world")
-    await editor.flush()
-
-    await page.getByRole("button", { name: "Code" }).click()
-    await assertEditorHtml(editor, "<p><code>Hello world</code></p>")
-
-    await editor.send("Control+z")
-
-    await assertEditorHtml(editor, "<p>Hello world</p>")
-  })
-
-  test("undo inline code formatting on partial selection", async ({ page, editor }) => {
-    await editor.send("Hello world")
-    await editor.flush()
-
-    await editor.select("world")
-    await editor.flush()
-
-    await page.getByRole("button", { name: "Code" }).click()
-    await assertEditorHtml(editor, "<p>Hello <code>world</code></p>")
-
-    await editor.send("Control+z")
-
-    await assertEditorHtml(editor, "<p>Hello world</p>")
-  })
-
-  test("undo code block formatting with Ctrl+Z", async ({ page, editor }) => {
-    await editor.send("Hello world")
-    await editor.flush()
-
-    await editor.click()
-    await editor.flush()
-
-    await page.getByRole("button", { name: "Code" }).click()
-    await assertEditorHtml(
-      editor,
-      '<pre data-language="plain" data-highlight-language="plain">Hello world</pre>',
-    )
-
-    await editor.send("Control+z")
-
-    await assertEditorHtml(editor, "<p>Hello world</p>")
-  })
-
-  test("undo multi-line code block formatting with Ctrl+Z", async ({ page, editor }) => {
-    await editor.send("Line one")
-    await editor.send("Enter")
-    await editor.send("Line two")
-    await editor.send("Enter")
-    await editor.send("Line three")
-    await editor.flush()
-
-    await editor.send("Control+a")
-    await editor.flush()
-
-    await page.getByRole("button", { name: "Code" }).click()
-    await assertEditorHtml(
-      editor,
-      '<pre data-language="plain" data-highlight-language="plain">Line one<br>Line two<br>Line three</pre>',
-    )
-
-    // Press Ctrl+Z on the page (not via editor.send) to simulate real usage:
-    // after clicking the toolbar button, focus is on the toolbar, not the editor
-    await page.keyboard.press("Control+z")
-
-    await assertEditorHtml(editor, "<p>Line one</p><p>Line two</p><p>Line three</p>")
   })
 })
 

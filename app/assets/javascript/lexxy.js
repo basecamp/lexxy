@@ -7638,7 +7638,22 @@ class CommandDispatcher {
   }
 
   #registerKeyboardCommands() {
+    this.editor.registerCommand(ve$1, this.#handleArrowRightKey.bind(this), Gi);
     this.editor.registerCommand(De$2, this.#handleTabKey.bind(this), Gi);
+  }
+
+  #handleArrowRightKey(event) {
+    const selection = $r();
+    if (!wr(selection) || !selection.isCollapsed()) return false
+    if (this.selection.isInsideCodeBlock || !selection.hasFormat("code")) return false
+
+    const anchorNode = selection.anchor.getNode();
+    if (!yr(anchorNode) || selection.anchor.offset !== anchorNode.getTextContentSize()) return false
+    if (this.selection.nodeAfterCursor !== null) return false
+
+    event.preventDefault();
+    selection.toggleFormat("code");
+    return true
   }
 
   #registerDragAndDropHandlers() {
@@ -7681,7 +7696,7 @@ class CommandDispatcher {
     const files = Array.from(dataTransfer.files);
     if (!files.length) return
 
-    this.contents.dropFiles(files, { clientX: event.clientX, clientY: event.clientY });
+    this.contents.uploadFiles(files, { selectLast: true });
 
     this.editor.focus();
   }
@@ -10039,11 +10054,6 @@ class Contents {
     }
   }
 
-  dropFiles(files, { clientX, clientY } = {}) {
-    this.#moveSelectionToPoint(clientX, clientY);
-    this.uploadFiles(files, { selectLast: true });
-  }
-
   uploadFiles(files, { selectLast } = {}) {
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])");
@@ -10475,33 +10485,6 @@ class Contents {
 
   #shouldUploadFile(file) {
     return dispatch(this.editorElement, "lexxy:file-accept", { file }, true)
-  }
-
-  // During an external file drag (from the OS file manager), the browser shows
-  // a visual drag caret but does NOT update the DOM selection. This method uses
-  // caretRangeFromPoint/caretPositionFromPoint to position the caret at the drop
-  // coordinates so the subsequent upload inserts at the correct location.
-  #moveSelectionToPoint(clientX, clientY) {
-    if (clientX == null || clientY == null) return
-
-    let range;
-
-    if (document.caretRangeFromPoint) {
-      range = document.caretRangeFromPoint(clientX, clientY);
-    } else if (document.caretPositionFromPoint) {
-      const position = document.caretPositionFromPoint(clientX, clientY);
-      if (position) {
-        range = document.createRange();
-        range.setStart(position.offsetNode, position.offset);
-        range.collapse(true);
-      }
-    }
-
-    if (!range) return
-
-    const domSelection = window.getSelection();
-    domSelection.removeAllRanges();
-    domSelection.addRange(range);
   }
 }
 
