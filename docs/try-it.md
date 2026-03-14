@@ -7,9 +7,9 @@ nav_order: 2
 # Try the Editor
 
 {::nomarkdown}
-<link rel="stylesheet" href="https://unpkg.com/@37signals/lexxy@latest/dist/stylesheets/lexxy.css">
+<link rel="stylesheet" href="https://unpkg.com/@37signals/lexxy@0.8.0-beta/dist/stylesheets/lexxy.css">
 <script type="module">
-  import * as Lexxy from "https://esm.sh/@37signals/lexxy@latest";
+  import * as Lexxy from "https://esm.sh/@37signals/lexxy@0.8.0-beta";
 
   navigator.serviceWorker.register("{{ site.baseurl }}/attachments-sw.js");
 </script>
