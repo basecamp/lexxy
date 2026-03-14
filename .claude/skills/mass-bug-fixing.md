@@ -95,7 +95,7 @@ For each bug in the batch, launch a parallel agent in its own worktree. Each age
 4. **Test** — Run the full test suite (`yarn test:browser` for Playwright, `bin/rails test:all` for Capybara) plus `yarn lint`. Fix any failures or lint errors.
 5. **Commit** — Single commit with a clear message describing the fix.
 
-**Test naming:** Never name test files after bug numbers (e.g., `bug_1234_thing.test.js`). Use descriptive names that fit the existing test suite (e.g., `paste_blockquote.test.js`, `tables_click_target.test.js`, `markdown_format.test.js`). If an existing test file already covers the area, add tests there instead of creating a new file. Test `describe` blocks should also be descriptive, not reference bug numbers.
+**Test naming:** Never name test files after bug numbers (e.g., `bug_1234_thing.test.js`). Use descriptive names that fit the existing test suite (e.g., `tables_click_target.test.js`, `markdown_format.test.js`). **Always check if an existing test file already covers the area** (e.g., paste tests go in `paste.test.js`, table tests go in `tables.test.js`) and add tests there as a new `test.describe` block instead of creating a separate file. Only create a new file when the topic is genuinely distinct and no existing file covers it. Test `describe` blocks should also be descriptive, not reference bug numbers.
 
 Each worktree agent should use a unique port to avoid Rails server collisions (e.g., `PORT=3100`, `PORT=3200`, etc.) if system tests are involved.
 
