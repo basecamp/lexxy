@@ -73,17 +73,16 @@ class UrlPreviewBracketEscapingTest < ApplicationSystemTestCase
   end
 
   private
+    def extract_attachment_content(editor_value)
+      doc = Nokogiri::HTML.fragment(editor_value)
+      node = doc.at_css("action-text-attachment")
+      return nil unless node
 
-  def extract_attachment_content(editor_value)
-    doc = Nokogiri::HTML.fragment(editor_value)
-    node = doc.at_css("action-text-attachment")
-    return nil unless node
-
-    content = node["content"]
-    begin
-      JSON.parse(content)
-    rescue
-      content
+      content = node["content"]
+      begin
+        JSON.parse(content)
+      rescue
+        content
+      end
     end
-  end
 end
