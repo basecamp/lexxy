@@ -117,13 +117,13 @@ gh pr create \
 Fixes Fizzy card #<number>: <card title>
 EOF
 )" \
-  --assignee jorgemanrubia
+  --assignee "$(gh api user --jq '.login')"
 ```
 
 **PR conventions:**
 - Title: descriptive only, no card/issue numbers (e.g., "Fix cursor jumping after pasting into blockquote" not "Fix #4567: cursor paste bug")
 - Body: include a Summary section with bullet points, and a link to the Fizzy card or GitHub issue
-- Assignee: always assign to the user who invoked the skill
+- Assignee: always assign to the current GitHub user (`gh api user --jq '.login'`), never hardcode a username
 
 **Comment on the Fizzy card:**
 
