@@ -610,8 +610,12 @@ export default class Selection {
   }
 
   #getNextNodeFromTextEnd(anchorNode) {
-    if (anchorNode.getNextSibling() instanceof DecoratorNode) {
-      return anchorNode.getNextSibling()
+    const nextSibling = anchorNode.getNextSibling()
+    if (nextSibling instanceof DecoratorNode) {
+      return nextSibling
+    }
+    if (nextSibling != null) {
+      return null
     }
     const parent = anchorNode.getParent()
     return parent ? parent.getNextSibling() : null
@@ -632,11 +636,15 @@ export default class Selection {
   }
 
   #getPreviousNodeFromTextStart(anchorNode) {
-    if (anchorNode.getPreviousSibling() instanceof DecoratorNode) {
-      return anchorNode.getPreviousSibling()
+    const previousSibling = anchorNode.getPreviousSibling()
+    if (previousSibling instanceof DecoratorNode) {
+      return previousSibling
+    }
+    if (previousSibling != null) {
+      return null
     }
     const parent = anchorNode.getParent()
-    return parent.getPreviousSibling()
+    return parent ? parent.getPreviousSibling() : null
   }
 
   #getNodeBeforeElementNode(anchorNode, offset) {
