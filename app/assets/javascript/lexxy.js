@@ -8226,6 +8226,10 @@ class Selection {
   }
 
   get isTableCellSelected() {
+    const selection = $r();
+    const { anchor, focus } = selection;
+    if (!wr(selection) || anchor.key !== focus.key) return false
+
     return this.nearestNodeOfType(Ke$1) !== null
   }
 
