@@ -1,6 +1,6 @@
 import {
   $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
-  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND, DecoratorNode,
+  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND,
   KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
@@ -611,7 +611,7 @@ export default class Selection {
 
   #getNextNodeFromTextEnd(anchorNode) {
     const nextSibling = anchorNode.getNextSibling()
-    if (nextSibling instanceof DecoratorNode) {
+    if ($isDecoratorNode(nextSibling)) {
       return nextSibling
     }
     if (nextSibling != null) {
@@ -637,7 +637,7 @@ export default class Selection {
 
   #getPreviousNodeFromTextStart(anchorNode) {
     const previousSibling = anchorNode.getPreviousSibling()
-    if (previousSibling instanceof DecoratorNode) {
+    if ($isDecoratorNode(previousSibling)) {
       return previousSibling
     }
     if (previousSibling != null) {

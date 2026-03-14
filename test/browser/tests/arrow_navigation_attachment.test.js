@@ -15,6 +15,9 @@ test.describe("Arrow key navigation near attachments", () => {
     )
     await editor.flush()
 
+    // Focus the editor before setting selection to avoid #ensureFirstInteraction() overwriting it
+    await editor.click()
+
     // Place cursor at the start of the italic text
     await editor.content.evaluate((el) => {
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
@@ -26,7 +29,6 @@ test.describe("Arrow key navigation near attachments", () => {
       sel.removeAllRanges()
       sel.addRange(range)
     })
-    await editor.flush()
 
     // Arrow right through "italic" (6 chars) — lands at end of italic text
     for (let i = 0; i < 6; i++) {
@@ -38,12 +40,10 @@ test.describe("Arrow key navigation near attachments", () => {
     await editor.send("ArrowRight")
 
     // Verify: the attachment should not be selected
-    const attachmentSelected = await page.locator("figure.attachment.node--selected").count()
-    expect(attachmentSelected).toBe(0)
+    await expect(page.locator("figure.attachment.node--selected")).toHaveCount(0)
 
     // Typing should insert into the text, confirming cursor is in the text
     await editor.send("X")
-    await editor.flush()
 
     const value = await editor.value()
     expect(value).toContain("X")
@@ -57,6 +57,9 @@ test.describe("Arrow key navigation near attachments", () => {
       '<p>plain <em>italic</em></p>',
     )
     await editor.flush()
+
+    // Focus the editor before setting selection to avoid #ensureFirstInteraction() overwriting it
+    await editor.click()
 
     // Place cursor at the end of the paragraph's last text node
     await editor.content.evaluate((el) => {
@@ -76,7 +79,6 @@ test.describe("Arrow key navigation near attachments", () => {
         sel.addRange(range)
       }
     })
-    await editor.flush()
 
     // Arrow left through "italic" (6 chars) — lands at start of italic text
     for (let i = 0; i < 6; i++) {
@@ -88,12 +90,10 @@ test.describe("Arrow key navigation near attachments", () => {
     await editor.send("ArrowLeft")
 
     // Verify: the attachment should not be selected
-    const attachmentSelected = await page.locator("figure.attachment.node--selected").count()
-    expect(attachmentSelected).toBe(0)
+    await expect(page.locator("figure.attachment.node--selected")).toHaveCount(0)
 
     // Typing should insert into the text, confirming cursor is in the text
     await editor.send("X")
-    await editor.flush()
 
     const value = await editor.value()
     expect(value).toContain("plain")
