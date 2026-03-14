@@ -16,7 +16,7 @@ const PUNCTUATION_OR_SPACE = /[^\w]/
 // This listener detects that scenario for ALL text format transformers
 // (backtick, bold, italic, strikethrough, etc.) and applies the appropriate
 // format.
-export function registerMarkdownLeadingTagFix(editor, transformers) {
+export function registerMarkdownLeadingTagHandler(editor, transformers) {
   const textFormatTransformers = transformers
     .filter(t => t.type === "text-format")
     .sort((a, b) => b.tag.length - a.tag.length) // Longer tags first
