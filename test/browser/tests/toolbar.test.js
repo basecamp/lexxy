@@ -222,6 +222,21 @@ test.describe("Toolbar", () => {
     )
   })
 
+  test("quote only the selected line from soft line breaks", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>First line<br>Second line<br>Third line</p>")
+    await editor.select("Second line")
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>First line</p><blockquote><p>Second line</p></blockquote><p>Third line</p>",
+    )
+  })
+
   test("links", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")

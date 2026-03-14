@@ -7547,7 +7547,9 @@ class CommandDispatcher {
   }
 
   dispatchInsertQuoteBlock() {
-    this.contents.toggleNodeWrappingAllSelectedNodes((node) => Pt$3(node), () => Ot$3());
+    if (!this.contents.wrapSelectedSoftBreakLines(() => Ot$3())) {
+      this.contents.toggleNodeWrappingAllSelectedNodes((node) => Pt$3(node), () => Ot$3());
+    }
   }
 
   dispatchInsertCodeBlock() {
@@ -9930,6 +9932,41 @@ class Contents {
     return result
   }
 
+  wrapSelectedSoftBreakLines(newNodeFn) {
+    let paragraphKey = null;
+    let selectedLineRange = null;
+
+    this.editor.getEditorState().read(() => {
+      const selection = $r();
+      if (!wr(selection) || selection.isCollapsed()) return
+
+      const paragraph = this.#getSelectedParagraphWithSoftLineBreaks(selection);
+      if (!paragraph) return
+
+      const lines = this.#splitParagraphIntoLines(paragraph);
+      selectedLineRange = this.#getSelectedLineRange(lines, selection);
+
+      if (!selectedLineRange) return
+
+      const { start, end } = selectedLineRange;
+      if (start === 0 && end === lines.length - 1) return
+
+      paragraphKey = paragraph.getKey();
+    });
+
+    if (!paragraphKey || !selectedLineRange) return false
+
+    this.editor.update(() => {
+      const paragraph = Mo(paragraphKey);
+      if (!paragraph || !Yi(paragraph)) return
+
+      const lines = this.#splitParagraphIntoLines(paragraph);
+      this.#replaceParagraphWithWrappedSelectedLines(paragraph, lines, selectedLineRange, newNodeFn);
+    });
+
+    return true
+  }
+
   unwrapSelectedListItems() {
     this.editor.update(() => {
       const selection = $r();
@@ -10316,6 +10353,101 @@ class Contents {
 
   #removeNodes(nodesToDelete) {
     nodesToDelete.forEach((node) => node.remove());
+  }
+
+  #getSelectedParagraphWithSoftLineBreaks(selection) {
+    const anchorParagraph = this.#getParagraphFromNode(selection.anchor.getNode());
+    const focusParagraph = this.#getParagraphFromNode(selection.focus.getNode());
+
+    if (!anchorParagraph || anchorParagraph !== focusParagraph) return null
+    if (Pt$3(anchorParagraph.getParent())) return null
+
+    return this.#paragraphHasSoftLineBreaks(anchorParagraph) ? anchorParagraph : null
+  }
+
+  #paragraphHasSoftLineBreaks(paragraph) {
+    return paragraph.getChildren().some((child) => Zn(child))
+  }
+
+  #splitParagraphIntoLines(paragraph) {
+    const lines = [ [] ];
+
+    paragraph.getChildren().forEach((child) => {
+      if (Zn(child)) {
+        lines.push([]);
+      } else {
+        lines[lines.length - 1].push(child);
+      }
+    });
+
+    return lines
+  }
+
+  #getSelectedLineRange(lines, selection) {
+    const selectedNodeKeys = new Set(
+      selection.getNodes().map((node) => node.getKey())
+    );
+
+    selectedNodeKeys.add(selection.anchor.getNode().getKey());
+    selectedNodeKeys.add(selection.focus.getNode().getKey());
+
+    const selectedLineIndexes = lines
+      .map((lineNodes, index) => {
+        return lineNodes.some((node) => selectedNodeKeys.has(node.getKey())) ? index : null
+      })
+      .filter((index) => index !== null);
+
+    if (selectedLineIndexes.length === 0) return null
+
+    return {
+      start: selectedLineIndexes[0],
+      end: selectedLineIndexes[selectedLineIndexes.length - 1]
+    }
+  }
+
+  #replaceParagraphWithWrappedSelectedLines(paragraph, lines, { start, end }, newNodeFn) {
+    const insertedNodes = [];
+
+    this.#appendParagraphsForLines(insertedNodes, lines.slice(0, start));
+
+    const wrappingNode = newNodeFn();
+    lines.slice(start, end + 1).forEach((lineNodes) => {
+      wrappingNode.append(this.#createParagraphFromLine(lineNodes));
+    });
+    insertedNodes.push(wrappingNode);
+
+    this.#appendParagraphsForLines(insertedNodes, lines.slice(end + 1));
+
+    let previousNode = null;
+    insertedNodes.forEach((node) => {
+      if (previousNode) {
+        previousNode.insertAfter(node);
+      } else {
+        paragraph.insertBefore(node);
+      }
+
+      previousNode = node;
+    });
+
+    paragraph.remove();
+  }
+
+  #appendParagraphsForLines(insertedNodes, lines) {
+    lines.forEach((lineNodes) => {
+      insertedNodes.push(this.#createParagraphFromLine(lineNodes));
+    });
+  }
+
+  #createParagraphFromLine(lineNodes) {
+    const paragraph = Vi();
+
+    if (lineNodes.length === 0) {
+      paragraph.append(Qn());
+    } else {
+      paragraph.append(...lineNodes);
+    }
+
+    return paragraph
   }
 
   #collectSelectedListItems(selection) {
