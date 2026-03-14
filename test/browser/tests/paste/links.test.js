@@ -44,7 +44,7 @@ test.describe("Paste — Links", () => {
 
     await assertEditorHtml(
       editor,
-      '<p>Hello <a href="https://37signals.com"><b><strong>everyone</strong></b></a></p>',
+      '<p>Hello <a href="https://37signals.com"><strong>everyone</strong></a></p>',
     )
   })
 

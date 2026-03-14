@@ -14,14 +14,14 @@ test.describe("Inline formatting", () => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
     await page.getByRole("button", { name: "Bold" }).click()
-    await assertEditorHtml(editor, "<p>Hello <b><strong>everyone</strong></b></p>")
+    await assertEditorHtml(editor, "<p>Hello <strong>everyone</strong></p>")
   })
 
   test("italic", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
     await page.getByRole("button", { name: "Italic" }).click()
-    await assertEditorHtml(editor, "<p>Hello <i><em>everyone</em></i></p>")
+    await assertEditorHtml(editor, "<p>Hello <em>everyone</em></p>")
   })
 
   test("strikethrough", async ({ page, editor }) => {

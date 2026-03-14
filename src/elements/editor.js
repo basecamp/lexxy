@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $isDecoratorNode, $isParagraphNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $isDecoratorNode, $isParagraphNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -23,6 +23,7 @@ import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { exportTextNodeDOM } from "../helpers/text_node_export_helper"
 import { ProvisionalParagraphExtension } from "../extensions/provisional_paragraph_extension"
 import { HighlightExtension } from "../extensions/highlight_extension"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
@@ -253,7 +254,10 @@ export class LexicalEditorElement extends HTMLElement {
       name: "lexxy/core",
       namespace: "Lexxy",
       theme: theme,
-      nodes: this.#lexicalNodes
+      nodes: this.#lexicalNodes,
+      html: {
+        export: new Map([ [ TextNode, exportTextNodeDOM ] ])
+      }
     },
       ...this.extensions.lexicalExtensions
     )
