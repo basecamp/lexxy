@@ -37,6 +37,7 @@
     "lint": "eslint",
     "test": "vitest",
     "test:browser": "npx playwright test --config test/browser/playwright.config.js",
+    "test:browser:no-webkit": "npx playwright test --config test/browser/playwright.config.js --project chromium firefox",
     "test:browser:chromium": "npx playwright test --config test/browser/playwright.config.js --project=chromium",
     "test:browser:firefox": "npx playwright test --config test/browser/playwright.config.js --project=firefox",
     "test:browser:webkit": "npx playwright test --config test/browser/playwright.config.js --project=webkit",
