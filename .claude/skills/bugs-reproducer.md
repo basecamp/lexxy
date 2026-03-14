@@ -378,7 +378,7 @@ When reproduced via Capybara, keep the test in `test/system/`. When reproduced v
 
 These are areas where bugs tend to cluster, based on the architecture:
 
-**Decorator node navigation** — Arrow keys around attachments, dividers, and galleries. The `Selection` class manually intercepts LEFT/RIGHT/UP/DOWN at node boundaries. Chrome has specific workarounds for fake cursor elements.
+**Decorator node navigation and NodeSelection** — Arrow keys around attachments, dividers, and galleries. The `Selection` class manually intercepts LEFT/RIGHT/UP/DOWN at node boundaries. Chrome has specific workarounds for fake cursor elements. Lexical's `NodeSelection` also has no-op `insertText()`/`insertRawText()` methods, so any text input while an inline decorator is selected must be handled by custom code — the browser's native text insertion will go to the wrong position because the native selection has no ranges.
 
 **Provisional paragraph lifecycle** — The invisible paragraphs inserted around decorator nodes by `ProvisionalParagraphExtension`. They should appear when needed, disappear when not, and convert to real paragraphs when typed into. Bugs: they don't appear, they duplicate, they don't convert, or they persist when they shouldn't.
 

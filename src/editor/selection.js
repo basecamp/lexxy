@@ -1,5 +1,5 @@
 import {
-  $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
+  $createParagraphNode, $createTextNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
   $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND, DecoratorNode,
   KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
 } from "lexical"
@@ -25,6 +25,7 @@ export default class Selection {
     this.#listenForNodeSelections()
     this.#processSelectionChangeCommands()
     this.#containEditorFocus()
+    this.#handleTextInsertionOnNodeSelection()
   }
 
   set current(selection) {
@@ -333,6 +334,33 @@ export default class Selection {
         }
       }
     }, true)
+  }
+
+  #handleTextInsertionOnNodeSelection() {
+    this.editorContentElement.addEventListener("keydown", (event) => {
+      if (!this.hasNodeSelection) return
+      if (event.key.length !== 1 || event.metaKey || event.ctrlKey || event.altKey) return
+
+      event.preventDefault()
+
+      this.editor.update(() => {
+        const selection = $getSelection()
+        if (!$isNodeSelection(selection)) return
+
+        const nodes = selection.getNodes()
+        if (nodes.length === 0) return
+
+        const firstNode = nodes[0]
+        const textNode = $createTextNode(event.key)
+
+        firstNode.insertBefore(textNode)
+        for (const node of nodes) {
+          node.remove()
+        }
+
+        textNode.selectEnd()
+      })
+    })
   }
 
   #syncSelectedClasses() {
