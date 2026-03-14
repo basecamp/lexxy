@@ -116,7 +116,7 @@ gh pr create \
 ## Summary
 <1-3 bullet points describing the fix>
 
-Fixes Fizzy card #<number>: <card title>
+Fixes [Fizzy card #<number>](<card_url>): <card title>
 EOF
 )" \
   --assignee "$(gh api user --jq '.login')"
@@ -124,7 +124,7 @@ EOF
 
 **PR conventions:**
 - Title: descriptive only, no card/issue numbers (e.g., "Fix cursor jumping after pasting into blockquote" not "Fix #4567: cursor paste bug")
-- Body: include a Summary section with bullet points, and a link to the Fizzy card or GitHub issue
+- Body: include a Summary section with bullet points, and a **full markdown link** to the Fizzy card or GitHub issue (e.g., `[Fizzy card #3785](https://app.fizzy.do/5986089/cards/3785)`). Use the card's `url` field from `fizzy card show`. Never use just `#<number>` — GitHub would misinterpret it as a GitHub issue reference.
 - Assignee: always assign to the current GitHub user (`gh api user --jq '.login'`), never hardcode a username
 
 **Comment on the Fizzy card:**
