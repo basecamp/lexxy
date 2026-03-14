@@ -27,7 +27,7 @@ module Lexxy
           if html = value.body_before_type_cast.presence
             self.prefix_partial_path_with_controller_namespace = false if respond_to?(:prefix_partial_path_with_controller_namespace=)
             ActionText::Fragment.wrap(html).replace(ActionText::Attachment.tag_name) do |node|
-              if node["url"].blank?
+              if node["url"].blank? && !lexxy_content_attachment?(node)
                 attachment = ActionText::Attachment.from_node(node)
                 node["content"] = render_action_text_attachment(attachment).to_json
               end
@@ -37,6 +37,16 @@ module Lexxy
         else
           value
         end
+      end
+
+      def lexxy_content_attachment?(node)
+        content = node["content"]
+        return false if content.blank?
+
+        JSON.parse(content)
+        true
+      rescue JSON::ParserError
+        false
       end
   end
 end
