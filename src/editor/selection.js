@@ -218,6 +218,7 @@ export default class Selection {
     if (!anchorNode) return null
 
     if ($isTextNode(anchorNode)) {
+      if (offset < anchorNode.getTextContentSize()) return null
       return this.#getNextNodeFromTextEnd(anchorNode)
     }
 
@@ -248,6 +249,7 @@ export default class Selection {
     if (!anchorNode) return null
 
     if ($isTextNode(anchorNode)) {
+      if (offset > 0) return null
       return this.#getPreviousNodeFromTextStart(anchorNode)
     }
 
