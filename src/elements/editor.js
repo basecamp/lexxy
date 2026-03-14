@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $isDecoratorNode, $isParagraphNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $isDecoratorNode, $isElementNode, $isParagraphNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -93,7 +93,7 @@ export class LexicalEditorElement extends HTMLElement {
   toString() {
     if (!this.cachedStringValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedStringValue = $getRoot().getTextContent()
+        this.cachedStringValue = $getReadableTextContent($getRoot())
       })
     }
 
@@ -552,3 +552,26 @@ export class LexicalEditorElement extends HTMLElement {
 }
 
 export default LexicalEditorElement
+
+// Like $getRoot().getTextContent() but uses readable text for custom attachment nodes
+// (e.g., mentions) instead of their single-character cursor placeholder.
+function $getReadableTextContent(node) {
+  if (node instanceof CustomActionTextAttachmentNode) {
+    return node.getReadableTextContent()
+  }
+
+  if ($isElementNode(node)) {
+    let text = ""
+    const children = node.getChildren()
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]
+      text += $getReadableTextContent(child)
+      if ($isElementNode(child) && i !== children.length - 1 && !child.isInline()) {
+        text += "\n\n"
+      }
+    }
+    return text
+  }
+
+  return node.getTextContent()
+}
