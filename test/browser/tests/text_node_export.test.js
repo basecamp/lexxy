@@ -2,7 +2,7 @@ import { test } from "../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../helpers/assertions.js"
 
-test.describe("Bug #4378: Redundant bold markup on markdown paste", () => {
+test.describe("Text node export: clean bold and italic markup", () => {
   test("pasting markdown with bold + inline code produces clean HTML", async ({ page, editor }) => {
     await page.goto("/")
     await editor.waitForConnected()
