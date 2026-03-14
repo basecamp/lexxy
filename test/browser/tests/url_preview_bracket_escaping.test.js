@@ -9,6 +9,9 @@ test.describe("URL preview with angle bracket content", () => {
   })
 
   test("content attribute with HTML entities survives DOMPurify sanitization", async ({ page }) => {
+    const hasDOMPurify = await page.evaluate(() => !!window.DOMPurify)
+    test.skip(!hasDOMPurify, "DOMPurify not available as global")
+
     // This test directly tests DOMPurify behavior with the content attribute
     const result = await page.evaluate(() => {
       // Build an attachment element with JSON-stringified content that includes HTML entities
@@ -23,19 +26,7 @@ test.describe("URL preview with angle bracket content", () => {
       wrapper.appendChild(el)
       const serializedHtml = wrapper.innerHTML
 
-      // Now sanitize using DOMPurify via the Lexxy module
-      // We can't import directly, but we can use the editor's value mechanism
-      // Instead, let's manually check what DOMPurify does
-
-      // Import DOMPurify from the page's already-loaded module
-      // DOMPurify should be available since lexxy loads it
-      const DOMPurify = window.DOMPurify
-
-      if (!DOMPurify) {
-        return { error: "DOMPurify not available as global" }
-      }
-
-      const sanitized = DOMPurify.sanitize(serializedHtml, {
+      const sanitized = window.DOMPurify.sanitize(serializedHtml, {
         ALLOWED_TAGS: ["action-text-attachment"],
         ALLOWED_ATTR: ["content", "content-type"],
         SAFE_FOR_XML: false
@@ -53,14 +44,7 @@ test.describe("URL preview with angle bracket content", () => {
       }
     })
 
-    console.log("Result:", JSON.stringify(result, null, 2))
-
-    if (result.error) {
-      // DOMPurify not globally available, skip this test variant
-      console.log("Skipping: " + result.error)
-    } else {
-      expect(result.match).toBe(true)
-    }
+    expect(result.match).toBe(true)
   })
 
   test("preserves angle bracket content through complete editor round-trip", async ({ page, editor }) => {

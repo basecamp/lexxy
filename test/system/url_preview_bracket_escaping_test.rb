@@ -81,7 +81,7 @@ class UrlPreviewBracketEscapingTest < ApplicationSystemTestCase
       content = node["content"]
       begin
         JSON.parse(content)
-      rescue
+      rescue JSON::ParserError
         content
       end
     end
