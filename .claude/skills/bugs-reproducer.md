@@ -97,6 +97,8 @@ The **action under test** — the interaction you're trying to reproduce — mus
 
 **`editor.paste()` is a special case.** It dispatches a synthetic `ClipboardEvent`, which is how all existing paste tests work — browsers don't allow programmatic clipboard access, so this is the correct way to reproduce paste bugs. Use `editor.paste()` as the action under test for paste-related bugs.
 
+**Mixed clipboard payloads need extra care.** When reproducing paste bugs that include files plus HTML or plain text, Firefox may ignore synthetic file payloads on `ClipboardEvent`. In those cases, extend `editor.paste()` to attach a custom `clipboardData` object for file-bearing events, but keep the existing `ClipboardEvent` path for ordinary text/HTML paste so you do not accidentally regress the rest of the paste suite.
+
 **The reproduction step itself must be human-like:**
 
 | For the action under test | Use | Don't use |
@@ -385,6 +387,8 @@ These are areas where bugs tend to cluster, based on the architecture:
 **Paste handling edge cases** — The clipboard handler has separate code paths for: only plain text, HTML with attachments, URLs (including Safari's `text/uri-list`), markdown, files, and content inside code blocks (bypasses Lexxy entirely). Bugs often appear at the boundary between these paths. Cross-app paste (Trix → Lexxy) is a key variant: Trix stores raw HTML in the `content` attribute of `<action-text-attachment>`, while Lexxy stores JSON-stringified HTML. Any code that parses `content` must handle both formats.
 
 **Soft line break selections** — `Shift+Enter` produces `LineBreakNode`s inside a single paragraph. Formatting actions that work on top-level elements can accidentally treat multiple visible lines as one block, so reproduce selection bugs with real soft line breaks (or `<br>` setup) whenever the report mentions composer line breaks.
+
+**Mixed clipboard payload precedence** — Some apps copy the same image as both an HTML `<img>` snippet and a real file. Reproductions need to exercise both payloads together because browsers may expose them differently, and Lexxy should prefer the upload path when attachments are supported.
 
 **Highlight style sync** — The `HighlightExtension` keeps Lexical's `highlight` format bit in sync with inline CSS styles. Two TextNode transforms run on every mutation: one for sync, one for canonical palette enforcement. Infinite loop risk if the sync logic disagrees with Lexical's internal state.
 
