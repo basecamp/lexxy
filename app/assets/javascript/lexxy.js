@@ -10818,19 +10818,38 @@ class Clipboard {
     if (!this.editorElement.supportsAttachments) return false
 
     const html = clipboardData.getData("text/html");
+    const files = clipboardData.files;
+
+    if (files.length && this.#isCopiedImageHTML(html)) {
+      this.#uploadFilesPreservingScroll(files);
+      return true
+    }
+
     if (html) {
       this.contents.insertHtml(html, { tag: Jn });
       return true
     }
 
+    this.#uploadFilesPreservingScroll(files);
+
+    return true
+  }
+
+  #isCopiedImageHTML(html) {
+    if (!html) return false
+
+    const doc = parseHtml(html);
+    const elementChildren = Array.from(doc.body.children);
+
+    return elementChildren.length === 1 && elementChildren[0].tagName === "IMG"
+  }
+
+  #uploadFilesPreservingScroll(files) {
     this.#preservingScrollPosition(() => {
-      const files = clipboardData.files;
       if (files.length) {
         this.contents.uploadFiles(files, { selectLast: true });
       }
     });
-
-    return true
   }
 
   // Deals with an issue in Safari where it scrolls to the tops after pasting attachments
