@@ -1,7 +1,7 @@
 import { test } from "../test_helper.js"
 import { expect } from "@playwright/test"
 
-test.describe("Bug #3803: Click below a table", () => {
+test.describe("Tables: click target below table", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/")
     await page.waitForSelector("lexxy-editor[connected]")
