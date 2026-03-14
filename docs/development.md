@@ -106,3 +106,50 @@ yarn release
 Create [a new release in GitHub](https://github.com/basecamp/lexxy/releases). 
 
 While in beta we are flagging the releases as pre-release.
+
+## Performance benchmarks
+
+Lexxy also ships a browser benchmark harness for the JS side of the editor. These benchmarks run against the Vite fixture app in `test/browser/fixtures/`, just like the Playwright browser tests, so they measure editor bootstrap and content-loading cost without involving Rails, Action Text persistence, or Active Storage uploads.
+
+To run the full browser benchmark suite locally:
+
+```bash
+yarn benchmark:browser
+```
+
+Results are written to `tmp/browser-benchmarks.json`.
+
+For quicker iteration, you can narrow the run to a single scenario or reduce the sample counts:
+
+```bash
+# List scenarios
+yarn benchmark:browser --list-scenarios
+
+# Run one scenario with smaller sample sizes
+yarn benchmark:browser --scenario load-very-large-table --warmup 1 --iterations 5
+```
+
+The current benchmark scenarios are:
+
+- `bootstrap-empty-editor`
+- `bootstrap-many-editors`
+- `load-large-content`
+- `load-very-large-table`
+- `load-many-attachments`
+
+To compare two result files locally:
+
+```bash
+yarn benchmark:browser:compare tmp/baseline.json tmp/current.json
+```
+
+The compare script checks per-scenario median regressions against coarse thresholds so it can be used in CI without flapping on normal GitHub runner variance.
+
+## Benchmark CI
+
+GitHub Actions runs the browser benchmark workflow from `.github/workflows/benchmarks.yml` on pull requests, pushes to `main`, and manual dispatches.
+
+- Each run uploads `tmp/browser-benchmarks.json` as the `browser-benchmarks` artifact.
+- Pull requests compare their results against the latest successful benchmark run from `main`.
+- The workflow only fails when a scenario median regresses by more than both the configured absolute and relative threshold.
+- The comparison is written to the workflow summary, so you can inspect the deltas without downloading artifacts manually.

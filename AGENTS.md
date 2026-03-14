@@ -31,6 +31,16 @@ Single-file tests (`code_highlighting`, `events`) live at the root level.
 
 When adding a new test, pick the folder whose description fits best. If none fits, consider whether a new folder is warranted or if the test extends an existing category.
 
+## Performance Benchmarks
+
+Use the browser benchmark harness for Lexxy performance work. It is intentionally scoped to the JS/editor side of the project, not Rails persistence or Action Text server behavior.
+
+- Run browser benchmarks from the worktree with `yarn benchmark:browser`.
+- Results are written to `tmp/browser-benchmarks.json`.
+- For targeted iteration, use `yarn benchmark:browser --list-scenarios` and `yarn benchmark:browser --scenario <name> --warmup <n> --iterations <n>`.
+- Compare two runs with `yarn benchmark:browser:compare <baseline.json> <current.json>`.
+- CI uses `.github/workflows/benchmarks.yml` and compares PR results against the latest successful benchmark run on `main`.
+- Treat CI benchmark failures as coarse regression alarms. The thresholds are intentionally loose enough to survive normal GitHub-hosted runner variance.
 ## Fixing Bugs
 
 Follow this mandatory workflow. Every step must complete before moving to the next.
