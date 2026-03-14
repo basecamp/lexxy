@@ -46,6 +46,8 @@ FETCH BUGS → BATCH (groups of ~5) → PARALLEL AGENTS (one per bug, each in a 
                                         ├── Comment on Fizzy card / GitHub issue
                                         └── Schedule CI check
                                         │
+                                     CI GREEN → REQUEST COPILOT REVIEW → ADDRESS FEEDBACK
+                                        │
                                      NEXT BATCH (after current completes)
 ```
 
@@ -162,10 +164,36 @@ sleep 180 && gh pr checks <pr_number> --repo <owner/repo>
 
 When the CI check returns:
 
-- **Green:** Report success to the user.
+- **Green:** Request Copilot review and proceed to Step 6.
 - **Red:** Investigate the failure. If it's a flaky test unrelated to the change, note it. If it's a real failure, fix it, push, and re-check.
 
-### Step 6: Process next batch
+### Step 6: Copilot code review
+
+After CI passes, request a GitHub Copilot review on each PR:
+
+```bash
+gh api repos/<owner>/<repo>/pulls/<pr_number>/requested_reviewers \
+  -f "reviewers[]=copilot-pull-request-reviewer[bot]"
+```
+
+Once the review arrives, address the feedback:
+
+1. **Read all comments**: `gh api repos/<owner>/<repo>/pulls/<pr>/reviews/<review_id>/comments`
+2. **Reply to each comment** on GitHub explaining what you'll do (agree, disagree with rationale, or acknowledge)
+3. **For actionable feedback** (real bugs, API misuse, test robustness):
+   - Write a test that validates the issue Copilot identified (following the bugs-reproducer pattern: test first, then fix)
+   - Fix the issue
+   - Run the full test suite + lint
+   - Push the fix
+4. **For cosmetic or low-value feedback** (style nits, redundant suggestions, over-engineering): reply explaining why you're declining and move on
+5. **Common actionable patterns**:
+   - Using internal/private APIs instead of public ones (e.g., `_nodeMap` → `$getNodeByKey()`)
+   - Tests that silently pass instead of visibly skipping/failing
+   - Non-retrying assertions (e.g., `count()` + `expect()` instead of `toHaveCount()`)
+   - Logic bugs in edge cases (e.g., regex that over-matches)
+   - Bare `rescue` instead of specific exception classes
+
+### Step 7: Process next batch
 
 After all agents in the current batch complete (or time out), process the next batch. Report a summary of the completed batch:
 
