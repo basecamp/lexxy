@@ -12,6 +12,9 @@
 /node_modules/
 /app/assets/javascript/*.js.map
 
+# Claude Code
+/.claude/worktrees/
+
 # Playwright
 /test/browser/test-results/
 /test/browser/playwright-report/
