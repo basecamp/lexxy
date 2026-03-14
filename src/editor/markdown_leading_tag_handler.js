@@ -35,7 +35,7 @@ export function registerMarkdownLeadingTagHandler(editor, transformers) {
 
     if (!dirtyLeaves.has(anchorKey)) return
 
-    const anchorNode = editorState._nodeMap.get(anchorKey)
+    const anchorNode = editorState.read(() => $getNodeByKey(anchorKey))
     if (!$isTextNode(anchorNode)) return
 
     // Only trigger when cursor moved forward (typing)
@@ -137,8 +137,8 @@ function $applyFormatFromLeadingTag(anchorNode, openTagStart, transformer) {
   $setSelection(nextSelection)
 
   // Select the inner text to apply formatting
-  nextSelection.anchor.set(anchorNode.__key, openTagStart, "text")
-  nextSelection.focus.set(anchorNode.__key, openTagStart + inner.length, "text")
+  nextSelection.anchor.set(anchorNode.getKey(), openTagStart, "text")
+  nextSelection.focus.set(anchorNode.getKey(), openTagStart + inner.length, "text")
 
   for (const format of transformer.format) {
     if (!nextSelection.hasFormat(format)) {

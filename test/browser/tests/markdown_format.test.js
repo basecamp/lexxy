@@ -1,7 +1,7 @@
 import { test } from "../test_helper.js"
 import { assertEditorHtml } from "../helpers/assertions.js"
 
-test.describe("Markdown format: leading tag typed before trailing tag", () => {
+test.describe("Markdown format: trailing tag typed first, then leading tag", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/")
     await page.waitForSelector("lexxy-editor[connected]")
