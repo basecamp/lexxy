@@ -13,10 +13,6 @@ Process a batch of bugs from a Fizzy board or GitHub repo in parallel, using wor
 
 ## Invocation
 
-```
-/mass-bug-fixing <source>
-```
-
 **From a Fizzy board (default):**
 
 ```
@@ -109,8 +105,9 @@ When an agent finishes its bug fix:
 # Push branch with descriptive name
 git push -u origin fix-<short-description>
 
-# Create PR — descriptive title only, no card/issue numbers in title
-gh pr create \
+# Create PR and capture its URL for CI follow-up
+# For Fizzy card bugs:
+pr_url=$(gh pr create \
   --title "Fix <descriptive title>" \
   --body "$(cat <<'EOF'
 ## Summary
@@ -119,12 +116,26 @@ gh pr create \
 Fixes [Fizzy card #<number>](<card_url>): <card title>
 EOF
 )" \
-  --assignee "$(gh api user --jq '.login')"
+  --assignee "$(gh api user --jq '.login')")
+
+# For GitHub issue bugs:
+pr_url=$(gh pr create \
+  --title "Fix <descriptive title>" \
+  --body "$(cat <<'EOF'
+## Summary
+<1-3 bullet points describing the fix>
+
+Fixes #<issue_number>
+EOF
+)" \
+  --assignee "$(gh api user --jq '.login')")
 ```
 
 **PR conventions:**
 - Title: descriptive only, no card/issue numbers (e.g., "Fix cursor jumping after pasting into blockquote" not "Fix #4567: cursor paste bug")
-- Body: include a Summary section with bullet points, and a **full markdown link** to the Fizzy card or GitHub issue (e.g., `[Fizzy card #3785](https://app.fizzy.do/5986089/cards/3785)`). Use the card's `url` field from `fizzy card show`. Never use just `#<number>` — GitHub would misinterpret it as a GitHub issue reference.
+- Body: include a Summary section with bullet points, plus a link to the source:
+  - **Fizzy cards:** always use a full markdown link (e.g., `[Fizzy card #3785](https://app.fizzy.do/5986089/cards/3785)`). Use the card's `url` field from `fizzy card show`. Never use just `#<number>` — GitHub would misinterpret it as a GitHub issue reference.
+  - **GitHub issues:** use `Fixes #<number>` to auto-close the issue when the PR merges.
 - Assignee: always assign to the current GitHub user (`gh api user --jq '.login'`), never hardcode a username
 
 **Comment on the Fizzy card:**
@@ -151,11 +162,11 @@ For GitHub issues, use `gh issue comment`.
 
 **Schedule CI check:**
 
-After creating the PR, schedule a background check ~3 minutes later to verify CI passes:
+After creating the PR, schedule a background check ~3 minutes later to verify CI passes. Use the `pr_url` captured from `gh pr create` above:
 
 ```bash
 # Background: check CI status after 3 minutes
-sleep 180 && gh pr checks <pr_number> --repo <owner/repo>
+sleep 180 && gh pr checks "$pr_url"
 ```
 
 ### Step 5: CI follow-up
