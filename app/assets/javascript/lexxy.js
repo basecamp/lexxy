@@ -13808,8 +13808,11 @@ class TableTools extends HTMLElement {
   }
 
   #show() {
+    this.#updateButtonsPosition();
     this.style.display = "flex";
-    this.#update();
+    this.#updateRowColumnCount();
+    this.#closeMoreMenu();
+    this.#handleCommandButtonHover();
   }
 
   #hide() {
