@@ -7,6 +7,7 @@ import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
+import { registerMarkdownLeadingTagHandler } from "../editor/markdown_leading_tag_handler"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 
 import theme from "../config/theme"
@@ -376,6 +377,7 @@ export class LexicalEditorElement extends HTMLElement {
       this.#registerCodeHiglightingComponents()
       if (this.supportsMarkdown) {
         registerMarkdownShortcuts(this.editor, TRANSFORMERS)
+        registerMarkdownLeadingTagHandler(this.editor, TRANSFORMERS)
       }
     } else {
       registerPlainText(this.editor)
