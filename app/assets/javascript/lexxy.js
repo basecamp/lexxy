@@ -6937,6 +6937,162 @@ function K$2(t,...e){const n=new URL("https://lexical.dev/docs/error"),r=new URL
 
 function D$1(t,e){const n={};for(const o of t){const t=e(o);t&&(n[t]?n[t].push(o):n[t]=[o]);}return n}function K$1(t){const e=D$1(t,t=>t.type);return {element:e.element||[],multilineElement:e["multiline-element"]||[],textFormat:e["text-format"]||[],textMatch:e["text-match"]||[]}}const q$1=/[!-/:-@[-`{-~\s]/;function rt$1(t){return yr(t)&&!t.hasFormat("code")}function at(t,...e){const n=new URL("https://lexical.dev/docs/error"),o=new URLSearchParams;o.append("code",t);for(const t of e)o.append("v",t);throw n.search=o.toString(),Error(`Minified Lexical error #${t}; visit ${n.toString()} for the full message or use the non-minified dev environment for full errors and additional helpful warnings.`)}const ft$1=/^(\s*)(\d{1,})\.\s/,gt$1=/^(\s*)[-*+]\s/,dt$1=/^(#{1,6})\s/,pt$1=/^>\s/,ht=/^([ \t]*`{3,})([\w-]+)?[ \t]?/,xt$1=/^[ \t]*`{3,}$/,vt$1=it$2("mdListMarker",{parse:t=>"string"==typeof t&&/^[-*+]$/.test(t)?t:"-"}),It$1=it$2("mdCodeFence",{parse:t=>"string"==typeof t&&/^`{3,}$/.test(t)?t:"```"}),St$1=t=>(e,n,o,r)=>{const s=t(o);s.append(...n),e.replace(s),r||s.select(0,0);};const bt$1=t=>(e,n,o,r)=>{const s=e.getPreviousSibling(),i=e.getNextSibling(),l=ce$1("check"===t?"x"===o[3]:void 0),c=o[0].trim()[0],a="bullet"!==t&&"check"!==t||c!==vt$1.parse(c)?void 0:c;if(me$1(i)&&i.getListType()===t){a&&lt$2(i,vt$1,a);const t=i.getFirstChild();null!==t?t.insertBefore(l):i.append(l),e.remove();}else if(me$1(s)&&s.getListType()===t)a&&lt$2(s,vt$1,a),s.append(l),e.remove();else {const n=pe$1(t,"number"===t?Number(o[2]):void 0);a&&lt$2(n,vt$1,a),n.append(l),e.replace(n);}l.append(...n),r||l.select(0,0);const f=function(t){const e=t.match(/\t/g),n=t.match(/ /g);let o=0;return e&&(o+=e.length),n&&(o+=Math.floor(n.length/4)),o}(o[1]);f&&l.setIndent(f);},wt$1=(t,e,n)=>{const o=[],r=t.getChildren();let s=0;for(const i of r)if(ae$1(i)){if(1===i.getChildrenSize()){const t=i.getFirstChild();if(me$1(t)){o.push(wt$1(t,e,n+1));continue}}const r=" ".repeat(4*n),l=t.getListType(),c=ot$2(t,vt$1),a="number"===l?`${t.getStart()+s}. `:"check"===l?`${c} [${i.getChecked()?"x":" "}] `:c+" ";o.push(r+a+e(i)),s++;}return o.join("\n")},Ft$1={dependencies:[Tt$2],export:(t,e)=>{if(!It$2(t))return null;const n=Number(t.getTag().slice(1));return "#".repeat(n)+" "+e(t)},regExp:dt$1,replace:St$1(t=>{const e="h"+t[1].length;return Mt$2(e)}),type:"element"},Lt$1={dependencies:[_t$2],export:(t,e)=>{if(!Pt$3(t))return null;const n=e(t).split("\n"),o=[];for(const t of n)o.push("> "+t);return o.join("\n")},regExp:pt$1,replace:(t,e,n,o)=>{if(o){const n=t.getPreviousSibling();if(Pt$3(n))return n.splice(n.getChildrenSize(),0,[Qn(),...e]),void t.remove()}const r=Ot$3();r.append(...e),t.replace(r),o||r.select(0,0);},type:"element"},Nt={dependencies:[U$1],export:t=>{if(!Q$1(t))return null;const e=t.getTextContent();let n=ot$2(t,It$1);if(e.indexOf(n)>-1){const t=e.match(/`{3,}/g);if(t){const e=Math.max(...t.map(t=>t.length));n="`".repeat(e+1);}}return n+(t.getLanguage()||"")+(e?"\n"+e:"")+"\n"+n},handleImportAfterStartMatch:({lines:t,rootNode:e,startLineIndex:n,startMatch:o})=>{const r=o[1],s=r.trim().length,i=t[n],l=o.index+r.length,c=i.slice(l),a=new RegExp(`\`{${s},}$`);if(a.test(c)){const t=c.match(a),r=c.slice(0,c.lastIndexOf(t[0])),s=[...o];return s[2]="",Nt.replace(e,null,s,t,[r],true),[true,n]}const f=new RegExp(`^[ \\t]*\`{${s},}$`);for(let r=n+1;r<t.length;r++){const s=t[r];if(f.test(s)){const l=s.match(f),c=t.slice(n+1,r),a=i.slice(o[0].length);return a.length>0&&c.unshift(a),Nt.replace(e,null,o,l,c,true),[true,r]}}const g=t.slice(n+1),u=i.slice(o[0].length);return u.length>0&&g.unshift(u),Nt.replace(e,null,o,null,g,true),[true,t.length-1]},regExpEnd:{optional:true,regExp:xt$1},regExpStart:ht,replace:(t,e,n,o,r,s)=>{let i,c;const a=n[1]?n[1].trim():"```",f=n[2]||void 0;if(!e&&r){if(1===r.length)o?(i=X$1(f),c=r[0]):(i=X$1(f),c=r[0].startsWith(" ")?r[0].slice(1):r[0]);else {for(i=X$1(f),r.length>0&&(0===r[0].trim().length?r.shift():r[0].startsWith(" ")&&(r[0]=r[0].slice(1)));r.length>0&&!r[r.length-1].length;)r.pop();c=r.join("\n");}lt$2(i,It$1,a);const e=pr(c);i.append(e),t.append(i);}else e&&St$1(t=>X$1(t?t[2]:void 0))(t,e,n,s);},type:"multiline-element"},kt$1={dependencies:[ue$1,se$1],export:(t,e)=>me$1(t)?wt$1(t,e,0):null,regExp:gt$1,replace:bt$1("bullet"),type:"element"},Mt$1={dependencies:[ue$1,se$1],export:(t,e)=>me$1(t)?wt$1(t,e,0):null,regExp:ft$1,replace:bt$1("number"),type:"element"},_t$1={format:["code"],tag:"`",type:"text-format"},Bt$1={format:["highlight"],tag:"==",type:"text-format"},jt$1={format:["bold","italic"],tag:"***",type:"text-format"},Pt$1={format:["bold","italic"],intraword:false,tag:"___",type:"text-format"},At$1={format:["bold"],tag:"**",type:"text-format"},Ot$1={format:["bold"],intraword:false,tag:"__",type:"text-format"},zt$1={format:["strikethrough"],tag:"~~",type:"text-format"},Ut$1={format:["italic"],tag:"*",type:"text-format"},Wt$1={format:["italic"],intraword:false,tag:"_",type:"text-format"},Dt$1={dependencies:[E$3],export:(t,e,n)=>{if(!B$2(t)||H$1(t))return null;const o=t.getTitle(),r=e(t);return o?`[${r}](${t.getURL()} "${o}")`:`[${r}](${t.getURL()})`},importRegExp:/(?:\[(.+?)\])(?:\((?:([^()\s]+)(?:\s"((?:[^"]*\\")*[^"]*)"\s*)?)\))/,regExp:/(?:\[([^[\]]*(?:\[[^[\]]*\][^[\]]*)*)\])(?:\((?:([^()\s]+)(?:\s"((?:[^"]*\\")*[^"]*)"\s*)?)\))$/,replace:(t,e)=>{if(qs(t,B$2))return;const[,n,o,r]=e,s=K$3(o,{title:r}),i=n.split("[").length-1,c=n.split("]").length-1;let a=n,f="";if(i<c)return;if(i>c){const t=n.split("[");f="["+t[0],a=t.slice(1).join("[");}const g=pr(a);return g.setFormat(t.getFormat()),s.append(g),t.replace(s),f&&s.insertBefore(pr(f)),g},trigger:")",type:"text-match"},Kt$1=[Ft$1,Lt$1,kt$1,Mt$1],qt$1=[Nt],Gt$1=[_t$1,jt$1,Pt$1,At$1,Ot$1,Bt$1,Ut$1,Wt$1,zt$1],Ht$1=[Dt$1],Jt$1=[...Kt$1,...qt$1,...Gt$1,...Ht$1];function Qt$1(t,e,n,o,r){const s=t.getParent();if(!xs(s)||t.getFirstChild()!==e)return  false;const i=e.getTextContent();if(!r&&" "!==i[n-1])return  false;for(const{regExpStart:s,replace:l,regExpEnd:c}of o){if(c&&!("optional"in c)||c&&"optional"in c&&!c.optional)continue;const o=i.match(s);if(o){const s=r||o[0].endsWith(" ")?n:n-1;if(o[0].length!==s)continue;const i=e.getNextSiblings(),[c,a]=e.splitText(n);if(false!==l(t,a?[a,...i]:i,o,null,null,false))return c.remove(),true}}return  false}function Vt$1(t,e,n){const o=n.length;for(let r=e;r>=o;r--){const e=r-o;if(Xt$1(t,e,n,0,o)&&" "!==t[e+o])return e}return  -1}function Xt$1(t,e,n,o,r){for(let s=0;s<r;s++)if(t[e+s]!==n[o+s])return  false;return  true}function Yt$1(t,n=Jt$1){const o=K$1(n),r=D$1(o.textFormat,({tag:t})=>t[t.length-1]),l=D$1(o.textMatch,({trigger:t})=>t);for(const e of n){const n=e.type;if("element"===n||"text-match"===n||"multiline-element"===n){const n=e.dependencies;for(const e of n)t.hasNode(e)||at(173,e.getType());}}const c=(t,n,c)=>{(function(t,e,n,o){const r=t.getParent();if(!xs(r)||t.getFirstChild()!==e)return  false;const s=e.getTextContent();if(" "!==s[n-1])return  false;for(const{regExp:r,replace:i}of o){const o=s.match(r);if(o&&o[0].length===(o[0].endsWith(" ")?n:n-1)){const r=e.getNextSiblings(),[s,l]=e.splitText(n);if(false!==i(t,l?[l,...r]:r,o,false))return s.remove(),true}}return  false})(t,n,c,o.element)||Qt$1(t,n,c,o.multilineElement)||function(t,e,n){let o=t.getTextContent();const r=n[o[e-1]];if(null==r)return  false;e<o.length&&(o=o.slice(0,e));for(const e of r){if(!e.replace||!e.regExp)continue;const n=o.match(e.regExp);if(null===n)continue;const r=n.index||0,s=r+n[0].length;let i;return 0===r?[i]=t.splitText(s):[,i]=t.splitText(r,s),i.selectNext(0,0),e.replace(i,n),true}return  false}(n,c,l)||function(t,n,o){const r=t.getTextContent(),l=n-1,c=r[l],a=o[c];if(!a)return  false;for(const n of a){const{tag:o}=n,a=o.length,f=l-a+1;if(a>1&&!Xt$1(r,f,o,0,a))continue;if(" "===r[f-1])continue;const g=r[l+1];if(false===n.intraword&&g&&!q$1.test(g))continue;const u=t;let d=u,p=Vt$1(r,f,o),h=d;for(;p<0&&(h=h.getPreviousSibling())&&!Zn(h);)if(yr(h)){if(h.hasFormat("code"))continue;const t=h.getTextContent();d=h,p=Vt$1(t,t.length,o);}if(p<0)continue;if(d===u&&p+a===f)continue;const x=d.getTextContent();if(p>0&&x[p-1]===c)continue;const C=x[p-1];if(false===n.intraword&&C&&!q$1.test(C))continue;const T=u.getTextContent(),E=T.slice(0,f)+T.slice(l+1);u.setTextContent(E);const v=d===u?E:x;d.setTextContent(v.slice(0,p)+v.slice(p+a));const I=$r(),S=Wr();zo(S);const b=l-a*(d===u?2:1)+1;S.anchor.set(d.__key,p,"text"),S.focus.set(u.__key,b,"text");for(const t of n.format)S.hasFormat(t)||S.formatText(t);S.anchor.set(S.focus.key,S.focus.offset,S.focus.type);for(const t of n.format)S.hasFormat(t)&&S.toggleFormat(t);return wr(I)&&(S.format=I.format),true}}(n,c,r);};return ec(t.registerUpdateListener(({tags:n,dirtyLeaves:o,editorState:r,prevEditorState:s})=>{if(n.has(jn)||n.has(Rn$1))return;if(t.isComposing())return;const l=r.read($r),a=s.read($r);if(!wr(a)||!wr(l)||!l.isCollapsed()||l.is(a))return;const f=l.anchor.key,g=l.anchor.offset,u=r._nodeMap.get(f);!yr(u)||!o.has(f)||1!==g&&g>a.anchor.offset+1||t.update(()=>{if(!rt$1(u))return;const t=u.getParent();null===t||Q$1(t)||c(t,u,l.anchor.offset);});}),t.registerCommand(Ee$2,t=>{if(null!==t&&t.shiftKey)return  false;const n=$r();if(!wr(n)||!n.isCollapsed())return  false;const r=n.anchor.offset,s=n.anchor.getNode();if(!yr(s)||!rt$1(s))return  false;const l=s.getParent();if(null===l||Q$1(l))return  false;return r===s.getTextContent().length&&(!!Qt$1(l,s,r,o.multilineElement,true)&&(null!==t&&t.preventDefault(),true))},Hi))}
 
+const PUNCTUATION_OR_SPACE = /[^\w]/;
+
+// Supplements Lexical's built-in registerMarkdownShortcuts to handle the case
+// where a user types a leading tag before text that already ends with a
+// trailing tag (e.g. typing ` before `hello`` or ** before **hello**).
+//
+// Lexical's markdown shortcut handler only triggers format transformations when
+// the closing tag is the character just typed. When the opening tag is typed
+// instead (e.g. typing ` before `hello`` to form ``hello``), the built-in
+// handler doesn't match because it looks backward from the cursor for an
+// opening tag, but the cursor is right after it.
+//
+// This listener detects that scenario for ALL text format transformers
+// (backtick, bold, italic, strikethrough, etc.) and applies the appropriate
+// format.
+function registerMarkdownLeadingTagHandler(editor, transformers) {
+  const textFormatTransformers = transformers
+    .filter(t => t.type === "text-format")
+    .sort((a, b) => b.tag.length - a.tag.length); // Longer tags first
+
+  return editor.registerUpdateListener(({ tags, dirtyLeaves, editorState, prevEditorState }) => {
+    if (tags.has("historic") || tags.has("collaboration")) return
+    if (editor.isComposing()) return
+
+    const selection = editorState.read($r);
+    const prevSelection = prevEditorState.read($r);
+
+    if (!wr(prevSelection) || !wr(selection) || !selection.isCollapsed()) return
+
+    const anchorKey = selection.anchor.key;
+    const anchorOffset = selection.anchor.offset;
+
+    if (!dirtyLeaves.has(anchorKey)) return
+
+    const anchorNode = editorState.read(() => Mo(anchorKey));
+    if (!yr(anchorNode)) return
+
+    // Only trigger when cursor moved forward (typing)
+    const prevOffset = prevSelection.anchor.key === anchorKey ? prevSelection.anchor.offset : 0;
+    if (anchorOffset <= prevOffset) return
+
+    const textContent = editorState.read(() => anchorNode.getTextContent());
+
+    // Try each transformer, longest tags first
+    for (const transformer of textFormatTransformers) {
+      const tag = transformer.tag;
+      const tagLen = tag.length;
+
+      // The typed characters must end at the cursor position and form the opening tag
+      const openTagStart = anchorOffset - tagLen;
+      if (openTagStart < 0) continue
+
+      const candidateOpenTag = textContent.slice(openTagStart, anchorOffset);
+      if (candidateOpenTag !== tag) continue
+
+      // Disambiguate from longer tags: if the character before the opening tag
+      // is the same as the tag character, this might be part of a longer tag
+      // (e.g. seeing `*` when the user is actually typing `**`)
+      const tagChar = tag[0];
+      if (openTagStart > 0 && textContent[openTagStart - 1] === tagChar) continue
+
+      // Check intraword constraint: if intraword is false, the character before
+      // the opening tag must be a space, punctuation, or the start of the text
+      if (transformer.intraword === false && openTagStart > 0) {
+        const beforeChar = textContent[openTagStart - 1];
+        if (beforeChar && !PUNCTUATION_OR_SPACE.test(beforeChar)) continue
+      }
+
+      // Search forward for a closing tag in the same text node
+      const searchStart = anchorOffset;
+      const closeTagIndex = textContent.indexOf(tag, searchStart);
+      if (closeTagIndex < 0) continue
+
+      // Disambiguate closing tag from longer tags: if the character right after
+      // the closing tag is the same as the tag character, skip
+      // (e.g. `*hello**` — the first `*` at index 6 is part of `**`)
+      if (textContent[closeTagIndex + tagLen] === tagChar) continue
+
+      // Also check if the character before the closing tag start is the same
+      // tag character (e.g. the closing tag might be a suffix of a longer sequence)
+      if (closeTagIndex > 0 && textContent[closeTagIndex - 1] === tagChar) continue
+
+      // There must be content between the tags (not just empty or whitespace-adjacent)
+      const innerStart = anchorOffset;
+      const innerEnd = closeTagIndex;
+      if (innerEnd <= innerStart) continue
+
+      // No space immediately after opening tag
+      if (textContent[innerStart] === " ") continue
+
+      // No space immediately before closing tag
+      if (textContent[innerEnd - 1] === " ") continue
+
+      // Check intraword constraint for closing tag
+      if (transformer.intraword === false) {
+        const afterCloseChar = textContent[closeTagIndex + tagLen];
+        if (afterCloseChar && !PUNCTUATION_OR_SPACE.test(afterCloseChar)) continue
+      }
+
+      editor.update(() => {
+        const node = Mo(anchorKey);
+        if (!node || !yr(node)) return
+
+        const parent = node.getParent();
+        if (parent === null || Q$1(parent)) return
+
+        $applyFormatFromLeadingTag(node, openTagStart, transformer);
+      });
+
+      break // Only apply the first (longest) matching transformer
+    }
+  })
+}
+
+function $applyFormatFromLeadingTag(anchorNode, openTagStart, transformer) {
+  const tag = transformer.tag;
+  const tagLen = tag.length;
+  const textContent = anchorNode.getTextContent();
+
+  const innerStart = openTagStart + tagLen;
+  const closeTagIndex = textContent.indexOf(tag, innerStart);
+  if (closeTagIndex < 0) return
+
+  const inner = textContent.slice(innerStart, closeTagIndex);
+  if (inner.length === 0) return
+
+  // Remove both tags and apply format
+  const before = textContent.slice(0, openTagStart);
+  const after = textContent.slice(closeTagIndex + tagLen);
+
+  anchorNode.setTextContent(before + inner + after);
+
+  const nextSelection = Wr();
+  zo(nextSelection);
+
+  // Select the inner text to apply formatting
+  nextSelection.anchor.set(anchorNode.getKey(), openTagStart, "text");
+  nextSelection.focus.set(anchorNode.getKey(), openTagStart + inner.length, "text");
+
+  for (const format of transformer.format) {
+    if (!nextSelection.hasFormat(format)) {
+      nextSelection.formatText(format);
+    }
+  }
+
+  // Collapse selection to end of formatted text and clear the format
+  // so subsequent typing is plain text
+  nextSelection.anchor.set(nextSelection.focus.key, nextSelection.focus.offset, nextSelection.focus.type);
+
+  for (const format of transformer.format) {
+    if (nextSelection.hasFormat(format)) {
+      nextSelection.toggleFormat(format);
+    }
+  }
+}
+
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -10905,6 +11061,60 @@ class Extensions {
   }
 }
 
+// Custom TextNode exportDOM that avoids redundant bold/italic wrapping.
+//
+// Lexical's built-in TextNode.exportDOM() calls createDOM() which produces semantic tags
+// like <strong> for bold and <em> for italic, then unconditionally wraps the result
+// with presentational tags (<b>, <i>) for the same formats. This produces redundant markup
+// like <b><strong>text</strong></b>.
+//
+// This custom export skips <b> when <strong> is already present and <i> when <em> is
+// already present, while preserving <s> and <u> wrappers which have no semantic equivalents
+// in createDOM's output.
+
+function exportTextNodeDOM(editor, textNode) {
+  const element = textNode.createDOM(editor._config, editor);
+  element.style.whiteSpace = "pre-wrap";
+
+  if (textNode.hasFormat("lowercase")) {
+    element.style.textTransform = "lowercase";
+  } else if (textNode.hasFormat("uppercase")) {
+    element.style.textTransform = "uppercase";
+  } else if (textNode.hasFormat("capitalize")) {
+    element.style.textTransform = "capitalize";
+  }
+
+  let result = element;
+
+  if (textNode.hasFormat("bold") && !containsTag(element, "strong")) {
+    result = wrapWith(result, "b");
+  }
+  if (textNode.hasFormat("italic") && !containsTag(element, "em")) {
+    result = wrapWith(result, "i");
+  }
+  if (textNode.hasFormat("strikethrough")) {
+    result = wrapWith(result, "s");
+  }
+  if (textNode.hasFormat("underline")) {
+    result = wrapWith(result, "u");
+  }
+
+  return { element: result }
+}
+
+function containsTag(element, tagName) {
+  const upperTag = tagName.toUpperCase();
+  if (element.tagName === upperTag) return true
+
+  return element.querySelector(tagName) !== null
+}
+
+function wrapWith(element, tag) {
+  const wrapper = document.createElement(tag);
+  wrapper.appendChild(element);
+  return wrapper
+}
+
 class ProvisionalParagraphNode extends Ui {
   $config() {
     return this.config("provisonal_paragraph", {
@@ -11533,7 +11743,10 @@ class LexicalEditorElement extends HTMLElement {
       name: "lexxy/core",
       namespace: "Lexxy",
       theme: theme,
-      nodes: this.#lexicalNodes
+      nodes: this.#lexicalNodes,
+      html: {
+        export: new Map([ [ lr, exportTextNodeDOM ] ])
+      }
     },
       ...this.extensions.lexicalExtensions
     );
@@ -11657,6 +11870,7 @@ class LexicalEditorElement extends HTMLElement {
       this.#registerCodeHiglightingComponents();
       if (this.supportsMarkdown) {
         Yt$1(this.editor, Jt$1);
+        registerMarkdownLeadingTagHandler(this.editor, Jt$1);
       }
     } else {
       z$1(this.editor);
