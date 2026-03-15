@@ -1,5 +1,5 @@
-import { test } from "../test_helper.js"
-import { assertEditorHtml } from "../helpers/assertions.js"
+import { test } from "../../test_helper.js"
+import { assertEditorHtml } from "../../helpers/assertions.js"
 
 test.describe("Markdown format: trailing tag typed first, then leading tag", () => {
   test.beforeEach(async ({ page }) => {
