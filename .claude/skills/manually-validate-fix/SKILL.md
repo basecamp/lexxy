@@ -218,12 +218,18 @@ Review screenshots and console output from both runs.
 2. ...
 ```
 
-### 8. Label the PR
+### 8. Label and Comment on the PR
 
 **If Validated:**
 
 ```bash
 gh pr edit <number> --add-label "fix-validated" -R basecamp/lexxy
+gh pr comment <number> --body "$(cat <<'EOF'
+## Manual Validation: Validated
+
+<Brief description of what was tested — written for a human reviewer. Describe the steps you performed and what you observed, e.g. "Typed a bulleted list, selected all items, applied heading format from the toolbar. Confirmed the list converted to a heading without leaving orphaned list markers.">
+EOF
+)"
 ```
 
 **If Not Fixed** — comment on the PR:
@@ -232,7 +238,7 @@ gh pr edit <number> --add-label "fix-validated" -R basecamp/lexxy
 gh pr comment <number> --body "$(cat <<'EOF'
 ## Manual Validation: Not Fixed
 
-<verdict details>
+<Same human-readable description of the steps tested and what was observed, explaining why validation failed.>
 EOF
 )"
 ```
