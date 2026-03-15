@@ -1,6 +1,6 @@
-import { test } from "../test_helper.js"
+import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
-import { mockActiveStorageUploads } from "../helpers/active_storage_mock.js"
+import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
 
 test.describe("Gallery", () => {
   test.beforeEach(async ({ page }) => {

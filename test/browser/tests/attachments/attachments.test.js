@@ -1,7 +1,7 @@
-import { test } from "../test_helper.js"
+import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
-import { assertEditorHtml } from "../helpers/assertions.js"
-import { mockActiveStorageUploads } from "../helpers/active_storage_mock.js"
+import { assertEditorHtml } from "../../helpers/assertions.js"
+import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
 
 test.describe("Attachments", () => {
   test.beforeEach(async ({ page }) => {

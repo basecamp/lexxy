@@ -1,5 +1,5 @@
-import { test } from "../test_helper.js"
-import { assertEditorHtml } from "../helpers/assertions.js"
+import { test } from "../../test_helper.js"
+import { assertEditorHtml } from "../../helpers/assertions.js"
 
 test.describe("Paste with styles", () => {
   test.beforeEach(async ({ page }) => {

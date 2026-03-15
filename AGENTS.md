@@ -18,12 +18,16 @@ When working from a git worktree:
 
 Playwright tests in `test/browser/tests/` are grouped into semantic folders:
 
-| Folder         | What goes here                                                       |
-|----------------|----------------------------------------------------------------------|
-| `formatting/`  | Toolbar chrome, inline marks, highlights, block formats (headers, lists, quotes, links) |
-| `tables/`      | Table creation, navigation, and editing                              |
-| `paste/`       | Markdown conversion, URL/link paste, file/attachment paste           |
-| *(root)*       | Everything else: attachments, code highlighting, events, focus, etc. |
+| Folder         | What goes here                                                                          |
+|----------------|-----------------------------------------------------------------------------------------|
+| `attachments/` | Upload, delete, caption, gallery                                                        |
+| `code/`        | Code blocks: syntax highlighting                                                        |
+| `editor/`      | Core editor API: focus, isEmpty/isBlank, toString, setValue, CSS status classes          |
+| `events/`      | Custom event API (change, focus, blur)                                                  |
+| `formatting/`  | Toolbar chrome, inline marks, highlights, block formats, lists, HR, escape, color       |
+| `modes/`       | Plain-text mode, single-line mode                                                       |
+| `paste/`       | Markdown conversion, URL/link paste, file/attachment paste, style canonicalization       |
+| `tables/`      | Table creation, navigation, and editing                                                 |
 
 When adding a new test, pick the folder whose description fits best. If none fits, consider whether a new folder is warranted or if the test extends an existing category.
 
