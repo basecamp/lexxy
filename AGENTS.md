@@ -25,7 +25,7 @@ Playwright tests in `test/browser/tests/` are grouped into semantic folders:
 | `formatting/`  | Toolbar chrome, inline marks, highlights, block formats, lists, HR, escape, color       |
 | `modes/`       | Plain-text mode, single-line mode                                                       |
 | `paste/`       | Markdown conversion, URL/link paste, file/attachment paste, style canonicalization       |
-| `tables/`      | Structure (add/remove rows/columns), headers, edge cases (delete, select-all, wrapper)  |
+| `tables/`      | Structure (add/remove rows/columns), headers, manipulation (delete, select-all, wrapper) |
 
 Single-file tests (`code_highlighting`, `events`) live at the root level.
 

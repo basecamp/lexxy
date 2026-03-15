@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 
-test.describe("Tables — Edge cases", () => {
+test.describe("Tables — Manipulation", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/")
     await page.waitForSelector("lexxy-editor[connected]")
