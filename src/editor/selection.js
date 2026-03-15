@@ -1,6 +1,6 @@
 import {
   $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
-  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND, DecoratorNode,
+  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND,
   KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
@@ -610,8 +610,12 @@ export default class Selection {
   }
 
   #getNextNodeFromTextEnd(anchorNode) {
-    if (anchorNode.getNextSibling() instanceof DecoratorNode) {
-      return anchorNode.getNextSibling()
+    const nextSibling = anchorNode.getNextSibling()
+    if ($isDecoratorNode(nextSibling)) {
+      return nextSibling
+    }
+    if (nextSibling != null) {
+      return null
     }
     const parent = anchorNode.getParent()
     return parent ? parent.getNextSibling() : null
@@ -632,11 +636,15 @@ export default class Selection {
   }
 
   #getPreviousNodeFromTextStart(anchorNode) {
-    if (anchorNode.getPreviousSibling() instanceof DecoratorNode) {
-      return anchorNode.getPreviousSibling()
+    const previousSibling = anchorNode.getPreviousSibling()
+    if ($isDecoratorNode(previousSibling)) {
+      return previousSibling
+    }
+    if (previousSibling != null) {
+      return null
     }
     const parent = anchorNode.getParent()
-    return parent.getPreviousSibling()
+    return parent ? parent.getPreviousSibling() : null
   }
 
   #getNodeBeforeElementNode(anchorNode, offset) {
