@@ -8417,6 +8417,7 @@ class Selection {
     if (!anchorNode) return null
 
     if (yr(anchorNode)) {
+      if (offset < anchorNode.getTextContentSize()) return null
       return this.#getNextNodeFromTextEnd(anchorNode)
     }
 
@@ -8447,6 +8448,7 @@ class Selection {
     if (!anchorNode) return null
 
     if (yr(anchorNode)) {
+      if (offset > 0) return null
       return this.#getPreviousNodeFromTextStart(anchorNode)
     }
 
