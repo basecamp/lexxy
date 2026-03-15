@@ -3,8 +3,7 @@ name: bugs-reproducer
 description: |
   Bug reproduction for the Lexxy rich text editor. Core editing bugs use
   Playwright (Selenium fallback); system-level bugs use Capybara. All local.
-invocation: user
-user_invocation: /bugs-reproducer
+disable-model-invocation: true
 ---
 
 # Bugs Reproducer
