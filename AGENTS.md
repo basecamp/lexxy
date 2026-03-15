@@ -14,6 +14,19 @@ When working from a git worktree:
 - If you skip `bin/dev`, rebuild assets in the worktree before trusting system test results after any `src/` change.
 - Playwright tests in `test/browser/` do not need `bin/dev`.
 
+## Browser Test Organization
+
+Playwright tests in `test/browser/tests/` are grouped into semantic folders:
+
+| Folder         | What goes here                                                       |
+|----------------|----------------------------------------------------------------------|
+| `formatting/`  | Toolbar chrome, inline marks, highlights, block formats (headers, lists, quotes, links) |
+| `tables/`      | Table creation, navigation, and editing                              |
+| `paste/`       | Markdown conversion, URL/link paste, file/attachment paste           |
+| *(root)*       | Everything else: attachments, code highlighting, events, focus, etc. |
+
+When adding a new test, pick the folder whose description fits best. If none fits, consider whether a new folder is warranted or if the test extends an existing category.
+
 ## Fixing Bugs
 
 Follow this mandatory workflow. Every step must complete before moving to the next.
