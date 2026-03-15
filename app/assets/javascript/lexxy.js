@@ -8809,8 +8809,12 @@ class Selection {
   }
 
   #getNextNodeFromTextEnd(anchorNode) {
-    if (anchorNode.getNextSibling() instanceof Fi) {
-      return anchorNode.getNextSibling()
+    const nextSibling = anchorNode.getNextSibling();
+    if (Li(nextSibling)) {
+      return nextSibling
+    }
+    if (nextSibling != null) {
+      return null
     }
     const parent = anchorNode.getParent();
     return parent ? parent.getNextSibling() : null
@@ -8831,11 +8835,15 @@ class Selection {
   }
 
   #getPreviousNodeFromTextStart(anchorNode) {
-    if (anchorNode.getPreviousSibling() instanceof Fi) {
-      return anchorNode.getPreviousSibling()
+    const previousSibling = anchorNode.getPreviousSibling();
+    if (Li(previousSibling)) {
+      return previousSibling
+    }
+    if (previousSibling != null) {
+      return null
     }
     const parent = anchorNode.getParent();
-    return parent.getPreviousSibling()
+    return parent ? parent.getPreviousSibling() : null
   }
 
   #getNodeBeforeElementNode(anchorNode, offset) {
@@ -10014,6 +10022,8 @@ class Contents {
   }
 
   insertDOM(doc, { tag } = {}) {
+    this.#unwrapPlaceholderAnchors(doc);
+
     this.editor.update(() => {
       const selection = $r();
       if (!wr(selection)) return
@@ -10346,6 +10356,19 @@ class Contents {
       uploader.nodes = nodes;
       uploader.$insertUploadNodes();
       return true
+    }
+  }
+
+  // Anchors with non-meaningful hrefs (e.g. "#", "") appear in content copied
+  // from rendered views where mentions and interactive elements are wrapped in
+  // <a href="#"> tags. Unwrap them so their text content pastes as plain text
+  // and real links are preserved.
+  #unwrapPlaceholderAnchors(doc) {
+    for (const anchor of doc.querySelectorAll("a")) {
+      const href = anchor.getAttribute("href") || "";
+      if (href === "" || href === "#") {
+        anchor.replaceWith(...anchor.childNodes);
+      }
     }
   }
 
@@ -11414,6 +11437,14 @@ class WrappedTableNode extends _n {
 
   static importDOM() {
     return super.importDOM()
+  }
+
+  canInsertTextBefore() {
+    return false
+  }
+
+  canInsertTextAfter() {
+    return false
   }
 
   exportDOM(editor) {
@@ -12833,6 +12864,16 @@ class LexicalPromptElement extends HTMLElement {
       this.#hidePopover();
       this.#editorElement.focus();
       event.stopPropagation();
+    } else if (event.key === ",") {
+      event.preventDefault();
+      event.stopPropagation();
+      this.#optionWasSelected();
+      this.#editor.update(() => {
+        const selection = $r();
+        if (wr(selection)) {
+          selection.insertText(",");
+        }
+      });
     }
     // Arrow keys are now handled via Lexical commands with HIGH priority
   }

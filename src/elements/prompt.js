@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $createTextNode, $isTextNode, COMMAND_PRIORITY_CRITICAL, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $createTextNode, $getSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_CRITICAL, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
@@ -339,6 +339,16 @@ export class LexicalPromptElement extends HTMLElement {
       this.#hidePopover()
       this.#editorElement.focus()
       event.stopPropagation()
+    } else if (event.key === ",") {
+      event.preventDefault()
+      event.stopPropagation()
+      this.#optionWasSelected()
+      this.#editor.update(() => {
+        const selection = $getSelection()
+        if ($isRangeSelection(selection)) {
+          selection.insertText(",")
+        }
+      })
     }
     // Arrow keys are now handled via Lexical commands with HIGH priority
   }

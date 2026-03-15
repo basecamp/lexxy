@@ -50,6 +50,16 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_mention_attachment people(:peter)
   end
 
+  test "comma selects the focused option and preserves the comma" do
+    find_editor.send "1"
+    find_editor.send "peter,"
+    assert_mention_attachment people(:peter)
+
+    find_editor.within_contents do
+      assert_text ","
+    end
+  end
+
   test "hasOpenPrompt reports correct status" do
     assert_not find_editor.open_prompt?
 
@@ -167,9 +177,9 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     def assert_bold_mention_surrounded_by_bold_text
       assert_editor_html do
-        assert_selector "p > strong", text: "Hello "
+        assert_selector "p > b > strong", text: "Hello "
         assert_selector %(p > action-text-attachment[content-type="application/vnd.actiontext.mention"])
-        assert_selector "p > strong", text: " there"
+        assert_selector "p > b > strong", text: " there"
       end
     end
 
