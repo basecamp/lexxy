@@ -1,9 +1,9 @@
-import { test } from "../test_helper.js"
+import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import {
   assertEditorHtml,
   assertEditorContent,
-} from "../helpers/assertions.js"
+} from "../../helpers/assertions.js"
 
 test.describe("Load HTML", () => {
   test.beforeEach(async ({ page }) => {

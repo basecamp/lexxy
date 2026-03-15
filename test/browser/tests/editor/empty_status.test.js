@@ -1,4 +1,4 @@
-import { test } from "../test_helper.js"
+import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 
 const EMPTY_SELECTOR = "lexxy-editor.lexxy-editor--empty"

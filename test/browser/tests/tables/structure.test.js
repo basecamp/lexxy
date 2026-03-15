@@ -1,11 +1,8 @@
-import { test } from "../test_helper.js"
+import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
-import {
-  assertEditorContent,
-  assertEditorTableStructure,
-} from "../helpers/assertions.js"
+import { assertEditorContent, assertEditorTableStructure } from "../../helpers/assertions.js"
 
-test.describe("Tables", () => {
+test.describe("Tables — Structure", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/")
     await page.waitForSelector("lexxy-editor[connected]")
@@ -34,29 +31,6 @@ test.describe("Tables", () => {
     await assertEditorTableStructure(editor, 3, 4)
   })
 
-  test("toggling header style on row", async ({ editor }) => {
-    await editor.clickToolbarButton("insertTable")
-
-    const table = editor.content.locator("table")
-    const headerRow = table.locator("tr:has(th + th + th)")
-    const singleHeaderRow = table.locator("tr:has(th + td + td)")
-
-    await expect(headerRow).toHaveCount(1)
-    await expect(singleHeaderRow).toHaveCount(2)
-
-    await editor.openTableRowMenu()
-    await editor.clickTableButton("Toggle row style")
-
-    await expect(headerRow).toHaveCount(0)
-    await expect(singleHeaderRow).toHaveCount(3)
-
-    await editor.openTableRowMenu()
-    await editor.clickTableButton("Toggle row style")
-
-    await expect(headerRow).toHaveCount(1)
-    await expect(singleHeaderRow).toHaveCount(2)
-  })
-
   test("deleting a row", async ({ editor }) => {
     await editor.clickToolbarButton("insertTable")
 
@@ -73,24 +47,6 @@ test.describe("Tables", () => {
 
     await editor.clickTableButton("Add column")
     await assertEditorTableStructure(editor, 4, 3)
-  })
-
-  test("toggling header style on column", async ({ editor }) => {
-    await editor.clickToolbarButton("insertTable")
-
-    const table = editor.content.locator("table")
-
-    await expect(table.locator("tr > th:first-child")).toHaveCount(3)
-
-    await editor.openTableColumnMenu()
-    await editor.clickTableButton("Toggle column style")
-
-    await expect(table.locator("tr > th:first-child")).toHaveCount(1)
-
-    await editor.openTableColumnMenu()
-    await editor.clickTableButton("Toggle column style")
-
-    await expect(table.locator("tr > th:first-child")).toHaveCount(3)
   })
 
   test("deleting a column", async ({ editor }) => {

@@ -1,5 +1,6 @@
-import { test } from "../test_helper.js"
-import { assertEditorHtml } from "../helpers/assertions.js"
+import { test } from "../../test_helper.js"
+import { assertEditorHtml } from "../../helpers/assertions.js"
+import { applyHighlightOption } from "../../helpers/toolbar.js"
 
 test.describe("Color highlighter", () => {
   test.beforeEach(async ({ page }) => {
@@ -22,11 +23,3 @@ test.describe("Color highlighter", () => {
     )
   })
 })
-
-async function applyHighlightOption(page, attribute, buttonIndex) {
-  await page.locator("[name='highlight']").click()
-  const buttons = page.locator(
-    `lexxy-highlight-dropdown .lexxy-highlight-colors .lexxy-highlight-button[data-style='${attribute}']`,
-  )
-  await buttons.nth(buttonIndex - 1).click()
-}

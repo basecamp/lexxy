@@ -1,5 +1,5 @@
-import { test } from "../test_helper.js"
-import { assertEditorPlainText } from "../helpers/assertions.js"
+import { test } from "../../test_helper.js"
+import { assertEditorPlainText } from "../../helpers/assertions.js"
 
 test.describe("Editor toString", () => {
   test.beforeEach(async ({ page }) => {
