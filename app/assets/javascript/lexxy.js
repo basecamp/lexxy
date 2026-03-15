@@ -10051,28 +10051,28 @@ class Contents {
   }
 
   insertDOM(doc, { tag } = {}) {
-    this.#unwrapPlaceholderAnchors(doc);
-
     this.editor.update(() => {
       const selection = $r();
       if (!wr(selection)) return
 
       const nodes = m$1(this.editor, doc);
       if (!this.#insertUploadNodes(nodes)) {
-        if (this.#isInsideQuoteNode(selection)) {
-          this.#insertNodesIntoQuote(selection, nodes);
-        } else {
-          selection.insertNodes(nodes);
-        }
+        selection.insertNodes(nodes);
       }
     }, { tag });
   }
 
   insertAtCursor(node) {
-    const selection = $r() ?? Io().selectEnd();
+    let selection = $r() ?? Io().selectEnd();
     const selectedNodes = selection?.getNodes();
 
     if (wr(selection)) {
+      const anchorNode = selection.anchor.getNode();
+      if ($isShadowRoot(anchorNode)) {
+        const paragraph = Vi();
+        anchorNode.append(paragraph);
+        selection = paragraph.selectStart();
+      }
       selection.insertNodes([ node ]);
     } else if (Or(selection) && selectedNodes.length > 0) {
       // Overrides Lexical's default behavior of _removing_ the currently selected nodes
@@ -10080,7 +10080,7 @@ class Contents {
       const lastNode = selectedNodes.at(-1);
       lastNode.insertAfter(node);
     }
-}
+  }
 
   insertAtCursorEnsuringLineBelow(node) {
     this.insertAtCursor(node);
@@ -10337,6 +10337,7 @@ class Contents {
       if (selectLast && uploader.nodes?.length) {
         const lastNode = uploader.nodes.at(-1);
         lastNode.selectEnd();
+        this.#normalizeSelectionInShadowRoot();
       }
     });
   }
@@ -10386,88 +10387,6 @@ class Contents {
       uploader.$insertUploadNodes();
       return true
     }
-  }
-
-  // Anchors with non-meaningful hrefs (e.g. "#", "") appear in content copied
-  // from rendered views where mentions and interactive elements are wrapped in
-  // <a href="#"> tags. Unwrap them so their text content pastes as plain text
-  // and real links are preserved.
-  #unwrapPlaceholderAnchors(doc) {
-    for (const anchor of doc.querySelectorAll("a")) {
-      const href = anchor.getAttribute("href") || "";
-      if (href === "" || href === "#") {
-        anchor.replaceWith(...anchor.childNodes);
-      }
-    }
-  }
-
-  #isInsideQuoteNode(selection) {
-    const anchorNode = selection.anchor.getNode();
-    if (Pt$3(anchorNode)) return true
-    const topLevelElement = anchorNode.getTopLevelElement();
-    return topLevelElement && Pt$3(topLevelElement)
-  }
-
-  #insertNodesIntoQuote(selection, nodes) {
-    const anchorNode = selection.anchor.getNode();
-    const quoteNode = Pt$3(anchorNode) ? anchorNode : anchorNode.getTopLevelElement();
-
-    // Find the current paragraph within the quote, or use the quote itself
-    const currentParagraph = this.#findParagraphInQuote(anchorNode, quoteNode);
-
-    // Append each generated node into the quote
-    let insertAfter = currentParagraph;
-    for (const node of nodes) {
-      if (Yi(node)) {
-        if (insertAfter === currentParagraph && Yi(currentParagraph) && this.#isElementEmpty(currentParagraph)) {
-          // Replace empty paragraph content with this node's children
-          for (const child of node.getChildren()) {
-            currentParagraph.append(child);
-          }
-        } else {
-          insertAfter.insertAfter(node);
-          insertAfter = node;
-        }
-      } else {
-        const wrapper = Vi();
-        wrapper.append(node);
-        insertAfter.insertAfter(wrapper);
-        insertAfter = wrapper;
-      }
-    }
-
-    // Place cursor at end of last inserted content
-    insertAfter.selectEnd();
-  }
-
-  #findParagraphInQuote(anchorNode, quoteNode) {
-    // If the anchor is the quote itself, find or create a paragraph inside it
-    if (Pt$3(anchorNode)) {
-      const firstChild = anchorNode.getFirstChild();
-      if (firstChild && Yi(firstChild)) {
-        return firstChild
-      }
-      // Create a new paragraph inside the quote
-      const paragraph = Vi();
-      anchorNode.append(paragraph);
-      return paragraph
-    }
-
-    // If the anchor is a paragraph inside the quote
-    if (Yi(anchorNode)) {
-      return anchorNode
-    }
-
-    // If the anchor is a text node, its parent should be a paragraph
-    const parent = anchorNode.getParent();
-    if (parent && Yi(parent)) {
-      return parent
-    }
-
-    // Fallback: create a new paragraph in the quote
-    const paragraph = Vi();
-    quoteNode.append(paragraph);
-    return paragraph
   }
 
   #insertLineBelowIfLastNode(node) {
@@ -10946,6 +10865,29 @@ class Contents {
   #shouldUploadFile(file) {
     return dispatch(this.editorElement, "lexxy:file-accept", { file }, true)
   }
+
+  // When the selection anchor is on a shadow root (e.g. a table cell), Lexical's
+  // insertNodes can't find a block parent and fails silently. Normalize the
+  // selection to point inside the shadow root's content instead.
+  #normalizeSelectionInShadowRoot() {
+    const selection = $r();
+    if (!wr(selection)) return
+
+    const anchorNode = selection.anchor.getNode();
+    if (!$isShadowRoot(anchorNode)) return
+
+    // Append a paragraph inside the shadow root so there's a valid text-level
+    // target for subsequent insertions. This is necessary because decorator
+    // nodes (e.g. attachments) at the end of a table cell leave the selection
+    // on the cell itself with no block-level descendant to anchor to.
+    const paragraph = Vi();
+    anchorNode.append(paragraph);
+    paragraph.selectStart();
+  }
+}
+
+function $isShadowRoot(node) {
+  return Pi(node) && xs(node) && !Ki(node)
 }
 
 /**
