@@ -45,3 +45,7 @@ This is an early beta. Here's what's coming next:
 ## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+
+---
+
+[![CI](https://github.com/basecamp/lexxy/actions/workflows/ci.yml/badge.svg)](https://github.com/basecamp/lexxy/actions/workflows/ci.yml)
