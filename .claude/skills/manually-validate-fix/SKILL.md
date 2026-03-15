@@ -1,5 +1,5 @@
 ---
-name: fix-manual-validation
+name: manually-validate-fix
 description: Validate a bug-fix PR by reproducing the bug in production and confirming the fix locally, using browser automation.
 disable-model-invocation: true
 argument-hint: <pr-number>
