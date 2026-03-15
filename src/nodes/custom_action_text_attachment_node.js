@@ -40,7 +40,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
               contentType: attachment.getAttribute("content-type")
             }))
 
-            nodes.push($createTextNode(" "))
+            nodes.push($createTextNode("\u2060"))
 
             return { node: nodes }
           },

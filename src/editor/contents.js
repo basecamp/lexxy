@@ -775,8 +775,9 @@ export default class Contents {
     const textBeforeString = fullText.slice(0, lastIndex)
     const textAfterCursor = fullText.slice(offset)
 
+    const trailingSpacer = this.#hasInlineDecoratorNode(replacementNodes) ? "\u2060" : " "
     const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, selection, textBeforeString)
-    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, selection, textAfterCursor || " ")
+    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, selection, textAfterCursor || trailingSpacer)
 
     anchorNode.replace(textNodeBefore)
 
@@ -786,6 +787,10 @@ export default class Contents {
     this.#appendLineBreakIfNeeded(textNodeAfter.getParentOrThrow())
     const cursorOffset = textAfterCursor ? 0 : 1
     textNodeAfter.select(cursorOffset, cursorOffset)
+  }
+
+  #hasInlineDecoratorNode(nodes) {
+    return nodes.some(node => node instanceof CustomActionTextAttachmentNode && node.isInline())
   }
 
   #cloneTextNodeFormatting(anchorNode, selection, text) {
