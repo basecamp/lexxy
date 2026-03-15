@@ -468,10 +468,40 @@ export default class Selection {
     const node = backwards ? this.nodeBeforeCursor : this.nodeAfterCursor
     if (!$isDecoratorNode(node)) return false
 
+    if (this.#collapseListItemToParagraph()) return true
+
     this.#removeEmptyElementAnchorNode()
 
     const selection = this.#selectInLexical(node)
     return Boolean(selection)
+  }
+
+  // When the cursor is inside a list item, collapse the list item into a
+  // paragraph instead of selecting the decorator. This lets the user
+  // delete a list that immediately follows an attachment without the
+  // attachment becoming selected.
+  #collapseListItemToParagraph() {
+    const anchorNode = $getSelection()?.anchor?.getNode()
+    const listItem = anchorNode && $getNearestNodeOfType(anchorNode, ListItemNode)
+    if (!listItem) return false
+
+    const listNode = $getNearestNodeOfType(listItem, ListNode)
+    if (!listNode) return false
+
+    const paragraph = $createParagraphNode()
+    const children = listItem.getChildren()
+    children.forEach(child => paragraph.append(child))
+
+    if (listNode.getChildrenSize() === 1) {
+      listNode.insertBefore(paragraph)
+      listNode.remove()
+    } else {
+      listNode.insertBefore(paragraph)
+      listItem.remove()
+    }
+
+    paragraph.selectStart()
+    return true
   }
 
   #removeEmptyElementAnchorNode(anchor = $getSelection()?.anchor) {

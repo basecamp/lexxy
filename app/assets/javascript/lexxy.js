@@ -8667,10 +8667,40 @@ class Selection {
     const node = backwards ? this.nodeBeforeCursor : this.nodeAfterCursor;
     if (!Li(node)) return false
 
+    if (this.#collapseListItemToParagraph()) return true
+
     this.#removeEmptyElementAnchorNode();
 
     const selection = this.#selectInLexical(node);
     return Boolean(selection)
+  }
+
+  // When the cursor is inside a list item, collapse the list item into a
+  // paragraph instead of selecting the decorator. This lets the user
+  // delete a list that immediately follows an attachment without the
+  // attachment becoming selected.
+  #collapseListItemToParagraph() {
+    const anchorNode = $r()?.anchor?.getNode();
+    const listItem = anchorNode && vt$4(anchorNode, se$1);
+    if (!listItem) return false
+
+    const listNode = vt$4(listItem, ue$1);
+    if (!listNode) return false
+
+    const paragraph = Vi();
+    const children = listItem.getChildren();
+    children.forEach(child => paragraph.append(child));
+
+    if (listNode.getChildrenSize() === 1) {
+      listNode.insertBefore(paragraph);
+      listNode.remove();
+    } else {
+      listNode.insertBefore(paragraph);
+      listItem.remove();
+    }
+
+    paragraph.selectStart();
+    return true
   }
 
   #removeEmptyElementAnchorNode(anchor = $r()?.anchor) {
@@ -9990,7 +10020,11 @@ class Contents {
 
       const nodes = m$1(this.editor, doc);
       if (!this.#insertUploadNodes(nodes)) {
-        selection.insertNodes(nodes);
+        if (this.#isInsideQuoteNode(selection)) {
+          this.#insertNodesIntoQuote(selection, nodes);
+        } else {
+          selection.insertNodes(nodes);
+        }
       }
     }, { tag });
   }
@@ -10313,6 +10347,75 @@ class Contents {
       uploader.$insertUploadNodes();
       return true
     }
+  }
+
+  #isInsideQuoteNode(selection) {
+    const anchorNode = selection.anchor.getNode();
+    if (Pt$3(anchorNode)) return true
+    const topLevelElement = anchorNode.getTopLevelElement();
+    return topLevelElement && Pt$3(topLevelElement)
+  }
+
+  #insertNodesIntoQuote(selection, nodes) {
+    const anchorNode = selection.anchor.getNode();
+    const quoteNode = Pt$3(anchorNode) ? anchorNode : anchorNode.getTopLevelElement();
+
+    // Find the current paragraph within the quote, or use the quote itself
+    const currentParagraph = this.#findParagraphInQuote(anchorNode, quoteNode);
+
+    // Append each generated node into the quote
+    let insertAfter = currentParagraph;
+    for (const node of nodes) {
+      if (Yi(node)) {
+        if (insertAfter === currentParagraph && Yi(currentParagraph) && this.#isElementEmpty(currentParagraph)) {
+          // Replace empty paragraph content with this node's children
+          for (const child of node.getChildren()) {
+            currentParagraph.append(child);
+          }
+        } else {
+          insertAfter.insertAfter(node);
+          insertAfter = node;
+        }
+      } else {
+        const wrapper = Vi();
+        wrapper.append(node);
+        insertAfter.insertAfter(wrapper);
+        insertAfter = wrapper;
+      }
+    }
+
+    // Place cursor at end of last inserted content
+    insertAfter.selectEnd();
+  }
+
+  #findParagraphInQuote(anchorNode, quoteNode) {
+    // If the anchor is the quote itself, find or create a paragraph inside it
+    if (Pt$3(anchorNode)) {
+      const firstChild = anchorNode.getFirstChild();
+      if (firstChild && Yi(firstChild)) {
+        return firstChild
+      }
+      // Create a new paragraph inside the quote
+      const paragraph = Vi();
+      anchorNode.append(paragraph);
+      return paragraph
+    }
+
+    // If the anchor is a paragraph inside the quote
+    if (Yi(anchorNode)) {
+      return anchorNode
+    }
+
+    // If the anchor is a text node, its parent should be a paragraph
+    const parent = anchorNode.getParent();
+    if (parent && Yi(parent)) {
+      return parent
+    }
+
+    // Fallback: create a new paragraph in the quote
+    const paragraph = Vi();
+    quoteNode.append(paragraph);
+    return paragraph
   }
 
   #insertLineBelowIfLastNode(node) {
