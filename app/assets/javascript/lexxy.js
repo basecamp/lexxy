@@ -7507,9 +7507,10 @@ class HighlightExtension extends LexxyExtension {
         const canonicalizers = buildCanonicalizers(config);
 
         return ec(
-          editor.registerCommand(TOGGLE_HIGHLIGHT_COMMAND, $toggleSelectionStyles, Gi),
-          editor.registerCommand(REMOVE_HIGHLIGHT_COMMAND, () => $toggleSelectionStyles(BLANK_STYLES), Gi),
+          editor.registerCommand(TOGGLE_HIGHLIGHT_COMMAND, (styles) => $toggleSelectionStyles(editor, styles), Gi),
+          editor.registerCommand(REMOVE_HIGHLIGHT_COMMAND, () => $toggleSelectionStyles(editor, BLANK_STYLES), Gi),
           editor.registerNodeTransform(lr, $syncHighlightWithStyle),
+          editor.registerNodeTransform(nt$1, $syncHighlightWithCodeHighlightNode),
           editor.registerNodeTransform(lr, (textNode) => $canonicalizePastedStyles(textNode, canonicalizers))
         )
       }
@@ -7547,7 +7548,7 @@ function buildCanonicalizers(config) {
   ]
 }
 
-function $toggleSelectionStyles(styles) {
+function $toggleSelectionStyles(editor, styles) {
   const selection = $r();
   if (!wr(selection)) return
 
@@ -7557,7 +7558,117 @@ function $toggleSelectionStyles(styles) {
     patch[property] = toggleOrReplace(oldValue, styles[property]);
   }
 
-  U$2(selection, patch);
+  if ($selectionIsInCodeBlock(selection)) {
+    $patchCodeHighlightStyles(editor, selection, patch);
+  } else {
+    U$2(selection, patch);
+  }
+}
+
+function $selectionIsInCodeBlock(selection) {
+  const nodes = selection.getNodes();
+  return nodes.some((node) => {
+    const parent = ot(node) ? node.getParent() : node;
+    return Q$1(parent)
+  })
+}
+
+function $patchCodeHighlightStyles(editor, selection, patch) {
+  // Capture selection state and node keys before the nested update
+  const nodeKeys = selection.getNodes()
+    .filter((node) => ot(node))
+    .map((node) => ({
+      key: node.getKey(),
+      startOffset: $getNodeSelectionOffsets(node, selection)[0],
+      endOffset: $getNodeSelectionOffsets(node, selection)[1],
+      textSize: node.getTextContentSize()
+    }));
+
+  // Use skipTransforms to prevent the code highlighting system from
+  // re-tokenizing and wiping out the style changes we apply.
+  // Use discrete to force a synchronous commit, ensuring the changes
+  // are committed before editor.focus() triggers a second update cycle
+  // that would re-run transforms and wipe out the styles.
+  editor.update(() => {
+    for (const { key, startOffset, endOffset, textSize } of nodeKeys) {
+      const node = Mo(key);
+      if (!node || !ot(node)) continue
+
+      const parent = node.getParent();
+      if (!Q$1(parent)) continue
+      if (startOffset === endOffset) continue
+
+      if (startOffset === 0 && endOffset === textSize) {
+        $applyStylePatchToNode(node, patch);
+      } else {
+        const splitNodes = node.splitText(startOffset, endOffset);
+        const targetNode = splitNodes[startOffset === 0 ? 0 : 1];
+        $applyStylePatchToNode(targetNode, patch);
+      }
+    }
+  }, { skipTransforms: true, discrete: true });
+}
+
+function $getNodeSelectionOffsets(node, selection) {
+  const nodeKey = node.getKey();
+  const anchorKey = selection.anchor.key;
+  const focusKey = selection.focus.key;
+  const textSize = node.getTextContentSize();
+
+  const isAnchor = nodeKey === anchorKey;
+  const isFocus = nodeKey === focusKey;
+
+  // Determine if selection is forward or backward
+  const isForward = selection.isBackward() === false;
+
+  let start = 0;
+  let end = textSize;
+
+  if (isForward) {
+    if (isAnchor) start = selection.anchor.offset;
+    if (isFocus) end = selection.focus.offset;
+  } else {
+    if (isFocus) start = selection.focus.offset;
+    if (isAnchor) end = selection.anchor.offset;
+  }
+
+  return [ start, end ]
+}
+
+function $applyStylePatchToNode(node, patch) {
+  const prevStyles = b$3(node.getStyle());
+  const newStyles = { ...prevStyles };
+
+  for (const [ key, value ] of Object.entries(patch)) {
+    if (value === null) {
+      delete newStyles[key];
+    } else {
+      newStyles[key] = value;
+    }
+  }
+
+  const newCSSText = R$3(newStyles);
+  node.setStyle(newCSSText);
+
+  // Sync the highlight format using TextNode's setFormat to bypass
+  // CodeHighlightNode's no-op override
+  const shouldHaveHighlight = hasHighlightStyles(newCSSText);
+  const hasHighlight = node.hasFormat("highlight");
+
+  if (shouldHaveHighlight !== hasHighlight) {
+    $setCodeHighlightFormat(node, shouldHaveHighlight);
+  }
+}
+
+function $setCodeHighlightFormat(node, shouldHaveHighlight) {
+  const writable = node.getWritable();
+  const IS_HIGHLIGHT = 1 << 7;
+
+  if (shouldHaveHighlight) {
+    writable.__format |= IS_HIGHLIGHT;
+  } else {
+    writable.__format &= ~IS_HIGHLIGHT;
+  }
 }
 
 function toggleOrReplace(oldValue, newValue) {
@@ -7567,6 +7678,18 @@ function toggleOrReplace(oldValue, newValue) {
 function $syncHighlightWithStyle(textNode) {
   if (hasHighlightStyles(textNode.getStyle()) !== textNode.hasFormat("highlight")) {
     textNode.toggleFormat("highlight");
+  }
+}
+
+function $syncHighlightWithCodeHighlightNode(node) {
+  const parent = node.getParent();
+  if (!Q$1(parent)) return
+
+  const shouldHaveHighlight = hasHighlightStyles(node.getStyle());
+  const hasHighlight = node.hasFormat("highlight");
+
+  if (shouldHaveHighlight !== hasHighlight) {
+    $setCodeHighlightFormat(node, shouldHaveHighlight);
   }
 }
 

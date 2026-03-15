@@ -1,6 +1,7 @@
 import { test } from "../../test_helper.js"
-import { assertEditorHtml } from "../../helpers/assertions.js"
+import { assertEditorHtml, assertEditorContent } from "../../helpers/assertions.js"
 import { applyHighlightOption } from "../../helpers/toolbar.js"
+import { expect } from "@playwright/test"
 
 test.describe("Color highlighter", () => {
   test.beforeEach(async ({ page }) => {
@@ -22,4 +23,43 @@ test.describe("Color highlighter", () => {
       '<p>Hello everyone<mark style="color: var(--highlight-1);"> again!</mark></p>',
     )
   })
+
+  test("color highlighting text in a plain-text code block", async ({ page, editor }) => {
+    await editor.setValue('<pre data-language="plain"><code>some log output</code></pre>')
+    await expect(page.locator("select[name=lexxy-code-language]")).toHaveValue("plain")
+
+    await editor.select("log output")
+    await applyHighlightOption(page, "background-color", 1)
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code mark")).toContainText("log output")
+    })
+  })
+
+  test("removing highlight from text in a plain-text code block", async ({ page, editor }) => {
+    await editor.setValue('<pre data-language="plain"><code>some log output</code></pre>')
+    await expect(page.locator("select[name=lexxy-code-language]")).toHaveValue("plain")
+
+    await editor.select("log output")
+    await applyHighlightOption(page, "background-color", 1)
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code mark")).toContainText("log output")
+    })
+
+    await editor.select("log output")
+    await removeHighlight(page)
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code mark")).toHaveCount(0)
+    })
+  })
 })
+
+async function removeHighlight(page) {
+  await page.locator("[name='highlight']").click()
+  await page.locator("[data-command='removeHighlight']").click()
+}
