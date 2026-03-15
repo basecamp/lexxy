@@ -1,6 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorContent, assertEditorTableStructure } from "../../helpers/assertions.js"
+import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
 
 test.describe("Tables — Structure", () => {
   test.beforeEach(async ({ page }) => {
@@ -113,5 +114,69 @@ test.describe("Tables — Structure", () => {
       return figure !== null && figure.querySelector("table") !== null
     }, value)
     expect(hasWrapper).toBe(true)
+  })
+})
+
+test.describe("Tables with attachments", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/attachments.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await page.waitForSelector("lexxy-toolbar[connected]")
+    await mockActiveStorageUploads(page)
+  })
+
+  test("uploading multiple images into a table cell at once", async ({
+    page,
+    editor,
+  }) => {
+    await editor.clickToolbarButton("insertTable")
+    await editor.flush()
+
+    await editor.content.locator("table th").first().click()
+    await editor.flush()
+
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      editor.clickToolbarButton("uploadAttachments"),
+    ])
+    await fileChooser.setFiles([
+      "test/fixtures/files/example.png",
+      "test/fixtures/files/example2.png",
+    ])
+
+    const cell = editor.content.locator("table th").first()
+    await expect(
+      cell.locator("figure.attachment"),
+    ).toHaveCount(2, { timeout: 10_000 })
+  })
+
+  test("uploading images one by one into a table cell", async ({
+    page,
+    editor,
+  }) => {
+    await editor.clickToolbarButton("insertTable")
+    await editor.flush()
+
+    const cell = editor.content.locator("table td").first()
+    await cell.click()
+    await editor.flush()
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+    await expect(
+      cell.locator("figure.attachment"),
+    ).toHaveCount(1, { timeout: 10_000 })
+
+    // Upload second image without clicking the first
+    await editor.uploadFile("test/fixtures/files/example2.png")
+
+    // Both images should be inside the same table cell
+    await expect(
+      cell.locator("figure.attachment"),
+    ).toHaveCount(2, { timeout: 10_000 })
+
+    // No images should escape outside the table
+    await expect(
+      editor.content.locator(":scope > figure.attachment"),
+    ).toHaveCount(0)
   })
 })
