@@ -33,7 +33,11 @@ export default class Contents {
 
       const nodes = $generateNodesFromDOM(this.editor, doc)
       if (!this.#insertUploadNodes(nodes)) {
-        selection.insertNodes(nodes)
+        if (this.#isInsideQuoteNode(selection)) {
+          this.#insertNodesIntoQuote(selection, nodes)
+        } else {
+          selection.insertNodes(nodes)
+        }
       }
     }, { tag })
   }
@@ -356,6 +360,75 @@ export default class Contents {
       uploader.$insertUploadNodes()
       return true
     }
+  }
+
+  #isInsideQuoteNode(selection) {
+    const anchorNode = selection.anchor.getNode()
+    if ($isQuoteNode(anchorNode)) return true
+    const topLevelElement = anchorNode.getTopLevelElement()
+    return topLevelElement && $isQuoteNode(topLevelElement)
+  }
+
+  #insertNodesIntoQuote(selection, nodes) {
+    const anchorNode = selection.anchor.getNode()
+    const quoteNode = $isQuoteNode(anchorNode) ? anchorNode : anchorNode.getTopLevelElement()
+
+    // Find the current paragraph within the quote, or use the quote itself
+    const currentParagraph = this.#findParagraphInQuote(anchorNode, quoteNode)
+
+    // Append each generated node into the quote
+    let insertAfter = currentParagraph
+    for (const node of nodes) {
+      if ($isParagraphNode(node)) {
+        if (insertAfter === currentParagraph && $isParagraphNode(currentParagraph) && this.#isElementEmpty(currentParagraph)) {
+          // Replace empty paragraph content with this node's children
+          for (const child of node.getChildren()) {
+            currentParagraph.append(child)
+          }
+        } else {
+          insertAfter.insertAfter(node)
+          insertAfter = node
+        }
+      } else {
+        const wrapper = $createParagraphNode()
+        wrapper.append(node)
+        insertAfter.insertAfter(wrapper)
+        insertAfter = wrapper
+      }
+    }
+
+    // Place cursor at end of last inserted content
+    insertAfter.selectEnd()
+  }
+
+  #findParagraphInQuote(anchorNode, quoteNode) {
+    // If the anchor is the quote itself, find or create a paragraph inside it
+    if ($isQuoteNode(anchorNode)) {
+      const firstChild = anchorNode.getFirstChild()
+      if (firstChild && $isParagraphNode(firstChild)) {
+        return firstChild
+      }
+      // Create a new paragraph inside the quote
+      const paragraph = $createParagraphNode()
+      anchorNode.append(paragraph)
+      return paragraph
+    }
+
+    // If the anchor is a paragraph inside the quote
+    if ($isParagraphNode(anchorNode)) {
+      return anchorNode
+    }
+
+    // If the anchor is a text node, its parent should be a paragraph
+    const parent = anchorNode.getParent()
+    if (parent && $isParagraphNode(parent)) {
+      return parent
+    }
+
+    // Fallback: create a new paragraph in the quote
+    const paragraph = $createParagraphNode()
+    quoteNode.append(paragraph)
+    return paragraph
   }
 
   #insertLineBelowIfLastNode(node) {
