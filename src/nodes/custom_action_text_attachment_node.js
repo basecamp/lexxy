@@ -81,6 +81,10 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   getTextContent() {
+    return "\ufeff"
+  }
+
+  getReadableTextContent() {
     return this.createDOM().textContent.trim() || `[${this.contentType}]`
   }
 

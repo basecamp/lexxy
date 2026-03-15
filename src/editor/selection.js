@@ -363,7 +363,9 @@ export default class Selection {
     }
   }
 
-  async #selectPreviousNode() {
+  async #selectPreviousNode(event) {
+    if (event?.shiftKey) return false
+
     if (this.hasNodeSelection) {
       return await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
     } else {
@@ -371,7 +373,9 @@ export default class Selection {
     }
   }
 
-  async #selectNextNode() {
+  async #selectNextNode(event) {
+    if (event?.shiftKey) return false
+
     if (this.hasNodeSelection) {
       return await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
     } else {

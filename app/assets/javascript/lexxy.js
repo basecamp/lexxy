@@ -8562,7 +8562,9 @@ class Selection {
     }
   }
 
-  async #selectPreviousNode() {
+  async #selectPreviousNode(event) {
+    if (event?.shiftKey) return false
+
     if (this.hasNodeSelection) {
       return await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
     } else {
@@ -8570,7 +8572,9 @@ class Selection {
     }
   }
 
-  async #selectNextNode() {
+  async #selectNextNode(event) {
+    if (event?.shiftKey) return false
+
     if (this.hasNodeSelection) {
       return await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
     } else {
@@ -9022,6 +9026,10 @@ class CustomActionTextAttachmentNode extends Fi {
   }
 
   getTextContent() {
+    return "\ufeff"
+  }
+
+  getReadableTextContent() {
     return this.createDOM().textContent.trim() || `[${this.contentType}]`
   }
 
@@ -11737,7 +11745,7 @@ class LexicalEditorElement extends HTMLElement {
   toString() {
     if (!this.cachedStringValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedStringValue = Io().getTextContent();
+        this.cachedStringValue = $getReadableTextContent(Io());
       });
     }
 
@@ -12186,6 +12194,29 @@ class LexicalEditorElement extends HTMLElement {
     this.valueBeforeDisconnect = null;
     this.connectedCallback();
   }
+}
+
+// Like $getRoot().getTextContent() but uses readable text for custom attachment nodes
+// (e.g., mentions) instead of their single-character cursor placeholder.
+function $getReadableTextContent(node) {
+  if (node instanceof CustomActionTextAttachmentNode) {
+    return node.getReadableTextContent()
+  }
+
+  if (Pi(node)) {
+    let text = "";
+    const children = node.getChildren();
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      text += $getReadableTextContent(child);
+      if (Pi(child) && i !== children.length - 1 && !child.isInline()) {
+        text += "\n\n";
+      }
+    }
+    return text
+  }
+
+  return node.getTextContent()
 }
 
 class ToolbarDropdown extends HTMLElement {
