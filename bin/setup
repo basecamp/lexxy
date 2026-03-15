@@ -7,6 +7,9 @@ bundle install
 echo "== Installing JavaScript dependencies =="
 yarn install
 
+echo "== Building JavaScript assets =="
+yarn build
+
 echo "== Installing Playwright browsers =="
 npx playwright install
 

@@ -6,3 +6,9 @@ load "rails/tasks/engine.rake"
 load "rails/tasks/statistics.rake"
 
 require "bundler/gem_tasks"
+
+task :yarn_build do
+  sh "yarn build"
+end
+
+Rake::Task["build"].enhance([:yarn_build])
