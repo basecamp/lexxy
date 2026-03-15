@@ -4,6 +4,7 @@ import {
   $isRangeSelection,
   $isRootOrShadowRoot,
   $isTextNode,
+  $setSelection,
   COMMAND_PRIORITY_LOW,
   COMMAND_PRIORITY_NORMAL,
   FORMAT_TEXT_COMMAND,
@@ -49,6 +50,8 @@ const COMMANDS = [
 ]
 
 export class CommandDispatcher {
+  #selectionBeforeDrag = null
+
   static configureFor(editorElement) {
     new CommandDispatcher(editorElement)
   }
@@ -260,6 +263,7 @@ export class CommandDispatcher {
   #handleDragEnter(event) {
     this.dragCounter++
     if (this.dragCounter === 1) {
+      this.#saveSelectionBeforeDrag()
       this.editor.getRootElement().classList.add("lexxy-editor--drag-over")
     }
   }
@@ -267,6 +271,7 @@ export class CommandDispatcher {
   #handleDragLeave(event) {
     this.dragCounter--
     if (this.dragCounter === 0) {
+      this.#selectionBeforeDrag = null
       this.editor.getRootElement().classList.remove("lexxy-editor--drag-over")
     }
   }
@@ -287,9 +292,26 @@ export class CommandDispatcher {
     const files = Array.from(dataTransfer.files)
     if (!files.length) return
 
+    this.#restoreSelectionBeforeDrag()
     this.contents.uploadFiles(files, { selectLast: true })
 
     this.editor.focus()
+  }
+
+  #saveSelectionBeforeDrag() {
+    this.editor.getEditorState().read(() => {
+      this.#selectionBeforeDrag = $getSelection()?.clone()
+    })
+  }
+
+  #restoreSelectionBeforeDrag() {
+    if (!this.#selectionBeforeDrag) return
+
+    this.editor.update(() => {
+      $setSelection(this.#selectionBeforeDrag)
+    })
+
+    this.#selectionBeforeDrag = null
   }
 
   #handleTabKey(event) {

@@ -7616,6 +7616,8 @@ const COMMANDS = [
 ];
 
 class CommandDispatcher {
+  #selectionBeforeDrag = null
+
   static configureFor(editorElement) {
     new CommandDispatcher(editorElement);
   }
@@ -7827,6 +7829,7 @@ class CommandDispatcher {
   #handleDragEnter(event) {
     this.dragCounter++;
     if (this.dragCounter === 1) {
+      this.#saveSelectionBeforeDrag();
       this.editor.getRootElement().classList.add("lexxy-editor--drag-over");
     }
   }
@@ -7834,6 +7837,7 @@ class CommandDispatcher {
   #handleDragLeave(event) {
     this.dragCounter--;
     if (this.dragCounter === 0) {
+      this.#selectionBeforeDrag = null;
       this.editor.getRootElement().classList.remove("lexxy-editor--drag-over");
     }
   }
@@ -7854,9 +7858,26 @@ class CommandDispatcher {
     const files = Array.from(dataTransfer.files);
     if (!files.length) return
 
+    this.#restoreSelectionBeforeDrag();
     this.contents.uploadFiles(files, { selectLast: true });
 
     this.editor.focus();
+  }
+
+  #saveSelectionBeforeDrag() {
+    this.editor.getEditorState().read(() => {
+      this.#selectionBeforeDrag = $r()?.clone();
+    });
+  }
+
+  #restoreSelectionBeforeDrag() {
+    if (!this.#selectionBeforeDrag) return
+
+    this.editor.update(() => {
+      zo(this.#selectionBeforeDrag);
+    });
+
+    this.#selectionBeforeDrag = null;
   }
 
   #handleTabKey(event) {
