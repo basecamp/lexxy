@@ -33,6 +33,8 @@
   "scripts": {
     "build": "rollup -c",
     "build:npm": "rollup -c rollup.config.npm.mjs",
+    "benchmark:browser": "node scripts/benchmarks/run-browser-benchmarks.js",
+    "benchmark:browser:compare": "node scripts/benchmarks/compare-browser-benchmarks.js",
     "watch": "rollup -wc --watch.onEnd=\"rails restart\"",
     "lint": "eslint",
     "test": "vitest",
