@@ -13,7 +13,7 @@ class ColorHighlighterTest < ApplicationSystemTestCase
     click_on "Update Post"
     click_on "Edit this post"
 
-    assert_equal_html "<p>Hello <i><b><strong>everyone</strong></b></i></p>", find_editor.value
+    assert_equal_html "<p>Hello <i><strong>everyone</strong></i></p>", find_editor.value
   end
 
   test "color highlighting is preserved after saving" do

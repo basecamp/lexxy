@@ -113,7 +113,7 @@ test.describe("Events", () => {
     ).toBeVisible()
     await assertEditorHtml(
       editor,
-      "<p>Hello <b><strong>there</strong></b></p>",
+      "<p>Hello <strong>there</strong></p>",
     )
   })
 

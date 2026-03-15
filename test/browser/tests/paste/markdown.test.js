@@ -8,7 +8,7 @@ test.describe("Paste — Markdown", () => {
     await editor.waitForConnected()
 
     await editor.paste("Hello **there**")
-    await assertEditorHtml(editor, "<p>Hello <b><strong>there</strong></b></p>")
+    await assertEditorHtml(editor, "<p>Hello <strong>there</strong></p>")
   })
 
   test("don't convert markdown when pasting into code block", async ({

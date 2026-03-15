@@ -53,7 +53,7 @@ test.describe("Highlights", () => {
 
     await assertEditorHtml(
       editor,
-      '<p>Hello <b><mark style="color: var(--highlight-1);"><strong>everyone</strong></mark></b></p>',
+      '<p>Hello <mark style="color: var(--highlight-1);"><strong>everyone</strong></mark></p>',
     )
   })
 })

@@ -42,10 +42,10 @@ class TrixHtmlTest < ApplicationSystemTestCase
       <mark style="background-color: blue;">blue background</mark>
       <mark style="color: darkgreen;background-color: green;">green everything</mark>
       <s>corrected</s>
-      <s><b><strong>wrong!</strong></b></s>
+      <s><strong>wrong!</strong></s>
       <s><mark style="color: red;">deleted</mark></s>
-      <b><mark style="color: yellow;"><strong>banana</strong></mark></b>
-      <i><mark style="color: blue;"><em>wave</em></mark></i>
+      <mark style="color: yellow;"><strong>banana</strong></mark>
+      <mark style="color: blue;"><em>wave</em></mark>
     LEXXY
 
     trix_html.zip(lexxy_html).each do |trix_html, lexxy_html|
