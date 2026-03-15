@@ -21,13 +21,13 @@ Playwright tests in `test/browser/tests/` are grouped into semantic folders:
 | Folder         | What goes here                                                                          |
 |----------------|-----------------------------------------------------------------------------------------|
 | `attachments/` | Upload, delete, caption, gallery                                                        |
-| `code/`        | Code blocks: syntax highlighting                                                        |
 | `editor/`      | Core editor API: focus, isEmpty/isBlank, toString, setValue, CSS status classes          |
-| `events/`      | Custom event API (change, focus, blur)                                                  |
 | `formatting/`  | Toolbar chrome, inline marks, highlights, block formats, lists, HR, escape, color       |
 | `modes/`       | Plain-text mode, single-line mode                                                       |
 | `paste/`       | Markdown conversion, URL/link paste, file/attachment paste, style canonicalization       |
-| `tables/`      | Table creation, navigation, and editing                                                 |
+| `tables/`      | Structure (add/remove rows/columns), headers, edge cases (delete, select-all, wrapper)  |
+
+Single-file tests (`code_highlighting`, `events`) live at the root level.
 
 When adding a new test, pick the folder whose description fits best. If none fits, consider whether a new folder is warranted or if the test extends an existing category.
 

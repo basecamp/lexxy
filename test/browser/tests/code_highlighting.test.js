@@ -1,6 +1,6 @@
-import { test } from "../../test_helper.js"
+import { test } from "../test_helper.js"
 import { expect } from "@playwright/test"
-import { assertEditorContent } from "../../helpers/assertions.js"
+import { assertEditorContent } from "../helpers/assertions.js"
 
 test.describe("Code highlighting", () => {
   test.beforeEach(async ({ page }) => {
