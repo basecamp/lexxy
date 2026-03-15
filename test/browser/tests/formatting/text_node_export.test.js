@@ -1,6 +1,6 @@
-import { test } from "../test_helper.js"
+import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
-import { assertEditorHtml } from "../helpers/assertions.js"
+import { assertEditorHtml } from "../../helpers/assertions.js"
 
 test.describe("Text node export: clean bold and italic markup", () => {
   test("pasting markdown with bold + inline code produces clean HTML", async ({ page, editor }) => {
