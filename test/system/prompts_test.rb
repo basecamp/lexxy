@@ -177,9 +177,9 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     def assert_bold_mention_surrounded_by_bold_text
       assert_editor_html do
-        assert_selector "p > b > strong", text: "Hello "
+        assert_selector "p > strong", text: "Hello "
         assert_selector %(p > action-text-attachment[content-type="application/vnd.actiontext.mention"])
-        assert_selector "p > b > strong", text: " there"
+        assert_selector "p > strong", text: " there"
       end
     end
 

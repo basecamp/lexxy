@@ -29,7 +29,7 @@ test.describe("Markdown format: trailing tag typed first, then leading tag", () 
     await editor.send("Home")
     await editor.send("**")
 
-    await assertEditorHtml(editor, "<p><b><strong>hello</strong></b></p>")
+    await assertEditorHtml(editor, "<p><strong>hello</strong></p>")
   })
 
   test("typing trailing * first, then leading * creates italic", async ({ editor }) => {
@@ -38,7 +38,7 @@ test.describe("Markdown format: trailing tag typed first, then leading tag", () 
     await editor.send("Home")
     await editor.send("*")
 
-    await assertEditorHtml(editor, "<p><i><em>hello</em></i></p>")
+    await assertEditorHtml(editor, "<p><em>hello</em></p>")
   })
 
   test("typing trailing ~~ first, then leading ~~ creates strikethrough", async ({ editor }) => {
