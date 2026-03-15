@@ -11,4 +11,4 @@ task :yarn_build do
   sh "yarn build"
 end
 
-Rake::Task["build"].enhance([:yarn_build])
+Rake::Task["build"].enhance([ :yarn_build ])
