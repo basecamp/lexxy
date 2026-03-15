@@ -27,6 +27,8 @@ export default class Contents {
   }
 
   insertDOM(doc, { tag } = {}) {
+    this.#unwrapPlaceholderAnchors(doc)
+
     this.editor.update(() => {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
@@ -394,6 +396,19 @@ export default class Contents {
     }
 
     node.remove()
+  }
+
+  // Anchors with non-meaningful hrefs (e.g. "#", "") appear in content copied
+  // from rendered views where mentions and interactive elements are wrapped in
+  // <a href="#"> tags. Unwrap them so their text content pastes as plain text
+  // and real links are preserved.
+  #unwrapPlaceholderAnchors(doc) {
+    for (const anchor of doc.querySelectorAll("a")) {
+      const href = anchor.getAttribute("href") || ""
+      if (href === "" || href === "#") {
+        anchor.replaceWith(...anchor.childNodes)
+      }
+    }
   }
 
   #insertNodeWrappingAllSelectedNodes(newNodeFn) {
