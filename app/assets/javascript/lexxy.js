@@ -9585,7 +9585,7 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       const writable = this.getWritable();
       writable.width = width;
       writable.height = height;
-    }, { tag: SILENT_UPDATE_TAGS });
+    }, { tag: this.#backgroundUpdateTags });
   }
 
   get #hasDimensions() {
@@ -9644,19 +9644,21 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   #setProgress(progress) {
     this.editor.update(() => {
       this.getWritable().progress = progress;
-    }, { tag: SILENT_UPDATE_TAGS });
+    }, { tag: this.#backgroundUpdateTags });
   }
 
   #handleUploadError(error) {
     console.warn(`Upload error for ${this.file?.name ?? "file"}: ${error}`);
     this.editor.update(() => {
       this.getWritable().uploadError = true;
-    }, { tag: SILENT_UPDATE_TAGS });
+    }, { tag: this.#backgroundUpdateTags });
   }
 
   #showUploadedAttachment(blob) {
+    const editorHasFocus = this.#editorHasFocus;
+
     this.editor.update(() => {
-      const shouldTransferNodeSelection = this.isSelected();
+      const shouldTransferNodeSelection = editorHasFocus && this.isSelected();
 
       const replacementNode = this.#toActionTextAttachmentNodeWith(blob);
       this.replace(replacementNode);
@@ -9665,7 +9667,24 @@ class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
         const nodeSelection = $createNodeSelectionWith(replacementNode);
         zo(nodeSelection);
       }
-    }, { tag: SILENT_UPDATE_TAGS });
+    }, { tag: this.#backgroundUpdateTags });
+  }
+
+  // Upload lifecycle methods (progress, completion, errors) run asynchronously and may
+  // fire while the user is focused on another element (e.g., a title field). Without
+  // SKIP_DOM_SELECTION_TAG, Lexical's reconciler would move the DOM selection back into
+  // the editor, stealing focus from wherever the user is currently typing.
+  get #backgroundUpdateTags() {
+    if (this.#editorHasFocus) {
+      return SILENT_UPDATE_TAGS
+    } else {
+      return [ ...SILENT_UPDATE_TAGS, Vn ]
+    }
+  }
+
+  get #editorHasFocus() {
+    const rootElement = this.editor.getRootElement();
+    return rootElement !== null && rootElement.contains(document.activeElement)
   }
 
   #toActionTextAttachmentNodeWith(blob) {
