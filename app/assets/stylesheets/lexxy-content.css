@@ -451,12 +451,10 @@
     --lexxy-attachment-image-size: 1em;
     --lexxy-attachment-text-color: currentColor;
 
-    align-items: center;
     background: var(--lexxy-attachment-bg-color);
     border-radius: var(--lexxy-radius);
     color: var(--lexxy-attachment-text-color);
-    display: inline-flex;
-    gap: 0.25ch;
+    display: inline;
     margin: 0;
     padding: 0;
     position: relative;
@@ -466,6 +464,8 @@
       block-size: var(--lexxy-attachment-image-size);
       border-radius: 50%;
       inline-size: var(--lexxy-attachment-image-size);
+      margin-inline-end: 0.25ch;
+      vertical-align: middle;
     }
   }
 
