@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { $createTextNode, DecoratorNode } from "lexical"
 
-import { createElement, parseHtml } from "../helpers/html_helper"
+import { createElement, parseHtml, stripWhiteSpace } from "../helpers/html_helper"
 import { parseAttachmentContent } from "../helpers/storage_helper"
 
 export class CustomActionTextAttachmentNode extends DecoratorNode {
@@ -75,16 +75,14 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true })
 
     const wrapper = createElement("div", { className: "lexxy-attachment-wrapper" })
-
     wrapper.innerHTML = this.innerHtml
 
     const deleteButton = createElement("lexxy-node-delete-button")
     wrapper.appendChild(deleteButton)
 
-    figure.append(wrapper)
+    stripWhiteSpace(wrapper)
 
-    // Removing white-space between HTML tags to remove unwanted space caused by `display: inline`
-    figure.innerHTML = figure.innerHTML.replace(/>\s+</g, "><").trim()
+    figure.append(wrapper)
 
     return figure
   }

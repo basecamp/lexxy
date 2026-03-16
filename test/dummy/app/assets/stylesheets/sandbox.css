@@ -146,6 +146,7 @@ section > h2 {
 /* -------------------------------------------------------------------------- */
 
 .person {
+  display: inline-block;
   position: relative;
   white-space: nowrap;
 

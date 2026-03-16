@@ -56,4 +56,12 @@ export function generateDomId(prefix) {
   return `${prefix}-${randomPart}`
 }
 
+export function stripWhiteSpace(element) {
+  // Removing white-space between HTML tags to remove unwanted space caused by `display: inline`
+  for (const node of [ ...element.childNodes ]) {
+    if (node.nodeType === Node.TEXT_NODE && /^\s*$/.test(node.textContent)) {
+      node.remove()
+    }
+  }
+}
 
