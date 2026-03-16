@@ -218,8 +218,12 @@ export default class Selection {
     if (!anchorNode) return null
 
     if ($isTextNode(anchorNode)) {
-      if (offset < anchorNode.getTextContentSize()) return null
-      return this.#getNextNodeFromTextEnd(anchorNode)
+      if (offset === anchorNode.getTextContentSize()) return this.#getNextNodeFromTextEnd(anchorNode)
+      if (this.#isCursorOnLastVisualLineOfBlock(anchorNode)) {
+        const topLevelElement = anchorNode.getTopLevelElement()
+        return topLevelElement ? topLevelElement.getNextSibling() : null
+      }
+      return null
     }
 
     if ($isElementNode(anchorNode)) {
@@ -249,8 +253,12 @@ export default class Selection {
     if (!anchorNode) return null
 
     if ($isTextNode(anchorNode)) {
-      if (offset > 0) return null
-      return this.#getPreviousNodeFromTextStart(anchorNode)
+      if (offset === 0) return this.#getPreviousNodeFromTextStart(anchorNode)
+      if (this.#isCursorOnFirstVisualLineOfBlock(anchorNode)) {
+        const topLevelElement = anchorNode.getTopLevelElement()
+        return topLevelElement ? topLevelElement.getPreviousSibling() : null
+      }
+      return null
     }
 
     if ($isElementNode(anchorNode)) {
@@ -674,5 +682,61 @@ export default class Selection {
       current = current.getParent()
     }
     return current ? current.getPreviousSibling() : null
+  }
+
+  #isCursorOnFirstVisualLineOfBlock(anchorNode) {
+    return this.#isCursorOnEdgeLineOfBlock(anchorNode, "first")
+  }
+
+  #isCursorOnLastVisualLineOfBlock(anchorNode) {
+    return this.#isCursorOnEdgeLineOfBlock(anchorNode, "last")
+  }
+
+  // Check whether the cursor sits on the first or last visual line of its
+  // top-level block by comparing the Y position of the cursor with the Y
+  // position of the block's start (first line) or end (last line).
+  #isCursorOnEdgeLineOfBlock(anchorNode, edge) {
+    const topLevelElement = anchorNode.getTopLevelElement()
+    if (!topLevelElement) return false
+
+    const domElement = this.editor.getElementByKey(topLevelElement.getKey())
+    if (!domElement) return false
+
+    const nativeSelection = window.getSelection()
+    if (!nativeSelection?.rangeCount) return false
+
+    const cursorRect = nativeSelection.getRangeAt(0).getBoundingClientRect()
+    if (this.#isRectUnreliable(cursorRect)) return false
+
+    const edgeRect = this.#getEdgeCharRect(domElement, edge)
+    if (!edgeRect || this.#isRectUnreliable(edgeRect)) return false
+
+    return Math.abs(cursorRect.top - edgeRect.top) < 5
+  }
+
+  // Get a reliable bounding rect for the first or last character in a DOM
+  // element by creating a non-collapsed range around it.
+  #getEdgeCharRect(element, edge) {
+    const walker = document.createTreeWalker(element, 4 /* NodeFilter.SHOW_TEXT */)
+    let textNode
+
+    if (edge === "first") {
+      textNode = walker.nextNode()
+    } else {
+      while (walker.nextNode()) textNode = walker.currentNode
+    }
+
+    if (!textNode || textNode.length === 0) return null
+
+    const range = document.createRange()
+    if (edge === "first") {
+      range.setStart(textNode, 0)
+      range.setEnd(textNode, 1)
+    } else {
+      range.setStart(textNode, textNode.length - 1)
+      range.setEnd(textNode, textNode.length)
+    }
+
+    return range.getBoundingClientRect()
   }
 }
