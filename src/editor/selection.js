@@ -705,13 +705,14 @@ export default class Selection {
     const nativeSelection = window.getSelection()
     if (!nativeSelection?.rangeCount) return false
 
-    const cursorRect = nativeSelection.getRangeAt(0).getBoundingClientRect()
-    if (this.#isRectUnreliable(cursorRect)) return false
+    const cursorRect = this.#getReliableRectFromRange(nativeSelection.getRangeAt(0))
+    if (!cursorRect || this.#isRectUnreliable(cursorRect)) return false
 
     const edgeRect = this.#getEdgeCharRect(domElement, edge)
     if (!edgeRect || this.#isRectUnreliable(edgeRect)) return false
 
-    return Math.abs(cursorRect.top - edgeRect.top) < 5
+    const tolerance = edgeRect.height > 0 ? edgeRect.height * 0.5 : 5
+    return Math.abs(cursorRect.top - edgeRect.top) < tolerance
   }
 
   // Get a reliable bounding rect for the first or last character in a DOM
