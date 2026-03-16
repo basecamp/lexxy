@@ -243,7 +243,7 @@ export class CommandDispatcher {
 
     const anchorNode = selection.anchor.getNode()
     if (!$isTextNode(anchorNode) || selection.anchor.offset !== anchorNode.getTextContentSize()) return false
-    if (this.selection.nodeAfterCursor !== null) return false
+    if (anchorNode.getNextSibling() !== null) return false
 
     event.preventDefault()
     selection.toggleFormat("code")
