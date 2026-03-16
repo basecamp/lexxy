@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $isDecoratorNode, $isElementNode, $isParagraphNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isParagraphNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -210,8 +210,18 @@ export class LexicalEditorElement extends HTMLElement {
     const nodes = $generateNodesFromDOM(this.editor, parseHtml(`${html}`))
 
     return nodes
+      .filter(this.#isNotWhitespaceOnlyNode)
       .map(this.#wrapTextNode)
       .map(this.#unwrapDecoratorNode)
+  }
+
+  // Whitespace-only text nodes (e.g. "\n" between block elements like <div>) and stray line break
+  // nodes are formatting artifacts from the HTML source. They can't be appended to the root node
+  // and have no semantic meaning, so we strip them during import.
+  #isNotWhitespaceOnlyNode(node) {
+    if ($isLineBreakNode(node)) return false
+    if ($isTextNode(node) && node.getTextContent().trim() === "") return false
+    return true
   }
 
   // Raw string values produce TextNodes which cannot be appended directly to the RootNode.
