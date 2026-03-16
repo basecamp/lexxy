@@ -766,6 +766,7 @@
   /* Attachment delete button */
 
   &:is(lexxy-node-delete-button) {
+    color: inherit;
     inset-block-start: 0;
     inset-inline-start: 100%;
     opacity: 0;
@@ -778,6 +779,11 @@
 
     .lexxy-node-delete:hover {
       background-color: var(--lexxy-color-red);
+      color: inherit;
+    }
+
+    svg {
+      fill: currentColor;
     }
   }
 
