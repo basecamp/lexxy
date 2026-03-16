@@ -91,7 +91,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   toString() {
-    if (!this.cachedStringValue) {
+    if (this.cachedStringValue == null) {
       this.editor?.getEditorState().read(() => {
         this.cachedStringValue = $getReadableTextContent($getRoot())
       })
@@ -565,6 +565,10 @@ function $getReadableTextContent(node) {
     const children = node.getChildren()
     for (let i = 0; i < children.length; i++) {
       const child = children[i]
+      const previousChild = children[i - 1]
+
+      if (isAttachmentSpacerTextNode(child, previousChild, i, children.length)) continue
+
       text += $getReadableTextContent(child)
       if ($isElementNode(child) && i !== children.length - 1 && !child.isInline()) {
         text += "\n\n"
@@ -574,4 +578,11 @@ function $getReadableTextContent(node) {
   }
 
   return node.getTextContent()
+}
+
+function isAttachmentSpacerTextNode(node, previousNode, index, childCount) {
+  return $isTextNode(node)
+    && node.getTextContent() === " "
+    && index === childCount - 1
+    && previousNode instanceof CustomActionTextAttachmentNode
 }

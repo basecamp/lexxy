@@ -1,4 +1,5 @@
 import { test } from "../../test_helper.js"
+import { expect } from "@playwright/test"
 import { assertEditorPlainText } from "../../helpers/assertions.js"
 
 test.describe("Editor toString", () => {
@@ -22,6 +23,26 @@ test.describe("Editor toString", () => {
     await editor.send("World")
 
     await assertEditorPlainText(editor, "Hello\n\nWorld")
+  })
+
+  test("toString returns content for prompt-inserted custom attachments", async ({ page, editor }) => {
+    await page.goto("/mentions.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+
+    await page.locator("template[type='editor']").first().evaluate((template) => {
+      template.innerHTML = `
+        <span class="person person--inline">
+          <img src="/avatar.png" class="person--avatar" alt="">
+          <span class="person--name">Jorge</span>
+        </span>
+      `
+    })
+
+    await editor.send("@")
+    await expect(page.locator(".lexxy-prompt-menu--visible")).toBeVisible({ timeout: 5_000 })
+    await editor.send("Enter")
+
+    await assertEditorPlainText(editor, "Jorge")
   })
 
   test("toString demo value", async ({ editor }) => {
