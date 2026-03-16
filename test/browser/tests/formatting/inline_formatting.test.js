@@ -31,6 +31,20 @@ test.describe("Inline formatting", () => {
     await assertEditorHtml(editor, "<p>Hello <s>everyone</s></p>")
   })
 
+  test("underline via keyboard shortcut", async ({ page, editor }) => {
+    await editor.setValue(HELLO_EVERYONE)
+    await editor.select("everyone")
+
+    const modifier = process.platform === "darwin" ? "Meta" : "Control"
+    await editor.content.press(`${modifier}+u`)
+    await assertEditorHtml(editor, "<p>Hello <u>everyone</u></p>")
+  })
+
+  test("underline round-trips through setValue/value", async ({ editor }) => {
+    await editor.setValue("<p>Hello <u>everyone</u></p>")
+    await assertEditorHtml(editor, "<p>Hello <u>everyone</u></p>")
+  })
+
   test("toggle code for selected words", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
