@@ -22,7 +22,7 @@ class EditorValueMethodsTest < ApplicationSystemTestCase
     find_editor.send "1"
     click_on_prompt "Peter Johnson"
 
-    assert_editor_plain_text "Peter Johnson\u2060"
+    assert_editor_plain_text "Peter Johnson"
   end
 
   test "toString with mixed content includes all text" do
