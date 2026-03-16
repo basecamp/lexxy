@@ -24,7 +24,9 @@ export default class Clipboard {
       return true
     }
 
-    return this.#handlePastedFiles(clipboardData)
+    const handled = this.#handlePastedFiles(clipboardData)
+    if (handled) event.preventDefault()
+    return handled
   }
 
   #isPlainTextOrURLPasted(clipboardData) {
