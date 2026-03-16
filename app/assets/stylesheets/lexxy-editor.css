@@ -207,6 +207,62 @@
     }
   }
 
+  .attachment[draggable] {
+    cursor: grab;
+  }
+
+  .attachment.lexxy-dragging {
+    opacity: 0.4;
+  }
+
+  [class*="lexxy-drop-target--"] {
+    position: relative;
+  }
+
+  /* Horizontal line indicator for block and list drops */
+  .lexxy-drop-target--block-before::before,
+  .lexxy-drop-target--block-after::after,
+  .lexxy-drop-target--list-before::before,
+  .lexxy-drop-target--list-after::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    block-size: 3px;
+    background-color: var(--lexxy-focus-ring-color);
+    border-radius: 1px;
+    pointer-events: none;
+  }
+
+  .lexxy-drop-target--block-before::before,
+  .lexxy-drop-target--list-before::before {
+    inset-block-start: -2px;
+  }
+
+  .lexxy-drop-target--block-after::after,
+  .lexxy-drop-target--list-after::after {
+    inset-block-end: -2px;
+  }
+
+  /* Vertical line indicator for gallery merge and reorder */
+  .lexxy-drop-target--gallery-before::before,
+  .lexxy-drop-target--gallery-after::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inline-size: 3px;
+    background-color: var(--lexxy-focus-ring-color);
+    border-radius: 1px;
+    pointer-events: none;
+  }
+
+  .lexxy-drop-target--gallery-before::before {
+    inset-inline-start: -4px;
+  }
+
+  .lexxy-drop-target--gallery-after::after {
+    inset-inline-end: -4px;
+  }
+
   .attachment:hover:not(.node--selected) {
     outline: var(--lexxy-focus-ring-size) solid color-mix(in oklch, var(--lexxy-focus-ring-color) 30%, transparent);
     outline-offset: var(--lexxy-focus-ring-offset);

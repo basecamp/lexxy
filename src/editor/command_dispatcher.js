@@ -261,6 +261,8 @@ export class CommandDispatcher {
   }
 
   #handleDragEnter(event) {
+    if (this.#isInternalDrag(event)) return
+
     this.dragCounter++
     if (this.dragCounter === 1) {
       this.#saveSelectionBeforeDrag()
@@ -269,6 +271,8 @@ export class CommandDispatcher {
   }
 
   #handleDragLeave(event) {
+    if (this.#isInternalDrag(event)) return
+
     this.dragCounter--
     if (this.dragCounter === 0) {
       this.#selectionBeforeDrag = null
@@ -277,10 +281,14 @@ export class CommandDispatcher {
   }
 
   #handleDragOver(event) {
+    if (this.#isInternalDrag(event)) return
+
     event.preventDefault()
   }
 
   #handleDrop(event) {
+    if (this.#isInternalDrag(event)) return
+
     event.preventDefault()
 
     this.dragCounter = 0
@@ -312,6 +320,10 @@ export class CommandDispatcher {
     })
 
     this.#selectionBeforeDrag = null
+  }
+
+  #isInternalDrag(event) {
+    return event.dataTransfer?.types.includes("application/x-lexxy-node-key")
   }
 
   #handleTabKey(event) {
