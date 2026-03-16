@@ -13,7 +13,7 @@ class Lexxy::TagHelperTest < ActionView::TestCase
         attachment = value.at("action-text-attachment")
 
         assert_equal "Hello ", value.text
-        assert_equal "<em>James Anderson</em> (<strong>JA</strong>)", JSON.parse(attachment["content"])
+        assert_equal "<span class=\"person person--inline\"><span class=\"person--avatar\">JA</span><span class=\"person--name\">James Anderson</span></span>", JSON.parse(attachment["content"])
       end
     end
   end
