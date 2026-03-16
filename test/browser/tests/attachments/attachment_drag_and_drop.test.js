@@ -54,7 +54,7 @@ test.describe("Attachment Drag and Drop", () => {
   })
 
   test.describe("Repositioning attachments", () => {
-    test("drag a standalone image below a text paragraph", async ({ page, editor }) => {
+    test("drag a standalone image above a text paragraph", async ({ page, editor }) => {
       await editor.send("Hello world", "Enter")
       await editor.uploadFile("test/fixtures/files/example.png")
       await waitForUploadsComplete(page)
@@ -65,7 +65,7 @@ test.describe("Attachment Drag and Drop", () => {
       await expect(editor.content.locator("figure.attachment--preview + p")).toContainText("Hello world")
     })
 
-    test("drag a file attachment below a text paragraph", async ({ page, editor }) => {
+    test("drag a file attachment above a text paragraph", async ({ page, editor }) => {
       await editor.send("Hello world", "Enter")
       await editor.uploadFile("test/fixtures/files/dummy.pdf")
       await waitForUploadsComplete(page)

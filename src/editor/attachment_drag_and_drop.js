@@ -1,5 +1,4 @@
 import {
-  $createNodeSelection,
   $getNearestNodeFromDOMNode,
   $getNodeByKey,
   $setSelection,
@@ -19,6 +18,7 @@ export class AttachmentDragAndDrop {
   #editor
   #draggedNodeKey = null
   #rafId = null
+  #draggingRafId = null
   #cleanupFns = []
 
   constructor(editor) {
@@ -66,7 +66,10 @@ export class AttachmentDragAndDrop {
     event.dataTransfer.setDragImage(figure, figure.offsetWidth / 2, figure.offsetHeight / 2)
 
     // Add dragging class after a tick so it doesn't affect the drag image
-    requestAnimationFrame(() => figure.classList.add("lexxy-dragging"))
+    this.#draggingRafId = requestAnimationFrame(() => {
+      this.#draggingRafId = null
+      figure.classList.add("lexxy-dragging")
+    })
 
     return true
   }
@@ -245,12 +248,11 @@ export class AttachmentDragAndDrop {
       this.#dropBetweenBlocks(draggedNode, target)
     }
 
-    // Select the dropped node to stabilize selection state. Without this,
-    // some browsers fire a follow-up selectionchange that creates a second
-    // history entry, requiring two undos instead of one.
-    const nodeSelection = $createNodeSelection()
-    nodeSelection.add(draggedKey)
-    $setSelection(nodeSelection)
+    // Clear selection to prevent a second history entry. Lexical dispatches
+    // SELECTION_CHANGE_COMMAND during commit for non-range selections, which
+    // creates a separate update. Null selection avoids that dispatch entirely
+    // and also prevents Firefox's follow-up selectionchange from dirtying nodes.
+    $setSelection(null)
   }
 
   #dropOntoImage(draggedNode, targetKey, position) {
@@ -342,6 +344,11 @@ export class AttachmentDragAndDrop {
     if (this.#rafId) {
       cancelAnimationFrame(this.#rafId)
       this.#rafId = null
+    }
+
+    if (this.#draggingRafId) {
+      cancelAnimationFrame(this.#draggingRafId)
+      this.#draggingRafId = null
     }
   }
 }
