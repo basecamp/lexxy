@@ -905,7 +905,6 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
   }
 
   lexxy-node-delete-button {
-    display: none;
     inset-inline-start: 0;
     line-height: 1lh;
 
@@ -919,9 +918,5 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
         border-radius: 50%;
       }
     }
-  }
-
-  &.node--selected lexxy-node-delete-button {
-    display: block;
   }
 }
