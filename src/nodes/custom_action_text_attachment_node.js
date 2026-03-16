@@ -74,15 +74,12 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   createDOM() {
     const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true })
 
-    const wrapper = createElement("div", { className: "lexxy-attachment-wrapper" })
-    wrapper.innerHTML = this.innerHtml
+    figure.innerHTML = this.innerHtml
 
     const deleteButton = createElement("lexxy-node-delete-button")
-    wrapper.appendChild(deleteButton)
+    figure.appendChild(deleteButton)
 
-    stripWhiteSpace(wrapper)
-
-    figure.append(wrapper)
+    stripWhiteSpace(figure)
 
     return figure
   }

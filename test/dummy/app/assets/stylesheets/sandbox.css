@@ -146,7 +146,7 @@ section > h2 {
 /* -------------------------------------------------------------------------- */
 
 .person {
-  display: inline-block;
+  display: inline;
   position: relative;
   white-space: nowrap;
 
@@ -165,9 +165,12 @@ section > h2 {
     &:not(img) {
       align-items: center;
       background-color: var(--lexxy-color-accent-dark);
+      block-size: 1.2lh;
       color: var(--lexxy-color-ink-inverted);
       display: inline-flex;
+      font-size: 0.75em;
       font-weight: 600;
+      inline-size: 1.2lh;
       justify-content: center;
     }
   }

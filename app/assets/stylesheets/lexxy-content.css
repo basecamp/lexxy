@@ -452,28 +452,19 @@
     --lexxy-attachment-text-color: currentColor;
 
     background: var(--lexxy-attachment-bg-color);
-    border-radius: var(--lexxy-radius);
+    border-radius: 2lh;
+    box-shadow: 0 0 0 2px var(--lexxy-attachment-bg-color);
     color: var(--lexxy-attachment-text-color);
     display: inline;
     margin: 0;
     padding: 0;
+    position: relative;
     white-space: normal;
 
-    .lexxy-attachment-wrapper {
-      background-color: var(--lexxy-color-ink-5);
-      border-radius: 20px;
-      box-shadow: 0 0 0 2px var(--lexxy-color-ink-5);
-      display: inline;
-      padding-inline-end: 0.25ch;
-      position: relative;
-      vertical-align: text-bottom;
-      white-space: nowrap;
+    .node--selected & {
+      --lexxy-attachment-bg-color: var(--lexxy-focus-ring-color);
 
-      .node--selected & {
-        background-color: var(--lexxy-focus-ring-color);
-        box-shadow: 0 0 0 2px var(--lexxy-focus-ring-color);
-        color: var(--lexxy-focus-text);
-      }
+      color: var(--lexxy-focus-text);
     }
 
     img {
