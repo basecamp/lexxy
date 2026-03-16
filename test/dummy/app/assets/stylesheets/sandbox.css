@@ -146,9 +146,12 @@ section > h2 {
 /* -------------------------------------------------------------------------- */
 
 .person {
-  padding-inline-start: calc(1lh + 0.25ch);
   position: relative;
   white-space: nowrap;
+
+  &:has(.person--avatar) {
+    padding-inline-start: calc(1lh + 0.25ch);
+  }
 
   .person--avatar {
     aspect-ratio: 1;
