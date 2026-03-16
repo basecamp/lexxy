@@ -72,6 +72,7 @@ export class EditorHandle {
         }
       }
     }, text)
+    await this.flush()
   }
 
   async selectAll() {
@@ -83,6 +84,7 @@ export class EditorHandle {
       sel.removeAllRanges()
       sel.addRange(range)
     })
+    await this.flush()
   }
 
   async paste(text, { html, files = [] } = {}) {
