@@ -448,7 +448,7 @@
 
   action-text-attachment[content-type^="application/vnd.actiontext"] {
     --lexxy-attachment-bg-color: transparent;
-    --lexxy-attachment-image-size: 1em;
+    --lexxy-attachment-image-size: 1lh;
     --lexxy-attachment-text-color: currentColor;
 
     background: var(--lexxy-attachment-bg-color);
@@ -457,15 +457,33 @@
     display: inline;
     margin: 0;
     padding: 0;
-    position: relative;
     white-space: normal;
+
+    .lexxy-attachment-wrapper {
+      background-color: var(--lexxy-color-ink-5);
+      border-radius: 20px;
+      box-shadow: 0 0 0 2px var(--lexxy-color-ink-5);
+      display: inline;
+      padding-inline-end: 0.25ch;
+      position: relative;
+      vertical-align: text-bottom;
+      white-space: nowrap;
+
+      .node--selected & {
+        background-color: var(--lexxy-focus-ring-color);
+        box-shadow: 0 0 0 2px var(--lexxy-focus-ring-color);
+        color: var(--lexxy-focus-text);
+      }
+    }
 
     img {
       block-size: var(--lexxy-attachment-image-size);
       border-radius: 50%;
       inline-size: var(--lexxy-attachment-image-size);
+      inset-block-start: 0;
+      inset-inline-start: 0;
       margin-inline-end: 0.25ch;
-      vertical-align: middle;
+      position: absolute;
     }
   }
 

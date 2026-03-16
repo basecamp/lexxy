@@ -18,7 +18,6 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   static importDOM() {
-
     return {
       [this.TAG_NAME]: (element) => {
         if (!element.getAttribute("content")) {
@@ -39,8 +38,6 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
               innerHtml: parseAttachmentContent(attachment.getAttribute("content")),
               contentType: attachment.getAttribute("content-type")
             }))
-
-            nodes.push($createTextNode("\u2060"))
 
             return { node: nodes }
           },
@@ -68,10 +65,17 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   createDOM() {
     const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true })
 
-    figure.insertAdjacentHTML("beforeend", this.innerHtml)
+    const wrapper = createElement("div", { className: "lexxy-attachment-wrapper" })
+
+    wrapper.innerHTML = this.innerHtml
 
     const deleteButton = createElement("lexxy-node-delete-button")
-    figure.appendChild(deleteButton)
+    wrapper.appendChild(deleteButton)
+
+    figure.append(wrapper)
+
+    // Removing white-space between HTML tags to remove unwanted space caused by `display: inline`
+    figure.innerHTML = figure.innerHTML.replace(/>\s+</g, "><").trim()
 
     return figure
   }
@@ -116,5 +120,4 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   decorate() {
     return null
   }
-
 }

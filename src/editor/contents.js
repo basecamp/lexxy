@@ -790,9 +790,8 @@ export default class Contents {
     const textBeforeString = fullText.slice(0, lastIndex)
     const textAfterCursor = fullText.slice(offset)
 
-    const trailingSpacer = this.#hasInlineDecoratorNode(replacementNodes) ? "\u2060" : " "
     const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, selection, textBeforeString)
-    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, selection, textAfterCursor || trailingSpacer)
+    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, selection, textAfterCursor || " ")
 
     anchorNode.replace(textNodeBefore)
 

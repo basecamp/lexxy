@@ -146,35 +146,25 @@ section > h2 {
 /* -------------------------------------------------------------------------- */
 
 .person {
-  display: inline;
+  padding-inline-start: calc(1lh + 0.25ch);
+  position: relative;
+  white-space: nowrap;
 
   .person--avatar {
     aspect-ratio: 1;
-    background-color: var(--lexxy-color-accent-dark);
     block-size: 1lh;
     border-radius: 50%;
-    display: inline-flex;
     inline-size: 1lh;
-    vertical-align: text-bottom;
+    inset-inline-start: 0;
+    position: absolute;
 
     &:not(img) {
       align-items: center;
+      background-color: var(--lexxy-color-accent-dark);
       color: var(--lexxy-color-ink-inverted);
+      display: inline-flex;
       font-weight: 600;
       justify-content: center;
-      text-align: center;
-    }
-  }
-
-  &.person--inline {
-    background-color: oklch(50% 0 0 / 0.1);
-    border-radius: 20px;
-    box-shadow: 0 0 0 2px oklch(50% 0 0 / 0.1);
-    padding-inline-end: 0.25ch;
-
-    .node--selected & {
-      background-color: var(--lexxy-focus-ring-color);
-      box-shadow: 0 0 0 2px var(--lexxy-focus-ring-color);
     }
   }
 }
