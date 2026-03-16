@@ -31,16 +31,14 @@ test.describe("Mention deletion cursor position", () => {
 
     // Place cursor just before the mention
     await editor.content.click()
-    await page.keyboard.press("Home")
-    for (let i = 0; i < 6; i++) {
+    await editor.select("Hello")
+    for (let i = 0; i < 2; i++) {
       await page.keyboard.press("ArrowRight")
     }
     await editor.flush()
 
-    // Shift+Right to select through the mention's text content ("Alice" = 5 chars)
-    for (let i = 0; i < 5; i++) {
-      await page.keyboard.press("Shift+ArrowRight")
-    }
+    // Shift+Right to select through the mention's text content
+    await page.keyboard.press("Shift+ArrowRight")
     await editor.flush()
 
     // Delete the selection
@@ -60,16 +58,14 @@ test.describe("Mention deletion cursor position", () => {
 
     // Place cursor just after the mention
     await editor.content.click()
-    await page.keyboard.press("End")
-    for (let i = 0; i < 4; i++) {
+    await editor.select("end")
+    for (let i = 0; i < 2; i++) {
       await page.keyboard.press("ArrowLeft")
     }
     await editor.flush()
 
-    // Shift+Left to select backwards through the mention text content ("Alice" = 5 chars)
-    for (let i = 0; i < 5; i++) {
-      await page.keyboard.press("Shift+ArrowLeft")
-    }
+    // Shift+Left to select backwards through the mention text content
+    await page.keyboard.press("Shift+ArrowLeft")
     await editor.flush()
 
     // Delete the selection
