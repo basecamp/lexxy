@@ -803,10 +803,6 @@ export default class Contents {
     textNodeAfter.select(cursorOffset, cursorOffset)
   }
 
-  #hasInlineDecoratorNode(nodes) {
-    return nodes.some(node => node instanceof CustomActionTextAttachmentNode && node.isInline())
-  }
-
   #cloneTextNodeFormatting(anchorNode, selection, text) {
     const parent = anchorNode.getParent()
     const fallbackFormat = parent?.getTextFormat?.() || 0
