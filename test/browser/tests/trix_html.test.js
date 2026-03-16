@@ -52,7 +52,7 @@ test.describe("Trix HTML", () => {
 
     test("strong del", async ({ editor }) => {
       await editor.setValue("<div><strong><del>wrong!</del></strong></div>")
-      await assertEditorHtml(editor, "<p><s><b><strong>wrong!</strong></b></s></p>")
+      await assertEditorHtml(editor, "<p><s><strong>wrong!</strong></s></p>")
     })
 
     test("del with color", async ({ editor }) => {
@@ -62,12 +62,12 @@ test.describe("Trix HTML", () => {
 
     test("strong with color", async ({ editor }) => {
       await editor.setValue('<div><strong style="color: yellow;">banana</strong></div>')
-      await assertEditorHtml(editor, '<p><b><mark style="color: yellow;"><strong>banana</strong></mark></b></p>')
+      await assertEditorHtml(editor, '<p><mark style="color: yellow;"><strong>banana</strong></mark></p>')
     })
 
     test("em with color", async ({ editor }) => {
       await editor.setValue('<div><em style="color: blue;">wave</em></div>')
-      await assertEditorHtml(editor, '<p><i><mark style="color: blue;"><em>wave</em></mark></i></p>')
+      await assertEditorHtml(editor, '<p><mark style="color: blue;"><em>wave</em></mark></p>')
     })
   })
 
