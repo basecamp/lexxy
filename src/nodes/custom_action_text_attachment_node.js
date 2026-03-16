@@ -39,6 +39,11 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
               contentType: attachment.getAttribute("content-type")
             }))
 
+            const nextSibling = attachment.nextSibling
+            if (nextSibling && nextSibling.nodeType === Node.TEXT_NODE && /^\s/.test(nextSibling.textContent)) {
+              nodes.push($createTextNode(" "))
+            }
+
             return { node: nodes }
           },
           priority: 2
