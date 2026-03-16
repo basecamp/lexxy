@@ -1,4 +1,4 @@
-import { $createParagraphNode, $getSelection, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, KEY_ARROW_DOWN_COMMAND, KEY_ENTER_COMMAND } from "lexical"
+import { $createParagraphNode, $getSelection, $isLineBreakNode, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, KEY_ARROW_DOWN_COMMAND, KEY_ENTER_COMMAND } from "lexical"
 import { $createListNode, $isListItemNode, $isListNode } from "@lexical/list"
 import { $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
@@ -27,8 +27,6 @@ export default class FormatEscaper {
   #handleEnterKey(event) {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return false
-
-    if (this.#handleCodeBlocks(event, selection)) return true
 
     const anchorNode = selection.anchor.getNode()
 
@@ -293,21 +291,6 @@ export default class FormatEscaper {
 
   // Code blocks
 
-  #handleCodeBlocks(event, selection) {
-    if (!selection.isCollapsed()) return false
-
-    const codeNode = this.#getCodeNodeFromSelection(selection)
-    if (!codeNode) return false
-
-    if (this.#isCursorOnEmptyLastLineOfCodeBlock(selection, codeNode)) {
-      event?.preventDefault()
-      this.#exitCodeBlock(codeNode)
-      return true
-    }
-
-    return false
-  }
-
   #handleArrowDownInCodeBlock(event) {
     const selection = $getSelection()
     if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
@@ -331,27 +314,6 @@ export default class FormatEscaper {
     return $getNearestNodeOfType(anchorNode, CodeNode) || ($isCodeNode(anchorNode) ? anchorNode : null)
   }
 
-  #isCursorOnEmptyLastLineOfCodeBlock(selection, codeNode) {
-    const children = codeNode.getChildren()
-    if (children.length === 0) return true
-
-    const anchorNode = selection.anchor.getNode()
-    const anchorOffset = selection.anchor.offset
-
-    // Chromium: cursor on the CodeNode element after the last child (a line break)
-    if ($isCodeNode(anchorNode) && anchorOffset === children.length) {
-      return $isLineBreakNode(children[children.length - 1])
-    }
-
-    // Firefox: cursor on an empty text node that follows a line break at the end
-    if ($isTextNode(anchorNode) && anchorNode.getTextContentSize() === 0 && anchorOffset === 0) {
-      const previousSibling = anchorNode.getPreviousSibling()
-      return $isLineBreakNode(previousSibling) && anchorNode.getNextSibling() === null
-    }
-
-    return false
-  }
-
   #isCursorOnLastLineOfCodeBlock(selection, codeNode) {
     const anchorNode = selection.anchor.getNode()
     const children = codeNode.getChildren()
@@ -369,20 +331,4 @@ export default class FormatEscaper {
     return anchorIndex > lastLineBreakIndex
   }
 
-  #exitCodeBlock(codeNode) {
-    const children = codeNode.getChildren()
-    const lastChild = children[children.length - 1]
-
-    if ($isTextNode(lastChild) && lastChild.getTextContentSize() === 0) {
-      const previousSibling = lastChild.getPreviousSibling()
-      lastChild.remove()
-      if ($isLineBreakNode(previousSibling)) previousSibling.remove()
-    } else if ($isLineBreakNode(lastChild)) {
-      lastChild.remove()
-    }
-
-    const paragraph = $createParagraphNode()
-    codeNode.insertAfter(paragraph)
-    paragraph.selectStart()
-  }
 }

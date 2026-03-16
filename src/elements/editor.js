@@ -23,6 +23,7 @@ import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { EarlyEscapeCodeNode } from "../nodes/early_escape_code_node"
 import { exportTextNodeDOM } from "../helpers/text_node_export_helper"
 import { ProvisionalParagraphExtension } from "../extensions/provisional_paragraph_extension"
 import { HighlightExtension } from "../extensions/highlight_extension"
@@ -276,7 +277,8 @@ export class LexicalEditorElement extends HTMLElement {
         HeadingNode,
         ListNode,
         ListItemNode,
-        CodeNode,
+        EarlyEscapeCodeNode,
+        { replace: CodeNode, with: (node) => new EarlyEscapeCodeNode(node.getLanguage()), withKlass: EarlyEscapeCodeNode },
         CodeHighlightNode,
         LinkNode,
         AutoLinkNode,

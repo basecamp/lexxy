@@ -18,7 +18,7 @@ import {
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
-import { $isCodeNode, CodeNode } from "@lexical/code"
+import { $isCodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
@@ -26,6 +26,7 @@ import { createElement } from "../helpers/html_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { REMOVE_HIGHLIGHT_COMMAND, TOGGLE_HIGHLIGHT_COMMAND } from "../extensions/highlight_extension"
+import { $createCodeNode } from "../nodes/early_escape_code_node"
 
 const COMMANDS = [
   "bold",
@@ -149,7 +150,7 @@ export class CommandDispatcher {
       if (this.selection.hasSelectedWordsInSingleLine) {
         this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
       } else {
-        this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new CodeNode("plain"))
+        this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => $createCodeNode("plain"))
       }
     })
   }
