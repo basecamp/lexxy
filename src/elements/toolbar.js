@@ -308,7 +308,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   get #buttons() {
-    return Array.from(this.querySelectorAll(":scope > button"))
+    return Array.from(this.querySelectorAll(":scope > button:not([data-prevent-overflow='true'])"))
   }
 
   get #focusableItems() {
@@ -378,7 +378,7 @@ export class LexicalToolbarElement extends HTMLElement {
         ${ToolbarIcons.ol}
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="upload" data-command="uploadAttachments" title="Upload file">
+      <button class="lexxy-editor__toolbar-button" type="button" name="upload" data-command="uploadAttachments" data-prevent-overflow="true" title="Upload file">
         ${ToolbarIcons.attachment}
       </button>
 
@@ -389,9 +389,9 @@ export class LexicalToolbarElement extends HTMLElement {
       <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
         ${ToolbarIcons.hr}
       </button>
- 
+
       <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
- 
+
       <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo">
         ${ToolbarIcons.undo}
       </button>
