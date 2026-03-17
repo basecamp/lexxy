@@ -45,10 +45,11 @@ export class EditorHandle {
   async send(...keys) {
     await this.#ensureFirstInteraction()
     for (const key of keys) {
-      if (this.#isSpecialKey(key)) {
-        await this.content.press(key)
+      const translated = this.#translateKey(key)
+      if (this.#isSpecialKey(translated)) {
+        await this.content.press(translated)
       } else {
-        await this.content.pressSequentially(key)
+        await this.content.pressSequentially(translated)
       }
       await this.flush()
     }
@@ -213,6 +214,15 @@ export class EditorHandle {
       }
       this.#firstInteraction = true
     }
+  }
+
+  // On macOS, Home/End scroll the page instead of moving the cursor.
+  // Translate to Meta+Arrow equivalents so tests work cross-platform.
+  #translateKey(key) {
+    if (process.platform !== "darwin") return key
+    return key
+      .replace(/\bHome\b/, "Meta+ArrowLeft")
+      .replace(/\bEnd\b/, "Meta+ArrowRight")
   }
 
   #isSpecialKey(key) {
