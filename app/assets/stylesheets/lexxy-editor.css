@@ -186,6 +186,8 @@
   }
 
   .attachment {
+    background-color: var(--lexxy-color-canvas);
+
     progress {
       max-inline-size: 10ch;
       margin: auto;
@@ -205,6 +207,93 @@
         inset-inline-start: unset;
       }
     }
+
+    &.attachment--error {
+      background: color-mix(var(--lexxy-color-red) 10%, transparent);
+      padding: 2ch;
+
+      &:before {
+        align-items: center;
+        aspect-ratio: 1;
+        background: var(--lexxy-color-red);
+        block-size: 1.5lh;
+        border-radius: 50%;
+        color: white;
+        content: "!";
+        display: flex;
+        justify-content: center;
+        margin: auto;
+      }
+
+      > div {
+        flex: 1;
+        font-size: 0.85em;
+        padding: 1ch;
+        text-align: start;
+      }
+    }
+  }
+
+  .attachment[draggable] {
+    cursor: grab;
+  }
+
+  .attachment.lexxy-dragging {
+    opacity: 0.4;
+  }
+
+  [class*="lexxy-drop-target--"] {
+    position: relative;
+  }
+
+  /* Horizontal line indicator for block and list drops */
+  .lexxy-drop-target--block-before::before,
+  .lexxy-drop-target--block-after::after,
+  .lexxy-drop-target--list-before::before,
+  .lexxy-drop-target--list-after::after {
+    background-color: var(--lexxy-focus-ring-color);
+    block-size: 3px;
+    border-radius: 1px;
+    content: "";
+    inset-inline: 0;
+    pointer-events: none;
+    position: absolute;
+    transform: translate(0, 0.5ch);
+  }
+
+  .lexxy-drop-target--block-before::before,
+  .lexxy-drop-target--list-before::before {
+    transform: translate(0, -0.5ch);
+  }
+
+  .lexxy-drop-target--block-before::before,
+  .lexxy-drop-target--list-before::before {
+    inset-block-start: -2px;
+  }
+
+  .lexxy-drop-target--block-after::after,
+  .lexxy-drop-target--list-after::after {
+    inset-block-end: -2px;
+  }
+
+  /* Vertical line indicator for gallery merge and reorder */
+  .lexxy-drop-target--gallery-before::before,
+  .lexxy-drop-target--gallery-after::after {
+    background-color: var(--lexxy-focus-ring-color);
+    border-radius: 1px;
+    content: "";
+    inset-block: 0;
+    inline-size: 3px;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  .lexxy-drop-target--gallery-before::before {
+    inset-inline-start: -4px;
+  }
+
+  .lexxy-drop-target--gallery-after::after {
+    inset-inline-end: -4px;
   }
 
   .attachment:hover:not(.node--selected) {
@@ -225,26 +314,34 @@
   /* ------------------------------------------------------------------------ */
 
   .attachment-gallery {
+    --lexxy-attachment-gallery-columns: 3;
     --lexxy-attachment-gallery-gap: 0.4ch;
     --lexxy-focus-ring-offset: -6px;
 
-    display: block;
     padding: 0;
 
     .attachment {
+      background: transparent;
+      box-sizing: border-box;
       margin: var(--lexxy-attachment-gallery-gap);
       padding: 0;
       padding-block-end: var(--lexxy-attachment-gap);
       vertical-align: top;
 
-      &.attachment--error {
-        padding: 2ch;
-      }
-
       img {
         box-sizing: border-box;
         padding: 1ch;
         padding-block-end: 0;
+      }
+
+
+      &.attachment--error {
+        background: color-mix(var(--lexxy-color-red) 10%, transparent);
+        padding: 2ch;
+
+        > div {
+          text-align: center;
+        }
       }
     }
   }

@@ -419,15 +419,11 @@
     text-align: center;
 
     .attachment {
-      display: inline-block;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 0;
       inline-size: calc(33.333% - 0.8ch);
       vertical-align: top;
-
-      img {
-        margin: auto;
-        max-block-size: 50rem;
-        object-fit: contain;
-      }
 
       .attachment__caption {
         padding-block-end: 1ch;
