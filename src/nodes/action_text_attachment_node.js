@@ -189,7 +189,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   #createDOMForImage(options = {}) {
     const img = createElement("img", { src: this.src, draggable: false, alt: this.altText, ...this.#imageDimensions, ...options })
-    return img
+    const container = createElement("div", { className: "attachment__container" })
+    container.appendChild(img)
+    return container
   }
 
   get #imageDimensions() {
