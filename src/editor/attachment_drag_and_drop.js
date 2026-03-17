@@ -63,7 +63,6 @@ export class AttachmentDragAndDrop {
     this.#draggedNodeKey = figure.dataset.lexicalNodeKey
     event.dataTransfer.setData(MIME_TYPE, this.#draggedNodeKey)
     event.dataTransfer.effectAllowed = "move"
-    event.dataTransfer.setDragImage(figure, figure.offsetWidth / 2, figure.offsetHeight / 2)
 
     // Add dragging class after a tick so it doesn't affect the drag image
     this.#draggingRafId = requestAnimationFrame(() => {
