@@ -224,13 +224,19 @@
   .lexxy-drop-target--block-after::after,
   .lexxy-drop-target--list-before::before,
   .lexxy-drop-target--list-after::after {
-    content: "";
-    position: absolute;
-    inset-inline: 0;
-    block-size: 3px;
     background-color: var(--lexxy-focus-ring-color);
+    block-size: 3px;
     border-radius: 1px;
+    content: "";
+    inset-inline: 0;
     pointer-events: none;
+    position: absolute;
+    transform: translate(0, 0.5ch);
+  }
+
+  .lexxy-drop-target--block-before::before,
+  .lexxy-drop-target--list-before::before {
+    transform: translate(0, -0.5ch);
   }
 
   .lexxy-drop-target--block-before::before,
@@ -246,13 +252,13 @@
   /* Vertical line indicator for gallery merge and reorder */
   .lexxy-drop-target--gallery-before::before,
   .lexxy-drop-target--gallery-after::after {
-    content: "";
-    position: absolute;
-    inset-block: 0;
-    inline-size: 3px;
     background-color: var(--lexxy-focus-ring-color);
     border-radius: 1px;
+    content: "";
+    inset-block: 0;
+    inline-size: 3px;
     pointer-events: none;
+    position: absolute;
   }
 
   .lexxy-drop-target--gallery-before::before {
