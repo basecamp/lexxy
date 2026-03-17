@@ -33,27 +33,24 @@ test.describe("Backspace after mention in list item", () => {
     // Place cursor right after the decorator node using JS to ensure precise positioning
     await editor.content.evaluate((el) => {
       const attachment = el.querySelector("action-text-attachment")
-      // The word joiner text node is the next sibling's text content
+      if (!attachment) throw new Error("No action-text-attachment found in editor")
+
       const wordJoinerSpan = attachment.nextElementSibling
-      if (wordJoinerSpan) {
-        const textNode = wordJoinerSpan.firstChild
-        const range = document.createRange()
-        range.setStart(textNode, textNode.textContent.length)
-        range.collapse(true)
-        const sel = window.getSelection()
-        sel.removeAllRanges()
-        sel.addRange(range)
-      }
+      if (!wordJoinerSpan?.firstChild) throw new Error("No word joiner span/text node found after mention")
+
+      const textNode = wordJoinerSpan.firstChild
+      const range = document.createRange()
+      range.setStart(textNode, textNode.textContent.length)
+      range.collapse(true)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
     })
     await editor.flush()
 
     // First backspace: deletes the invisible word joiner
-    await page.keyboard.press("Backspace")
-    await editor.flush()
-
     // Second backspace: should select the mention, NOT outdent the list item
-    await page.keyboard.press("Backspace")
-    await editor.flush()
+    await editor.send("Backspace", "Backspace")
 
     // The list should still exist (not outdented to a paragraph)
     await assertEditorContent(editor, async (content) => {
