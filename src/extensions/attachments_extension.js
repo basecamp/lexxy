@@ -4,7 +4,7 @@ import { mergeRegister } from "@lexical/utils"
 import { $findOrCreateGalleryForImage, $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node.js"
-import { AttachmentDragAndDrop } from "../editor/attachment_drag_and_drop"
+import { AttachmentDragAndDrop } from "../editor/attachments/drag_and_drop"
 
 import LexxyExtension from "./lexxy_extension"
 import { $isAtNodeEdge } from "../helpers/lexical_helper.js"
