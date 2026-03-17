@@ -207,6 +207,31 @@
         inset-inline-start: unset;
       }
     }
+
+    &.attachment--error {
+      background: color-mix(var(--lexxy-color-red) 10%, transparent);
+      padding: 2ch;
+
+      &:before {
+        align-items: center;
+        aspect-ratio: 1;
+        background: var(--lexxy-color-red);
+        block-size: 1.5lh;
+        border-radius: 50%;
+        color: white;
+        content: "!";
+        display: flex;
+        justify-content: center;
+        margin: auto;
+      }
+
+      > div {
+        flex: 1;
+        font-size: 0.85em;
+        padding: 1ch;
+        text-align: start;
+      }
+    }
   }
 
   .attachment[draggable] {
@@ -303,14 +328,20 @@
       padding-block-end: var(--lexxy-attachment-gap);
       vertical-align: top;
 
-      &.attachment--error {
-        padding: 2ch;
-      }
-
       img {
         box-sizing: border-box;
         padding: 1ch;
         padding-block-end: 0;
+      }
+
+
+      &.attachment--error {
+        background: color-mix(var(--lexxy-color-red) 10%, transparent);
+        padding: 2ch;
+
+        > div {
+          text-align: center;
+        }
       }
     }
   }
