@@ -7,6 +7,27 @@ test.describe("Mentions", () => {
     await page.waitForSelector("lexxy-editor[connected]")
   })
 
+  test("inserting a mention adds a trailing space", async ({ page, editor }) => {
+    await editor.send("Hello @")
+
+    const popover = page.locator(".lexxy-prompt-menu--visible")
+    await expect(popover).toBeVisible({ timeout: 5_000 })
+
+    await editor.send("Enter")
+    await editor.flush()
+
+    await expect(editor.content.locator("action-text-attachment")).toBeVisible({ timeout: 5_000 })
+
+    // The text after the mention should contain a space so the cursor isn't stuck against it
+    const hasTrailingSpace = await editor.content.evaluate((el) => {
+      const attachment = el.querySelector("action-text-attachment")
+      if (!attachment) return false
+      const next = attachment.nextSibling
+      return next && /^\s/.test(next.textContent)
+    })
+    expect(hasTrailingSpace).toBe(true)
+  })
+
   test("mention and possessive apostrophe-s do not break across lines", async ({ page, editor }) => {
     await editor.locator.evaluate((el) => {
       el.style.width = "200px"
