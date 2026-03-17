@@ -9,8 +9,8 @@ import {
 } from "lexical"
 
 import { $isListItemNode, $isListNode } from "@lexical/list"
-import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
-import { $findOrCreateGalleryForImage } from "../nodes/image_gallery_node"
+import { $isActionTextAttachmentNode } from "../../nodes/action_text_attachment_node"
+import { $findOrCreateGalleryForImage } from "../../nodes/image_gallery_node"
 
 const MIME_TYPE = "application/x-lexxy-node-key"
 
