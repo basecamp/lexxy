@@ -15,6 +15,7 @@ import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
+import { isAttachmentSpacerTextNode } from "../helpers/lexical_helper"
 import { sanitize } from "../helpers/sanitization_helper"
 import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
@@ -575,11 +576,4 @@ function $getReadableTextContent(node) {
   }
 
   return node.getTextContent()
-}
-
-function isAttachmentSpacerTextNode(node, previousNode, index, childCount) {
-  return $isTextNode(node)
-    && node.getTextContent() === " "
-    && index === childCount - 1
-    && previousNode instanceof CustomActionTextAttachmentNode
 }
