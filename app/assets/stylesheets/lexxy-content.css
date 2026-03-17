@@ -419,7 +419,9 @@
     text-align: center;
 
     .attachment {
-      display: inline-block;
+      display: inline-flex;
+      flex-direction: column;
+      gap: 0;
       inline-size: calc(33.333% - 0.8ch);
       vertical-align: top;
 

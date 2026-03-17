@@ -293,16 +293,11 @@
     --lexxy-attachment-gallery-gap: 0.4ch;
     --lexxy-focus-ring-offset: -6px;
 
-    display: block;
     padding: 0;
 
     .attachment {
       background: transparent;
       box-sizing: border-box;
-      display: inline-flex;
-      flex-direction: column;
-      gap: 0;
-      inline-size: calc(100% / var(--lexxy-attachment-gallery-columns) - var(--lexxy-attachment-gallery-gap) * 2);
       margin: var(--lexxy-attachment-gallery-gap);
       padding: 0;
       padding-block-end: var(--lexxy-attachment-gap);
@@ -317,11 +312,6 @@
         padding: 1ch;
         padding-block-end: 0;
       }
-    }
-
-    &:has(> .attachment:nth-child(2):last-of-type),
-    &:has(> .attachment:nth-child(4):last-of-type) {
-      --lexxy-attachment-gallery-columns: 2;
     }
   }
 
