@@ -288,6 +288,7 @@
   .attachment {
     --lexxy-attachment-gap: 0.75ch;
 
+    background-color: var(--lexxy-color-canvas);
     block-size: auto;
     box-sizing: border-box;
     border-radius: var(--lexxy-radius);
