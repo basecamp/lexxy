@@ -186,6 +186,8 @@
   }
 
   .attachment {
+    background-color: var(--lexxy-color-canvas);
+
     progress {
       max-inline-size: 10ch;
       margin: auto;
@@ -295,6 +297,7 @@
     padding: 0;
 
     .attachment {
+      background: transparent;
       box-sizing: border-box;
       display: inline-flex;
       flex-direction: column;

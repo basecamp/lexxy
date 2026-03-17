@@ -288,7 +288,6 @@
   .attachment {
     --lexxy-attachment-gap: 0.75ch;
 
-    background-color: var(--lexxy-color-canvas);
     block-size: auto;
     box-sizing: border-box;
     border-radius: var(--lexxy-radius);
@@ -416,22 +415,24 @@
   /* ------------------------------------------------------------------------ */
 
   .attachment-gallery {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: block;
+    text-align: center;
 
     .attachment {
-      display: flex;
-      flex-direction: column;
-      inline-size: 100%;
+      display: inline-block;
+      inline-size: calc(33.333% - 0.8ch);
+      vertical-align: top;
 
       .attachment__caption {
         padding-block-end: 1ch;
       }
     }
 
-    &:has(> :nth-child(2):last-child),
-    &:has(> :nth-child(4):last-child) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+    &.attachment-gallery--2,
+    &.attachment-gallery--4 {
+      .attachment {
+        inline-size: calc(50% - 0.8ch);
+      }
     }
   }
 
