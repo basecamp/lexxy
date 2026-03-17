@@ -86,6 +86,37 @@ test.describe("Toolbar", () => {
     await assertEditorHtml(editor, "<p>Hello World</p>")
   })
 
+  test("overflow compaction keeps upload button visible", async ({ page }) => {
+    const toolbar = page.locator("lexxy-toolbar")
+    const uploadButton = toolbar.locator(":scope > button[name=upload]")
+    const overflowMenu = toolbar.locator(".lexxy-editor__toolbar-overflow-menu")
+
+    // Shrink the viewport until the toolbar overflows
+    const originalSize = page.viewportSize()
+    await page.setViewportSize({ width: 300, height: originalSize.height })
+
+    // Wait for the toolbar to enter overflow state
+    await expect(toolbar).toHaveAttribute("overflowing", "")
+
+    // The upload button must remain a direct child of the toolbar (not moved to overflow menu)
+    await expect(uploadButton).toBeVisible()
+    await expect(uploadButton).toHaveCount(1)
+
+    // Other buttons should have been moved into the overflow menu
+    const overflowedButtons = overflowMenu.locator("button")
+    await expect(overflowedButtons.first()).toBeAttached()
+
+    // The upload button must not appear inside the overflow menu
+    await expect(overflowMenu.locator("button[name=upload]")).toHaveCount(0)
+
+    // Upload button should be clickable (not obscured)
+    await expect(uploadButton).toBeEnabled()
+
+    // Restore viewport and verify overflow is resolved
+    await page.setViewportSize(originalSize)
+    await expect(toolbar).not.toHaveAttribute("overflowing")
+  })
+
   test("external toolbar", async ({ page }) => {
     await page.goto("/toolbar-external.html")
     await expect(
