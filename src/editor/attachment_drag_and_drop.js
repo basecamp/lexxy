@@ -175,7 +175,7 @@ export class AttachmentDragAndDrop {
     // Otherwise, find nearest block-level element for between-block insertion.
     // Normalize so each gap has exactly one indicator: prefer "after" on the
     // previous sibling, falling back to "before" only for the first block.
-    const block = this.#findNearestBlock(element, rootElement)
+    const block = this.#findNearestBlock(element, rootElement, event.clientY)
     if (!block) return null
 
     const position = this.#computeVerticalPosition(block, event.clientY)
@@ -185,13 +185,26 @@ export class AttachmentDragAndDrop {
     return { type: "block", element: block, position }
   }
 
-  #findNearestBlock(element, rootElement) {
+  #findNearestBlock(element, rootElement, clientY) {
     let current = element
     while (current && current !== rootElement) {
       if (current.parentElement === rootElement) return current
       current = current.parentElement
     }
-    return null
+
+    // elementFromPoint landed on the root itself (e.g. a margin gap between
+    // blocks). Fall back to the nearest child by vertical distance.
+    let nearest = null
+    let minDistance = Infinity
+    for (const child of rootElement.children) {
+      const rect = child.getBoundingClientRect()
+      const distance = Math.min(Math.abs(clientY - rect.top), Math.abs(clientY - rect.bottom))
+      if (distance < minDistance) {
+        minDistance = distance
+        nearest = child
+      }
+    }
+    return nearest
   }
 
   #computeVerticalPosition(element, clientY) {
