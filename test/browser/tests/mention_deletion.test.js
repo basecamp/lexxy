@@ -18,6 +18,52 @@ const mention2Html = [
   ">Bob</action-text-attachment>",
 ].join("")
 
+test.describe("Backspace after mention in list item", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/")
+    await page.waitForSelector("lexxy-editor[connected]")
+  })
+
+  test("backspace after mention in list item selects the mention instead of outdenting", async ({ page, editor }) => {
+    // Set up a list item containing only a mention (importDOM adds word joiner after it)
+    await editor.setValue(`<ul><li>${mentionHtml}</li></ul>`)
+    await editor.flush()
+    await expect(editor.content.locator("action-text-attachment")).toBeVisible()
+
+    // Place cursor right after the decorator node using JS to ensure precise positioning
+    await editor.content.evaluate((el) => {
+      const attachment = el.querySelector("action-text-attachment")
+      if (!attachment) throw new Error("No action-text-attachment found in editor")
+
+      const wordJoinerSpan = attachment.nextElementSibling
+      if (!wordJoinerSpan?.firstChild) throw new Error("No word joiner span/text node found after mention")
+
+      const textNode = wordJoinerSpan.firstChild
+      const range = document.createRange()
+      range.setStart(textNode, textNode.textContent.length)
+      range.collapse(true)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
+    })
+    await editor.flush()
+
+    // First backspace: deletes the invisible word joiner
+    // Second backspace: should select the mention, NOT outdent the list item
+    await editor.send("Backspace", "Backspace")
+
+    // The list should still exist (not outdented to a paragraph)
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("ul")).toHaveCount(1)
+    })
+
+    // The mention should be selected (node--selected class)
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator(".node--selected")).toHaveCount(1)
+    })
+  })
+})
+
 test.describe("Mention deletion cursor position", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/")

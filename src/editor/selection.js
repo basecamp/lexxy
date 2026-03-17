@@ -482,7 +482,7 @@ export default class Selection {
     const node = backwards ? this.nodeBeforeCursor : this.nodeAfterCursor
     if (!$isDecoratorNode(node)) return false
 
-    if (this.#collapseListItemToParagraph()) return true
+    if (this.#collapseListItemToParagraph(node)) return true
 
     this.#removeEmptyElementAnchorNode()
 
@@ -493,11 +493,15 @@ export default class Selection {
   // When the cursor is inside a list item, collapse the list item into a
   // paragraph instead of selecting the decorator. This lets the user
   // delete a list that immediately follows an attachment without the
-  // attachment becoming selected.
-  #collapseListItemToParagraph() {
+  // attachment becoming selected. Only applies when the decorator is
+  // outside the list item (e.g. a block attachment before the list),
+  // not when it's an inline mention inside the list item.
+  #collapseListItemToParagraph(decoratorNode) {
     const anchorNode = $getSelection()?.anchor?.getNode()
     const listItem = anchorNode && $getNearestNodeOfType(anchorNode, ListItemNode)
     if (!listItem) return false
+
+    if (listItem.isParentOf(decoratorNode)) return false
 
     const listNode = $getNearestNodeOfType(listItem, ListNode)
     if (!listNode) return false
