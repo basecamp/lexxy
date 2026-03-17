@@ -15,6 +15,7 @@ import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
+import { isAttachmentSpacerTextNode } from "../helpers/lexical_helper"
 import { sanitize } from "../helpers/sanitization_helper"
 import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
@@ -91,7 +92,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   toString() {
-    if (!this.cachedStringValue) {
+    if (this.cachedStringValue == null) {
       this.editor?.getEditorState().read(() => {
         this.cachedStringValue = $getReadableTextContent($getRoot())
       })
@@ -562,6 +563,10 @@ function $getReadableTextContent(node) {
     const children = node.getChildren()
     for (let i = 0; i < children.length; i++) {
       const child = children[i]
+      const previousChild = children[i - 1]
+
+      if (isAttachmentSpacerTextNode(child, previousChild, i, children.length)) continue
+
       text += $getReadableTextContent(child)
       if ($isElementNode(child) && i !== children.length - 1 && !child.isInline()) {
         text += "\n\n"

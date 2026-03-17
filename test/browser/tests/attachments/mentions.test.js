@@ -7,8 +7,8 @@ test.describe("Mentions", () => {
     await page.waitForSelector("lexxy-editor[connected]")
   })
 
-  test("typing apostrophe-s after a mention has no space between mention and possessive", async ({ page, editor }) => {
-    await editor.send("@")
+  test("inserting a mention adds a trailing space", async ({ page, editor }) => {
+    await editor.send("Hello @")
 
     const popover = page.locator(".lexxy-prompt-menu--visible")
     await expect(popover).toBeVisible({ timeout: 5_000 })
@@ -16,25 +16,16 @@ test.describe("Mentions", () => {
     await editor.send("Enter")
     await editor.flush()
 
-    const mention = editor.content.locator("action-text-attachment")
-    await expect(mention).toBeVisible({ timeout: 5_000 })
+    await expect(editor.content.locator("action-text-attachment")).toBeVisible({ timeout: 5_000 })
 
-    await editor.content.pressSequentially("'s")
-    await editor.flush()
-
-    // The text node after the mention should not start with a regular space.
-    // Lexical wraps text in <span data-lexical-text="true">, so look for that.
-    const textAfterMention = await editor.content.evaluate((el) => {
+    // The text after the mention should contain a space so the cursor isn't stuck against it
+    const hasTrailingSpace = await editor.content.evaluate((el) => {
       const attachment = el.querySelector("action-text-attachment")
-      if (!attachment) return null
-      const nextSpan = attachment.nextElementSibling
-      if (!nextSpan || !nextSpan.hasAttribute("data-lexical-text")) return null
-      return nextSpan.textContent
+      if (!attachment) return false
+      const next = attachment.nextSibling
+      return next && /^\s/.test(next.textContent)
     })
-
-    expect(textAfterMention).not.toBeNull()
-    expect(textAfterMention).not.toMatch(/^ /)
-    expect(textAfterMention).toContain("'s")
+    expect(hasTrailingSpace).toBe(true)
   })
 
   test("mention and possessive apostrophe-s do not break across lines", async ({ page, editor }) => {

@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { $createTextNode, DecoratorNode } from "lexical"
 
-import { createElement } from "../helpers/html_helper"
+import { createElement, extractPlainTextFromHtml } from "../helpers/html_helper"
 import { parseAttachmentContent } from "../helpers/storage_helper"
 
 export class CustomActionTextAttachmentNode extends DecoratorNode {
@@ -18,7 +18,6 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   static importDOM() {
-
     return {
       [this.TAG_NAME]: (element) => {
         if (!element.getAttribute("content")) {
@@ -34,13 +33,19 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
               nodes.push($createTextNode(" "))
             }
 
+            const innerHtml = parseAttachmentContent(attachment.getAttribute("content"))
+
             nodes.push(new CustomActionTextAttachmentNode({
               sgid: attachment.getAttribute("sgid"),
-              innerHtml: parseAttachmentContent(attachment.getAttribute("content")),
+              innerHtml,
+              plainText: attachment.textContent.trim() || extractPlainTextFromHtml(innerHtml),
               contentType: attachment.getAttribute("content-type")
             }))
 
-            nodes.push($createTextNode("\u2060"))
+            const nextSibling = attachment.nextSibling
+            if (nextSibling && nextSibling.nodeType === Node.TEXT_NODE && /^\s/.test(nextSibling.textContent)) {
+              nodes.push($createTextNode(" "))
+            }
 
             return { node: nodes }
           },
@@ -54,7 +59,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     return Lexxy.global.get("attachmentTagName")
   }
 
-  constructor({ tagName, sgid, contentType, innerHtml }, key) {
+  constructor({ tagName, sgid, contentType, innerHtml, plainText }, key) {
     super(key)
 
     const contentTypeNamespace = Lexxy.global.get("attachmentContentTypeNamespace")
@@ -63,6 +68,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     this.sgid = sgid
     this.contentType = contentType || `application/vnd.${contentTypeNamespace}.unknown`
     this.innerHtml = innerHtml
+    this.plainText = plainText ?? extractPlainTextFromHtml(innerHtml)
   }
 
   createDOM() {
@@ -85,7 +91,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   getReadableTextContent() {
-    return this.createDOM().textContent.trim() || `[${this.contentType}]`
+    return this.plainText || `[${this.contentType}]`
   }
 
   isInline() {
@@ -109,12 +115,12 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
       tagName: this.tagName,
       sgid: this.sgid,
       contentType: this.contentType,
-      innerHtml: this.innerHtml
+      innerHtml: this.innerHtml,
+      plainText: this.plainText
     }
   }
 
   decorate() {
     return null
   }
-
 }

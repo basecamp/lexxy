@@ -5,6 +5,8 @@ import { $getNearestNodeOfType } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
 import { $isAtNodeEnd } from "@lexical/selection"
 
+import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+
 export const SILENT_UPDATE_TAGS = [ HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG ]
 
 export function $createNodeSelectionWith(...nodes) {
@@ -70,4 +72,11 @@ export function extendConversion(nodeKlass, conversionName, callback = (output =
 
     return callback(conversionOutput, element) ?? conversionOutput
   }
+}
+
+export function isAttachmentSpacerTextNode(node, previousNode, index, childCount) {
+  return $isTextNode(node)
+    && node.getTextContent() === " "
+    && index === childCount - 1
+    && previousNode instanceof CustomActionTextAttachmentNode
 }

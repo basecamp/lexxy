@@ -25,32 +25,18 @@ test.describe("Backspace after mention in list item", () => {
   })
 
   test("backspace after mention in list item selects the mention instead of outdenting", async ({ page, editor }) => {
-    // Set up a list item containing only a mention (importDOM adds word joiner after it)
+    // Set up a list item containing only a mention
     await editor.setValue(`<ul><li>${mentionHtml}</li></ul>`)
     await editor.flush()
     await expect(editor.content.locator("action-text-attachment")).toBeVisible()
 
-    // Place cursor right after the decorator node using JS to ensure precise positioning
-    await editor.content.evaluate((el) => {
-      const attachment = el.querySelector("action-text-attachment")
-      if (!attachment) throw new Error("No action-text-attachment found in editor")
-
-      const wordJoinerSpan = attachment.nextElementSibling
-      if (!wordJoinerSpan?.firstChild) throw new Error("No word joiner span/text node found after mention")
-
-      const textNode = wordJoinerSpan.firstChild
-      const range = document.createRange()
-      range.setStart(textNode, textNode.textContent.length)
-      range.collapse(true)
-      const sel = window.getSelection()
-      sel.removeAllRanges()
-      sel.addRange(range)
-    })
+    // Place cursor at the end of the list item (after the mention)
+    await editor.content.locator("ul li").click()
+    await editor.send("End")
     await editor.flush()
 
-    // First backspace: deletes the invisible word joiner
-    // Second backspace: should select the mention, NOT outdent the list item
-    await editor.send("Backspace", "Backspace")
+    // Backspace should select the mention, NOT outdent the list item
+    await editor.send("Backspace")
 
     // The list should still exist (not outdented to a paragraph)
     await assertEditorContent(editor, async (content) => {
@@ -77,7 +63,7 @@ test.describe("Mention deletion cursor position", () => {
 
     // Place cursor just before the mention
     await editor.content.click()
-    await page.keyboard.press("Home")
+    await editor.send("Home")
     for (let i = 0; i < 6; i++) {
       await page.keyboard.press("ArrowRight")
     }
@@ -106,7 +92,7 @@ test.describe("Mention deletion cursor position", () => {
 
     // Place cursor just after the mention
     await editor.content.click()
-    await page.keyboard.press("End")
+    await editor.send("End")
     for (let i = 0; i < 4; i++) {
       await page.keyboard.press("ArrowLeft")
     }
@@ -152,7 +138,7 @@ test.describe("Mention deletion cursor position", () => {
     // The marker should appear where the mention was, between "Before" and "after"
     const text = await editor.content.evaluate((el) => el.textContent)
     expect(text).not.toContain("Alice")
-    expect(text).toMatch(/Before[\s\u2060]*X[\s\u2060]*after/)
+    expect(text).toMatch(/Before[\s]*X[\s]*after/)
   })
 
   test("with multiple mentions, deleting first via click+backspace does not jump to second", async ({ page, editor }) => {
@@ -176,7 +162,7 @@ test.describe("Mention deletion cursor position", () => {
     await assertEditorContent(editor, async (content) => {
       const text = await content.evaluate((el) => el.textContent)
       expect(text).not.toContain("Alice")
-      expect(text).toMatch(/Hello[\s\u2060]*X/)
+      expect(text).toMatch(/Hello[\s]*X/)
       await expect(content.locator("action-text-attachment")).toHaveCount(1)
     })
   })
