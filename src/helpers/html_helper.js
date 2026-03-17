@@ -56,4 +56,6 @@ export function generateDomId(prefix) {
   return `${prefix}-${randomPart}`
 }
 
-
+export function extractPlainTextFromHtml(innerHtml = "") {
+  return parseHtml(innerHtml).body.textContent.trim()
+}

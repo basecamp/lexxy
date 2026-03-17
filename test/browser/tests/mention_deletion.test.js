@@ -152,7 +152,7 @@ test.describe("Mention deletion cursor position", () => {
     // The marker should appear where the mention was, between "Before" and "after"
     const text = await editor.content.evaluate((el) => el.textContent)
     expect(text).not.toContain("Alice")
-    expect(text).toMatch(/Before[\s\u2060]*X[\s\u2060]*after/)
+    expect(text).toMatch(/Before[\s]*X[\s]*after/)
   })
 
   test("with multiple mentions, deleting first via click+backspace does not jump to second", async ({ page, editor }) => {
@@ -176,7 +176,7 @@ test.describe("Mention deletion cursor position", () => {
     await assertEditorContent(editor, async (content) => {
       const text = await content.evaluate((el) => el.textContent)
       expect(text).not.toContain("Alice")
-      expect(text).toMatch(/Hello[\s\u2060]*X/)
+      expect(text).toMatch(/Hello[\s]*X/)
       await expect(content.locator("action-text-attachment")).toHaveCount(1)
     })
   })
