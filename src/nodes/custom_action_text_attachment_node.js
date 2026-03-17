@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { $createTextNode, DecoratorNode } from "lexical"
 
-import { createElement, extractPlainTextFromHtml, parseHtml } from "../helpers/html_helper"
+import { createElement, extractPlainTextFromHtml } from "../helpers/html_helper"
 import { parseAttachmentContent } from "../helpers/storage_helper"
 
 export class CustomActionTextAttachmentNode extends DecoratorNode {
