@@ -146,6 +146,10 @@ export class AttachmentDragAndDrop {
       return { type: "gallery", element: targetFigure, nodeKey: targetFigure.dataset.lexicalNodeKey, position }
     }
 
+    // Hovering over the dragged image itself inside a gallery — treat as no-op
+    // to prevent fallthrough to the block handler, which would eject it from the gallery.
+    if (targetFigure && targetFigure.closest(".attachment-gallery")) return null
+
     // Check if hovering over a gallery's empty space (for reorder within gallery)
     const targetGallery = element.closest(".attachment-gallery")
     if (targetGallery) {
@@ -157,6 +161,8 @@ export class AttachmentDragAndDrop {
         const position = this.#computeHorizontalPosition(galleryFigure, event.clientX)
         return { type: "gallery-reorder", element: galleryFigure, nodeKey: galleryFigure.dataset.lexicalNodeKey, position }
       }
+      // Nearest figure is the dragged image — no-op to avoid block handler fallthrough
+      if (galleryFigure) return null
     }
 
     // Check if hovering over a list item (for list splitting)
