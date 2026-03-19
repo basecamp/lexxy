@@ -1,5 +1,5 @@
-import { $createParagraphNode, $getSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, INSERT_PARAGRAPH_COMMAND, KEY_ARROW_DOWN_COMMAND, ParagraphNode } from "lexical"
-import { $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
+import { $createParagraphNode, $getSelection, $isRangeSelection, $splitNode, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, INSERT_PARAGRAPH_COMMAND, KEY_ARROW_DOWN_COMMAND, ParagraphNode } from "lexical"
+import { $isQuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $isBlankNode, $isCursorOnLastLine, $trimTrailingBlankNodes } from "../../helpers/lexical_helper"
 import { EarlyEscapeCodeNode } from "../../nodes/early_escape_code_node"
@@ -37,32 +37,22 @@ export default class FormatEscaper {
     const nonEmptySiblings = siblingsAfter.filter(sibling => !$isBlankNode(sibling))
 
     if (nonEmptySiblings.length > 0) {
-      this.#splitBlockquote(blockquote, paragraph, nonEmptySiblings)
+      this.#splitBlockquote(blockquote, paragraph)
     } else {
-      const newParagraph = $createParagraphNode()
-      blockquote.insertAfter(newParagraph)
-      paragraph.remove()
-      newParagraph.selectStart()
+      blockquote.insertAfter(paragraph)
+      paragraph.selectStart()
     }
 
     return true
   }
 
-  #splitBlockquote(blockquote, emptyParagraph, siblingsAfter) {
-    const newParagraph = $createParagraphNode()
-    blockquote.insertAfter(newParagraph)
+  #splitBlockquote(blockquote, emptyParagraph) {
+    const splitQuotes = $splitNode(blockquote, emptyParagraph.getIndexWithinParent())
 
-    const newBlockquote = $createQuoteNode()
-    newParagraph.insertAfter(newBlockquote)
+    splitQuotes[1].insertAfter(emptyParagraph)
+    splitQuotes.forEach($trimTrailingBlankNodes)
 
-    newBlockquote.append(...siblingsAfter)
-
-    emptyParagraph.remove()
-
-    $trimTrailingBlankNodes(blockquote)
-    $trimTrailingBlankNodes(newBlockquote)
-
-    newParagraph.selectStart()
+    emptyParagraph.selectEnd()
   }
 
   #handleArrowDownInCodeBlock(event) {
@@ -76,7 +66,7 @@ export default class FormatEscaper {
       event?.preventDefault()
       const paragraph = $createParagraphNode()
       codeNode.insertAfter(paragraph)
-      paragraph.selectStart()
+      paragraph.selectEnd()
       return true
     }
 

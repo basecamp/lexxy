@@ -1,6 +1,6 @@
-import { $createParagraphNode, ParagraphNode } from "lexical"
-import { $createListNode, $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
-import { $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
+import { $createParagraphNode, $splitNode, ParagraphNode } from "lexical"
+import { $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
+import { $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $isBlankNode, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
 
@@ -33,12 +33,12 @@ export class EarlyEscapeListItemNode extends ListItemNode {
     const isInBlockquote = blockquote && $isQuoteNode(blockquote)
 
     if (isInBlockquote) {
-      const nonEmptyListItems = this.getNextSiblings().filter(
+      const hasNonEmptyListItems = this.getNextSiblings().some(
         sibling => $isListItemNode(sibling) && !$isBlankNode(sibling)
       )
 
-      if (nonEmptyListItems.length > 0) {
-        return this.#splitBlockquoteWithList(blockquote, parentList, nonEmptyListItems)
+      if (hasNonEmptyListItems) {
+        return this.#splitBlockquoteWithList()
       }
     }
 
@@ -49,42 +49,14 @@ export class EarlyEscapeListItemNode extends ListItemNode {
     return paragraph
   }
 
-  #splitBlockquoteWithList(blockquote, parentList, listItemsAfter) {
-    const nonEmptyBlockquoteSiblings = parentList.getNextSiblings().filter(
-      sibling => !$isBlankNode(sibling)
-    )
-
-    const middleParagraph = $createParagraphNode()
-    blockquote.insertAfter(middleParagraph)
-
-    const newList = $createListNode(parentList.getListType())
-
-    const newBlockquote = $createQuoteNode()
-    middleParagraph.insertAfter(newBlockquote)
-    newBlockquote.append(newList)
-
-    listItemsAfter.forEach(item => {
-      newList.append(item)
-    })
-
-    nonEmptyBlockquoteSiblings.forEach(sibling => {
-      newBlockquote.append(sibling)
-    })
-
+  #splitBlockquoteWithList() {
+    const splitQuotes = $splitNode(this.getParent(), this.getIndexWithinParent())
     this.remove()
 
-    $trimTrailingBlankNodes(parentList)
-    $trimTrailingBlankNodes(newBlockquote)
+    const middleParagraph = $createParagraphNode()
+    splitQuotes[0].insertAfter(middleParagraph)
 
-    if (parentList.getChildrenSize() === 0) {
-      parentList.remove()
-
-      if (blockquote.getChildrenSize() === 0) {
-        blockquote.remove()
-      }
-    } else {
-      $trimTrailingBlankNodes(blockquote)
-    }
+    splitQuotes.forEach($trimTrailingBlankNodes)
 
     return middleParagraph
   }
