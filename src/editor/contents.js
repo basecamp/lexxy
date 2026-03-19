@@ -1,6 +1,7 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection,
-  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $setSelection
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $setSelection,
+  PASTE_TAG
  } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -28,7 +29,7 @@ export default class Contents {
 
   insertDOM(doc, { tag } = {}) {
     this.#unwrapPlaceholderAnchors(doc)
-    this.#stripTableCellColorStyles(doc)
+    if (tag === PASTE_TAG) this.#stripTableCellColorStyles(doc)
 
     this.editor.update(() => {
       const selection = $getSelection()
