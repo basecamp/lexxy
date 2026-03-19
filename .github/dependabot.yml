@@ -28,8 +28,12 @@ updates:
         - "@lexical/*"
 - package-ecosystem: github-actions
   directory: "/"
+  groups:
+    github-actions:
+      patterns:
+        - "*"
   schedule:
-    interval: daily
+    interval: weekly
   open-pull-requests-limit: 10
   cooldown:
     default-days: 10
