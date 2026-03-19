@@ -128,6 +128,40 @@ test.describe("Inline formatting", () => {
     await assertEditorHtml(editor, "<p><code>Hello bold and italic world</code></p>")
   })
 
+  test("applying code to partial selection across mixed formats merges selected text and preserves surrounding formatting", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      "<p>Hello <strong>bold text</strong> and <em>italic text</em> world</p>",
+    )
+
+    // Select "bold text and italic" — a partial selection spanning mixed formats
+    await editor.content.evaluate((el) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      let startNode, endNode
+      let node
+      while ((node = walker.nextNode())) {
+        if (node.nodeValue.includes("bold text")) startNode = node
+        if (node.nodeValue.includes("italic text")) endNode = node
+      }
+      const range = document.createRange()
+      range.setStart(startNode, 0)
+      range.setEnd(endNode, "italic".length)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
+    })
+    await editor.flush()
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>Hello <code>bold text and italic</code><em> text</em> world</p>",
+    )
+  })
+
   test("toggle code for block", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.click()

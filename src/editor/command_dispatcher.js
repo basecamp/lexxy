@@ -196,10 +196,10 @@ export class CommandDispatcher {
         target.setFormat(0)
 
         if (isFirst && startPoint.type === "text") {
-          startPoint.set(target.__key, 0, "text")
+          startPoint.set(target.getKey(), 0, "text")
         }
         if (isLast && endPoint.type === "text") {
-          endPoint.set(target.__key, endOffset - startOffset, "text")
+          endPoint.set(target.getKey(), endOffset - startOffset, "text")
         }
       }
     }
