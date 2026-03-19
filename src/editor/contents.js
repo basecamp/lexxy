@@ -292,7 +292,7 @@ export default class Contents {
       const children = element.getChildren()
       if (!children.some($isLineBreakNode)) continue
 
-      const groups = [[]]
+      const groups = [ [] ]
       for (const child of children) {
         if ($isLineBreakNode(child)) {
           groups.push([])
