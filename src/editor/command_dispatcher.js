@@ -121,7 +121,7 @@ export class CommandDispatcher {
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "bullet") {
-      this.contents.unwrapSelectedListItems()
+      this.contents.setBlockFormat(null)
     } else {
       this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
     }
@@ -134,7 +134,7 @@ export class CommandDispatcher {
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "number") {
-      this.contents.unwrapSelectedListItems()
+      this.contents.setBlockFormat(null)
     } else {
       this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
     }
@@ -148,7 +148,7 @@ export class CommandDispatcher {
     if (this.selection.hasSelectedWordsInSingleLine) {
       this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
     } else {
-      this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new CodeNode("plain"))
+      this.contents.toggleCodeBlockWrapping((node) => $isCodeNode(node))
     }
   }
 
