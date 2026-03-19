@@ -207,13 +207,12 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
 
-    this.#setButtonPressed("format", isInHeading || isStrikethrough || isInQuote)
+    this.#setButtonPressed("format", isInHeading || isStrikethrough)
+    this.#setButtonPressed("paragraph", !isInHeading && !isInQuote)
     this.#setButtonPressed("heading-large", headingTag === "h2")
     this.#setButtonPressed("heading-medium", headingTag === "h3")
     this.#setButtonPressed("heading-small", headingTag === "h4")
-    this.#setButtonPressed("paragraph", !isInHeading && !isInQuote)
     this.#setButtonPressed("strikethrough", isStrikethrough)
-    this.#setButtonPressed("quote", isInQuote)
 
     this.#setButtonPressed("lists", isInList)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
@@ -221,7 +220,9 @@ export class LexicalToolbarElement extends HTMLElement {
 
     this.#setButtonPressed("highlight", isHighlight)
     this.#setButtonPressed("link", isInLink)
+    this.#setButtonPressed("quote", isInQuote)
     this.#setButtonPressed("code", isInCode)
+
     this.#setButtonPressed("table", isInTable)
 
     this.#updateUndoRedoButtonStates()
@@ -362,9 +363,6 @@ export class LexicalToolbarElement extends HTMLElement {
           <button type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading">
             ${ToolbarIcons.h4} <span>Small Heading</span>
           </button>
-          <button type="button" name="quote" data-command="insertQuoteBlock" title="Quote">
-            ${ToolbarIcons.quote} <span>Quote</span>
-          </button>
           <button type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
             ${ToolbarIcons.strikethrough} <span>Strikethrough</span>
           </button>
@@ -377,7 +375,7 @@ export class LexicalToolbarElement extends HTMLElement {
           ${ToolbarIcons.ul}
         </summary>
         <div class="lexxy-editor__toolbar-dropdown-list">
-          <button name="unordered-list" data-command="insertUnorderedList" title="Bullet list">
+          <button type="button" name="unordered-list" data-command="insertUnorderedList" title="Bullet list">
             ${ToolbarIcons.ul} <span>Bullets</span>
           </button>
           <button type="button" name="ordered-list" data-command="insertOrderedList" title="Numbered list">
@@ -410,6 +408,10 @@ export class LexicalToolbarElement extends HTMLElement {
           </form>
         </lexxy-link-dropdown>
       </details>
+
+      <button class="lexxy-editor__toolbar-button" type="button" name="quote" data-command="insertQuoteBlock" title="Quote">
+        ${ToolbarIcons.quote}
+      </button>
 
       <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="code" data-command="insertCodeBlock" title="Code">
         ${ToolbarIcons.code}

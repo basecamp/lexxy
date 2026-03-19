@@ -5,15 +5,13 @@ import {
  } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
-import { $createCodeNode } from "@lexical/code"
+import { $createCodeNode, $isCodeNode } from "@lexical/code"
 import { $createHeadingNode, $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
-import { $isListNode, ListItemNode } from "@lexical/list"
-import { $getNearestNodeOfType } from "@lexical/utils"
+import { $setBlocksType } from "@lexical/selection"
 import FormatEscaper from "./contents/format_escaper"
-import { $setBlocksType } from '@lexical/selection'
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 
@@ -72,9 +70,7 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    if (tag == "blockquote") {
-      this.#toggleBlockquote(selection)
-    } else if (tag == "code") {
+    if (tag == "code") {
       $setBlocksType(selection, () => $createCodeNode("plain"))
     } else if (tag) {
       $setBlocksType(selection, () => $createHeadingNode(tag))
@@ -83,17 +79,42 @@ export default class Contents {
     }
   }
 
-  toggleCodeBlockWrapping(isFormatAppliedFn) {
+  toggleCodeBlock() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
+    const anchorNode = selection.anchor.getNode()
+    if ($isRootOrShadowRoot(anchorNode)) {
+      const codeNode = $createCodeNode("plain")
+      anchorNode.append(codeNode)
+      codeNode.selectEnd()
+      return
+    }
 
-    // Check if format is already applied
-    if (isFormatAppliedFn(topLevelElement)) {
-      this.setBlockFormat(null)
-    } else {
+    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+
+    if (topLevelElement && !$isCodeNode(topLevelElement)) {
       this.setBlockFormat("code")
+    } else {
+      this.setBlockFormat(null)
+    }
+  }
+
+  toggleBlockquote() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    const topLevelElements = this.#topLevelElementsInSelection(selection)
+
+    if (topLevelElements[0] && $isQuoteNode(topLevelElements[0])) {
+      topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
+    } else {
+      const elements = this.#withoutTrailingEmptyParagraphs(topLevelElements)
+      if (elements.length === 0) return
+
+      const blockquote = $createQuoteNode()
+      elements[0].insertBefore(blockquote)
+      elements.forEach((element) => blockquote.append(element))
     }
   }
 
@@ -254,6 +275,15 @@ export default class Contents {
     })
   }
 
+  #topLevelElementsInSelection(selection) {
+    const elements = new Set()
+    for (const node of selection.getNodes()) {
+      const topLevel = node.getTopLevelElement()
+      if (topLevel) elements.add(topLevel)
+    }
+    return Array.from(elements)
+  }
+
   #insertUploadNodes(nodes) {
     if (nodes.every($isActionTextAttachmentNode)) {
       const uploader = Uploader.for(this.editorElement, [])
@@ -371,54 +401,6 @@ export default class Contents {
     // Check if it only contains line breaks
     const children = element.getChildren()
     return children.length === 0 || children.every(child => $isLineBreakNode(child))
-  }
-
-  #getParagraphFromNode(node) {
-    if ($isParagraphNode(node)) return node
-    if ($isTextNode(node) && node.getParent() && $isParagraphNode(node.getParent())) {
-      return node.getParent()
-    }
-    return null
-  }
-
-  #toggleBlockquote(selection) {
-    const anchorTopLevel = selection.anchor.getNode().getTopLevelElement()
-
-    if (anchorTopLevel && $isQuoteNode(anchorTopLevel)) {
-      this.#unwrapSelectedBlockquotes(selection)
-    } else {
-      this.#wrapInBlockquote(selection)
-    }
-  }
-
-  #unwrapSelectedBlockquotes(selection) {
-    const quoteNodes = new Set()
-
-    for (const node of selection.getNodes()) {
-      const topLevel = node.getTopLevelElement()
-      if (topLevel && $isQuoteNode(topLevel)) {
-        quoteNodes.add(topLevel)
-      }
-    }
-
-    for (const quoteNode of quoteNodes) {
-      this.#unwrap(quoteNode)
-    }
-  }
-
-  #wrapInBlockquote(selection) {
-    const topLevelElements = new Set()
-
-    for (const node of selection.getNodes()) {
-      topLevelElements.add(node.getTopLevelElementOrThrow())
-    }
-
-    const elements = this.#withoutTrailingEmptyParagraphs(Array.from(topLevelElements))
-    if (elements.length === 0) return
-
-    const blockquote = $createQuoteNode()
-    elements[0].insertBefore(blockquote)
-    elements.forEach((element) => blockquote.append(element))
   }
 
   #getTextAnchorData() {

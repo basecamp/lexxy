@@ -2,7 +2,6 @@ import {
   $createTextNode,
   $getSelection,
   $isRangeSelection,
-  $isRootOrShadowRoot,
   $isTextNode,
   $setSelection,
   COMMAND_PRIORITY_LOW,
@@ -17,7 +16,6 @@ import {
   UNDO_COMMAND
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
-import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
@@ -141,14 +139,14 @@ export class CommandDispatcher {
   }
 
   dispatchInsertQuoteBlock() {
-    this.contents.setBlockFormat("blockquote")
+    this.contents.toggleBlockquote()
   }
 
   dispatchInsertCodeBlock() {
     if (this.selection.hasSelectedWordsInSingleLine) {
       this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
     } else {
-      this.contents.toggleCodeBlockWrapping((node) => $isCodeNode(node))
+      this.contents.toggleCodeBlock()
     }
   }
 
