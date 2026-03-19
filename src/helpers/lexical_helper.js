@@ -1,7 +1,7 @@
 import { $createNodeSelection, $createParagraphNode, $isLineBreakNode, $isTextNode, TextNode } from "lexical"
 import { HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG } from "lexical"
 import { ListNode } from "@lexical/list"
-import { $getNearestNodeOfType } from "@lexical/utils"
+import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
 import { $isAtNodeEnd } from "@lexical/selection"
 
@@ -84,6 +84,16 @@ export function $isBlankNode(node) {
     if ($isLineBreakNode(child)) return true
     return $isBlankNode(child)
   })
+}
+
+export function $trimTrailingBlankNodes(parent) {
+  for (const child of $lastToFirstIterator(parent)) {
+    if ($isBlankNode(child)) {
+      child.remove()
+    } else {
+      break
+    }
+  }
 }
 
 export function isAttachmentSpacerTextNode(node, previousNode, index, childCount) {

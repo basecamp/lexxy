@@ -1,7 +1,7 @@
 import { $createParagraphNode, $getSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, KEY_ARROW_DOWN_COMMAND, KEY_ENTER_COMMAND, ParagraphNode } from "lexical"
 import { $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
-import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
-import { $isBlankNode } from "../../helpers/lexical_helper"
+import { $getNearestNodeOfType } from "@lexical/utils"
+import { $isBlankNode, $trimTrailingBlankNodes } from "../../helpers/lexical_helper"
 import { EarlyEscapeCodeNode } from "../../nodes/early_escape_code_node"
 
 export default class FormatEscaper {
@@ -86,8 +86,8 @@ export default class FormatEscaper {
 
     emptyParagraph.remove()
 
-    this.#removeTrailingEmptyNodes(blockquote)
-    this.#removeTrailingEmptyNodes(newBlockquote)
+    $trimTrailingBlankNodes(blockquote)
+    $trimTrailingBlankNodes(newBlockquote)
 
     newParagraph.selectStart()
   }
@@ -110,13 +110,4 @@ export default class FormatEscaper {
     return false
   }
 
-  #removeTrailingEmptyNodes(blockquote) {
-    for (const child of $lastToFirstIterator(blockquote)) {
-      if ($isBlankNode(child)) {
-        child.remove()
-      } else {
-        break
-      }
-    }
-  }
 }

@@ -1,8 +1,8 @@
 import { $createParagraphNode, ParagraphNode } from "lexical"
 import { $createListNode, $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
 import { $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
-import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
-import { $isBlankNode } from "../helpers/lexical_helper"
+import { $getNearestNodeOfType } from "@lexical/utils"
+import { $isBlankNode, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
 
 export class EarlyEscapeListItemNode extends ListItemNode {
   $config() {
@@ -80,8 +80,8 @@ export class EarlyEscapeListItemNode extends ListItemNode {
 
     this.remove()
 
-    this.#removeTrailingEmptyListItems(parentList)
-    this.#removeTrailingEmptyNodes(newBlockquote)
+    $trimTrailingBlankNodes(parentList)
+    $trimTrailingBlankNodes(newBlockquote)
 
     if (parentList.getChildrenSize() === 0) {
       parentList.remove()
@@ -90,29 +90,10 @@ export class EarlyEscapeListItemNode extends ListItemNode {
         blockquote.remove()
       }
     } else {
-      this.#removeTrailingEmptyNodes(blockquote)
+      $trimTrailingBlankNodes(blockquote)
     }
 
     return middleParagraph
   }
 
-  #removeTrailingEmptyListItems(list) {
-    for (const item of $lastToFirstIterator(list)) {
-      if ($isListItemNode(item) && $isBlankNode(item)) {
-        item.remove()
-      } else {
-        break
-      }
-    }
-  }
-
-  #removeTrailingEmptyNodes(container) {
-    for (const child of $lastToFirstIterator(container)) {
-      if ($isBlankNode(child)) {
-        child.remove()
-      } else {
-        break
-      }
-    }
-  }
 }
