@@ -57,6 +57,50 @@ test.describe("Paste — Files & Attachments", () => {
       ])
   })
 
+  test("paste Lexxy mention from rendered view preserves mention correctly", async ({ page, editor }) => {
+    await page.goto("/mentions.html")
+    await editor.waitForConnected()
+
+    // Simulate copying a mention from a rendered Lexxy view (e.g., a posted
+    // Basecamp/Fizzy comment) and pasting it into a Lexxy editor.
+    //
+    // When Lexxy saves content, exportDOM() JSON-encodes innerHtml into the
+    // content attribute: content=JSON.stringify(innerHtml). Server-side HTML
+    // rendering (e.g., Rails/Nokogiri) may double-encode the entities in this
+    // attribute, so \" becomes \&amp;quot; instead of \&quot;. When the user
+    // copies from the rendered page, the clipboard HTML has this double-encoded
+    // format. When pasted, JSON.parse() fails on \&quot; because \& is not a
+    // valid JSON escape — the fallback returns the raw string (with JSON wrapper
+    // quotes) as innerHtml, producing broken/doubled mention display.
+    //
+    // This test uses the actual format observed in Fizzy's rendered HTML.
+    const mentionHtml = [
+      '<action-text-attachment',
+      ' sgid="test-sgid-lexxy"',
+      ' content-type="application/vnd.actiontext.mention"',
+      // This is the format from Fizzy's rendered HTML: the JSON content
+      // attribute has been double-entity-encoded by the server's HTML
+      // serializer. The original JSON.stringify output has \" for embedded
+      // quotes. The server first encodes " as &quot;, then re-encodes
+      // the & in &quot; as &amp;, producing \&amp;quot; in the HTML.
+      // When the browser parses this, &amp; -> & and quot; stays literal,
+      // so the attribute value becomes \&quot; (not \"). JSON.parse() fails
+      // because \& is not a valid JSON escape.
+      ' content="&amp;quot;&amp;lt;span class=\\&amp;quot;person person--inline\\&amp;quot;&amp;gt;&amp;lt;span class=\\&amp;quot;person--name\\&amp;quot;&amp;gt;Michael Berger&amp;lt;/span&amp;gt;&amp;lt;/span&amp;gt;&amp;quot;"',
+      '>',
+      '<span class="person person--inline"><span class="person--name">Michael Berger</span></span>',
+      '</action-text-attachment>'
+    ].join("")
+
+    await editor.paste("Michael Berger", { html: mentionHtml })
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("action-text-attachment")).toHaveCount(1)
+      await expect(content.locator("action-text-attachment .person--name")).toHaveText("Michael Berger")
+    })
+  })
+
   test("paste Trix mention HTML without crashing", async ({ page, editor }) => {
     await page.goto("/")
     await editor.waitForConnected()
