@@ -83,15 +83,9 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    const anchorNode = selection.anchor.getNode()
-    if ($isRootOrShadowRoot(anchorNode)) {
-      const codeNode = $createCodeNode("plain")
-      anchorNode.append(codeNode)
-      codeNode.selectEnd()
-      return
-    }
+    if (this.#insertNodeIfRoot($createCodeNode("plain"))) return
 
-    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
 
     if (topLevelElement && !$isCodeNode(topLevelElement)) {
       this.setBlockFormat("code")
@@ -103,6 +97,8 @@ export default class Contents {
   toggleBlockquote() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
+
+    if (this.#insertNodeIfRoot($createQuoteNode())) return
 
     const topLevelElements = this.#topLevelElementsInSelection(selection)
 
@@ -280,6 +276,21 @@ export default class Contents {
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
       previousNode.insertAfter(newNode)
     })
+  }
+
+  #insertNodeIfRoot(node) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return false
+
+    const anchorNode = selection.anchor.getNode()
+    if ($isRootOrShadowRoot(anchorNode)) {
+      anchorNode.append(node)
+      node.selectEnd()
+
+      return true
+    }
+
+    return false
   }
 
   #splitParagraphsAtLineBreaks(selection) {
