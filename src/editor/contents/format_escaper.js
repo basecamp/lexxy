@@ -1,5 +1,5 @@
-import { $createParagraphNode, $getSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, KEY_ARROW_DOWN_COMMAND, KEY_ENTER_COMMAND, ParagraphNode } from "lexical"
-import { $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
+import { $createParagraphNode, $getSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, INSERT_PARAGRAPH_COMMAND, KEY_ARROW_DOWN_COMMAND, ParagraphNode } from "lexical"
+import { $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $isBlankNode, $isCursorOnLastLine, $trimTrailingBlankNodes } from "../../helpers/lexical_helper"
 import { EarlyEscapeCodeNode } from "../../nodes/early_escape_code_node"
@@ -12,8 +12,8 @@ export default class FormatEscaper {
 
   monitor() {
     this.editor.registerCommand(
-      KEY_ENTER_COMMAND,
-      (event) => this.#handleEnterKey(event),
+      INSERT_PARAGRAPH_COMMAND,
+      () => this.#escapeFromBlockquote(),
       COMMAND_PRIORITY_HIGH
     )
 
@@ -24,35 +24,14 @@ export default class FormatEscaper {
     )
   }
 
-  #handleEnterKey(event) {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return false
+  #escapeFromBlockquote() {
+    const anchorNode = $getSelection().anchor.getNode()
 
-    const anchorNode = selection.anchor.getNode()
-
-    if (!$getNearestNodeOfType(anchorNode, QuoteNode)) return false
-
-    return this.#handleBlockquotes(event, anchorNode)
-  }
-
-  #handleBlockquotes(event, anchorNode) {
     const paragraph = $getNearestNodeOfType(anchorNode, ParagraphNode)
     if (!paragraph || !$isBlankNode(paragraph)) return false
 
-    const parent = paragraph.getParent()
-    if (!parent || !$isQuoteNode(parent)) return false
-
-    event.preventDefault()
-    this.#escapeFromBlockquote(anchorNode)
-    return true
-  }
-
-  #escapeFromBlockquote(anchorNode) {
-    const paragraph = $getNearestNodeOfType(anchorNode, ParagraphNode)
-    if (!paragraph) return
-
     const blockquote = paragraph.getParent()
-    if (!blockquote || !$isQuoteNode(blockquote)) return
+    if (!blockquote || !$isQuoteNode(blockquote)) return false
 
     const siblingsAfter = paragraph.getNextSiblings()
     const nonEmptySiblings = siblingsAfter.filter(sibling => !$isBlankNode(sibling))
@@ -65,6 +44,8 @@ export default class FormatEscaper {
       paragraph.remove()
       newParagraph.selectStart()
     }
+
+    return true
   }
 
   #splitBlockquote(blockquote, emptyParagraph, siblingsAfter) {
