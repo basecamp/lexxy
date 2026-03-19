@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
-import { openFormatDropdown, clickFormatButton } from "../../helpers/toolbar.js"
+import { clickFormatButton } from "../../helpers/toolbar.js"
 
 test.describe("Heading format", () => {
   test.beforeEach(async ({ page }) => {

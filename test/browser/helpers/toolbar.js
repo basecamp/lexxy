@@ -2,7 +2,7 @@ export const HELLO_EVERYONE = "<p>Hello everyone</p>"
 
 export async function openFormatDropdown(page) {
   await page.evaluate(() => {
-    const details = document.querySelector("details:has(summary[name='format'])")
+    const details = document.querySelector("summary[name='format']").closest("details")
     details.open = true
     details.dispatchEvent(new Event("toggle"))
   })
@@ -15,7 +15,7 @@ export async function clickFormatButton(page, command) {
 
 export async function openListsDropdown(page) {
   await page.evaluate(() => {
-    const details = document.querySelector("details:has(summary[name='lists'])")
+    const details = document.querySelector("summary[name='lists']").closest("details")
     details.open = true
     details.dispatchEvent(new Event("toggle"))
   })

@@ -112,6 +112,7 @@ export default class Contents {
       this.#splitParagraphsAtLineBreaks(selection)
 
       const elements = this.#topLevelElementsInSelection(selection)
+      if (elements.length === 0) return
 
       const blockquote = $createQuoteNode()
       elements[0].insertBefore(blockquote)
@@ -315,11 +316,11 @@ export default class Contents {
 
       for (const group of groups) {
         if (group.length === 0) continue
-        const p = $createParagraphNode()
-        group.forEach(child => p.append(child))
-        element.insertBefore(p)
+        const paragraph = $createParagraphNode()
+        group.forEach(child => paragraph.append(child))
+        element.insertBefore(paragraph)
       }
-      element.remove()
+      if (groups.some(group => group.length > 0)) element.remove()
     }
   }
 
