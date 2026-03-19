@@ -25,6 +25,7 @@ export default class Selection {
     this.#listenForNodeSelections()
     this.#processSelectionChangeCommands()
     this.#containEditorFocus()
+    this.#clearStaleInlineCodeFormat()
   }
 
   set current(selection) {
@@ -133,7 +134,7 @@ export default class Selection {
       isInLink: $getNearestNodeOfType(anchorNode, LinkNode) !== null,
       isInQuote: $isQuoteNode(topLevelElement),
       isInHeading: $isHeadingNode(topLevelElement),
-      isInCode: selection.hasFormat("code") || $getNearestNodeOfType(anchorNode, CodeNode) !== null,
+      isInCode: this.#isInCode(selection, anchorNode),
       isInList: listType !== null,
       listType,
       isInTable: $getTableCellNodeFromLexicalNode(anchorNode) !== null
@@ -266,6 +267,51 @@ export default class Selection {
     }
 
     return this.#findPreviousSiblingUp(anchorNode)
+  }
+
+  // When all inline code text is deleted, Lexical's selection retains the stale
+  // code format flag. Verify the flag is backed by actual code-formatted content:
+  // a code block ancestor or a text node that carries the code format.
+  #isInCode(selection, anchorNode) {
+    if ($getNearestNodeOfType(anchorNode, CodeNode) !== null) return true
+    if (!selection.hasFormat("code")) return false
+
+    return $isTextNode(anchorNode) && anchorNode.hasFormat("code")
+  }
+
+  // After deleting all inline code text, Lexical preserves the code format on
+  // the selection even though no code-formatted content remains. This listener
+  // detects that stale state and clears it so newly typed text won't be
+  // code-formatted.
+  #clearStaleInlineCodeFormat() {
+    this.editor.registerUpdateListener(({ editorState, tags }) => {
+      if (tags.has("history-merge") || tags.has("skip-dom-selection")) return
+
+      let isStale = false
+
+      editorState.read(() => {
+        const selection = $getSelection()
+        if (!$isRangeSelection(selection) || !selection.isCollapsed()) return
+        if (!selection.hasFormat("code")) return
+
+        const anchorNode = selection.anchor.getNode()
+        if ($getNearestNodeOfType(anchorNode, CodeNode) !== null) return
+        if ($isTextNode(anchorNode) && anchorNode.hasFormat("code")) return
+
+        isStale = true
+      })
+
+      if (isStale) {
+        setTimeout(() => {
+          this.editor.update(() => {
+            const selection = $getSelection()
+            if ($isRangeSelection(selection) && selection.hasFormat("code")) {
+              selection.toggleFormat("code")
+            }
+          })
+        }, 0)
+      }
+    })
   }
 
   get #currentlySelectedKeys() {

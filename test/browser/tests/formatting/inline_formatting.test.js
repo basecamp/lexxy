@@ -92,6 +92,26 @@ test.describe("Inline formatting", () => {
     await expect(codeButton).toHaveAttribute("aria-pressed", "false")
   })
 
+  test("deleting all inline code text clears the code format", async ({ page, editor }) => {
+    await editor.setValue("<p><code>hello</code></p>")
+
+    const codeButton = page.getByRole("button", { name: "Code" })
+
+    // Select the code text and verify code button is active
+    await editor.select("hello")
+    await expect(codeButton).toHaveAttribute("aria-pressed", "true")
+
+    // Delete the selected code text
+    await editor.send("Backspace")
+
+    // The code button should no longer be active
+    await expect(codeButton).toHaveAttribute("aria-pressed", "false")
+
+    // Typing new text should NOT be code-formatted
+    await editor.send("world")
+    await assertEditorHtml(editor, "<p>world</p>")
+  })
+
   test("toggle code for block", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.click()
