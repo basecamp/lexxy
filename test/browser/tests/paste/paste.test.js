@@ -64,16 +64,16 @@ test.describe("Paste — Files & Attachments", () => {
     // Simulate copying a mention from a rendered Lexxy view (e.g., a posted
     // Basecamp/Fizzy comment) and pasting it into a Lexxy editor.
     //
-    // When Lexxy saves content, exportDOM() JSON-encodes innerHtml into the
-    // content attribute: content=JSON.stringify(innerHtml). Server-side HTML
-    // rendering (e.g., Rails/Nokogiri) may double-encode the entities in this
-    // attribute, so \" becomes \&amp;quot; instead of \&quot;. When the user
-    // copies from the rendered page, the clipboard HTML has this double-encoded
-    // format. When pasted, JSON.parse() fails on \&quot; because \& is not a
-    // valid JSON escape — the fallback returns the raw string (with JSON wrapper
-    // quotes) as innerHtml, producing broken/doubled mention display.
+    // Legacy format: older versions of exportDOM() JSON-encoded innerHtml into
+    // the content attribute (content=JSON.stringify(innerHtml)). Server-side
+    // HTML rendering (e.g., Rails/Nokogiri) would then double-encode the
+    // entities in this attribute, so \" became &amp;quot; instead of &quot;.
+    // When a user copies from a page with this legacy format, the clipboard
+    // HTML has double-encoded entities. The parser must handle this gracefully
+    // by decoding entities before retrying JSON.parse.
     //
-    // This test uses the actual format observed in Fizzy's rendered HTML.
+    // This test uses the actual legacy format observed in Fizzy's rendered HTML
+    // to ensure backward compatibility with already-persisted content.
     const mentionHtml = [
       '<action-text-attachment',
       ' sgid="test-sgid-lexxy"',
