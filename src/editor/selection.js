@@ -295,8 +295,7 @@ export default class Selection {
         if (!selection.hasFormat("code")) return
 
         const anchorNode = selection.anchor.getNode()
-        if ($getNearestNodeOfType(anchorNode, CodeNode) !== null) return
-        if ($isTextNode(anchorNode) && anchorNode.hasFormat("code")) return
+        if (this.#isInCode(selection, anchorNode)) return
 
         isStale = true
       })
@@ -305,9 +304,12 @@ export default class Selection {
         setTimeout(() => {
           this.editor.update(() => {
             const selection = $getSelection()
-            if ($isRangeSelection(selection) && selection.hasFormat("code")) {
-              selection.toggleFormat("code")
-            }
+            if (!$isRangeSelection(selection) || !selection.hasFormat("code")) return
+
+            const anchorNode = selection.anchor.getNode()
+            if (this.#isInCode(selection, anchorNode)) return
+
+            selection.toggleFormat("code")
           })
         }, 0)
       }
