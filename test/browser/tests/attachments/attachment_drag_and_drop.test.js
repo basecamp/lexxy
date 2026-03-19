@@ -249,6 +249,8 @@ test.describe("Attachment Drag and Drop", () => {
   })
 
   test.describe("Undo/redo", () => {
+    const modifier = process.platform === "darwin" ? "Meta" : "Control"
+
     test("undo reverses gallery creation", async ({ page, editor }) => {
       await editor.uploadFile("test/fixtures/files/example.png")
       await editor.send("Enter")
@@ -258,7 +260,7 @@ test.describe("Attachment Drag and Drop", () => {
       await simulateDragByIndex(page, 1, 0, "onto")
       await assertGalleryWithImages(editor, 2)
 
-      await editor.send("Control+z")
+      await editor.send(`${modifier}+z`)
 
       await assertNoGallery(page)
       await expect(page.locator("figure.attachment")).toHaveCount(2)
@@ -274,7 +276,7 @@ test.describe("Attachment Drag and Drop", () => {
       await editor.flush()
       await expect(editor.content.locator("figure.attachment--preview + p")).toContainText("Hello world")
 
-      await editor.send("Control+z")
+      await editor.send(`${modifier}+z`)
 
       await expect(editor.content.locator("p:not(.provisional-paragraph) ~ figure.attachment")).toBeVisible()
     })
