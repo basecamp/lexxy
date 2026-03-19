@@ -160,9 +160,14 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   async #showPopover() {
+    this.showPopoverAborted = false
     this.popoverElement ??= await this.#buildPopover()
+    if (this.showPopoverAborted) return
+
     this.#resetPopoverPosition()
     await this.#filterOptions()
+    if (this.showPopoverAborted) return
+
     this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", true)
     this.#selectFirstOption()
 
@@ -273,6 +278,7 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   async #hidePopover() {
+    this.showPopoverAborted = true
     this.#clearSelection()
     this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", false)
     this.#editorElement.removeEventListener("lexxy:change", this.#filterOptions)
