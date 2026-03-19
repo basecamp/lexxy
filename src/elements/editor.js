@@ -5,7 +5,9 @@ import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
-import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
+import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/code"
+import { EarlyEscapeCodeNode } from "../nodes/early_escape_code_node"
+import { EarlyEscapeListItemNode } from "../nodes/early_escape_list_item_node"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_tag_handler"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
@@ -274,7 +276,11 @@ export class LexicalEditorElement extends HTMLElement {
         HeadingNode,
         ListNode,
         ListItemNode,
+        EarlyEscapeListItemNode,
+        { replace: ListItemNode, with: () => new EarlyEscapeListItemNode(), withKlass: EarlyEscapeListItemNode },
         CodeNode,
+        EarlyEscapeCodeNode,
+        { replace: CodeNode, with: (node) => new EarlyEscapeCodeNode(node.getLanguage()), withKlass: EarlyEscapeCodeNode },
         CodeHighlightNode,
         LinkNode,
         AutoLinkNode,

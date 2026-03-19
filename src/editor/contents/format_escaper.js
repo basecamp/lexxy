@@ -1,8 +1,6 @@
-import { $createParagraphNode, $getSelection, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, KEY_ARROW_DOWN_COMMAND, KEY_ENTER_COMMAND } from "lexical"
-import { $createListNode, $isListItemNode, $isListNode } from "@lexical/list"
+import { $createParagraphNode, $getSelection, $isLineBreakNode, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, KEY_ARROW_DOWN_COMMAND, KEY_ENTER_COMMAND } from "lexical"
 import { $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
-import { $isCodeNode, CodeNode } from "@lexical/code"
-import { $getNearestNodeOfType } from "@lexical/utils"
+import { EarlyEscapeCodeNode } from "../../nodes/early_escape_code_node"
 
 export default class FormatEscaper {
   constructor(editorElement) {
@@ -28,24 +26,11 @@ export default class FormatEscaper {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return false
 
-    if (this.#handleCodeBlocks(event, selection)) return true
-
     const anchorNode = selection.anchor.getNode()
 
     if (!this.#isInsideBlockquote(anchorNode)) return false
 
-    return this.#handleLists(event, anchorNode)
-      || this.#handleBlockquotes(event, anchorNode)
-  }
-
-  #handleLists(event, anchorNode) {
-    if (this.#shouldEscapeFromEmptyListItem(anchorNode) || this.#shouldEscapeFromEmptyParagraphInListItem(anchorNode)) {
-      event.preventDefault()
-      this.#escapeFromList(anchorNode)
-      return true
-    }
-
-    return false
+    return this.#handleBlockquotes(event, anchorNode)
   }
 
   #handleBlockquotes(event, anchorNode) {
@@ -58,88 +43,6 @@ export default class FormatEscaper {
     return false
   }
 
-  #isInsideBlockquote(node) {
-    let currentNode = node
-
-    while (currentNode) {
-      if ($isQuoteNode(currentNode)) {
-        return true
-      }
-      currentNode = currentNode.getParent()
-    }
-
-    return false
-  }
-
-  #shouldEscapeFromEmptyListItem(node) {
-    const listItem = this.#getListItemNode(node)
-    if (!listItem) return false
-
-    return this.#isNodeEmpty(listItem)
-  }
-
-  #shouldEscapeFromEmptyParagraphInListItem(node) {
-    const paragraph = this.#getParagraphNode(node)
-    if (!paragraph) return false
-
-    if (!this.#isNodeEmpty(paragraph)) return false
-
-    const parent = paragraph.getParent()
-    return parent && $isListItemNode(parent)
-  }
-
-  #isNodeEmpty(node) {
-    if (node.getTextContent().trim() !== "") return false
-
-    const children = node.getChildren()
-    if (children.length === 0) return true
-
-    return children.every(child => {
-      if ($isLineBreakNode(child)) return true
-      return this.#isNodeEmpty(child)
-    })
-  }
-
-  #getListItemNode(node) {
-    let currentNode = node
-
-    while (currentNode) {
-      if ($isListItemNode(currentNode)) {
-        return currentNode
-      }
-      currentNode = currentNode.getParent()
-    }
-
-    return null
-  }
-
-  #escapeFromList(anchorNode) {
-    const listItem = this.#getListItemNode(anchorNode)
-    if (!listItem) return
-
-    const parentList = listItem.getParent()
-    if (!parentList || !$isListNode(parentList)) return
-
-    const blockquote = parentList.getParent()
-    const isInBlockquote = blockquote && $isQuoteNode(blockquote)
-
-    if (isInBlockquote) {
-      const listItemsAfter = this.#getListItemSiblingsAfter(listItem)
-      const nonEmptyListItems = listItemsAfter.filter(item => !this.#isNodeEmpty(item))
-
-      if (nonEmptyListItems.length > 0) {
-        this.#splitBlockquoteWithList(blockquote, parentList, listItem, nonEmptyListItems)
-        return
-      }
-    }
-
-    const paragraph = $createParagraphNode()
-    parentList.insertAfter(paragraph)
-
-    listItem.remove()
-    paragraph.selectStart()
-  }
-
   #shouldEscapeFromEmptyParagraphInBlockquote(node) {
     const paragraph = this.#getParagraphNode(node)
     if (!paragraph) return false
@@ -148,19 +51,6 @@ export default class FormatEscaper {
 
     const parent = paragraph.getParent()
     return parent && $isQuoteNode(parent)
-  }
-
-  #getParagraphNode(node) {
-    let currentNode = node
-
-    while (currentNode) {
-      if ($isParagraphNode(currentNode)) {
-        return currentNode
-      }
-      currentNode = currentNode.getParent()
-    }
-
-    return null
   }
 
   #escapeFromBlockquote(anchorNode) {
@@ -183,6 +73,79 @@ export default class FormatEscaper {
     }
   }
 
+  #splitBlockquote(blockquote, emptyParagraph, siblingsAfter) {
+    const newParagraph = $createParagraphNode()
+    blockquote.insertAfter(newParagraph)
+
+    const newBlockquote = $createQuoteNode()
+    newParagraph.insertAfter(newBlockquote)
+
+    newBlockquote.append(...siblingsAfter)
+
+    emptyParagraph.remove()
+
+    this.#removeTrailingEmptyNodes(blockquote)
+    this.#removeTrailingEmptyNodes(newBlockquote)
+
+    newParagraph.selectStart()
+  }
+
+  #handleArrowDownInCodeBlock(event) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+
+    const codeNode = EarlyEscapeCodeNode.$fromSelection(selection)
+    if (!codeNode) return false
+
+    if (codeNode.$isCursorOnLastLine(selection) && !codeNode.getNextSibling()) {
+      event?.preventDefault()
+      const paragraph = $createParagraphNode()
+      codeNode.insertAfter(paragraph)
+      paragraph.selectStart()
+      return true
+    }
+
+    return false
+  }
+
+  #isInsideBlockquote(node) {
+    let currentNode = node
+
+    while (currentNode) {
+      if ($isQuoteNode(currentNode)) {
+        return true
+      }
+      currentNode = currentNode.getParent()
+    }
+
+    return false
+  }
+
+  #isNodeEmpty(node) {
+    if (node.getTextContent().trim() !== "") return false
+
+    const children = node.getChildren()
+    if (children.length === 0) return true
+
+    return children.every(child => {
+      if ($isLineBreakNode(child)) return true
+      return this.#isNodeEmpty(child)
+    })
+  }
+
+  #getParagraphNode(node) {
+    let currentNode = node
+
+    while (currentNode) {
+      if ($isParagraphNode(currentNode)) {
+        return currentNode
+      }
+      currentNode = currentNode.getParent()
+    }
+
+    return null
+  }
+
   #getSiblingsAfter(node) {
     const siblings = []
     let sibling = node.getNextSibling()
@@ -195,71 +158,6 @@ export default class FormatEscaper {
     return siblings
   }
 
-  #getListItemSiblingsAfter(listItem) {
-    const siblings = []
-    let sibling = listItem.getNextSibling()
-
-    while (sibling) {
-      if ($isListItemNode(sibling)) {
-        siblings.push(sibling)
-      }
-      sibling = sibling.getNextSibling()
-    }
-
-    return siblings
-  }
-
-  #splitBlockquoteWithList(blockquote, parentList, emptyListItem, listItemsAfter) {
-    const blockquoteSiblingsAfterList = this.#getSiblingsAfter(parentList)
-    const nonEmptyBlockquoteSiblings = blockquoteSiblingsAfterList.filter(sibling => !this.#isNodeEmpty(sibling))
-
-    const middleParagraph = $createParagraphNode()
-    blockquote.insertAfter(middleParagraph)
-
-    const newList = $createListNode(parentList.getListType())
-
-    const newBlockquote = $createQuoteNode()
-    middleParagraph.insertAfter(newBlockquote)
-    newBlockquote.append(newList)
-
-    listItemsAfter.forEach(item => {
-      newList.append(item)
-    })
-
-    nonEmptyBlockquoteSiblings.forEach(sibling => {
-      newBlockquote.append(sibling)
-    })
-
-    emptyListItem.remove()
-
-    this.#removeTrailingEmptyListItems(parentList)
-    this.#removeTrailingEmptyNodes(newBlockquote)
-
-    if (parentList.getChildrenSize() === 0) {
-      parentList.remove()
-
-      if (blockquote.getChildrenSize() === 0) {
-        blockquote.remove()
-      }
-    } else {
-      this.#removeTrailingEmptyNodes(blockquote)
-    }
-
-    middleParagraph.selectStart()
-  }
-
-  #removeTrailingEmptyListItems(list) {
-    const items = list.getChildren()
-    for (let i = items.length - 1; i >= 0; i--) {
-      const item = items[i]
-      if ($isListItemNode(item) && this.#isNodeEmpty(item)) {
-        item.remove()
-      } else {
-        break
-      }
-    }
-  }
-
   #removeTrailingEmptyNodes(blockquote) {
     const children = blockquote.getChildren()
     for (let i = children.length - 1; i >= 0; i--) {
@@ -270,119 +168,5 @@ export default class FormatEscaper {
         break
       }
     }
-  }
-
-  #splitBlockquote(blockquote, emptyParagraph, siblingsAfter) {
-    const newParagraph = $createParagraphNode()
-    blockquote.insertAfter(newParagraph)
-
-    const newBlockquote = $createQuoteNode()
-    newParagraph.insertAfter(newBlockquote)
-
-    siblingsAfter.forEach(sibling => {
-      newBlockquote.append(sibling)
-    })
-
-    emptyParagraph.remove()
-
-    this.#removeTrailingEmptyNodes(blockquote)
-    this.#removeTrailingEmptyNodes(newBlockquote)
-
-    newParagraph.selectStart()
-  }
-
-  // Code blocks
-
-  #handleCodeBlocks(event, selection) {
-    if (!selection.isCollapsed()) return false
-
-    const codeNode = this.#getCodeNodeFromSelection(selection)
-    if (!codeNode) return false
-
-    if (this.#isCursorOnEmptyLastLineOfCodeBlock(selection, codeNode)) {
-      event?.preventDefault()
-      this.#exitCodeBlock(codeNode)
-      return true
-    }
-
-    return false
-  }
-
-  #handleArrowDownInCodeBlock(event) {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
-
-    const codeNode = this.#getCodeNodeFromSelection(selection)
-    if (!codeNode) return false
-
-    if (this.#isCursorOnLastLineOfCodeBlock(selection, codeNode) && !codeNode.getNextSibling()) {
-      event?.preventDefault()
-      const paragraph = $createParagraphNode()
-      codeNode.insertAfter(paragraph)
-      paragraph.selectStart()
-      return true
-    }
-
-    return false
-  }
-
-  #getCodeNodeFromSelection(selection) {
-    const anchorNode = selection.anchor.getNode()
-    return $getNearestNodeOfType(anchorNode, CodeNode) || ($isCodeNode(anchorNode) ? anchorNode : null)
-  }
-
-  #isCursorOnEmptyLastLineOfCodeBlock(selection, codeNode) {
-    const children = codeNode.getChildren()
-    if (children.length === 0) return true
-
-    const anchorNode = selection.anchor.getNode()
-    const anchorOffset = selection.anchor.offset
-
-    // Chromium: cursor on the CodeNode element after the last child (a line break)
-    if ($isCodeNode(anchorNode) && anchorOffset === children.length) {
-      return $isLineBreakNode(children[children.length - 1])
-    }
-
-    // Firefox: cursor on an empty text node that follows a line break at the end
-    if ($isTextNode(anchorNode) && anchorNode.getTextContentSize() === 0 && anchorOffset === 0) {
-      const previousSibling = anchorNode.getPreviousSibling()
-      return $isLineBreakNode(previousSibling) && anchorNode.getNextSibling() === null
-    }
-
-    return false
-  }
-
-  #isCursorOnLastLineOfCodeBlock(selection, codeNode) {
-    const anchorNode = selection.anchor.getNode()
-    const children = codeNode.getChildren()
-    if (children.length === 0) return true
-
-    const lastChild = children[children.length - 1]
-
-    if ($isCodeNode(anchorNode) && selection.anchor.offset === children.length) return true
-    if (anchorNode === lastChild) return true
-
-    const lastLineBreakIndex = children.findLastIndex(child => $isLineBreakNode(child))
-    if (lastLineBreakIndex === -1) return true
-
-    const anchorIndex = children.indexOf(anchorNode)
-    return anchorIndex > lastLineBreakIndex
-  }
-
-  #exitCodeBlock(codeNode) {
-    const children = codeNode.getChildren()
-    const lastChild = children[children.length - 1]
-
-    if ($isTextNode(lastChild) && lastChild.getTextContentSize() === 0) {
-      const previousSibling = lastChild.getPreviousSibling()
-      lastChild.remove()
-      if ($isLineBreakNode(previousSibling)) previousSibling.remove()
-    } else if ($isLineBreakNode(lastChild)) {
-      lastChild.remove()
-    }
-
-    const paragraph = $createParagraphNode()
-    codeNode.insertAfter(paragraph)
-    paragraph.selectStart()
   }
 }
