@@ -1,6 +1,6 @@
 import { $createParagraphNode, $getSelection, $isLineBreakNode, $isRangeSelection, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, KEY_ARROW_DOWN_COMMAND, KEY_ENTER_COMMAND, ParagraphNode } from "lexical"
 import { $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
-import { $getNearestNodeOfType } from "@lexical/utils"
+import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { EarlyEscapeCodeNode } from "../../nodes/early_escape_code_node"
 
 export default class FormatEscaper {
@@ -122,9 +122,7 @@ export default class FormatEscaper {
   }
 
   #removeTrailingEmptyNodes(blockquote) {
-    const children = blockquote.getChildren()
-    for (let i = children.length - 1; i >= 0; i--) {
-      const child = children[i]
+    for (const child of $lastToFirstIterator(blockquote)) {
       if (this.#isNodeEmpty(child)) {
         child.remove()
       } else {

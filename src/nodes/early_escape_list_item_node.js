@@ -1,7 +1,7 @@
 import { $createParagraphNode, $isLineBreakNode, ParagraphNode } from "lexical"
 import { $createListNode, $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
 import { $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
-import { $getNearestNodeOfType } from "@lexical/utils"
+import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 
 export class EarlyEscapeListItemNode extends ListItemNode {
   $config() {
@@ -96,9 +96,7 @@ export class EarlyEscapeListItemNode extends ListItemNode {
   }
 
   #removeTrailingEmptyListItems(list) {
-    const items = list.getChildren()
-    for (let i = items.length - 1; i >= 0; i--) {
-      const item = items[i]
+    for (const item of $lastToFirstIterator(list)) {
       if ($isListItemNode(item) && this.#isNodeEmpty(item)) {
         item.remove()
       } else {
@@ -108,9 +106,7 @@ export class EarlyEscapeListItemNode extends ListItemNode {
   }
 
   #removeTrailingEmptyNodes(container) {
-    const children = container.getChildren()
-    for (let i = children.length - 1; i >= 0; i--) {
-      const child = children[i]
+    for (const child of $lastToFirstIterator(container)) {
       if (this.#isNodeEmpty(child)) {
         child.remove()
       } else {
