@@ -1,6 +1,7 @@
-import { $createParagraphNode, $getSelection, $isLineBreakNode, $isRangeSelection, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, KEY_ARROW_DOWN_COMMAND, KEY_ENTER_COMMAND, ParagraphNode } from "lexical"
+import { $createParagraphNode, $getSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, KEY_ARROW_DOWN_COMMAND, KEY_ENTER_COMMAND, ParagraphNode } from "lexical"
 import { $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
+import { $isBlankNode } from "../../helpers/lexical_helper"
 import { EarlyEscapeCodeNode } from "../../nodes/early_escape_code_node"
 
 export default class FormatEscaper {
@@ -48,7 +49,7 @@ export default class FormatEscaper {
     const paragraph = $getNearestNodeOfType(node, ParagraphNode)
     if (!paragraph) return false
 
-    if (!this.#isNodeEmpty(paragraph)) return false
+    if (!$isBlankNode(paragraph)) return false
 
     const parent = paragraph.getParent()
     return parent && $isQuoteNode(parent)
@@ -62,7 +63,7 @@ export default class FormatEscaper {
     if (!blockquote || !$isQuoteNode(blockquote)) return
 
     const siblingsAfter = paragraph.getNextSiblings()
-    const nonEmptySiblings = siblingsAfter.filter(sibling => !this.#isNodeEmpty(sibling))
+    const nonEmptySiblings = siblingsAfter.filter(sibling => !$isBlankNode(sibling))
 
     if (nonEmptySiblings.length > 0) {
       this.#splitBlockquote(blockquote, paragraph, nonEmptySiblings)
@@ -109,21 +110,9 @@ export default class FormatEscaper {
     return false
   }
 
-  #isNodeEmpty(node) {
-    if (node.getTextContent().trim() !== "") return false
-
-    const children = node.getChildren()
-    if (children.length === 0) return true
-
-    return children.every(child => {
-      if ($isLineBreakNode(child)) return true
-      return this.#isNodeEmpty(child)
-    })
-  }
-
   #removeTrailingEmptyNodes(blockquote) {
     for (const child of $lastToFirstIterator(blockquote)) {
-      if (this.#isNodeEmpty(child)) {
+      if ($isBlankNode(child)) {
         child.remove()
       } else {
         break

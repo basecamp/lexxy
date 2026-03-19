@@ -1,7 +1,8 @@
-import { $createParagraphNode, $isLineBreakNode, ParagraphNode } from "lexical"
+import { $createParagraphNode, ParagraphNode } from "lexical"
 import { $createListNode, $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
 import { $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
+import { $isBlankNode } from "../helpers/lexical_helper"
 
 export class EarlyEscapeListItemNode extends ListItemNode {
   $config() {
@@ -22,13 +23,13 @@ export class EarlyEscapeListItemNode extends ListItemNode {
   }
 
   #isItemEmpty() {
-    return this.#isNodeEmpty(this)
+    return $isBlankNode(this)
   }
 
   #isEmptyParagraphInItem(selection) {
     const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
     if (!paragraph) return false
-    return this.#isNodeEmpty(paragraph) && $isListItemNode(paragraph.getParent())
+    return $isBlankNode(paragraph) && $isListItemNode(paragraph.getParent())
   }
 
   #escapeFromList() {
@@ -40,7 +41,7 @@ export class EarlyEscapeListItemNode extends ListItemNode {
 
     if (isInBlockquote) {
       const nonEmptyListItems = this.getNextSiblings().filter(
-        sibling => $isListItemNode(sibling) && !this.#isNodeEmpty(sibling)
+        sibling => $isListItemNode(sibling) && !$isBlankNode(sibling)
       )
 
       if (nonEmptyListItems.length > 0) {
@@ -57,7 +58,7 @@ export class EarlyEscapeListItemNode extends ListItemNode {
 
   #splitBlockquoteWithList(blockquote, parentList, listItemsAfter) {
     const nonEmptyBlockquoteSiblings = parentList.getNextSiblings().filter(
-      sibling => !this.#isNodeEmpty(sibling)
+      sibling => !$isBlankNode(sibling)
     )
 
     const middleParagraph = $createParagraphNode()
@@ -97,7 +98,7 @@ export class EarlyEscapeListItemNode extends ListItemNode {
 
   #removeTrailingEmptyListItems(list) {
     for (const item of $lastToFirstIterator(list)) {
-      if ($isListItemNode(item) && this.#isNodeEmpty(item)) {
+      if ($isListItemNode(item) && $isBlankNode(item)) {
         item.remove()
       } else {
         break
@@ -107,23 +108,11 @@ export class EarlyEscapeListItemNode extends ListItemNode {
 
   #removeTrailingEmptyNodes(container) {
     for (const child of $lastToFirstIterator(container)) {
-      if (this.#isNodeEmpty(child)) {
+      if ($isBlankNode(child)) {
         child.remove()
       } else {
         break
       }
     }
-  }
-
-  #isNodeEmpty(node) {
-    if (node.getTextContent().trim() !== "") return false
-
-    const children = node.getChildren?.()
-    if (!children || children.length === 0) return true
-
-    return children.every(child => {
-      if ($isLineBreakNode(child)) return true
-      return this.#isNodeEmpty(child)
-    })
   }
 }

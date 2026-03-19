@@ -1,4 +1,4 @@
-import { $createNodeSelection, $createParagraphNode, $isTextNode, TextNode } from "lexical"
+import { $createNodeSelection, $createParagraphNode, $isLineBreakNode, $isTextNode, TextNode } from "lexical"
 import { HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType } from "@lexical/utils"
@@ -72,6 +72,18 @@ export function extendConversion(nodeKlass, conversionName, callback = (output =
 
     return callback(conversionOutput, element) ?? conversionOutput
   }
+}
+
+export function $isBlankNode(node) {
+  if (node.getTextContent().trim() !== "") return false
+
+  const children = node.getChildren?.()
+  if (!children || children.length === 0) return true
+
+  return children.every(child => {
+    if ($isLineBreakNode(child)) return true
+    return $isBlankNode(child)
+  })
 }
 
 export function isAttachmentSpacerTextNode(node, previousNode, index, childCount) {
