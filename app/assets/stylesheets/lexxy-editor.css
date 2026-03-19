@@ -503,6 +503,25 @@
   user-select: none;
   -webkit-user-select: none;
 
+  &.lexxy-editor__toolbar-dropdown--chevron {
+    summary {
+      aspect-ratio: unset;
+      gap: 0.5ch;
+      grid-template-columns: 2fr 1fr;
+      padding-inline: 0.75ch;
+
+      &:after {
+        block-size: 0.4ch;
+        border-block-end: 2px solid currentcolor;
+        border-inline-end: 2px solid currentcolor;
+        content: "";
+        display: inline-block;
+        inline-size: 0.4ch;
+        transform: rotate(45deg);
+      }
+    }
+  }
+
   summary ~ * {
     background-color: var(--lexxy-color-canvas);
     border: 2px solid var(--lexxy-color-selected-hover);
@@ -538,6 +557,37 @@
 
     &:hover {
       opacity: 0.8;
+    }
+  }
+
+  .lexxy-editor__toolbar-dropdown-list {
+    border-start-start-radius: 0;
+    flex-direction: column;
+    gap: 0;
+
+    button {
+      align-items: center;
+      display: flex;
+      flex-direction: row;
+      gap: 1ch;
+      padding: 1ch;
+
+      &[aria-pressed="true"] {
+        background-color: var(--lexxy-color-selected);
+
+        &:hover {
+          background-color: var(--lexxy-color-selected-hover);
+        }
+      }
+
+      span {
+        font-size: var(--lexxy-text-small);
+      }
+
+      svg {
+        block-size: 1lh;
+        inline-size: 1lh;
+      }
     }
   }
 

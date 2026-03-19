@@ -206,14 +206,19 @@ export class LexicalToolbarElement extends HTMLElement {
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
-    this.#setButtonPressed("strikethrough", isStrikethrough)
-    this.#setButtonPressed("highlight", isHighlight)
-    this.#setButtonPressed("link", isInLink)
-    this.#setButtonPressed("quote", isInQuote)
+
+    this.#setButtonPressed("format", isInHeading || isStrikethrough || isInQuote)
     this.#setButtonPressed("heading", isInHeading)
-    this.#setButtonPressed("code", isInCode)
+    this.#setButtonPressed("strikethrough", isStrikethrough)
+    this.#setButtonPressed("quote", isInQuote)
+
+    this.#setButtonPressed("lists", isInList)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
     this.#setButtonPressed("ordered-list", isInList && listType === "number")
+
+    this.#setButtonPressed("highlight", isHighlight)
+    this.#setButtonPressed("link", isInLink)
+    this.#setButtonPressed("code", isInCode)
     this.#setButtonPressed("table", isInTable)
 
     this.#updateUndoRedoButtonStates()
@@ -321,6 +326,14 @@ export class LexicalToolbarElement extends HTMLElement {
 
   static get defaultTemplate() {
     return `
+    <button class="lexxy-editor__toolbar-button" type="button" name="upload" data-command="uploadAttachments" data-prevent-overflow="true" title="Add images">
+      ${ToolbarIcons.image}
+    </button>
+
+    <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="upload" data-command="uploadAttachments" data-prevent-overflow="true" title="Upload files">
+      ${ToolbarIcons.attachment}
+    </button>
+
       <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="Bold">
         ${ToolbarIcons.bold}
       </button>
@@ -329,15 +342,39 @@ export class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.italic}
       </button>
 
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
-      ${ToolbarIcons.strikethrough}
-      </button>
+      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron" name="lexxy-dropdown">
+        <summary class="lexxy-editor__toolbar-button" name="format" title="Text formatting">
+          ${ToolbarIcons.heading}
+        </summary>
+        <div class="lexxy-editor__toolbar-dropdown-list">
+          <button type="button" name="heading" data-command="rotateHeadingFormat" title="Heading">
+            ${ToolbarIcons.heading} <span>Heading</span>
+          </button>
+          <button type="button" name="quote" data-command="insertQuoteBlock" title="Quote">
+            ${ToolbarIcons.quote} <span>Quote</span>
+          </button>
+          <button type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
+            ${ToolbarIcons.strikethrough} <span>Strikethrough</span>
+          </button>
+        </div>
+      </details>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="heading" data-command="rotateHeadingFormat" title="Heading">
-        ${ToolbarIcons.heading}
-      </button>
 
-      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
+      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron" name="lexxy-dropdown">
+        <summary class="lexxy-editor__toolbar-button" name="lists" title="Lists">
+          ${ToolbarIcons.ul}
+        </summary>
+        <div class="lexxy-editor__toolbar-dropdown-list">
+          <button name="unordered-list" data-command="insertUnorderedList" title="Bullet list">
+            ${ToolbarIcons.ul} <span>Bullets</span>
+          </button>
+          <button type="button" name="ordered-list" data-command="insertOrderedList" title="Numbered list">
+            ${ToolbarIcons.ol} <span>Numbers</span>
+          </button>
+        </div>
+      </details>
+
+      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">
           ${ToolbarIcons.highlight}
         </summary>
@@ -362,24 +399,8 @@ export class LexicalToolbarElement extends HTMLElement {
         </lexxy-link-dropdown>
       </details>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="quote" data-command="insertQuoteBlock" title="Quote">
-        ${ToolbarIcons.quote}
-      </button>
-
       <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="code" data-command="insertCodeBlock" title="Code">
         ${ToolbarIcons.code}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="unordered-list" data-command="insertUnorderedList" title="Bullet list">
-        ${ToolbarIcons.ul}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="ordered-list" data-command="insertOrderedList" title="Numbered list">
-        ${ToolbarIcons.ol}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="upload" data-command="uploadAttachments" data-prevent-overflow="true" title="Upload file">
-        ${ToolbarIcons.attachment}
       </button>
 
       <button class="lexxy-editor__toolbar-button" type="button" name="table" data-command="insertTable" title="Insert a table">
