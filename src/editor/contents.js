@@ -111,9 +111,7 @@ export default class Contents {
 
       this.#splitParagraphsAtLineBreaks(selection)
 
-      const freshElements = this.#topLevelElementsInSelection(selection)
-      const elements = this.#withoutTrailingEmptyParagraphs(freshElements)
-      if (elements.length === 0) return
+      const elements = this.#topLevelElementsInSelection(selection)
 
       const blockquote = $createQuoteNode()
       elements[0].insertBefore(blockquote)
