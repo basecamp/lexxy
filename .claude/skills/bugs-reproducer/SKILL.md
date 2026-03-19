@@ -109,6 +109,41 @@ The **action under test** — the interaction you're trying to reproduce — mus
 
 **`executeScript` / `evaluate` is primarily for reading** — inspecting DOM state, checking cursor position, reading scroll offsets. Narrow setup exceptions exist (e.g., programmatic DOM manipulation when real interaction would destroy required preconditions), but never use it to produce the action under test.
 
+## Non-Negotiable: Read Every Screenshot
+
+**After taking any screenshot, read it and describe what you actually see — not what you expect to see.** The screenshot is ground truth. DOM/CSS inspection is supporting evidence; it explains what the screenshot shows, it does not override it.
+
+This skill gets invoked repeatedly in bug-fix loops where an agent or human is iterating on a fix. Screenshot validation during those loops is just as critical as during initial reproduction — it's the quality gate that prevents wasted iterations on visually broken fixes.
+
+### After each screenshot, check:
+
+- **What's actually visible?** Describe the layout, element positions, and content you see.
+- **Does it match expectations?** Compare explicitly against the expected state.
+- **Any visual anomalies?** Unexpected scrollbars, overflow, clipping, empty space, misalignment, elements pushed out of position.
+- **Something looks off?** Stop and investigate before proceeding. Do not assume it's fine.
+
+### Fix validation is especially skeptical
+
+When testing a proposed fix or change, the screenshot is the only evidence that matters:
+
+- Don't assume the fix worked because the code looks right.
+- Compare the screenshot against both the original bug state AND the expected fixed state.
+- A fix that introduces new visual problems (layout shifts, unexpected scrollbars, misplaced elements, large empty areas) is not a fix.
+
+### The anti-pattern this prevents
+
+| | |
+|---|---|
+| **WRONG** | Take screenshot → assume it confirms expectations → move on |
+| **RIGHT** | Take screenshot → read it → describe what's actually visible → compare against expected state → flag any anomaly |
+
+### When screenshots matter vs. when they don't
+
+Not every reproduction needs screenshots. The test: **if a human would ask "what did it look like?", screenshots are required.**
+
+- **Visual bugs** (layout, rendering, toolbar state, cursor position, formatting appearance): `page.screenshot()` → **read and describe it** before proceeding. The screenshot is the evidence.
+- **Diagnostic bugs** (DOM state, console errors, wrong HTML output, event ordering): capture the relevant diagnostic data (editor HTML, console output, Lexical state). Screenshots are optional when they wouldn't change the reader's conclusion.
+
 ## Non-Negotiable: Persevere
 
 One test is one attempt. Different attempts vary the **setup**: content volume, cursor positioning, page lifecycle, scroll depth, timing.
@@ -250,10 +285,15 @@ yarn test:browser:headed -- test/browser/tests/<file>.test.js
 Playwright automatically captures screenshots on failure, traces on first retry, and videos on first retry. For explicit evidence during reproduction:
 
 ```javascript
+// Visual bugs: screenshot at each decisive step — then READ it
 await page.screenshot({ path: "/tmp/bug-step-1.png" })
+
+// Diagnostic bugs: editor state is the evidence
 const html = await editor.innerHTML()
 console.log("Editor HTML:", html)
 ```
+
+**For visual bugs, take and read screenshots at each step** — a screenshot without analysis is not evidence. See [Non-Negotiable: Read Every Screenshot](#non-negotiable-read-every-screenshot). For diagnostic bugs where HTML output or console evidence suffices, capture that instead.
 
 ### 4b. Reproduce with Capybara (for Rails integration bugs)
 
@@ -311,9 +351,10 @@ try {
   );
   await content.click();
 
-  // Reproduction steps here — screenshot after each
+  // Reproduction steps here — capture evidence after each
   await content.sendKeys('Hello there');
   await screenshot(driver, 'step-1');
+  // READ the screenshot: describe what's visible, compare against expected state
 
   // Inspect via executeScript (read only)
   const html = await driver.executeScript(
@@ -347,12 +388,12 @@ try {
 **Lexxy subsystem:** <node type / extension / clipboard / selection / toolbar / Action Text>
 
 **Steps Executed:**
-1. <step> — [evidence]
-2. <step> — [evidence]
-3. <step> — bug manifests here
+1. <step> — observed: <describe what evidence shows>
+2. <step> — observed: <describe what evidence shows>
+3. <step> — observed: <describe what evidence shows> ← bug manifests here
 
 **Evidence Summary:**
-- <what was observed>
+- <what was actually observed — actual vs expected>
 - <DOM/Lexical state if inspected>
 - <console errors if present>
 
