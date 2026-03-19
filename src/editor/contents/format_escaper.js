@@ -1,7 +1,7 @@
 import { $createParagraphNode, $getSelection, $isRangeSelection, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, KEY_ARROW_DOWN_COMMAND, KEY_ENTER_COMMAND, ParagraphNode } from "lexical"
 import { $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType } from "@lexical/utils"
-import { $isBlankNode, $trimTrailingBlankNodes } from "../../helpers/lexical_helper"
+import { $isBlankNode, $isCursorOnLastLine, $trimTrailingBlankNodes } from "../../helpers/lexical_helper"
 import { EarlyEscapeCodeNode } from "../../nodes/early_escape_code_node"
 
 export default class FormatEscaper {
@@ -99,7 +99,7 @@ export default class FormatEscaper {
     const codeNode = EarlyEscapeCodeNode.$fromSelection(selection)
     if (!codeNode) return false
 
-    if (codeNode.$isCursorOnLastLine(selection) && !codeNode.getNextSibling()) {
+    if ($isCursorOnLastLine(selection) && !codeNode.getNextSibling()) {
       event?.preventDefault()
       const paragraph = $createParagraphNode()
       codeNode.insertAfter(paragraph)

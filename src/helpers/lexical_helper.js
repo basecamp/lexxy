@@ -1,4 +1,4 @@
-import { $createNodeSelection, $createParagraphNode, $isLineBreakNode, $isTextNode, TextNode } from "lexical"
+import { $createNodeSelection, $createParagraphNode, $isElementNode, $isLineBreakNode, $isTextNode, TextNode } from "lexical"
 import { HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
@@ -72,6 +72,24 @@ export function extendConversion(nodeKlass, conversionName, callback = (output =
 
     return callback(conversionOutput, element) ?? conversionOutput
   }
+}
+
+export function $isCursorOnLastLine(selection) {
+  const anchorNode = selection.anchor.getNode()
+  const elementNode = $isElementNode(anchorNode) ? anchorNode : anchorNode.getParentOrThrow()
+  const children = elementNode.getChildren()
+  if (children.length === 0) return true
+
+  const lastChild = children[children.length - 1]
+
+  if (anchorNode === elementNode.getLatest() && selection.anchor.offset === children.length) return true
+  if (anchorNode === lastChild) return true
+
+  const lastLineBreakIndex = children.findLastIndex(child => $isLineBreakNode(child))
+  if (lastLineBreakIndex === -1) return true
+
+  const anchorIndex = children.indexOf(anchorNode)
+  return anchorIndex > lastLineBreakIndex
 }
 
 export function $isBlankNode(node) {
