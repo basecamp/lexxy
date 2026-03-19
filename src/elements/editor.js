@@ -6,8 +6,6 @@ import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/code"
-import { EarlyEscapeCodeNode } from "../nodes/early_escape_code_node"
-import { EarlyEscapeListItemNode } from "../nodes/early_escape_list_item_node"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_tag_handler"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
@@ -32,6 +30,7 @@ import { HighlightExtension } from "../extensions/highlight_extension"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 import { TablesExtension } from "../extensions/tables_extension"
 import { AttachmentsExtension } from "../extensions/attachments_extension.js"
+import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 
 
 export class LexicalEditorElement extends HTMLElement {
@@ -124,7 +123,8 @@ export class LexicalEditorElement extends HTMLElement {
       HighlightExtension,
       TrixContentExtension,
       TablesExtension,
-      AttachmentsExtension
+      AttachmentsExtension,
+      FormatEscapeExtension
     ]
   }
 
@@ -276,11 +276,7 @@ export class LexicalEditorElement extends HTMLElement {
         HeadingNode,
         ListNode,
         ListItemNode,
-        EarlyEscapeListItemNode,
-        { replace: ListItemNode, with: () => new EarlyEscapeListItemNode(), withKlass: EarlyEscapeListItemNode },
         CodeNode,
-        EarlyEscapeCodeNode,
-        { replace: CodeNode, with: (node) => new EarlyEscapeCodeNode(node.getLanguage()), withKlass: EarlyEscapeCodeNode },
         CodeHighlightNode,
         LinkNode,
         AutoLinkNode,
