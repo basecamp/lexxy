@@ -97,7 +97,7 @@ test.describe("Block formatting", () => {
 
   test("insert quote without selection", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
-    await clickFormatButton(page, "insertQuoteBlock")
+    await page.getByRole("button", { name: "Quote" }).click()
     await assertEditorHtml(
       editor,
       "<blockquote><p>Hello everyone</p></blockquote>",
@@ -108,21 +108,21 @@ test.describe("Block formatting", () => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
 
-    await clickFormatButton(page, "insertQuoteBlock")
+    await page.getByRole("button", { name: "Quote" }).click()
     await assertEditorHtml(
       editor,
       "<blockquote><p>Hello everyone</p></blockquote>",
     )
 
     await editor.select("everyone")
-    await clickFormatButton(page, "insertQuoteBlock")
+    await page.getByRole("button", { name: "Quote" }).click()
     await assertEditorHtml(editor, "<p>Hello everyone</p>")
   })
 
   test("multi line quote", async ({ page, editor }) => {
     await editor.setValue("<p>Hello</p><p>Everyone</p>")
     await editor.selectAll()
-    await clickFormatButton(page, "insertQuoteBlock")
+    await page.getByRole("button", { name: "Quote" }).click()
     await assertEditorHtml(
       editor,
       "<blockquote><p>Hello</p><p>Everyone</p></blockquote>",
