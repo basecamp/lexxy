@@ -305,6 +305,14 @@ export class LexicalPromptElement extends HTMLElement {
 
     if (this.#editorContents.containsTextBackUntil(this.trigger)) {
       await this.#showFilteredOptions()
+
+      // Re-check after async operation — the trigger may have been consumed
+      // (e.g. markdown heading shortcut converted "# " to h1 during the fetch)
+      if (!this.#editorContents.containsTextBackUntil(this.trigger)) {
+        this.#hidePopover()
+        return
+      }
+
       await nextFrame()
       this.#positionPopover()
     } else {
