@@ -37,6 +37,24 @@ test.describe("Color highlighter", () => {
     })
   })
 
+  test("highlight in a code block survives setValue round-trip", async ({ page, editor }) => {
+    await editor.setValue('<pre data-language="plain"><code>some log output</code></pre>')
+    await editor.select("log output")
+    await applyHighlightOption(page, "background-color", 1)
+    await editor.flush()
+
+    const html = await editor.value()
+
+    // Reload the HTML into the editor (simulating save → re-edit)
+    await editor.setValue(html)
+    await editor.flush()
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code mark")).toContainText("log output")
+    })
+  })
+
   test("removing highlight from text in a plain-text code block", async ({ page, editor }) => {
     await editor.setValue('<pre data-language="plain"><code>some log output</code></pre>')
     await expect(page.locator("select[name=lexxy-code-language]")).toHaveValue("plain")

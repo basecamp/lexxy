@@ -1,7 +1,7 @@
 import { $getNodeByKey, $getState, $hasUpdateTag, $setState, COMMAND_PRIORITY_NORMAL, PASTE_TAG, TextNode, createCommand, createState, defineExtension } from "lexical"
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty, $patchStyleText, getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
-import { $isCodeHighlightNode, $isCodeNode, CodeHighlightNode } from "@lexical/code"
+import { $createCodeHighlightNode, $createCodeNode, $isCodeHighlightNode, $isCodeNode, CodeHighlightNode, CodeNode } from "@lexical/code"
 import { extendTextNodeConversion } from "../helpers/lexical_helper"
 import { StyleCanonicalizer, applyCanonicalizers, hasHighlightStyles } from "../helpers/format_helper"
 import { RichTextExtension } from "@lexical/rich-text"
@@ -15,6 +15,11 @@ export const BLANK_STYLES = { "color": null, "background-color": null }
 const hasPastedStylesState = createState("hasPastedStyles", {
   parse: (value) => value || false
 })
+
+// Stores pending highlight ranges extracted during HTML import, keyed by CodeNode key.
+// After the code retokenizer creates fresh CodeHighlightNodes, a mutation listener
+// reads this map and re-applies the highlight styles.
+const pendingCodeHighlights = new Map()
 
 export class HighlightExtension extends LexxyExtension {
   get enabled() {
@@ -38,12 +43,20 @@ export class HighlightExtension extends LexxyExtension {
         // keep the ref to the canonicalizers for optimized css conversion
         const canonicalizers = buildCanonicalizers(config)
 
+        // Register the <pre> converter directly in the conversion cache so it
+        // coexists with other extensions' "pre" converters (the extension-level
+        // html.import uses Object.assign, which means only one "pre" per key).
+        $registerPreConversion(editor)
+
         return mergeRegister(
           editor.registerCommand(TOGGLE_HIGHLIGHT_COMMAND, (styles) => $toggleSelectionStyles(editor, styles), COMMAND_PRIORITY_NORMAL),
           editor.registerCommand(REMOVE_HIGHLIGHT_COMMAND, () => $toggleSelectionStyles(editor, BLANK_STYLES), COMMAND_PRIORITY_NORMAL),
           editor.registerNodeTransform(TextNode, $syncHighlightWithStyle),
           editor.registerNodeTransform(CodeHighlightNode, $syncHighlightWithCodeHighlightNode),
-          editor.registerNodeTransform(TextNode, (textNode) => $canonicalizePastedStyles(textNode, canonicalizers))
+          editor.registerNodeTransform(TextNode, (textNode) => $canonicalizePastedStyles(textNode, canonicalizers)),
+          editor.registerMutationListener(CodeNode, (mutations) => {
+            $applyPendingCodeHighlights(editor, mutations)
+          }, { skipInitialization: true })
         )
       }
     })
@@ -70,6 +83,181 @@ function $markConversion() {
   return {
     conversion: extendTextNodeConversion("mark", $applyHighlightStyle),
     priority: 1
+  }
+}
+
+// Register a custom <pre> converter directly in the editor's HTML conversion
+// cache. We can't use the extension-level html.import because Object.assign
+// merges all extensions' converters by tag, and a later extension (e.g.
+// TrixContentExtension) would overwrite ours.
+function $registerPreConversion(editor) {
+  let preEntries = editor._htmlConversions.get("pre")
+  if (!preEntries) {
+    preEntries = []
+    editor._htmlConversions.set("pre", preEntries)
+  }
+  preEntries.push($preConversionWithHighlights)
+}
+
+// Custom <pre> import that extracts highlight ranges from <mark> elements
+// before the code retokenizer can destroy them. The ranges are stored in
+// pendingCodeHighlights and applied after retokenization via a mutation listener.
+function $preConversionWithHighlights(domNode) {
+  const highlights = extractHighlightRanges(domNode)
+  if (highlights.length === 0) return null
+
+  return {
+    conversion: (domNode) => {
+      const language = domNode.getAttribute("data-language")
+      const codeNode = $createCodeNode(language)
+      pendingCodeHighlights.set(codeNode.getKey(), highlights)
+      return { node: codeNode }
+    },
+    priority: 2
+  }
+}
+
+// Walk the DOM tree inside a <pre> element and build a list of
+// { start, end, style } ranges for every <mark> element found.
+function extractHighlightRanges(preElement) {
+  const ranges = []
+  const codeElement = preElement.querySelector("code") || preElement
+
+  let offset = 0
+
+  function walk(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      offset += node.textContent.length
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const isMark = node.tagName === "MARK"
+      const start = offset
+
+      for (const child of node.childNodes) {
+        walk(child)
+      }
+
+      if (isMark) {
+        const style = extractHighlightStyleFromElement(node)
+        if (style) {
+          ranges.push({ start, end: offset, style })
+        }
+      }
+    }
+  }
+
+  for (const child of codeElement.childNodes) {
+    walk(child)
+  }
+
+  return ranges
+}
+
+function extractHighlightStyleFromElement(element) {
+  const styles = {}
+  if (element.style?.color) styles.color = element.style.color
+  if (element.style?.backgroundColor) styles["background-color"] = element.style.backgroundColor
+  const css = getCSSFromStyleObject(styles)
+  return css.length > 0 ? css : null
+}
+
+// Called from the CodeNode mutation listener after the retokenizer has
+// replaced TextNodes with fresh CodeHighlightNodes.
+function $applyPendingCodeHighlights(editor, mutations) {
+  const keysToProcess = []
+
+  for (const [ key, type ] of mutations) {
+    if (type !== "destroyed" && pendingCodeHighlights.has(key)) {
+      keysToProcess.push(key)
+    }
+  }
+
+  if (keysToProcess.length === 0) return
+
+  // Use a deferred update so the retokenizer has finished its
+  // skipTransforms update before we touch the nodes.
+  editor.update(() => {
+    for (const key of keysToProcess) {
+      const highlights = pendingCodeHighlights.get(key)
+      pendingCodeHighlights.delete(key)
+      if (!highlights) continue
+
+      const codeNode = $getNodeByKey(key)
+      if (!codeNode || !$isCodeNode(codeNode)) continue
+
+      $applyHighlightRangesToCodeNode(codeNode, highlights)
+    }
+  }, { skipTransforms: true, discrete: true })
+}
+
+// Apply saved highlight ranges to the CodeHighlightNode children
+// of a CodeNode, splitting nodes at range boundaries as needed.
+// We can't use TextNode.splitText() because it creates TextNode
+// instances (not CodeHighlightNodes) for the split parts. Instead,
+// we manually create CodeHighlightNode replacements.
+function $applyHighlightRangesToCodeNode(codeNode, highlights) {
+  if (highlights.length === 0) return
+
+  const children = codeNode.getChildren()
+  let charOffset = 0
+
+  // Build a map of character offsets to children
+  const childRanges = []
+  for (const child of children) {
+    if ($isCodeHighlightNode(child)) {
+      const text = child.getTextContent()
+      childRanges.push({ node: child, start: charOffset, end: charOffset + text.length })
+      charOffset += text.length
+    } else {
+      // LineBreakNode, TabNode - count as 1 character each (\n, \t)
+      charOffset += 1
+    }
+  }
+
+  for (const { start: hlStart, end: hlEnd, style } of highlights) {
+    for (const { node, start: nodeStart, end: nodeEnd } of childRanges) {
+      // Check if this child overlaps with the highlight range
+      const overlapStart = Math.max(hlStart, nodeStart)
+      const overlapEnd = Math.min(hlEnd, nodeEnd)
+
+      if (overlapStart >= overlapEnd) continue
+
+      // Calculate offsets relative to this node
+      const relStart = overlapStart - nodeStart
+      const relEnd = overlapEnd - nodeStart
+      const nodeLength = nodeEnd - nodeStart
+
+      const latestNode = $getNodeByKey(node.getKey())
+      if (!latestNode || !$isCodeHighlightNode(latestNode)) continue
+
+      if (relStart === 0 && relEnd === nodeLength) {
+        // Entire node is highlighted - apply style directly
+        latestNode.setStyle(style)
+        $setCodeHighlightFormat(latestNode, true)
+      } else {
+        // Need to split: replace the node with 2 or 3 CodeHighlightNodes
+        const text = latestNode.getTextContent()
+        const highlightType = latestNode.getHighlightType()
+        const replacements = []
+
+        if (relStart > 0) {
+          replacements.push($createCodeHighlightNode(text.slice(0, relStart), highlightType))
+        }
+
+        const styledNode = $createCodeHighlightNode(text.slice(relStart, relEnd), highlightType)
+        styledNode.setStyle(style)
+        $setCodeHighlightFormat(styledNode, true)
+        replacements.push(styledNode)
+
+        if (relEnd < nodeLength) {
+          replacements.push($createCodeHighlightNode(text.slice(relEnd), highlightType))
+        }
+
+        for (const replacement of replacements) {
+          latestNode.insertBefore(replacement)
+        }
+        latestNode.remove()
+      }
+    }
   }
 }
 
