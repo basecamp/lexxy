@@ -85,7 +85,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     this.tagName = tagName || ActionTextAttachmentNode.TAG_NAME
     this.sgid = sgid
     this.src = src
-    this.previewable = previewable
+    this.previewable = parsePreviewable(previewable)
     this.altText = altText || ""
     this.caption = caption || ""
     this.contentType = contentType || ""
@@ -271,6 +271,14 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     // handle its own keyboard events natively (Ctrl+A, Ctrl+C, Ctrl+X, etc.).
     event.stopPropagation()
   }
+}
+
+// The previewable attribute can arrive as a boolean (from JSON/blob responses)
+// or as a string (from DOM getAttribute). Normalize to a boolean so that
+// "false" (a truthy string) doesn't incorrectly mark an attachment as previewable.
+function parsePreviewable(value) {
+  if (typeof value === "string") return value === "true"
+  return Boolean(value)
 }
 
 export function $createActionTextAttachmentNode(...args) {
