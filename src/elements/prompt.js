@@ -15,6 +15,7 @@ export class LexicalPromptElement extends HTMLElement {
   constructor() {
     super()
     this.keyListeners = []
+    this.showPopoverId = 0
   }
 
   static observedAttributes = [ "connected" ]
@@ -160,13 +161,13 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   async #showPopover() {
-    this.showPopoverAborted = false
+    const showId = ++this.showPopoverId
     this.popoverElement ??= await this.#buildPopover()
-    if (this.showPopoverAborted) return
+    if (this.showPopoverId !== showId) return
 
     this.#resetPopoverPosition()
     await this.#filterOptions()
-    if (this.showPopoverAborted) return
+    if (this.showPopoverId !== showId) return
 
     this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", true)
     this.#selectFirstOption()
@@ -278,7 +279,7 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   async #hidePopover() {
-    this.showPopoverAborted = true
+    this.showPopoverId++
     this.#clearSelection()
     this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", false)
     this.#editorElement.removeEventListener("lexxy:change", this.#filterOptions)
