@@ -333,7 +333,7 @@ export class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.image}
     </button>
 
-    <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="upload" data-command="uploadAttachments" title="Upload files">
+    <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="files" data-command="uploadAttachments" title="Upload files">
       ${ToolbarIcons.attachment}
     </button>
 
