@@ -1,6 +1,7 @@
-import { $createParagraphNode, $isLineBreakNode, $isParagraphNode } from "lexical"
+import { $createParagraphNode, $isLineBreakNode, ParagraphNode } from "lexical"
 import { $createListNode, $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
-import { $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
+import { $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
+import { $getNearestNodeOfType } from "@lexical/utils"
 
 export class EarlyEscapeListItemNode extends ListItemNode {
   $config() {
@@ -16,17 +17,8 @@ export class EarlyEscapeListItemNode extends ListItemNode {
   }
 
   #shouldEscape(selection) {
-    if (!this.#isInsideBlockquote()) return false
+    if (!$getNearestNodeOfType(this, QuoteNode)) return false
     return this.#isItemEmpty() || this.#isEmptyParagraphInItem(selection)
-  }
-
-  #isInsideBlockquote() {
-    let node = this
-    while (node) {
-      if ($isQuoteNode(node)) return true
-      node = node.getParent()
-    }
-    return false
   }
 
   #isItemEmpty() {
@@ -34,15 +26,9 @@ export class EarlyEscapeListItemNode extends ListItemNode {
   }
 
   #isEmptyParagraphInItem(selection) {
-    const anchorNode = selection.anchor.getNode()
-    let node = anchorNode
-    while (node) {
-      if ($isParagraphNode(node)) {
-        return this.#isNodeEmpty(node) && $isListItemNode(node.getParent())
-      }
-      node = node.getParent()
-    }
-    return false
+    const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
+    if (!paragraph) return false
+    return this.#isNodeEmpty(paragraph) && $isListItemNode(paragraph.getParent())
   }
 
   #escapeFromList() {
@@ -53,8 +39,9 @@ export class EarlyEscapeListItemNode extends ListItemNode {
     const isInBlockquote = blockquote && $isQuoteNode(blockquote)
 
     if (isInBlockquote) {
-      const listItemsAfter = this.#getListItemSiblingsAfter()
-      const nonEmptyListItems = listItemsAfter.filter(item => !this.#isNodeEmpty(item))
+      const nonEmptyListItems = this.getNextSiblings().filter(
+        sibling => $isListItemNode(sibling) && !this.#isNodeEmpty(sibling)
+      )
 
       if (nonEmptyListItems.length > 0) {
         return this.#splitBlockquoteWithList(blockquote, parentList, nonEmptyListItems)
@@ -69,8 +56,7 @@ export class EarlyEscapeListItemNode extends ListItemNode {
   }
 
   #splitBlockquoteWithList(blockquote, parentList, listItemsAfter) {
-    const blockquoteSiblingsAfterList = this.#getSiblingsAfter(parentList)
-    const nonEmptyBlockquoteSiblings = blockquoteSiblingsAfterList.filter(
+    const nonEmptyBlockquoteSiblings = parentList.getNextSiblings().filter(
       sibling => !this.#isNodeEmpty(sibling)
     )
 
@@ -107,32 +93,6 @@ export class EarlyEscapeListItemNode extends ListItemNode {
     }
 
     return middleParagraph
-  }
-
-  #getListItemSiblingsAfter() {
-    const siblings = []
-    let sibling = this.getNextSibling()
-
-    while (sibling) {
-      if ($isListItemNode(sibling)) {
-        siblings.push(sibling)
-      }
-      sibling = sibling.getNextSibling()
-    }
-
-    return siblings
-  }
-
-  #getSiblingsAfter(node) {
-    const siblings = []
-    let sibling = node.getNextSibling()
-
-    while (sibling) {
-      siblings.push(sibling)
-      sibling = sibling.getNextSibling()
-    }
-
-    return siblings
   }
 
   #removeTrailingEmptyListItems(list) {

@@ -1,5 +1,6 @@
-import { $createParagraphNode, $getSelection, $isLineBreakNode, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, KEY_ARROW_DOWN_COMMAND, KEY_ENTER_COMMAND } from "lexical"
-import { $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
+import { $createParagraphNode, $getSelection, $isLineBreakNode, $isRangeSelection, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, KEY_ARROW_DOWN_COMMAND, KEY_ENTER_COMMAND, ParagraphNode } from "lexical"
+import { $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
+import { $getNearestNodeOfType } from "@lexical/utils"
 import { EarlyEscapeCodeNode } from "../../nodes/early_escape_code_node"
 
 export default class FormatEscaper {
@@ -28,7 +29,7 @@ export default class FormatEscaper {
 
     const anchorNode = selection.anchor.getNode()
 
-    if (!this.#isInsideBlockquote(anchorNode)) return false
+    if (!$getNearestNodeOfType(anchorNode, QuoteNode)) return false
 
     return this.#handleBlockquotes(event, anchorNode)
   }
@@ -44,7 +45,7 @@ export default class FormatEscaper {
   }
 
   #shouldEscapeFromEmptyParagraphInBlockquote(node) {
-    const paragraph = this.#getParagraphNode(node)
+    const paragraph = $getNearestNodeOfType(node, ParagraphNode)
     if (!paragraph) return false
 
     if (!this.#isNodeEmpty(paragraph)) return false
@@ -54,13 +55,13 @@ export default class FormatEscaper {
   }
 
   #escapeFromBlockquote(anchorNode) {
-    const paragraph = this.#getParagraphNode(anchorNode)
+    const paragraph = $getNearestNodeOfType(anchorNode, ParagraphNode)
     if (!paragraph) return
 
     const blockquote = paragraph.getParent()
     if (!blockquote || !$isQuoteNode(blockquote)) return
 
-    const siblingsAfter = this.#getSiblingsAfter(paragraph)
+    const siblingsAfter = paragraph.getNextSiblings()
     const nonEmptySiblings = siblingsAfter.filter(sibling => !this.#isNodeEmpty(sibling))
 
     if (nonEmptySiblings.length > 0) {
@@ -108,19 +109,6 @@ export default class FormatEscaper {
     return false
   }
 
-  #isInsideBlockquote(node) {
-    let currentNode = node
-
-    while (currentNode) {
-      if ($isQuoteNode(currentNode)) {
-        return true
-      }
-      currentNode = currentNode.getParent()
-    }
-
-    return false
-  }
-
   #isNodeEmpty(node) {
     if (node.getTextContent().trim() !== "") return false
 
@@ -131,31 +119,6 @@ export default class FormatEscaper {
       if ($isLineBreakNode(child)) return true
       return this.#isNodeEmpty(child)
     })
-  }
-
-  #getParagraphNode(node) {
-    let currentNode = node
-
-    while (currentNode) {
-      if ($isParagraphNode(currentNode)) {
-        return currentNode
-      }
-      currentNode = currentNode.getParent()
-    }
-
-    return null
-  }
-
-  #getSiblingsAfter(node) {
-    const siblings = []
-    let sibling = node.getNextSibling()
-
-    while (sibling) {
-      siblings.push(sibling)
-      sibling = sibling.getNextSibling()
-    }
-
-    return siblings
   }
 
   #removeTrailingEmptyNodes(blockquote) {
