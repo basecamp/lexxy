@@ -1,4 +1,4 @@
-import { $createParagraphNode, $getSelection, $isElementNode, $isRootOrShadowRoot, ParagraphNode } from "lexical"
+import { $createParagraphNode, $getSelection, $isElementNode, $isRangeSelection, $isRootOrShadowRoot, ParagraphNode } from "lexical"
 
 export class ProvisionalParagraphNode extends ParagraphNode {
   $config() {
@@ -45,7 +45,27 @@ export class ProvisionalParagraphNode extends ParagraphNode {
   // https://github.com/facebook/lexical/blob/f1e4f66014377b1f2595aec2b0ee17f5b7ef4dfc/packages/lexical/src/LexicalNode.ts#L646
   isSelected(selection = null) {
     const targetSelection = selection || $getSelection()
-    return targetSelection?.getNodes().some(node => node.is(this) || this.isParentOf(node))
+    if (!targetSelection) return false
+
+    if (targetSelection.getNodes().some(node => node.is(this) || this.isParentOf(node))) return true
+
+    // A collapsed range selection on the parent element at an offset adjacent to
+    // this node means the caret is visually at this paragraph's position. Treat it
+    // as selected so the paragraph is visible and the caret renders correctly.
+    //
+    // Both the offset matching our index (cursor just before us) and index + 1
+    // (cursor just after us) count, because the provisional paragraph is an
+    // invisible spacer: the browser resolves both offsets to the same visual spot.
+    if ($isRangeSelection(targetSelection) && targetSelection.isCollapsed()) {
+      const { anchor } = targetSelection
+      const parent = this.getParent()
+      if (parent && anchor.getNode().is(parent) && anchor.type === "element") {
+        const index = this.getIndexWithinParent()
+        return anchor.offset === index || anchor.offset === index + 1
+      }
+    }
+
+    return false
   }
 
   removeUnlessRequired(self = this.getLatest()) {

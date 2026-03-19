@@ -162,6 +162,22 @@ test.describe("Attachments", () => {
     await expect(figure).toBeVisible()
   })
 
+  test("caret position matches typing position after uploading image into empty editor", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+    await editor.flush()
+
+    // After uploading into an empty editor, the selection should be in a
+    // paragraph before the attachment and that paragraph must be visible
+    // (not collapsed as hidden) so the caret renders at the correct position.
+    const paragraphBeforeAttachment = editor.content.locator("figure.attachment").locator("xpath=preceding-sibling::p[1]")
+    await expect(paragraphBeforeAttachment).toHaveClass(/provisional-paragraph/)
+    await expect(paragraphBeforeAttachment).not.toHaveClass(/hidden/)
+  })
+
   test("Ctrl+C in caption copies text without losing focus", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
