@@ -436,7 +436,8 @@
   padding: 2px;
   position: relative;
 
-  &[data-attachments="false"] button[name="upload"]{
+  &[data-attachments="false"] button[name="upload"],
+  &[data-attachments="false"] button[name="files"] {
     display: none;
   }
 

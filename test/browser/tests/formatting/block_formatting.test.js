@@ -37,11 +37,62 @@ test.describe("Block formatting", () => {
     await assertEditorHtml(editor, "<ul><li>Hello everyone</li></ul>")
   })
 
+  test("toggle bullet list off", async ({ page, editor }) => {
+    await editor.setValue(HELLO_EVERYONE)
+    await editor.select("everyone")
+    await clickListsButton(page, "insertUnorderedList")
+    await assertEditorHtml(editor, "<ul><li>Hello everyone</li></ul>")
+
+    await editor.select("everyone")
+    await clickListsButton(page, "insertUnorderedList")
+    await assertEditorHtml(editor, "<p>Hello everyone</p>")
+  })
+
+  test("toggle bullet list off with multiple items", async ({ page, editor }) => {
+    await editor.setValue("<p>Alpha</p><p>Bravo</p><p>Charlie</p>")
+    await editor.selectAll()
+    await clickListsButton(page, "insertUnorderedList")
+    await assertEditorHtml(editor, "<ul><li>Alpha</li><li>Bravo</li><li>Charlie</li></ul>")
+
+    await editor.selectAll()
+    await clickListsButton(page, "insertUnorderedList")
+    await assertEditorHtml(editor, "<p>Alpha</p><p>Bravo</p><p>Charlie</p>")
+  })
+
+  test("toggle nested bullet list off", async ({ page, editor }) => {
+    await editor.setValue("<ul><li>Parent<ul><li>Child</li></ul></li></ul>")
+    await editor.selectAll()
+    await clickListsButton(page, "insertUnorderedList")
+    await assertEditorHtml(editor, "<p>Parent</p><p>Child</p>")
+  })
+
   test("numbered list", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
     await clickListsButton(page, "insertOrderedList")
     await assertEditorHtml(editor, "<ol><li>Hello everyone</li></ol>")
+  })
+
+  test("toggle numbered list off", async ({ page, editor }) => {
+    await editor.setValue(HELLO_EVERYONE)
+    await editor.select("everyone")
+    await clickListsButton(page, "insertOrderedList")
+    await assertEditorHtml(editor, "<ol><li>Hello everyone</li></ol>")
+
+    await editor.select("everyone")
+    await clickListsButton(page, "insertOrderedList")
+    await assertEditorHtml(editor, "<p>Hello everyone</p>")
+  })
+
+  test("toggle numbered list off with multiple items", async ({ page, editor }) => {
+    await editor.setValue("<p>Alpha</p><p>Bravo</p><p>Charlie</p>")
+    await editor.selectAll()
+    await clickListsButton(page, "insertOrderedList")
+    await assertEditorHtml(editor, "<ol><li>Alpha</li><li>Bravo</li><li>Charlie</li></ol>")
+
+    await editor.selectAll()
+    await clickListsButton(page, "insertOrderedList")
+    await assertEditorHtml(editor, "<p>Alpha</p><p>Bravo</p><p>Charlie</p>")
   })
 
   test("insert quote without selection", async ({ page, editor }) => {

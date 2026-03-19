@@ -208,7 +208,7 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("italic", isItalic)
 
     this.#setButtonPressed("format", isInHeading || isStrikethrough)
-    this.#setButtonPressed("paragraph", !isInHeading && !isInQuote)
+    this.#setButtonPressed("paragraph", !isInHeading)
     this.#setButtonPressed("heading-large", headingTag === "h2")
     this.#setButtonPressed("heading-medium", headingTag === "h3")
     this.#setButtonPressed("heading-small", headingTag === "h4")

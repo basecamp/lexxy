@@ -70,7 +70,7 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    if (tag == "code") {
+    if (tag === "code") {
       $setBlocksType(selection, () => $createCodeNode("plain"))
     } else if (tag) {
       $setBlocksType(selection, () => $createHeadingNode(tag))
@@ -106,10 +106,15 @@ export default class Contents {
 
     const topLevelElements = this.#topLevelElementsInSelection(selection)
 
-    if (topLevelElements[0] && $isQuoteNode(topLevelElements[0])) {
-      topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
+    const allQuoted = topLevelElements.length > 0 && topLevelElements.every($isQuoteNode)
+
+    if (allQuoted) {
+      topLevelElements.forEach(node => this.#unwrap(node))
     } else {
-      const elements = this.#withoutTrailingEmptyParagraphs(topLevelElements)
+      topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
+
+      const freshElements = this.#topLevelElementsInSelection(selection)
+      const elements = this.#withoutTrailingEmptyParagraphs(freshElements)
       if (elements.length === 0) return
 
       const blockquote = $createQuoteNode()
