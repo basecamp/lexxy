@@ -18,8 +18,9 @@ const hasPastedStylesState = createState("hasPastedStyles", {
 
 // Stores pending highlight ranges extracted during HTML import, keyed by CodeNode key.
 // After the code retokenizer creates fresh CodeHighlightNodes, a mutation listener
-// reads this map and re-applies the highlight styles.
-const pendingCodeHighlights = new Map()
+// reads this map and re-applies the highlight styles. Scoped per editor instance
+// so entries don't leak across editors or outlive a torn-down editor.
+const pendingCodeHighlights = new WeakMap()
 
 export class HighlightExtension extends LexxyExtension {
   get enabled() {
@@ -91,29 +92,34 @@ function $markConversion() {
 // merges all extensions' converters by tag, and a later extension (e.g.
 // TrixContentExtension) would overwrite ours.
 function $registerPreConversion(editor) {
+  if (!editor._htmlConversions) return
+
   let preEntries = editor._htmlConversions.get("pre")
   if (!preEntries) {
     preEntries = []
     editor._htmlConversions.set("pre", preEntries)
   }
-  preEntries.push($preConversionWithHighlights)
+  preEntries.push($preConversionWithHighlightsFactory(editor))
 }
 
-// Custom <pre> import that extracts highlight ranges from <mark> elements
-// before the code retokenizer can destroy them. The ranges are stored in
-// pendingCodeHighlights and applied after retokenization via a mutation listener.
-function $preConversionWithHighlights(domNode) {
-  const highlights = extractHighlightRanges(domNode)
-  if (highlights.length === 0) return null
+// Returns a <pre> converter factory scoped to a specific editor instance.
+// The factory extracts highlight ranges from <mark> elements before the code
+// retokenizer can destroy them. The ranges are stored in pendingCodeHighlights
+// and applied after retokenization via a mutation listener.
+function $preConversionWithHighlightsFactory(editor) {
+  return function $preConversionWithHighlights(domNode) {
+    const highlights = extractHighlightRanges(domNode)
+    if (highlights.length === 0) return null
 
-  return {
-    conversion: (domNode) => {
-      const language = domNode.getAttribute("data-language")
-      const codeNode = $createCodeNode(language)
-      pendingCodeHighlights.set(codeNode.getKey(), highlights)
-      return { node: codeNode }
-    },
-    priority: 2
+    return {
+      conversion: (domNode) => {
+        const language = domNode.getAttribute("data-language")
+        const codeNode = $createCodeNode(language)
+        $getPendingHighlights(editor).set(codeNode.getKey(), highlights)
+        return { node: codeNode }
+      },
+      priority: 2
+    }
   }
 }
 
@@ -129,6 +135,12 @@ function extractHighlightRanges(preElement) {
     if (node.nodeType === Node.TEXT_NODE) {
       offset += node.textContent.length
     } else if (node.nodeType === Node.ELEMENT_NODE) {
+      // <br> maps to a LineBreakNode (1 character) in Lexical
+      if (node.tagName === "BR") {
+        offset += 1
+        return
+      }
+
       const isMark = node.tagName === "MARK"
       const start = offset
 
@@ -152,6 +164,15 @@ function extractHighlightRanges(preElement) {
   return ranges
 }
 
+function $getPendingHighlights(editor) {
+  let map = pendingCodeHighlights.get(editor)
+  if (!map) {
+    map = new Map()
+    pendingCodeHighlights.set(editor, map)
+  }
+  return map
+}
+
 function extractHighlightStyleFromElement(element) {
   const styles = {}
   if (element.style?.color) styles.color = element.style.color
@@ -163,10 +184,11 @@ function extractHighlightStyleFromElement(element) {
 // Called from the CodeNode mutation listener after the retokenizer has
 // replaced TextNodes with fresh CodeHighlightNodes.
 function $applyPendingCodeHighlights(editor, mutations) {
+  const pending = $getPendingHighlights(editor)
   const keysToProcess = []
 
   for (const [ key, type ] of mutations) {
-    if (type !== "destroyed" && pendingCodeHighlights.has(key)) {
+    if (type !== "destroyed" && pending.has(key)) {
       keysToProcess.push(key)
     }
   }
@@ -177,8 +199,8 @@ function $applyPendingCodeHighlights(editor, mutations) {
   // skipTransforms update before we touch the nodes.
   editor.update(() => {
     for (const key of keysToProcess) {
-      const highlights = pendingCodeHighlights.get(key)
-      pendingCodeHighlights.delete(key)
+      const highlights = pending.get(key)
+      pending.delete(key)
       if (!highlights) continue
 
       const codeNode = $getNodeByKey(key)
@@ -197,23 +219,11 @@ function $applyPendingCodeHighlights(editor, mutations) {
 function $applyHighlightRangesToCodeNode(codeNode, highlights) {
   if (highlights.length === 0) return
 
-  const children = codeNode.getChildren()
-  let charOffset = 0
-
-  // Build a map of character offsets to children
-  const childRanges = []
-  for (const child of children) {
-    if ($isCodeHighlightNode(child)) {
-      const text = child.getTextContent()
-      childRanges.push({ node: child, start: charOffset, end: charOffset + text.length })
-      charOffset += text.length
-    } else {
-      // LineBreakNode, TabNode - count as 1 character each (\n, \t)
-      charOffset += 1
-    }
-  }
-
   for (const { start: hlStart, end: hlEnd, style } of highlights) {
+    // Rebuild the child-to-offset mapping for each highlight range because
+    // earlier ranges may have split nodes, invalidating previous mappings.
+    const childRanges = $buildChildRanges(codeNode)
+
     for (const { node, start: nodeStart, end: nodeEnd } of childRanges) {
       // Check if this child overlaps with the highlight range
       const overlapStart = Math.max(hlStart, nodeStart)
@@ -226,17 +236,14 @@ function $applyHighlightRangesToCodeNode(codeNode, highlights) {
       const relEnd = overlapEnd - nodeStart
       const nodeLength = nodeEnd - nodeStart
 
-      const latestNode = $getNodeByKey(node.getKey())
-      if (!latestNode || !$isCodeHighlightNode(latestNode)) continue
-
       if (relStart === 0 && relEnd === nodeLength) {
         // Entire node is highlighted - apply style directly
-        latestNode.setStyle(style)
-        $setCodeHighlightFormat(latestNode, true)
+        node.setStyle(style)
+        $setCodeHighlightFormat(node, true)
       } else {
         // Need to split: replace the node with 2 or 3 CodeHighlightNodes
-        const text = latestNode.getTextContent()
-        const highlightType = latestNode.getHighlightType()
+        const text = node.getTextContent()
+        const highlightType = node.getHighlightType()
         const replacements = []
 
         if (relStart > 0) {
@@ -253,12 +260,30 @@ function $applyHighlightRangesToCodeNode(codeNode, highlights) {
         }
 
         for (const replacement of replacements) {
-          latestNode.insertBefore(replacement)
+          node.insertBefore(replacement)
         }
-        latestNode.remove()
+        node.remove()
       }
     }
   }
+}
+
+function $buildChildRanges(codeNode) {
+  const childRanges = []
+  let charOffset = 0
+
+  for (const child of codeNode.getChildren()) {
+    if ($isCodeHighlightNode(child)) {
+      const text = child.getTextContent()
+      childRanges.push({ node: child, start: charOffset, end: charOffset + text.length })
+      charOffset += text.length
+    } else {
+      // LineBreakNode, TabNode - count as 1 character each (\n, \t)
+      charOffset += 1
+    }
+  }
+
+  return childRanges
 }
 
 function buildCanonicalizers(config) {
