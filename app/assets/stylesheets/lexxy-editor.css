@@ -511,12 +511,12 @@
       padding-inline: 0.75ch;
 
       &:after {
-        block-size: 0.4ch;
+        block-size: 0.3ch;
         border-block-end: 2px solid currentcolor;
         border-inline-end: 2px solid currentcolor;
         content: "";
         display: inline-block;
-        inline-size: 0.4ch;
+        inline-size: 0.3ch;
         transform: rotate(45deg);
       }
     }
@@ -563,7 +563,8 @@
   .lexxy-editor__toolbar-dropdown-list {
     border-start-start-radius: 0;
     flex-direction: column;
-    gap: 0;
+    gap: 0.1ch;
+    padding: 0.1ch;
 
     button {
       align-items: center;

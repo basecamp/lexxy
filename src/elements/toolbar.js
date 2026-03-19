@@ -202,13 +202,16 @@ export class LexicalToolbarElement extends HTMLElement {
     if (!anchorNode.getParent()) { return }
 
     const { isBold, isItalic, isStrikethrough, isHighlight, isInLink, isInQuote, isInHeading,
-      isInCode, isInList, listType, isInTable } = this.selection.getFormat()
+      headingTag, isInCode, isInList, listType, isInTable } = this.selection.getFormat()
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
 
     this.#setButtonPressed("format", isInHeading || isStrikethrough || isInQuote)
-    this.#setButtonPressed("heading", isInHeading)
+    this.#setButtonPressed("heading-large", headingTag === "h2")
+    this.#setButtonPressed("heading-medium", headingTag === "h3")
+    this.#setButtonPressed("heading-small", headingTag === "h4")
+    this.#setButtonPressed("paragraph", !isInHeading && !isInQuote)
     this.#setButtonPressed("strikethrough", isStrikethrough)
     this.#setButtonPressed("quote", isInQuote)
 
@@ -330,7 +333,7 @@ export class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.image}
     </button>
 
-    <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="upload" data-command="uploadAttachments" data-prevent-overflow="true" title="Upload files">
+    <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="upload" data-command="uploadAttachments" title="Upload files">
       ${ToolbarIcons.attachment}
     </button>
 
@@ -347,8 +350,17 @@ export class LexicalToolbarElement extends HTMLElement {
           ${ToolbarIcons.heading}
         </summary>
         <div class="lexxy-editor__toolbar-dropdown-list">
-          <button type="button" name="heading" data-command="rotateHeadingFormat" title="Heading">
-            ${ToolbarIcons.heading} <span>Heading</span>
+          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph">
+            ${ToolbarIcons.paragraph} <span>Normal</span>
+          </button>
+          <button type="button" name="heading-large" data-command="setFormatHeadingLarge" title="Large heading">
+            ${ToolbarIcons.h2} <span>Large Heading</span>
+          </button>
+          <button type="button" name="heading-medium" data-command="setFormatHeadingMedium" title="Medium heading">
+            ${ToolbarIcons.h3} <span>Medium Heading</span>
+          </button>
+          <button type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading">
+            ${ToolbarIcons.h4} <span>Small Heading</span>
           </button>
           <button type="button" name="quote" data-command="insertQuoteBlock" title="Quote">
             ${ToolbarIcons.quote} <span>Quote</span>

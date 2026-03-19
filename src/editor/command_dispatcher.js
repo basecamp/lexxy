@@ -17,7 +17,6 @@ import {
   UNDO_COMMAND
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
-import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
@@ -35,7 +34,10 @@ const COMMANDS = [
   "unlink",
   "toggleHighlight",
   "removeHighlight",
-  "rotateHeadingFormat",
+  "setFormatHeadingLarge",
+  "setFormatHeadingMedium",
+  "setFormatHeadingSmall",
+  "setFormatParagraph",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -139,19 +141,15 @@ export class CommandDispatcher {
   }
 
   dispatchInsertQuoteBlock() {
-    if (!this.contents.wrapSelectedSoftBreakLines(() => $createQuoteNode())) {
-      this.contents.toggleNodeWrappingAllSelectedNodes((node) => $isQuoteNode(node), () => $createQuoteNode())
-    }
+    this.contents.setBlockFormat("blockquote")
   }
 
   dispatchInsertCodeBlock() {
-    this.editor.update(() => {
-      if (this.selection.hasSelectedWordsInSingleLine) {
-        this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
-      } else {
-        this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new CodeNode("plain"))
-      }
-    })
+    if (this.selection.hasSelectedWordsInSingleLine) {
+      this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
+    } else {
+      this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new CodeNode("plain"))
+    }
   }
 
   dispatchInsertHorizontalDivider() {
@@ -159,35 +157,20 @@ export class CommandDispatcher {
     this.editor.focus()
   }
 
-  dispatchRotateHeadingFormat() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return
+  dispatchSetFormatHeadingLarge() {
+    this.contents.setBlockFormat("h2")
+  }
 
-    if ($isRootOrShadowRoot(selection.anchor.getNode())) {
-      selection.insertNodes([ $createHeadingNode("h2") ])
-      return
-    }
+  dispatchSetFormatHeadingMedium() {
+    this.contents.setBlockFormat("h3")
+  }
 
-    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
-    let nextTag = "h2"
-    if ($isHeadingNode(topLevelElement)) {
-      const currentTag = topLevelElement.getTag()
-      if (currentTag === "h2") {
-        nextTag = "h3"
-      } else if (currentTag === "h3") {
-        nextTag = "h4"
-      } else if (currentTag === "h4") {
-        nextTag = null
-      } else {
-        nextTag = "h2"
-      }
-    }
+  dispatchSetFormatHeadingSmall() {
+    this.contents.setBlockFormat("h4")
+  }
 
-    if (nextTag) {
-      this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
-    } else {
-      this.contents.removeFormattingFromSelectedLines()
-    }
+  dispatchSetFormatParagraph() {
+    this.contents.setBlockFormat(null)
   }
 
   dispatchUploadAttachments() {
