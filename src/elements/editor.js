@@ -182,7 +182,7 @@ export class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
+        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null), this.config.get("allowedElements"))
       })
     }
 

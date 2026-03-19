@@ -9,6 +9,19 @@ export function deepMerge(target, source) {
   return result
 }
 
+export function partition(hash, predicate) {
+  const pass = {}
+  const fail = {}
+  for (const [ key, value ] of Object.entries(hash)) {
+    if (predicate(key, value)) {
+      pass[key] = value
+    } else {
+      fail[key] = value
+    }
+  }
+  return [ pass, fail ]
+}
+
 function arePlainHashes(...values) {
   return values.every(value => value && value.constructor == Object)
 }

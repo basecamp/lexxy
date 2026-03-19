@@ -1,5 +1,6 @@
 import DOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
+import { partition } from "../helpers/hash_helper"
 import Lexxy from "./lexxy"
 
 const ALLOWED_HTML_TAGS = [ "a", "b", "blockquote", "br", "code", "div", "em",
@@ -38,10 +39,15 @@ DOMPurify.addHook("uponSanitizeElement", (node, data) => {
   }
 })
 
-export function buildConfig() {
+export function buildConfig(allowedElements) {
+  const [ add, forbid ] = partition(allowedElements, (_, value) => value)
+
   return {
     ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(Lexxy.global.get("attachmentTagName")),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
+    ADD_TAGS: Object.keys(add),
+    FORBID_TAGS: Object.keys(forbid),
+    ADD_ATTR: (attr, tag) => add[tag]?.includes?.(attr),
     ADD_URI_SAFE_ATTR: [ "caption", "filename" ],
     SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
   }

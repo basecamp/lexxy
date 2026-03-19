@@ -48,6 +48,21 @@ Editors support the following options, configurable using presets and element at
 - `markdown`: Pass `false` to disable Markdown support.
 - `multiLine`: Pass `false` to force single line editing.
 - `richText`: Pass `false` to disable rich text editing.
+- `allowedElements`: Add or remove HTML elements from sanitization. Keys are tag names; values are `true` (allow), `false` (forbid), or an array of extra attribute names to allow on that tag.
+
+  ```js
+  Lexxy.configure({
+    default: {
+      allowedElements: {
+        time: [ "datetime" ], // allow <time datetime="...">
+        abbr: true,           // allow <abbr>
+        q: false              // remove <q>
+      }
+    }
+  })
+  ```
+
+  Globally allowed attributes (like `class` and `style`) remain available on all elements.
 
 The toolbar is considered part of the editor for `lexxy:focus` and `lexxy:blur` events.
 

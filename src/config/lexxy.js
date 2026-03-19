@@ -10,6 +10,7 @@ const global = new Configuration({
 
 const presets = new Configuration({
   default: {
+    allowedElements: {},
     attachments: true,
     markdown: true,
     multiLine: true,
