@@ -116,6 +116,18 @@ test.describe("Inline formatting", () => {
     await assertEditorHtml(editor, "<p>world</p>")
   })
 
+  test("applying code to text with mixed formatting produces a single code element", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      "<p>Hello <strong>bold</strong> and <em>italic</em> world</p>",
+    )
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+    await assertEditorHtml(editor, "<p><code>Hello bold and italic world</code></p>")
+  })
+
   test("toggle code for block", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.click()
