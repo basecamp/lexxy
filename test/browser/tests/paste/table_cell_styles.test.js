@@ -81,17 +81,20 @@ test.describe("Paste — Table cell color styles", () => {
 
       const bgColor = await cell.evaluate((el) => el.style.backgroundColor)
       expect(bgColor).toBe("")
+
+      const color = await cell.evaluate((el) => el.style.color)
+      expect(color).toBe("")
     })
   })
 
-  test("strips background from pasted table header cells", async ({
+  test("strips background shorthand from pasted table header cells", async ({
     editor,
   }) => {
     const tableHtml = `
       <table>
         <tr>
-          <th style="background-color: rgb(40, 40, 60);">Header</th>
-          <td style="background-color: rgb(26, 26, 46);">Data</td>
+          <th style="background: rgb(40, 40, 60);">Header</th>
+          <td style="background: rgb(26, 26, 46);">Data</td>
         </tr>
       </table>
     `
@@ -103,10 +106,10 @@ test.describe("Paste — Table cell color styles", () => {
       await expect(cells).toHaveCount(2)
 
       for (const cell of await cells.all()) {
-        const bgColor = await cell.evaluate(
-          (el) => el.style.backgroundColor,
+        const bg = await cell.evaluate(
+          (el) => el.style.background,
         )
-        expect(bgColor).toBe("")
+        expect(bg).toBe("")
       }
     })
   })
