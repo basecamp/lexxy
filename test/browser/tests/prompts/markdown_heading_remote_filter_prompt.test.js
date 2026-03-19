@@ -16,12 +16,8 @@ test.describe("# prompt freeze with remote-filtering source (Fizzy config)", () 
   test.beforeEach(async ({ page }) => {
     let requestCount = 0
 
-    // RemoteFilterSource uses debounceAsync(200ms) + network fetch
-    // Simulate realistic server response time
     await page.route("**/prompt-items**", async (route) => {
       requestCount++
-      // 50ms simulates a fast server response; the 200ms debounce in RemoteFilterSource
-      // is the primary source of async delay
       await new Promise((resolve) => setTimeout(resolve, 50))
       await route.fulfill({
         contentType: "text/html",
@@ -34,88 +30,72 @@ test.describe("# prompt freeze with remote-filtering source (Fizzy config)", () 
     await page.waitForSelector("lexxy-editor[connected]")
   })
 
-  test("space pressed during remote-filter popover load does not freeze editor", async ({ page, editor }) => {
-    // Type # to trigger the prompt
+  test("space during first popover load does not freeze editor", async ({ page, editor }) => {
     await editor.send("#")
     await editor.flush()
 
-    // Press SPACE before the remote-filtering source completes (200ms debounce + network)
-    // This triggers the markdown heading shortcut: "# " -> h1
+    // Press SPACE before remote-filtering completes (200ms debounce + network)
     await editor.content.press("Space")
 
-    // Wait for the remote fetch to complete
     await expect.poll(
       () => page.evaluate(() => window.getRequestCount()),
       { message: "remote filter fetch should complete", timeout: 5000 }
     ).toBeGreaterThan(0)
-
     await editor.flush()
 
-    // Popover should NOT be visible
     await expect(page.locator(".lexxy-prompt-menu--visible")).not.toBeVisible()
-
-    // Editor should accept typing (not frozen)
     await editor.send("hello")
     await editor.flush()
     await expect(page.locator(".lexxy-editor__content")).toContainText("hello")
   })
 
-  test("typing after # heading conversion produces no JS errors", async ({ page, editor }) => {
-    // Collect JS errors
+  test("space after visible popover does not freeze editor", async ({ page, editor }) => {
+    await editor.send("#")
+    await editor.flush()
+
+    // Wait for the menu to fully appear, then press SPACE
+    await expect(page.locator(".lexxy-prompt-menu--visible")).toBeVisible({ timeout: 5000 })
+    await editor.content.press("Space")
+    await editor.flush()
+    await page.waitForTimeout(500)
+
+    await expect(page.locator(".lexxy-prompt-menu--visible")).not.toBeVisible()
+    await editor.send("hello")
+    await editor.flush()
+    await expect(page.locator(".lexxy-editor__content")).toContainText("hello")
+  })
+
+  test("space during cached popover reload does not freeze editor", async ({ page, editor }) => {
     const jsErrors = []
     page.on("pageerror", (error) => jsErrors.push(error.message))
 
-    // Type # to trigger the prompt (starts 200ms debounce in RemoteFilterSource)
+    // First trigger: build and cache the popover
     await editor.send("#")
     await editor.flush()
-
-    // Wait 100ms to land INSIDE the 200ms debounce window, then press space
-    await page.waitForTimeout(100)
-    await editor.content.press("Space")
-
-    // Wait for everything to settle
-    await expect.poll(
-      () => page.evaluate(() => window.getRequestCount()),
-      { message: "remote filter fetch should complete", timeout: 5000 }
-    ).toBeGreaterThan(0)
-    await editor.flush()
-
-    // Type some text
-    await editor.send("hello world")
-    await editor.flush()
-
-    // Verify no selectionTransform errors
-    const selectionErrors = jsErrors.filter((e) => e.includes("selectionTransform"))
-    expect(selectionErrors).toHaveLength(0)
-
-    // Verify no Lexical errors
-    const lexicalErrors = jsErrors.filter((e) => e.includes("Lexical error") || e.includes("Minified Lexical"))
-    expect(lexicalErrors).toHaveLength(0)
-
-    await expect(page.locator(".lexxy-editor__content")).toContainText("hello world")
-  })
-
-  test("space pressed AFTER visible popover does not freeze editor", async ({ page, editor }) => {
-    // Type # to trigger the prompt
-    await editor.send("#")
-    await editor.flush()
-
-    // Wait for the popover to actually appear (remote fetch must complete)
     await expect(page.locator(".lexxy-prompt-menu--visible")).toBeVisible({ timeout: 5000 })
 
-    // Now press SPACE while the menu is visible
-    // Since supports-space-in-searches is set, SPACE is not intercepted by the prompt
-    // and triggers the markdown heading shortcut: "# " -> h1
-    await editor.content.press("Space")
+    // Dismiss and clear
+    await editor.content.press("Escape")
+    await editor.flush()
+    await editor.content.press("Backspace")
     await editor.flush()
 
-    // Wait for everything to settle
-    await page.waitForTimeout(500)
+    // Second trigger: popover is cached (#buildPopover skipped),
+    // goes straight to #showFilteredOptions → 200ms debounce
+    await editor.send("#")
+    await editor.flush()
 
-    // Popover should NOT be visible (heading shortcut consumed the trigger)
+    // SPACE during debounce — no listeners registered yet to detect it
+    await editor.content.press("Space")
+    await page.waitForTimeout(1000)
+
+    const crashErrors = jsErrors.filter((e) =>
+      e.includes("selectionTransform") || e.includes("Lexical error") || e.includes("Minified Lexical")
+    )
+    expect(crashErrors).toHaveLength(0)
+
+    await editor.flush()
     await expect(page.locator(".lexxy-prompt-menu--visible")).not.toBeVisible()
-
-    // Editor should accept typing (not frozen)
     await editor.send("hello")
     await editor.flush()
     await expect(page.locator(".lexxy-editor__content")).toContainText("hello")

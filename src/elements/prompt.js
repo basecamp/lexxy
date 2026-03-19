@@ -325,6 +325,7 @@ export class LexicalPromptElement extends HTMLElement {
     const filter = this.#editorContents.textBackUntil(this.trigger)
     const filteredListItems = await this.source.buildListItems(filter)
     if (this.showPopoverId !== showId) return
+    if (!this.#editorContents.containsTextBackUntil(this.trigger)) return
 
     this.popoverElement.innerHTML = ""
 
