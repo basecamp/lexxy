@@ -173,7 +173,7 @@ test.describe("Attachments", () => {
     // After uploading into an empty editor, the selection should be in a
     // paragraph before the attachment and that paragraph must be visible
     // (not collapsed as hidden) so the caret renders at the correct position.
-    const paragraphBeforeAttachment = editor.content.locator("figure.attachment").locator("xpath=preceding-sibling::p[1]")
+    const paragraphBeforeAttachment = figure.locator("xpath=preceding-sibling::p[1]")
     await expect(paragraphBeforeAttachment).toHaveClass(/provisional-paragraph/)
     await expect(paragraphBeforeAttachment).not.toHaveClass(/hidden/)
   })
