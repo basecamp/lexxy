@@ -1,6 +1,5 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
-import { assertEditorHtml } from "../../helpers/assertions.js"
 
 test.describe("Non-previewable attachment", () => {
   test.beforeEach(async ({ page }) => {
@@ -38,7 +37,7 @@ test.describe("Non-previewable attachment", () => {
     await expect(figure.locator(".attachment__name")).toHaveText("protected.pdf")
   })
 
-  test("serializes correctly in editor value", async ({ page, editor }) => {
+  test("serializes correctly in editor value", async ({ editor }) => {
     const attachmentHtml = [
       '<action-text-attachment',
       '  sgid="test-sgid-123"',
