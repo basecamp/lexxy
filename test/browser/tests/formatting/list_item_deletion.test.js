@@ -1,5 +1,4 @@
 import { test } from "../../test_helper.js"
-import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
 
 test.describe("List item deletion cursor position", () => {
