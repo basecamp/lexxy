@@ -548,6 +548,8 @@ export default class Selection {
   }
 
   #selectDecoratorNodeBeforeDeletion(backwards) {
+    if (backwards && this.#removeEmptyListItem()) return true
+
     const node = backwards ? this.nodeBeforeCursor : this.nodeAfterCursor
     if (!$isDecoratorNode(node)) return false
 
@@ -557,6 +559,39 @@ export default class Selection {
 
     const selection = this.#selectInLexical(node)
     return Boolean(selection)
+  }
+
+  // When backspace is pressed on an empty list item that has siblings,
+  // remove the empty item and place the cursor appropriately. Without this,
+  // Lexical's default collapseAtStart converts the empty item into a paragraph
+  // above the list, causing the cursor to jump away from the list content.
+  //
+  // This only applies when there IS a next sibling — if the empty item is the
+  // last one in the list, Lexical's default (convert to paragraph) provides
+  // the standard "exit list" behavior.
+  #removeEmptyListItem() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+
+    const anchorNode = selection.anchor.getNode()
+    const listItem = $getNearestNodeOfType(anchorNode, ListItemNode)
+    if (!listItem) return false
+
+    const isEmpty = listItem.getTextContent().trim() === ""
+    if (!isEmpty) return false
+
+    const nextSibling = listItem.getNextSibling()
+    if (!nextSibling) return false
+
+    const previousSibling = listItem.getPreviousSibling()
+    if (previousSibling) {
+      previousSibling.selectEnd()
+    } else {
+      nextSibling.selectStart()
+    }
+
+    listItem.remove()
+    return true
   }
 
   // When the cursor is inside a list item, collapse the list item into a
