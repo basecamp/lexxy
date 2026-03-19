@@ -137,7 +137,9 @@ test.describe("Tables with attachments", () => {
 
     const [fileChooser] = await Promise.all([
       page.waitForEvent("filechooser"),
-      editor.clickToolbarButton("uploadAttachments"),
+      page
+        .locator('lexxy-toolbar [name="upload"]')
+        .click(),
     ])
     await fileChooser.setFiles([
       "test/fixtures/files/example.png",
