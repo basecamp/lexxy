@@ -36,23 +36,15 @@ export default class FormatEscaper {
   }
 
   #handleBlockquotes(event, anchorNode) {
-    if (this.#shouldEscapeFromEmptyParagraphInBlockquote(anchorNode)) {
-      event.preventDefault()
-      this.#escapeFromBlockquote(anchorNode)
-      return true
-    }
-
-    return false
-  }
-
-  #shouldEscapeFromEmptyParagraphInBlockquote(node) {
-    const paragraph = $getNearestNodeOfType(node, ParagraphNode)
-    if (!paragraph) return false
-
-    if (!$isBlankNode(paragraph)) return false
+    const paragraph = $getNearestNodeOfType(anchorNode, ParagraphNode)
+    if (!paragraph || !$isBlankNode(paragraph)) return false
 
     const parent = paragraph.getParent()
-    return parent && $isQuoteNode(parent)
+    if (!parent || !$isQuoteNode(parent)) return false
+
+    event.preventDefault()
+    this.#escapeFromBlockquote(anchorNode)
+    return true
   }
 
   #escapeFromBlockquote(anchorNode) {

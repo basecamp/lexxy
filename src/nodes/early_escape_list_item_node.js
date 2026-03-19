@@ -19,17 +19,10 @@ export class EarlyEscapeListItemNode extends ListItemNode {
 
   #shouldEscape(selection) {
     if (!$getNearestNodeOfType(this, QuoteNode)) return false
-    return this.#isItemEmpty() || this.#isEmptyParagraphInItem(selection)
-  }
+    if ($isBlankNode(this)) return true
 
-  #isItemEmpty() {
-    return $isBlankNode(this)
-  }
-
-  #isEmptyParagraphInItem(selection) {
     const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
-    if (!paragraph) return false
-    return $isBlankNode(paragraph) && $isListItemNode(paragraph.getParent())
+    return paragraph && $isBlankNode(paragraph) && $isListItemNode(paragraph.getParent())
   }
 
   #escapeFromList() {
