@@ -1,7 +1,11 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
-import { HELLO_EVERYONE, placeCaretAtEndOfInlineCode } from "../../helpers/toolbar.js"
+import {
+  HELLO_EVERYONE,
+  clickFormatButton,
+  placeCaretAtEndOfInlineCode,
+} from "../../helpers/toolbar.js"
 
 test.describe("Inline formatting", () => {
   test.beforeEach(async ({ page }) => {
@@ -27,7 +31,7 @@ test.describe("Inline formatting", () => {
   test("strikethrough", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
-    await page.getByRole("button", { name: "Strikethrough" }).click()
+    await clickFormatButton(page, "strikethrough")
     await assertEditorHtml(editor, "<p>Hello <s>everyone</s></p>")
   })
 

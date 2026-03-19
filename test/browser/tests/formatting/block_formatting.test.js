@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
-import { HELLO_EVERYONE } from "../../helpers/toolbar.js"
+import { HELLO_EVERYONE, clickFormatButton, clickListsButton } from "../../helpers/toolbar.js"
 
 test.describe("Block formatting", () => {
   test.beforeEach(async ({ page }) => {
@@ -10,40 +10,43 @@ test.describe("Block formatting", () => {
     await page.waitForSelector("lexxy-toolbar[connected]")
   })
 
-  test("rotate headers", async ({ page, editor }) => {
+  test("apply and cycle headings", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
 
-    await page.getByRole("button", { name: "Heading" }).click()
+    await clickFormatButton(page, "setFormatHeadingLarge")
     await assertEditorHtml(editor, "<h2>Hello everyone</h2>")
 
-    await page.getByRole("button", { name: "Heading" }).click()
+    await editor.select("everyone")
+    await clickFormatButton(page, "setFormatHeadingMedium")
     await assertEditorHtml(editor, "<h3>Hello everyone</h3>")
 
-    await page.getByRole("button", { name: "Heading" }).click()
+    await editor.select("everyone")
+    await clickFormatButton(page, "setFormatHeadingSmall")
     await assertEditorHtml(editor, "<h4>Hello everyone</h4>")
 
-    await page.getByRole("button", { name: "Heading" }).click()
+    await editor.select("everyone")
+    await clickFormatButton(page, "setFormatParagraph")
     await assertEditorHtml(editor, "<p>Hello everyone</p>")
   })
 
   test("bullet list", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
-    await page.getByRole("button", { name: "Bullet list" }).click()
+    await clickListsButton(page, "insertUnorderedList")
     await assertEditorHtml(editor, "<ul><li>Hello everyone</li></ul>")
   })
 
   test("numbered list", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
-    await page.getByRole("button", { name: "Numbered list" }).click()
+    await clickListsButton(page, "insertOrderedList")
     await assertEditorHtml(editor, "<ol><li>Hello everyone</li></ol>")
   })
 
   test("insert quote without selection", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
-    await page.getByRole("button", { name: "Quote" }).click()
+    await clickFormatButton(page, "insertQuoteBlock")
     await assertEditorHtml(
       editor,
       "<blockquote><p>Hello everyone</p></blockquote>",
@@ -54,21 +57,21 @@ test.describe("Block formatting", () => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
 
-    await page.getByRole("button", { name: "Quote" }).click()
+    await clickFormatButton(page, "insertQuoteBlock")
     await assertEditorHtml(
       editor,
       "<blockquote><p>Hello everyone</p></blockquote>",
     )
 
     await editor.select("everyone")
-    await page.getByRole("button", { name: "Quote" }).click()
+    await clickFormatButton(page, "insertQuoteBlock")
     await assertEditorHtml(editor, "<p>Hello everyone</p>")
   })
 
   test("multi line quote", async ({ page, editor }) => {
     await editor.setValue("<p>Hello</p><p>Everyone</p>")
     await editor.selectAll()
-    await page.getByRole("button", { name: "Quote" }).click()
+    await clickFormatButton(page, "insertQuoteBlock")
     await assertEditorHtml(
       editor,
       "<blockquote><p>Hello</p><p>Everyone</p></blockquote>",
@@ -82,7 +85,7 @@ test.describe("Block formatting", () => {
     await editor.setValue("<p>First line<br>Second line<br>Third line</p>")
     await editor.select("Second line")
 
-    await page.getByRole("button", { name: "Quote" }).click()
+    await page.locator("[data-command='insertQuoteBlock']").click()
 
     await assertEditorHtml(
       editor,
