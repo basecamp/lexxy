@@ -15,6 +15,7 @@ export class LexicalPromptElement extends HTMLElement {
   constructor() {
     super()
     this.keyListeners = []
+    this.showPopoverId = 0
   }
 
   static observedAttributes = [ "connected" ]
@@ -160,9 +161,14 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   async #showPopover() {
+    const showId = ++this.showPopoverId
     this.popoverElement ??= await this.#buildPopover()
+    if (this.showPopoverId !== showId) return
+
     this.#resetPopoverPosition()
     await this.#filterOptions()
+    if (this.showPopoverId !== showId) return
+
     this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", true)
     this.#selectFirstOption()
 
@@ -273,6 +279,7 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   async #hidePopover() {
+    this.showPopoverId++
     this.#clearSelection()
     this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", false)
     this.#editorElement.removeEventListener("lexxy:change", this.#filterOptions)
@@ -298,6 +305,14 @@ export class LexicalPromptElement extends HTMLElement {
 
     if (this.#editorContents.containsTextBackUntil(this.trigger)) {
       await this.#showFilteredOptions()
+
+      // Re-check after async operation — the trigger may have been consumed
+      // (e.g. markdown heading shortcut converted "# " to h1 during the fetch)
+      if (!this.#editorContents.containsTextBackUntil(this.trigger)) {
+        this.#hidePopover()
+        return
+      }
+
       await nextFrame()
       this.#positionPopover()
     } else {
@@ -306,8 +321,12 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   async #showFilteredOptions() {
+    const showId = this.showPopoverId
     const filter = this.#editorContents.textBackUntil(this.trigger)
     const filteredListItems = await this.source.buildListItems(filter)
+    if (this.showPopoverId !== showId) return
+    if (!this.#editorContents.containsTextBackUntil(this.trigger)) return
+
     this.popoverElement.innerHTML = ""
 
     if (filteredListItems.length > 0) {
