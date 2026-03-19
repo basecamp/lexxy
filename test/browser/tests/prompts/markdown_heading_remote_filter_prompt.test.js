@@ -94,4 +94,30 @@ test.describe("# prompt freeze with remote-filtering source (Fizzy config)", () 
 
     await expect(page.locator(".lexxy-editor__content")).toContainText("hello world")
   })
+
+  test("space pressed AFTER visible popover does not freeze editor", async ({ page, editor }) => {
+    // Type # to trigger the prompt
+    await editor.send("#")
+    await editor.flush()
+
+    // Wait for the popover to actually appear (remote fetch must complete)
+    await expect(page.locator(".lexxy-prompt-menu--visible")).toBeVisible({ timeout: 5000 })
+
+    // Now press SPACE while the menu is visible
+    // Since supports-space-in-searches is set, SPACE is not intercepted by the prompt
+    // and triggers the markdown heading shortcut: "# " -> h1
+    await editor.content.press("Space")
+    await editor.flush()
+
+    // Wait for everything to settle
+    await page.waitForTimeout(500)
+
+    // Popover should NOT be visible (heading shortcut consumed the trigger)
+    await expect(page.locator(".lexxy-prompt-menu--visible")).not.toBeVisible()
+
+    // Editor should accept typing (not frozen)
+    await editor.send("hello")
+    await editor.flush()
+    await expect(page.locator(".lexxy-editor__content")).toContainText("hello")
+  })
 })
