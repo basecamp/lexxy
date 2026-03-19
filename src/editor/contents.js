@@ -113,6 +113,8 @@ export default class Contents {
     } else {
       topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
+      this.#splitParagraphsAtLineBreaks(selection)
+
       const freshElements = this.#topLevelElementsInSelection(selection)
       const elements = this.#withoutTrailingEmptyParagraphs(freshElements)
       if (elements.length === 0) return
@@ -278,6 +280,38 @@ export default class Contents {
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
       previousNode.insertAfter(newNode)
     })
+  }
+
+  #splitParagraphsAtLineBreaks(selection) {
+    const selectedNodeKeys = new Set(selection.getNodes().map(n => n.getKey()))
+    const topLevelElements = this.#topLevelElementsInSelection(selection)
+
+    for (const element of topLevelElements) {
+      if (!$isParagraphNode(element)) continue
+
+      const children = element.getChildren()
+      if (!children.some($isLineBreakNode)) continue
+
+      const groups = [[]]
+      for (const child of children) {
+        if ($isLineBreakNode(child)) {
+          groups.push([])
+          child.remove()
+        } else {
+          groups[groups.length - 1].push(child)
+        }
+      }
+
+      if (groups.every(group => group.some(child => selectedNodeKeys.has(child.getKey())))) continue
+
+      for (const group of groups) {
+        if (group.length === 0) continue
+        const p = $createParagraphNode()
+        group.forEach(child => p.append(child))
+        element.insertBefore(p)
+      }
+      element.remove()
+    }
   }
 
   #topLevelElementsInSelection(selection) {
