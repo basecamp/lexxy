@@ -129,3 +129,28 @@ test.describe("Paste — Cut and paste", () => {
     await assertEditorHtml(editor, "<p>Hello world</p>")
   })
 })
+
+test.describe("Paste — Code block", () => {
+  test("pasting plain text with line breaks into a code block keeps all text inside", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.click()
+    await editor.clickToolbarButton("insertCodeBlock")
+    await editor.flush()
+
+    await editor.paste("The quick brown fox jumps over the lazy dog.\n\nPack my box with five dozen liquor jugs.")
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      const codeBlock = content.locator("code")
+      await expect(codeBlock).toContainText("The quick brown fox jumps over the lazy dog.")
+      await expect(codeBlock).toContainText("Pack my box with five dozen liquor jugs.")
+    })
+
+    // Verify no text escapes the code block into a sibling paragraph
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("p")).toHaveCount(0)
+    })
+  })
+})

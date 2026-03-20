@@ -3,7 +3,7 @@ import { isUrl } from "../helpers/string_helper"
 import { nextFrame } from "../helpers/timing_helpers"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
-import { $getSelection, $isRangeSelection, PASTE_TAG } from "lexical"
+import { $createLineBreakNode, $createTextNode, $getSelection, $isRangeSelection, PASTE_TAG } from "lexical"
 import { $insertDataTransferForRichText } from "@lexical/clipboard"
 
 export default class Clipboard {
@@ -16,7 +16,13 @@ export default class Clipboard {
   paste(event) {
     const clipboardData = event.clipboardData
 
-    if (!clipboardData || this.#isPastingIntoCodeBlock()) return false
+    if (!clipboardData) return false
+
+    if (this.#isPastingIntoCodeBlock()) {
+      this.#pasteIntoCodeBlock(clipboardData)
+      event.preventDefault()
+      return true
+    }
 
     if (this.#isPlainTextOrURLPasted(clipboardData)) {
       this.#pastePlainText(clipboardData)
@@ -63,6 +69,26 @@ export default class Clipboard {
     })
 
     return result
+  }
+
+  #pasteIntoCodeBlock(clipboardData) {
+    const text = clipboardData.getData("text/plain")
+    if (!text) return
+
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const lines = text.split(/\n/)
+      const nodes = []
+
+      for (let i = 0; i < lines.length; i++) {
+        if (i > 0) nodes.push($createLineBreakNode())
+        if (lines[i]) nodes.push($createTextNode(lines[i]))
+      }
+
+      selection.insertNodes(nodes)
+    }, { tag: PASTE_TAG })
   }
 
   #pastePlainText(clipboardData) {
