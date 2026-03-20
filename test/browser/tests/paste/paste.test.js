@@ -57,6 +57,32 @@ test.describe("Paste — Files & Attachments", () => {
       ])
   })
 
+  test("paste rendered Lexxy mention preserves mention", async ({ page, editor }) => {
+    await page.goto("/mentions.html")
+    await editor.waitForConnected()
+
+    // Simulate pasting a mention copied from a rendered Lexxy view (e.g., a
+    // posted Fizzy comment). The content attribute contains raw HTML — the same
+    // format Trix/ActionText uses and Lexxy now exports.
+    const mentionHtml = [
+      '<action-text-attachment',
+      ' sgid="test-sgid-lexxy"',
+      ' content-type="application/vnd.actiontext.mention"',
+      ' content="&lt;span class=&quot;person person--inline&quot;&gt;&lt;span class=&quot;person--name&quot;&gt;Michael Berger&lt;/span&gt;&lt;/span&gt;"',
+      '>',
+      '<span class="person person--inline"><span class="person--name">Michael Berger</span></span>',
+      '</action-text-attachment>'
+    ].join("")
+
+    await editor.paste("Michael Berger", { html: mentionHtml })
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("action-text-attachment")).toHaveCount(1)
+      await expect(content.locator("action-text-attachment .person--name")).toHaveText("Michael Berger")
+    })
+  })
+
   test("paste Trix mention HTML without crashing", async ({ page, editor }) => {
     await page.goto("/")
     await editor.waitForConnected()
