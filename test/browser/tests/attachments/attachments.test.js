@@ -162,6 +162,36 @@ test.describe("Attachments", () => {
     await expect(figure).toBeVisible()
   })
 
+  test("caret position matches typing position after uploading image into empty editor", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+    await editor.flush()
+
+    // After uploading into an empty editor, the cursor should land below the
+    // attachment so typing inserts text there. The trailing provisional paragraph
+    // must be visible (not collapsed as hidden) so the caret renders correctly.
+    const paragraphAfterAttachment = figure.locator("xpath=following-sibling::p[1]")
+    await expect(paragraphAfterAttachment).toHaveClass(/provisional-paragraph/)
+    await expect(paragraphAfterAttachment).not.toHaveClass(/hidden/)
+  })
+
+  test("typing after uploading image into empty editor inserts text below the attachment", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+    await editor.flush()
+
+    await page.keyboard.type("hello below")
+
+    const paragraph = figure.locator("xpath=following-sibling::p[1]")
+    await expect(paragraph).toHaveText("hello below")
+  })
+
   test("Ctrl+C in caption copies text without losing focus", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
