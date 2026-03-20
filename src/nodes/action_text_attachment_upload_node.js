@@ -4,7 +4,7 @@ import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { createElement, dispatch } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
-import { SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $isRootOrShadowRoot, SKIP_DOM_SELECTION_TAG } from "lexical"
 
 export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   static getType() {
@@ -214,7 +214,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       const replacementNode = this.#toActionTextAttachmentNodeWith(blob)
       this.replace(replacementNode)
 
-      if (editorHasFocus) {
+      if (editorHasFocus && $isRootOrShadowRoot(replacementNode.getParent())) {
         replacementNode.selectNext()
       }
     }, { tag: this.#backgroundUpdateTags })
