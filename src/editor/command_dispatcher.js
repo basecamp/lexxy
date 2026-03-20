@@ -28,6 +28,7 @@ const COMMANDS = [
   "bold",
   "italic",
   "strikethrough",
+  "underline",
   "link",
   "unlink",
   "toggleHighlight",
@@ -82,6 +83,10 @@ export class CommandDispatcher {
 
   dispatchStrikethrough() {
     this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")
+  }
+
+  dispatchUnderline() {
+    this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")
   }
 
   dispatchToggleHighlight(styles) {

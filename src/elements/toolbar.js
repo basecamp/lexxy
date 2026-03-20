@@ -201,18 +201,19 @@ export class LexicalToolbarElement extends HTMLElement {
     const anchorNode = selection.anchor.getNode()
     if (!anchorNode.getParent()) { return }
 
-    const { isBold, isItalic, isStrikethrough, isHighlight, isInLink, isInQuote, isInHeading,
+    const { isBold, isItalic, isStrikethrough, isUnderline, isHighlight, isInLink, isInQuote, isInHeading,
       headingTag, isInCode, isInList, listType, isInTable } = this.selection.getFormat()
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
 
-    this.#setButtonPressed("format", isInHeading || isStrikethrough)
+    this.#setButtonPressed("format", isInHeading || isStrikethrough || isUnderline)
     this.#setButtonPressed("paragraph", !isInHeading)
     this.#setButtonPressed("heading-large", headingTag === "h2")
     this.#setButtonPressed("heading-medium", headingTag === "h3")
     this.#setButtonPressed("heading-small", headingTag === "h4")
     this.#setButtonPressed("strikethrough", isStrikethrough)
+    this.#setButtonPressed("underline", isUnderline)
 
     this.#setButtonPressed("lists", isInList)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
@@ -363,8 +364,12 @@ export class LexicalToolbarElement extends HTMLElement {
           <button type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading">
             ${ToolbarIcons.h4} <span>Small Heading</span>
           </button>
+          <div class="separator" role="separator"></div>
           <button type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
             ${ToolbarIcons.strikethrough} <span>Strikethrough</span>
+          </button>
+          <button type="button" name="underline" data-command="underline" title="Underline">
+            ${ToolbarIcons.underline} <span>Underline</span>
           </button>
         </div>
       </details>

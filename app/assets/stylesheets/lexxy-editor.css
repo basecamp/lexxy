@@ -591,6 +591,12 @@
         inline-size: 1lh;
       }
     }
+
+    .separator {
+      background: var(--lexxy-color-ink-lighter);
+      block-size: 1px;
+      inline-size: 100%;
+    }
   }
 
 

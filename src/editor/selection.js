@@ -131,6 +131,7 @@ export default class Selection {
       isBold: selection.hasFormat("bold"),
       isItalic: selection.hasFormat("italic"),
       isStrikethrough: selection.hasFormat("strikethrough"),
+      isUnderline: selection.hasFormat("underline"),
       isHighlight: isSelectionHighlighted(selection),
       isInLink: $getNearestNodeOfType(anchorNode, LinkNode) !== null,
       isInQuote: $isQuoteNode(topLevelElement),
