@@ -1,6 +1,7 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection,
-  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $setSelection
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $setSelection,
+  PASTE_TAG
  } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
@@ -26,6 +27,7 @@ export default class Contents {
 
   insertDOM(doc, { tag } = {}) {
     this.#unwrapPlaceholderAnchors(doc)
+    if (tag === PASTE_TAG) this.#stripTableCellColorStyles(doc)
 
     this.editor.update(() => {
       const selection = $getSelection()
@@ -406,6 +408,17 @@ export default class Contents {
       if (href === "" || href === "#") {
         anchor.replaceWith(...anchor.childNodes)
       }
+    }
+  }
+
+  // Table cells copied from a page inherit the source theme's inline color
+  // styles (e.g. dark-mode backgrounds). Strip them so pasted tables adopt
+  // the current theme instead of carrying stale colors.
+  #stripTableCellColorStyles(doc) {
+    for (const cell of doc.querySelectorAll("td, th")) {
+      cell.style.removeProperty("background-color")
+      cell.style.removeProperty("background")
+      cell.style.removeProperty("color")
     }
   }
 
