@@ -1,7 +1,6 @@
-import { $createParagraphNode } from "lexical"
 import { CodeNode } from "@lexical/code"
 import { $getNearestNodeOfType } from "@lexical/utils"
-import { $isCursorOnLastLine, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
+import { $insertNewParagraphAfter, $isCursorOnLastLine, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
 
 export class EarlyEscapeCodeNode extends CodeNode {
   $config() {
@@ -19,10 +18,7 @@ export class EarlyEscapeCodeNode extends CodeNode {
 
     if (this.#isCursorOnEmptyLastLine(selection)) {
       $trimTrailingBlankNodes(this)
-
-      const paragraph = $createParagraphNode()
-      this.insertAfter(paragraph)
-      return paragraph
+      return $insertNewParagraphAfter(this)
     }
 
     return super.insertNewAfter(selection, restoreSelection)

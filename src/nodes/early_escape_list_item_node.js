@@ -1,8 +1,8 @@
-import { $createParagraphNode, $splitNode, ParagraphNode } from "lexical"
+import { $splitNode, ParagraphNode } from "lexical"
 import { $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
 import { $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType } from "@lexical/utils"
-import { $isBlankNode, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
+import { $insertNewParagraphAfter, $isBlankNode, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
 
 export class EarlyEscapeListItemNode extends ListItemNode {
   $config() {
@@ -42,9 +42,7 @@ export class EarlyEscapeListItemNode extends ListItemNode {
       }
     }
 
-    const paragraph = $createParagraphNode()
-    parentList.insertAfter(paragraph)
-
+    const paragraph = $insertNewParagraphAfter(parentList)
     this.remove()
     return paragraph
   }
@@ -53,8 +51,7 @@ export class EarlyEscapeListItemNode extends ListItemNode {
     const splitQuotes = $splitNode(this.getParent(), this.getIndexWithinParent())
     this.remove()
 
-    const middleParagraph = $createParagraphNode()
-    splitQuotes[0].insertAfter(middleParagraph)
+    const middleParagraph = $insertNewParagraphAfter(splitQuotes[0])
 
     splitQuotes.forEach($trimTrailingBlankNodes)
 

@@ -12,6 +12,7 @@ import { $isListNode, ListItemNode } from "@lexical/list"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { $insertNewParagraphAfter } from "../helpers/lexical_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -276,8 +277,7 @@ export default class Contents {
   }
 
   createParagraphAfterNode(node, text) {
-    const newParagraph = $createParagraphNode()
-    node.insertAfter(newParagraph)
+    const newParagraph = $insertNewParagraphAfter(node)
     newParagraph.selectStart()
 
     // Insert the typed text
@@ -369,9 +369,7 @@ export default class Contents {
     this.editor.update(() => {
       const nextSibling = node.getNextSibling()
       if (!nextSibling) {
-        const newParagraph = $createParagraphNode()
-        node.insertAfter(newParagraph)
-        newParagraph.selectStart()
+        $insertNewParagraphAfter(node).selectStart()
       }
     })
   }

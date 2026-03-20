@@ -1,5 +1,4 @@
 import {
-  $createParagraphNode,
   $getNodeByKey,
   $getSelection,
   $isParagraphNode,
@@ -20,6 +19,7 @@ import {
 
 import { upcaseFirst } from "../../helpers/string_helper"
 import { nextFrame } from "../../helpers/timing_helpers"
+import { $insertNewParagraphAfter } from "../../helpers/lexical_helper"
 
 export class TableController {
   constructor(editorElement) {
@@ -274,9 +274,7 @@ export class TableController {
       if ($isParagraphNode(next)) {
         next.selectStart()
       } else {
-        const newParagraph = $createParagraphNode()
-        this.currentTableNode.insertAfter(newParagraph)
-        newParagraph.selectStart()
+        $insertNewParagraphAfter(this.currentTableNode).selectStart()
       }
     })
   }

@@ -104,6 +104,12 @@ export function $isBlankNode(node) {
   })
 }
 
+export function $insertNewParagraphAfter(node) {
+  const paragraph = $createParagraphNode()
+  node.insertAfter(paragraph)
+  return paragraph
+}
+
 export function $trimTrailingBlankNodes(parent) {
   for (const child of $lastToFirstIterator(parent)) {
     if ($isBlankNode(child)) {
