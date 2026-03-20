@@ -20,4 +20,21 @@ class CodeHighlightingTest < ApplicationSystemTestCase
     assert_selector "code[data-language='ruby']"
     assert_selector "code span.token.keyword", text: "def"
   end
+
+  test "color highlights inside code blocks are preserved in rendered view" do
+    find_editor.send "def hello_world"
+    find_editor.select("dev")
+    click_on "Code"
+    select "Ruby", from: "lexxy-code-language"
+
+    # Apply a background highlight to "hello"
+    find_editor.select "hello"
+    apply_highlight_option "background-color", 1
+
+    click_on "Update Post"
+
+    # Verify the rendered output preserves the highlight mark inside Prism tokens
+    assert_selector "code[data-language='ruby']"
+    assert_selector "code mark[style*='background-color']", text: "hello"
+  end
 end
