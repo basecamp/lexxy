@@ -3,6 +3,8 @@
 CI.run do
   step "Style: Ruby", "bin/rubocop -f github"
   step "Style: JavaScript", "yarn lint"
+  step "Style: GitHub Actions (actionlint)", "actionlint"
+  step "Style: GitHub Actions (zizmor)", "zizmor ."
 
   step "Tests: JavaScript", "yarn test"
   step "Tests: Rails (prepare)", "env RAILS_ENV=test bin/rails db:test:prepare"
