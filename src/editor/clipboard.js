@@ -24,7 +24,9 @@ export default class Clipboard {
       return true
     }
 
-    return this.#handlePastedFiles(clipboardData)
+    const handled = this.#handlePastedFiles(clipboardData)
+    if (handled) event.preventDefault()
+    return handled
   }
 
   #isPlainTextOrURLPasted(clipboardData) {
@@ -122,14 +124,21 @@ export default class Clipboard {
       return true
     }
 
-    if (html) {
+    if (html && !this.#isLexicalClipboardData(clipboardData)) {
       this.contents.insertHtml(html, { tag: PASTE_TAG })
       return true
     }
 
-    this.#uploadFilesPreservingScroll(files)
+    if (files.length) {
+      this.#uploadFilesPreservingScroll(files)
+      return true
+    }
 
-    return true
+    return false
+  }
+
+  #isLexicalClipboardData(clipboardData) {
+    return Array.from(clipboardData.types).includes("application/x-lexical-editor")
   }
 
   #isCopiedImageHTML(html) {
