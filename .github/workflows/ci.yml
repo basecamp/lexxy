@@ -5,11 +5,12 @@ on:
   push:
     branches: [ main ]
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   lint:
+    permissions:
+      contents: read
     name: Lint
     runs-on: ubuntu-latest
     steps:
@@ -42,6 +43,8 @@ jobs:
   zizmor:
     name: GitHub Actions audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -56,6 +59,8 @@ jobs:
   js-unit-tests:
     name: JS unit tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -77,6 +82,8 @@ jobs:
   rails-system-tests:
     name: Rails system tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Install packages
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config google-chrome-stable mupdf build-essential ffmpeg groff libreoffice-writer libreoffice-impress libreoffice-calc mupdf-tools libvips zip
@@ -122,6 +129,8 @@ jobs:
   browser-test:
     name: Browser tests (${{ matrix.browser }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:

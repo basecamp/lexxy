@@ -13,6 +13,8 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
+permissions: {}
+
 jobs:
   build:
     runs-on: ubuntu-latest
