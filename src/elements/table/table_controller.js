@@ -19,7 +19,7 @@ import {
 
 import { upcaseFirst } from "../../helpers/string_helper"
 import { nextFrame } from "../../helpers/timing_helpers"
-import { $insertNewParagraphAfter } from "../../helpers/lexical_helper"
+import { $insertNewParagraphAfter, $isBlankNode } from "../../helpers/lexical_helper"
 
 export class TableController {
   constructor(editorElement) {
@@ -285,7 +285,7 @@ export class TableController {
     const cell = this.currentCell
     if (!cell) return false
 
-    return cell.getTextContent().trim() === ""
+    return $isBlankNode(cell)
   }
 
   #isCurrentRowLast() {
@@ -303,7 +303,7 @@ export class TableController {
     const cells = this.currentRowCells
     if (!cells) return false
 
-    return cells.every(cell => cell.getTextContent().trim() === "")
+    return cells.every($isBlankNode)
   }
 
   #isFirstCellInRow() {

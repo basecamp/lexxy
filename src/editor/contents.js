@@ -12,7 +12,7 @@ import { $isListNode, ListItemNode } from "@lexical/list"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
-import { $insertNewParagraphAfter } from "../helpers/lexical_helper"
+import { $insertNewParagraphAfter, $isBlankNode } from "../helpers/lexical_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -444,7 +444,7 @@ export default class Contents {
     // Find the last non-empty paragraph
     while (lastNonEmptyIndex >= 0) {
       const element = elements[lastNonEmptyIndex]
-      if (!$isParagraphNode(element) || !this.#isElementEmpty(element)) {
+      if (!$isParagraphNode(element) || !$isBlankNode(element)) {
         break
       }
       lastNonEmptyIndex--
@@ -453,20 +453,11 @@ export default class Contents {
     return elements.slice(0, lastNonEmptyIndex + 1)
   }
 
-  #isElementEmpty(element) {
-    // Check text content first
-    if (element.getTextContent().trim() !== "") return false
-
-    // Check if it only contains line breaks
-    const children = element.getChildren()
-    return children.length === 0 || children.every(child => $isLineBreakNode(child))
-  }
-
   #removeStandaloneEmptyParagraph() {
     const root = $getRoot()
     if (root.getChildrenSize() === 1) {
       const firstChild = root.getFirstChild()
-      if (firstChild && $isParagraphNode(firstChild) && this.#isElementEmpty(firstChild)) {
+      if (firstChild && $isParagraphNode(firstChild) && $isBlankNode(firstChild)) {
         firstChild.remove()
       }
     }
