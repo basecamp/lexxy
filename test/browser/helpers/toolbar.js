@@ -1,5 +1,31 @@
 export const HELLO_EVERYONE = "<p>Hello everyone</p>"
 
+export async function openFormatDropdown(page) {
+  await page.evaluate(() => {
+    const details = document.querySelector("summary[name='format']").closest("details")
+    details.open = true
+    details.dispatchEvent(new Event("toggle"))
+  })
+}
+
+export async function clickFormatButton(page, command) {
+  await openFormatDropdown(page)
+  await page.locator(`[data-command='${command}']`).click()
+}
+
+export async function openListsDropdown(page) {
+  await page.evaluate(() => {
+    const details = document.querySelector("summary[name='lists']").closest("details")
+    details.open = true
+    details.dispatchEvent(new Event("toggle"))
+  })
+}
+
+export async function clickListsButton(page, command) {
+  await openListsDropdown(page)
+  await page.locator(`[data-command='${command}']`).click()
+}
+
 export async function applyHighlightOption(page, attribute, buttonIndex) {
   await page.locator("[name='highlight']").click()
   const buttons = page.locator(

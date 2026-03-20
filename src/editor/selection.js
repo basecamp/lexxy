@@ -125,16 +125,19 @@ export default class Selection {
 
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
     const listType = getListType(anchorNode)
+    const headingNode = this.#getNearestHeadingNode(anchorNode)
 
     return {
       isBold: selection.hasFormat("bold"),
       isItalic: selection.hasFormat("italic"),
       isStrikethrough: selection.hasFormat("strikethrough"),
+      isUnderline: selection.hasFormat("underline"),
       isHighlight: isSelectionHighlighted(selection),
       isInLink: $getNearestNodeOfType(anchorNode, LinkNode) !== null,
       isInQuote: $isQuoteNode(topLevelElement),
-      isInHeading: $isHeadingNode(topLevelElement),
+      isInHeading: headingNode !== null,
       isInCode: this.#isInCode(selection, anchorNode),
+      headingTag: headingNode?.getTag() ?? null,
       isInList: listType !== null,
       listType,
       isInTable: $getTableCellNodeFromLexicalNode(anchorNode) !== null
@@ -497,6 +500,24 @@ export default class Selection {
   #getTopLevelFromRangeSelection(selection) {
     const anchorNode = selection.anchor.getNode()
     return anchorNode.getTopLevelElement()
+  }
+
+  #getNearestHeadingNode(anchorNode) {
+    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+
+    let headingNode = $isHeadingNode(topLevelElement) ? topLevelElement : null
+    if (!headingNode) {
+      let current = anchorNode.getParent()
+      while (current) {
+        if ($isHeadingNode(current)) {
+          headingNode = current
+          break
+        }
+        current = current.getParent()
+      }
+    }
+
+    return headingNode
   }
 
   #moveToOrCreateNextLine(topLevelElement) {

@@ -19,31 +19,31 @@ test.describe("Toolbar", () => {
 
   test("attachments icon display", async ({ page }) => {
     await expect(
-      page.locator("lexxy-toolbar button[name=upload]"),
+      page.locator("lexxy-toolbar button[name=image]"),
     ).toBeVisible()
 
     await page.goto("/attachments-disabled.html")
     await page.waitForSelector("lexxy-toolbar[connected]")
     await expect(
-      page.locator("lexxy-toolbar button[name=upload]"),
+      page.locator("lexxy-toolbar button[name=image]"),
     ).toBeHidden()
 
     await page.goto("/attachments-enabled.html")
     await page.waitForSelector("lexxy-toolbar[connected]")
     await expect(
-      page.locator("lexxy-toolbar button[name=upload]"),
+      page.locator("lexxy-toolbar button[name=image]"),
     ).toBeVisible()
 
     await page.goto("/")
     await page.waitForSelector("lexxy-toolbar[connected]")
     await expect(
-      page.locator("lexxy-toolbar button[name=upload]"),
+      page.locator("lexxy-toolbar button[name=image]"),
     ).toBeVisible()
 
     await page.goto("/attachments-invalid.html")
     await page.waitForSelector("lexxy-toolbar[connected]")
     await expect(
-      page.locator("lexxy-toolbar button[name=upload]"),
+      page.locator("lexxy-toolbar button[name=image]"),
     ).toBeVisible()
   })
 
@@ -88,7 +88,7 @@ test.describe("Toolbar", () => {
 
   test("overflow compaction keeps upload button visible", async ({ page }) => {
     const toolbar = page.locator("lexxy-toolbar")
-    const uploadButton = toolbar.locator(":scope > button[name=upload]")
+    const uploadButton = toolbar.locator(":scope > button[name=image]")
     const overflowMenu = toolbar.locator(".lexxy-editor__toolbar-overflow-menu")
 
     // Shrink the viewport until the toolbar overflows
@@ -107,7 +107,7 @@ test.describe("Toolbar", () => {
     await expect(overflowedButtons.first()).toBeAttached()
 
     // The upload button must not appear inside the overflow menu
-    await expect(overflowMenu.locator("button[name=upload]")).toHaveCount(0)
+    await expect(overflowMenu.locator("button[name=image]")).toHaveCount(0)
 
     // Upload button should be clickable (not obscured)
     await expect(uploadButton).toBeEnabled()

@@ -7,7 +7,7 @@ class AttachmentsTest < ApplicationSystemTestCase
 
   test "upload image" do
     attach_file file_fixture("example.png") do
-      click_on "Upload file"
+      click_on "Upload files"
     end
 
     assert_image_figure_attachment content_type: "image/png", caption: "example.png"
@@ -15,7 +15,7 @@ class AttachmentsTest < ApplicationSystemTestCase
 
   test "upload previewable attachment" do
     attach_file file_fixture("dummy.pdf") do
-      click_on "Upload file"
+      click_on "Upload files"
     end
 
     assert_image_figure_attachment content_type: "application/pdf", caption: "dummy.pdf"
@@ -23,10 +23,10 @@ class AttachmentsTest < ApplicationSystemTestCase
 
   test "disable attachments" do
     visit edit_post_path(posts(:empty))
-    assert_button "Upload file"
+    assert_button "Upload files"
 
     visit edit_post_path(posts(:empty), attachments_disabled: true)
-    assert_no_button "Upload file"
+    assert_no_button "Upload files"
   end
 
   test "configure attachment tag name" do
@@ -50,7 +50,7 @@ class AttachmentsTest < ApplicationSystemTestCase
       configure_authenticated_uploads: true)
 
     attach_file file_fixture("example.png") do
-      click_on "Upload file"
+      click_on "Upload files"
     end
 
     assert_image_figure_attachment content_type: "image/png", caption: "example.png"
@@ -66,7 +66,7 @@ class AttachmentsTest < ApplicationSystemTestCase
       configure_authenticated_uploads: false)
 
     attach_file file_fixture("example.png") do
-      click_on "Upload file"
+      click_on "Upload files"
     end
 
     assert_selector "figure.attachment--error"

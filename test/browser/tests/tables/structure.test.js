@@ -135,11 +135,7 @@ test.describe("Tables with attachments", () => {
     await editor.content.locator("table th").first().click()
     await editor.flush()
 
-    const [fileChooser] = await Promise.all([
-      page.waitForEvent("filechooser"),
-      editor.clickToolbarButton("uploadAttachments"),
-    ])
-    await fileChooser.setFiles([
+    await editor.uploadFile([
       "test/fixtures/files/example.png",
       "test/fixtures/files/example2.png",
     ])

@@ -1,6 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml, assertEditorContent } from "../../helpers/assertions.js"
+import { clickFormatButton, clickListsButton } from "../../helpers/toolbar.js"
 
 test.describe("Escape format", () => {
   test.beforeEach(async ({ page }) => {
@@ -13,10 +14,10 @@ test.describe("Escape format", () => {
     await editor.send("First line")
     await editor.selectAll()
 
-    await page.getByRole("button", { name: "Bullet list" }).click()
+    await clickListsButton(page, "insertUnorderedList")
     await assertEditorHtml(editor, "<ul><li>First line</li></ul>")
 
-    await page.getByRole("button", { name: "Quote" }).click()
+    await clickFormatButton(page, "insertQuoteBlock")
     await assertEditorHtml(
       editor,
       "<blockquote><ul><li>First line</li></ul></blockquote>",
@@ -43,7 +44,7 @@ test.describe("Escape format", () => {
     await editor.send("Enter")
     await editor.send("Third paragraph")
     await editor.selectAll()
-    await page.getByRole("button", { name: "Quote" }).click()
+    await clickFormatButton(page, "insertQuoteBlock")
 
     await editor.select("Second paragraph")
     await editor.send("ArrowRight")
@@ -68,9 +69,9 @@ test.describe("Escape format", () => {
     await editor.send("Enter")
     await editor.send("Item three")
     await editor.selectAll()
-    await page.getByRole("button", { name: "Bullet list" }).click()
+    await clickListsButton(page, "insertUnorderedList")
 
-    await page.getByRole("button", { name: "Quote" }).click()
+    await clickFormatButton(page, "insertQuoteBlock")
     await assertEditorHtml(
       editor,
       "<blockquote><ul><li>Item one</li><li>Item two</li><li>Item three</li></ul></blockquote>",
@@ -95,9 +96,9 @@ test.describe("Escape format", () => {
   }) => {
     await editor.send("Item one")
     await editor.selectAll()
-    await page.getByRole("button", { name: "Bullet list" }).click()
+    await clickListsButton(page, "insertUnorderedList")
 
-    await page.getByRole("button", { name: "Quote" }).click()
+    await clickFormatButton(page, "insertQuoteBlock")
     await assertEditorHtml(
       editor,
       "<blockquote><ul><li>Item one</li></ul></blockquote>",

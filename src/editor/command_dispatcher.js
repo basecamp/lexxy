@@ -2,7 +2,6 @@ import {
   $createTextNode,
   $getSelection,
   $isRangeSelection,
-  $isRootOrShadowRoot,
   $isTextNode,
   $setSelection,
   COMMAND_PRIORITY_LOW,
@@ -17,8 +16,6 @@ import {
   UNDO_COMMAND
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
-import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
-import { $isCodeNode, CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
@@ -31,11 +28,15 @@ const COMMANDS = [
   "bold",
   "italic",
   "strikethrough",
+  "underline",
   "link",
   "unlink",
   "toggleHighlight",
   "removeHighlight",
-  "rotateHeadingFormat",
+  "setFormatHeadingLarge",
+  "setFormatHeadingMedium",
+  "setFormatHeadingSmall",
+  "setFormatParagraph",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -84,6 +85,10 @@ export class CommandDispatcher {
     this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")
   }
 
+  dispatchUnderline() {
+    this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")
+  }
+
   dispatchToggleHighlight(styles) {
     this.editor.dispatchCommand(TOGGLE_HIGHLIGHT_COMMAND, styles)
   }
@@ -119,7 +124,7 @@ export class CommandDispatcher {
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "bullet") {
-      this.contents.unwrapSelectedListItems()
+      this.contents.applyParagraphFormat()
     } else {
       this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
     }
@@ -132,26 +137,22 @@ export class CommandDispatcher {
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "number") {
-      this.contents.unwrapSelectedListItems()
+      this.contents.applyParagraphFormat()
     } else {
       this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
     }
   }
 
   dispatchInsertQuoteBlock() {
-    if (!this.contents.wrapSelectedSoftBreakLines(() => $createQuoteNode())) {
-      this.contents.toggleNodeWrappingAllSelectedNodes((node) => $isQuoteNode(node), () => $createQuoteNode())
-    }
+    this.contents.toggleBlockquote()
   }
 
   dispatchInsertCodeBlock() {
-    this.editor.update(() => {
-      if (this.selection.hasSelectedWordsInSingleLine) {
-        this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
-      } else {
-        this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new CodeNode("plain"))
-      }
-    })
+    if (this.selection.hasSelectedWordsInSingleLine) {
+      this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
+    } else {
+      this.contents.toggleCodeBlock()
+    }
   }
 
   dispatchInsertHorizontalDivider() {
@@ -159,35 +160,20 @@ export class CommandDispatcher {
     this.editor.focus()
   }
 
-  dispatchRotateHeadingFormat() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return
+  dispatchSetFormatHeadingLarge() {
+    this.contents.applyHeadingFormat("h2")
+  }
 
-    if ($isRootOrShadowRoot(selection.anchor.getNode())) {
-      selection.insertNodes([ $createHeadingNode("h2") ])
-      return
-    }
+  dispatchSetFormatHeadingMedium() {
+    this.contents.applyHeadingFormat("h3")
+  }
 
-    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
-    let nextTag = "h2"
-    if ($isHeadingNode(topLevelElement)) {
-      const currentTag = topLevelElement.getTag()
-      if (currentTag === "h2") {
-        nextTag = "h3"
-      } else if (currentTag === "h3") {
-        nextTag = "h4"
-      } else if (currentTag === "h4") {
-        nextTag = null
-      } else {
-        nextTag = "h2"
-      }
-    }
+  dispatchSetFormatHeadingSmall() {
+    this.contents.applyHeadingFormat("h4")
+  }
 
-    if (nextTag) {
-      this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
-    } else {
-      this.contents.removeFormattingFromSelectedLines()
-    }
+  dispatchSetFormatParagraph() {
+    this.contents.applyParagraphFormat()
   }
 
   dispatchUploadAttachments() {
