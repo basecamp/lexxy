@@ -125,15 +125,7 @@ export default class Selection {
 
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
     const listType = getListType(anchorNode)
-
-    let headingNode = $isHeadingNode(topLevelElement) ? topLevelElement : null
-    if (!headingNode) {
-      let current = anchorNode.getParent()
-      while (current) {
-        if ($isHeadingNode(current)) { headingNode = current; break }
-        current = current.getParent()
-      }
-    }
+    const headingNode = this.#getHeadingNodeType(anchorNode)
 
     return {
       isBold: selection.hasFormat("bold"),
@@ -507,6 +499,24 @@ export default class Selection {
   #getTopLevelFromRangeSelection(selection) {
     const anchorNode = selection.anchor.getNode()
     return anchorNode.getTopLevelElement()
+  }
+
+  #getHeadingNodeType(anchorNode) {
+    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+
+    let headingNode = $isHeadingNode(topLevelElement) ? topLevelElement : null
+    if (!headingNode) {
+      let current = anchorNode.getParent()
+      while (current) {
+        if ($isHeadingNode(current)) {
+          headingNode = current
+          break
+        }
+        current = current.getParent()
+      }
+    }
+
+    return headingNode
   }
 
   #moveToOrCreateNextLine(topLevelElement) {

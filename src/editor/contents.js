@@ -66,17 +66,25 @@ export default class Contents {
     this.#insertLineBelowIfLastNode(node)
   }
 
-  setBlockFormat(tag) {
+  applyParagraphFormat() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    if (tag === "code") {
-      $setBlocksType(selection, () => $createCodeNode("plain"))
-    } else if (tag) {
-      $setBlocksType(selection, () => $createHeadingNode(tag))
-    } else {
-      $setBlocksType(selection, () => $createParagraphNode())
-    }
+    $setBlocksType(selection, () => $createParagraphNode())
+  }
+
+  applyHeadingFormat(tag) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    $setBlocksType(selection, () => $createHeadingNode(tag))
+  }
+
+  #applyCodeBlockFormat() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    $setBlocksType(selection, () => $createCodeNode("plain"))
   }
 
   toggleCodeBlock() {
@@ -88,9 +96,9 @@ export default class Contents {
     const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
 
     if (topLevelElement && !$isCodeNode(topLevelElement)) {
-      this.setBlockFormat("code")
+      this.#applyCodeBlockFormat()
     } else {
-      this.setBlockFormat(null)
+      this.applyParagraphFormat()
     }
   }
 

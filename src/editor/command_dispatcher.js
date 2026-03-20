@@ -119,7 +119,7 @@ export class CommandDispatcher {
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "bullet") {
-      this.contents.setBlockFormat(null)
+      this.contents.applyParagraphFormat()
     } else {
       this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
     }
@@ -132,7 +132,7 @@ export class CommandDispatcher {
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "number") {
-      this.contents.setBlockFormat(null)
+      this.contents.applyParagraphFormat()
     } else {
       this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
     }
@@ -156,19 +156,19 @@ export class CommandDispatcher {
   }
 
   dispatchSetFormatHeadingLarge() {
-    this.contents.setBlockFormat("h2")
+    this.contents.applyHeadingFormat("h2")
   }
 
   dispatchSetFormatHeadingMedium() {
-    this.contents.setBlockFormat("h3")
+    this.contents.applyHeadingFormat("h3")
   }
 
   dispatchSetFormatHeadingSmall() {
-    this.contents.setBlockFormat("h4")
+    this.contents.applyHeadingFormat("h4")
   }
 
   dispatchSetFormatParagraph() {
-    this.contents.setBlockFormat(null)
+    this.contents.applyParagraphFormat()
   }
 
   dispatchUploadAttachments() {
