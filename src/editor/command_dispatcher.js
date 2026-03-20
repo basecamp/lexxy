@@ -226,15 +226,21 @@ export class CommandDispatcher {
     this.contents.applyParagraphFormat()
   }
 
-  dispatchUploadAttachments() {
-    const input = createElement("input", {
+  dispatchUploadAttachments(payload) {
+    const attributes = {
       type: "file",
       multiple: true,
       style: "display: none;",
       onchange: ({ target: { files } }) => {
         this.contents.uploadFiles(files, { selectLast: true })
       }
-    })
+    }
+
+    if (payload === "image") {
+      attributes.accept = "image/*,video/*"
+    }
+
+    const input = createElement("input", attributes)
 
     // Append and remove to make testable
     this.editorElement.appendChild(input)
