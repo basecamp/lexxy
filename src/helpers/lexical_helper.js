@@ -1,4 +1,4 @@
-import { $createNodeSelection, $createParagraphNode, $isElementNode, $isLineBreakNode, $isTextNode, TextNode } from "lexical"
+import { $createNodeSelection, $createParagraphNode, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isTextNode, TextNode } from "lexical"
 import { HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
@@ -112,6 +112,24 @@ export function $trimTrailingBlankNodes(parent) {
       break
     }
   }
+}
+
+// A list item is structurally empty if it contains no meaningful content.
+// Unlike getTextContent().trim() === "", this walks descendants to ensure
+// decorator nodes (mentions, attachments whose getTextContent() may return
+// invisible characters like \ufeff) are treated as non-empty content.
+export function $isListItemStructurallyEmpty(listItem) {
+  const children = listItem.getChildren()
+  for (const child of children) {
+    if ($isDecoratorNode(child)) return false
+    if ($isLineBreakNode(child)) continue
+    if ($isTextNode(child)) {
+      if (child.getTextContent().trim() !== "") return false
+    } else if ($isElementNode(child)) {
+      if (child.getTextContent().trim() !== "") return false
+    }
+  }
+  return true
 }
 
 export function isAttachmentSpacerTextNode(node, previousNode, index, childCount) {
