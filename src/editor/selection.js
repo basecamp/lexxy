@@ -125,7 +125,7 @@ export default class Selection {
 
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
     const listType = getListType(anchorNode)
-    const headingNode = this.#getHeadingNodeType(anchorNode)
+    const headingNode = this.#getNearestHeadingNode(anchorNode)
 
     return {
       isBold: selection.hasFormat("bold"),
@@ -502,7 +502,7 @@ export default class Selection {
     return anchorNode.getTopLevelElement()
   }
 
-  #getHeadingNodeType(anchorNode) {
+  #getNearestHeadingNode(anchorNode) {
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
 
     let headingNode = $isHeadingNode(topLevelElement) ? topLevelElement : null
