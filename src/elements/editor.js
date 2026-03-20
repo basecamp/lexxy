@@ -497,6 +497,7 @@ export class LexicalEditorElement extends HTMLElement {
     const toolbar = createElement("lexxy-toolbar")
     toolbar.innerHTML = LexicalToolbar.defaultTemplate
     toolbar.setAttribute("data-attachments", this.supportsAttachments) // Drives toolbar CSS styles
+    toolbar.setAttribute("data-upload-button", this.config.get("uploadButton")) // Drives which upload buttons are shown (both / image / file)
     this.prepend(toolbar)
     return toolbar
   }

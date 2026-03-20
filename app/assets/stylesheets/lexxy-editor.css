@@ -441,6 +441,14 @@
     display: none;
   }
 
+  &[data-upload-button="file"] button[name="upload"] {
+    display: none;
+  }
+
+  &[data-upload-button="image"] button[name="files"] {
+    display: none;
+  }
+
   .lexxy-editor__toolbar-button {
     aspect-ratio: 1;
     block-size: var(--lexxy-toolbar-button-size);
