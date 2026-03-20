@@ -11,7 +11,6 @@ import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_atta
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $setBlocksType } from "@lexical/selection"
-import FormatEscaper from "./contents/format_escaper"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 
@@ -403,61 +402,6 @@ export default class Contents {
       cell.style.removeProperty("background")
       cell.style.removeProperty("color")
     }
-  }
-
-  #insertNodeWrappingAllSelectedNodes(newNodeFn) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const selectedNodes = selection.extract()
-      if (selectedNodes.length === 0) {
-        return
-      }
-
-      const topLevelElements = new Set()
-      selectedNodes.forEach((node) => {
-        const topLevel = node.getTopLevelElementOrThrow()
-        topLevelElements.add(topLevel)
-      })
-
-      const elements = this.#withoutTrailingEmptyParagraphs(Array.from(topLevelElements))
-      if (elements.length === 0) {
-        this.#removeStandaloneEmptyParagraph()
-        this.insertAtCursor(newNodeFn())
-        return
-      }
-
-      const wrappingNode = newNodeFn()
-      elements[0].insertBefore(wrappingNode)
-      elements.forEach((element) => {
-        wrappingNode.append(element)
-      })
-    })
-  }
-
-  #withoutTrailingEmptyParagraphs(elements) {
-    let lastNonEmptyIndex = elements.length - 1
-
-    // Find the last non-empty paragraph
-    while (lastNonEmptyIndex >= 0) {
-      const element = elements[lastNonEmptyIndex]
-      if (!$isParagraphNode(element) || !this.#isElementEmpty(element)) {
-        break
-      }
-      lastNonEmptyIndex--
-    }
-
-    return elements.slice(0, lastNonEmptyIndex + 1)
-  }
-
-  #isElementEmpty(element) {
-    // Check text content first
-    if (element.getTextContent().trim() !== "") return false
-
-    // Check if it only contains line breaks
-    const children = element.getChildren()
-    return children.length === 0 || children.every(child => $isLineBreakNode(child))
   }
 
   #getTextAnchorData() {
