@@ -23,7 +23,7 @@ class AttachmentsTest < ApplicationSystemTestCase
 
   test "upload image via image button" do
     attach_file file_fixture("example.png") do
-      click_on "Add images"
+      click_on "Add images and video"
     end
 
     assert_image_figure_attachment content_type: "image/png", caption: "example.png"
