@@ -1,10 +1,10 @@
 import Lexxy from "../config/lexxy"
-import { $createNodeSelectionWith, SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
+import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { createElement, dispatch } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
-import { $setSelection, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { SKIP_DOM_SELECTION_TAG } from "lexical"
 
 export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   static getType() {
@@ -211,14 +211,11 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const editorHasFocus = this.#editorHasFocus
 
     this.editor.update(() => {
-      const shouldTransferNodeSelection = editorHasFocus && this.isSelected()
-
       const replacementNode = this.#toActionTextAttachmentNodeWith(blob)
       this.replace(replacementNode)
 
-      if (shouldTransferNodeSelection) {
-        const nodeSelection = $createNodeSelectionWith(replacementNode)
-        $setSelection(nodeSelection)
+      if (editorHasFocus) {
+        replacementNode.selectNext()
       }
     }, { tag: this.#backgroundUpdateTags })
   }

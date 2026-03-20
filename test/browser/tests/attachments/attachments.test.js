@@ -170,12 +170,12 @@ test.describe("Attachments", () => {
     await expect(figure).toBeVisible({ timeout: 10_000 })
     await editor.flush()
 
-    // After uploading into an empty editor, the selection should be in a
-    // paragraph before the attachment and that paragraph must be visible
-    // (not collapsed as hidden) so the caret renders at the correct position.
-    const paragraphBeforeAttachment = figure.locator("xpath=preceding-sibling::p[1]")
-    await expect(paragraphBeforeAttachment).toHaveClass(/provisional-paragraph/)
-    await expect(paragraphBeforeAttachment).not.toHaveClass(/hidden/)
+    // After uploading into an empty editor, the cursor should land below the
+    // attachment so typing inserts text there. The trailing provisional paragraph
+    // must be visible (not collapsed as hidden) so the caret renders correctly.
+    const paragraphAfterAttachment = figure.locator("xpath=following-sibling::p[1]")
+    await expect(paragraphAfterAttachment).toHaveClass(/provisional-paragraph/)
+    await expect(paragraphAfterAttachment).not.toHaveClass(/hidden/)
   })
 
   test("Ctrl+C in caption copies text without losing focus", async ({ page, editor }) => {
