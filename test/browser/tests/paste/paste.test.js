@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
-import { assertEditorContent } from "../../helpers/assertions.js"
+import { assertEditorContent, assertEditorHtml } from "../../helpers/assertions.js"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
 
 const EXAMPLE_PNG = readFileSync("test/fixtures/files/example.png").toString(
@@ -80,5 +80,26 @@ test.describe("Paste — Files & Attachments", () => {
     await assertEditorContent(editor, async (content) => {
       await expect(content.locator("action-text-attachment")).toHaveCount(1)
     })
+  })
+})
+
+const modifier = process.platform === "darwin" ? "Meta" : "Control"
+
+test.describe("Paste — Cut and paste", () => {
+  test("cut and paste does not duplicate content", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.send("Hello world")
+    await editor.flush()
+
+    await editor.selectAll()
+    await editor.content.press(`${modifier}+x`)
+    await editor.flush()
+
+    await editor.content.press(`${modifier}+v`)
+    await editor.flush()
+
+    await assertEditorHtml(editor, "<p>Hello world</p>")
   })
 })
