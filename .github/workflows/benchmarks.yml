@@ -68,9 +68,11 @@ jobs:
       - name: Note missing baseline
         if: steps.baseline.outputs.run_id == ''
         run: |
-          echo "## Browser Benchmark Comparison" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "No successful \`main\` benchmark run exists yet, so this run only published a fresh baseline artifact." >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## Browser Benchmark Comparison"
+            echo ""
+            echo "No successful \`main\` benchmark run exists yet, so this run only published a fresh baseline artifact."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Download baseline benchmark artifact
         if: steps.baseline.outputs.run_id != ''
