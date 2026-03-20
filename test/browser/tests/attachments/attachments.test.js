@@ -32,7 +32,7 @@ test.describe("Attachments", () => {
 
   test("upload non previewable attachment", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
-    await editor.uploadFile("test/fixtures/files/note.txt")
+    await editor.uploadFile("test/fixtures/files/note.txt", { via: "file" })
 
     const figure = page.locator("figure.attachment[data-content-type='text/plain']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
