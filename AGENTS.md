@@ -42,6 +42,11 @@ Use the browser benchmark harness for Lexxy performance work. It is intentionall
 - Compare two runs with `yarn benchmark:browser:compare <baseline.json> <current.json>`.
 - CI uses `.github/workflows/benchmarks.yml` and compares PR results against the latest successful benchmark run on `main`.
 - Treat CI benchmark failures as coarse regression alarms. The thresholds are intentionally loose enough to survive normal GitHub-hosted runner variance.
+
+## Action Text Persistence
+
+When changing how Lexxy formats or serializes content (new inline styles, node types, HTML export changes, sanitization rules), always verify the new format survives the full Action Text round-trip: editor → save → render → re-edit. The editor's HTML passes through DOMPurify (client), Loofah (server), and `highlightCode()` (rendered view) — any of these can strip markup that the editor preserved. Write a Capybara system test that edits a post in the dummy app (`test/dummy/`), saves it, and asserts the rendered show page and re-edited content are correct. Use `posts(:empty)` or `posts(:hello_world)` fixtures as starting points. See `test/system/code_highlighting_test.rb` and `test/system/color_highlighter_test.rb` for examples.
+
 ## Fixing Bugs
 
 Follow this mandatory workflow. Every step must complete before moving to the next.

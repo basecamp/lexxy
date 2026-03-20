@@ -37,6 +37,51 @@ test.describe("Color highlighter", () => {
     })
   })
 
+  test("highlight in a code block survives setValue round-trip", async ({ page, editor }) => {
+    await editor.setValue('<pre data-language="plain"><code>some log output</code></pre>')
+    await editor.select("log output")
+    await applyHighlightOption(page, "background-color", 1)
+    await editor.flush()
+
+    const html = await editor.value()
+
+    // Reload the HTML into the editor (simulating save → re-edit).
+    // Poll until the mutation listener has re-applied highlights after retokenization.
+    await editor.setValue(html)
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toContainText("log output")
+    }).toPass({ timeout: 5_000 })
+  })
+
+  test("highlight in a multiline code block survives round-trip", async ({ page, editor }) => {
+    const html = '<pre data-language="plain"><code>line one<br>line <mark style="background-color: var(--highlight-bg-1);">two</mark><br>line three</code></pre>'
+    await editor.setValue(html)
+    await editor.flush()
+
+    const savedHtml = await editor.value()
+    await editor.setValue(savedHtml)
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toContainText("two")
+    }).toPass({ timeout: 5_000 })
+  })
+
+  test("multiple disjoint highlights in a code block survive round-trip", async ({ page, editor }) => {
+    const html = '<pre data-language="plain"><code><mark style="color: var(--highlight-1);">first</mark> gap <mark style="background-color: var(--highlight-bg-2);">second</mark></code></pre>'
+    await editor.setValue(html)
+    await editor.flush()
+
+    const savedHtml = await editor.value()
+    await editor.setValue(savedHtml)
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toHaveCount(2)
+      await expect(editor.content.locator("code mark").nth(0)).toContainText("first")
+      await expect(editor.content.locator("code mark").nth(1)).toContainText("second")
+    }).toPass({ timeout: 5_000 })
+  })
+
   test("removing highlight from text in a plain-text code block", async ({ page, editor }) => {
     await editor.setValue('<pre data-language="plain"><code>some log output</code></pre>')
     await expect(page.locator("select[name=lexxy-code-language]")).toHaveValue("plain")

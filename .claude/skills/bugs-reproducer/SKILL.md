@@ -309,6 +309,35 @@ bin/rails test test/system/<file>.rb
 bin/rails test:all
 ```
 
+**Testing Action Text rendered output (non-editor view):**
+
+The dummy app (`test/dummy/`) has a `Post` model with `has_rich_text :body`. Use the posts CRUD to test the full save → render round-trip:
+
+1. Visit `edit_post_path(posts(:empty))` (or `:hello_world` for pre-existing content)
+2. Compose content in the editor (use `find_editor`, toolbar helpers, etc.)
+3. `click_on "Update Post"` — saves via Action Text and redirects to the show page
+4. Assert against the **rendered** HTML on the show page (not the editor)
+
+The show page renders `@post.body` inside a `data-controller="code-highlight"` div, which invokes `highlightCode()` from Lexxy via a Stimulus controller. This is the same function apps use to apply Prism syntax highlighting to rendered Action Text content.
+
+Key distinction: bugs that only appear in the **rendered view** (after save, outside the editor) are different from editor bugs. The rendered view runs through Action Text sanitization (Loofah) and then client-side Prism highlighting — both can strip or transform HTML that the editor preserved. Test these by asserting on the show page DOM, not the editor.
+
+```ruby
+# Example: test that highlights survive rendering
+test "highlights preserved in rendered view" do
+  visit edit_post_path(posts(:empty))
+  find_editor.send "some text"
+  find_editor.select "some"
+  apply_highlight_option "background-color", 1
+  click_on "Update Post"
+
+  # Now on the show page — assert against rendered Action Text output
+  assert_selector "mark[style*='background-color']", text: "some"
+end
+```
+
+Fixtures in `test/fixtures/posts.yml` and `test/fixtures/action_text/rich_texts.yml` provide pre-seeded post data.
+
 ### 4c. Reproduce with Selenium (fallback)
 
 If Playwright doesn't reproduce after 3+ attempts and the bug might require real OS-level events, fall back to Selenium WebDriver `.mjs` scripts.
