@@ -149,9 +149,59 @@ export class CommandDispatcher {
 
   dispatchInsertCodeBlock() {
     if (this.selection.hasSelectedWordsInSingleLine) {
-      this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
+      this.#toggleInlineCode()
     } else {
       this.contents.toggleCodeBlock()
+    }
+  }
+
+  #toggleInlineCode() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    if (!selection.isCollapsed()) {
+      const textNodes = selection.getNodes().filter($isTextNode)
+      const applyingCode = !textNodes.every((node) => node.hasFormat("code"))
+
+      if (applyingCode) {
+        this.#stripInlineFormattingFromSelection(selection, textNodes)
+      }
+    }
+
+    this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
+  }
+
+  // Strip all inline formatting (bold, italic, etc.) from the selected text
+  // nodes so that applying code produces a single merged <code> element instead
+  // of one per differently-formatted span.
+  #stripInlineFormattingFromSelection(selection, textNodes) {
+    const isBackward = selection.isBackward()
+    const startPoint = isBackward ? selection.focus : selection.anchor
+    const endPoint = isBackward ? selection.anchor : selection.focus
+
+    for (let i = 0; i < textNodes.length; i++) {
+      const node = textNodes[i]
+      if (node.getFormat() === 0) continue
+
+      const isFirst = i === 0
+      const isLast = i === textNodes.length - 1
+      const startOffset = isFirst && startPoint.type === "text" ? startPoint.offset : 0
+      const endOffset = isLast && endPoint.type === "text" ? endPoint.offset : node.getTextContentSize()
+
+      if (startOffset === 0 && endOffset === node.getTextContentSize()) {
+        node.setFormat(0)
+      } else {
+        const splits = node.splitText(startOffset, endOffset)
+        const target = startOffset === 0 ? splits[0] : splits[1]
+        target.setFormat(0)
+
+        if (isFirst && startPoint.type === "text") {
+          startPoint.set(target.getKey(), 0, "text")
+        }
+        if (isLast && endPoint.type === "text") {
+          endPoint.set(target.getKey(), endOffset - startOffset, "text")
+        }
+      }
     }
   }
 
