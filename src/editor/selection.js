@@ -1,5 +1,5 @@
 import {
-  $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
+  $createParagraphNode, $getCommonAncestor, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
   $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND,
   KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
 } from "lexical"
@@ -154,7 +154,7 @@ export default class Selection {
     const anchorNode = selection.anchor.getNode()
     const focusNode = selection.focus.getNode()
 
-    if (anchorNode.getTopLevelElement() !== focusNode.getTopLevelElement()) {
+    if (!$getCommonAncestor(anchorNode, focusNode)) {
       return false
     }
 
