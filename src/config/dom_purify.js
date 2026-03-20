@@ -1,13 +1,10 @@
 import DOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
-import Lexxy from "./lexxy"
 
-const ALLOWED_HTML_TAGS = [ "a", "b", "blockquote", "br", "code", "div", "em",
-  "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "u", "ul", "table", "tbody", "tr", "th", "td" ]
+// Tags importable by Lexical that we don't want produced in output
+const FORBIDDEN_HTML_TAGS = [ "del", "span", "video" ]
 
-const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",
-  "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "presentation",
-  "previewable", "sgid", "src", "style", "title", "url", "width" ]
+const ALLOWED_HTML_ATTRIBUTES = [ "class", "contenteditable", "href", "src", "style", "title" ]
 
 const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
 
@@ -38,10 +35,23 @@ DOMPurify.addHook("uponSanitizeElement", (node, data) => {
   }
 })
 
-export function buildConfig() {
+export function buildConfig(allowedElements) {
+  const tagAttributes = {}
+
+  for (const element of allowedElements) {
+    if (typeof element === "string") {
+      tagAttributes[element] ||= []
+    } else {
+      tagAttributes[element.tag] ||= []
+      tagAttributes[element.tag].push(...element.attributes)
+    }
+  }
+
   return {
-    ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(Lexxy.global.get("attachmentTagName")),
+    ALLOWED_TAGS: Object.keys(tagAttributes),
+    FORBID_TAGS: FORBIDDEN_HTML_TAGS,
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
+    ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute),
     ADD_URI_SAFE_ATTR: [ "caption", "filename" ],
     SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
   }

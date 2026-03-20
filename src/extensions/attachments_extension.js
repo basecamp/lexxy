@@ -9,9 +9,16 @@ import { AttachmentDragAndDrop } from "../editor/attachments/drag_and_drop"
 import LexxyExtension from "./lexxy_extension"
 import { $isAtNodeEdge } from "../helpers/lexical_helper.js"
 
+const ATTACHMENT_ATTRIBUTES = [ "alt", "caption", "content", "content-type", "data-direct-upload-id",
+  "data-sgid", "filename", "filesize", "height", "presentation", "previewable", "sgid", "url", "width" ]
+
 export class AttachmentsExtension extends LexxyExtension {
   get enabled() {
     return this.editorElement.supportsAttachments
+  }
+
+  get allowedElements() {
+    return [ { tag: ActionTextAttachmentNode.TAG_NAME, attributes: ATTACHMENT_ATTRIBUTES } ]
   }
 
   get lexicalExtension() {

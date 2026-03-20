@@ -184,7 +184,7 @@ export class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
+        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null), this.#allowedElements)
       })
     }
 
@@ -512,6 +512,15 @@ export class LexicalEditorElement extends HTMLElement {
     } else {
       this.internals.setValidity(this.#validationTextArea.validity, this.#validationTextArea.validationMessage, this.editorContentElement)
     }
+  }
+
+  get #allowedElements() {
+    return this.#importableTags.concat(this.extensions.allowedElements)
+  }
+
+  get #importableTags() {
+    const tags = Array.from(this.editor._htmlConversions.keys())
+    return tags.filter(tag => !tag.startsWith("#"))
   }
 
   #reset() {
