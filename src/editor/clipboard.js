@@ -18,7 +18,7 @@ export default class Clipboard {
 
     if (!clipboardData) return false
 
-    if (this.#isPastingIntoCodeBlock()) {
+    if (this.#isPastingIntoCodeBlock) {
       this.#pasteIntoCodeBlock(clipboardData)
       event.preventDefault()
       return true
@@ -50,7 +50,7 @@ export default class Clipboard {
     return types.length === 2 && types.includes("text/uri-list") && types.includes("text/plain")
   }
 
-  #isPastingIntoCodeBlock() {
+  get #isPastingIntoCodeBlock() {
     let result = false
 
     this.editor.getEditorState().read(() => {
