@@ -1,8 +1,8 @@
 import Lexxy from "../config/lexxy"
 import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
-import { bytesToHumanSize } from "../helpers/storage_helper"
-import { extractFileName } from "../helpers/storage_helper"
+import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
+import { parseBoolean } from "../helpers/string_helper"
 
 
 export class ActionTextAttachmentNode extends DecoratorNode {
@@ -85,7 +85,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     this.tagName = tagName || ActionTextAttachmentNode.TAG_NAME
     this.sgid = sgid
     this.src = src
-    this.previewable = previewable
+    this.previewable = parseBoolean(previewable)
     this.altText = altText || ""
     this.caption = caption || ""
     this.contentType = contentType || ""
@@ -189,9 +189,30 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   #createDOMForImage(options = {}) {
     const img = createElement("img", { src: this.src, draggable: false, alt: this.altText, ...this.#imageDimensions, ...options })
+
+    if (this.previewable && !this.isPreviewableImage) {
+      img.onerror = () => this.#swapPreviewToFileDOM(img)
+    }
+
     const container = createElement("div", { className: "attachment__container" })
     container.appendChild(img)
     return container
+  }
+
+  #swapPreviewToFileDOM(img) {
+    const figure = img.closest("figure.attachment")
+    if (!figure) return
+
+    figure.className = figure.className.replace("attachment--preview", "attachment--file")
+
+    const container = figure.querySelector(".attachment__container")
+    if (container) container.remove()
+
+    const caption = figure.querySelector("figcaption")
+    if (caption) caption.remove()
+
+    figure.appendChild(this.#createDOMForFile())
+    figure.appendChild(this.#createDOMForNotImage())
   }
 
   get #imageDimensions() {

@@ -28,3 +28,10 @@ export function filterMatches(text, potentialMatch) {
 export function upcaseFirst(string) {
   return string.charAt(0).toUpperCase() + string.slice(1)
 }
+
+// Parses a value that may arrive as a boolean or as a string (e.g. from DOM
+// getAttribute) into a proper boolean. Ensures "false" doesn't evaluate as truthy.
+export function parseBoolean(value) {
+  if (typeof value === "string") return value === "true"
+  return Boolean(value)
+}
