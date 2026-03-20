@@ -79,25 +79,19 @@ export default class Contents {
     $setBlocksType(selection, () => $createHeadingNode(tag))
   }
 
-  #applyCodeBlockFormat() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return
-
-    $setBlocksType(selection, () => $createCodeNode("plain"))
-  }
-
   toggleCodeBlock() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
     if (this.#insertNodeIfRoot($createCodeNode("plain"))) return
 
-    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
+    const topLevelElements = this.#topLevelElementsInSelection(selection)
+    const allCode = topLevelElements.length > 0 && topLevelElements.every($isCodeNode)
 
-    if (topLevelElement && !$isCodeNode(topLevelElement)) {
-      this.#applyCodeBlockFormat()
+    if (allCode) {
+      topLevelElements.forEach(node => this.#unwrapCodeBlock(node))
     } else {
-      this.applyParagraphFormat()
+      this.#applyCodeBlockFormat(topLevelElements)
     }
   }
 
@@ -297,6 +291,60 @@ export default class Contents {
     }
 
     return false
+  }
+
+  #applyCodeBlockFormat(topLevelElements) {
+    if (topLevelElements.length === 0) return
+
+    const codeNode = $createCodeNode("plain")
+    topLevelElements[0].insertBefore(codeNode)
+
+    topLevelElements.forEach((element, index) => {
+      if (index > 0) codeNode.append($createLineBreakNode())
+
+      const children = element.getChildren()
+      if (children.length === 0) {
+        codeNode.append($createTextNode(""))
+      } else {
+        children.forEach(child => {
+          if ($isTextNode(child)) {
+            codeNode.append($createTextNode(child.getTextContent()))
+          } else if ($isLineBreakNode(child)) {
+            codeNode.append($createLineBreakNode())
+          } else {
+            codeNode.append($createTextNode(child.getTextContent()))
+          }
+        })
+      }
+
+      element.remove()
+    })
+
+    codeNode.selectEnd()
+  }
+
+  #unwrapCodeBlock(codeNode) {
+    const children = codeNode.getChildren()
+    const groups = [ [] ]
+
+    for (const child of children) {
+      if ($isLineBreakNode(child)) {
+        groups.push([])
+      } else {
+        groups[groups.length - 1].push(child.getTextContent())
+      }
+    }
+
+    for (const group of groups) {
+      const paragraph = $createParagraphNode()
+      const text = group.join("")
+      if (text) {
+        paragraph.append($createTextNode(text))
+      }
+      codeNode.insertBefore(paragraph)
+    }
+
+    codeNode.remove()
   }
 
   #splitParagraphsAtLineBreaks(selection) {
