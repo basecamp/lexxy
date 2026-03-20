@@ -43,13 +43,12 @@ class UploadFocusTest < ApplicationSystemTestCase
 
     # Start the upload — the blob creation XHR is deferred
     attach_file file_fixture("example.png") do
-      click_on "Upload file"
+      click_on "Upload files"
     end
 
     # Focus the title field while upload is paused
     title_field = find("input[aria-label='Post title']")
-    title_field.click
-    title_field.send_keys [ :control, "a" ], "Hello"
+    title_field.set("Hello")
     assert_equal title_field, active_element, "Title should have focus before upload completes"
 
     # Release the deferred upload request
@@ -96,13 +95,12 @@ class UploadFocusTest < ApplicationSystemTestCase
 
     # Start the upload — deferred
     attach_file file_fixture("example.png") do
-      click_on "Upload file"
+      click_on "Upload files"
     end
 
     # Move to the title and type
     title_field = find("input[aria-label='Post title']")
-    title_field.click
-    title_field.send_keys [ :control, "a" ], "Hello"
+    title_field.set("Hello")
 
     # Release the upload
     page.execute_script "window.__flushXhrQueue()"

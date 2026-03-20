@@ -437,7 +437,7 @@
   position: relative;
 
   &[data-attachments="false"] button[name="image"],
-  &[data-attachments="false"] button[name="files"] {
+  &[data-attachments="false"] button[name="file"] {
     display: none;
   }
 
@@ -445,7 +445,7 @@
     display: none;
   }
 
-  &[data-upload="image"] button[name="files"] {
+  &[data-upload="image"] button[name="file"] {
     display: none;
   }
 
