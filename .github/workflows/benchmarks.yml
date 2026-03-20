@@ -6,15 +6,16 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-permissions:
-  actions: read
-  contents: read
+permissions: {}
 
 jobs:
   browser-benchmarks:
     name: Browser benchmarks
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
     env:
       BENCHMARK_ITERATIONS: 10
       BENCHMARK_WARMUP_ITERATIONS: 2
