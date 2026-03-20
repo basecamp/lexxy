@@ -497,8 +497,7 @@ export default class Selection {
   // outside the list item (e.g. a block attachment before the list),
   // not when it's an inline mention inside the list item.
   #collapseListItemToParagraph(decoratorNode) {
-    const anchorNode = $getSelection()?.anchor?.getNode()
-    const listItem = anchorNode && $getNearestNodeOfType(anchorNode, ListItemNode)
+    const listItem = this.nearestNodeOfType(ListItemNode)
     if (!listItem) return false
 
     if (listItem.isParentOf(decoratorNode)) return false
@@ -511,8 +510,7 @@ export default class Selection {
     children.forEach(child => paragraph.append(child))
 
     if (listNode.getChildrenSize() === 1) {
-      listNode.insertBefore(paragraph)
-      listNode.remove()
+      listNode.replace(paragraph)
     } else {
       listNode.insertBefore(paragraph)
       listItem.remove()

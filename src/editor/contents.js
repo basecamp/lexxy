@@ -697,9 +697,8 @@ export default class Contents {
     const paragraph = $createParagraphNode()
     const sublists = this.#extractSublistsAndContent(listItem, paragraph)
 
-    listItem.insertAfter(paragraph)
+    listItem.replace(paragraph)
     this.#insertSublists(paragraph, sublists)
-    listItem.remove()
 
     return paragraph
   }
