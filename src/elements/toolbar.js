@@ -36,6 +36,14 @@ export class LexicalToolbarElement extends HTMLElement {
     }
   }
 
+  configure(config) {
+    if (typeof config === "object" && config !== null) {
+      for (const [ button, value ] of Object.entries(config)) {
+        this.setAttribute(`data-${button}`, value)
+      }
+    }
+  }
+
   setEditor(editorElement) {
     this.editorElement = editorElement
     this.editor = editorElement.editor

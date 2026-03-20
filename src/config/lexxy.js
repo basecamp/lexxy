@@ -14,8 +14,9 @@ const presets = new Configuration({
     markdown: true,
     multiLine: true,
     richText: true,
-    toolbar: true,
-    uploadButton: "both",
+    toolbar: {
+      upload: "both"
+    },
     highlight: {
       buttons: {
         color: range(1, 9).map(n => `var(--highlight-${n})`),

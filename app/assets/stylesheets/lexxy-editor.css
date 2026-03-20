@@ -441,11 +441,11 @@
     display: none;
   }
 
-  &[data-upload-button="file"] button[name="upload"] {
+  &[data-upload="file"] button[name="upload"] {
     display: none;
   }
 
-  &[data-upload-button="image"] button[name="files"] {
+  &[data-upload="image"] button[name="files"] {
     display: none;
   }
 

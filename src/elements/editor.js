@@ -481,23 +481,23 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #findOrCreateDefaultToolbar() {
-    const toolbarId = this.config.get("toolbar")
-    if (toolbarId && toolbarId !== true) {
-      return document.getElementById(toolbarId)
+    const toolbarConfig = this.config.get("toolbar")
+    if (typeof toolbarConfig === "string") {
+      return document.getElementById(toolbarConfig)
     } else {
       return this.#createDefaultToolbar()
     }
   }
 
   get #hasToolbar() {
-    return this.supportsRichText && this.config.get("toolbar")
+    return this.supportsRichText && !!this.config.get("toolbar")
   }
 
   #createDefaultToolbar() {
     const toolbar = createElement("lexxy-toolbar")
     toolbar.innerHTML = LexicalToolbar.defaultTemplate
     toolbar.setAttribute("data-attachments", this.supportsAttachments) // Drives toolbar CSS styles
-    toolbar.setAttribute("data-upload-button", this.config.get("uploadButton")) // Drives which upload buttons are shown (both / image / file)
+    toolbar.configure(this.config.get("toolbar"))
     this.prepend(toolbar)
     return toolbar
   }

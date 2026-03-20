@@ -43,9 +43,9 @@ Lexxy.configure({
 
 Editors support the following options, configurable using presets and element attributes:
 
-- `toolbar`: Pass `false` to disable the toolbar entirely, or pass the ID of a `<lexxy-toolbar>` element to use as an external toolbar. By default, the toolbar is bootstrapped and displayed above the editor.
+- `toolbar`: Pass `false` to disable the toolbar entirely, pass the ID of a `<lexxy-toolbar>` element to use as an external toolbar, or pass an object to configure individual toolbar buttons. By default, the toolbar is bootstrapped and displayed above the editor.
+  - `toolbar.upload`: Control which upload button(s) appear in the toolbar. Accepts `"file"`, `"image"`, or `"both"` (default).
 - `attachments`: Pass `false` to disable attachments completely. By default, attachments are supported, including paste and drag & drop support.
-- `uploadButton`: Control the icon(s) shown in the toolbar for attachments. There are 3 possible values: `file`, `image` or `both` (default).
 - `markdown`: Pass `false` to disable Markdown support.
 - `multiLine`: Pass `false` to force single line editing.
 - `richText`: Pass `false` to disable rich text editing.
