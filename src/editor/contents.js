@@ -439,17 +439,7 @@ export default class Contents {
   }
 
   #withoutTrailingEmptyParagraphs(elements) {
-    let lastNonEmptyIndex = elements.length - 1
-
-    // Find the last non-empty paragraph
-    while (lastNonEmptyIndex >= 0) {
-      const element = elements[lastNonEmptyIndex]
-      if (!$isParagraphNode(element) || !$isBlankNode(element)) {
-        break
-      }
-      lastNonEmptyIndex--
-    }
-
+    const lastNonEmptyIndex = elements.findLastIndex(el => !$isParagraphNode(el) || !$isBlankNode(el))
     return elements.slice(0, lastNonEmptyIndex + 1)
   }
 

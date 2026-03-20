@@ -161,14 +161,7 @@ export default class Selection {
     const anchorElement = anchorNode.getTopLevelElement()
     if (!anchorElement) return false
 
-    const nodes = selection.getNodes()
-    for (const node of nodes) {
-      if ($isLineBreakNode(node)) {
-        return false
-      }
-    }
-
-    return true
+    return !selection.getNodes().some($isLineBreakNode)
   }
 
   get isInsideList() {
