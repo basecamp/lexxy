@@ -436,12 +436,12 @@
   padding: 2px;
   position: relative;
 
-  &[data-attachments="false"] button[name="upload"],
+  &[data-attachments="false"] button[name="image"],
   &[data-attachments="false"] button[name="files"] {
     display: none;
   }
 
-  &[data-upload="file"] button[name="upload"] {
+  &[data-upload="file"] button[name="image"] {
     display: none;
   }
 
