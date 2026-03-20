@@ -10,7 +10,7 @@ import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $createNodeSelectionWith, getListType } from "../helpers/lexical_helper"
+import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } from "../helpers/lexical_helper"
 import { LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
@@ -577,7 +577,7 @@ export default class Selection {
     const listItem = $getNearestNodeOfType(anchorNode, ListItemNode)
     if (!listItem) return false
 
-    if (!this.#isListItemStructurallyEmpty(listItem)) return false
+    if (!$isListItemStructurallyEmpty(listItem)) return false
 
     const nextSibling = listItem.getNextSibling()
     if (!nextSibling) return false
@@ -590,24 +590,6 @@ export default class Selection {
     }
 
     listItem.remove()
-    return true
-  }
-
-  // A list item is structurally empty if it contains no meaningful content.
-  // Unlike getTextContent().trim() === "", this walks descendants to ensure
-  // decorator nodes (mentions, attachments whose getTextContent() may return
-  // invisible characters like \ufeff) are treated as non-empty content.
-  #isListItemStructurallyEmpty(listItem) {
-    const children = listItem.getChildren()
-    for (const child of children) {
-      if ($isDecoratorNode(child)) return false
-      if ($isLineBreakNode(child)) continue
-      if ($isTextNode(child)) {
-        if (child.getTextContent().trim() !== "") return false
-      } else if ($isElementNode(child)) {
-        if (child.getTextContent().trim() !== "") return false
-      }
-    }
     return true
   }
 
