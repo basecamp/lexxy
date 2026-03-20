@@ -300,7 +300,8 @@ export default class Contents {
   }
 
   #splitParagraphsAtLineBreaks(selection) {
-    const selectedNodeKeys = new Set(selection.getNodes().map(n => n.getKey()))
+    const anchorKey = selection.anchor.getNode().getKey()
+    const focusKey = selection.focus.getNode().getKey()
     const topLevelElements = this.#topLevelElementsInSelection(selection)
 
     for (const element of topLevelElements) {
@@ -308,6 +309,14 @@ export default class Contents {
 
       const children = element.getChildren()
       if (!children.some($isLineBreakNode)) continue
+
+      // Check whether this paragraph needs splitting: skip only if neither
+      // selection endpoint is inside it (meaning it's a middle paragraph
+      // fully between anchor and focus with no partial lines to split off).
+      const hasEndpoint = children.some(child =>
+        child.getKey() === anchorKey || child.getKey() === focusKey
+      )
+      if (!hasEndpoint) continue
 
       const groups = [ [] ]
       for (const child of children) {
@@ -318,8 +327,6 @@ export default class Contents {
           groups[groups.length - 1].push(child)
         }
       }
-
-      if (groups.every(group => group.some(child => selectedNodeKeys.has(child.getKey())))) continue
 
       for (const group of groups) {
         if (group.length === 0) continue
