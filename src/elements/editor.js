@@ -5,7 +5,7 @@ import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
-import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
+import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_tag_handler"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
@@ -30,6 +30,7 @@ import { HighlightExtension } from "../extensions/highlight_extension"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 import { TablesExtension } from "../extensions/tables_extension"
 import { AttachmentsExtension } from "../extensions/attachments_extension.js"
+import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 
 
 export class LexicalEditorElement extends HTMLElement {
@@ -122,7 +123,8 @@ export class LexicalEditorElement extends HTMLElement {
       HighlightExtension,
       TrixContentExtension,
       TablesExtension,
-      AttachmentsExtension
+      AttachmentsExtension,
+      FormatEscapeExtension
     ]
   }
 
