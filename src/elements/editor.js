@@ -256,7 +256,7 @@ export class LexicalEditorElement extends HTMLElement {
       theme: theme,
       nodes: this.#lexicalNodes,
       html: {
-        export: new Map([ [ TextNode, exportTextNodeDOM ] ])
+        export: new Map([ [ TextNode, exportTextNodeDOM ], [ CodeHighlightNode, exportTextNodeDOM ] ])
       }
     },
       ...this.extensions.lexicalExtensions

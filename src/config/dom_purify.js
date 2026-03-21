@@ -1,9 +1,6 @@
 import DOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 
-// Tags importable by Lexical that we don't want produced in output
-const FORBIDDEN_HTML_TAGS = [ "del", "span", "video" ]
-
 const ALLOWED_HTML_ATTRIBUTES = [ "class", "contenteditable", "href", "src", "style", "title" ]
 
 const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
@@ -49,7 +46,6 @@ export function buildConfig(allowedElements) {
 
   return {
     ALLOWED_TAGS: Object.keys(tagAttributes),
-    FORBID_TAGS: FORBIDDEN_HTML_TAGS,
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute),
     ADD_URI_SAFE_ATTR: [ "caption", "filename" ],
