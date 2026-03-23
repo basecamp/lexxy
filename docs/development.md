@@ -6,21 +6,73 @@ nav_order: 7
 
 # Development
 
-## Local development
+## Setup
 
-To build the JS source when it changes, run:
+Install all dependencies (Ruby gems, Node packages, Playwright browsers, and database):
 
 ```bash
-yarn build -w
+bin/setup
 ```
 
-To the sandbox app:
+## Local development
+
+To start both the Rails server and the JS watcher:
 
 ```bash
-bin/rails server
+bin/dev
 ```
 
 The sandbox app is available at http://lexxy.localhost:3000. There is also a CRUD example at http://lexxy.localhost:3000/posts.
+
+To run multiple worktrees in parallel, give each worktree its own port:
+
+```bash
+PORT=3100 bin/dev
+PORT=3200 bin/dev
+```
+
+Use the matching URL for that worktree, for example `http://lexxy.localhost:3100/posts`.
+
+## Tests
+
+CI runs the full suite on every pull request and push to `main` via GitHub Actions (see `.github/workflows/ci.yml`). It runs four jobs in parallel: lint, JS unit tests, Rails system tests, and Playwright browser tests (across Chromium, Firefox, and WebKit).
+
+To run tests locally:
+
+```bash
+# JS unit tests (Vitest)
+yarn test
+
+# Playwright browser tests — all browsers
+yarn test:browser
+
+# Playwright browser tests — single browser
+yarn test:browser:chromium
+yarn test:browser:firefox
+yarn test:browser:webkit
+
+# Playwright browser tests — headed (visible browser window)
+yarn test:browser:headed
+
+# Rails system tests
+bin/rails test:all
+
+# Lint
+bin/rubocop
+yarn lint
+```
+
+### Two browser-facing test suites
+
+#### Playwright (`test/browser/`) — JS editing behavior
+
+Tests pure JS editing behavior: typing, cursor/selection, formatting, paste handling, toolbar interactions, keyboard shortcuts, node transforms, tables, code blocks, and other client-side interactions. Tests run against a Vite dev server serving static HTML fixtures — no Rails required. Playwright runs across Chromium, Firefox, and WebKit for local cross-browser coverage.
+
+**WebKit on Omarchy/Arch Linux:** Playwright's bundled WebKit binaries are compiled against Ubuntu's system libraries (ICU 74, libjxl 0.8, etc.). Arch ships newer, ABI-incompatible versions of these libraries, so WebKit will fail to launch locally. This is a Playwright limitation — they only build WebKit for Ubuntu. Chromium and Firefox work fine everywhere. Run `yarn test:browser:chromium` or `yarn test:browser:firefox` locally; WebKit coverage is guaranteed by CI which runs on Ubuntu.
+
+#### Capybara (`test/system/`) — Rails integration
+
+Tests the full Rails stack: Action Text rendering and persistence, Trix ↔ Lexxy conversion (both directions, in `test/system/trix/`), ActiveStorage uploads, SGID/prompt resolution, form behavior, Turbo/page refresh, authenticated storage, and gallery display after save. Tests run against the dummy Rails app using `selenium_chrome_headless`.
 
 ## Documentation
 
@@ -54,3 +106,50 @@ yarn release
 Create [a new release in GitHub](https://github.com/basecamp/lexxy/releases). 
 
 While in beta we are flagging the releases as pre-release.
+
+## Performance benchmarks
+
+Lexxy also ships a browser benchmark harness for the JS side of the editor. These benchmarks run against the Vite fixture app in `test/browser/fixtures/`, just like the Playwright browser tests, so they measure editor bootstrap and content-loading cost without involving Rails, Action Text persistence, or Active Storage uploads.
+
+To run the full browser benchmark suite locally:
+
+```bash
+yarn benchmark:browser
+```
+
+Results are written to `tmp/browser-benchmarks.json`.
+
+For quicker iteration, you can narrow the run to a single scenario or reduce the sample counts:
+
+```bash
+# List scenarios
+yarn benchmark:browser --list-scenarios
+
+# Run one scenario with smaller sample sizes
+yarn benchmark:browser --scenario load-very-large-table --warmup 1 --iterations 5
+```
+
+The current benchmark scenarios are:
+
+- `bootstrap-empty-editor`
+- `bootstrap-many-editors`
+- `load-large-content`
+- `load-very-large-table`
+- `load-many-attachments`
+
+To compare two result files locally:
+
+```bash
+yarn benchmark:browser:compare tmp/baseline.json tmp/current.json
+```
+
+The compare script checks per-scenario median regressions against coarse thresholds so it can be used in CI without flapping on normal GitHub runner variance.
+
+## Benchmark CI
+
+GitHub Actions runs the browser benchmark workflow from `.github/workflows/benchmarks.yml` on pull requests, pushes to `main`, and manual dispatches.
+
+- Each run uploads `tmp/browser-benchmarks.json` as the `browser-benchmarks` artifact.
+- Pull requests compare their results against the latest successful benchmark run from `main`.
+- The workflow only fails when a scenario median regresses by more than both the configured absolute and relative threshold.
+- The comparison is written to the workflow summary, so you can inspect the deltas without downloading artifacts manually.

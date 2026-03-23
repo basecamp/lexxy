@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    lexxy (0.8.0.beta)
+    lexxy (0.9.0.beta)
       rails (>= 8.0.2)
 
 GEM
@@ -115,6 +115,8 @@ GEM
     ffi (1.17.2-aarch64-linux-gnu)
     ffi (1.17.2-arm64-darwin)
     ffi (1.17.2-x86_64-linux-gnu)
+    foreman (0.90.0)
+      thor (~> 1.4)
     globalid (1.3.0)
       activesupport (>= 6.1)
     i18n (1.14.8)
@@ -316,6 +318,7 @@ PLATFORMS
 DEPENDENCIES
   capybara
   cuprite
+  foreman
   image_processing
   importmap-rails
   lexxy!

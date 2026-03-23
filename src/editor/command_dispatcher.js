@@ -3,11 +3,13 @@ import {
   $getNodeByKey,
   $getSelection,
   $isRangeSelection,
-  $isRootOrShadowRoot,
+  $isTextNode,
+  $setSelection,
   COMMAND_PRIORITY_LOW,
   COMMAND_PRIORITY_NORMAL,
   FORMAT_TEXT_COMMAND,
   INDENT_CONTENT_COMMAND,
+  KEY_ARROW_RIGHT_COMMAND,
   KEY_TAB_COMMAND,
   OUTDENT_CONTENT_COMMAND,
   PASTE_COMMAND,
@@ -15,8 +17,7 @@ import {
   UNDO_COMMAND
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
-import { $createHeadingNode, $createQuoteNode, $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
-import { $isCodeNode, CodeNode } from "@lexical/code"
+import { CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $isLinkNode, $toggleLink, LinkNode } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
@@ -29,11 +30,15 @@ const COMMANDS = [
   "bold",
   "italic",
   "strikethrough",
+  "underline",
   "link",
   "unlink",
   "toggleHighlight",
   "removeHighlight",
-  "rotateHeadingFormat",
+  "setFormatHeadingLarge",
+  "setFormatHeadingMedium",
+  "setFormatHeadingSmall",
+  "setFormatParagraph",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -49,6 +54,8 @@ const COMMANDS = [
 ]
 
 export class CommandDispatcher {
+  #selectionBeforeDrag = null
+
   static configureFor(editorElement) {
     new CommandDispatcher(editorElement)
   }
@@ -79,6 +86,10 @@ export class CommandDispatcher {
 
   dispatchStrikethrough() {
     this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")
+  }
+
+  dispatchUnderline() {
+    this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")
   }
 
   dispatchToggleHighlight(styles) {
@@ -133,7 +144,7 @@ export class CommandDispatcher {
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "bullet") {
-      this.contents.unwrapSelectedListItems()
+      this.contents.applyParagraphFormat()
     } else {
       this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
     }
@@ -146,24 +157,72 @@ export class CommandDispatcher {
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "number") {
-      this.contents.unwrapSelectedListItems()
+      this.contents.applyParagraphFormat()
     } else {
       this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
     }
   }
 
   dispatchInsertQuoteBlock() {
-    this.contents.toggleNodeWrappingAllSelectedNodes((node) => $isQuoteNode(node), () => $createQuoteNode())
+    this.contents.toggleBlockquote()
   }
 
   dispatchInsertCodeBlock() {
-    this.editor.update(() => {
-      if (this.selection.hasSelectedWordsInSingleLine) {
-        this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
-      } else {
-        this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new CodeNode("plain"))
+    if (this.selection.hasSelectedWordsInSingleLine) {
+      this.#toggleInlineCode()
+    } else {
+      this.contents.toggleCodeBlock()
+    }
+  }
+
+  #toggleInlineCode() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    if (!selection.isCollapsed()) {
+      const textNodes = selection.getNodes().filter($isTextNode)
+      const applyingCode = !textNodes.every((node) => node.hasFormat("code"))
+
+      if (applyingCode) {
+        this.#stripInlineFormattingFromSelection(selection, textNodes)
       }
-    })
+    }
+
+    this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
+  }
+
+  // Strip all inline formatting (bold, italic, etc.) from the selected text
+  // nodes so that applying code produces a single merged <code> element instead
+  // of one per differently-formatted span.
+  #stripInlineFormattingFromSelection(selection, textNodes) {
+    const isBackward = selection.isBackward()
+    const startPoint = isBackward ? selection.focus : selection.anchor
+    const endPoint = isBackward ? selection.anchor : selection.focus
+
+    for (let i = 0; i < textNodes.length; i++) {
+      const node = textNodes[i]
+      if (node.getFormat() === 0) continue
+
+      const isFirst = i === 0
+      const isLast = i === textNodes.length - 1
+      const startOffset = isFirst && startPoint.type === "text" ? startPoint.offset : 0
+      const endOffset = isLast && endPoint.type === "text" ? endPoint.offset : node.getTextContentSize()
+
+      if (startOffset === 0 && endOffset === node.getTextContentSize()) {
+        node.setFormat(0)
+      } else {
+        const splits = node.splitText(startOffset, endOffset)
+        const target = startOffset === 0 ? splits[0] : splits[1]
+        target.setFormat(0)
+
+        if (isFirst && startPoint.type === "text") {
+          startPoint.set(target.getKey(), 0, "text")
+        }
+        if (isLast && endPoint.type === "text") {
+          endPoint.set(target.getKey(), endOffset - startOffset, "text")
+        }
+      }
+    }
   }
 
   dispatchSetCodeLanguage(language) {
@@ -177,35 +236,20 @@ export class CommandDispatcher {
     this.editor.focus()
   }
 
-  dispatchRotateHeadingFormat() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return
+  dispatchSetFormatHeadingLarge() {
+    this.contents.applyHeadingFormat("h2")
+  }
 
-    if ($isRootOrShadowRoot(selection.anchor.getNode())) {
-      selection.insertNodes([ $createHeadingNode("h2") ])
-      return
-    }
+  dispatchSetFormatHeadingMedium() {
+    this.contents.applyHeadingFormat("h3")
+  }
 
-    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
-    let nextTag = "h2"
-    if ($isHeadingNode(topLevelElement)) {
-      const currentTag = topLevelElement.getTag()
-      if (currentTag === "h2") {
-        nextTag = "h3"
-      } else if (currentTag === "h3") {
-        nextTag = "h4"
-      } else if (currentTag === "h4") {
-        nextTag = null
-      } else {
-        nextTag = "h2"
-      }
-    }
+  dispatchSetFormatHeadingSmall() {
+    this.contents.applyHeadingFormat("h4")
+  }
 
-    if (nextTag) {
-      this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
-    } else {
-      this.contents.removeFormattingFromSelectedLines()
-    }
+  dispatchSetFormatParagraph() {
+    this.contents.applyParagraphFormat()
   }
 
   dispatchUploadAttachments() {
@@ -250,7 +294,22 @@ export class CommandDispatcher {
   }
 
   #registerKeyboardCommands() {
+    this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#handleArrowRightKey.bind(this), COMMAND_PRIORITY_NORMAL)
     this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleTabKey.bind(this), COMMAND_PRIORITY_NORMAL)
+  }
+
+  #handleArrowRightKey(event) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+    if (this.selection.isInsideCodeBlock || !selection.hasFormat("code")) return false
+
+    const anchorNode = selection.anchor.getNode()
+    if (!$isTextNode(anchorNode) || selection.anchor.offset !== anchorNode.getTextContentSize()) return false
+    if (anchorNode.getNextSibling() !== null) return false
+
+    event.preventDefault()
+    selection.toggleFormat("code")
+    return true
   }
 
   #registerDragAndDropHandlers() {
@@ -264,24 +323,34 @@ export class CommandDispatcher {
   }
 
   #handleDragEnter(event) {
+    if (this.#isInternalDrag(event)) return
+
     this.dragCounter++
     if (this.dragCounter === 1) {
+      this.#saveSelectionBeforeDrag()
       this.editor.getRootElement().classList.add("lexxy-editor--drag-over")
     }
   }
 
   #handleDragLeave(event) {
+    if (this.#isInternalDrag(event)) return
+
     this.dragCounter--
     if (this.dragCounter === 0) {
+      this.#selectionBeforeDrag = null
       this.editor.getRootElement().classList.remove("lexxy-editor--drag-over")
     }
   }
 
   #handleDragOver(event) {
+    if (this.#isInternalDrag(event)) return
+
     event.preventDefault()
   }
 
   #handleDrop(event) {
+    if (this.#isInternalDrag(event)) return
+
     event.preventDefault()
 
     this.dragCounter = 0
@@ -293,9 +362,30 @@ export class CommandDispatcher {
     const files = Array.from(dataTransfer.files)
     if (!files.length) return
 
+    this.#restoreSelectionBeforeDrag()
     this.contents.uploadFiles(files, { selectLast: true })
 
     this.editor.focus()
+  }
+
+  #saveSelectionBeforeDrag() {
+    this.editor.getEditorState().read(() => {
+      this.#selectionBeforeDrag = $getSelection()?.clone()
+    })
+  }
+
+  #restoreSelectionBeforeDrag() {
+    if (!this.#selectionBeforeDrag) return
+
+    this.editor.update(() => {
+      $setSelection(this.#selectionBeforeDrag)
+    })
+
+    this.#selectionBeforeDrag = null
+  }
+
+  #isInternalDrag(event) {
+    return event.dataTransfer?.types.includes("application/x-lexxy-node-key")
   }
 
   #handleTabKey(event) {

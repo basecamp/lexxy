@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "vitest"
-import { createTestEditorWithNativeAdapter, destroyTestEditor, captureEvent } from "../helpers/editor_helper"
+import { createTestEditorWithNativeAdapter, destroyTestEditor, captureEvent } from "../unit/helpers/editor_helper"
 
 let editorElement
 

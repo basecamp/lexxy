@@ -1,9 +1,10 @@
-import { $getSelection, $isDecoratorNode, $isParagraphNode, COMMAND_PRIORITY_NORMAL, DELETE_CHARACTER_COMMAND, defineExtension } from "lexical"
+import { $getSelection, $isDecoratorNode, $isParagraphNode, $splitNode, COMMAND_PRIORITY_NORMAL, DELETE_CHARACTER_COMMAND, defineExtension } from "lexical"
 import { mergeRegister } from "@lexical/utils"
 
 import { $findOrCreateGalleryForImage, $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node.js"
+import { AttachmentDragAndDrop } from "../editor/attachments/drag_and_drop"
 
 import LexxyExtension from "./lexxy_extension"
 import { $isAtNodeEdge } from "../helpers/lexical_helper.js"
@@ -22,11 +23,34 @@ export class AttachmentsExtension extends LexxyExtension {
         ImageGalleryNode
       ],
       register(editor) {
+        const dragAndDrop = new AttachmentDragAndDrop(editor)
+
         return mergeRegister(
-          editor.registerCommand(DELETE_CHARACTER_COMMAND, $collapseIntoGallery, COMMAND_PRIORITY_NORMAL)
+          editor.registerNodeTransform(ActionTextAttachmentNode, $extractAttachmentFromParagraph),
+          editor.registerCommand(DELETE_CHARACTER_COMMAND, $collapseIntoGallery, COMMAND_PRIORITY_NORMAL),
+          () => dragAndDrop.destroy()
         )
       }
     })
+  }
+}
+
+// Decorator nodes can be wrapped in a Paragraph Node by Lexical when contained in a <div>
+// We remove them, splitting the node as needed
+function $extractAttachmentFromParagraph(attachmentNode) {
+  const parentNode = attachmentNode.getParent()
+  if (!$isParagraphNode(parentNode)) return
+
+  if (parentNode.getChildrenSize() === 1) {
+    parentNode.replace(attachmentNode)
+  } else {
+    const index = attachmentNode.getIndexWithinParent()
+    const [ topParagraph, bottomParagraph ] = $splitNode(parentNode, index)
+    topParagraph.insertAfter(attachmentNode)
+
+    for (const p of [ topParagraph, bottomParagraph ]) {
+      if (p.isEmpty()) p.remove()
+    }
   }
 }
 

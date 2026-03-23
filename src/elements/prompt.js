@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $createTextNode, $isTextNode, COMMAND_PRIORITY_CRITICAL, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $createTextNode, $getSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_CRITICAL, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
@@ -15,6 +15,7 @@ export class LexicalPromptElement extends HTMLElement {
   constructor() {
     super()
     this.keyListeners = []
+    this.showPopoverId = 0
   }
 
   static observedAttributes = [ "connected" ]
@@ -78,6 +79,8 @@ export class LexicalPromptElement extends HTMLElement {
   #addTriggerListener() {
     const unregister = this.#editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
+        if (this.#selection.isInsideCodeBlock) return
+
         const { node, offset } = this.#selection.selectedNodeWithOffset()
         if (!node) return
 
@@ -108,10 +111,15 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   #addCursorPositionListener() {
-    this.cursorPositionListener = this.#editor.registerUpdateListener(() => {
+    this.cursorPositionListener = this.#editor.registerUpdateListener(({ editorState }) => {
       if (this.closed) return
 
-      this.#editor.read(() => {
+      editorState.read(() => {
+        if (this.#selection.isInsideCodeBlock) {
+          this.#hidePopover()
+          return
+        }
+
         const { node, offset } = this.#selection.selectedNodeWithOffset()
         if (!node) return
 
@@ -153,9 +161,14 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   async #showPopover() {
+    const showId = ++this.showPopoverId
     this.popoverElement ??= await this.#buildPopover()
+    if (this.showPopoverId !== showId) return
+
     this.#resetPopoverPosition()
     await this.#filterOptions()
+    if (this.showPopoverId !== showId) return
+
     this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", true)
     this.#selectFirstOption()
 
@@ -234,29 +247,39 @@ export class LexicalPromptElement extends HTMLElement {
     const verticalOffset = contentRect.top - editorRect.top
 
     if (!this.popoverElement.hasAttribute("data-anchored")) {
-      this.popoverElement.style.left = `${x}px`
+      this.#setPopoverOffsetX(x)
+      this.#setPopoverOffsetY(y + verticalOffset)
       this.popoverElement.toggleAttribute("data-anchored", true)
     }
 
-    this.popoverElement.style.top = `${y + verticalOffset}px`
-    this.popoverElement.style.bottom = "auto"
-
     const popoverRect = this.popoverElement.getBoundingClientRect()
-    const isClippedAtBottom = popoverRect.bottom > window.innerHeight
 
-    if (isClippedAtBottom || this.popoverElement.hasAttribute("data-clipped-at-bottom")) {
-      this.popoverElement.style.top = `${y + verticalOffset - popoverRect.height - fontSize}px`
-      this.popoverElement.style.bottom = "auto"
+    if (popoverRect.right > window.innerWidth) {
+      this.popoverElement.toggleAttribute("data-clipped-at-right", true)
+    }
+
+    if (popoverRect.bottom > window.innerHeight) {
+      this.#setPopoverOffsetY(contentRect.height - y + fontSize)
       this.popoverElement.toggleAttribute("data-clipped-at-bottom", true)
     }
   }
 
+  #setPopoverOffsetX(value) {
+    this.popoverElement.style.setProperty("--lexxy-prompt-offset-x", `${value}px`)
+  }
+
+  #setPopoverOffsetY(value) {
+    this.popoverElement.style.setProperty("--lexxy-prompt-offset-y", `${value}px`)
+  }
+
   #resetPopoverPosition() {
     this.popoverElement.removeAttribute("data-clipped-at-bottom")
+    this.popoverElement.removeAttribute("data-clipped-at-right")
     this.popoverElement.removeAttribute("data-anchored")
   }
 
   async #hidePopover() {
+    this.showPopoverId++
     this.#clearSelection()
     this.popoverElement.classList.toggle("lexxy-prompt-menu--visible", false)
     this.#editorElement.removeEventListener("lexxy:change", this.#filterOptions)
@@ -282,6 +305,14 @@ export class LexicalPromptElement extends HTMLElement {
 
     if (this.#editorContents.containsTextBackUntil(this.trigger)) {
       await this.#showFilteredOptions()
+
+      // Re-check after async operation — the trigger may have been consumed
+      // (e.g. markdown heading shortcut converted "# " to h1 during the fetch)
+      if (!this.#editorContents.containsTextBackUntil(this.trigger)) {
+        this.#hidePopover()
+        return
+      }
+
       await nextFrame()
       this.#positionPopover()
     } else {
@@ -290,8 +321,12 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   async #showFilteredOptions() {
+    const showId = this.showPopoverId
     const filter = this.#editorContents.textBackUntil(this.trigger)
     const filteredListItems = await this.source.buildListItems(filter)
+    if (this.showPopoverId !== showId) return
+    if (!this.#editorContents.containsTextBackUntil(this.trigger)) return
+
     this.popoverElement.innerHTML = ""
 
     if (filteredListItems.length > 0) {
@@ -323,6 +358,16 @@ export class LexicalPromptElement extends HTMLElement {
       this.#hidePopover()
       this.#editorElement.focus()
       event.stopPropagation()
+    } else if (event.key === ",") {
+      event.preventDefault()
+      event.stopPropagation()
+      this.#optionWasSelected()
+      this.#editor.update(() => {
+        const selection = $getSelection()
+        if ($isRangeSelection(selection)) {
+          selection.insertText(",")
+        }
+      })
     }
     // Arrow keys are now handled via Lexical commands with HIGH priority
   }

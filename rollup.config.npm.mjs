@@ -1,4 +1,4 @@
-import copy from 'rollup-plugin-copy';
+import copy from "rollup-plugin-copy";
 
 const helperChunks = [
   "prismjs",
@@ -22,17 +22,17 @@ export default {
   },
   external: [
     /^@lexical\//,
-    'lexical',
-    'dompurify',
-    'marked',
-    'prismjs',
+    "lexical",
+    "dompurify",
+    "marked",
+    "prismjs",
     /^prismjs\//,
-    '@rails/activestorage'
+    "@rails/activestorage"
   ],
   plugins: [
     copy({
       targets: [
-        { src: 'app/assets/stylesheets/**/*', dest: 'dist/stylesheets' },
+        { src: "app/assets/stylesheets/**/*", dest: "dist/stylesheets" },
       ]
     })
   ]

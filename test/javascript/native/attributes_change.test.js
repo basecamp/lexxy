@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest"
 import { $getRoot } from "lexical"
-import { createTestEditorWithNativeAdapter, destroyTestEditor, setContent, selectAll, captureEvent } from "../helpers/editor_helper"
+import { createTestEditorWithNativeAdapter, destroyTestEditor, setContent, selectAll, captureEvent } from "../unit/helpers/editor_helper"
 
 let editorElement
 

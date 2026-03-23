@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isDecoratorNode, $isParagraphNode, $isRangeSelection, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -6,8 +6,9 @@ import { $getNearestNodeOfType } from "@lexical/utils"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
-import { CodeHighlightNode, CodeNode, registerCodeHighlighting, } from "@lexical/code"
+import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
+import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_tag_handler"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 
 import theme from "../config/theme"
@@ -15,6 +16,7 @@ import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
+import { isAttachmentSpacerTextNode } from "../helpers/lexical_helper"
 import { sanitize } from "../helpers/sanitization_helper"
 import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
@@ -25,11 +27,13 @@ import { BrowserAdapter } from "../editor/adapters/browser_adapter"
 import { getHighlightStyles } from "../helpers/format_helper"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+import { exportTextNodeDOM } from "../helpers/text_node_export_helper"
 import { ProvisionalParagraphExtension } from "../extensions/provisional_paragraph_extension"
 import { HighlightExtension } from "../extensions/highlight_extension"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 import { TablesExtension } from "../extensions/tables_extension"
 import { AttachmentsExtension } from "../extensions/attachments_extension.js"
+import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 
 
 export class LexicalEditorElement extends HTMLElement {
@@ -96,9 +100,9 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   toString() {
-    if (!this.cachedStringValue) {
+    if (this.cachedStringValue == null) {
       this.editor?.getEditorState().read(() => {
-        this.cachedStringValue = $getRoot().getTextContent()
+        this.cachedStringValue = $getReadableTextContent($getRoot())
       })
     }
 
@@ -126,7 +130,8 @@ export class LexicalEditorElement extends HTMLElement {
       HighlightExtension,
       TrixContentExtension,
       TablesExtension,
-      AttachmentsExtension
+      AttachmentsExtension,
+      FormatEscapeExtension
     ]
   }
 
@@ -245,8 +250,17 @@ export class LexicalEditorElement extends HTMLElement {
     const nodes = $generateNodesFromDOM(this.editor, parseHtml(`${html}`))
 
     return nodes
+      .filter(this.#isNotWhitespaceOnlyNode)
       .map(this.#wrapTextNode)
-      .map(this.#unwrapDecoratorNode)
+  }
+
+  // Whitespace-only text nodes (e.g. "\n" between block elements like <div>) and stray line break
+  // nodes are formatting artifacts from the HTML source. They can't be appended to the root node
+  // and have no semantic meaning, so we strip them during import.
+  #isNotWhitespaceOnlyNode(node) {
+    if ($isLineBreakNode(node)) return false
+    if ($isTextNode(node) && node.getTextContent().trim() === "") return false
+    return true
   }
 
   // Raw string values produce TextNodes which cannot be appended directly to the RootNode.
@@ -257,18 +271,6 @@ export class LexicalEditorElement extends HTMLElement {
     const paragraph = $createParagraphNode()
     paragraph.append(node)
     return paragraph
-  }
-
-  // Custom decorator block elements such as action-text-attachments get wrapped into <p> automatically by Lexical.
-  // We unwrap those.
-  #unwrapDecoratorNode(node) {
-    if ($isParagraphNode(node) && node.getChildrenSize() === 1) {
-      const child = node.getFirstChild()
-      if ($isDecoratorNode(child) && !child.isInline()) {
-        return child
-      }
-    }
-    return node
   }
 
   #initialize() {
@@ -289,7 +291,10 @@ export class LexicalEditorElement extends HTMLElement {
       name: "lexxy/core",
       namespace: "Lexxy",
       theme: theme,
-      nodes: this.#lexicalNodes
+      nodes: this.#lexicalNodes,
+      html: {
+        export: new Map([ [ TextNode, exportTextNodeDOM ] ])
+      }
     },
       ...this.extensions.lexicalExtensions
     )
@@ -415,6 +420,7 @@ export class LexicalEditorElement extends HTMLElement {
       this.#registerCodeHiglightingComponents()
       if (this.supportsMarkdown) {
         registerMarkdownShortcuts(this.editor, TRANSFORMERS)
+        registerMarkdownLeadingTagHandler(this.editor, TRANSFORMERS)
       }
     } else {
       registerPlainText(this.editor)
@@ -515,22 +521,23 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #findOrCreateDefaultToolbar() {
-    const toolbarId = this.config.get("toolbar")
-    if (toolbarId && toolbarId !== true) {
-      return document.getElementById(toolbarId)
+    const toolbarConfig = this.config.get("toolbar")
+    if (typeof toolbarConfig === "string") {
+      return document.getElementById(toolbarConfig)
     } else {
       return this.#createDefaultToolbar()
     }
   }
 
   get #hasToolbar() {
-    return this.supportsRichText && this.config.get("toolbar")
+    return this.supportsRichText && !!this.config.get("toolbar")
   }
 
   #createDefaultToolbar() {
     const toolbar = createElement("lexxy-toolbar")
     toolbar.innerHTML = LexicalToolbar.defaultTemplate
     toolbar.setAttribute("data-attachments", this.supportsAttachments) // Drives toolbar CSS styles
+    toolbar.configure(this.config.get("toolbar"))
     this.prepend(toolbar)
     return toolbar
   }
@@ -657,3 +664,30 @@ export class LexicalEditorElement extends HTMLElement {
 }
 
 export default LexicalEditorElement
+
+// Like $getRoot().getTextContent() but uses readable text for custom attachment nodes
+// (e.g., mentions) instead of their single-character cursor placeholder.
+function $getReadableTextContent(node) {
+  if (node instanceof CustomActionTextAttachmentNode) {
+    return node.getReadableTextContent()
+  }
+
+  if ($isElementNode(node)) {
+    let text = ""
+    const children = node.getChildren()
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i]
+      const previousChild = children[i - 1]
+
+      if (isAttachmentSpacerTextNode(child, previousChild, i, children.length)) continue
+
+      text += $getReadableTextContent(child)
+      if ($isElementNode(child) && i !== children.length - 1 && !child.isInline()) {
+        text += "\n\n"
+      }
+    }
+    return text
+  }
+
+  return node.getTextContent()
+}

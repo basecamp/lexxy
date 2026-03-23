@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest"
 import { $getRoot } from "lexical"
-import { createTestEditor, destroyTestEditor, setContent, selectEnd } from "../helpers/editor_helper"
+import { createTestEditor, destroyTestEditor, setContent, selectEnd } from "../unit/helpers/editor_helper"
 import { ActionTextAttachmentUploadNode } from "../../../src/nodes/action_text_attachment_upload_node"
 
 let editorElement

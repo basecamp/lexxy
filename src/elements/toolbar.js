@@ -36,6 +36,14 @@ export class LexicalToolbarElement extends HTMLElement {
     }
   }
 
+  configure(config) {
+    if (typeof config === "object" && config !== null) {
+      for (const [ button, value ] of Object.entries(config)) {
+        this.setAttribute(`data-${button}`, value)
+      }
+    }
+  }
+
   setEditor(editorElement) {
     this.editorElement = editorElement
     this.editor = editorElement.editor
@@ -102,6 +110,8 @@ export class LexicalToolbarElement extends HTMLElement {
     this.editor.update(() => {
       this.editor.dispatchCommand(command, payload)
     }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined })
+
+    if (!isKeyboard) this.editor.focus()
   }
 
   #bindHotkeys() {
@@ -199,19 +209,29 @@ export class LexicalToolbarElement extends HTMLElement {
     const anchorNode = selection.anchor.getNode()
     if (!anchorNode.getParent()) { return }
 
-    const { isBold, isItalic, isStrikethrough, isHighlight, isInLink, isInQuote, isInHeading,
-      isInCode, isInList, listType, isInTable } = this.selection.getFormat()
+    const { isBold, isItalic, isStrikethrough, isUnderline, isHighlight, isInLink, isInQuote, isInHeading,
+      headingTag, isInCode, isInList, listType, isInTable } = this.selection.getFormat()
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
+
+    this.#setButtonPressed("format", isInHeading || isStrikethrough || isUnderline)
+    this.#setButtonPressed("paragraph", !isInHeading)
+    this.#setButtonPressed("heading-large", headingTag === "h2")
+    this.#setButtonPressed("heading-medium", headingTag === "h3")
+    this.#setButtonPressed("heading-small", headingTag === "h4")
     this.#setButtonPressed("strikethrough", isStrikethrough)
+    this.#setButtonPressed("underline", isUnderline)
+
+    this.#setButtonPressed("lists", isInList)
+    this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
+    this.#setButtonPressed("ordered-list", isInList && listType === "number")
+
     this.#setButtonPressed("highlight", isHighlight)
     this.#setButtonPressed("link", isInLink)
     this.#setButtonPressed("quote", isInQuote)
-    this.#setButtonPressed("heading", isInHeading)
     this.#setButtonPressed("code", isInCode)
-    this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
-    this.#setButtonPressed("ordered-list", isInList && listType === "number")
+
     this.#setButtonPressed("table", isInTable)
 
     this.#updateUndoRedoButtonStates()
@@ -306,7 +326,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   get #buttons() {
-    return Array.from(this.querySelectorAll(":scope > button"))
+    return Array.from(this.querySelectorAll(":scope > button:not([data-prevent-overflow='true'])"))
   }
 
   get #focusableItems() {
@@ -319,6 +339,14 @@ export class LexicalToolbarElement extends HTMLElement {
 
   static get defaultTemplate() {
     return `
+    <button class="lexxy-editor__toolbar-button" type="button" name="image" data-command="uploadAttachments" data-prevent-overflow="true" title="Add images">
+      ${ToolbarIcons.image}
+    </button>
+
+    <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="file" data-command="uploadAttachments" title="Upload files">
+      ${ToolbarIcons.attachment}
+    </button>
+
       <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="Bold">
         ${ToolbarIcons.bold}
       </button>
@@ -327,15 +355,49 @@ export class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.italic}
       </button>
 
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
-      ${ToolbarIcons.strikethrough}
-      </button>
+      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron" name="lexxy-dropdown">
+        <summary class="lexxy-editor__toolbar-button" name="format" title="Text formatting">
+          ${ToolbarIcons.heading}
+        </summary>
+        <div class="lexxy-editor__toolbar-dropdown-list">
+          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph">
+            ${ToolbarIcons.paragraph} <span>Normal</span>
+          </button>
+          <button type="button" name="heading-large" data-command="setFormatHeadingLarge" title="Large heading">
+            ${ToolbarIcons.h2} <span>Large Heading</span>
+          </button>
+          <button type="button" name="heading-medium" data-command="setFormatHeadingMedium" title="Medium heading">
+            ${ToolbarIcons.h3} <span>Medium Heading</span>
+          </button>
+          <button type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading">
+            ${ToolbarIcons.h4} <span>Small Heading</span>
+          </button>
+          <div class="separator" role="separator"></div>
+          <button type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
+            ${ToolbarIcons.strikethrough} <span>Strikethrough</span>
+          </button>
+          <button type="button" name="underline" data-command="underline" title="Underline">
+            ${ToolbarIcons.underline} <span>Underline</span>
+          </button>
+        </div>
+      </details>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="heading" data-command="rotateHeadingFormat" title="Heading">
-        ${ToolbarIcons.heading}
-      </button>
 
-      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
+      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron" name="lexxy-dropdown">
+        <summary class="lexxy-editor__toolbar-button" name="lists" title="Lists">
+          ${ToolbarIcons.ul}
+        </summary>
+        <div class="lexxy-editor__toolbar-dropdown-list">
+          <button type="button" name="unordered-list" data-command="insertUnorderedList" title="Bullet list">
+            ${ToolbarIcons.ul} <span>Bullets</span>
+          </button>
+          <button type="button" name="ordered-list" data-command="insertOrderedList" title="Numbered list">
+            ${ToolbarIcons.ol} <span>Numbers</span>
+          </button>
+        </div>
+      </details>
+
+      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">
           ${ToolbarIcons.highlight}
         </summary>
@@ -368,18 +430,6 @@ export class LexicalToolbarElement extends HTMLElement {
         ${ToolbarIcons.code}
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="unordered-list" data-command="insertUnorderedList" title="Bullet list">
-        ${ToolbarIcons.ul}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="ordered-list" data-command="insertOrderedList" title="Numbered list">
-        ${ToolbarIcons.ol}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="upload" data-command="uploadAttachments" title="Upload file">
-        ${ToolbarIcons.attachment}
-      </button>
-
       <button class="lexxy-editor__toolbar-button" type="button" name="table" data-command="insertTable" title="Insert a table">
         ${ToolbarIcons.table}
       </button>
@@ -387,9 +437,9 @@ export class LexicalToolbarElement extends HTMLElement {
       <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
         ${ToolbarIcons.hr}
       </button>
- 
+
       <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
- 
+
       <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo">
         ${ToolbarIcons.undo}
       </button>

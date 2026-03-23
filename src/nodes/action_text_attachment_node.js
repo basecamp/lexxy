@@ -1,8 +1,8 @@
 import Lexxy from "../config/lexxy"
 import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
-import { bytesToHumanSize } from "../helpers/storage_helper"
-import { extractFileName } from "../helpers/storage_helper"
+import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
+import { parseBoolean } from "../helpers/string_helper"
 
 
 export class ActionTextAttachmentNode extends DecoratorNode {
@@ -85,7 +85,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     this.tagName = tagName || ActionTextAttachmentNode.TAG_NAME
     this.sgid = sgid
     this.src = src
-    this.previewable = previewable
+    this.previewable = parseBoolean(previewable)
     this.altText = altText || ""
     this.caption = caption || ""
     this.contentType = contentType || ""
@@ -170,6 +170,8 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   createAttachmentFigure(previewable = this.isPreviewableAttachment) {
     const figure = createAttachmentFigure(this.contentType, previewable, this.fileName)
+    figure.draggable = true
+    figure.dataset.lexicalNodeKey = this.__key
 
     const deleteButton = createElement("lexxy-node-delete-button")
     figure.appendChild(deleteButton)
@@ -187,9 +189,30 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   #createDOMForImage(options = {}) {
     const img = createElement("img", { src: this.src, draggable: false, alt: this.altText, ...this.#imageDimensions, ...options })
+
+    if (this.previewable && !this.isPreviewableImage) {
+      img.onerror = () => this.#swapPreviewToFileDOM(img)
+    }
+
     const container = createElement("div", { className: "attachment__container" })
     container.appendChild(img)
     return container
+  }
+
+  #swapPreviewToFileDOM(img) {
+    const figure = img.closest("figure.attachment")
+    if (!figure) return
+
+    figure.className = figure.className.replace("attachment--preview", "attachment--file")
+
+    const container = figure.querySelector(".attachment__container")
+    if (container) container.remove()
+
+    const caption = figure.querySelector("figcaption")
+    if (caption) caption.remove()
+
+    figure.appendChild(this.#createDOMForFile())
+    figure.appendChild(this.#createDOMForNotImage())
   }
 
   get #imageDimensions() {
@@ -231,6 +254,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     input.addEventListener("focusin", () => input.placeholder = "Add caption...")
     input.addEventListener("blur", (event) => this.#handleCaptionInputBlurred(event))
     input.addEventListener("keydown", (event) => this.#handleCaptionInputKeydown(event))
+    input.addEventListener("copy", (event) => event.stopPropagation())
+    input.addEventListener("cut", (event) => event.stopPropagation())
+    input.addEventListener("paste", (event) => event.stopPropagation())
 
     caption.appendChild(input)
 
@@ -251,7 +277,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   #handleCaptionInputKeydown(event) {
     if (event.key === "Enter") {
       event.preventDefault()
-      event.stopPropagation()
       event.target.blur()
 
       this.editor.update(() => {
@@ -262,6 +287,10 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       })
     }
 
+    // Stop all keydown events from bubbling to the Lexical root element.
+    // The caption textarea is outside Lexical's content model and should
+    // handle its own keyboard events natively (Ctrl+A, Ctrl+C, Ctrl+X, etc.).
+    event.stopPropagation()
   }
 }
 
