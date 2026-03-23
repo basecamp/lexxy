@@ -18,7 +18,7 @@ import {
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { CodeNode } from "@lexical/code"
-import { $createAutoLinkNode, $isLinkNode, $toggleLink, LinkNode } from "@lexical/link"
+import { $createAutoLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
@@ -126,14 +126,7 @@ export class CommandDispatcher {
         return
       }
 
-      const selection = $getSelection()
-
-      if ($isRangeSelection(selection)) {
-        if (selection.isCollapsed()) {
-          this.selection.expandToNearestOfType(LinkNode)
-        }
-        $toggleLink(null)
-      }
+      $toggleLink(null)
     })
   }
 
