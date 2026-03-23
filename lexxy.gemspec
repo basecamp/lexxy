@@ -21,10 +21,10 @@ Gem::Specification.new do |spec|
   spec.extensions = [ "ext/Rakefile" ]
 
   spec.add_dependency "rails", ">= 8.0.2"
-  spec.add_development_dependency "turbo-rails"
-  spec.add_development_dependency "stimulus-rails"
-  spec.add_development_dependency "capybara"
-  spec.add_development_dependency "selenium-webdriver"
-  spec.add_development_dependency "cuprite"
-  spec.add_development_dependency "image_processing"
+  spec.add_development_dependency "turbo-rails", "~> 2.0"
+  spec.add_development_dependency "stimulus-rails", "~> 1.0"
+  spec.add_development_dependency "capybara", "~> 3.0"
+  spec.add_development_dependency "selenium-webdriver", "~> 4.0"
+  spec.add_development_dependency "cuprite", "~> 0.17"
+  spec.add_development_dependency "image_processing", "~> 1.0"
 end
