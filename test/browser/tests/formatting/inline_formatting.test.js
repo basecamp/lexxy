@@ -215,4 +215,15 @@ test.describe("Inline formatting", () => {
       "<p>Line one</p><p>Line two</p><p>Line three</p>",
     )
   })
+
+  test("toggling code block on a blockquote with multiple paragraphs preserves all lines", async ({ page, editor }) => {
+    await editor.setValue("<blockquote><p>Line one</p><p>Line two</p></blockquote>")
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<pre data-language="plain" data-highlight-language="plain">Line one<br>Line two</pre>',
+    )
+  })
 })

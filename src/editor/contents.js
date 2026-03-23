@@ -102,7 +102,11 @@ export default class Contents {
     if (allCode) {
       topLevelElements.forEach(node => this.#unwrapCodeBlock(node))
     } else {
-      this.#applyCodeBlockFormat(topLevelElements)
+      topLevelElements.filter(node => !$isParagraphNode(node) && !$isCodeNode(node) && $isElementNode(node))
+        .forEach(node => this.#unwrap(node))
+
+      const elements = this.#topLevelElementsInSelection(selection)
+      this.#applyCodeBlockFormat(elements)
     }
   }
 
