@@ -8,14 +8,15 @@ import {
 
 import { $generateNodesFromDOM } from "@lexical/html"
 import { $createCodeNode, $isCodeNode } from "@lexical/code"
-import { $createHeadingNode, $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
+import { $createHeadingNode, $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
-import { $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
+import { $ensureForwardRangeSelection, $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
+import { $getNearestNodeOfType } from "@lexical/utils"
 
 export default class Contents {
   constructor(editorElement) {
@@ -585,6 +586,7 @@ function $isShadowRoot(node) {
 class NodeInserter {
   static for(selection) {
     const INSERTERS = [
+      QuoteNodeInserter,
       ShadowRootNodeInserter,
       NodeSelectionNodeInserter
     ]
@@ -594,6 +596,25 @@ class NodeInserter {
 
   constructor(selection) {
     this.selection = selection
+  }
+}
+
+// Lexical will split a QuoteNode when inserting other Elements - we want them simply inserted as-is
+class QuoteNodeInserter extends NodeInserter {
+  static handles(selection) {
+    return $getNearestNodeOfType(selection.anchor?.getNode(), QuoteNode)
+  }
+
+  insertNodes(nodes) {
+    if (!this.selection.isCollapsed()) { this.selection.removeText() }
+
+    $ensureForwardRangeSelection(this.selection)
+    let lastNode = this.selection.focus.getNode()
+    for (const node of nodes) {
+      lastNode = lastNode.insertAfter(node)
+    }
+
+    lastNode.selectEnd()
   }
 }
 
