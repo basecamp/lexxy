@@ -85,10 +85,11 @@ Present the batches to the user for confirmation before launching agents.
 
 ### Step 3: Launch parallel worktree agents
 
-For each bug in the batch, launch a parallel agent in its own worktree. **Before launching each agent, move the card to the "working on" column** so the board reflects what's actively in progress:
+For each bug in the batch, launch a parallel agent in its own worktree. **Before launching each agent, move the card to the "working on" column and self-assign it** so the board reflects what's actively in progress and who's working on it:
 
 ```bash
 fizzy card column <card_number> --column <working_on_column_id>
+fizzy card self-assign <card_number>
 ```
 
 Each agent follows the project's mandatory bug-fixing workflow from `AGENTS.md`:
@@ -227,6 +228,7 @@ After completing a batch, review whether any bugs revealed a **family of bugs** 
 | `fizzy card list --board <id> --all` | List all cards on a board | Omit `--column` for all columns |
 | `fizzy card show <number>` | Show a specific card | Works with card numbers, not just IDs |
 | `fizzy card column <number> --column <column_id>` | Move a card to a column | Used to move cards to "working on" |
+| `fizzy card self-assign <number>` | Assign a card to yourself | Used when picking up a bug |
 | `fizzy comment create --card <number> --body "text"` | Comment on a card | Use heredoc for multiline body |
 
 **Gotchas:**
@@ -267,12 +269,12 @@ Shall I proceed with Batch 1?
 
 User: Yes
 
-Agent: Moving 5 cards to "Working on" and launching parallel worktree agents...
-  → Card #4601 → Working on ✓ → Agent 1 (worktree: fix-paste-url-blockquote, PORT=3100)
-  → Card #4603 → Working on ✓ → Agent 2 (worktree: fix-trix-bold-conversion, PORT=3200)
-  → Card #4607 → Working on ✓ → Agent 3 (worktree: fix-gallery-collapse-third-image, PORT=3300)
-  → Card #4610 → Working on ✓ → Agent 4 (worktree: fix-toolbar-bold-stale-state, PORT=3400)
-  → Card #4612 → Working on ✓ → Agent 5 (worktree: fix-divider-undo-duplicate, PORT=3500)
+Agent: Moving 5 cards to "Working on", self-assigning, and launching parallel worktree agents...
+  → Card #4601 → Working on ✓ → assigned ✓ → Agent 1 (worktree: fix-paste-url-blockquote, PORT=3100)
+  → Card #4603 → Working on ✓ → assigned ✓ → Agent 2 (worktree: fix-trix-bold-conversion, PORT=3200)
+  → Card #4607 → Working on ✓ → assigned ✓ → Agent 3 (worktree: fix-gallery-collapse-third-image, PORT=3300)
+  → Card #4610 → Working on ✓ → assigned ✓ → Agent 4 (worktree: fix-toolbar-bold-stale-state, PORT=3400)
+  → Card #4612 → Working on ✓ → assigned ✓ → Agent 5 (worktree: fix-divider-undo-duplicate, PORT=3500)
 
 [agents work in parallel...]
 
