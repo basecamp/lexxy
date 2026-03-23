@@ -37,6 +37,7 @@ FETCH BUGS → BATCH (groups of ~5) → PARALLEL AGENTS (one per bug, each in a 
                                         ├── Reproduce (failing test)
                                         ├── Fix (root cause)
                                         ├── Test (full suite + lint)
+                                        ├── Code Review (/lexical-code-review)
                                         ├── Commit
                                         ├── Push branch + create PR
                                         ├── Comment on Fizzy card / GitHub issue
@@ -98,7 +99,8 @@ Each agent follows the project's mandatory bug-fixing workflow from `AGENTS.md`:
 2. **Reproduce** — Use `/bugs-reproducer` patterns to write a failing test. Confirm it fails before touching source code.
 3. **Fix** — Investigate root cause, implement the fix, make the reproduction test pass.
 4. **Test** — Run the full test suite (`yarn test:browser` for Playwright, `bin/rails test:all` for Capybara) plus `yarn lint`. Fix any failures or lint errors.
-5. **Commit** — Single commit with a clear message describing the fix.
+5. **Code Review** — Run `/lexical-code-review` on the staged diff. Address all findings — Critical, Immediate, and Pattern violations alike. No fix ships with known anti-patterns.
+6. **Commit** — Single commit with a clear message describing the fix.
 
 **Test naming:** Never name test files after bug numbers (e.g., `bug_1234_thing.test.js`). Use descriptive names that fit the existing test suite (e.g., `tables_click_target.test.js`, `markdown_format.test.js`). **Always check if an existing test file already covers the area** (e.g., paste tests go in `paste.test.js`, table tests go in `tables.test.js`) and add tests there as a new `test.describe` block instead of creating a separate file. Only create a new file when the topic is genuinely distinct and no existing file covers it. Test `describe` blocks should also be descriptive, not reference bug numbers.
 
