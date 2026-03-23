@@ -109,6 +109,81 @@ test.describe("Paste — Files & Attachments", () => {
   })
 })
 
+test.describe("Paste — Blockquote", () => {
+  test("pasting plain text with newlines into an empty blockquote keeps all lines inside the quote", async ({
+    page,
+    editor,
+  }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    // Reproduce the exact user flow from the bug report:
+    // 1. Click Quote button to enter blockquote mode
+    // 2. Paste plain text with newlines (console output)
+    await editor.click()
+    await page.getByRole("button", { name: "Quote" }).click()
+    await editor.flush()
+
+    await editor.paste("this \nis\nwhat\n\nI am pasting")
+    await editor.flush()
+
+    // ALL pasted text must remain inside the blockquote — nothing should
+    // escape to a paragraph outside the quote.
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("blockquote")).toHaveCount(1)
+      const outerParagraphs = content.locator(":scope > p")
+      await expect(outerParagraphs).toHaveCount(0)
+    })
+  })
+
+  test("pasting HTML with multiple paragraphs into a blockquote keeps all inside", async ({
+    page,
+    editor,
+  }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.click()
+    await page.getByRole("button", { name: "Quote" }).click()
+    await editor.flush()
+
+    // Paste HTML with paragraph-level structure (common when copying from web pages)
+    await editor.paste("line one\nline two\nline three", {
+      html: "<p>line one</p><p>line two</p><p>line three</p>",
+    })
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("blockquote")).toHaveCount(1)
+      const outerParagraphs = content.locator(":scope > p")
+      await expect(outerParagraphs).toHaveCount(0)
+    })
+  })
+
+  test("pasting plain text into blockquote with existing content keeps all inside", async ({
+    page,
+    editor,
+  }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    // Set up a blockquote with existing text
+    await editor.setValue("<blockquote><p>Already quoted</p></blockquote>")
+    await editor.focus()
+    await editor.send("End")
+    await editor.flush()
+
+    await editor.paste("this \nis\nwhat\n\nI am pasting")
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("blockquote")).toHaveCount(1)
+      const outerParagraphs = content.locator(":scope > p")
+      await expect(outerParagraphs).toHaveCount(0)
+    })
+  })
+})
+
 const modifier = process.platform === "darwin" ? "Meta" : "Control"
 
 test.describe("Paste — Cut and paste", () => {
