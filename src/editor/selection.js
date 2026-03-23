@@ -149,21 +149,6 @@ export default class Selection {
     return $getNearestNodeOfType(anchorNode, nodeType)
   }
 
-  expandToNearestOfType(nodeType) {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return
-
-    const node = $getNearestNodeOfType(selection.anchor.getNode(), nodeType)
-    if (!node) return
-
-    const firstDescendant = node.getFirstDescendant()
-    const lastDescendant = node.getLastDescendant()
-    if (firstDescendant && lastDescendant) {
-      selection.anchor.set(firstDescendant.getKey(), 0, "text")
-      selection.focus.set(lastDescendant.getKey(), lastDescendant.getTextContent().length, "text")
-    }
-  }
-
 
   get hasSelectedWordsInSingleLine() {
     const selection = $getSelection()
