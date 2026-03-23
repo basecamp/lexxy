@@ -1010,6 +1010,7 @@
   &[data-clipped-at-right] {
     inset-inline-start: unset;
     inset-inline-end: 1ch;
+    max-inline-size: calc(100% - 1ch);
   }
 
   &[data-clipped-at-bottom] {
