@@ -338,6 +338,7 @@
       display: block;
       margin-inline: auto;
       max-inline-size: 100%;
+      -webkit-user-select: none;
       user-select: none;
     }
 
