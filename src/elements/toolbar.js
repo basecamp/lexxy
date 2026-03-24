@@ -339,11 +339,11 @@ export class LexicalToolbarElement extends HTMLElement {
 
   static get defaultTemplate() {
     return `
-    <button class="lexxy-editor__toolbar-button" type="button" name="image" data-command="uploadAttachments" data-payload="image" data-prevent-overflow="true" title="Add images and video">
+    <button class="lexxy-editor__toolbar-button" type="button" name="image" data-command="uploadImage" data-prevent-overflow="true" title="Add images and video">
       ${ToolbarIcons.image}
     </button>
 
-    <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="file" data-command="uploadAttachments" data-payload="file" title="Upload files">
+    <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="file" data-command="uploadFile" title="Upload files">
       ${ToolbarIcons.attachment}
     </button>
 

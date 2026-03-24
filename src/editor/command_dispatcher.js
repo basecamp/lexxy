@@ -42,7 +42,8 @@ const COMMANDS = [
   "insertQuoteBlock",
   "insertCodeBlock",
   "insertHorizontalDivider",
-  "uploadAttachments",
+  "uploadImage",
+  "uploadFile",
 
   "insertTable",
 
@@ -226,7 +227,15 @@ export class CommandDispatcher {
     this.contents.applyParagraphFormat()
   }
 
-  dispatchUploadAttachments(payload) {
+  dispatchUploadImage() {
+    this.#dispatchUploadAttachment("image/*,video/*")
+  }
+
+  dispatchUploadFile() {
+    this.#dispatchUploadAttachment()
+  }
+
+  #dispatchUploadAttachment(accept = null) {
     const attributes = {
       type: "file",
       multiple: true,
@@ -236,9 +245,7 @@ export class CommandDispatcher {
       }
     }
 
-    if (payload === "image") {
-      attributes.accept = "image/*,video/*"
-    }
+    if (accept) attributes.accept = accept
 
     const input = createElement("input", attributes)
 
