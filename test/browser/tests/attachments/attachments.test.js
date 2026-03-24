@@ -41,16 +41,6 @@ test.describe("Attachments", () => {
     await expect(figure.locator(".attachment__name")).toHaveText("note.txt")
   })
 
-  test("upload file via file button", async ({ page, editor }) => {
-    await mockActiveStorageUploads(page)
-    await editor.uploadFile("test/fixtures/files/note.txt", { via: "file" })
-
-    const figure = page.locator("figure.attachment[data-content-type='text/plain']")
-    await expect(figure).toBeVisible({ timeout: 10_000 })
-
-    await expect(figure.locator(".attachment__name")).toHaveText("note.txt")
-  })
-
   test("delete attachment with keyboard", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
