@@ -215,9 +215,14 @@ export class CommandDispatcher {
   }
 
   dispatchSetCodeLanguage(language) {
-    if (this.selection.isInsideCodeBlock) {
-      this.selection.nearestNodeOfType(CodeNode).setLanguage(language)
-    }
+    this.editor.update(() => {
+      if (!this.selection.isInsideCodeBlock) return
+
+      const codeNode = this.selection.nearestNodeOfType(CodeNode)
+      if (!codeNode) return
+
+      codeNode.setLanguage(language)
+    })
   }
 
   dispatchInsertHorizontalDivider() {
