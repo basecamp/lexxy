@@ -270,13 +270,20 @@ export default class Contents {
       setAttributes(blob) {
         editor.update(() => {
           const node = $getNodeByKey(nodeKey)
-          if (node) node.showUploadedAttachment(blob)
+          if (!(node instanceof ActionTextAttachmentUploadNode)) return
+
+          const replacementNodeKey = node.showUploadedAttachment(blob)
+          if (replacementNodeKey) {
+            nodeKey = replacementNodeKey
+          }
         }, { tag: HISTORY_MERGE_TAG })
       },
       setUploadProgress(progress) {
         editor.update(() => {
           const node = $getNodeByKey(nodeKey)
-          if (node) node.getWritable().progress = progress
+          if (!(node instanceof ActionTextAttachmentUploadNode)) return
+
+          node.getWritable().progress = progress
         }, { tag: HISTORY_MERGE_TAG })
       },
       remove() {

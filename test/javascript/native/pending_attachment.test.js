@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest"
 import { $getRoot } from "lexical"
-import { createTestEditor, destroyTestEditor, setContent, selectEnd } from "../unit/helpers/editor_helper"
+import { createTestEditor, destroyTestEditor, setContent, selectEnd, tick } from "../unit/helpers/editor_helper"
 import { ActionTextAttachmentUploadNode } from "../../../src/nodes/action_text_attachment_upload_node"
 
 let editorElement
@@ -94,5 +94,32 @@ describe("insertPendingAttachment", () => {
 
     const handle = editorElement.contents.insertPendingAttachment(createFile())
     expect(handle).toBeNull()
+  })
+
+  test("handle can still remove attachment after setAttributes replaces upload node", async () => {
+    editorElement = await createTestEditor()
+    await setContent(editorElement, "<p>hello</p>")
+    selectEnd(editorElement)
+
+    const handle = editorElement.contents.insertPendingAttachment(createFile())
+    expect(handle).not.toBeNull()
+
+    handle.setAttributes({
+      attachable_sgid: "sgid://app/ActiveStorage::Blob/1",
+      filename: "test.png",
+      content_type: "image/png",
+      byte_size: 4,
+      previewable: true,
+      url: "https://example.com/test.png",
+      signed_id: "signed-id"
+    })
+    await tick()
+
+    expect(editorElement.value).toContain("action-text-attachment")
+
+    handle.remove()
+    await tick()
+
+    expect(editorElement.value).not.toContain("action-text-attachment")
   })
 })

@@ -221,6 +221,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     if ($isRootOrShadowRoot(replacementNode.getParent())) {
       replacementNode.selectNext()
     }
+
+    return replacementNode.getKey()
   }
 
   // Upload lifecycle methods (progress, completion, errors) run asynchronously and may
