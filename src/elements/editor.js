@@ -494,10 +494,10 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #createDefaultToolbar() {
+    const items = this.config.get("toolbar.items")
     const toolbar = createElement("lexxy-toolbar")
-    toolbar.innerHTML = LexicalToolbar.defaultTemplate
+    toolbar.innerHTML = LexicalToolbar.buildTemplate(items)
     toolbar.setAttribute("data-attachments", this.supportsAttachments) // Drives toolbar CSS styles
-    toolbar.configure(this.config.get("toolbar"))
     this.prepend(toolbar)
     return toolbar
   }

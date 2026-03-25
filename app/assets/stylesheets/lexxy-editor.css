@@ -441,13 +441,6 @@
     display: none;
   }
 
-  &[data-upload="file"] button[name="image"] {
-    display: none;
-  }
-
-  &[data-upload="image"] button[name="file"] {
-    display: none;
-  }
 
   .lexxy-editor__toolbar-button {
     aspect-ratio: 1;
@@ -600,10 +593,8 @@
       }
     }
 
-    .separator {
-      background: var(--lexxy-color-ink-lighter);
-      block-size: 1px;
-      inline-size: 100%;
+    .lexxy-editor__toolbar-group-end {
+      border-block-end: 1px solid var(--lexxy-color-ink-lighter);
     }
   }
 
