@@ -177,6 +177,11 @@ export class LexicalEditorElement extends HTMLElement {
 
   registerAdapter(adapter) {
     this.adapter = adapter
+
+    if (!this.editor) return
+
+    this.#dispatchEditorInitialized()
+    this.#dispatchAttributesChange()
   }
 
   freezeSelection() {
