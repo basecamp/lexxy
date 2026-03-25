@@ -3,6 +3,9 @@ export class BrowserAdapter {
 
   dispatchAttributesChange(attributes, linkHref, highlight) {}
   dispatchEditorInitialized(detail) {}
-  freeze(frozenLinkKey) {}
+  freeze() {}
   thaw() {}
+  unlinkFrozenNode() {
+    return false
+  }
 }

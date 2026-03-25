@@ -1,4 +1,7 @@
 import { dispatch } from "../../helpers/html_helper"
+import { $getNodeByKey, $getSelection, $isRangeSelection } from "lexical"
+import { $isLinkNode, LinkNode } from "@lexical/link"
+import { $getNearestNodeOfType } from "@lexical/utils"
 
 export class NativeAdapter {
   frozenLinkKey = null
@@ -20,12 +23,51 @@ export class NativeAdapter {
     dispatch(this.editorElement, "lexxy:editor-initialized", detail)
   }
 
-  freeze(frozenLinkKey) {
+  freeze() {
+    let frozenLinkKey = null
+    this.editorElement.editor?.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const linkNode = $getNearestNodeOfType(selection.anchor.getNode(), LinkNode)
+      if (linkNode) {
+        frozenLinkKey = linkNode.getKey()
+      }
+    })
+
     this.frozenLinkKey = frozenLinkKey
     this.editorContentElement.contentEditable = "false"
   }
 
   thaw() {
     this.editorContentElement.contentEditable = "true"
+  }
+
+  unlinkFrozenNode() {
+    const key = this.frozenLinkKey
+    if (!key) return false
+
+    const linkNode = $getNodeByKey(key)
+    if ($isLinkNode(linkNode)) {
+      const children = linkNode.getChildren()
+      for (const child of children) {
+        linkNode.insertBefore(child)
+      }
+      linkNode.remove()
+
+      // Select the former link text so a follow-up createLink can re-wrap it.
+      const first = children.at(0)
+      const last = children.at(-1)
+      if (first && last) {
+        const selection = $getSelection()
+        if ($isRangeSelection(selection)) {
+          selection.anchor.set(first.getKey(), 0, "text")
+          selection.focus.set(last.getKey(), last.getTextContent().length, "text")
+        }
+      }
+    }
+
+    this.frozenLinkKey = null
+    return true
   }
 }

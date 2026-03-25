@@ -180,17 +180,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   freezeSelection() {
-    let frozenLinkKey = null
-    this.editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const linkNode = $getNearestNodeOfType(selection.anchor.getNode(), LinkNode)
-      if (linkNode) {
-        frozenLinkKey = linkNode.getKey()
-      }
-    })
-    this.adapter.freeze(frozenLinkKey)
+    this.adapter.freeze()
   }
 
   thawSelection() {

@@ -1,6 +1,5 @@
 import {
   $createTextNode,
-  $getNodeByKey,
   $getSelection,
   $isRangeSelection,
   $isTextNode,
@@ -18,7 +17,7 @@ import {
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { CodeNode } from "@lexical/code"
-import { $createAutoLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
+import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
@@ -118,11 +117,8 @@ export class CommandDispatcher {
 
   dispatchUnlink() {
     this.editor.update(() => {
-      // Prefer the frozen link key saved during the native bridge freeze/thaw
-      // cycle. After contentEditable is toggled off and back on, Lexical retains
-      // a stale internal selection that $toggleLink cannot act on reliably.
-      if (this.editorElement.adapter.frozenLinkKey) {
-        this.#unlinkFrozenNode()
+      // Let adapters signal whether unlink should target a frozen link key.
+      if (this.editorElement.adapter.unlinkFrozenNode?.()) {
         return
       }
 
@@ -401,33 +397,6 @@ export class CommandDispatcher {
   #handleTabForCode() {
     const selection = $getSelection()
     return $isRangeSelection(selection) && selection.isCollapsed()
-  }
-
-  #unlinkFrozenNode() {
-    const key = this.editorElement.adapter.frozenLinkKey
-    if (!key) return
-
-    const linkNode = $getNodeByKey(key)
-    if (!$isLinkNode(linkNode)) return
-
-    const children = linkNode.getChildren()
-    for (const child of children) {
-      linkNode.insertBefore(child)
-    }
-    linkNode.remove()
-
-    // Select the former link text so a follow-up createLink can re-wrap it
-    const first = children.at(0)
-    const last = children.at(-1)
-    if (first && last) {
-      const selection = $getSelection()
-      if ($isRangeSelection(selection)) {
-        selection.anchor.set(first.getKey(), 0, "text")
-        selection.focus.set(last.getKey(), last.getTextContent().length, "text")
-      }
-    }
-
-    this.editorElement.adapter.frozenLinkKey = null
   }
 
 }

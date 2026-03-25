@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "vitest"
-import { createTestEditorWithNativeAdapter, destroyTestEditor, setContent, selectAll } from "../unit/helpers/editor_helper"
+import { createTestEditorWithNativeAdapter, destroyTestEditor, setContent, selectAll, tick } from "../unit/helpers/editor_helper"
 
 let editorElement
 
@@ -60,5 +60,26 @@ describe("selection freeze and thaw", () => {
 
     // The frozen key is preserved after thaw for the unlink command to use
     expect(editorElement.adapter.frozenLinkKey).toBe(frozenKey)
+  })
+
+  test("unlink command consumes frozenLinkKey and removes the frozen link", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p><a href='https://example.com'>link text</a></p>")
+    selectAll(editorElement)
+
+    editorElement.freezeSelection()
+    editorElement.thawSelection()
+    editorElement.editor.dispatchCommand("unlink", undefined)
+    await tick()
+
+    expect(editorElement.value).not.toContain("<a ")
+    expect(editorElement.adapter.frozenLinkKey).toBeNull()
+  })
+
+  test("unlinkFrozenNode returns false when no frozen link key exists", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    const handled = editorElement.adapter.unlinkFrozenNode()
+
+    expect(handled).toBe(false)
   })
 })
