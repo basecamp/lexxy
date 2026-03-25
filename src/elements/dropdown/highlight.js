@@ -1,5 +1,7 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
+import { createElement } from "../../helpers/html_helper"
+import ToolbarIcons from "../toolbar_icons"
 import { ToolbarDropdown } from "../toolbar_dropdown"
 
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button"
@@ -11,6 +13,31 @@ const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 const NO_STYLE = Symbol("no_style")
 
 export class HighlightDropdown extends ToolbarDropdown {
+  static buildToolbarElement(name, entry) {
+    const details = createElement("details", {
+      className: "lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron",
+      name: "lexxy-dropdown"
+    })
+
+    details.appendChild(createElement("summary", {
+      className: "lexxy-editor__toolbar-button",
+      name,
+      title: entry.title
+    }, ToolbarIcons[entry.icon]))
+
+    const dropdown = createElement("lexxy-highlight-dropdown", {
+      className: "lexxy-editor__toolbar-dropdown-content"
+    })
+    dropdown.appendChild(createElement("div", { className: "lexxy-highlight-colors" }))
+    dropdown.appendChild(createElement("button", {
+      className: "lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset",
+      "data-command": "removeHighlight"
+    }, "Remove all coloring"))
+
+    details.appendChild(dropdown)
+    return details
+  }
+
   connectedCallback() {
     super.connectedCallback()
     this.#registerToggleHandler()
