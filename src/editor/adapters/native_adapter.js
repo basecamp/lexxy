@@ -1,5 +1,5 @@
 import { dispatch } from "../../helpers/html_helper"
-import { $getNodeByKey, $getSelection, $isRangeSelection } from "lexical"
+import { $getNodeByKey, $getSelection, $isElementNode, $isRangeSelection, $isTextNode } from "lexical"
 import { $isLinkNode, LinkNode } from "@lexical/link"
 import { $getNearestNodeOfType } from "@lexical/utils"
 
@@ -56,18 +56,43 @@ export class NativeAdapter {
       linkNode.remove()
 
       // Select the former link text so a follow-up createLink can re-wrap it.
-      const first = children.at(0)
-      const last = children.at(-1)
-      if (first && last) {
+      const firstText = this.#findFirstTextDescendant(children)
+      const lastText = this.#findLastTextDescendant(children)
+      if (firstText && lastText) {
         const selection = $getSelection()
         if ($isRangeSelection(selection)) {
-          selection.anchor.set(first.getKey(), 0, "text")
-          selection.focus.set(last.getKey(), last.getTextContent().length, "text")
+          selection.anchor.set(firstText.getKey(), 0, "text")
+          selection.focus.set(lastText.getKey(), lastText.getTextContent().length, "text")
         }
       }
     }
 
     this.frozenLinkKey = null
     return true
+  }
+
+  #findFirstTextDescendant(nodes) {
+    for (const node of nodes) {
+      if ($isTextNode(node)) return node
+      if ($isElementNode(node)) {
+        const nestedTextNode = this.#findFirstTextDescendant(node.getChildren())
+        if (nestedTextNode) return nestedTextNode
+      }
+    }
+
+    return null
+  }
+
+  #findLastTextDescendant(nodes) {
+    for (let index = nodes.length - 1; index >= 0; index--) {
+      const node = nodes[index]
+      if ($isTextNode(node)) return node
+      if ($isElementNode(node)) {
+        const nestedTextNode = this.#findLastTextDescendant(node.getChildren())
+        if (nestedTextNode) return nestedTextNode
+      }
+    }
+
+    return null
   }
 }

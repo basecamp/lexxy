@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest"
+import { $createLineBreakNode, $createParagraphNode, $createRangeSelection, $getRoot, $setSelection } from "lexical"
+import { LinkNode } from "@lexical/link"
 import { createTestEditorWithNativeAdapter, destroyTestEditor, setContent, selectAll, tick } from "../unit/helpers/editor_helper"
 
 let editorElement
@@ -81,5 +83,34 @@ describe("selection freeze and thaw", () => {
     const handled = editorElement.adapter.unlinkFrozenNode()
 
     expect(handled).toBe(false)
+  })
+
+  test("unlinkFrozenNode handles links without text descendants", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+
+    let handled = false
+    editorElement.editor.update(() => {
+      const root = $getRoot()
+      root.clear()
+
+      const paragraph = $createParagraphNode()
+      const linkNode = new LinkNode("https://example.com")
+      linkNode.append($createLineBreakNode())
+      paragraph.append(linkNode)
+      root.append(paragraph)
+
+      const selection = $createRangeSelection()
+      selection.anchor.set(paragraph.getKey(), 0, "element")
+      selection.focus.set(paragraph.getKey(), 1, "element")
+      $setSelection(selection)
+
+      editorElement.adapter.frozenLinkKey = linkNode.getKey()
+      handled = editorElement.adapter.unlinkFrozenNode()
+    })
+    await tick()
+
+    expect(handled).toBe(true)
+    expect(editorElement.adapter.frozenLinkKey).toBeNull()
+    expect(editorElement.value).not.toContain("<a ")
   })
 })
