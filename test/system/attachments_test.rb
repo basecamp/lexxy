@@ -21,6 +21,24 @@ class AttachmentsTest < ApplicationSystemTestCase
     assert_image_figure_attachment content_type: "application/pdf", caption: "dummy.pdf"
   end
 
+  test "upload image via image button" do
+    attach_file file_fixture("example.png") do
+      click_on "Add images and video"
+    end
+
+    assert_image_figure_attachment content_type: "image/png", caption: "example.png"
+  end
+
+  test "upload file via file button" do
+    attach_file file_fixture("note.txt") do
+      click_on "Upload files"
+    end
+
+    assert_figure_attachment content_type: "text/plain" do
+      assert_selector ".attachment__name", text: "note.txt"
+    end
+  end
+
   test "disable attachments" do
     visit edit_post_path(posts(:empty))
     assert_button "Upload files"

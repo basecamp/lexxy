@@ -152,10 +152,10 @@ export class EditorHandle {
     }, shift)
   }
 
-  async uploadFile(filePath) {
+  async uploadFile(filePath, { via = "image" } = {}) {
     const [fileChooser] = await Promise.all([
       this.page.waitForEvent("filechooser"),
-      this.locator.locator("lexxy-toolbar button[name='image']").click(),
+      this.locator.locator(`lexxy-toolbar button[name='${via}']`).click(),
     ])
     await fileChooser.setFiles(filePath)
   }

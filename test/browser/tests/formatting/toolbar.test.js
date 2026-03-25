@@ -117,6 +117,28 @@ test.describe("Toolbar", () => {
     await expect(toolbar).not.toHaveAttribute("overflowing")
   })
 
+  test("image button opens file picker restricted to images and videos", async ({ page }) => {
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      page.locator("lexxy-toolbar button[name='image']").click(),
+    ])
+
+    // The file input created by the image button should only accept images and videos
+    const accept = await page.locator("lexxy-editor input[type='file']").getAttribute("accept")
+    expect(accept).toBe("image/*,video/*")
+  })
+
+  test("file button opens file picker with no type restriction", async ({ page }) => {
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      page.locator("lexxy-toolbar button[name='file']").click(),
+    ])
+
+    // The file input created by the file button should accept all file types
+    const accept = await page.locator("lexxy-editor input[type='file']").getAttribute("accept")
+    expect(accept).toBeNull()
+  })
+
   test("external toolbar", async ({ page }) => {
     await page.goto("/toolbar-external.html")
     await expect(
