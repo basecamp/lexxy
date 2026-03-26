@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
-import { HELLO_EVERYONE, clickFormatButton } from "../../helpers/toolbar.js"
+import { HELLO_EVERYONE, clickToolbarButton } from "../../helpers/toolbar.js"
 
 test.describe("Block formatting", () => {
   test.beforeEach(async ({ page }) => {
@@ -14,19 +14,19 @@ test.describe("Block formatting", () => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
 
-    await clickFormatButton(page, "setFormatHeadingLarge")
+    await clickToolbarButton(page, "setFormatHeadingLarge")
     await assertEditorHtml(editor, "<h2>Hello everyone</h2>")
 
     await editor.select("everyone")
-    await clickFormatButton(page, "setFormatHeadingMedium")
+    await clickToolbarButton(page, "setFormatHeadingMedium")
     await assertEditorHtml(editor, "<h3>Hello everyone</h3>")
 
     await editor.select("everyone")
-    await clickFormatButton(page, "setFormatHeadingSmall")
+    await clickToolbarButton(page, "setFormatHeadingSmall")
     await assertEditorHtml(editor, "<h4>Hello everyone</h4>")
 
     await editor.select("everyone")
-    await clickFormatButton(page, "setFormatParagraph")
+    await clickToolbarButton(page, "setFormatParagraph")
     await assertEditorHtml(editor, "<p>Hello everyone</p>")
   })
 
