@@ -60,4 +60,11 @@ describe("adapter registration", () => {
     expect(attributesPayloads).toHaveLength(1)
     expect(attributesPayloads[0].attributes).toBeTruthy()
   })
+
+  test("dispatchEditorInitialized is safe after disconnect", async () => {
+    editorElement = await createTestEditor()
+    await destroyTestEditor(editorElement)
+
+    expect(() => editorElement.dispatchEditorInitialized()).not.toThrow()
+  })
 })

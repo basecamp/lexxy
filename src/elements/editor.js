@@ -45,6 +45,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
+  #editorInitializedRafId = null
 
   constructor() {
     super()
@@ -67,10 +68,7 @@ export class LexicalEditorElement extends HTMLElement {
     CommandDispatcher.configureFor(this)
     this.#initialize()
 
-    requestAnimationFrame(() => {
-      dispatch(this, "lexxy:initialize")
-      this.#dispatchEditorInitialized()
-    })
+    this.#scheduleEditorInitializedDispatch()
     this.toggleAttribute("connected", true)
 
     this.#handleAutofocus()
@@ -79,6 +77,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.#cancelEditorInitializedDispatch()
     this.valueBeforeDisconnect = this.value
     this.#reset() // Prevent hangs with Safari when morphing
   }
@@ -589,9 +588,29 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #dispatchEditorInitialized() {
+    if (!this.adapter) return
+
     this.adapter.dispatchEditorInitialized({
       highlightColors: this.#resolvedHighlightColors
     })
+  }
+
+  #scheduleEditorInitializedDispatch() {
+    this.#cancelEditorInitializedDispatch()
+    this.#editorInitializedRafId = requestAnimationFrame(() => {
+      this.#editorInitializedRafId = null
+      if (!this.isConnected || !this.adapter) return
+
+      dispatch(this, "lexxy:initialize")
+      this.#dispatchEditorInitialized()
+    })
+  }
+
+  #cancelEditorInitializedDispatch() {
+    if (this.#editorInitializedRafId == null) return
+
+    cancelAnimationFrame(this.#editorInitializedRafId)
+    this.#editorInitializedRafId = null
   }
 
   get #resolvedHighlightColors() {
@@ -620,6 +639,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #reset() {
+    this.#cancelEditorInitializedDispatch()
     this.#unregisterHandlers()
 
     if (this.editorContentElement) {
