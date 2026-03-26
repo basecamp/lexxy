@@ -48,22 +48,25 @@ export class NativeAdapter {
     if (!key) return false
 
     const linkNode = $getNodeByKey(key)
-    if ($isLinkNode(linkNode)) {
-      const children = linkNode.getChildren()
-      for (const child of children) {
-        linkNode.insertBefore(child)
-      }
-      linkNode.remove()
+    if (!$isLinkNode(linkNode)) {
+      this.frozenLinkKey = null
+      return false
+    }
 
-      // Select the former link text so a follow-up createLink can re-wrap it.
-      const firstText = this.#findFirstTextDescendant(children)
-      const lastText = this.#findLastTextDescendant(children)
-      if (firstText && lastText) {
-        const selection = $getSelection()
-        if ($isRangeSelection(selection)) {
-          selection.anchor.set(firstText.getKey(), 0, "text")
-          selection.focus.set(lastText.getKey(), lastText.getTextContent().length, "text")
-        }
+    const children = linkNode.getChildren()
+    for (const child of children) {
+      linkNode.insertBefore(child)
+    }
+    linkNode.remove()
+
+    // Select the former link text so a follow-up createLink can re-wrap it.
+    const firstText = this.#findFirstTextDescendant(children)
+    const lastText = this.#findLastTextDescendant(children)
+    if (firstText && lastText) {
+      const selection = $getSelection()
+      if ($isRangeSelection(selection)) {
+        selection.anchor.set(firstText.getKey(), 0, "text")
+        selection.focus.set(lastText.getKey(), lastText.getTextContent().length, "text")
       }
     }
 

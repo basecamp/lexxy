@@ -78,6 +78,24 @@ describe("selection freeze and thaw", () => {
     expect(editorElement.adapter.frozenLinkKey).toBeNull()
   })
 
+  test("unlink falls back to current selection when frozen key is stale", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+
+    await setContent(editorElement, "<p><a href='https://old.example'>old</a></p>")
+    selectAll(editorElement)
+    editorElement.freezeSelection()
+    editorElement.thawSelection()
+
+    await setContent(editorElement, "<p><a href='https://new.example'>new</a></p>")
+    selectAll(editorElement)
+
+    editorElement.editor.dispatchCommand("unlink", undefined)
+    await tick()
+
+    expect(editorElement.value).not.toContain("<a ")
+    expect(editorElement.adapter.frozenLinkKey).toBeNull()
+  })
+
   test("unlinkFrozenNode returns false when no frozen link key exists", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
     const handled = editorElement.adapter.unlinkFrozenNode()
