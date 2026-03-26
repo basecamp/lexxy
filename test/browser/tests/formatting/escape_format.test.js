@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml, assertEditorContent } from "../../helpers/assertions.js"
-import { clickFormatButton, clickListsButton } from "../../helpers/toolbar.js"
+import { clickFormatButton } from "../../helpers/toolbar.js"
 
 test.describe("Escape format", () => {
   test.beforeEach(async ({ page }) => {
@@ -14,7 +14,7 @@ test.describe("Escape format", () => {
     await editor.send("First line")
     await editor.selectAll()
 
-    await clickListsButton(page, "insertUnorderedList")
+    await page.getByRole("button", { name: "Bullet list" }).click()
     await assertEditorHtml(editor, "<ul><li>First line</li></ul>")
 
     await clickFormatButton(page, "insertQuoteBlock")
@@ -69,7 +69,7 @@ test.describe("Escape format", () => {
     await editor.send("Enter")
     await editor.send("Item three")
     await editor.selectAll()
-    await clickListsButton(page, "insertUnorderedList")
+    await page.getByRole("button", { name: "Bullet list" }).click()
 
     await clickFormatButton(page, "insertQuoteBlock")
     await assertEditorHtml(
@@ -96,7 +96,7 @@ test.describe("Escape format", () => {
   }) => {
     await editor.send("Item one")
     await editor.selectAll()
-    await clickListsButton(page, "insertUnorderedList")
+    await page.getByRole("button", { name: "Bullet list" }).click()
 
     await clickFormatButton(page, "insertQuoteBlock")
     await assertEditorHtml(
