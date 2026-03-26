@@ -557,11 +557,6 @@
     }
   }
 
-  [overflowing] &:not(.lexxy-editor__toolbar-overflow) summary ~ * {
-    inset-inline-end: var(--lexxy-toolbar-spacing);
-    inset-inline-start: var(--lexxy-toolbar-spacing);
-  }
-
   button {
     color: var(--lexxy-color-text);
 
@@ -573,7 +568,6 @@
   .lexxy-editor__toolbar-dropdown-list {
     border-start-start-radius: 0;
     flex-direction: column;
-    gap: var(--lexxy-toolbar-gap);
     padding: 0.1ch;
 
     button {
@@ -602,54 +596,20 @@
       }
     }
 
-    .separator {
+    .lexxy-editor__toolbar-separator {
       background: var(--lexxy-color-ink-lighter);
       block-size: 1px;
       inline-size: 100%;
     }
 
-    .lexxy-editor__toolbar-group-end {
-      margin-block-end: var(--lexxy-toolbar-gap);
-
-      &:after {
-        background: var(--lexxy-color-ink-lighter);
-        block-size: 1px;
-        content: "";
-        display: block;
-        inset-inline: 0.5ch;
-        inset-block-end: calc(var(--lexxy-toolbar-gap) * -2);
-        pointer-events: none;
-        position: absolute;
-      }
-
-      & + * {
-        margin: 0;
-        margin-block-start: calc(var(--lexxy-toolbar-gap) + 1px);
-      }
-    }
-
     [overflowing] & {
-      flex-direction: row;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
 
       button span { display: none; }
 
-      .lexxy-editor__toolbar-group-end {
-        margin: 0;
-        margin-inline-end: var(--lexxy-toolbar-gap);
-
-        &:after {
-          block-size: var(--lexxy-toolbar-icon-size);
-          inline-size: 1px;
-          inset-block: 0;
-          inset-inline-start: auto;
-          inset-inline-end: calc(var(--lexxy-toolbar-gap) * -2);
-          margin: auto;
-        }
-
-        & + * {
-          margin: 0;
-          margin-inline-start: calc(var(--lexxy-toolbar-gap) + 1px);
-        }
+      .lexxy-editor__toolbar-separator {
+        grid-column: 1 / -1;
       }
     }
   }
@@ -752,6 +712,11 @@
     font-size: var(--lexxy-text-small);
     inset-inline-start: 0;
     max-inline-size: var(--max-inline-size);
+
+    [overflowing] & {
+      inset-inline-end: var(--lexxy-toolbar-spacing);
+      inset-inline-start: var(--lexxy-toolbar-spacing);
+    }
 
     button {
       position: relative;

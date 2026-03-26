@@ -339,13 +339,13 @@ export class LexicalToolbarElement extends HTMLElement {
 
   static get defaultTemplate() {
     return `
-    <button class="lexxy-editor__toolbar-button" type="button" name="image" data-command="uploadImage" data-prevent-overflow="true" title="Add images and video">
-      ${ToolbarIcons.image}
-    </button>
+      <button class="lexxy-editor__toolbar-button" type="button" name="image" data-command="uploadImage" data-prevent-overflow="true" title="Add images and video">
+        ${ToolbarIcons.image}
+      </button>
 
-    <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="file" data-command="uploadFile" title="Upload files">
-      ${ToolbarIcons.attachment}
-    </button>
+      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="file" data-command="uploadFile" title="Upload files">
+        ${ToolbarIcons.attachment}
+      </button>
 
       <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="Bold">
         ${ToolbarIcons.bold}
@@ -372,6 +372,7 @@ export class LexicalToolbarElement extends HTMLElement {
           <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading">
             ${ToolbarIcons.h4} <span>Small Heading</span>
           </button>
+          <div class="lexxy-editor__toolbar-separator" role="separator"></div>
           <button type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
             ${ToolbarIcons.strikethrough} <span>Strikethrough</span>
           </button>
