@@ -38,7 +38,9 @@ export async function createTestEditor(options = {}) {
   document.body.appendChild(element)
 
   // Wait for requestAnimationFrame callbacks (lexxy:initialize, dispatchHighlightColors)
-  await tick()
+  if (!options.skipTick) {
+    await tick()
+  }
 
   return element
 }

@@ -179,6 +179,7 @@ export class LexicalEditorElement extends HTMLElement {
 
     if (!this.editor) return
 
+    this.#cancelEditorInitializedDispatch()
     this.#dispatchEditorInitialized()
     this.#dispatchAttributesChange()
   }

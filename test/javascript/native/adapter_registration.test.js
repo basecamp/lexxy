@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "vitest"
-import { createTestEditor, destroyTestEditor, selectAll, setContent } from "../unit/helpers/editor_helper"
+import { createTestEditor, destroyTestEditor, selectAll, setContent, tick } from "../unit/helpers/editor_helper"
 import { BrowserAdapter } from "../../../src/editor/adapters/browser_adapter"
 
 let editorElement
@@ -66,5 +66,28 @@ describe("adapter registration", () => {
     await destroyTestEditor(editorElement)
 
     expect(() => editorElement.dispatchEditorInitialized()).not.toThrow()
+  })
+
+  test("registerAdapter does not double-dispatch initialized before first frame", async () => {
+    editorElement = await createTestEditor({ skipTick: true })
+
+    const initializedPayloads = []
+    const customAdapter = {
+      frozenLinkKey: null,
+      dispatchEditorInitialized(detail) {
+        initializedPayloads.push(detail)
+      },
+      dispatchAttributesChange() {},
+      freeze() {},
+      thaw() {},
+      unlinkFrozenNode() {
+        return false
+      }
+    }
+
+    editorElement.registerAdapter(customAdapter)
+    await tick()
+
+    expect(initializedPayloads).toHaveLength(1)
   })
 })
