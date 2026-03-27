@@ -11,6 +11,7 @@ module Lexxy
     isolate_namespace Lexxy
 
     config.lexxy = ActiveSupport::OrderedOptions.new
+    config.lexxy.additional_allowed_attributes = []
     config.lexxy.override_action_text_defaults = true
 
     initializer "lexxy.initialize" do |app|
@@ -35,13 +36,7 @@ module Lexxy
 
     initializer "lexxy.sanitization" do |app|
       ActiveSupport.on_load(:action_text_content) do
-        default_allowed_tags = Class.new.include(ActionText::ContentHelper).new.sanitizer_allowed_tags
-        ActionText::ContentHelper.allowed_tags = default_allowed_tags + %w[ video audio source embed table tbody tr th td ]
-
-        default_allowed_attributes = Class.new.include(ActionText::ContentHelper).new.sanitizer_allowed_attributes
-        ActionText::ContentHelper.allowed_attributes = default_allowed_attributes + %w[ controls poster data-language style ]
-
-        Loofah::HTML5::SafeList::ALLOWED_CSS_FUNCTIONS << "var" # Allow CSS variables
+        Lexxy.configure_action_text_sanitizer!(app.config.lexxy)
       end
     end
 

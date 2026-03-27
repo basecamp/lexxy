@@ -5,7 +5,7 @@ import Lexxy from "./lexxy"
 const ALLOWED_HTML_TAGS = [ "a", "b", "blockquote", "br", "code", "div", "em",
   "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "mark", "ol", "p", "pre", "q", "s", "strong", "u", "ul", "table", "tbody", "tr", "th", "td" ]
 
-const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",
+const DEFAULT_ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",
   "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "presentation",
   "previewable", "sgid", "src", "style", "title", "url", "width" ]
 
@@ -38,10 +38,13 @@ DOMPurify.addHook("uponSanitizeElement", (node, data) => {
   }
 })
 
-export function buildConfig() {
+export function buildConfig({ additionalAllowedAttributes = [] } = {}) {
   return {
     ALLOWED_TAGS: ALLOWED_HTML_TAGS.concat(Lexxy.global.get("attachmentTagName")),
-    ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
+    ALLOWED_ATTR: Array.from(new Set([
+      ...DEFAULT_ALLOWED_HTML_ATTRIBUTES,
+      ...additionalAllowedAttributes,
+    ])),
     ADD_URI_SAFE_ATTR: [ "caption", "filename" ],
     SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
   }
