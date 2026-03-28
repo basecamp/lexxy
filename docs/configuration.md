@@ -50,7 +50,7 @@ Editors support the following options, configurable using presets and element at
 - `multiLine`: Pass `false` to force single line editing.
 - `richText`: Pass `false` to disable rich text editing.
 
-The toolbar is considered part of the editor for `lexxy:focus` and `lexxy:blur` events.
+The toolbar is considered part of the editor for `lexxy:focus` and `lexxy:blur` events. If the toolbar registers event or lexical handlers, it should expose a `dispose()` function which will be called on editor disconnect.
 
 Lexxy also supports standard HTML attributes:
   - `placeholder`: Text displayed when the editor is empty.
