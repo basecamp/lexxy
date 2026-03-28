@@ -15,6 +15,10 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.dispose()
+  }
+
+  dispose() {
     this.unregisterUpdateListener?.()
     this.unregisterUpdateListener = null
   }

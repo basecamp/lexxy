@@ -42,6 +42,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
+  #disposables = []
 
   constructor() {
     super()
@@ -55,6 +56,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.extensions = new Extensions(this)
 
     this.editor = this.#createEditor()
+    this.#disposables.push(this.editor)
 
     this.contents = new Contents(this)
     this.selection = new Selection(this)
@@ -249,6 +251,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #createEditor() {
     this.editorContentElement ||= this.#createEditorContentElement()
+    this.appendChild(this.editorContentElement)
 
     const editor = buildEditorFromExtensions({
       name: "lexxy/core",
@@ -298,7 +301,6 @@ export class LexicalEditorElement extends HTMLElement {
     })
     editorContentElement.id = `${this.id}-content`
     this.#ariaAttributes.forEach(attribute => editorContentElement.setAttribute(attribute.name, attribute.value))
-    this.appendChild(editorContentElement)
 
     if (this.getAttribute("tabindex")) {
       editorContentElement.setAttribute("tabindex", this.getAttribute("tabindex"))
@@ -391,14 +393,18 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #registerTableComponents() {
-    this.tableTools = createElement("lexxy-table-tools")
-    this.append(this.tableTools)
+    let tableTools = this.querySelector("lexxy-table-tools")
+    tableTools ??= createElement("lexxy-table-tools")
+    this.append(tableTools)
+    this.#disposables.push(tableTools)
   }
 
   #registerCodeHiglightingComponents() {
     registerCodeHighlighting(this.editor)
-    this.codeLanguagePicker = createElement("lexxy-code-language-picker")
-    this.append(this.codeLanguagePicker)
+    let codeLanguagePicker = this.querySelector("lexxy-code-language-picker")
+    codeLanguagePicker ??= createElement("lexxy-code-language-picker")
+    this.append(codeLanguagePicker)
+    this.#disposables.push(codeLanguagePicker)
   }
 
   #handleEnter() {
@@ -476,6 +482,10 @@ export class LexicalEditorElement extends HTMLElement {
   #attachToolbar() {
     if (this.#hasToolbar) {
       this.toolbarElement.setEditor(this)
+      if (typeof this.toolbarElement.dispose === "function") {
+        this.#disposables.push(this.toolbarElement)
+      }
+
       this.extensions.initializeToolbars()
     }
   }
@@ -515,34 +525,17 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #reset() {
+    this.#dispose()
+    this.editorContentElement?.remove()
+  }
+
+  #dispose() {
     this.#unregisterHandlers()
-
-    if (this.toolbar) {
-      if (!this.getAttribute("toolbar")) { this.toolbar.remove() }
-      this.toolbar = null
-    }
-
-    if (this.codeLanguagePicker) {
-      this.codeLanguagePicker.remove()
-      this.codeLanguagePicker = null
-    }
-
-    if (this.tableTools) {
-      this.tableTools.remove()
-      this.tableTools = null
-    }
-
-    if (this.editorContentElement) {
-      this.editorContentElement.remove()
-      this.editorContentElement = null
-    }
-
-    this.editor?.dispose()
-    this.editor = null
-    this.contents = null
-    this.selection = null
-
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
+
+    while (this.#disposables.length) {
+      this.#disposables.pop().dispose()
+    }
   }
 
   #reconnect() {

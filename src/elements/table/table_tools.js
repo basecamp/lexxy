@@ -20,6 +20,10 @@ export class TableTools extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.dispose()
+  }
+
+  dispose() {
     this.#unregisterKeyboardShortcuts()
 
     this.unregisterUpdateListener?.()

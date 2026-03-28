@@ -25,6 +25,10 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.dispose()
+  }
+
+  dispose() {
     this.#uninstallResizeObserver()
     this.#unbindHotkeys()
     this.#unbindFocusListeners()
