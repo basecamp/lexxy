@@ -32,6 +32,8 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#uninstallResizeObserver()
     this.#unbindHotkeys()
     this.#unbindFocusListeners()
+    this.unregisterSelectionListener?.()
+    this.unregisterHistoryListener?.()
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -182,7 +184,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.editor.registerUpdateListener(() => {
+    this.unregisterSelectionListener = this.editor.registerUpdateListener(() => {
       this.editor.getEditorState().read(() => {
         this.#updateButtonStates()
         this.#closeDropdowns()
@@ -191,7 +193,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorHistoryChanges() {
-    this.editor.registerUpdateListener(() => {
+    this.unregisterHistoryListener = this.editor.registerUpdateListener(() => {
       this.#updateUndoRedoButtonStates()
     })
   }
