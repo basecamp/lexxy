@@ -115,7 +115,7 @@ export class LexicalEditorElement extends HTMLElement {
   get toolbarElement() {
     if (!this.#hasToolbar) return null
 
-    this.toolbar = this.toolbar || this.#findOrCreateDefaultToolbar()
+    this.toolbar ??= this.#findOrCreateDefaultToolbar()
     return this.toolbar
   }
 
@@ -495,7 +495,7 @@ export class LexicalEditorElement extends HTMLElement {
     if (typeof toolbarConfig === "string") {
       return document.getElementById(toolbarConfig)
     } else {
-      return this.#createDefaultToolbar()
+      return this.querySelector("lexxy-toolbar") ?? this.#createDefaultToolbar()
     }
   }
 

@@ -34,6 +34,8 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#unbindFocusListeners()
     this.unregisterSelectionListener?.()
     this.unregisterHistoryListener?.()
+
+    this.editorElement = null
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -81,6 +83,8 @@ export class LexicalToolbarElement extends HTMLElement {
     this.editorPromise = new Promise((resolve) => {
       this.resolveEditorPromise = resolve
     })
+
+    this.editorPromise.then(editor => this.editorElement = editor)
   }
 
   #installResizeObserver() {
@@ -159,8 +163,8 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #unbindFocusListeners() {
-    this.editorElement.removeEventListener("lexxy:focus", this.#handleEditorFocus)
-    this.editorElement.removeEventListener("lexxy:blur", this.#handleEditorBlur)
+    this.editorElement?.removeEventListener("lexxy:focus", this.#handleEditorFocus)
+    this.editorElement?.removeEventListener("lexxy:blur", this.#handleEditorBlur)
     this.removeEventListener("keydown", this.#handleKeydown)
   }
 

@@ -48,6 +48,8 @@ export class TableTools extends HTMLElement {
   }
 
   #setUpButtons() {
+    this.innerHTML = ""
+
     this.appendChild(this.#createRowButtonsContainer())
     this.appendChild(this.#createColumnButtonsContainer())
 

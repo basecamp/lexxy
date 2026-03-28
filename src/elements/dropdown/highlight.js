@@ -11,14 +11,14 @@ const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 const NO_STYLE = Symbol("no_style")
 
 export class HighlightDropdown extends ToolbarDropdown {
-  connectedCallback() {
-    super.connectedCallback()
-    this.#registerToggleHandler()
-  }
-
   initialize() {
     this.#setUpButtons()
     this.#registerButtonHandlers()
+  }
+
+  connectedCallback() {
+    super.connectedCallback()
+    this.#registerToggleHandler()
   }
 
   #registerToggleHandler() {
@@ -31,6 +31,8 @@ export class HighlightDropdown extends ToolbarDropdown {
   }
 
   #setUpButtons() {
+    this.#buttonContainer.innerHTML = ""
+
     const colorGroups = this.editorElement.config.get("highlight.buttons")
 
     this.#populateButtonGroup("color", colorGroups.color)

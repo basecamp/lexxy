@@ -24,14 +24,12 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   #attachLanguagePicker() {
-    this.languagePickerElement = this.#createLanguagePicker()
+    this.languagePickerElement = this.#findLanguagePicker() ?? this.#createLanguagePicker()
+    this.append(this.languagePickerElement)
+  }
 
-    this.languagePickerElement.addEventListener("change", () => {
-      this.#updateCodeBlockLanguage(this.languagePickerElement.value)
-    })
-
-    this.languagePickerElement.setAttribute("nonce", getNonce())
-    this.appendChild(this.languagePickerElement)
+  #findLanguagePicker() {
+    return this.querySelector("select")
   }
 
   #createLanguagePicker() {
@@ -43,6 +41,12 @@ export class CodeLanguagePicker extends HTMLElement {
       option.textContent = label
       selectElement.appendChild(option)
     }
+
+    selectElement.addEventListener("change", () => {
+      this.#updateCodeBlockLanguage(this.languagePickerElement.value)
+    })
+
+    selectElement.setAttribute("nonce", getNonce())
 
     return selectElement
   }

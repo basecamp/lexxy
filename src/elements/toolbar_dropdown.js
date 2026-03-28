@@ -36,7 +36,7 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   async #onToolbarEditor(callback) {
-    await this.toolbar.editorConnected
+    await this.toolbar.editorElement
     callback()
   }
 
