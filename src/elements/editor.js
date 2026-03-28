@@ -517,15 +517,6 @@ export class LexicalEditorElement extends HTMLElement {
   #reset() {
     this.#unregisterHandlers()
 
-    this.editor?.dispose()
-    this.editor = null
-    this.contents = null
-
-    if (this.editorContentElement) {
-      this.editorContentElement.remove()
-      this.editorContentElement = null
-    }
-
     if (this.toolbar) {
       if (!this.getAttribute("toolbar")) { this.toolbar.remove() }
       this.toolbar = null
@@ -536,11 +527,19 @@ export class LexicalEditorElement extends HTMLElement {
       this.codeLanguagePicker = null
     }
 
-    if (this.tableHandler) {
-      this.tableHandler.remove()
-      this.tableHandler = null
+    if (this.tableTools) {
+      this.tableTools.remove()
+      this.tableTools = null
     }
 
+    if (this.editorContentElement) {
+      this.editorContentElement.remove()
+      this.editorContentElement = null
+    }
+
+    this.editor?.dispose()
+    this.editor = null
+    this.contents = null
     this.selection = null
 
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
