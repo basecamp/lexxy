@@ -517,13 +517,14 @@ export class LexicalEditorElement extends HTMLElement {
   #reset() {
     this.#unregisterHandlers()
 
+    this.editor?.dispose()
+    this.editor = null
+    this.contents = null
+
     if (this.editorContentElement) {
       this.editorContentElement.remove()
       this.editorContentElement = null
     }
-
-    this.contents = null
-    this.editor = null
 
     if (this.toolbar) {
       if (!this.getAttribute("toolbar")) { this.toolbar.remove() }
