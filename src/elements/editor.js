@@ -527,6 +527,10 @@ export class LexicalEditorElement extends HTMLElement {
   #reset() {
     this.#dispose()
     this.editorContentElement?.remove()
+
+    // Prevents issues with turbo morphing receiving an empty <lexxy-editor> which wipes
+    // out the DOM for the tools, and the old toolbar reference will cause issues
+    this.toolbar = null
   }
 
   #dispose() {
