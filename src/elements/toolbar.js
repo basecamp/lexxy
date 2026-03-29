@@ -30,12 +30,17 @@ export class LexicalToolbarElement extends HTMLElement {
 
   dispose() {
     this.#uninstallResizeObserver()
+    this.#unbindButtons()
     this.#unbindHotkeys()
     this.#unbindFocusListeners()
     this.unregisterSelectionListener?.()
     this.unregisterHistoryListener?.()
 
     this.editorElement = null
+    this.editor = null
+    this.selection = null
+
+    this.#createEditorPromise()
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -79,12 +84,12 @@ export class LexicalToolbarElement extends HTMLElement {
     this.connectedCallback()
   }
 
-  #createEditorPromise() {
+  async #createEditorPromise() {
     this.editorPromise = new Promise((resolve) => {
       this.resolveEditorPromise = resolve
     })
 
-    this.editorPromise.then(editor => this.editorElement = editor)
+    this.editorElement = await this.editorPromise
   }
 
   #installResizeObserver() {
@@ -100,10 +105,14 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #bindButtons() {
-    this.addEventListener("click", this.#handleButtonClicked.bind(this))
+    this.addEventListener("click", this.#handleButtonClicked)
   }
 
-  #handleButtonClicked(event) {
+  #unbindButtons() {
+    this.removeEventListener("click", this.#handleButtonClicked)
+  }
+
+  #handleButtonClicked = (event) => {
     this.#handleTargetClicked(event, "[data-command]", this.#dispatchButtonCommand.bind(this))
   }
 
