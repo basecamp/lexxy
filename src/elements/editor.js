@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $isElementNode, $isLineBreakNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $isElementNode, $isLineBreakNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode, mergeRegister } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -59,10 +59,16 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(this.editor)
 
     this.contents = new Contents(this)
+    this.#disposables.push(this.contents)
+
     this.selection = new Selection(this)
+    this.#disposables.push(this.selection)
+
     this.clipboard = new Clipboard(this)
 
-    CommandDispatcher.configureFor(this)
+    const commandDispatcher = CommandDispatcher.configureFor(this)
+    this.#disposables.push(commandDispatcher)
+
     this.#initialize()
 
     requestAnimationFrame(() => dispatch(this, "lexxy:initialize"))
@@ -376,20 +382,28 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #registerComponents() {
+    const registered = []
+
     if (this.supportsRichText) {
-      registerRichText(this.editor)
-      registerList(this.editor)
+      registered.push(
+        registerRichText(this.editor),
+        registerList(this.editor)
+      )
       this.#registerTableComponents()
       this.#registerCodeHiglightingComponents()
       if (this.supportsMarkdown) {
-        registerMarkdownShortcuts(this.editor, TRANSFORMERS)
-        registerMarkdownLeadingTagHandler(this.editor, TRANSFORMERS)
+          registered.push(
+            registerMarkdownShortcuts(this.editor, TRANSFORMERS),
+            registerMarkdownLeadingTagHandler(this.editor, TRANSFORMERS)
+        )
       }
     } else {
-      registerPlainText(this.editor)
+      registered.push(registerPlainText(this.editor))
     }
     this.historyState = createEmptyHistoryState()
-    registerHistory(this.editor, this.historyState, 20)
+    registered.push(registerHistory(this.editor, this.historyState, 20))
+
+    this.#addUnregisterHandler(mergeRegister(...registered))
   }
 
   #registerTableComponents() {
@@ -409,7 +423,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #handleEnter() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.editor.registerCommand(
+    this.#addUnregisterHandler(this.editor.registerCommand(
       KEY_ENTER_COMMAND,
       (event) => {
         // Prevent CTRL+ENTER
@@ -427,12 +441,17 @@ export class LexicalEditorElement extends HTMLElement {
         return false
       },
       COMMAND_PRIORITY_NORMAL
-    )
+    ))
   }
 
   #registerFocusEvents() {
     this.addEventListener("focusin", this.#handleFocusIn)
     this.addEventListener("focusout", this.#handleFocusOut)
+
+    this.#addUnregisterHandler(() => {
+      this.removeEventListener("focusin", this.#handleFocusIn)
+      this.removeEventListener("focusout", this.#handleFocusOut)
+    })
   }
 
   #handleFocusIn(event) {
@@ -527,6 +546,7 @@ export class LexicalEditorElement extends HTMLElement {
   #reset() {
     this.#dispose()
     this.editorContentElement?.remove()
+    this.editorContentElement = null
 
     // Prevents issues with turbo morphing receiving an empty <lexxy-editor> which wipes
     // out the DOM for the tools, and the old toolbar reference will cause issues

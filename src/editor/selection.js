@@ -1,7 +1,8 @@
 import {
   $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
   $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND,
-  KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
+  KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode,
+  mergeRegister
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
@@ -16,6 +17,8 @@ import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 
 export default class Selection {
+  #unregister = []
+
   constructor(editorElement) {
     this.editorElement = editorElement
     this.editorContentElement = editorElement.editorContentElement
@@ -272,6 +275,18 @@ export default class Selection {
     return this.#findPreviousSiblingUp(anchorNode)
   }
 
+  dispose() {
+    this.editorElement = null
+    this.editorContentElement = null
+    this.editor = null
+    this.previouslySelectedKeys = null
+
+    while (this.#unregister.length) {
+      const unregister = this.#unregister.pop()
+      unregister()
+    }
+  }
+
   // When all inline code text is deleted, Lexical's selection retains the stale
   // code format flag. Verify the flag is backed by actual code-formatted content:
   // a code block ancestor or a text node that carries the code format.
@@ -287,7 +302,7 @@ export default class Selection {
   // detects that stale state and clears it so newly typed text won't be
   // code-formatted.
   #clearStaleInlineCodeFormat() {
-    this.editor.registerUpdateListener(({ editorState, tags }) => {
+    this.#unregister.push(this.editor.registerUpdateListener(({ editorState, tags }) => {
       if (tags.has("history-merge") || tags.has("skip-dom-selection")) return
 
       let isStale = false
@@ -316,7 +331,7 @@ export default class Selection {
           })
         }, 0)
       }
-    })
+    }))
   }
 
   get #currentlySelectedKeys() {
@@ -335,29 +350,32 @@ export default class Selection {
   }
 
   #processSelectionChangeCommands() {
-    this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, this.#selectPreviousNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#selectNextNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
+    this.#unregister.push(mergeRegister(
+      this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, this.#selectPreviousNode.bind(this), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#selectNextNode.bind(this), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousTopLevelNode.bind(this), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextTopLevelNode.bind(this), COMMAND_PRIORITY_LOW),
 
-    this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW)
+      this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW),
 
-    this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
-      this.current = $getSelection()
-    }, COMMAND_PRIORITY_LOW)
+      this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
+        this.current = $getSelection()
+      }, COMMAND_PRIORITY_LOW)
+    ))
   }
 
   #listenForNodeSelections() {
-    this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
+    this.#unregister.push(this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
       if (!isDOMNode(target)) return false
 
       const targetNode = $getNearestNodeFromDOMNode(target)
       return $isDecoratorNode(targetNode) && this.#selectInLexical(targetNode)
-    }, COMMAND_PRIORITY_LOW)
+    }, COMMAND_PRIORITY_LOW))
 
-    this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
-      this.#selectOrAppendNextLine()
-    })
+    const moveNextLineHandler = () => this.#selectOrAppendNextLine()
+    const rootElement = this.editor.getRootElement()
+    rootElement.addEventListener("lexxy:internal:move-to-next-line", moveNextLineHandler)
+    this.#unregister.push(() => rootElement.removeEventListener("lexxy:internal:move-to-next-line", moveNextLineHandler))
   }
 
   #containEditorFocus() {
