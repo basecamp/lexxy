@@ -25,9 +25,22 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.dispose()
+  }
+
+  dispose() {
     this.#uninstallResizeObserver()
+    this.#unbindButtons()
     this.#unbindHotkeys()
     this.#unbindFocusListeners()
+    this.unregisterSelectionListener?.()
+    this.unregisterHistoryListener?.()
+
+    this.editorElement = null
+    this.editor = null
+    this.selection = null
+
+    this.#createEditorPromise()
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -71,10 +84,12 @@ export class LexicalToolbarElement extends HTMLElement {
     this.connectedCallback()
   }
 
-  #createEditorPromise() {
+  async #createEditorPromise() {
     this.editorPromise = new Promise((resolve) => {
       this.resolveEditorPromise = resolve
     })
+
+    this.editorElement = await this.editorPromise
   }
 
   #installResizeObserver() {
@@ -90,10 +105,14 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #bindButtons() {
-    this.addEventListener("click", this.#handleButtonClicked.bind(this))
+    this.addEventListener("click", this.#handleButtonClicked)
   }
 
-  #handleButtonClicked(event) {
+  #unbindButtons() {
+    this.removeEventListener("click", this.#handleButtonClicked)
+  }
+
+  #handleButtonClicked = (event) => {
     this.#handleTargetClicked(event, "[data-command]", this.#dispatchButtonCommand.bind(this))
   }
 
@@ -153,8 +172,8 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #unbindFocusListeners() {
-    this.editorElement.removeEventListener("lexxy:focus", this.#handleEditorFocus)
-    this.editorElement.removeEventListener("lexxy:blur", this.#handleEditorBlur)
+    this.editorElement?.removeEventListener("lexxy:focus", this.#handleEditorFocus)
+    this.editorElement?.removeEventListener("lexxy:blur", this.#handleEditorBlur)
     this.removeEventListener("keydown", this.#handleKeydown)
   }
 
@@ -178,7 +197,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.editor.registerUpdateListener(() => {
+    this.unregisterSelectionListener = this.editor.registerUpdateListener(() => {
       this.editor.getEditorState().read(() => {
         this.#updateButtonStates()
         this.#closeDropdowns()
@@ -187,7 +206,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorHistoryChanges() {
-    this.editor.registerUpdateListener(() => {
+    this.unregisterHistoryListener = this.editor.registerUpdateListener(() => {
       this.#updateUndoRedoButtonStates()
     })
   }

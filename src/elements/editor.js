@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $isElementNode, $isLineBreakNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $isElementNode, $isLineBreakNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode, mergeRegister } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -42,6 +42,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
+  #disposables = []
 
   constructor() {
     super()
@@ -55,12 +56,19 @@ export class LexicalEditorElement extends HTMLElement {
     this.extensions = new Extensions(this)
 
     this.editor = this.#createEditor()
+    this.#disposables.push(this.editor)
 
     this.contents = new Contents(this)
+    this.#disposables.push(this.contents)
+
     this.selection = new Selection(this)
+    this.#disposables.push(this.selection)
+
     this.clipboard = new Clipboard(this)
 
-    CommandDispatcher.configureFor(this)
+    const commandDispatcher = CommandDispatcher.configureFor(this)
+    this.#disposables.push(commandDispatcher)
+
     this.#initialize()
 
     requestAnimationFrame(() => dispatch(this, "lexxy:initialize"))
@@ -113,7 +121,7 @@ export class LexicalEditorElement extends HTMLElement {
   get toolbarElement() {
     if (!this.#hasToolbar) return null
 
-    this.toolbar = this.toolbar || this.#findOrCreateDefaultToolbar()
+    this.toolbar ??= this.#findOrCreateDefaultToolbar()
     return this.toolbar
   }
 
@@ -249,6 +257,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #createEditor() {
     this.editorContentElement ||= this.#createEditorContentElement()
+    this.appendChild(this.editorContentElement)
 
     const editor = buildEditorFromExtensions({
       name: "lexxy/core",
@@ -298,7 +307,6 @@ export class LexicalEditorElement extends HTMLElement {
     })
     editorContentElement.id = `${this.id}-content`
     this.#ariaAttributes.forEach(attribute => editorContentElement.setAttribute(attribute.name, attribute.value))
-    this.appendChild(editorContentElement)
 
     if (this.getAttribute("tabindex")) {
       editorContentElement.setAttribute("tabindex", this.getAttribute("tabindex"))
@@ -374,36 +382,48 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #registerComponents() {
+    const registered = []
+
     if (this.supportsRichText) {
-      registerRichText(this.editor)
-      registerList(this.editor)
+      registered.push(
+        registerRichText(this.editor),
+        registerList(this.editor)
+      )
       this.#registerTableComponents()
       this.#registerCodeHiglightingComponents()
       if (this.supportsMarkdown) {
-        registerMarkdownShortcuts(this.editor, TRANSFORMERS)
-        registerMarkdownLeadingTagHandler(this.editor, TRANSFORMERS)
+          registered.push(
+            registerMarkdownShortcuts(this.editor, TRANSFORMERS),
+            registerMarkdownLeadingTagHandler(this.editor, TRANSFORMERS)
+        )
       }
     } else {
-      registerPlainText(this.editor)
+      registered.push(registerPlainText(this.editor))
     }
     this.historyState = createEmptyHistoryState()
-    registerHistory(this.editor, this.historyState, 20)
+    registered.push(registerHistory(this.editor, this.historyState, 20))
+
+    this.#addUnregisterHandler(mergeRegister(...registered))
   }
 
   #registerTableComponents() {
-    this.tableTools = createElement("lexxy-table-tools")
-    this.append(this.tableTools)
+    let tableTools = this.querySelector("lexxy-table-tools")
+    tableTools ??= createElement("lexxy-table-tools")
+    this.append(tableTools)
+    this.#disposables.push(tableTools)
   }
 
   #registerCodeHiglightingComponents() {
     registerCodeHighlighting(this.editor)
-    this.codeLanguagePicker = createElement("lexxy-code-language-picker")
-    this.append(this.codeLanguagePicker)
+    let codeLanguagePicker = this.querySelector("lexxy-code-language-picker")
+    codeLanguagePicker ??= createElement("lexxy-code-language-picker")
+    this.append(codeLanguagePicker)
+    this.#disposables.push(codeLanguagePicker)
   }
 
   #handleEnter() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.editor.registerCommand(
+    this.#addUnregisterHandler(this.editor.registerCommand(
       KEY_ENTER_COMMAND,
       (event) => {
         // Prevent CTRL+ENTER
@@ -421,12 +441,17 @@ export class LexicalEditorElement extends HTMLElement {
         return false
       },
       COMMAND_PRIORITY_NORMAL
-    )
+    ))
   }
 
   #registerFocusEvents() {
     this.addEventListener("focusin", this.#handleFocusIn)
     this.addEventListener("focusout", this.#handleFocusOut)
+
+    this.#addUnregisterHandler(() => {
+      this.removeEventListener("focusin", this.#handleFocusIn)
+      this.removeEventListener("focusout", this.#handleFocusOut)
+    })
   }
 
   #handleFocusIn(event) {
@@ -476,6 +501,10 @@ export class LexicalEditorElement extends HTMLElement {
   #attachToolbar() {
     if (this.#hasToolbar) {
       this.toolbarElement.setEditor(this)
+      if (typeof this.toolbarElement.dispose === "function") {
+        this.#disposables.push(this.toolbarElement)
+      }
+
       this.extensions.initializeToolbars()
     }
   }
@@ -485,7 +514,7 @@ export class LexicalEditorElement extends HTMLElement {
     if (typeof toolbarConfig === "string") {
       return document.getElementById(toolbarConfig)
     } else {
-      return this.#createDefaultToolbar()
+      return this.querySelector("lexxy-toolbar") ?? this.#createDefaultToolbar()
     }
   }
 
@@ -515,34 +544,22 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #reset() {
+    this.#dispose()
+    this.editorContentElement?.remove()
+    this.editorContentElement = null
+
+    // Prevents issues with turbo morphing receiving an empty <lexxy-editor> which wipes
+    // out the DOM for the tools, and the old toolbar reference will cause issues
+    this.toolbar = null
+  }
+
+  #dispose() {
     this.#unregisterHandlers()
-
-    if (this.editorContentElement) {
-      this.editorContentElement.remove()
-      this.editorContentElement = null
-    }
-
-    this.contents = null
-    this.editor = null
-
-    if (this.toolbar) {
-      if (!this.getAttribute("toolbar")) { this.toolbar.remove() }
-      this.toolbar = null
-    }
-
-    if (this.codeLanguagePicker) {
-      this.codeLanguagePicker.remove()
-      this.codeLanguagePicker = null
-    }
-
-    if (this.tableHandler) {
-      this.tableHandler.remove()
-      this.tableHandler = null
-    }
-
-    this.selection = null
-
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
+
+    while (this.#disposables.length) {
+      this.#disposables.pop().dispose()
+    }
   }
 
   #reconnect() {
