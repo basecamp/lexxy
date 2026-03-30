@@ -11,11 +11,12 @@ export class NativeAdapter {
     this.editorContentElement = editorElement.editorContentElement
   }
 
-  dispatchAttributesChange(attributes, linkHref, highlight) {
+  dispatchAttributesChange(attributes, linkHref, highlight, headingTag) {
     dispatch(this.editorElement, "lexxy:attributes-change", {
       attributes,
       link: linkHref ? { href: linkHref } : null,
-      highlight
+      highlight,
+      headingTag
     })
   }
 

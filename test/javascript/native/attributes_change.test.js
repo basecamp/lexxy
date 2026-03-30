@@ -87,6 +87,7 @@ describe("attributes change event", () => {
     })
 
     expect(event.detail.link).toBeNull()
+    expect(event.detail.headingTag).toBeNull()
   })
 
   test("reports quote as active when inside a blockquote", async () => {
@@ -111,6 +112,7 @@ describe("attributes change event", () => {
     })
 
     expect(event.detail.attributes.heading.active).toBe(true)
+    expect(event.detail.headingTag).toBe("h2")
   })
 
   test("includes undo/redo state", async () => {

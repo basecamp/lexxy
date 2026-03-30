@@ -17,6 +17,7 @@ describe("editor initialized event", () => {
 
     expect(event.detail.highlightColors.colors).toBeInstanceOf(Array)
     expect(event.detail.highlightColors.backgroundColors).toBeInstanceOf(Array)
+    expect(event.detail.headingFormats).toBeInstanceOf(Array)
   })
 
   test("each color entry has name and value properties", async () => {
@@ -53,5 +54,20 @@ describe("editor initialized event", () => {
     for (const color of event.detail.highlightColors.backgroundColors) {
       expect(color.name).toMatch(/^var\(--highlight-bg-\d+\)$/)
     }
+  })
+
+  test("dispatches heading formats with command and tag", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+
+    const event = await captureEvent(editorElement, "lexxy:editor-initialized", () => {
+      editorElement.dispatchEditorInitialized()
+    })
+
+    expect(event.detail.headingFormats).toEqual([
+      { label: "Normal", command: "setFormatParagraph", tag: null },
+      { label: "Large heading", command: "setFormatHeadingLarge", tag: "h2" },
+      { label: "Medium heading", command: "setFormatHeadingMedium", tag: "h3" },
+      { label: "Small heading", command: "setFormatHeadingSmall", tag: "h4" },
+    ])
   })
 })

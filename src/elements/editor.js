@@ -553,6 +553,7 @@ export class LexicalEditorElement extends HTMLElement {
     let attributes = null
     let linkHref = null
     let highlight = null
+    let headingTag = null
 
     this.editor.getEditorState().read(() => {
       const selection = $getSelection()
@@ -581,10 +582,11 @@ export class LexicalEditorElement extends HTMLElement {
 
       linkHref = linkNode ? linkNode.getURL() : null
       highlight = format.isHighlight ? getHighlightStyles(selection) : null
+      headingTag = format.headingTag ?? null
     })
 
     if (attributes) {
-      this.adapter.dispatchAttributesChange(attributes, linkHref, highlight)
+      this.adapter.dispatchAttributesChange(attributes, linkHref, highlight, headingTag)
     }
   }
 
@@ -592,7 +594,8 @@ export class LexicalEditorElement extends HTMLElement {
     if (!this.adapter) return
 
     this.adapter.dispatchEditorInitialized({
-      highlightColors: this.#resolvedHighlightColors
+      highlightColors: this.#resolvedHighlightColors,
+      headingFormats: this.#supportedHeadingFormats
     })
   }
 
@@ -621,6 +624,17 @@ export class LexicalEditorElement extends HTMLElement {
     const colors = this.#resolveColors("color", buttons.color || [])
     const backgroundColors = this.#resolveColors("background-color", buttons["background-color"] || [])
     return { colors, backgroundColors }
+  }
+
+  get #supportedHeadingFormats() {
+    if (!this.supportsRichText) return []
+
+    return [
+      { label: "Normal", command: "setFormatParagraph", tag: null },
+      { label: "Large heading", command: "setFormatHeadingLarge", tag: "h2" },
+      { label: "Medium heading", command: "setFormatHeadingMedium", tag: "h3" },
+      { label: "Small heading", command: "setFormatHeadingSmall", tag: "h4" },
+    ]
   }
 
   #resolveColors(property, cssValues) {

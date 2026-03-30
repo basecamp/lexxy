@@ -43,8 +43,8 @@ describe("adapter registration", () => {
       dispatchEditorInitialized(detail) {
         initializedPayloads.push(detail)
       },
-      dispatchAttributesChange(attributes, linkHref, highlight) {
-        attributesPayloads.push({ attributes, linkHref, highlight })
+      dispatchAttributesChange(attributes, linkHref, highlight, headingTag) {
+        attributesPayloads.push({ attributes, linkHref, highlight, headingTag })
       },
       freeze() {},
       thaw() {},
@@ -57,8 +57,10 @@ describe("adapter registration", () => {
 
     expect(initializedPayloads).toHaveLength(1)
     expect(initializedPayloads[0]).toHaveProperty("highlightColors")
+    expect(initializedPayloads[0]).toHaveProperty("headingFormats")
     expect(attributesPayloads).toHaveLength(1)
     expect(attributesPayloads[0].attributes).toBeTruthy()
+    expect(attributesPayloads[0]).toHaveProperty("headingTag")
   })
 
   test("dispatchEditorInitialized is safe after disconnect", async () => {
