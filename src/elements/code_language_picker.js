@@ -25,7 +25,17 @@ export class CodeLanguagePicker extends HTMLElement {
 
   #attachLanguagePicker() {
     this.languagePickerElement = this.#findLanguagePicker() ?? this.#createLanguagePicker()
-    this.append(this.languagePickerElement)
+
+    this.languagePickerElement.addEventListener("change", () => {
+      this.#updateCodeBlockLanguage(this.languagePickerElement.value)
+    })
+
+    this.languagePickerElement.addEventListener("mousedown", (event) => {
+      this.#dispatchOpenEvent(event)
+    })
+
+    this.languagePickerElement.setAttribute("nonce", getNonce())
+    this.appendChild(this.languagePickerElement)
   }
 
   #findLanguagePicker() {
@@ -41,16 +51,6 @@ export class CodeLanguagePicker extends HTMLElement {
       option.textContent = label
       selectElement.appendChild(option)
     }
-
-    selectElement.addEventListener("change", () => {
-      this.#updateCodeBlockLanguage(this.languagePickerElement.value)
-    })
-
-    this.languagePickerElement.addEventListener("mousedown", (event) => {
-      this.#dispatchOpenEvent(event)
-    })
-
-    selectElement.setAttribute("nonce", getNonce())
 
     return selectElement
   }
