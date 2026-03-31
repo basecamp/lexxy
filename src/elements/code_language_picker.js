@@ -15,23 +15,21 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.dispose()
+  }
+
+  dispose() {
     this.unregisterUpdateListener?.()
     this.unregisterUpdateListener = null
   }
 
   #attachLanguagePicker() {
-    this.languagePickerElement = this.#createLanguagePicker()
+    this.languagePickerElement = this.#findLanguagePicker() ?? this.#createLanguagePicker()
+    this.append(this.languagePickerElement)
+  }
 
-    this.languagePickerElement.addEventListener("change", () => {
-      this.#updateCodeBlockLanguage(this.languagePickerElement.value)
-    })
-
-    this.languagePickerElement.addEventListener("mousedown", (event) => {
-      this.#dispatchOpenEvent(event)
-    })
-
-    this.languagePickerElement.setAttribute("nonce", getNonce())
-    this.appendChild(this.languagePickerElement)
+  #findLanguagePicker() {
+    return this.querySelector("select")
   }
 
   #createLanguagePicker() {
@@ -43,6 +41,16 @@ export class CodeLanguagePicker extends HTMLElement {
       option.textContent = label
       selectElement.appendChild(option)
     }
+
+    selectElement.addEventListener("change", () => {
+      this.#updateCodeBlockLanguage(this.languagePickerElement.value)
+    })
+
+    this.languagePickerElement.addEventListener("mousedown", (event) => {
+      this.#dispatchOpenEvent(event)
+    })
+
+    selectElement.setAttribute("nonce", getNonce())
 
     return selectElement
   }

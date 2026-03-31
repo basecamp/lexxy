@@ -44,7 +44,8 @@ const COMMANDS = [
   "insertCodeBlock",
   "setCodeLanguage",
   "insertHorizontalDivider",
-  "uploadAttachments",
+  "uploadImage",
+  "uploadFile",
 
   "insertTable",
 
@@ -54,9 +55,10 @@ const COMMANDS = [
 
 export class CommandDispatcher {
   #selectionBeforeDrag = null
+  #unregister = []
 
   static configureFor(editorElement) {
-    new CommandDispatcher(editorElement)
+    return new CommandDispatcher(editorElement)
   }
 
   constructor(editorElement) {
@@ -246,15 +248,27 @@ export class CommandDispatcher {
     this.contents.applyParagraphFormat()
   }
 
-  dispatchUploadAttachments() {
-    const input = createElement("input", {
+  dispatchUploadImage() {
+    this.#dispatchUploadAttachment("image/*,video/*")
+  }
+
+  dispatchUploadFile() {
+    this.#dispatchUploadAttachment()
+  }
+
+  #dispatchUploadAttachment(accept = null) {
+    const attributes = {
       type: "file",
       multiple: true,
       style: "display: none;",
       onchange: ({ target: { files } }) => {
         this.contents.uploadFiles(files, { selectLast: true })
       }
-    })
+    }
+
+    if (accept) attributes.accept = accept
+
+    const input = createElement("input", attributes)
 
     // Append and remove to make testable
     this.editorElement.appendChild(input)
@@ -274,6 +288,13 @@ export class CommandDispatcher {
     this.editor.dispatchCommand(REDO_COMMAND, undefined)
   }
 
+  dispose() {
+    while (this.#unregister.length) {
+      const unregister = this.#unregister.pop()
+      unregister()
+    }
+  }
+
   #registerCommands() {
     for (const command of COMMANDS) {
       const methodName = `dispatch${capitalize(command)}`
@@ -284,12 +305,12 @@ export class CommandDispatcher {
   }
 
   #registerCommandHandler(command, priority, handler) {
-    this.editor.registerCommand(command, handler, priority)
+    this.#unregister.push(this.editor.registerCommand(command, handler, priority))
   }
 
   #registerKeyboardCommands() {
-    this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#handleArrowRightKey.bind(this), COMMAND_PRIORITY_NORMAL)
-    this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleTabKey.bind(this), COMMAND_PRIORITY_NORMAL)
+    this.#registerCommandHandler(KEY_ARROW_RIGHT_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleArrowRightKey.bind(this))
+    this.#registerCommandHandler(KEY_TAB_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleTabKey.bind(this))
   }
 
   #handleArrowRightKey(event) {

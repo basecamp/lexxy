@@ -20,7 +20,11 @@ export default class Contents {
   constructor(editorElement) {
     this.editorElement = editorElement
     this.editor = editorElement.editor
+  }
 
+  dispose() {
+    this.editorElement = null
+    this.editor = null
   }
 
   insertHtml(html, { tag } = {}) {

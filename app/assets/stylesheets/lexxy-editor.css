@@ -488,14 +488,15 @@
 
       &:after {
         background-color: var(--lexxy-color-ink-lighter);
+        block-size: var(--lexxy-toolbar-icon-size);
         content: "";
         display: block;
-        width: 1px;
-        height: 60%;
+        inline-size: 1px;
         inset-inline-end: calc(-1 * var(--lexxy-toolbar-spacing));
-        inset-block-start: 20%;
-        position: absolute;
+        inset-block: 0;
+        margin: auto;
         pointer-events: none;
+        position: absolute;
       }
     }
   }
@@ -556,11 +557,6 @@
     }
   }
 
-  [overflowing] &:not(.lexxy-editor__toolbar-overflow) summary ~ * {
-    inset-inline-end: var(--lexxy-toolbar-spacing);
-    inset-inline-start: var(--lexxy-toolbar-spacing);
-  }
-
   button {
     color: var(--lexxy-color-text);
 
@@ -572,7 +568,6 @@
   .lexxy-editor__toolbar-dropdown-list {
     border-start-start-radius: 0;
     flex-direction: column;
-    gap: 0.1ch;
     padding: 0.1ch;
 
     button {
@@ -581,6 +576,7 @@
       flex-direction: row;
       gap: 1ch;
       padding: 1ch;
+      position: relative;
 
       &[aria-pressed="true"] {
         background-color: var(--lexxy-color-selected);
@@ -600,10 +596,21 @@
       }
     }
 
-    .separator {
+    .lexxy-editor__toolbar-separator {
       background: var(--lexxy-color-ink-lighter);
       block-size: 1px;
       inline-size: 100%;
+    }
+
+    [overflowing] & {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+
+      button span { display: none; }
+
+      .lexxy-editor__toolbar-separator {
+        grid-column: 1 / -1;
+      }
     }
   }
 
@@ -705,6 +712,11 @@
     font-size: var(--lexxy-text-small);
     inset-inline-start: 0;
     max-inline-size: var(--max-inline-size);
+
+    [overflowing] & {
+      inset-inline-end: var(--lexxy-toolbar-spacing);
+      inset-inline-start: var(--lexxy-toolbar-spacing);
+    }
 
     button {
       position: relative;

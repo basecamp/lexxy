@@ -7,27 +7,30 @@ export class LinkDropdown extends ToolbarDropdown {
     super.connectedCallback()
     this.input = this.querySelector("input")
 
-    this.#registerHandlers()
+    this.container.addEventListener("toggle", this.#handleToggle)
+    this.addEventListener("submit", this.#handleSubmit)
+    this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink)
   }
 
-  #registerHandlers() {
-    this.container.addEventListener("toggle", this.#handleToggle.bind(this))
-    this.addEventListener("submit", this.#handleSubmit.bind(this))
-    this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this))
+  disconnectedCallback() {
+    this.container?.removeEventListener("toggle", this.#handleToggle)
+    this.removeEventListener("submit", this.#handleSubmit)
+    this.querySelector("[value='unlink']")?.removeEventListener("click", this.#handleUnlink)
+    super.disconnectedCallback()
   }
 
-  #handleToggle({ newState }) {
+  #handleToggle = ({ newState }) => {
     this.input.value = this.#selectedLinkUrl
     this.input.required = newState === "open"
   }
 
-  #handleSubmit(event) {
+  #handleSubmit = (event) => {
     const command = event.submitter?.value
     this.editor.dispatchCommand(command, this.input.value)
     this.close()
   }
 
-  #handleUnlink() {
+  #handleUnlink = () => {
     this.editor.dispatchCommand("unlink")
     this.close()
   }

@@ -20,6 +20,10 @@ export class TableTools extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.dispose()
+  }
+
+  dispose() {
     this.#unregisterKeyboardShortcuts()
 
     this.unregisterUpdateListener?.()
@@ -44,6 +48,8 @@ export class TableTools extends HTMLElement {
   }
 
   #setUpButtons() {
+    this.innerHTML = ""
+
     this.appendChild(this.#createRowButtonsContainer())
     this.appendChild(this.#createColumnButtonsContainer())
 
