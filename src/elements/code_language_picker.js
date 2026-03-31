@@ -4,10 +4,13 @@ import { createElement, dispatch } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
 
 export class CodeLanguagePicker extends HTMLElement {
+  #abortController = null
+
   connectedCallback() {
     this.editorElement = this.closest("lexxy-editor")
     this.editor = this.editorElement.editor
     this.classList.add("lexxy-floating-controls")
+    this.#abortController = new AbortController()
 
     this.#attachLanguagePicker()
     this.#hide()
@@ -19,6 +22,8 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   dispose() {
+    this.#abortController?.abort()
+    this.#abortController = null
     this.unregisterUpdateListener?.()
     this.unregisterUpdateListener = null
   }
@@ -26,13 +31,15 @@ export class CodeLanguagePicker extends HTMLElement {
   #attachLanguagePicker() {
     this.languagePickerElement = this.#findLanguagePicker() ?? this.#createLanguagePicker()
 
+    const signal = this.#abortController.signal
+
     this.languagePickerElement.addEventListener("change", () => {
       this.#updateCodeBlockLanguage(this.languagePickerElement.value)
-    })
+    }, { signal })
 
     this.languagePickerElement.addEventListener("mousedown", (event) => {
       this.#dispatchOpenEvent(event)
-    })
+    }, { signal })
 
     this.languagePickerElement.setAttribute("nonce", getNonce())
     this.appendChild(this.languagePickerElement)
