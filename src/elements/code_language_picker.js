@@ -1,13 +1,16 @@
 import { $isCodeNode, CODE_LANGUAGE_FRIENDLY_NAME_MAP, normalizeCodeLang } from "@lexical/code"
 import { $getSelection, $isRangeSelection } from "lexical"
-import { createElement } from "../helpers/html_helper"
+import { createElement, dispatch } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
 
 export class CodeLanguagePicker extends HTMLElement {
+  #abortController = null
+
   connectedCallback() {
     this.editorElement = this.closest("lexxy-editor")
     this.editor = this.editorElement.editor
     this.classList.add("lexxy-floating-controls")
+    this.#abortController = new AbortController()
 
     this.#attachLanguagePicker()
     this.#hide()
@@ -19,13 +22,27 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   dispose() {
+    this.#abortController?.abort()
+    this.#abortController = null
     this.unregisterUpdateListener?.()
     this.unregisterUpdateListener = null
   }
 
   #attachLanguagePicker() {
     this.languagePickerElement = this.#findLanguagePicker() ?? this.#createLanguagePicker()
-    this.append(this.languagePickerElement)
+
+    const signal = this.#abortController.signal
+
+    this.languagePickerElement.addEventListener("change", () => {
+      this.#updateCodeBlockLanguage(this.languagePickerElement.value)
+    }, { signal })
+
+    this.languagePickerElement.addEventListener("mousedown", (event) => {
+      this.#dispatchOpenEvent(event)
+    }, { signal })
+
+    this.languagePickerElement.setAttribute("nonce", getNonce())
+    this.appendChild(this.languagePickerElement)
   }
 
   #findLanguagePicker() {
@@ -41,12 +58,6 @@ export class CodeLanguagePicker extends HTMLElement {
       option.textContent = label
       selectElement.appendChild(option)
     }
-
-    selectElement.addEventListener("change", () => {
-      this.#updateCodeBlockLanguage(this.languagePickerElement.value)
-    })
-
-    selectElement.setAttribute("nonce", getNonce())
 
     return selectElement
   }
@@ -68,6 +79,21 @@ export class CodeLanguagePicker extends HTMLElement {
     const plainIndex = sortedEntries.findIndex(([ key ]) => key === "plain")
     const plainEntry = sortedEntries.splice(plainIndex, 1)[0]
     return Object.fromEntries([ plainEntry, ...sortedEntries ])
+  }
+
+  #dispatchOpenEvent(event) {
+    const handled = !dispatch(this.editorElement, "lexxy:code-language-picker-open", {
+      languages: this.#bridgeLanguages,
+      currentLanguage: this.languagePickerElement.value
+    }, true)
+
+    if (handled) {
+      event.preventDefault()
+    }
+  }
+
+  get #bridgeLanguages() {
+    return Object.entries(this.#languages).map(([ key, name ]) => ({ key, name }))
   }
 
   #updateCodeBlockLanguage(language) {

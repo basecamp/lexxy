@@ -16,6 +16,7 @@ import {
   UNDO_COMMAND
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
+import { CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
@@ -41,6 +42,7 @@ const COMMANDS = [
   "insertOrderedList",
   "insertQuoteBlock",
   "insertCodeBlock",
+  "setCodeLanguage",
   "insertHorizontalDivider",
   "uploadImage",
   "uploadFile",
@@ -116,7 +118,14 @@ export class CommandDispatcher {
   }
 
   dispatchUnlink() {
-    this.#toggleLink(null)
+    this.editor.update(() => {
+      // Let adapters signal whether unlink should target a frozen link key.
+      if (this.editorElement.adapter.unlinkFrozenNode?.()) {
+        return
+      }
+
+      $toggleLink(null)
+    })
   }
 
   dispatchInsertUnorderedList() {
@@ -205,6 +214,17 @@ export class CommandDispatcher {
         }
       }
     }
+  }
+
+  dispatchSetCodeLanguage(language) {
+    this.editor.update(() => {
+      if (!this.selection.isInsideCodeBlock) return
+
+      const codeNode = this.selection.nearestNodeOfType(CodeNode)
+      if (!codeNode) return
+
+      codeNode.setLanguage(language)
+    })
   }
 
   dispatchInsertHorizontalDivider() {
@@ -405,16 +425,6 @@ export class CommandDispatcher {
     return $isRangeSelection(selection) && selection.isCollapsed()
   }
 
-  // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
-  #toggleLink(url) {
-    this.editor.update(() => {
-      if (url === null) {
-        $toggleLink(null)
-      } else {
-        $toggleLink(url)
-      }
-    })
-  }
 }
 
 function capitalize(str) {

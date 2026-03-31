@@ -1,7 +1,8 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $isElementNode, $isLineBreakNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode, mergeRegister } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode, mergeRegister } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
+import { $getNearestNodeOfType } from "@lexical/utils"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
@@ -22,6 +23,8 @@ import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
+import { BrowserAdapter } from "../editor/adapters/browser_adapter"
+import { getHighlightStyles } from "../helpers/format_helper"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { exportTextNodeDOM } from "../helpers/text_node_export_helper"
@@ -42,6 +45,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
+  #editorInitializedRafId = null
   #disposables = []
 
   constructor() {
@@ -65,13 +69,14 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(this.selection)
 
     this.clipboard = new Clipboard(this)
+    this.adapter = new BrowserAdapter()
 
     const commandDispatcher = CommandDispatcher.configureFor(this)
     this.#disposables.push(commandDispatcher)
 
     this.#initialize()
 
-    requestAnimationFrame(() => dispatch(this, "lexxy:initialize"))
+    this.#scheduleEditorInitializedDispatch()
     this.toggleAttribute("connected", true)
 
     this.#handleAutofocus()
@@ -80,6 +85,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.#cancelEditorInitializedDispatch()
     this.valueBeforeDisconnect = this.value
     this.#reset() // Prevent hangs with Safari when morphing
   }
@@ -174,6 +180,32 @@ export class LexicalEditorElement extends HTMLElement {
 
   get supportsRichText() {
     return this.config.get("richText")
+  }
+
+  registerAdapter(adapter) {
+    this.adapter = adapter
+
+    if (!this.editor) return
+
+    this.#cancelEditorInitializedDispatch()
+    this.#dispatchEditorInitialized()
+    this.#dispatchAttributesChange()
+  }
+
+  freezeSelection() {
+    this.adapter.freeze()
+  }
+
+  thawSelection() {
+    this.adapter.thaw()
+  }
+
+  dispatchAttributesChange() {
+    this.#dispatchAttributesChange()
+  }
+
+  dispatchEditorInitialized() {
+    this.#dispatchEditorInitialized()
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -300,6 +332,7 @@ export class LexicalEditorElement extends HTMLElement {
     const editorContentElement = createElement("div", {
       classList: "lexxy-editor__content",
       contenteditable: true,
+      autocapitalize: "none",
       role: "textbox",
       "aria-multiline": true,
       "aria-label": this.#labelText,
@@ -361,6 +394,7 @@ export class LexicalEditorElement extends HTMLElement {
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
       this.#setValidity()
+      this.#dispatchAttributesChange()
     }))
   }
 
@@ -456,6 +490,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
+      this.#dispatchAttributesChange()
       dispatch(this, "lexxy:focus")
       this.currentlyFocused = true
     }
@@ -543,7 +578,112 @@ export class LexicalEditorElement extends HTMLElement {
     }
   }
 
+  #dispatchAttributesChange() {
+    let attributes = null
+    let linkHref = null
+    let highlight = null
+    let headingTag = null
+
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const format = this.selection.getFormat()
+      if (Object.keys(format).length === 0) return
+
+      const anchorNode = selection.anchor.getNode()
+      const linkNode = $getNearestNodeOfType(anchorNode, LinkNode)
+
+      attributes = {
+        bold: { active: format.isBold, enabled: true },
+        italic: { active: format.isItalic, enabled: true },
+        strikethrough: { active: format.isStrikethrough, enabled: true },
+        code: { active: format.isInCode, enabled: true },
+        highlight: { active: format.isHighlight, enabled: true },
+        link: { active: format.isInLink, enabled: true },
+        quote: { active: format.isInQuote, enabled: true },
+        heading: { active: format.isInHeading, enabled: true },
+        "unordered-list": { active: format.isInList && format.listType === "bullet", enabled: true },
+        "ordered-list": { active: format.isInList && format.listType === "number", enabled: true },
+        undo: { active: false, enabled: this.historyState?.undoStack.length > 0 },
+        redo: { active: false, enabled: this.historyState?.redoStack.length > 0 }
+      }
+
+      linkHref = linkNode ? linkNode.getURL() : null
+      highlight = format.isHighlight ? getHighlightStyles(selection) : null
+      headingTag = format.headingTag ?? null
+    })
+
+    if (attributes) {
+      this.adapter.dispatchAttributesChange(attributes, linkHref, highlight, headingTag)
+    }
+  }
+
+  #dispatchEditorInitialized() {
+    if (!this.adapter) return
+
+    this.adapter.dispatchEditorInitialized({
+      highlightColors: this.#resolvedHighlightColors,
+      headingFormats: this.#supportedHeadingFormats
+    })
+  }
+
+  #scheduleEditorInitializedDispatch() {
+    this.#cancelEditorInitializedDispatch()
+    this.#editorInitializedRafId = requestAnimationFrame(() => {
+      this.#editorInitializedRafId = null
+      if (!this.isConnected || !this.adapter) return
+
+      dispatch(this, "lexxy:initialize")
+      this.#dispatchEditorInitialized()
+    })
+  }
+
+  #cancelEditorInitializedDispatch() {
+    if (this.#editorInitializedRafId == null) return
+
+    cancelAnimationFrame(this.#editorInitializedRafId)
+    this.#editorInitializedRafId = null
+  }
+
+  get #resolvedHighlightColors() {
+    const buttons = this.config.get("highlight.buttons")
+    if (!buttons) return null
+
+    const colors = this.#resolveColors("color", buttons.color || [])
+    const backgroundColors = this.#resolveColors("background-color", buttons["background-color"] || [])
+    return { colors, backgroundColors }
+  }
+
+  get #supportedHeadingFormats() {
+    if (!this.supportsRichText) return []
+
+    return [
+      { label: "Normal", command: "setFormatParagraph", tag: null },
+      { label: "Large heading", command: "setFormatHeadingLarge", tag: "h2" },
+      { label: "Medium heading", command: "setFormatHeadingMedium", tag: "h3" },
+      { label: "Small heading", command: "setFormatHeadingSmall", tag: "h4" },
+    ]
+  }
+
+  #resolveColors(property, cssValues) {
+    const resolver = document.createElement("span")
+    resolver.style.display = "none"
+    this.appendChild(resolver)
+
+    const resolved = cssValues.map(cssValue => {
+      resolver.style.setProperty(property, cssValue)
+      const value = window.getComputedStyle(resolver).getPropertyValue(property)
+      resolver.style.removeProperty(property)
+      return { name: cssValue, value }
+    })
+
+    resolver.remove()
+    return resolved
+  }
+
   #reset() {
+    this.#cancelEditorInitializedDispatch()
     this.#dispose()
     this.editorContentElement?.remove()
     this.editorContentElement = null
@@ -555,6 +695,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #dispose() {
     this.#unregisterHandlers()
+    this.adapter = null
     document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
 
     while (this.#disposables.length) {

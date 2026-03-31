@@ -1,6 +1,7 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection,
   $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $setSelection,
+  HISTORY_MERGE_TAG,
   PASTE_TAG
  } from "lexical"
 
@@ -13,6 +14,7 @@ import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 
 export default class Contents {
   constructor(editorElement) {
@@ -248,6 +250,53 @@ export default class Contents {
         this.#normalizeSelectionInShadowRoot()
       }
     })
+  }
+
+  insertPendingAttachment(file) {
+    if (!this.editorElement.supportsAttachments) return null
+
+    let nodeKey = null
+    this.editor.update(() => {
+      const uploadNode = new ActionTextAttachmentUploadNode({
+        file,
+        uploadUrl: null,
+        blobUrlTemplate: this.editorElement.blobUrlTemplate,
+        editor: this.editor
+      })
+      this.insertAtCursor(uploadNode)
+      nodeKey = uploadNode.getKey()
+    }, { tag: HISTORY_MERGE_TAG })
+
+    if (!nodeKey) return null
+
+    const editor = this.editor
+    return {
+      setAttributes(blob) {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (!(node instanceof ActionTextAttachmentUploadNode)) return
+
+          const replacementNodeKey = node.showUploadedAttachment(blob)
+          if (replacementNodeKey) {
+            nodeKey = replacementNodeKey
+          }
+        }, { tag: HISTORY_MERGE_TAG })
+      },
+      setUploadProgress(progress) {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (!(node instanceof ActionTextAttachmentUploadNode)) return
+
+          node.getWritable().progress = progress
+        }, { tag: HISTORY_MERGE_TAG })
+      },
+      remove() {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (node) node.remove()
+        })
+      }
+    }
   }
 
   replaceNodeWithHTML(nodeKey, html, options = {}) {
