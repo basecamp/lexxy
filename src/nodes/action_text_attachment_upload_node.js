@@ -154,7 +154,6 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
     this.#setUploadStarted()
 
-
     const { DirectUpload } = await import("@rails/activestorage")
 
     const upload = new DirectUpload(this.file, this.uploadUrl, this)

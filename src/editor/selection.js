@@ -152,7 +152,6 @@ export default class Selection {
     return $getNearestNodeOfType(anchorNode, nodeType)
   }
 
-
   get hasSelectedWordsInSingleLine() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return false
