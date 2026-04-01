@@ -1,5 +1,13 @@
-// Mocks the two Active Storage direct upload endpoints using Playwright route interception.
+// Mocks the Active Storage direct upload endpoints using Playwright route interception.
 // Returns a handle for asserting that the expected calls were made.
+
+// 1×1 transparent PNG used as a fallback when the fixture file doesn't exist on disk.
+/* eslint-disable camelcase */
+const TRANSPARENT_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==",
+  "base64"
+)
+/* eslint-enable camelcase */
 
 export async function mockActiveStorageUploads(page) {
   let blobCounter = 0
@@ -34,6 +42,26 @@ export async function mockActiveStorageUploads(page) {
         },
       }),
     })
+  })
+
+  // GET /rails/active_storage/blobs/* — serves the uploaded file back (for preload)
+  await page.route("**/rails/active_storage/blobs/**", async (route) => {
+    const request = route.request()
+    if (request.method() !== "GET") return route.fallback()
+
+    const url = new URL(request.url())
+    const filename = url.pathname.split("/").pop()
+    const blob = calls.blobCreations.find(b => b.filename === filename)
+    const contentType = blob?.content_type || "application/octet-stream"
+
+    // Serve the fixture file if it exists, otherwise return a 1×1 transparent PNG
+    const fs = await import("fs")
+    const fixturePath = `test/fixtures/files/${filename}`
+    if (fs.existsSync(fixturePath)) {
+      await route.fulfill({ status: 200, contentType, path: fixturePath })
+    } else {
+      await route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG })
+    }
   })
 
   // PUT /rails/active_storage/disk/* — stores the file bytes
