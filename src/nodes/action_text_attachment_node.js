@@ -79,7 +79,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return Lexxy.global.get("attachmentTagName")
   }
 
-  constructor({ tagName, sgid, src, previewSrc, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
+  constructor({ tagName, sgid, src, previewSrc, previewable, altText, caption, contentType, fileName, fileSize, width, height, uploadError }, key) {
     super(key)
 
     this.tagName = tagName || ActionTextAttachmentNode.TAG_NAME
@@ -94,11 +94,14 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     this.fileSize = fileSize
     this.width = width
     this.height = height
+    this.uploadError = uploadError
 
     this.editor = $getEditor()
   }
 
   createDOM() {
+    if (this.uploadError) return this.createDOMForError()
+
     const figure = this.createAttachmentFigure()
 
     if (this.isPreviewableAttachment) {
@@ -112,7 +115,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return figure
   }
 
-  updateDOM(_prevNode, dom) {
+  updateDOM(prevNode, dom) {
+    if (this.uploadError !== prevNode.uploadError) return true
+
     const caption = dom.querySelector("figcaption textarea")
     if (caption && this.caption) {
       caption.value = this.caption
@@ -213,13 +218,27 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #preloadAndSwapSrc(img) {
+    const previewSrc = this.previewSrc
     const serverImage = new Image()
-    serverImage.onload = () => { img.src = this.src }
-    serverImage.onerror = () => {
-      const figure = img.closest("figure.attachment")
-      if (figure) figure.replaceWith(this.createDOMForError())
+
+    serverImage.onload = () => {
+      img.src = this.src
+      this.#revokePreviewSrc(previewSrc)
     }
+
+    serverImage.onerror = () => {
+      this.#revokePreviewSrc(previewSrc)
+      this.editor.update(() => {
+        this.getWritable().previewSrc = null
+        this.getWritable().uploadError = true
+      })
+    }
+
     serverImage.src = this.src
+  }
+
+  #revokePreviewSrc(previewSrc) {
+    if (previewSrc?.startsWith("blob:")) URL.revokeObjectURL(previewSrc)
   }
 
   #swapPreviewToFileDOM(img) {

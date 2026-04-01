@@ -2,16 +2,23 @@
 // Returns a handle for asserting that the expected calls were made.
 
 // 1×1 transparent PNG used as a fallback when the fixture file doesn't exist on disk.
-/* eslint-disable camelcase */
 const TRANSPARENT_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==",
   "base64"
 )
-/* eslint-enable camelcase */
 
-export async function mockActiveStorageUploads(page) {
+export async function mockActiveStorageUploads(page, { delayBlobResponses = false } = {}) {
   let blobCounter = 0
   const calls = { blobCreations: [], fileUploads: [] }
+  const pendingBlobRoutes = []
+
+  // When delayBlobResponses is true, GET /blobs/* requests are held until
+  // calls.releaseBlobResponses() is called. This lets tests assert the local
+  // preview is visible before the server image arrives.
+  calls.releaseBlobResponses = () => {
+    pendingBlobRoutes.forEach(fulfill => fulfill())
+    pendingBlobRoutes.length = 0
+  }
 
   // POST /rails/active_storage/direct_uploads — creates a blob record
   await page.route("**/rails/active_storage/direct_uploads", async (route) => {
@@ -50,17 +57,25 @@ export async function mockActiveStorageUploads(page) {
     if (request.method() !== "GET") return route.fallback()
 
     const url = new URL(request.url())
-    const filename = url.pathname.split("/").pop()
+    const filename = decodeURIComponent(url.pathname.split("/").pop())
     const blob = calls.blobCreations.find(b => b.filename === filename)
     const contentType = blob?.content_type || "application/octet-stream"
 
-    // Serve the fixture file if it exists, otherwise return a 1×1 transparent PNG
-    const fs = await import("fs")
-    const fixturePath = `test/fixtures/files/${filename}`
-    if (fs.existsSync(fixturePath)) {
-      await route.fulfill({ status: 200, contentType, path: fixturePath })
+    const fulfill = async () => {
+      // Serve the fixture file if it exists, otherwise return a 1×1 transparent PNG
+      const fs = await import("fs")
+      const fixturePath = `test/fixtures/files/${filename}`
+      if (fs.existsSync(fixturePath)) {
+        await route.fulfill({ status: 200, contentType, path: fixturePath })
+      } else {
+        await route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG })
+      }
+    }
+
+    if (delayBlobResponses) {
+      pendingBlobRoutes.push(fulfill)
     } else {
-      await route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG })
+      await fulfill()
     }
   })
 

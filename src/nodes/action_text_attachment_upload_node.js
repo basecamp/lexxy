@@ -207,8 +207,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   showUploadedAttachment(blob) {
-    const figure = this.editor.getElementByKey(this.getKey())
-    const previewSrc = figure?.querySelector("img")?.src
+    const previewSrc = this.file ? URL.createObjectURL(this.file) : null
 
     const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
     this.replace(replacementNode)
