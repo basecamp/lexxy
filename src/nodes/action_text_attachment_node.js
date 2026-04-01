@@ -169,6 +169,13 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return null
   }
 
+  createDOMForError() {
+    const figure = this.createAttachmentFigure()
+    figure.classList.add("attachment--error")
+    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.fileName || "file"}` }))
+    return figure
+  }
+
   createAttachmentFigure(previewable = this.isPreviewableAttachment) {
     const figure = createAttachmentFigure(this.contentType, previewable, this.fileName)
     figure.draggable = true
@@ -208,7 +215,10 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   #preloadAndSwapSrc(img) {
     const serverImage = new Image()
     serverImage.onload = () => { img.src = this.src }
-    serverImage.onerror = () => { img.src = this.src }
+    serverImage.onerror = () => {
+      const figure = img.closest("figure.attachment")
+      if (figure) figure.replaceWith(this.createDOMForError())
+    }
     serverImage.src = this.src
   }
 
