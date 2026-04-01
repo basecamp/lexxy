@@ -43,7 +43,8 @@ export default [
         customElements: "readonly",
         Prism: "readonly",
         ResizeObserver: "readonly",
-        PointerEvent: "readonly"
+        PointerEvent: "readonly",
+        Image: "readonly"
       }
     },
     rules: {
