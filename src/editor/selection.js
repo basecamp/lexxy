@@ -1,6 +1,7 @@
 import {
   $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
   $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND,
+  HISTORY_MERGE_TAG,
   KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
@@ -34,7 +35,7 @@ export default class Selection {
   set current(selection) {
     this.editor.update(() => {
       this.#syncSelectedClasses()
-    })
+    }, { tag: HISTORY_MERGE_TAG })
   }
 
   get hasNodeSelection() {

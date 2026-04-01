@@ -276,14 +276,10 @@ test.describe("Attachments", () => {
     // Wait for the history collapse to complete (runs in requestAnimationFrame)
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)))
 
-    // Undo until the undo button is disabled
-    const undoButton = page.getByRole("button", { name: "Undo" })
-    while (await undoButton.evaluate((el) => !el.disabled)) {
-      await undoButton.click()
-      await editor.flush()
-    }
+    // A single undo should restore the empty editor — no stale upload node figures
+    await page.getByRole("button", { name: "Undo" }).click()
+    await editor.flush()
 
-    // No upload node figures should remain — only the clean empty state
     await expect(figure).toHaveCount(0)
     await expect(editor.content.locator("progress")).toHaveCount(0)
   })
