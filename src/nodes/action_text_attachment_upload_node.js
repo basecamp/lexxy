@@ -38,7 +38,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   createDOM() {
-    if (this.uploadError) return this.#createDOMForError()
+    if (this.uploadError) return this.createDOMForError()
 
     // This side-effect is trigged on DOM load to fire only once and avoid multiple
     // uploads through cloning. The upload is guarded from restarting in case the
@@ -96,13 +96,6 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   get #uploadStarted() {
     return this.progress !== null
-  }
-
-  #createDOMForError() {
-    const figure = this.createAttachmentFigure()
-    figure.classList.add("attachment--error")
-    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "file"}` }))
-    return figure
   }
 
   #createDOMForImage() {
