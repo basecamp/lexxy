@@ -30,6 +30,27 @@ test.describe("Attachments", () => {
     await expect(page.locator("[data-event='lexxy:upload-end']")).toHaveCount(1)
   })
 
+  test("image keeps local preview until server image loads", async ({ page, editor }) => {
+    const calls = await mockActiveStorageUploads(page, { delayBlobResponses: true })
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+
+    const img = figure.locator("img")
+
+    // While the server image is delayed, the img should show a local blob: preview
+    await expect(img).toHaveAttribute("src", /^blob:/)
+
+    // Release the server image response and verify it swaps
+    calls.releaseBlobResponses()
+
+    await expect(img).toHaveAttribute(
+      "src",
+      /\/rails\/active_storage\/blobs\/mock-signed-id-\d+\/example\.png/,
+    )
+  })
+
   test("upload non previewable attachment", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/note.txt", { via: "file" })
