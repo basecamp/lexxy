@@ -1,4 +1,4 @@
-import { $getSelection, $isRangeSelection, $isRootOrShadowRoot, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $getSelection, $isRangeSelection, $isRootOrShadowRoot, HISTORIC_TAG, SKIP_DOM_SELECTION_TAG } from "lexical"
 import Lexxy from "../config/lexxy"
 import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
@@ -8,6 +8,8 @@ import { loadFileIntoImage } from "../helpers/upload_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 
 export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
+  static #activeUploads = new WeakSet()
+
   static getType() {
     return "action_text_attachment_upload"
   }
@@ -135,7 +137,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       const writable = this.getWritable()
       writable.width = width
       writable.height = height
-    }, { tag: this.#backgroundUpdateTags })
+    }, { tag: this.#transientUpdateTags })
   }
 
   get #hasDimensions() {
@@ -145,7 +147,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   async #startUploadIfNeeded() {
     if (this.#uploadStarted) return
     if (!this.uploadUrl) return // Bridge-managed upload — skip DirectUpload
+    if (ActionTextAttachmentUploadNode.#activeUploads.has(this.file)) return
 
+    ActionTextAttachmentUploadNode.#activeUploads.add(this.file)
+    const undoStackSnapshot = this.#historyState?.undoStack.length ?? 0
     this.#setUploadStarted()
 
     const { DirectUpload } = await import("@rails/activestorage")
@@ -163,9 +168,28 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
         this.#dispatchEvent("lexxy:upload-end", { file: this.file, error: null })
         this.editor.update(() => {
           this.showUploadedAttachment(blob)
-        }, { tag: this.#backgroundUpdateTags })
+        }, {
+          tag: this.#backgroundUpdateTags,
+          onUpdate: () => requestAnimationFrame(() => this.#collapseUploadHistory(undoStackSnapshot))
+        })
       }
     })
+  }
+
+  // The upload lifecycle creates intermediate history entries (from Lexical's
+  // internal transforms, selection changes, etc.) that contain transient upload
+  // node states. Trim those intermediate entries so undo skips straight from the
+  // completed attachment to the state before the upload began. The entry at
+  // undoStackSnapshot is the pre-upload state (pushed by the insertion); keep it.
+  #collapseUploadHistory(undoStackSnapshot) {
+    const historyState = this.#historyState
+    if (!historyState) return
+
+    historyState.undoStack.length = undoStackSnapshot + 1
+  }
+
+  get #historyState() {
+    return this.editor.getRootElement()?.closest("lexxy-editor")?.historyState
   }
 
   #createUploadDelegate() {
@@ -197,14 +221,14 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   #setProgress(progress) {
     this.editor.update(() => {
       this.getWritable().progress = progress
-    }, { tag: this.#backgroundUpdateTags })
+    }, { tag: this.#transientUpdateTags })
   }
 
   #handleUploadError(error) {
     console.warn(`Upload error for ${this.file?.name ?? "file"}: ${error}`)
     this.editor.update(() => {
       this.getWritable().uploadError = true
-    }, { tag: this.#backgroundUpdateTags })
+    }, { tag: this.#transientUpdateTags })
   }
 
   showUploadedAttachment(blob) {
@@ -221,10 +245,20 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return replacementNode.getKey()
   }
 
-  // Upload lifecycle methods (progress, completion, errors) run asynchronously and may
-  // fire while the user is focused on another element (e.g., a title field). Without
-  // SKIP_DOM_SELECTION_TAG, Lexical's reconciler would move the DOM selection back into
-  // the editor, stealing focus from wherever the user is currently typing.
+  // Transient updates (progress, dimensions, errors) are completely invisible to
+  // the undo history via HISTORIC_TAG. Only the final node replacement uses
+  // HISTORY_MERGE_TAG (via #backgroundUpdateTags) so the entire upload is one undo step.
+  get #transientUpdateTags() {
+    if (this.#editorHasFocus) {
+      return [ HISTORIC_TAG ]
+    } else {
+      return [ HISTORIC_TAG, SKIP_DOM_SELECTION_TAG ]
+    }
+  }
+
+  // Used for the final node replacement (upload complete) to merge with the
+  // original insertion as a single undo step. Without SKIP_DOM_SELECTION_TAG,
+  // Lexical's reconciler would steal focus from wherever the user is typing.
   get #backgroundUpdateTags() {
     if (this.#editorHasFocus) {
       return SILENT_UPDATE_TAGS

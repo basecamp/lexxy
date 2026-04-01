@@ -265,6 +265,29 @@ test.describe("Attachments", () => {
     await expect.poll(() => editor.plainTextValue()).toContain("hello world")
   })
 
+  test("undo after uploading into empty editor restores empty state", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+    await editor.flush()
+
+    // Wait for the history collapse to complete (runs in requestAnimationFrame)
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)))
+
+    // Undo until the undo button is disabled
+    const undoButton = page.getByRole("button", { name: "Undo" })
+    while (await undoButton.evaluate((el) => !el.disabled)) {
+      await undoButton.click()
+      await editor.flush()
+    }
+
+    // No upload node figures should remain — only the clean empty state
+    await expect(figure).toHaveCount(0)
+    await expect(editor.content.locator("progress")).toHaveCount(0)
+  })
+
   test("Ctrl+C in caption copies text without losing focus", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
