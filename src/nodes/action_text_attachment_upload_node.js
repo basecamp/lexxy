@@ -214,7 +214,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   showUploadedAttachment(blob) {
-    const replacementNode = this.#toActionTextAttachmentNodeWith(blob)
+    const figure = this.editor.getElementByKey(this.getKey())
+    const previewSrc = figure?.querySelector("img")?.src
+
+    const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
     this.replace(replacementNode)
 
     if ($isRootOrShadowRoot(replacementNode.getParent())) {
@@ -241,8 +244,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return rootElement !== null && rootElement.contains(document.activeElement)
   }
 
-  #toActionTextAttachmentNodeWith(blob) {
-    const conversion = new AttachmentNodeConversion(this, blob)
+  #toActionTextAttachmentNodeWith(blob, previewSrc) {
+    const conversion = new AttachmentNodeConversion(this, blob, previewSrc)
     return conversion.toAttachmentNode()
   }
 
@@ -253,16 +256,18 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 }
 
 class AttachmentNodeConversion {
-  constructor(uploadNode, blob) {
+  constructor(uploadNode, blob, previewSrc) {
     this.uploadNode = uploadNode
     this.blob = blob
+    this.previewSrc = previewSrc
   }
 
   toAttachmentNode() {
     return new ActionTextAttachmentNode({
       ...this.uploadNode,
       ...this.#propertiesFromBlob,
-      src: this.#src
+      src: this.#src,
+      previewSrc: this.previewSrc
     })
   }
 

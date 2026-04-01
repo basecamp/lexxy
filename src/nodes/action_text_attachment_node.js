@@ -79,12 +79,13 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return Lexxy.global.get("attachmentTagName")
   }
 
-  constructor({ tagName, sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
+  constructor({ tagName, sgid, src, previewSrc, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
     super(key)
 
     this.tagName = tagName || ActionTextAttachmentNode.TAG_NAME
     this.sgid = sgid
     this.src = src
+    this.previewSrc = previewSrc
     this.previewable = parseBoolean(previewable)
     this.altText = altText || ""
     this.caption = caption || ""
@@ -188,15 +189,27 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #createDOMForImage(options = {}) {
-    const img = createElement("img", { src: this.src, draggable: false, alt: this.altText, ...this.#imageDimensions, ...options })
+    const initialSrc = this.previewSrc || this.src
+    const img = createElement("img", { src: initialSrc, draggable: false, alt: this.altText, ...this.#imageDimensions, ...options })
 
     if (this.previewable && !this.isPreviewableImage) {
       img.onerror = () => this.#swapPreviewToFileDOM(img)
     }
 
+    if (this.previewSrc) {
+      this.#preloadAndSwapSrc(img)
+    }
+
     const container = createElement("div", { className: "attachment__container" })
     container.appendChild(img)
     return container
+  }
+
+  #preloadAndSwapSrc(img) {
+    const serverImage = new Image()
+    serverImage.onload = () => { img.src = this.src }
+    serverImage.onerror = () => { img.src = this.src }
+    serverImage.src = this.src
   }
 
   #swapPreviewToFileDOM(img) {
