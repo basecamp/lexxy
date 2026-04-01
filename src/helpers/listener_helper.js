@@ -10,3 +10,18 @@ export function registerEventListener(element, type, listener, options) {
     if (listener) elementRef.deref()?.removeEventListener(type, listener, options)
   }
 }
+
+export class ListenerBin {
+  #listeners = []
+
+  track(...listeners) {
+    this.#listeners.push(...listeners)
+  }
+
+  dispose() {
+    while (this.#listeners.length) {
+      const teardown = this.#listeners.pop()
+      teardown()
+    }
+  }
+}
