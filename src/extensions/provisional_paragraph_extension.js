@@ -1,4 +1,4 @@
-import { $getRoot, COMMAND_PRIORITY_HIGH, RootNode, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
+import { $addUpdateTag, $getRoot, COMMAND_PRIORITY_HIGH, HISTORY_MERGE_TAG, RootNode, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
 import { $descendantsMatching, $firstToLastIterator, $insertFirst, mergeRegister } from "@lexical/utils"
 import { $isProvisionalParagraphNode, ProvisionalParagraphNode } from "../nodes/provisional_paragraph_node"
 import LexxyExtension from "./lexxy_extension"
@@ -45,6 +45,9 @@ function $removeUnneededProvisionalParagraphs(rootNode) {
 }
 
 function $markAllProvisionalParagraphsDirty() {
+  // Selection-driven visibility updates must not become standalone undo steps.
+  $addUpdateTag(HISTORY_MERGE_TAG)
+
   for (const provisionalParagraph of $getAllProvisionalParagraphs()) {
     provisionalParagraph.markDirty()
   }
