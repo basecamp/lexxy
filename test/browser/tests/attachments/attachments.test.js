@@ -276,12 +276,38 @@ test.describe("Attachments", () => {
     // Wait for the history collapse to complete (runs in requestAnimationFrame)
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)))
 
-    // A single undo should restore the empty editor — no stale upload node figures
-    await page.getByRole("button", { name: "Undo" }).click()
-    await editor.flush()
+    // Undo until the undo button is disabled — no stale upload node should remain
+    const undoButton = page.getByRole("button", { name: "Undo" })
+    while (await undoButton.evaluate((el) => !el.disabled)) {
+      await undoButton.click()
+      await editor.flush()
+    }
 
     await expect(figure).toHaveCount(0)
     await expect(editor.content.locator("progress")).toHaveCount(0)
+  })
+
+  test("undo preserves edits made during upload", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+
+    // Type text first, then upload an image
+    await editor.send("hello world")
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+    await editor.flush()
+
+    // Wait for the history collapse to complete
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)))
+
+    // Undo should remove the attachment but preserve the typed text
+    const undoButton = page.getByRole("button", { name: "Undo" })
+    await undoButton.click()
+    await editor.flush()
+
+    await expect(figure).toHaveCount(0)
+    await expect(editor.content).toContainText("hello world")
   })
 
   test("Ctrl+C in caption copies text without losing focus", async ({ page, editor }) => {
