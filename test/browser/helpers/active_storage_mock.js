@@ -7,7 +7,7 @@ const TRANSPARENT_PNG = Buffer.from(
   "base64"
 )
 
-export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false } = {}) {
+export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0 } = {}) {
   let blobCounter = 0
   const calls = { blobCreations: [], fileUploads: [] }
   const pendingBlobRoutes = []
@@ -121,6 +121,10 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
       url: request.url(),
       contentType: request.headers()["content-type"],
     })
+
+    if (uploadDelayMs > 0) {
+      await page.waitForTimeout(uploadDelayMs)
+    }
 
     await route.fulfill({ status: 204 })
   })
