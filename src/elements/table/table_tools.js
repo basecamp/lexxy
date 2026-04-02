@@ -7,8 +7,11 @@ import theme from "../../config/theme"
 import { handleRollingTabIndex } from "../../helpers/accessibility_helper"
 import { createElement } from "../../helpers/html_helper"
 import { nextFrame } from "../../helpers/timing_helpers"
+import { ListenerBin, registerEventListener } from "../../helpers/listener_helper"
 
 export class TableTools extends HTMLElement {
+  #listeners = new ListenerBin()
+
   connectedCallback() {
     this.tableController = new TableController(this.#editorElement)
     this.classList.add("lexxy-floating-controls")
@@ -24,12 +27,7 @@ export class TableTools extends HTMLElement {
   }
 
   dispose() {
-    this.#unregisterKeyboardShortcuts()
-
-    this.unregisterUpdateListener?.()
-    this.unregisterUpdateListener = null
-
-    this.removeEventListener("keydown", this.#handleToolsKeydown)
+    this.#listeners.dispose()
 
     this.tableController?.destroy()
     this.tableController = null
@@ -54,7 +52,7 @@ export class TableTools extends HTMLElement {
     this.appendChild(this.#createColumnButtonsContainer())
 
     this.appendChild(this.#createDeleteTableButton())
-    this.addEventListener("keydown", this.#handleToolsKeydown)
+    this.#listeners.track(registerEventListener(this, "keydown", this.#handleToolsKeydown))
   }
 
   #createButtonsContainer(childType, setCountProperty, moreMenu) {
@@ -147,12 +145,7 @@ export class TableTools extends HTMLElement {
   }
 
   #registerKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts = this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#handleAccessibilityShortcutKey, COMMAND_PRIORITY_HIGH)
-  }
-
-  #unregisterKeyboardShortcuts() {
-    this.unregisterKeyboardShortcuts?.()
-    this.unregisterKeyboardShortcuts = null
+    this.#listeners.track(this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#handleAccessibilityShortcutKey, COMMAND_PRIORITY_HIGH))
   }
 
   #handleAccessibilityShortcutKey = (event) => {
@@ -222,7 +215,7 @@ export class TableTools extends HTMLElement {
   }
 
   #monitorForTableSelection() {
-    this.unregisterUpdateListener = this.#editor.registerUpdateListener(() => {
+    this.#listeners.track(this.#editor.registerUpdateListener(() => {
       this.tableController.updateSelectedTable()
 
       const tableNode = this.tableController.currentTableNode
@@ -231,7 +224,7 @@ export class TableTools extends HTMLElement {
       } else {
         this.#hide()
       }
-    })
+    }))
   }
 
   #executeTableCommand(command) {
