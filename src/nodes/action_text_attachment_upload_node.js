@@ -1,7 +1,8 @@
-import { $isRootOrShadowRoot, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $getSelection, $isRangeSelection, $isRootOrShadowRoot, SKIP_DOM_SELECTION_TAG } from "lexical"
 import Lexxy from "../config/lexxy"
 import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
+import { $isProvisionalParagraphNode } from "./provisional_paragraph_node"
 import { createElement, dispatch } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
@@ -210,9 +211,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const previewSrc = this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
 
     const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
+    const shouldSelectAfterReplacement = this.#selectionIncludesUploadNode
     this.replace(replacementNode)
 
-    if ($isRootOrShadowRoot(replacementNode.getParent())) {
+    if (shouldSelectAfterReplacement && $isRootOrShadowRoot(replacementNode.getParent())) {
       replacementNode.selectNext()
     }
 
@@ -234,6 +236,20 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   get #editorHasFocus() {
     const rootElement = this.editor.getRootElement()
     return rootElement !== null && rootElement.contains(document.activeElement)
+  }
+
+  get #selectionIncludesUploadNode() {
+    const selection = $getSelection()
+    if (selection === null) return false
+
+    if (selection.getNodes().some((node) => node.is(this))) return true
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+
+    const anchorNode = selection.anchor.getNode()
+    if (!$isProvisionalParagraphNode(anchorNode) || !anchorNode.isEmpty()) return false
+
+    const previousSibling = anchorNode.getPreviousSibling()
+    return previousSibling !== null && previousSibling.is(this)
   }
 
   #toActionTextAttachmentNodeWith(blob, previewSrc) {

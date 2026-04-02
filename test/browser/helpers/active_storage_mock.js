@@ -12,13 +12,16 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
   const calls = { blobCreations: [], fileUploads: [] }
   const pendingBlobRoutes = []
   let blobsReleased = false
+  let blobResponsesReleased = false
 
-  // When delayBlobResponses is true, GET /blobs/* requests are held until
-  // calls.releaseBlobResponses() is called. This lets tests assert the local
-  // preview is visible before the server image arrives. Idempotent: once
-  // released, any subsequent blob requests are fulfilled immediately.
+  // When delayBlobResponses is true, direct upload responses and GET /blobs/*
+  // requests are held until calls.releaseBlobResponses() is called. This lets
+  // tests keep uploads pending while typing, then release completion
+  // deterministically. Idempotent: once released, any subsequent requests are
+  // fulfilled immediately.
   calls.releaseBlobResponses = async () => {
     blobsReleased = true
+    blobResponsesReleased = true
     await Promise.all(pendingBlobRoutes.map(fulfill => fulfill()))
     pendingBlobRoutes.length = 0
   }
@@ -34,24 +37,32 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
 
     calls.blobCreations.push(blob)
 
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        id: blobCounter,
-        key: `test-key-${blobCounter}`,
-        filename: blob.filename,
-        content_type: blob.content_type,
-        byte_size: blob.byte_size,
-        checksum: blob.checksum,
-        signed_id: signedId,
-        attachable_sgid: `mock-sgid-${blobCounter}`,
-        direct_upload: {
-          url: `/rails/active_storage/disk/${signedId}`,
-          headers: { "Content-Type": blob.content_type },
-        },
-      }),
-    })
+    const fulfill = async () => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: blobCounter,
+          key: `test-key-${blobCounter}`,
+          filename: blob.filename,
+          content_type: blob.content_type,
+          byte_size: blob.byte_size,
+          checksum: blob.checksum,
+          signed_id: signedId,
+          attachable_sgid: `mock-sgid-${blobCounter}`,
+          direct_upload: {
+            url: `/rails/active_storage/disk/${signedId}`,
+            headers: { "Content-Type": blob.content_type },
+          },
+        }),
+      })
+    }
+
+    if (delayBlobResponses && !blobResponsesReleased) {
+      pendingBlobRoutes.push(fulfill)
+    } else {
+      await fulfill()
+    }
   })
 
   // GET /rails/active_storage/blobs/* — serves the uploaded file back (for preload)
