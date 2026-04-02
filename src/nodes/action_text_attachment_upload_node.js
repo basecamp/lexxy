@@ -167,7 +167,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       } else {
         this.#dispatchEvent("lexxy:upload-end", { file: this.file, error: null })
         this.editor.update(() => {
-          this.showUploadedAttachment(blob)
+          const uploadNode = $getNodeByKey(uploadNodeKey)
+          if (!(uploadNode instanceof ActionTextAttachmentUploadNode)) return
+
+          uploadNode.showUploadedAttachment(blob)
         }, {
           tag: this.#backgroundUpdateTags,
           onUpdate: () => requestAnimationFrame(() => this.#collapseUploadHistory(uploadNodeKey, blob.attachable_sgid))
@@ -203,6 +206,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }
 
     historyState.undoStack = collapsedUndoStack
+    historyState.redoStack = []
 
     // Force listeners (toolbar undo/redo button states) to observe the stack rewrite.
     this.editor.update(() => {}, { tag: HISTORIC_TAG })
