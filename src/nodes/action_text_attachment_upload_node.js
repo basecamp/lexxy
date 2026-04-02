@@ -207,9 +207,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   showUploadedAttachment(blob) {
-    const previewSrc = this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
-
-    const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
+    const replacementNode = this.#toActionTextAttachmentNodeWith(blob)
     this.replace(replacementNode)
 
     if ($isRootOrShadowRoot(replacementNode.getParent())) {
@@ -236,8 +234,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return rootElement !== null && rootElement.contains(document.activeElement)
   }
 
-  #toActionTextAttachmentNodeWith(blob, previewSrc) {
-    const conversion = new AttachmentNodeConversion(this, blob, previewSrc)
+  #toActionTextAttachmentNodeWith(blob) {
+    const conversion = new AttachmentNodeConversion(this, blob)
     return conversion.toAttachmentNode()
   }
 
@@ -248,10 +246,9 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 }
 
 class AttachmentNodeConversion {
-  constructor(uploadNode, blob, previewSrc) {
+  constructor(uploadNode, blob) {
     this.uploadNode = uploadNode
     this.blob = blob
-    this.previewSrc = previewSrc
   }
 
   toAttachmentNode() {
@@ -259,7 +256,7 @@ class AttachmentNodeConversion {
       ...this.uploadNode,
       ...this.#propertiesFromBlob,
       src: this.#src,
-      previewSrc: this.previewSrc
+      previewSrc: this.#previewSrc
     })
   }
 
@@ -283,6 +280,10 @@ class AttachmentNodeConversion {
     return this.uploadNode.blobUrlTemplate
       .replace(":signed_id", this.blob.signed_id)
       .replace(":filename", encodeURIComponent(this.blob.filename))
+  }
+
+  get #previewSrc() {
+    return this.uploadNode.isPreviewableImage && this.uploadNode.file ? URL.createObjectURL(this.uploadNode.file) : null
   }
 }
 
