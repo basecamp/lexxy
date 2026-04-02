@@ -462,6 +462,9 @@ async function simulateDragByIndex(page, sourceIndex, targetIndex, position) {
 }
 
 async function dragLocatorToLocator(page, sourceLocator, targetLocator, position = "onto") {
+  await sourceLocator.scrollIntoViewIfNeeded()
+  await targetLocator.scrollIntoViewIfNeeded()
+
   const sourceHandle = await sourceLocator.elementHandle()
   const targetHandle = await targetLocator.elementHandle()
 
