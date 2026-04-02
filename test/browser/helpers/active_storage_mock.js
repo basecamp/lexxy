@@ -15,8 +15,8 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
   // When delayBlobResponses is true, GET /blobs/* requests are held until
   // calls.releaseBlobResponses() is called. This lets tests assert the local
   // preview is visible before the server image arrives.
-  calls.releaseBlobResponses = () => {
-    pendingBlobRoutes.forEach(fulfill => fulfill())
+  calls.releaseBlobResponses = async () => {
+    await Promise.all(pendingBlobRoutes.map(fulfill => fulfill()))
     pendingBlobRoutes.length = 0
   }
 
