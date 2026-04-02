@@ -62,10 +62,13 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
     const contentType = blob?.content_type || "application/octet-stream"
 
     const fulfill = async () => {
-      // Serve the fixture file if it exists, otherwise return a 1×1 transparent PNG
+      // Serve the fixture file if it exists, otherwise return a 1×1 transparent PNG.
+      // The fixture file is only needed when delayBlobResponses is true (preview swap test).
+      // For other tests, always serve the tiny PNG to avoid layout shifts from full-size
+      // images that can break position-dependent tests like drag and drop.
       const fs = await import("fs")
       const fixturePath = `test/fixtures/files/${filename}`
-      if (fs.existsSync(fixturePath)) {
+      if (delayBlobResponses && fs.existsSync(fixturePath)) {
         await route.fulfill({ status: 200, contentType, path: fixturePath })
       } else {
         await route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG })

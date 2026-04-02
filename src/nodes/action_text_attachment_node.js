@@ -1,5 +1,6 @@
 import Lexxy from "../config/lexxy"
-import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
+import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
 import { parseBoolean } from "../helpers/string_helper"
@@ -225,7 +226,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       img.src = this.src
       this.editor.update(() => {
         this.getWritable().previewSrc = null
-      })
+      }, { tag: this.#backgroundUpdateTags })
       this.#revokePreviewSrc(previewSrc)
     }
 
@@ -234,10 +235,21 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       this.editor.update(() => {
         this.getWritable().previewSrc = null
         this.getWritable().uploadError = true
-      })
+      }, { tag: this.#backgroundUpdateTags })
     }
 
     serverImage.src = this.src
+  }
+
+  get #backgroundUpdateTags() {
+    const rootElement = this.editor.getRootElement()
+    const editorHasFocus = rootElement !== null && rootElement.contains(document.activeElement)
+
+    if (editorHasFocus) {
+      return SILENT_UPDATE_TAGS
+    } else {
+      return [ ...SILENT_UPDATE_TAGS, SKIP_DOM_SELECTION_TAG ]
+    }
   }
 
   #revokePreviewSrc(previewSrc) {
