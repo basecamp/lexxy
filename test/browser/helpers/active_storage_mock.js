@@ -11,11 +11,14 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
   let blobCounter = 0
   const calls = { blobCreations: [], fileUploads: [] }
   const pendingBlobRoutes = []
+  let blobsReleased = false
 
   // When delayBlobResponses is true, GET /blobs/* requests are held until
   // calls.releaseBlobResponses() is called. This lets tests assert the local
-  // preview is visible before the server image arrives.
+  // preview is visible before the server image arrives. Idempotent: once
+  // released, any subsequent blob requests are fulfilled immediately.
   calls.releaseBlobResponses = async () => {
+    blobsReleased = true
     await Promise.all(pendingBlobRoutes.map(fulfill => fulfill()))
     pendingBlobRoutes.length = 0
   }
@@ -75,7 +78,7 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
       }
     }
 
-    if (delayBlobResponses) {
+    if (delayBlobResponses && !blobsReleased) {
       pendingBlobRoutes.push(fulfill)
     } else {
       await fulfill()
