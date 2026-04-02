@@ -1,4 +1,4 @@
-import { $getNodeByKey, $getSelection, $isRangeSelection, $isRootOrShadowRoot, HISTORIC_TAG, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $createParagraphNode, $getNodeByKey, $getRoot, $getSelection, $isRangeSelection, $isRootOrShadowRoot, $nodesOfType, HISTORIC_TAG, SKIP_DOM_SELECTION_TAG } from "lexical"
 import Lexxy from "../config/lexxy"
 import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
@@ -170,23 +170,42 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
           this.showUploadedAttachment(blob)
         }, {
           tag: this.#backgroundUpdateTags,
-          onUpdate: () => requestAnimationFrame(() => this.#collapseUploadHistory(uploadNodeKey))
+          onUpdate: () => requestAnimationFrame(() => this.#collapseUploadHistory(uploadNodeKey, blob.attachable_sgid))
         })
       }
     })
   }
 
-  // The upload lifecycle creates intermediate history entries (from Lexical's
-  // internal transforms, selection changes, etc.) that contain transient upload
-  // node states. Remove only those entries — identified by the presence of the
-  // upload node key — so user edits made during the upload are preserved.
-  #collapseUploadHistory(uploadNodeKey) {
+  // Collapse upload-only entries and keep a deterministic undo target that
+  // preserves in-flight typing while removing the uploaded attachment.
+  #collapseUploadHistory(uploadNodeKey, uploadedSgid) {
     const historyState = this.#historyState
     if (!historyState) return
 
-    historyState.undoStack = historyState.undoStack.filter(entry =>
+    const currentSignature = historyState.current && this.#contentSignatureFor(historyState.current.editorState)
+
+    const collapsedUndoStack = historyState.undoStack.filter(entry =>
       !this.#entryContainsUploadNode(entry, uploadNodeKey)
     )
+
+    const undoStateWithoutAttachment = this.#stateWithoutUploadedAttachment(uploadedSgid)
+    if (undoStateWithoutAttachment) {
+      const undoSignature = this.#contentSignatureFor(undoStateWithoutAttachment)
+      const lastUndoEntry = collapsedUndoStack.at(-1)
+      const lastUndoSignature = lastUndoEntry && this.#contentSignatureFor(lastUndoEntry.editorState)
+
+      if (undoSignature !== currentSignature && undoSignature !== lastUndoSignature) {
+        collapsedUndoStack.push({
+          editor: this.editor,
+          editorState: undoStateWithoutAttachment
+        })
+      }
+    }
+
+    historyState.undoStack = collapsedUndoStack
+
+    // Force listeners (toolbar undo/redo button states) to observe the stack rewrite.
+    this.editor.update(() => {}, { tag: HISTORIC_TAG })
   }
 
   #entryContainsUploadNode(entry, uploadNodeKey) {
@@ -194,6 +213,30 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       const node = $getNodeByKey(uploadNodeKey)
       return node instanceof ActionTextAttachmentUploadNode
     })
+  }
+
+  #stateWithoutUploadedAttachment(uploadedSgid) {
+    if (!uploadedSgid) return null
+    const currentEntry = this.#historyState?.current
+    if (!currentEntry) return null
+
+    const serializedEditorState = currentEntry.editorState.toJSON()
+    return this.editor.parseEditorState(JSON.stringify(serializedEditorState), () => {
+      const uploadedAttachmentNode = $nodesOfType(ActionTextAttachmentNode).find(node => node.sgid === uploadedSgid)
+      if (!uploadedAttachmentNode) return
+
+      uploadedAttachmentNode.remove()
+
+      const root = $getRoot()
+      if (root.getChildrenSize() === 0) {
+        root.append($createParagraphNode())
+      }
+      root.selectEnd()
+    })
+  }
+
+  #contentSignatureFor(editorState) {
+    return JSON.stringify(editorState.toJSON().root)
   }
 
   get #historyState() {
