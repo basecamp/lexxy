@@ -288,14 +288,23 @@ test.describe("Attachments", () => {
   })
 
   test("undo preserves edits made during upload", async ({ page, editor }) => {
-    await mockActiveStorageUploads(page)
+    await mockActiveStorageUploads(page, { uploadDelayMs: 1_000 })
 
-    // Type text first, then upload an image
-    await editor.send("hello world")
     await editor.uploadFile("test/fixtures/files/example.png")
 
+    const uploadProgress = page.locator("figure.attachment progress")
+    await expect(uploadProgress).toBeVisible({ timeout: 10_000 })
+
+    // Type while the upload node is still in-flight.
+    await editor.send("hello world")
+    await expect(uploadProgress).toBeVisible()
+
     const figure = page.locator("figure.attachment")
-    await expect(figure).toBeVisible({ timeout: 10_000 })
+    await expect(figure.locator("img")).toHaveAttribute(
+      "src",
+      /\/rails\/active_storage\/blobs\/mock-signed-id-\d+\/example\.png/,
+      { timeout: 10_000 },
+    )
     await editor.flush()
 
     // Wait for the history collapse to complete
@@ -307,7 +316,29 @@ test.describe("Attachments", () => {
     await editor.flush()
 
     await expect(figure).toHaveCount(0)
+    await expect(editor.content.locator("progress")).toHaveCount(0)
     await expect(editor.content).toContainText("hello world")
+  })
+
+  test("node selection does not create an extra undo step", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.send("hello")
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+    await editor.flush()
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)))
+
+    // Click to create a node selection, then undo should still remove the attachment.
+    await figure.locator("img").click()
+    await editor.flush()
+
+    await page.getByRole("button", { name: "Undo" }).click()
+    await editor.flush()
+
+    await expect(figure).toHaveCount(0)
+    await expect(editor.content).toContainText("hello")
   })
 
   test("Ctrl+C in caption copies text without losing focus", async ({ page, editor }) => {
