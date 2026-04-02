@@ -43,7 +43,7 @@ test.describe("Attachments", () => {
     await expect(img).toHaveAttribute("src", /^blob:/)
 
     // Release the server image response and verify it swaps
-    calls.releaseBlobResponses()
+    await calls.releaseBlobResponses()
 
     await expect(img).toHaveAttribute(
       "src",

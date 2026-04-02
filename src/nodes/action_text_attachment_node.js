@@ -223,6 +223,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
     serverImage.onload = () => {
       img.src = this.src
+      this.editor.update(() => {
+        this.getWritable().previewSrc = null
+      })
       this.#revokePreviewSrc(previewSrc)
     }
 
