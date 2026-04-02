@@ -1,4 +1,4 @@
-import { $getSelection, $isRangeSelection, $isRootOrShadowRoot, HISTORIC_TAG, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { $getNodeByKey, $getSelection, $isRangeSelection, $isRootOrShadowRoot, HISTORIC_TAG, SKIP_DOM_SELECTION_TAG } from "lexical"
 import Lexxy from "../config/lexxy"
 import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
@@ -150,7 +150,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     if (ActionTextAttachmentUploadNode.#activeUploads.has(this.file)) return
 
     ActionTextAttachmentUploadNode.#activeUploads.add(this.file)
-    const undoStackSnapshot = this.#historyState?.undoStack.length ?? 0
+    const uploadNodeKey = this.getKey()
     this.#setUploadStarted()
 
     const { DirectUpload } = await import("@rails/activestorage")
@@ -170,7 +170,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
           this.showUploadedAttachment(blob)
         }, {
           tag: this.#backgroundUpdateTags,
-          onUpdate: () => requestAnimationFrame(() => this.#collapseUploadHistory(undoStackSnapshot))
+          onUpdate: () => requestAnimationFrame(() => this.#collapseUploadHistory(uploadNodeKey))
         })
       }
     })
@@ -178,14 +178,22 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   // The upload lifecycle creates intermediate history entries (from Lexical's
   // internal transforms, selection changes, etc.) that contain transient upload
-  // node states. Trim those intermediate entries so undo skips straight from the
-  // completed attachment to the state before the upload began. The entry at
-  // undoStackSnapshot is the pre-upload state (pushed by the insertion); keep it.
-  #collapseUploadHistory(undoStackSnapshot) {
+  // node states. Remove only those entries — identified by the presence of the
+  // upload node key — so user edits made during the upload are preserved.
+  #collapseUploadHistory(uploadNodeKey) {
     const historyState = this.#historyState
     if (!historyState) return
 
-    historyState.undoStack.length = undoStackSnapshot + 1
+    historyState.undoStack = historyState.undoStack.filter(entry =>
+      !this.#entryContainsUploadNode(entry, uploadNodeKey)
+    )
+  }
+
+  #entryContainsUploadNode(entry, uploadNodeKey) {
+    return entry.editorState.read(() => {
+      const node = $getNodeByKey(uploadNodeKey)
+      return node instanceof ActionTextAttachmentUploadNode
+    })
   }
 
   get #historyState() {
