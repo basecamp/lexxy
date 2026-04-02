@@ -224,24 +224,20 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
     serverImage.onload = () => {
       img.src = this.src
-      try {
-        this.editor.update(() => {
-          this.getWritable().previewSrc = null
-        }, { tag: this.#backgroundUpdateTags })
-      } finally {
-        this.#revokePreviewSrc(previewSrc)
-      }
+      this.editor.update(() => {
+        if (this.isAttached()) this.getWritable().previewSrc = null
+      }, { tag: this.#backgroundUpdateTags })
+      this.#revokePreviewSrc(previewSrc)
     }
 
     serverImage.onerror = () => {
-      try {
-        this.editor.update(() => {
+      this.editor.update(() => {
+        if (this.isAttached()) {
           this.getWritable().previewSrc = null
           this.getWritable().uploadError = true
-        }, { tag: this.#backgroundUpdateTags })
-      } finally {
-        this.#revokePreviewSrc(previewSrc)
-      }
+        }
+      }, { tag: this.#backgroundUpdateTags })
+      this.#revokePreviewSrc(previewSrc)
     }
 
     serverImage.src = this.src
