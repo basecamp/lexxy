@@ -85,6 +85,22 @@ export default class Contents {
     $setBlocksType(selection, () => $createHeadingNode(tag))
   }
 
+  clearFormatting() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    selection.getNodes().filter($isTextNode).forEach(node => {
+      node.setFormat(0)
+      node.setStyle("")
+    })
+
+    $toggleLink(null)
+
+    this.#topLevelElementsInSelection(selection).filter($isQuoteNode).forEach(node => this.#unwrap(node))
+
+    $setBlocksType(selection, () => $createParagraphNode())
+  }
+
   #applyCodeBlockFormat() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return

@@ -398,6 +398,10 @@ export class LexicalToolbarElement extends HTMLElement {
           <button type="button" name="underline" data-command="underline" title="Underline">
             ${ToolbarIcons.underline} <span>Underline</span>
           </button>
+          <div class="lexxy-editor__toolbar-separator" role="separator"></div>
+          <button type="button" name="clear-formatting" data-command="clearFormatting" title="Clear formatting">
+            ${ToolbarIcons.clearFormatting} <span>Clear formatting</span>
+          </button>
         </div>
       </details>
 
