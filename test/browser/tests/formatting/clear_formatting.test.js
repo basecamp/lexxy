@@ -97,6 +97,23 @@ test.describe("Clear formatting", () => {
     await assertEditorHtml(editor, "<p>Hello everyone</p>")
   })
 
+  test("preserves formatting outside partial selection", async ({ page, editor }) => {
+    await editor.setValue("<p><strong>bold text here</strong></p>")
+    await editor.content.evaluate((el) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      const textNode = walker.nextNode()
+      const range = document.createRange()
+      range.setStart(textNode, 5)
+      range.setEnd(textNode, 9)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
+    })
+    await editor.flush()
+    await clickToolbarButton(page, "clearFormatting")
+    await assertEditorHtml(editor, "<p><strong>bold </strong>text<strong> here</strong></p>")
+  })
+
   test("removes all formatting at once", async ({ page, editor }) => {
     await editor.setValue(
       '<h2>Heading</h2><p>Hello <strong><em>bold italic</em></strong> and <a href="https://example.com">link</a></p><blockquote><p>quoted</p></blockquote><ul><li>listed</li></ul>',

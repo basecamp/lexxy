@@ -251,7 +251,6 @@ export class CommandDispatcher {
 
   dispatchClearFormatting() {
     this.contents.clearFormatting()
-    this.editor.dispatchCommand(REMOVE_HIGHLIGHT_COMMAND)
   }
 
   dispatchUploadImage() {
