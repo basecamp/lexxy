@@ -25,6 +25,7 @@ import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
 import { BrowserAdapter } from "../editor/adapters/browser_adapter"
 import { getHighlightStyles } from "../helpers/format_helper"
+import Lexxy from "../config/lexxy"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { exportTextNodeDOM } from "../helpers/text_node_export_helper"
@@ -35,6 +36,7 @@ import { TablesExtension } from "../extensions/tables_extension"
 import { AttachmentsExtension } from "../extensions/attachments_extension.js"
 import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 
+function t(key, values) { return Lexxy.i18n.t(key, values) }
 
 export class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
@@ -659,10 +661,10 @@ export class LexicalEditorElement extends HTMLElement {
     if (!this.supportsRichText) return []
 
     return [
-      { label: "Normal", command: "setFormatParagraph", tag: null },
-      { label: "Large heading", command: "setFormatHeadingLarge", tag: "h2" },
-      { label: "Medium heading", command: "setFormatHeadingMedium", tag: "h3" },
-      { label: "Small heading", command: "setFormatHeadingSmall", tag: "h4" },
+      { label: t("toolbar.paragraph"), command: "setFormatParagraph", tag: null },
+      { label: t("toolbar.headingLargeTitle"), command: "setFormatHeadingLarge", tag: "h2" },
+      { label: t("toolbar.headingMediumTitle"), command: "setFormatHeadingMedium", tag: "h3" },
+      { label: t("toolbar.headingSmallTitle"), command: "setFormatHeadingSmall", tag: "h4" },
     ]
   }
 
