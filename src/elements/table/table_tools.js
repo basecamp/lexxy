@@ -7,6 +7,9 @@ import theme from "../../config/theme"
 import { handleRollingTabIndex } from "../../helpers/accessibility_helper"
 import { createElement } from "../../helpers/html_helper"
 import { nextFrame } from "../../helpers/timing_helpers"
+import Lexxy from "../../config/lexxy"
+
+function t(key, values) { return Lexxy.i18n.t(key, values) }
 
 export class TableTools extends HTMLElement {
   connectedCallback() {
@@ -58,16 +61,17 @@ export class TableTools extends HTMLElement {
   }
 
   #createButtonsContainer(childType, setCountProperty, moreMenu) {
+    const typeName = t(`table.${childType}`)
     const container = createElement("div", { className: `lexxy-floating-controls__group lexxy-table-control lexxy-table-control--${childType}` })
 
-    const plusButton = this.#createButton(`Add ${childType}`, { action: "insert", childType, direction: "after" }, "+")
-    const minusButton = this.#createButton(`Remove ${childType}`, { action: "delete", childType }, "−")
+    const plusButton = this.#createButton(t("table.add", { childType: typeName }), { action: "insert", childType, direction: "after" }, "+")
+    const minusButton = this.#createButton(t("table.remove", { childType: typeName }), { action: "delete", childType }, "−")
 
     const dropdown = createElement("details", { className: "lexxy-table-control__more-menu" })
     dropdown.setAttribute("name", "lexxy-dropdown")
     dropdown.tabIndex = -1
 
-    const count = createElement("summary", {}, `_ ${childType}s`)
+    const count = createElement("summary", {}, t(`table.${childType}Count`, { count: "_" }))
     setCountProperty(count)
     dropdown.appendChild(count)
 
@@ -97,11 +101,12 @@ export class TableTools extends HTMLElement {
   }
 
   #createMoreMenuSection(childType) {
+    const typeName = t(`table.${childType}`)
     const section = createElement("div", { className: "lexxy-floating-controls__group lexxy-table-control__more-menu-details" })
-    const addBeforeButton = this.#createButton(`Add ${childType} before`, { action: "insert", childType, direction: "before" })
-    const addAfterButton = this.#createButton(`Add ${childType} after`, { action: "insert", childType, direction: "after" })
-    const toggleStyleButton = this.#createButton(`Toggle ${childType} style`, { action: "toggle", childType })
-    const deleteButton = this.#createButton(`Remove ${childType}`, { action: "delete", childType })
+    const addBeforeButton = this.#createButton(t("table.addBefore", { childType: typeName }), { action: "insert", childType, direction: "before" })
+    const addAfterButton = this.#createButton(t("table.addAfter", { childType: typeName }), { action: "insert", childType, direction: "after" })
+    const toggleStyleButton = this.#createButton(t("table.toggleStyle", { childType: typeName }), { action: "toggle", childType })
+    const deleteButton = this.#createButton(t("table.remove", { childType: typeName }), { action: "delete", childType })
 
     section.appendChild(addBeforeButton)
     section.appendChild(addAfterButton)
@@ -114,7 +119,7 @@ export class TableTools extends HTMLElement {
   #createDeleteTableButton() {
     const container = createElement("div", { className: "lexxy-table-control lexxy-floating-controls__group" })
 
-    const deleteTableButton = this.#createButton("Delete this table?", { action: "delete", childType: "table" })
+    const deleteTableButton = this.#createButton(t("table.deleteTable"), { action: "delete", childType: "table" })
     deleteTableButton.classList.add("lexxy-table-control__button--delete-table")
 
     container.appendChild(deleteTableButton)
@@ -289,8 +294,8 @@ export class TableTools extends HTMLElement {
     const rowCount = tableElement.rows
     const columnCount = tableElement.columns
 
-    this.rowCount.textContent = `${rowCount} row${rowCount === 1 ? "" : "s"}`
-    this.columnCount.textContent = `${columnCount} column${columnCount === 1 ? "" : "s"}`
+    this.rowCount.textContent = t("table.rowCount", { count: rowCount })
+    this.columnCount.textContent = t("table.columnCount", { count: columnCount })
   }
 
   #setTableCellFocus() {

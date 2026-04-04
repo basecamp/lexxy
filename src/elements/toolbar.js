@@ -6,6 +6,9 @@ import {
 import { getNonce } from "../helpers/csp_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import ToolbarIcons from "./toolbar_icons"
+import Lexxy from "../config/lexxy"
+
+function t(key, values) { return Lexxy.i18n.t(key, values) }
 
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
@@ -357,114 +360,114 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   static get defaultTemplate() {
-    return `
-      <button class="lexxy-editor__toolbar-button" type="button" name="image" data-command="uploadImage" data-prevent-overflow="true" title="Add images and video">
-        ${ToolbarIcons.image}
-      </button>
+  return `
+    <button class="lexxy-editor__toolbar-button" type="button" name="image" data-command="uploadImage" data-prevent-overflow="true" title="${t("toolbar.uploadImage")}">
+      ${ToolbarIcons.image}
+    </button>
 
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="file" data-command="uploadFile" title="Upload files">
-        ${ToolbarIcons.attachment}
-      </button>
+    <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="file" data-command="uploadFile" title="${t("toolbar.uploadFile")}">
+      ${ToolbarIcons.attachment}
+    </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="Bold">
-        ${ToolbarIcons.bold}
-      </button>
+    <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="${t("toolbar.bold")}">
+      ${ToolbarIcons.bold}
+    </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="italic" data-command="italic" title="Italic">
-      ${ToolbarIcons.italic}
-      </button>
+    <button class="lexxy-editor__toolbar-button" type="button" name="italic" data-command="italic" title="${t("toolbar.italic")}">
+    ${ToolbarIcons.italic}
+    </button>
 
-      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron" name="lexxy-dropdown">
-        <summary class="lexxy-editor__toolbar-button" name="format" title="Text formatting">
-          ${ToolbarIcons.heading}
-        </summary>
-        <div class="lexxy-editor__toolbar-dropdown-list">
-          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph">
-            ${ToolbarIcons.paragraph} <span>Normal</span>
-          </button>
-          <button type="button" name="heading-large" data-command="setFormatHeadingLarge" title="Large heading">
-            ${ToolbarIcons.h2} <span>Large Heading</span>
-          </button>
-          <button type="button" name="heading-medium" data-command="setFormatHeadingMedium" title="Medium heading">
-            ${ToolbarIcons.h3} <span>Medium Heading</span>
-          </button>
-          <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading">
-            ${ToolbarIcons.h4} <span>Small Heading</span>
-          </button>
-          <div class="lexxy-editor__toolbar-separator" role="separator"></div>
-          <button type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
-            ${ToolbarIcons.strikethrough} <span>Strikethrough</span>
-          </button>
-          <button type="button" name="underline" data-command="underline" title="Underline">
-            ${ToolbarIcons.underline} <span>Underline</span>
-          </button>
-        </div>
-      </details>
+    <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron" name="lexxy-dropdown">
+      <summary class="lexxy-editor__toolbar-button" name="format" title="${t("toolbar.format")}">
+        ${ToolbarIcons.heading}
+      </summary>
+      <div class="lexxy-editor__toolbar-dropdown-list">
+        <button type="button" name="paragraph" data-command="setFormatParagraph" title="${t("toolbar.paragraphTitle")}">
+          ${ToolbarIcons.paragraph} <span>${t("toolbar.paragraph")}</span>
+        </button>
+        <button type="button" name="heading-large" data-command="setFormatHeadingLarge" title="${t("toolbar.headingLargeTitle")}">
+          ${ToolbarIcons.h2} <span>${t("toolbar.headingLarge")}</span>
+        </button>
+        <button type="button" name="heading-medium" data-command="setFormatHeadingMedium" title="${t("toolbar.headingMediumTitle")}">
+          ${ToolbarIcons.h3} <span>${t("toolbar.headingMedium")}</span>
+        </button>
+        <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="${t("toolbar.headingSmallTitle")}">
+          ${ToolbarIcons.h4} <span>${t("toolbar.headingSmall")}</span>
+        </button>
+        <div class="lexxy-editor__toolbar-separator" role="separator"></div>
+        <button type="button" name="strikethrough" data-command="strikethrough" title="${t("toolbar.strikethrough")}">
+          ${ToolbarIcons.strikethrough} <span>${t("toolbar.strikethrough")}</span>
+        </button>
+        <button type="button" name="underline" data-command="underline" title="${t("toolbar.underline")}">
+          ${ToolbarIcons.underline} <span>${t("toolbar.underline")}</span>
+        </button>
+      </div>
+    </details>
 
-      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron" name="lexxy-dropdown">
-        <summary class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">
-          ${ToolbarIcons.highlight}
-        </summary>
-        <lexxy-highlight-dropdown class="lexxy-editor__toolbar-dropdown-content">
-          <div class="lexxy-highlight-colors"></div>
-          <button data-command="removeHighlight" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset">Remove all coloring</button>
-        </lexxy-highlight-dropdown>
-      </details>
+    <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron" name="lexxy-dropdown">
+      <summary class="lexxy-editor__toolbar-button" name="highlight" title="${t("toolbar.highlight")}">
+        ${ToolbarIcons.highlight}
+      </summary>
+      <lexxy-highlight-dropdown class="lexxy-editor__toolbar-dropdown-content">
+        <div class="lexxy-highlight-colors"></div>
+        <button data-command="removeHighlight" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset">${t("toolbar.removeHighlight")}</button>
+      </lexxy-highlight-dropdown>
+    </details>
 
-      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
-        <summary class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" name="link" title="Link" data-hotkey="cmd+k ctrl+k">
-          ${ToolbarIcons.link}
-        </summary>
-        <lexxy-link-dropdown class="lexxy-editor__toolbar-dropdown-content">
-          <form method="dialog">
-            <input type="url" placeholder="Enter a URL…" class="input">
-            <div class="lexxy-editor__toolbar-dropdown-actions">
-              <button type="submit" class="lexxy-editor__toolbar-button" value="link">Link</button>
-              <button type="button" class="lexxy-editor__toolbar-button" value="unlink">Unlink</button>
-            </div>
-          </form>
-        </lexxy-link-dropdown>
-      </details>
+    <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
+      <summary class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" name="link" title="${t("toolbar.link")}" data-hotkey="cmd+k ctrl+k">
+        ${ToolbarIcons.link}
+      </summary>
+      <lexxy-link-dropdown class="lexxy-editor__toolbar-dropdown-content">
+        <form method="dialog">
+          <input type="url" placeholder="${t("toolbar.linkPlaceholder")}" class="input">
+          <div class="lexxy-editor__toolbar-dropdown-actions">
+            <button type="submit" class="lexxy-editor__toolbar-button" value="link">${t("toolbar.linkSubmit")}</button>
+            <button type="button" class="lexxy-editor__toolbar-button" value="unlink">${t("toolbar.unlink")}</button>
+          </div>
+        </form>
+      </lexxy-link-dropdown>
+    </details>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="quote" data-command="insertQuoteBlock" title="Quote">
-        ${ToolbarIcons.quote}
-      </button>
+    <button class="lexxy-editor__toolbar-button" type="button" name="quote" data-command="insertQuoteBlock" title="${t("toolbar.quote")}">
+      ${ToolbarIcons.quote}
+    </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="code" data-command="insertCodeBlock" title="Code">
-        ${ToolbarIcons.code}
-      </button>
+    <button class="lexxy-editor__toolbar-button" type="button" name="code" data-command="insertCodeBlock" title="${t("toolbar.code")}">
+      ${ToolbarIcons.code}
+    </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="unordered-list" data-command="insertUnorderedList" title="Bullet list">
-        ${ToolbarIcons.ul}
-      </button>
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="ordered-list" data-command="insertOrderedList" title="Numbered list">
-        ${ToolbarIcons.ol}
-      </button>
+    <button class="lexxy-editor__toolbar-button" type="button" name="unordered-list" data-command="insertUnorderedList" title="${t("toolbar.bulletList")}">
+      ${ToolbarIcons.ul}
+    </button>
+    <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="ordered-list" data-command="insertOrderedList" title="${t("toolbar.numberedList")}">
+      ${ToolbarIcons.ol}
+    </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="table" data-command="insertTable" title="Insert a table">
-        ${ToolbarIcons.table}
-      </button>
+    <button class="lexxy-editor__toolbar-button" type="button" name="table" data-command="insertTable" title="${t("toolbar.table")}">
+      ${ToolbarIcons.table}
+    </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
-        ${ToolbarIcons.hr}
-      </button>
+    <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="${t("toolbar.divider")}">
+      ${ToolbarIcons.hr}
+    </button>
 
-      <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
+    <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo">
-        ${ToolbarIcons.undo}
-      </button>
+    <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="${t("toolbar.undo")}">
+      ${ToolbarIcons.undo}
+    </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo">
-        ${ToolbarIcons.redo}
-      </button>
+    <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="${t("toolbar.redo")}">
+      ${ToolbarIcons.redo}
+    </button>
 
-      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-overflow" name="lexxy-dropdown">
-        <summary class="lexxy-editor__toolbar-button" aria-label="Show more toolbar buttons">${ToolbarIcons.overflow}</summary>
-        <div class="lexxy-editor__toolbar-dropdown-content lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons"></div>
-      </details>
-    `
-  }
+    <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-overflow" name="lexxy-dropdown">
+      <summary class="lexxy-editor__toolbar-button" aria-label="${t("toolbar.overflow")}">${ToolbarIcons.overflow}</summary>
+      <div class="lexxy-editor__toolbar-dropdown-content lexxy-editor__toolbar-overflow-menu" aria-label="${t("toolbar.overflowMenu")}"></div>
+    </details>
+  `
+}
 }
 
 export default LexicalToolbarElement

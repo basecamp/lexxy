@@ -66,3 +66,76 @@ Global options apply to all editors in your app and are configured using `Lexxy.
 
 {: .important }
 When overriding configuration, call `Lexxy.configure` immediately after your import statement. Editor elements are registered after the import's call stack completes, so configuration must happen synchronously to take effect.
+
+## Internationalization (i18n)
+
+Lexxy ships with English as the default locale. You can register additional locales and set the active locale:
+
+```js
+import { configure } from "@37signals/lexxy"
+
+configure({
+  i18n: {
+    locale: "ar",
+    ar: {
+      toolbar: {
+        bold: "عريض",
+        italic: "مائل",
+        // ... see src/config/locales/en.js for full list
+      },
+      table: {
+        row: "صف",
+        column: "عمود",
+        rowCount: { one: "صف واحد", two: "صفان", few: "%{count} صفوف", many: "%{count} صفًا", other: "%{count} صف" },
+        columnCount: { one: "عمود واحد", two: "عمودان", few: "%{count} أعمدة", many: "%{count} عمودًا", other: "%{count} عمود" },
+        // ...
+      }
+    }
+  }
+})
+```
+
+### Partial translations
+
+You only need to provide the keys you want to translate. Missing keys fall back to English:
+
+```js
+configure({
+  i18n: {
+    locale: "fr",
+    fr: {
+      toolbar: { bold: "Gras", italic: "Italique" }
+    }
+  }
+})
+```
+
+### Pluralization
+
+Table count labels support locale-aware pluralization via [`Intl.PluralRules`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/PluralRules). Provide an object with plural category keys (`zero`, `one`, `two`, `few`, `many`, `other`):
+
+```js
+{
+  table: {
+    rowCount: { one: "%{count} row", other: "%{count} rows" }
+  }
+}
+```
+
+### Interpolation
+
+Table labels use `%{variable}` placeholders for interpolation:
+
+```js
+{
+  table: {
+    add: "Add %{childType}",       // "Add row", "Add column"
+    row: "row",                     // interpolated into %{childType}
+    column: "column",
+  }
+}
+```
+
+### Available keys
+
+See [`src/config/locales/en.js`](../src/config/locales/en.js) for the complete list of translatable keys.

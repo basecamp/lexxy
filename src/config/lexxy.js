@@ -1,5 +1,6 @@
 import Configuration from "./configuration"
 import { range } from "../helpers/array_helper.js"
+import I18n from "./i18n"
 
 const global = new Configuration({
   attachmentTagName: "action-text-attachment",
@@ -30,12 +31,24 @@ const presets = new Configuration({
   }
 })
 
+const i18n = new I18n()
+
 export default {
   global,
   presets,
-  configure({ global: newGlobal, ...newPresets }) {
+  i18n,
+  configure({ global: newGlobal, i18n: i18nConfig, ...newPresets }) {
     if (newGlobal) {
       global.merge(newGlobal)
+    }
+    if (i18nConfig) {
+      const { locale, ...locales } = i18nConfig
+      for (const [ name, translations ] of Object.entries(locales)) {
+        i18n.registerLocale(name, translations)
+      }
+      if (locale) {
+        i18n.locale = locale
+      }
     }
     presets.merge(newPresets)
   }
