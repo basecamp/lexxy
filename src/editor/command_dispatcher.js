@@ -38,6 +38,7 @@ const COMMANDS = [
   "setFormatHeadingMedium",
   "setFormatHeadingSmall",
   "setFormatParagraph",
+  "clearFormatting",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -246,6 +247,10 @@ export class CommandDispatcher {
 
   dispatchSetFormatParagraph() {
     this.contents.applyParagraphFormat()
+  }
+
+  dispatchClearFormatting() {
+    this.contents.clearFormatting()
   }
 
   dispatchUploadImage() {

@@ -11,7 +11,7 @@ import { $createHeadingNode, $createQuoteNode, $isQuoteNode } from "@lexical/ric
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
-import { $setBlocksType } from "@lexical/selection"
+import { $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
@@ -83,6 +83,22 @@ export default class Contents {
     if (!$isRangeSelection(selection)) return
 
     $setBlocksType(selection, () => $createHeadingNode(tag))
+  }
+
+  clearFormatting() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    $forEachSelectedTextNode(node => {
+      node.setFormat(0)
+      node.setStyle("")
+    })
+
+    $toggleLink(null)
+
+    this.#topLevelElementsInSelection(selection).filter($isQuoteNode).forEach(node => this.#unwrap(node))
+
+    $setBlocksType(selection, () => $createParagraphNode())
   }
 
   #applyCodeBlockFormat() {
