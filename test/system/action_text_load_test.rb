@@ -27,4 +27,26 @@ class ActionTextLoadTest < ApplicationSystemTestCase
       assert_selector "action-text-attachment[content-type='video/mp4']", count: 1
     end
   end
+
+  test "preserves configured HTML attributes through the Action Text round trip" do
+    with_lexxy_config(additional_allowed_attributes: %w[start]) do
+      post = Post.create!(
+        title: "Ordered list",
+        body: '<ol start="3"><li>Third</li><li>Fourth</li></ol>'
+      )
+
+      visit edit_post_path(post)
+
+      assert_editor_html '<ol start="3"><li>Third</li><li>Fourth</li></ol>'
+
+      click_on "Update Post"
+
+      assert_selector "ol[start='3'] li", text: "Third"
+      assert_selector "ol[start='3'] li", text: "Fourth"
+
+      click_on "Edit this post"
+
+      assert_editor_html '<ol start="3"><li>Third</li><li>Fourth</li></ol>'
+    end
+  end
 end

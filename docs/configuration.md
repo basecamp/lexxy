@@ -46,6 +46,7 @@ Editors support the following options, configurable using presets and element at
 - `toolbar`: Pass `false` to disable the toolbar entirely, pass the ID of a `<lexxy-toolbar>` element to use as an external toolbar, or pass an object to configure individual toolbar buttons. By default, the toolbar is bootstrapped and displayed above the editor.
   - `toolbar.upload`: Control which upload button(s) appear in the toolbar. Accepts `"file"`, `"image"`, or `"both"` (default). The image button restricts the file picker to images and videos (`accept="image/*,video/*"`), which triggers the native photo/video picker on iOS and Android. The file button opens an unrestricted file picker.
 - `attachments`: Pass `false` to disable attachments completely. By default, attachments are supported, including paste and drag & drop support.
+- `additionalAllowedAttributes`: Pass an array of extra HTML attribute names to preserve when Lexxy serializes HTML. This is additive: the built-in safe defaults still apply. Rails apps should use `config.lexxy.additional_allowed_attributes` instead (see [Rails Sanitization](#rails-sanitization) below).
 - `markdown`: Pass `false` to disable Markdown support.
 - `multiLine`: Pass `false` to force single line editing.
 - `richText`: Pass `false` to disable rich text editing.
@@ -66,3 +67,14 @@ Global options apply to all editors in your app and are configured using `Lexxy.
 
 {: .important }
 When overriding configuration, call `Lexxy.configure` immediately after your import statement. Editor elements are registered after the import's call stack completes, so configuration must happen synchronously to take effect.
+
+## Rails Sanitization
+
+Rails apps should configure extra allowed HTML attributes in one place using the gem config:
+
+```ruby
+# config/application.rb
+config.lexxy.additional_allowed_attributes = %w[start]
+```
+
+Lexxy uses that setting for both Action Text sanitization on the server and the rendered editor's HTML serialization in the browser, so Rails apps do not need a separate `Lexxy.configure(...)` call for the same attributes.

@@ -24,6 +24,29 @@ test.describe("Load HTML", () => {
     await assertEditorHtml(editor, "<p>hello</p><p>there</p>")
   })
 
+  test("allows configuring additional html attributes", async ({ page, editor }) => {
+    // Initially stripped
+    await editor.setValue('<ol start="3"><li>Third</li><li>Fourth</li></ol>')
+
+    await assertEditorHtml(editor, "<ol><li>Third</li><li>Fourth</li></ol>")
+
+    // When configured they're maintained
+    await page.goto("/allowed-html-attributes.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+
+    await editor.setValue('<ol start="3"><li>Third</li><li>Fourth</li></ol>')
+
+    await assertEditorHtml(
+      editor,
+      '<ol start="3"><li>Third</li><li>Fourth</li></ol>',
+    )
+    await assertEditorContent(editor, async (content) => {
+      const items = content.locator("li")
+      await expect(items.first()).toHaveText("Third")
+      await expect(items.last()).toHaveText("Fourth")
+    })
+  })
+
   test("load HTML with newlines between div elements does not crash", async ({ editor }) => {
     // Whitespace text nodes (\n) between block elements like <div> are common in email HTML.
     // Previously this threw Lexical error #282 because the \n became a TextNode at the root level.
