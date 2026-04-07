@@ -1,13 +1,13 @@
 import {
-  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection,
+  $createLineBreakNode, $createParagraphNode, $createTextNode, $getChildCaretAtIndex, $getNodeByKey, $getRoot, $getSelection,
   $hasUpdateTag,
   $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $setSelection,
   HISTORY_MERGE_TAG,
   PASTE_TAG
- } from "lexical"
+} from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
-import { $createCodeNode, $isCodeNode } from "@lexical/code"
+import { $createCodeNode, $isCodeNode, CodeNode } from "@lexical/code"
 import { $createHeadingNode, $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
@@ -16,7 +16,7 @@ import { $ensureForwardRangeSelection, $forEachSelectedTextNode, $setBlocksType 
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
-import { $getNearestNodeOfType } from "@lexical/utils"
+import { $getNearestBlockElementAncestorOrThrow, $getNearestNodeOfType } from "@lexical/utils"
 
 export default class Contents {
   constructor(editorElement) {
@@ -49,7 +49,7 @@ export default class Contents {
   }
 
   insertAtCursor(...nodes) {
-    const selection  = $getSelection() ?? $getRoot().selectEnd()
+    const selection = $getSelection() ?? $getRoot().selectEnd()
     const inserter = NodeInserter.for(selection)
 
     inserter.insertNodes(nodes)
@@ -96,17 +96,16 @@ export default class Contents {
 
     if (this.#insertNodeIfRoot($createCodeNode("plain"))) return
 
-    const topLevelElements = this.#topLevelElementsInSelection(selection)
-    const allCode = topLevelElements.length > 0 && topLevelElements.every($isCodeNode)
+    const blockElements = this.#blockLevelElementsInSelection(selection)
+    const allCode = blockElements.every($isCodeNode)
 
     if (allCode) {
-      topLevelElements.forEach(node => this.#unwrapCodeBlock(node))
+      blockElements.forEach(node => this.#unwrapCodeBlock(node))
     } else {
-      topLevelElements.filter(node => !$isParagraphNode(node) && !$isCodeNode(node) && $isElementNode(node))
-        .forEach(node => this.#unwrap(node))
-
-      const elements = this.#topLevelElementsInSelection(selection)
-      this.#applyCodeBlockFormat(elements)
+      const codeNode = $createCodeNode("plain")
+      blockElements.at(-1).insertAfter(codeNode)
+      codeNode.selectEnd()
+      this.insertAtCursor(...blockElements)
     }
   }
 
@@ -355,30 +354,6 @@ export default class Contents {
     return false
   }
 
-  #applyCodeBlockFormat(topLevelElements) {
-    let codeNode = $createCodeNode("plain")
-
-    for (const element of topLevelElements) {
-      if (!$isElementNode(element)) {
-        codeNode = $createCodeNode("plain")
-        element.insertAfter(codeNode)
-        continue
-      }
-
-      for (const child of element.getChildren()) {
-        if ($isLineBreakNode(child)) {
-          codeNode.append($createLineBreakNode())
-        } else {
-          if (!codeNode.isEmpty()) codeNode.append($createLineBreakNode())
-          codeNode.append($createTextNode(child.getTextContent()))
-        }
-      }
-
-      element.insertAfter(codeNode)
-      element.remove()
-    }
-  }
-
   #unwrapCodeBlock(codeNode) {
     const children = codeNode.getChildren()
     const groups = [ [] ]
@@ -440,6 +415,15 @@ export default class Contents {
       }
       if (groups.some(group => group.length > 0)) element.remove()
     }
+  }
+
+  #blockLevelElementsInSelection(selection) {
+    const blocks = new Set()
+    for (const node of selection.getNodes()) {
+      blocks.add($getNearestBlockElementAncestorOrThrow(node))
+    }
+
+    return Array.from(blocks)
   }
 
   #topLevelElementsInSelection(selection) {
@@ -632,6 +616,7 @@ function $isShadowRoot(node) {
 class NodeInserter {
   static for(selection) {
     const INSERTERS = [
+      CodeNodeInserter,
       QuoteNodeInserter,
       ShadowRootNodeInserter,
       NodeSelectionNodeInserter
@@ -643,6 +628,42 @@ class NodeInserter {
   constructor(selection) {
     this.selection = selection
   }
+}
+
+class CodeNodeInserter extends NodeInserter {
+  static handles(selection) {
+    return $getNearestNodeOfType(selection.anchor?.getNode(), CodeNode)
+  }
+
+  insertNodes(nodes) {
+    if (!this.selection.isCollapsed()) { this.selection.removeText() }
+
+    $ensureForwardRangeSelection(this.selection)
+    const focusNode = this.selection.focus.getNode()
+    const codeNode = $getNearestNodeOfType(focusNode, CodeNode)
+    const insertionIndex = focusNode.is(codeNode) ? 0 : focusNode.getIndexWithinParent()
+
+    const caret = $getChildCaretAtIndex(codeNode, insertionIndex + 1, "previous")
+
+    for (const node of nodes) {
+      if (!node.isAttached()) continue
+      if (caret.getNodeAtCaret() && $isElementNode(node)) { caret.insert($createLineBreakNode()) }
+
+      caret.insert(this.#convertNodeToCodeChild(node))
+    }
+
+    caret.getNodeAtCaret().selectEnd()
+  }
+
+  #convertNodeToCodeChild(node) {
+    if ($isLineBreakNode(node)) {
+      return node
+    } else {
+      node.remove()
+      return $createTextNode(node.getTextContent())
+    }
+  }
+
 }
 
 // Lexical will split a QuoteNode when inserting other Elements - we want them simply inserted as-is
