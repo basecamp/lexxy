@@ -363,6 +363,7 @@ test.describe("Attachments", () => {
 
     // Redo should be a no-op once completion collapses and clears redo history.
     await redoButton.click()
+    await editor.flush()
     await expect(page.locator("figure.attachment")).toHaveCount(0)
     await expect(editor.content).toContainText("hello")
   })
