@@ -18,10 +18,11 @@ export class LinkDropdown extends ToolbarDropdown {
 
   #handleToggle = ({ newState }) => {
     this.input.value = this.#selectedLinkUrl
+    this.input.required = newState === "open"
   }
 
   #handleEnter = (event) => {
-    if (event.key == "Enter") {
+    if (event.key === "Enter") {
       event.preventDefault()
       event.stopPropagation()
       this.#handleLink(event)
