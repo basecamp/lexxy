@@ -585,7 +585,7 @@ function $isShadowRoot(node) {
 class NodeInserter {
   static for(selection) {
     const INSERTERS = [
-      RangeSelectionNodeInserter,
+      ShadowRootNodeInserter,
       NodeSelectionNodeInserter
     ]
     const Inserter = INSERTERS.find(inserter => inserter.handles(selection))
@@ -597,21 +597,17 @@ class NodeInserter {
   }
 }
 
-class RangeSelectionNodeInserter extends NodeInserter {
+class ShadowRootNodeInserter extends NodeInserter {
   static handles(selection) {
-    return $isRangeSelection(selection)
+    return $isShadowRoot(selection?.anchor.getNode())
   }
 
   insertNodes(nodes) {
-    let selection = this.selection
+    const anchorNode = this.selection.anchor.getNode()
+    const paragraph = $createParagraphNode()
+    anchorNode.append(paragraph)
 
-    const anchorNode = selection.anchor.getNode()
-    if ($isShadowRoot(anchorNode)) {
-      const paragraph = $createParagraphNode()
-      anchorNode.append(paragraph)
-      selection = paragraph.selectStart()
-    }
-    selection.insertNodes(nodes)
+    paragraph.selectStart().insertNodes(nodes)
   }
 }
 
