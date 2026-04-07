@@ -356,33 +356,27 @@ export default class Contents {
   }
 
   #applyCodeBlockFormat(topLevelElements) {
-    if (topLevelElements.length === 0) return
+    let codeNode = $createCodeNode("plain")
 
-    const codeNode = $createCodeNode("plain")
-    topLevelElements[0].insertBefore(codeNode)
-
-    topLevelElements.forEach((element, index) => {
-      if (index > 0) codeNode.append($createLineBreakNode())
-
-      const children = element.getChildren()
-      if (children.length === 0) {
-        codeNode.append($createTextNode(""))
-      } else {
-        children.forEach(child => {
-          if ($isTextNode(child)) {
-            codeNode.append($createTextNode(child.getTextContent()))
-          } else if ($isLineBreakNode(child)) {
-            codeNode.append($createLineBreakNode())
-          } else {
-            codeNode.append($createTextNode(child.getTextContent()))
-          }
-        })
+    for (const element of topLevelElements) {
+      if (!$isElementNode(element)) {
+        codeNode = $createCodeNode("plain")
+        element.insertAfter(codeNode)
+        continue
       }
 
-      element.remove()
-    })
+      for (const child of element.getChildren()) {
+        if ($isLineBreakNode(child)) {
+          codeNode.append($createLineBreakNode())
+        } else {
+          if (!codeNode.isEmpty()) codeNode.append($createLineBreakNode())
+          codeNode.append($createTextNode(child.getTextContent()))
+        }
+      }
 
-    codeNode.selectEnd()
+      element.insertAfter(codeNode)
+      element.remove()
+    }
   }
 
   #unwrapCodeBlock(codeNode) {
