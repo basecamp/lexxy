@@ -2,15 +2,18 @@ import { $isCodeNode, CODE_LANGUAGE_FRIENDLY_NAME_MAP, normalizeCodeLang } from 
 import { $getSelection, $isRangeSelection } from "lexical"
 import { createElement, dispatch } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
 export class CodeLanguagePicker extends HTMLElement {
   #abortController = null
+  #listeners = new ListenerBin()
 
   connectedCallback() {
     this.editorElement = this.closest("lexxy-editor")
     this.editor = this.editorElement.editor
     this.classList.add("lexxy-floating-controls")
     this.#abortController = new AbortController()
+    this.#listeners.track(() => this.#abortController?.abort())
 
     this.#attachLanguagePicker()
     this.#hide()
@@ -22,10 +25,7 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   dispose() {
-    this.#abortController?.abort()
-    this.#abortController = null
-    this.unregisterUpdateListener?.()
-    this.unregisterUpdateListener = null
+    this.#listeners.dispose()
   }
 
   #attachLanguagePicker() {
@@ -33,13 +33,13 @@ export class CodeLanguagePicker extends HTMLElement {
 
     const signal = this.#abortController.signal
 
-    this.languagePickerElement.addEventListener("change", () => {
+    this.#listeners.track(registerEventListener(this.languagePickerElement, "change", () => {
       this.#updateCodeBlockLanguage(this.languagePickerElement.value)
-    }, { signal })
+    }, { signal }))
 
-    this.languagePickerElement.addEventListener("mousedown", (event) => {
+    this.#listeners.track(registerEventListener(this.languagePickerElement, "mousedown", (event) => {
       this.#dispatchOpenEvent(event)
-    }, { signal })
+    }, { signal }))
 
     this.languagePickerElement.setAttribute("nonce", getNonce())
     this.appendChild(this.languagePickerElement)
@@ -107,8 +107,8 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   #monitorForCodeBlockSelection() {
-    this.unregisterUpdateListener = this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
         const codeNode = this.#getCurrentCodeNode()
 
         if (codeNode) {
@@ -117,7 +117,7 @@ export class CodeLanguagePicker extends HTMLElement {
           this.#hide()
         }
       })
-    })
+    }))
   }
 
   #getCurrentCodeNode() {
