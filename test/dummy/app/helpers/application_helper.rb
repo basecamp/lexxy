@@ -9,7 +9,7 @@ module ApplicationHelper
     content = rich_text.body
     return "" if content.blank?
 
-    if defined?(ActionText::Editor)
+    if Lexxy.supports_editor_adapter?
       require "action_text/editor/trix_editor"
       trix_editor = ActionText::Editor::TrixEditor.new
       canonical_content = content.render_attachments(&:to_editor_attachment)
