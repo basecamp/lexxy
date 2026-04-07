@@ -43,12 +43,12 @@ export default class Contents {
 
       const nodes = $generateNodesFromDOM(this.editor, doc)
       if (!this.#insertUploadNodes(nodes)) {
-        selection.insertNodes(nodes)
+        this.insertAtCursor(...nodes)
       }
     }, { tag })
   }
 
-  insertAtCursor(node) {
+  insertAtCursor(...nodes) {
     let selection = $getSelection() ?? $getRoot().selectEnd()
     const selectedNodes = selection?.getNodes()
 
@@ -59,12 +59,14 @@ export default class Contents {
         anchorNode.append(paragraph)
         selection = paragraph.selectStart()
       }
-      selection.insertNodes([ node ])
+      selection.insertNodes(nodes)
     } else if ($isNodeSelection(selection) && selectedNodes.length > 0) {
       // Overrides Lexical's default behavior of _removing_ the currently selected nodes
       // https://github.com/facebook/lexical/blob/v0.38.2/packages/lexical/src/LexicalSelection.ts#L412
-      const lastNode = selectedNodes.at(-1)
-      lastNode.insertAfter(node)
+      let lastNode = selectedNodes.at(-1)
+      for (const node of nodes) {
+        lastNode = lastNode.insertAfter(node)
+      }
     }
   }
 

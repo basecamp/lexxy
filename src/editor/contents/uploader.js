@@ -40,7 +40,7 @@ export default class Uploader {
   }
 
   $insertUploadNodes() {
-    this.nodes.forEach(this.contents.insertAtCursor)
+    this.contents.insertAtCursor(...this.nodes)
   }
 
   get #nodeUrlProperties() {
