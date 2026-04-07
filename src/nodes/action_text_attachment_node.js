@@ -222,25 +222,27 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     const previewSrc = this.previewSrc
     const serverImage = new Image()
 
-    serverImage.onload = () => {
-      img.src = this.src
-      this.editor.update(() => {
-        if (this.isAttached()) this.getWritable().previewSrc = null
-      }, { tag: this.#backgroundUpdateTags })
-      this.#revokePreviewSrc(previewSrc)
-    }
-
-    serverImage.onerror = () => {
-      this.editor.update(() => {
-        if (this.isAttached()) {
-          this.getWritable().previewSrc = null
-          this.getWritable().uploadError = true
-        }
-      }, { tag: this.#backgroundUpdateTags })
-      this.#revokePreviewSrc(previewSrc)
-    }
-
+    serverImage.onload = () => this.#handleImageLoaded(img, previewSrc)
+    serverImage.onerror = () => this.#handleImageLoadError(previewSrc)
     serverImage.src = this.src
+  }
+
+  #handleImageLoaded(img, previewSrc) {
+    img.src = this.src
+    this.editor.update(() => {
+      if (this.isAttached()) this.getWritable().previewSrc = null
+    }, { tag: this.#backgroundUpdateTags })
+    this.#revokePreviewSrc(previewSrc)
+  }
+
+  #handleImageLoadError(previewSrc) {
+    this.editor.update(() => {
+      if (this.isAttached()) {
+        this.getWritable().previewSrc = null
+        this.getWritable().uploadError = true
+      }
+    }, { tag: this.#backgroundUpdateTags })
+    this.#revokePreviewSrc(previewSrc)
   }
 
   get #backgroundUpdateTags() {
