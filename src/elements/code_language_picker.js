@@ -64,8 +64,6 @@ export class CodeLanguagePicker extends HTMLElement {
   get #languages() {
     const languages = { ...CODE_LANGUAGE_FRIENDLY_NAME_MAP }
 
-    const sortedEntries = Object.entries(languages)
-      .sort(([ , a ], [ , b ]) => a.localeCompare(b))
     languages.ruby ||= "Ruby"
     languages.php ||= "PHP"
     languages.go ||= "Go"
@@ -74,9 +72,10 @@ export class CodeLanguagePicker extends HTMLElement {
     languages.diff ||= "Diff"
 
     // Place the "plain" entry first, then the rest of language sorted alphabetically
-    const plainIndex = sortedEntries.findIndex(([ key ]) => key === "plain")
-    const plainEntry = sortedEntries.splice(plainIndex, 1)[0]
-    return Object.fromEntries([ plainEntry, ...sortedEntries ])
+    delete languages.plain
+    const sortedEntries = Object.entries(languages)
+      .sort((a, b) => a[1].localeCompare(b[1]))
+    return { plain: "Plain text", ...Object.fromEntries(sortedEntries) }
   }
 
   #dispatchOpenEvent(event) {
