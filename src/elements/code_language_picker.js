@@ -1,5 +1,4 @@
-import { $isCodeNode, CODE_LANGUAGE_FRIENDLY_NAME_MAP, normalizeCodeLang } from "@lexical/code"
-import { $getSelection, $isRangeSelection } from "lexical"
+import { CODE_LANGUAGE_FRIENDLY_NAME_MAP, CodeNode, normalizeCodeLang } from "@lexical/code"
 import { createElement, dispatch } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
@@ -121,22 +120,7 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   #getCurrentCodeNode() {
-    const selection = $getSelection()
-
-    if (!$isRangeSelection(selection)) {
-      return null
-    }
-
-    const anchorNode = selection.anchor.getNode()
-    const parentNode = anchorNode.getParent()
-
-    if ($isCodeNode(anchorNode)) {
-      return anchorNode
-    } else if ($isCodeNode(parentNode)) {
-      return parentNode
-    }
-
-    return null
+    return this.editorElement.selection.nearestNodeOfType(CodeNode)
   }
 
   #codeNodeWasSelected(codeNode) {
