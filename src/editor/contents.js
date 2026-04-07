@@ -58,7 +58,9 @@ export default class Contents {
         anchorNode.append(paragraph)
         selection = paragraph.selectStart()
       }
-      selection.insertNodes(nodes)
+
+      const inserter = NodeInserter.for(selection)
+      inserter.insertNodes(nodes)
     } else if ($isNodeSelection(selection) && selectedNodes.length > 0) {
       // Overrides Lexical's default behavior of _removing_ the currently selected nodes
       // https://github.com/facebook/lexical/blob/v0.38.2/packages/lexical/src/LexicalSelection.ts#L412
@@ -595,4 +597,10 @@ export default class Contents {
 
 function $isShadowRoot(node) {
   return $isElementNode(node) && $isRootOrShadowRoot(node) && !$isRootNode(node)
+}
+
+class NodeInserter {
+  static for(selection) {
+    return selection
+  }
 }
