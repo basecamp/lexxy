@@ -235,7 +235,7 @@ test.describe("Attachments", () => {
   })
 
   test("typing during pending upload keeps caret position after completion", async ({ page, editor }) => {
-    const calls = await mockActiveStorageUploads(page, { delayBlobResponses: true })
+    const calls = await mockActiveStorageUploads(page, { delayDirectUploadResponse: true })
     await editor.uploadFile("test/fixtures/files/example.png")
 
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
@@ -244,7 +244,7 @@ test.describe("Attachments", () => {
     await editor.send("hello")
     await expect.poll(() => editor.plainTextValue()).toContain("hello")
 
-    await calls.releaseBlobResponses()
+    await calls.releaseDirectUploadResponses()
     await editor.flush()
 
     await editor.send(" world")

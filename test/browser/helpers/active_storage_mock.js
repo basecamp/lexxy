@@ -7,23 +7,31 @@ const TRANSPARENT_PNG = Buffer.from(
   "base64"
 )
 
-export async function mockActiveStorageUploads(page, { delayBlobResponses = false } = {}) {
+export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false } = {}) {
   let blobCounter = 0
   const calls = { blobCreations: [], fileUploads: [] }
   const pendingBlobRoutes = []
+  const pendingDirectUploadRoutes = []
   let blobsReleased = false
-  let blobResponsesReleased = false
+  let directUploadReleased = false
 
-  // When delayBlobResponses is true, direct upload responses and GET /blobs/*
-  // requests are held until calls.releaseBlobResponses() is called. This lets
-  // tests keep uploads pending while typing, then release completion
-  // deterministically. Idempotent: once released, any subsequent requests are
-  // fulfilled immediately.
+  // When delayBlobResponses is true, GET /blobs/* requests are held until
+  // calls.releaseBlobResponses() is called. This lets tests assert the local
+  // preview is visible before the server image arrives. Idempotent: once
+  // released, any subsequent blob requests are fulfilled immediately.
   calls.releaseBlobResponses = async () => {
     blobsReleased = true
-    blobResponsesReleased = true
     await Promise.all(pendingBlobRoutes.map(fulfill => fulfill()))
     pendingBlobRoutes.length = 0
+  }
+
+  // When delayDirectUploadResponse is true, POST /direct_uploads responses are
+  // held until calls.releaseDirectUploadResponses() is called. This lets tests
+  // keep uploads pending while typing, then release completion deterministically.
+  calls.releaseDirectUploadResponses = async () => {
+    directUploadReleased = true
+    await Promise.all(pendingDirectUploadRoutes.map(fulfill => fulfill()))
+    pendingDirectUploadRoutes.length = 0
   }
 
   // POST /rails/active_storage/direct_uploads — creates a blob record
@@ -58,8 +66,8 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
       })
     }
 
-    if (delayBlobResponses && !blobResponsesReleased) {
-      pendingBlobRoutes.push(fulfill)
+    if (delayDirectUploadResponse && !directUploadReleased) {
+      pendingDirectUploadRoutes.push(fulfill)
     } else {
       await fulfill()
     }
