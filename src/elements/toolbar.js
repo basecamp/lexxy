@@ -1,4 +1,5 @@
 import {
+  $getNodeByKey,
   $getSelection,
   $isRangeSelection,
   SKIP_DOM_SELECTION_TAG
@@ -204,8 +205,8 @@ export class LexicalToolbarElement extends HTMLElement {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    const anchorNode = selection.anchor.getNode()
-    if (!anchorNode.getParent()) { return }
+    const anchorNode = $getNodeByKey(selection.anchor.key)
+    if (!anchorNode || !anchorNode.getParent()) { return }
 
     const { isBold, isItalic, isStrikethrough, isUnderline, isHighlight, isInLink, isInQuote, isInHeading,
       headingTag, isInCode, isInList, listType, isInTable } = this.selection.getFormat()

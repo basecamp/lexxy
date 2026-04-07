@@ -114,7 +114,10 @@ export default class Contents {
 
     if (this.#insertNodeIfRoot($createCodeNode("plain"))) return
 
-    const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
+    const anchorNode = $getNodeByKey(selection.anchor.key)
+    if (!anchorNode) return
+
+    const topLevelElement = anchorNode.getTopLevelElement()
 
     if (topLevelElement && !$isCodeNode(topLevelElement)) {
       this.#applyCodeBlockFormat()

@@ -1,5 +1,5 @@
 import {
-  $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
+  $createParagraphNode, $getNearestNodeFromDOMNode, $getNodeByKey, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
   $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND,
   KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
 } from "lexical"
@@ -123,10 +123,11 @@ export default class Selection {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return {}
 
-    const anchorNode = selection.anchor.getNode()
-    if (!anchorNode.getParent()) return {}
+    const anchorNode = $getNodeByKey(selection.anchor.key)
+    if (!anchorNode || !anchorNode.getParent()) return {}
 
-    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+    const topLevelElement = anchorNode.getTopLevelElement()
+    if (!topLevelElement) return {}
     const listType = getListType(anchorNode)
     const headingNode = this.#getNearestHeadingNode(anchorNode)
 
@@ -518,7 +519,8 @@ export default class Selection {
   }
 
   #getNearestHeadingNode(anchorNode) {
-    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+    const topLevelElement = anchorNode.getTopLevelElement()
+    if (!topLevelElement) return null
 
     let headingNode = $isHeadingNode(topLevelElement) ? topLevelElement : null
     if (!headingNode) {
