@@ -41,7 +41,8 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
 
     const body = JSON.parse(request.postData())
     const blob = body.blob
-    const signedId = `mock-signed-id-${++blobCounter}`
+    const blobId = ++blobCounter
+    const signedId = `mock-signed-id-${blobId}`
 
     calls.blobCreations.push(blob)
 
@@ -50,14 +51,14 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
-          id: blobCounter,
-          key: `test-key-${blobCounter}`,
+          id: blobId,
+          key: `test-key-${blobId}`,
           filename: blob.filename,
           content_type: blob.content_type,
           byte_size: blob.byte_size,
           checksum: blob.checksum,
           signed_id: signedId,
-          attachable_sgid: `mock-sgid-${blobCounter}`,
+          attachable_sgid: `mock-sgid-${blobId}`,
           direct_upload: {
             url: `/rails/active_storage/disk/${signedId}`,
             headers: { "Content-Type": blob.content_type },
