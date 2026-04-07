@@ -4,11 +4,13 @@ import {
   SKIP_DOM_SELECTION_TAG
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import ToolbarIcons from "./toolbar_icons"
 
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
+  #listeners = new ListenerBin()
 
   constructor() {
     super()
@@ -29,12 +31,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   dispose() {
-    this.#uninstallResizeObserver()
-    this.#unbindButtons()
-    this.#unbindHotkeys()
-    this.#unbindFocusListeners()
-    this.unregisterSelectionListener?.()
-    this.unregisterHistoryListener?.()
+    this.#listeners.dispose()
 
     this.editorElement = null
     this.editor = null
@@ -93,23 +90,13 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #installResizeObserver() {
-    this.resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
-    this.resizeObserver.observe(this)
-  }
-
-  #uninstallResizeObserver() {
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect()
-      this.resizeObserver = null
-    }
+    const resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
+    resizeObserver.observe(this)
+    this.#listeners.track(() => resizeObserver.disconnect())
   }
 
   #bindButtons() {
-    this.addEventListener("click", this.#handleButtonClicked)
-  }
-
-  #unbindButtons() {
-    this.removeEventListener("click", this.#handleButtonClicked)
+    this.#listeners.track(registerEventListener(this, "click", this.#handleButtonClicked))
   }
 
   #handleButtonClicked = (event) => {
@@ -134,11 +121,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #bindHotkeys() {
-    this.editorElement.addEventListener("keydown", this.#handleHotkey)
-  }
-
-  #unbindHotkeys() {
-    this.editorElement?.removeEventListener("keydown", this.#handleHotkey)
+    this.#listeners.track(registerEventListener(this.editorElement, "keydown", this.#handleHotkey))
   }
 
   #handleHotkey = (event) => {
@@ -166,15 +149,11 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #bindFocusListeners() {
-    this.editorElement.addEventListener("lexxy:focus", this.#handleEditorFocus)
-    this.editorElement.addEventListener("lexxy:blur", this.#handleEditorBlur)
-    this.addEventListener("keydown", this.#handleKeydown)
-  }
-
-  #unbindFocusListeners() {
-    this.editorElement?.removeEventListener("lexxy:focus", this.#handleEditorFocus)
-    this.editorElement?.removeEventListener("lexxy:blur", this.#handleEditorBlur)
-    this.removeEventListener("keydown", this.#handleKeydown)
+    this.#listeners.track(
+      registerEventListener(this.editorElement, "lexxy:focus", this.#handleEditorFocus),
+      registerEventListener(this.editorElement, "lexxy:blur", this.#handleEditorBlur),
+      registerEventListener(this, "keydown", this.#handleKeydown)
+    )
   }
 
   #handleEditorFocus = () => {
@@ -197,18 +176,18 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.unregisterSelectionListener = this.editor.registerUpdateListener(() => {
+    this.#listeners.track(this.editor.registerUpdateListener(() => {
       this.editor.getEditorState().read(() => {
         this.#updateButtonStates()
         this.#closeDropdowns()
       })
-    })
+    }))
   }
 
   #monitorHistoryChanges() {
-    this.unregisterHistoryListener = this.editor.registerUpdateListener(() => {
+    this.#listeners.track(this.editor.registerUpdateListener(() => {
       this.#updateUndoRedoButtonStates()
-    })
+    }))
   }
 
   #updateUndoRedoButtonStates() {

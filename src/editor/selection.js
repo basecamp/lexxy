@@ -1,8 +1,7 @@
 import {
   $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
   $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND,
-  KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode,
-  mergeRegister
+  KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
@@ -15,9 +14,10 @@ import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } f
 import { LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
 export default class Selection {
-  #unregister = []
+  #listeners = new ListenerBin()
 
   constructor(editorElement) {
     this.editorElement = editorElement
@@ -281,10 +281,7 @@ export default class Selection {
     this.editor = null
     this.previouslySelectedKeys = null
 
-    while (this.#unregister.length) {
-      const unregister = this.#unregister.pop()
-      unregister()
-    }
+    this.#listeners.dispose()
   }
 
   // When all inline code text is deleted, Lexical's selection retains the stale
@@ -302,7 +299,7 @@ export default class Selection {
   // detects that stale state and clears it so newly typed text won't be
   // code-formatted.
   #clearStaleInlineCodeFormat() {
-    this.#unregister.push(this.editor.registerUpdateListener(({ editorState, tags }) => {
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState, tags }) => {
       if (tags.has("history-merge") || tags.has("skip-dom-selection")) return
 
       let isStale = false
@@ -350,7 +347,7 @@ export default class Selection {
   }
 
   #processSelectionChangeCommands() {
-    this.#unregister.push(mergeRegister(
+    this.#listeners.track(
       this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, this.#selectPreviousNode.bind(this), COMMAND_PRIORITY_LOW),
       this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#selectNextNode.bind(this), COMMAND_PRIORITY_LOW),
       this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousTopLevelNode.bind(this), COMMAND_PRIORITY_LOW),
@@ -361,21 +358,21 @@ export default class Selection {
       this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
         this.current = $getSelection()
       }, COMMAND_PRIORITY_LOW)
-    ))
+    )
   }
 
   #listenForNodeSelections() {
-    this.#unregister.push(this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
+    this.#listeners.track(this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
       if (!isDOMNode(target)) return false
 
       const targetNode = $getNearestNodeFromDOMNode(target)
       return $isDecoratorNode(targetNode) && this.#selectInLexical(targetNode)
     }, COMMAND_PRIORITY_LOW))
 
-    const moveNextLineHandler = () => this.#selectOrAppendNextLine()
     const rootElement = this.editor.getRootElement()
-    rootElement.addEventListener("lexxy:internal:move-to-next-line", moveNextLineHandler)
-    this.#unregister.push(() => rootElement.removeEventListener("lexxy:internal:move-to-next-line", moveNextLineHandler))
+    this.#listeners.track(
+      registerEventListener(rootElement, "lexxy:internal:move-to-next-line", () => this.#selectOrAppendNextLine())
+    )
   }
 
   #containEditorFocus() {

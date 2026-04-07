@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode, mergeRegister } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -18,6 +18,7 @@ import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
 import { isAttachmentSpacerTextNode } from "../helpers/lexical_helper"
 import { sanitize } from "../helpers/sanitization_helper"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
@@ -46,6 +47,7 @@ export class LexicalEditorElement extends HTMLElement {
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
   #editorInitializedRafId = null
+  #listeners = new ListenerBin()
   #disposables = []
 
   constructor() {
@@ -61,6 +63,7 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.editor = this.#createEditor()
     this.#disposables.push(this.editor)
+    this.#disposables.push(this.#listeners)
 
     this.contents = new Contents(this)
     this.#disposables.push(this.contents)
@@ -381,7 +384,9 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #resetBeforeTurboCaches() {
-    document.addEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
+    this.#listeners.track(
+      registerEventListener(document, "turbo:before-cache", this.#handleTurboBeforeCache)
+    )
   }
 
   #handleTurboBeforeCache = (event) => {
@@ -389,7 +394,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #synchronizeWithChanges() {
-    this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
       this.#clearCachedValues()
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
@@ -401,18 +406,6 @@ export class LexicalEditorElement extends HTMLElement {
   #clearCachedValues() {
     this.cachedValue = null
     this.cachedStringValue = null
-  }
-
-  #addUnregisterHandler(handler) {
-    this.unregisterHandlers = this.unregisterHandlers || []
-    this.unregisterHandlers.push(handler)
-  }
-
-  #unregisterHandlers() {
-    this.unregisterHandlers?.forEach((handler) => {
-      handler()
-    })
-    this.unregisterHandlers = null
   }
 
   #registerComponents() {
@@ -437,7 +430,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.historyState = createEmptyHistoryState()
     registered.push(registerHistory(this.editor, this.historyState, 20))
 
-    this.#addUnregisterHandler(mergeRegister(...registered))
+    this.#listeners.track(...registered)
   }
 
   #registerTableComponents() {
@@ -457,7 +450,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #handleEnter() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.#addUnregisterHandler(this.editor.registerCommand(
+    this.#listeners.track(this.editor.registerCommand(
       KEY_ENTER_COMMAND,
       (event) => {
         // Prevent CTRL+ENTER
@@ -479,13 +472,10 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #registerFocusEvents() {
-    this.addEventListener("focusin", this.#handleFocusIn)
-    this.addEventListener("focusout", this.#handleFocusOut)
-
-    this.#addUnregisterHandler(() => {
-      this.removeEventListener("focusin", this.#handleFocusIn)
-      this.removeEventListener("focusout", this.#handleFocusOut)
-    })
+    this.#listeners.track(
+      registerEventListener(this, "focusin", this.#handleFocusIn),
+      registerEventListener(this, "focusout", this.#handleFocusOut)
+    )
   }
 
   #handleFocusIn(event) {
@@ -525,7 +515,7 @@ export class LexicalEditorElement extends HTMLElement {
   #attachDebugHooks() {
     if (!LexicalEditorElement.debug) return
 
-    this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
         console.debug("HTML: ", this.value, "String:", this.toString())
         console.debug("empty", this.isEmpty, "blank", this.isBlank)
@@ -694,10 +684,6 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #dispose() {
-    this.#unregisterHandlers()
-    this.adapter = null
-    document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
-
     while (this.#disposables.length) {
       this.#disposables.pop().dispose()
     }

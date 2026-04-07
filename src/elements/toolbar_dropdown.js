@@ -1,18 +1,22 @@
 import { nextFrame } from "../helpers/timing_helpers"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
 export class ToolbarDropdown extends HTMLElement {
+  #listeners = new ListenerBin()
+
   connectedCallback() {
     this.container = this.closest("details")
 
-    this.container.addEventListener("toggle", this.#handleToggle)
-    this.container.addEventListener("keydown", this.#handleKeyDown)
+    this.#listeners.track(
+      registerEventListener(this.container, "toggle", this.#handleToggle),
+      registerEventListener(this.container, "keydown", this.#handleKeyDown)
+    )
 
     this.#onToolbarEditor(this.initialize.bind(this))
   }
 
   disconnectedCallback() {
-    this.container?.removeEventListener("toggle", this.#handleToggle)
-    this.container?.removeEventListener("keydown", this.#handleKeyDown)
+    this.#listeners.dispose()
   }
 
   get toolbar() {
@@ -25,6 +29,10 @@ export class ToolbarDropdown extends HTMLElement {
 
   get editor() {
     return this.toolbar.editor
+  }
+
+  track(...listeners) {
+    this.#listeners.track(...listeners)
   }
 
   initialize() {

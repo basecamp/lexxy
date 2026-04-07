@@ -21,6 +21,7 @@ import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { REMOVE_HIGHLIGHT_COMMAND, TOGGLE_HIGHLIGHT_COMMAND } from "../extensions/highlight_extension"
@@ -56,7 +57,7 @@ const COMMANDS = [
 
 export class CommandDispatcher {
   #selectionBeforeDrag = null
-  #unregister = []
+  #listeners = new ListenerBin()
 
   static configureFor(editorElement) {
     return new CommandDispatcher(editorElement)
@@ -294,10 +295,7 @@ export class CommandDispatcher {
   }
 
   dispose() {
-    while (this.#unregister.length) {
-      const unregister = this.#unregister.pop()
-      unregister()
-    }
+    this.#listeners.dispose()
   }
 
   #registerCommands() {
@@ -310,7 +308,7 @@ export class CommandDispatcher {
   }
 
   #registerCommandHandler(command, priority, handler) {
-    this.#unregister.push(this.editor.registerCommand(command, handler, priority))
+    this.#listeners.track(this.editor.registerCommand(command, handler, priority))
   }
 
   #registerKeyboardCommands() {
@@ -335,10 +333,13 @@ export class CommandDispatcher {
   #registerDragAndDropHandlers() {
     if (this.editorElement.supportsAttachments) {
       this.dragCounter = 0
-      this.editor.getRootElement().addEventListener("dragover", this.#handleDragOver.bind(this))
-      this.editor.getRootElement().addEventListener("drop", this.#handleDrop.bind(this))
-      this.editor.getRootElement().addEventListener("dragenter", this.#handleDragEnter.bind(this))
-      this.editor.getRootElement().addEventListener("dragleave", this.#handleDragLeave.bind(this))
+      const root = this.editor.getRootElement()
+      this.#listeners.track(
+        registerEventListener(root, "dragover", this.#handleDragOver.bind(this)),
+        registerEventListener(root, "drop", this.#handleDrop.bind(this)),
+        registerEventListener(root, "dragenter", this.#handleDragEnter.bind(this)),
+        registerEventListener(root, "dragleave", this.#handleDragLeave.bind(this))
+      )
     }
   }
 

@@ -1,6 +1,7 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
 import { ToolbarDropdown } from "../toolbar_dropdown"
+import { registerEventListener } from "../../helpers/listener_helper"
 
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
@@ -18,23 +19,14 @@ export class HighlightDropdown extends ToolbarDropdown {
 
   connectedCallback() {
     super.connectedCallback()
-    this.container.addEventListener("toggle", this.#handleToggle)
-  }
-
-  disconnectedCallback() {
-    this.container?.removeEventListener("toggle", this.#handleToggle)
-    this.#removeButtonHandlers()
-    super.disconnectedCallback()
+    this.track(registerEventListener(this.container, "toggle", this.#handleToggle))
   }
 
   #registerButtonHandlers() {
-    this.#colorButtons.forEach(button => button.addEventListener("click", this.#handleColorButtonClick))
-    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick)
-  }
-
-  #removeButtonHandlers() {
-    this.#colorButtons.forEach(button => button.removeEventListener("click", this.#handleColorButtonClick))
-    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR)?.removeEventListener("click", this.#handleRemoveHighlightClick)
+    this.#colorButtons.forEach(button => {
+      this.track(registerEventListener(button, "click", this.#handleColorButtonClick))
+    })
+    this.track(registerEventListener(this.querySelector(REMOVE_HIGHLIGHT_SELECTOR), "click", this.#handleRemoveHighlightClick))
   }
 
   #setUpButtons() {
