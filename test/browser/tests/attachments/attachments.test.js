@@ -234,6 +234,23 @@ test.describe("Attachments", () => {
     await expect(paragraph).toHaveText("hello below")
   })
 
+  test("typing during pending upload keeps caret position after completion", async ({ page, editor }) => {
+    const calls = await mockActiveStorageUploads(page, { delayDirectUploadResponse: true })
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+
+    await editor.send("hello")
+    await expect.poll(() => editor.plainTextValue()).toContain("hello")
+
+    await calls.releaseDirectUploadResponses()
+    await editor.flush()
+
+    await editor.send(" world")
+    await expect.poll(() => editor.plainTextValue()).toContain("hello world")
+  })
+
   test("Ctrl+C in caption copies text without losing focus", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")

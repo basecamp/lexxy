@@ -7,11 +7,13 @@ const TRANSPARENT_PNG = Buffer.from(
   "base64"
 )
 
-export async function mockActiveStorageUploads(page, { delayBlobResponses = false } = {}) {
+export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false } = {}) {
   let blobCounter = 0
   const calls = { blobCreations: [], fileUploads: [] }
   const pendingBlobRoutes = []
+  const pendingDirectUploadRoutes = []
   let blobsReleased = false
+  let directUploadReleased = false
 
   // When delayBlobResponses is true, GET /blobs/* requests are held until
   // calls.releaseBlobResponses() is called. This lets tests assert the local
@@ -23,6 +25,15 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
     pendingBlobRoutes.length = 0
   }
 
+  // When delayDirectUploadResponse is true, POST /direct_uploads responses are
+  // held until calls.releaseDirectUploadResponses() is called. This lets tests
+  // keep uploads pending while typing, then release completion deterministically.
+  calls.releaseDirectUploadResponses = async () => {
+    directUploadReleased = true
+    await Promise.all(pendingDirectUploadRoutes.map(fulfill => fulfill()))
+    pendingDirectUploadRoutes.length = 0
+  }
+
   // POST /rails/active_storage/direct_uploads — creates a blob record
   await page.route("**/rails/active_storage/direct_uploads", async (route) => {
     const request = route.request()
@@ -30,28 +41,37 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
 
     const body = JSON.parse(request.postData())
     const blob = body.blob
-    const signedId = `mock-signed-id-${++blobCounter}`
+    const blobId = ++blobCounter
+    const signedId = `mock-signed-id-${blobId}`
 
     calls.blobCreations.push(blob)
 
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        id: blobCounter,
-        key: `test-key-${blobCounter}`,
-        filename: blob.filename,
-        content_type: blob.content_type,
-        byte_size: blob.byte_size,
-        checksum: blob.checksum,
-        signed_id: signedId,
-        attachable_sgid: `mock-sgid-${blobCounter}`,
-        direct_upload: {
-          url: `/rails/active_storage/disk/${signedId}`,
-          headers: { "Content-Type": blob.content_type },
-        },
-      }),
-    })
+    const fulfill = async () => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id: blobId,
+          key: `test-key-${blobId}`,
+          filename: blob.filename,
+          content_type: blob.content_type,
+          byte_size: blob.byte_size,
+          checksum: blob.checksum,
+          signed_id: signedId,
+          attachable_sgid: `mock-sgid-${blobId}`,
+          direct_upload: {
+            url: `/rails/active_storage/disk/${signedId}`,
+            headers: { "Content-Type": blob.content_type },
+          },
+        }),
+      })
+    }
+
+    if (delayDirectUploadResponse && !directUploadReleased) {
+      pendingDirectUploadRoutes.push(fulfill)
+    } else {
+      await fulfill()
+    }
   })
 
   // GET /rails/active_storage/blobs/* — serves the uploaded file back (for preload)
