@@ -8,6 +8,7 @@ import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
+import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transformer"
 import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_tag_handler"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 
@@ -419,9 +420,10 @@ export class LexicalEditorElement extends HTMLElement {
       this.#registerTableComponents()
       this.#registerCodeHiglightingComponents()
       if (this.supportsMarkdown) {
-          registered.push(
-            registerMarkdownShortcuts(this.editor, TRANSFORMERS),
-            registerMarkdownLeadingTagHandler(this.editor, TRANSFORMERS)
+        const transformers = [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ]
+        registered.push(
+          registerMarkdownShortcuts(this.editor, transformers),
+          registerMarkdownLeadingTagHandler(this.editor, transformers)
         )
       }
     } else {
