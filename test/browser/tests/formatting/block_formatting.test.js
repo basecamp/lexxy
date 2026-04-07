@@ -242,4 +242,42 @@ test.describe("Block formatting", () => {
       '<p>Hello <a href="https://37signals.com">everyone</a></p>',
     )
   })
+
+  test("pressing Enter in link URL input links selection without submitting form", async ({
+    page,
+    editor,
+  }) => {
+    await page.evaluate(() => {
+      window.__submitCount = 0
+      document.querySelector("form").addEventListener("submit", (event) => {
+        event.preventDefault()
+        window.__submitCount += 1
+      })
+    })
+
+    await editor.setValue(HELLO_EVERYONE)
+    await editor.select("everyone")
+    await editor.flush()
+
+    await page.evaluate(() => {
+      const details = document.querySelector(
+        "details:has(summary[name='link'])",
+      )
+      details.open = true
+      details.dispatchEvent(new Event("toggle"))
+    })
+
+    const input = page.locator("lexxy-link-dropdown input[type='url']").first()
+    await expect(input).toBeVisible({ timeout: 2_000 })
+    await input.fill("https://37signals.com")
+    await input.press("Enter")
+
+    await assertEditorHtml(
+      editor,
+      '<p>Hello <a href="https://37signals.com">everyone</a></p>',
+    )
+
+    const submitCount = await page.evaluate(() => window.__submitCount)
+    expect(submitCount).toBe(0)
+  })
 })
