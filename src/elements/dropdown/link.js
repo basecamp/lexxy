@@ -28,7 +28,7 @@ export class LinkDropdown extends ToolbarDropdown {
     }
   }
 
-  #handleLink = (event) => {
+  #handleLink = () => {
     if (!this.input.checkValidity()) {
       this.input.reportValidity()
       return
