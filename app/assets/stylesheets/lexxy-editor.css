@@ -637,22 +637,18 @@
 
   lexxy-link-dropdown {
     font-size: var(--lexxy-text-small);
+    gap: var(--lexxy-toolbar-spacing);
     inset-inline-start: var(--lexxy-toolbar-spacing);
     inset-inline-end: var(--lexxy-toolbar-spacing);
 
-    form {
-      display: flex;
-      flex: 1;
-      gap: var(--lexxy-toolbar-spacing);
+    [overflowing] [open] & {
+      display: block;
 
-      [overflowing] & {
-        display: block;
-
-        .lexxy-editor__toolbar-dropdown-actions {
-          margin-block-start: var(--lexxy-toolbar-spacing);
-        }
+      .lexxy-editor__toolbar-dropdown-actions {
+        margin-block-start: var(--lexxy-toolbar-spacing);
       }
     }
+
 
     .lexxy-editor__toolbar-dropdown-actions {
       display: flex;
@@ -681,7 +677,7 @@
       padding-inline: 2ch;
     }
 
-    button[type="submit"] {
+    button[value="link"] {
       background-color: var(--lexxy-color-accent-dark);
       color: var(--lexxy-color-ink-inverted);
 

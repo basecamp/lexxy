@@ -10,19 +10,31 @@ export class LinkDropdown extends ToolbarDropdown {
 
     this.track(
       registerEventListener(this.container, "toggle", this.#handleToggle),
-      registerEventListener(this, "submit", this.#handleSubmit),
+      registerEventListener(this.input, "keydown", this.#handleEnter),
+      registerEventListener(this.querySelector("[value='link']"), "click", this.#handleLink),
       registerEventListener(this.querySelector("[value='unlink']"), "click", this.#handleUnlink)
     )
   }
 
   #handleToggle = ({ newState }) => {
     this.input.value = this.#selectedLinkUrl
-    this.input.required = newState === "open"
   }
 
-  #handleSubmit = (event) => {
-    const command = event.submitter?.value
-    this.editor.dispatchCommand(command, this.input.value)
+  #handleEnter = (event) => {
+    if (event.key == "Enter") {
+      event.preventDefault()
+      event.stopPropagation()
+      this.#handleLink(event)
+    }
+  }
+
+  #handleLink = (event) => {
+    if (!this.input.checkValidity()) {
+      this.input.reportValidity()
+      return
+    }
+
+    this.editor.dispatchCommand("link", this.input.value)
     this.close()
   }
 
