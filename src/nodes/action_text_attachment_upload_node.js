@@ -1,6 +1,8 @@
-import { $createParagraphNode, $getNodeByKey, $getRoot, $getSelection, $isRangeSelection, $isRootOrShadowRoot, $nodesOfType, HISTORIC_TAG, SKIP_DOM_SELECTION_TAG } from "lexical"
+import {
+  $createParagraphNode, $getNodeByKey, $getRoot, $getSelection, $isRangeSelection, $isRootOrShadowRoot, HISTORIC_TAG, HISTORY_PUSH_TAG, SKIP_DOM_SELECTION_TAG,
+  SKIP_SCROLL_INTO_VIEW_TAG
+} from "lexical"
 import Lexxy from "../config/lexxy"
-import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { $isProvisionalParagraphNode } from "./provisional_paragraph_node"
 import { createElement, dispatch } from "../helpers/html_helper"
@@ -173,69 +175,62 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
           uploadNode.showUploadedAttachment(blob)
         }, {
           tag: this.#backgroundUpdateTags,
-          onUpdate: () => requestAnimationFrame(() => this.#collapseUploadHistory(uploadNodeKey, blob.attachable_sgid))
+          onUpdate: () => requestAnimationFrame(() => this.#collapseUploadHistory(uploadNodeKey))
         })
       }
     })
   }
 
-  // Collapse upload-only entries and keep a deterministic undo target that
-  // preserves in-flight typing while removing the uploaded attachment.
-  #collapseUploadHistory(uploadNodeKey, uploadedSgid) {
+  // Upload completion uses HISTORY_PUSH_TAG so Lexical creates the undo boundary.
+  // Then we rewrite any upload-node snapshots to their clean (node-stripped) form
+  // and collapse duplicates to avoid no-op undo steps.
+  #collapseUploadHistory(uploadNodeKey) {
     const historyState = this.#historyState
     if (!historyState) return
 
     const currentSignature = historyState.current && this.#contentSignatureFor(historyState.current.editorState)
+    const rewrittenStack = []
+    let prevSignature = null
 
-    const collapsedUndoStack = historyState.undoStack.filter(entry =>
-      !this.#entryContainsUploadNode(entry, uploadNodeKey)
-    )
+    for (const entry of historyState.undoStack) {
+      const hasUploadNode = entry.editorState.read(() =>
+        $getNodeByKey(uploadNodeKey) instanceof ActionTextAttachmentUploadNode
+      )
 
-    const undoStateWithoutAttachment = this.#stateWithoutUploadedAttachment(uploadedSgid)
-    if (undoStateWithoutAttachment) {
-      const undoSignature = this.#contentSignatureFor(undoStateWithoutAttachment)
-      const lastUndoEntry = collapsedUndoStack.at(-1)
-      const lastUndoSignature = lastUndoEntry && this.#contentSignatureFor(lastUndoEntry.editorState)
+      const editorState = hasUploadNode
+        ? this.#editorStateStrippingUploadNodes(entry.editorState)
+        : entry.editorState
 
-      if (undoSignature !== currentSignature && undoSignature !== lastUndoSignature) {
-        collapsedUndoStack.push({
-          editor: this.editor,
-          editorState: undoStateWithoutAttachment
-        })
+      const signature = this.#contentSignatureFor(editorState)
+      if (signature !== prevSignature && signature !== currentSignature) {
+        rewrittenStack.push(hasUploadNode ? { editor: entry.editor, editorState } : entry)
       }
+      prevSignature = signature
     }
 
-    historyState.undoStack = collapsedUndoStack
+    historyState.undoStack = rewrittenStack
     historyState.redoStack = []
 
     // Force listeners (toolbar undo/redo button states) to observe the stack rewrite.
     this.editor.update(() => {}, { tag: HISTORIC_TAG })
   }
 
-  #entryContainsUploadNode(entry, uploadNodeKey) {
-    return entry.editorState.read(() => {
-      const node = $getNodeByKey(uploadNodeKey)
-      return node instanceof ActionTextAttachmentUploadNode
+  // Upload nodes can't survive a JSON round-trip (File isn't serializable),
+  // so strip them from the serialized state before parseEditorState calls importJSON.
+  #editorStateStrippingUploadNodes(editorState) {
+    const json = editorState.toJSON()
+    this.#stripNodesFromJSON(json.root, n => n.type === "action_text_attachment_upload")
+    return this.editor.parseEditorState(json, () => {
+      if ($getRoot().getChildrenSize() === 0) $getRoot().append($createParagraphNode())
     })
   }
 
-  #stateWithoutUploadedAttachment(uploadedSgid) {
-    if (!uploadedSgid) return null
-    const currentEntry = this.#historyState?.current
-    if (!currentEntry) return null
-
-    const serializedEditorState = currentEntry.editorState.toJSON()
-    return this.editor.parseEditorState(JSON.stringify(serializedEditorState), () => {
-      const uploadedAttachmentNode = $nodesOfType(ActionTextAttachmentNode).find(node => node.sgid === uploadedSgid)
-      if (!uploadedAttachmentNode) return
-
-      uploadedAttachmentNode.remove()
-
-      const root = $getRoot()
-      if (root.getChildrenSize() === 0) {
-        root.append($createParagraphNode())
-      }
-      root.selectEnd()
+  #stripNodesFromJSON(node, predicate) {
+    if (!node.children) return
+    node.children = node.children.filter(child => {
+      if (predicate(child)) return false
+      this.#stripNodesFromJSON(child, predicate)
+      return true
     })
   }
 
@@ -301,8 +296,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   // Transient updates (progress, dimensions, errors) are completely invisible to
-  // the undo history via HISTORIC_TAG. Only the final node replacement uses
-  // HISTORY_MERGE_TAG (via #backgroundUpdateTags) so the entire upload is one undo step.
+  // the undo history via HISTORIC_TAG.
   get #transientUpdateTags() {
     if (this.#editorHasFocus) {
       return [ HISTORIC_TAG ]
@@ -311,14 +305,14 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }
   }
 
-  // Used for the final node replacement (upload complete) to merge with the
-  // original insertion as a single undo step. Without SKIP_DOM_SELECTION_TAG,
-  // Lexical's reconciler would steal focus from wherever the user is typing.
+  // Use HISTORY_PUSH_TAG to force a stable undo boundary at upload completion.
+  // SKIP_SCROLL_INTO_VIEW_TAG avoids scroll jumps, and SKIP_DOM_SELECTION_TAG
+  // prevents focus theft when the editor is not active.
   get #backgroundUpdateTags() {
     if (this.#editorHasFocus) {
-      return SILENT_UPDATE_TAGS
+      return [ HISTORY_PUSH_TAG, SKIP_SCROLL_INTO_VIEW_TAG ]
     } else {
-      return [ ...SILENT_UPDATE_TAGS, SKIP_DOM_SELECTION_TAG ]
+      return [ HISTORY_PUSH_TAG, SKIP_SCROLL_INTO_VIEW_TAG, SKIP_DOM_SELECTION_TAG ]
     }
   }
 
