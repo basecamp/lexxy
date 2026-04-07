@@ -5,14 +5,23 @@ import { registerEventListener } from "../../helpers/listener_helper"
 export class LinkDropdown extends ToolbarDropdown {
   connectedCallback() {
     super.connectedCallback()
+
     this.input = this.querySelector("input")
 
     this.track(
       registerEventListener(this.container, "toggle", this.#handleToggle),
       registerEventListener(this.input, "keydown", this.#handleEnter),
-      registerEventListener(this.querySelector("[value='link']"), "click", this.#handleLink),
-      registerEventListener(this.querySelector("[value='unlink']"), "click", this.#handleUnlink)
+      registerEventListener(this.linkButton, "click", this.#handleLink),
+      registerEventListener(this.unlinkButton, "click", this.#handleUnlink)
     )
+  }
+
+  get linkButton() {
+    return this.querySelector("[value='link']")
+  }
+
+  get unlinkButton() {
+    return this.querySelector("[value='unlink']")
   }
 
   #handleToggle = ({ newState }) => {
