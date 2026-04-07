@@ -1,5 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection,
+  $hasUpdateTag,
   $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $setSelection,
   HISTORY_MERGE_TAG,
   PASTE_TAG
@@ -33,9 +34,10 @@ export default class Contents {
 
   insertDOM(doc, { tag } = {}) {
     this.#unwrapPlaceholderAnchors(doc)
-    if (tag === PASTE_TAG) this.#stripTableCellColorStyles(doc)
 
     this.editor.update(() => {
+      if ($hasUpdateTag(PASTE_TAG)) this.#stripTableCellColorStyles(doc)
+
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
