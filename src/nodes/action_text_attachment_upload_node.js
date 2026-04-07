@@ -38,7 +38,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   createDOM() {
-    if (this.uploadError) return this.#createDOMForError()
+    if (this.uploadError) return this.createDOMForError()
 
     // This side-effect is trigged on DOM load to fire only once and avoid multiple
     // uploads through cloning. The upload is guarded from restarting in case the
@@ -96,13 +96,6 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   get #uploadStarted() {
     return this.progress !== null
-  }
-
-  #createDOMForError() {
-    const figure = this.createAttachmentFigure()
-    figure.classList.add("attachment--error")
-    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "file"}` }))
-    return figure
   }
 
   #createDOMForImage() {
@@ -214,7 +207,9 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   showUploadedAttachment(blob) {
-    const replacementNode = this.#toActionTextAttachmentNodeWith(blob)
+    const previewSrc = this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
+
+    const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
     this.replace(replacementNode)
 
     if ($isRootOrShadowRoot(replacementNode.getParent())) {
@@ -241,8 +236,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return rootElement !== null && rootElement.contains(document.activeElement)
   }
 
-  #toActionTextAttachmentNodeWith(blob) {
-    const conversion = new AttachmentNodeConversion(this, blob)
+  #toActionTextAttachmentNodeWith(blob, previewSrc) {
+    const conversion = new AttachmentNodeConversion(this, blob, previewSrc)
     return conversion.toAttachmentNode()
   }
 
@@ -253,16 +248,18 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 }
 
 class AttachmentNodeConversion {
-  constructor(uploadNode, blob) {
+  constructor(uploadNode, blob, previewSrc) {
     this.uploadNode = uploadNode
     this.blob = blob
+    this.previewSrc = previewSrc
   }
 
   toAttachmentNode() {
     return new ActionTextAttachmentNode({
       ...this.uploadNode,
       ...this.#propertiesFromBlob,
-      src: this.#src
+      src: this.#src,
+      previewSrc: this.previewSrc
     })
   }
 

@@ -30,6 +30,48 @@ test.describe("Attachments", () => {
     await expect(page.locator("[data-event='lexxy:upload-end']")).toHaveCount(1)
   })
 
+  test("image keeps local preview until server image loads", async ({ page, editor }) => {
+    const calls = await mockActiveStorageUploads(page, { delayBlobResponses: true })
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+
+    const img = figure.locator("img")
+
+    // While the server image is delayed, the img should show a local blob: preview
+    await expect(img).toHaveAttribute("src", /^blob:/)
+
+    // Release the server image response and verify it swaps
+    await calls.releaseBlobResponses()
+
+    await expect(img).toHaveAttribute(
+      "src",
+      /\/rails\/active_storage\/blobs\/mock-signed-id-\d+\/example\.png/,
+    )
+  })
+
+  test("deleting attachment before server image loads does not crash", async ({ page, editor }) => {
+    const calls = await mockActiveStorageUploads(page, { delayBlobResponses: true })
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+
+    // Delete the attachment while the server image is still pending
+    await figure.locator("img").click()
+    await editor.send("Delete")
+    await expect(figure).toHaveCount(0)
+
+    // Release the blob response — should not throw on the now-removed node
+    await calls.releaseBlobResponses()
+
+    // Editor should be empty and functional
+    await assertEditorHtml(editor, "")
+    await editor.send("Still works")
+    await expect(editor.content).toContainText("Still works")
+  })
+
   test("upload non previewable attachment", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/note.txt", { via: "file" })
