@@ -20,8 +20,11 @@ import {
 
 import { upcaseFirst } from "../../helpers/string_helper"
 import { nextFrame } from "../../helpers/timing_helpers"
+import { ListenerBin } from "../../helpers/listener_helper"
 
 export class TableController {
+  #listeners = new ListenerBin()
+
   constructor(editorElement) {
     this.editor = editorElement.editor
     this.contents = editorElement.contents
@@ -37,7 +40,7 @@ export class TableController {
     this.currentTableNodeKey = null
     this.currentCellKey = null
 
-    this.#unregisterKeyHandlers()
+    this.#listeners.dispose()
   }
 
   get currentCell() {
@@ -319,16 +322,10 @@ export class TableController {
 
   #registerKeyHandlers() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.unregisterBackspaceKeyHandler = this.editor.registerCommand(KEY_BACKSPACE_COMMAND, (event) => this.#handleBackspaceKey(event), COMMAND_PRIORITY_HIGH)
-    this.unregisterEnterKeyHandler = this.editor.registerCommand(KEY_ENTER_COMMAND, (event) => this.#handleEnterKey(event), COMMAND_PRIORITY_HIGH)
-  }
-
-  #unregisterKeyHandlers() {
-    this.unregisterBackspaceKeyHandler?.()
-    this.unregisterEnterKeyHandler?.()
-
-    this.unregisterBackspaceKeyHandler = null
-    this.unregisterEnterKeyHandler = null
+    this.#listeners.track(
+      this.editor.registerCommand(KEY_BACKSPACE_COMMAND, (event) => this.#handleBackspaceKey(event), COMMAND_PRIORITY_HIGH),
+      this.editor.registerCommand(KEY_ENTER_COMMAND, (event) => this.#handleEnterKey(event), COMMAND_PRIORITY_HIGH)
+    )
   }
 
   #handleBackspaceKey(event) {

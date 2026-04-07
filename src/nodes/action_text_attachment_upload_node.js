@@ -1,10 +1,11 @@
+import { $getSelection, $isRangeSelection, $isRootOrShadowRoot, SKIP_DOM_SELECTION_TAG } from "lexical"
 import Lexxy from "../config/lexxy"
 import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
+import { $isProvisionalParagraphNode } from "./provisional_paragraph_node"
 import { createElement, dispatch } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
-import { $isRootOrShadowRoot, SKIP_DOM_SELECTION_TAG } from "lexical"
 
 export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   static getType() {
@@ -38,16 +39,19 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   createDOM() {
-    if (this.uploadError) return this.#createDOMForError()
+    if (this.uploadError) return this.createDOMForError()
 
     // This side-effect is trigged on DOM load to fire only once and avoid multiple
     // uploads through cloning. The upload is guarded from restarting in case the
     // node is reloaded from saved state such as from history.
     this.#startUploadIfNeeded()
 
-    const figure = this.createAttachmentFigure()
+    // Bridge-managed uploads (uploadUrl is null) don't have file data to show
+    // an image preview, so always show the file icon during upload.
+    const canPreviewFile = this.isPreviewableAttachment && this.uploadUrl != null
+    const figure = this.createAttachmentFigure(canPreviewFile)
 
-    if (this.isPreviewableAttachment) {
+    if (canPreviewFile) {
       const img = figure.appendChild(this.#createDOMForImage())
 
       // load file locally to set dimensions and prevent vertical shifting
@@ -95,13 +99,6 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return this.progress !== null
   }
 
-  #createDOMForError() {
-    const figure = this.createAttachmentFigure()
-    figure.classList.add("attachment--error")
-    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "file"}` }))
-    return figure
-  }
-
   #createDOMForImage() {
     return createElement("img")
   }
@@ -147,6 +144,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   async #startUploadIfNeeded() {
     if (this.#uploadStarted) return
+    if (!this.uploadUrl) return // Bridge-managed upload — skip DirectUpload
 
     this.#setUploadStarted()
 
@@ -163,7 +161,9 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
         this.#handleUploadError(error)
       } else {
         this.#dispatchEvent("lexxy:upload-end", { file: this.file, error: null })
-        this.#showUploadedAttachment(blob)
+        this.editor.update(() => {
+          this.showUploadedAttachment(blob)
+        }, { tag: this.#backgroundUpdateTags })
       }
     })
   }
@@ -207,17 +207,18 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }, { tag: this.#backgroundUpdateTags })
   }
 
-  #showUploadedAttachment(blob) {
-    const editorHasFocus = this.#editorHasFocus
+  showUploadedAttachment(blob) {
+    const previewSrc = this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
 
-    this.editor.update(() => {
-      const replacementNode = this.#toActionTextAttachmentNodeWith(blob)
-      this.replace(replacementNode)
+    const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
+    const shouldSelectAfterReplacement = this.#selectionIncludesUploadNode
+    this.replace(replacementNode)
 
-      if (editorHasFocus && $isRootOrShadowRoot(replacementNode.getParent())) {
-        replacementNode.selectNext()
-      }
-    }, { tag: this.#backgroundUpdateTags })
+    if (shouldSelectAfterReplacement && $isRootOrShadowRoot(replacementNode.getParent())) {
+      replacementNode.selectNext()
+    }
+
+    return replacementNode.getKey()
   }
 
   // Upload lifecycle methods (progress, completion, errors) run asynchronously and may
@@ -237,8 +238,22 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return rootElement !== null && rootElement.contains(document.activeElement)
   }
 
-  #toActionTextAttachmentNodeWith(blob) {
-    const conversion = new AttachmentNodeConversion(this, blob)
+  get #selectionIncludesUploadNode() {
+    const selection = $getSelection()
+    if (selection === null) return false
+
+    if (selection.getNodes().some((node) => node.is(this))) return true
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+
+    const anchorNode = selection.anchor.getNode()
+    if (!$isProvisionalParagraphNode(anchorNode) || !anchorNode.isEmpty()) return false
+
+    const previousSibling = anchorNode.getPreviousSibling()
+    return previousSibling !== null && previousSibling.is(this)
+  }
+
+  #toActionTextAttachmentNodeWith(blob, previewSrc) {
+    const conversion = new AttachmentNodeConversion(this, blob, previewSrc)
     return conversion.toAttachmentNode()
   }
 
@@ -249,16 +264,18 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 }
 
 class AttachmentNodeConversion {
-  constructor(uploadNode, blob) {
+  constructor(uploadNode, blob, previewSrc) {
     this.uploadNode = uploadNode
     this.blob = blob
+    this.previewSrc = previewSrc
   }
 
   toAttachmentNode() {
     return new ActionTextAttachmentNode({
       ...this.uploadNode,
       ...this.#propertiesFromBlob,
-      src: this.#src
+      src: this.#src,
+      previewSrc: this.previewSrc
     })
   }
 

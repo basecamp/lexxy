@@ -20,6 +20,8 @@
 /test/browser/playwright-report/
 /test/browser/blob-report/
 
+Gemfile.lock
+
 # Jekyll docs
 /docs/_site/
 /docs/.jekyll-cache/

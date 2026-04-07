@@ -11,6 +11,7 @@ export default [
       ecmaVersion: 2022,
       sourceType: "module",
       globals: {
+        AbortController: "readonly",
         console: "readonly",
         document: "readonly",
         window: "readonly",
@@ -42,7 +43,8 @@ export default [
         customElements: "readonly",
         Prism: "readonly",
         ResizeObserver: "readonly",
-        PointerEvent: "readonly"
+        PointerEvent: "readonly",
+        Image: "readonly"
       }
     },
     rules: {

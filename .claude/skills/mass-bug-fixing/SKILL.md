@@ -62,6 +62,8 @@ fizzy card list --board <board_id> --column <column_id> --all
 fizzy card show <card_number>
 ```
 
+**Identify the "working on" column:** When listing columns, find the column that represents in-progress work (typically named "Working on", "In Progress", or similar). Store its column ID — you'll move cards there when agents pick them up. If no obvious column exists, ask the user which column to use.
+
 **GitHub issues:**
 
 ```bash
@@ -83,7 +85,14 @@ Present the batches to the user for confirmation before launching agents.
 
 ### Step 3: Launch parallel worktree agents
 
-For each bug in the batch, launch a parallel agent in its own worktree. Each agent follows the project's mandatory bug-fixing workflow from `AGENTS.md`:
+For each bug in the batch, launch a parallel agent in its own worktree. **Before launching each agent, move the card to the "working on" column and self-assign it** so the board reflects what's actively in progress and who's working on it:
+
+```bash
+fizzy card column <card_number> --column <working_on_column_id>
+fizzy card self-assign <card_number>
+```
+
+Each agent follows the project's mandatory bug-fixing workflow from `AGENTS.md`:
 
 1. **Classify** — Determine if it's a core editing bug (Playwright) or system-level bug (Capybara).
 2. **Reproduce** — Use `/bugs-reproducer` patterns to write a failing test. Confirm it fails before touching source code.
@@ -218,6 +227,8 @@ After completing a batch, review whether any bugs revealed a **family of bugs** 
 | `fizzy card list --board <id> --column <col_id> --all` | List cards in a column | `--all` is **required** — column filtering is client-side |
 | `fizzy card list --board <id> --all` | List all cards on a board | Omit `--column` for all columns |
 | `fizzy card show <number>` | Show a specific card | Works with card numbers, not just IDs |
+| `fizzy card column <number> --column <column_id>` | Move a card to a column | Used to move cards to "working on" |
+| `fizzy card self-assign <number>` | Assign a card to yourself | Used when picking up a bug |
 | `fizzy comment create --card <number> --body "text"` | Comment on a card | Use heredoc for multiline body |
 
 **Gotchas:**
@@ -232,6 +243,13 @@ After completing a batch, review whether any bugs revealed a **family of bugs** 
 User: /mass-bug-fixing --board 52436 --column 913527
 
 Agent: Fetching bugs from Fizzy board 52436, column 913527...
+
+Board columns:
+  913527 — Bugs
+  913528 — Working on
+  913529 — Done
+
+Found "Working on" column (913528) — cards will be moved there when picked up.
 
 Found 12 bugs. Organizing into batches of 5:
 
@@ -251,12 +269,12 @@ Shall I proceed with Batch 1?
 
 User: Yes
 
-Agent: Launching 5 parallel worktree agents...
-  → Agent 1: Card #4601 (worktree: fix-paste-url-blockquote, PORT=3100)
-  → Agent 2: Card #4603 (worktree: fix-trix-bold-conversion, PORT=3200)
-  → Agent 3: Card #4607 (worktree: fix-gallery-collapse-third-image, PORT=3300)
-  → Agent 4: Card #4610 (worktree: fix-toolbar-bold-stale-state, PORT=3400)
-  → Agent 5: Card #4612 (worktree: fix-divider-undo-duplicate, PORT=3500)
+Agent: Moving 5 cards to "Working on", self-assigning, and launching parallel worktree agents...
+  → Card #4601 → Working on ✓ → assigned ✓ → Agent 1 (worktree: fix-paste-url-blockquote, PORT=3100)
+  → Card #4603 → Working on ✓ → assigned ✓ → Agent 2 (worktree: fix-trix-bold-conversion, PORT=3200)
+  → Card #4607 → Working on ✓ → assigned ✓ → Agent 3 (worktree: fix-gallery-collapse-third-image, PORT=3300)
+  → Card #4610 → Working on ✓ → assigned ✓ → Agent 4 (worktree: fix-toolbar-bold-stale-state, PORT=3400)
+  → Card #4612 → Working on ✓ → assigned ✓ → Agent 5 (worktree: fix-divider-undo-duplicate, PORT=3500)
 
 [agents work in parallel...]
 

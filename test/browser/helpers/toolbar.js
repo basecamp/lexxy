@@ -8,21 +8,15 @@ export async function openFormatDropdown(page) {
   })
 }
 
-export async function clickFormatButton(page, command) {
-  await openFormatDropdown(page)
-  await page.locator(`[data-command='${command}']`).click()
-}
+const FORMAT_DROPDOWN_COMMANDS = new Set([
+  "setFormatParagraph", "setFormatHeadingLarge", "setFormatHeadingMedium",
+  "setFormatHeadingSmall", "strikethrough", "underline", "clearFormatting"
+])
 
-export async function openListsDropdown(page) {
-  await page.evaluate(() => {
-    const details = document.querySelector("summary[name='lists']").closest("details")
-    details.open = true
-    details.dispatchEvent(new Event("toggle"))
-  })
-}
-
-export async function clickListsButton(page, command) {
-  await openListsDropdown(page)
+export async function clickToolbarButton(page, command) {
+  if (FORMAT_DROPDOWN_COMMANDS.has(command)) {
+    await openFormatDropdown(page)
+  }
   await page.locator(`[data-command='${command}']`).click()
 }
 

@@ -1,12 +1,14 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $isElementNode, $isLineBreakNode, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
+import { $getNearestNodeOfType } from "@lexical/utils"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
+import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transformer"
 import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_tag_handler"
 import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 
@@ -17,11 +19,14 @@ import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
 import { isAttachmentSpacerTextNode } from "../helpers/lexical_helper"
 import { sanitize } from "../helpers/sanitization_helper"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
+import { BrowserAdapter } from "../editor/adapters/browser_adapter"
+import { getHighlightStyles } from "../helpers/format_helper"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { exportTextNodeDOM } from "../helpers/text_node_export_helper"
@@ -42,6 +47,9 @@ export class LexicalEditorElement extends HTMLElement {
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
+  #editorInitializedRafId = null
+  #listeners = new ListenerBin()
+  #disposables = []
 
   constructor() {
     super()
@@ -50,20 +58,29 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   connectedCallback() {
-    this.id ??= generateDomId("lexxy-editor")
+    this.id ||= generateDomId("lexxy-editor")
     this.config = new Configuration(this)
     this.extensions = new Extensions(this)
 
     this.editor = this.#createEditor()
+    this.#disposables.push(this.editor)
+    this.#disposables.push(this.#listeners)
 
     this.contents = new Contents(this)
-    this.selection = new Selection(this)
-    this.clipboard = new Clipboard(this)
+    this.#disposables.push(this.contents)
 
-    CommandDispatcher.configureFor(this)
+    this.selection = new Selection(this)
+    this.#disposables.push(this.selection)
+
+    this.clipboard = new Clipboard(this)
+    this.adapter = new BrowserAdapter()
+
+    const commandDispatcher = CommandDispatcher.configureFor(this)
+    this.#disposables.push(commandDispatcher)
+
     this.#initialize()
 
-    requestAnimationFrame(() => dispatch(this, "lexxy:initialize"))
+    this.#scheduleEditorInitializedDispatch()
     this.toggleAttribute("connected", true)
 
     this.#handleAutofocus()
@@ -72,6 +89,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   disconnectedCallback() {
+    this.#cancelEditorInitializedDispatch()
     this.valueBeforeDisconnect = this.value
     this.#reset() // Prevent hangs with Safari when morphing
   }
@@ -113,7 +131,7 @@ export class LexicalEditorElement extends HTMLElement {
   get toolbarElement() {
     if (!this.#hasToolbar) return null
 
-    this.toolbar = this.toolbar || this.#findOrCreateDefaultToolbar()
+    this.toolbar ??= this.#findOrCreateDefaultToolbar()
     return this.toolbar
   }
 
@@ -166,6 +184,32 @@ export class LexicalEditorElement extends HTMLElement {
 
   get supportsRichText() {
     return this.config.get("richText")
+  }
+
+  registerAdapter(adapter) {
+    this.adapter = adapter
+
+    if (!this.editor) return
+
+    this.#cancelEditorInitializedDispatch()
+    this.#dispatchEditorInitialized()
+    this.#dispatchAttributesChange()
+  }
+
+  freezeSelection() {
+    this.adapter.freeze()
+  }
+
+  thawSelection() {
+    this.adapter.thaw()
+  }
+
+  dispatchAttributesChange() {
+    this.#dispatchAttributesChange()
+  }
+
+  dispatchEditorInitialized() {
+    this.#dispatchEditorInitialized()
   }
 
   // TODO: Deprecate `single-line` attribute
@@ -249,6 +293,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #createEditor() {
     this.editorContentElement ||= this.#createEditorContentElement()
+    this.appendChild(this.editorContentElement)
 
     const editor = buildEditorFromExtensions({
       name: "lexxy/core",
@@ -291,6 +336,7 @@ export class LexicalEditorElement extends HTMLElement {
     const editorContentElement = createElement("div", {
       classList: "lexxy-editor__content",
       contenteditable: true,
+      autocapitalize: "none",
       role: "textbox",
       "aria-multiline": true,
       "aria-label": this.#labelText,
@@ -298,7 +344,6 @@ export class LexicalEditorElement extends HTMLElement {
     })
     editorContentElement.id = `${this.id}-content`
     this.#ariaAttributes.forEach(attribute => editorContentElement.setAttribute(attribute.name, attribute.value))
-    this.appendChild(editorContentElement)
 
     if (this.getAttribute("tabindex")) {
       editorContentElement.setAttribute("tabindex", this.getAttribute("tabindex"))
@@ -340,7 +385,9 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #resetBeforeTurboCaches() {
-    document.addEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
+    this.#listeners.track(
+      registerEventListener(document, "turbo:before-cache", this.#handleTurboBeforeCache)
+    )
   }
 
   #handleTurboBeforeCache = (event) => {
@@ -348,11 +395,12 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #synchronizeWithChanges() {
-    this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
       this.#clearCachedValues()
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
       this.#setValidity()
+      this.#dispatchAttributesChange()
     }))
   }
 
@@ -361,49 +409,50 @@ export class LexicalEditorElement extends HTMLElement {
     this.cachedStringValue = null
   }
 
-  #addUnregisterHandler(handler) {
-    this.unregisterHandlers = this.unregisterHandlers || []
-    this.unregisterHandlers.push(handler)
-  }
-
-  #unregisterHandlers() {
-    this.unregisterHandlers?.forEach((handler) => {
-      handler()
-    })
-    this.unregisterHandlers = null
-  }
-
   #registerComponents() {
+    const registered = []
+
     if (this.supportsRichText) {
-      registerRichText(this.editor)
-      registerList(this.editor)
+      registered.push(
+        registerRichText(this.editor),
+        registerList(this.editor)
+      )
       this.#registerTableComponents()
       this.#registerCodeHiglightingComponents()
       if (this.supportsMarkdown) {
-        registerMarkdownShortcuts(this.editor, TRANSFORMERS)
-        registerMarkdownLeadingTagHandler(this.editor, TRANSFORMERS)
+        const transformers = [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ]
+        registered.push(
+          registerMarkdownShortcuts(this.editor, transformers),
+          registerMarkdownLeadingTagHandler(this.editor, transformers)
+        )
       }
     } else {
-      registerPlainText(this.editor)
+      registered.push(registerPlainText(this.editor))
     }
     this.historyState = createEmptyHistoryState()
-    registerHistory(this.editor, this.historyState, 20)
+    registered.push(registerHistory(this.editor, this.historyState, 20))
+
+    this.#listeners.track(...registered)
   }
 
   #registerTableComponents() {
-    this.tableTools = createElement("lexxy-table-tools")
-    this.append(this.tableTools)
+    let tableTools = this.querySelector("lexxy-table-tools")
+    tableTools ??= createElement("lexxy-table-tools")
+    this.append(tableTools)
+    this.#disposables.push(tableTools)
   }
 
   #registerCodeHiglightingComponents() {
     registerCodeHighlighting(this.editor)
-    this.codeLanguagePicker = createElement("lexxy-code-language-picker")
-    this.append(this.codeLanguagePicker)
+    let codeLanguagePicker = this.querySelector("lexxy-code-language-picker")
+    codeLanguagePicker ??= createElement("lexxy-code-language-picker")
+    this.append(codeLanguagePicker)
+    this.#disposables.push(codeLanguagePicker)
   }
 
   #handleEnter() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.editor.registerCommand(
+    this.#listeners.track(this.editor.registerCommand(
       KEY_ENTER_COMMAND,
       (event) => {
         // Prevent CTRL+ENTER
@@ -421,16 +470,19 @@ export class LexicalEditorElement extends HTMLElement {
         return false
       },
       COMMAND_PRIORITY_NORMAL
-    )
+    ))
   }
 
   #registerFocusEvents() {
-    this.addEventListener("focusin", this.#handleFocusIn)
-    this.addEventListener("focusout", this.#handleFocusOut)
+    this.#listeners.track(
+      registerEventListener(this, "focusin", this.#handleFocusIn),
+      registerEventListener(this, "focusout", this.#handleFocusOut)
+    )
   }
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
+      this.#dispatchAttributesChange()
       dispatch(this, "lexxy:focus")
       this.currentlyFocused = true
     }
@@ -465,7 +517,7 @@ export class LexicalEditorElement extends HTMLElement {
   #attachDebugHooks() {
     if (!LexicalEditorElement.debug) return
 
-    this.#addUnregisterHandler(this.editor.registerUpdateListener(({ editorState }) => {
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
         console.debug("HTML: ", this.value, "String:", this.toString())
         console.debug("empty", this.isEmpty, "blank", this.isBlank)
@@ -476,6 +528,10 @@ export class LexicalEditorElement extends HTMLElement {
   #attachToolbar() {
     if (this.#hasToolbar) {
       this.toolbarElement.setEditor(this)
+      if (typeof this.toolbarElement.dispose === "function") {
+        this.#disposables.push(this.toolbarElement)
+      }
+
       this.extensions.initializeToolbars()
     }
   }
@@ -485,7 +541,7 @@ export class LexicalEditorElement extends HTMLElement {
     if (typeof toolbarConfig === "string") {
       return document.getElementById(toolbarConfig)
     } else {
-      return this.#createDefaultToolbar()
+      return this.querySelector("lexxy-toolbar") ?? this.#createDefaultToolbar()
     }
   }
 
@@ -523,35 +579,125 @@ export class LexicalEditorElement extends HTMLElement {
     return tags.filter(tag => !tag.startsWith("#"))
   }
 
+  #dispatchAttributesChange() {
+    let attributes = null
+    let linkHref = null
+    let highlight = null
+    let headingTag = null
+
+    this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection)) return
+
+      const format = this.selection.getFormat()
+      if (Object.keys(format).length === 0) return
+
+      const anchorNode = selection.anchor.getNode()
+      const linkNode = $getNearestNodeOfType(anchorNode, LinkNode)
+
+      attributes = {
+        bold: { active: format.isBold, enabled: true },
+        italic: { active: format.isItalic, enabled: true },
+        strikethrough: { active: format.isStrikethrough, enabled: true },
+        code: { active: format.isInCode, enabled: true },
+        highlight: { active: format.isHighlight, enabled: true },
+        link: { active: format.isInLink, enabled: true },
+        quote: { active: format.isInQuote, enabled: true },
+        heading: { active: format.isInHeading, enabled: true },
+        "unordered-list": { active: format.isInList && format.listType === "bullet", enabled: true },
+        "ordered-list": { active: format.isInList && format.listType === "number", enabled: true },
+        undo: { active: false, enabled: this.historyState?.undoStack.length > 0 },
+        redo: { active: false, enabled: this.historyState?.redoStack.length > 0 }
+      }
+
+      linkHref = linkNode ? linkNode.getURL() : null
+      highlight = format.isHighlight ? getHighlightStyles(selection) : null
+      headingTag = format.headingTag ?? null
+    })
+
+    if (attributes) {
+      this.adapter.dispatchAttributesChange(attributes, linkHref, highlight, headingTag)
+    }
+  }
+
+  #dispatchEditorInitialized() {
+    if (!this.adapter) return
+
+    this.adapter.dispatchEditorInitialized({
+      highlightColors: this.#resolvedHighlightColors,
+      headingFormats: this.#supportedHeadingFormats
+    })
+  }
+
+  #scheduleEditorInitializedDispatch() {
+    this.#cancelEditorInitializedDispatch()
+    this.#editorInitializedRafId = requestAnimationFrame(() => {
+      this.#editorInitializedRafId = null
+      if (!this.isConnected || !this.adapter) return
+
+      dispatch(this, "lexxy:initialize")
+      this.#dispatchEditorInitialized()
+    })
+  }
+
+  #cancelEditorInitializedDispatch() {
+    if (this.#editorInitializedRafId == null) return
+
+    cancelAnimationFrame(this.#editorInitializedRafId)
+    this.#editorInitializedRafId = null
+  }
+
+  get #resolvedHighlightColors() {
+    const buttons = this.config.get("highlight.buttons")
+    if (!buttons) return null
+
+    const colors = this.#resolveColors("color", buttons.color || [])
+    const backgroundColors = this.#resolveColors("background-color", buttons["background-color"] || [])
+    return { colors, backgroundColors }
+  }
+
+  get #supportedHeadingFormats() {
+    if (!this.supportsRichText) return []
+
+    return [
+      { label: "Normal", command: "setFormatParagraph", tag: null },
+      { label: "Large heading", command: "setFormatHeadingLarge", tag: "h2" },
+      { label: "Medium heading", command: "setFormatHeadingMedium", tag: "h3" },
+      { label: "Small heading", command: "setFormatHeadingSmall", tag: "h4" },
+    ]
+  }
+
+  #resolveColors(property, cssValues) {
+    const resolver = document.createElement("span")
+    resolver.style.display = "none"
+    this.appendChild(resolver)
+
+    const resolved = cssValues.map(cssValue => {
+      resolver.style.setProperty(property, cssValue)
+      const value = window.getComputedStyle(resolver).getPropertyValue(property)
+      resolver.style.removeProperty(property)
+      return { name: cssValue, value }
+    })
+
+    resolver.remove()
+    return resolved
+  }
+
   #reset() {
-    this.#unregisterHandlers()
+    this.#cancelEditorInitializedDispatch()
+    this.#dispose()
+    this.editorContentElement?.remove()
+    this.editorContentElement = null
 
-    if (this.editorContentElement) {
-      this.editorContentElement.remove()
-      this.editorContentElement = null
+    // Prevents issues with turbo morphing receiving an empty <lexxy-editor> which wipes
+    // out the DOM for the tools, and the old toolbar reference will cause issues
+    this.toolbar = null
+  }
+
+  #dispose() {
+    while (this.#disposables.length) {
+      this.#disposables.pop().dispose()
     }
-
-    this.contents = null
-    this.editor = null
-
-    if (this.toolbar) {
-      if (!this.getAttribute("toolbar")) { this.toolbar.remove() }
-      this.toolbar = null
-    }
-
-    if (this.codeLanguagePicker) {
-      this.codeLanguagePicker.remove()
-      this.codeLanguagePicker = null
-    }
-
-    if (this.tableHandler) {
-      this.tableHandler.remove()
-      this.tableHandler = null
-    }
-
-    this.selection = null
-
-    document.removeEventListener("turbo:before-cache", this.#handleTurboBeforeCache)
   }
 
   #reconnect() {

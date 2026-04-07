@@ -67,7 +67,7 @@ test.describe("Attachment Drag and Drop", () => {
 
     test("drag a file attachment above a text paragraph", async ({ page, editor }) => {
       await editor.send("Hello world", "Enter")
-      await editor.uploadFile("test/fixtures/files/dummy.pdf")
+      await editor.uploadFile("test/fixtures/files/dummy.pdf", { via: "file" })
       await waitForUploadsComplete(page)
 
       await simulateDrag(page, "figure.attachment--file", "p:not(.provisional-paragraph)", "before")

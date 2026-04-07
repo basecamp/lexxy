@@ -1,33 +1,32 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $isLinkNode } from "@lexical/link"
 import { ToolbarDropdown } from "../toolbar_dropdown"
+import { registerEventListener } from "../../helpers/listener_helper"
 
 export class LinkDropdown extends ToolbarDropdown {
   connectedCallback() {
     super.connectedCallback()
     this.input = this.querySelector("input")
 
-    this.#registerHandlers()
+    this.track(
+      registerEventListener(this.container, "toggle", this.#handleToggle),
+      registerEventListener(this, "submit", this.#handleSubmit),
+      registerEventListener(this.querySelector("[value='unlink']"), "click", this.#handleUnlink)
+    )
   }
 
-  #registerHandlers() {
-    this.container.addEventListener("toggle", this.#handleToggle.bind(this))
-    this.addEventListener("submit", this.#handleSubmit.bind(this))
-    this.querySelector("[value='unlink']").addEventListener("click", this.#handleUnlink.bind(this))
-  }
-
-  #handleToggle({ newState }) {
+  #handleToggle = ({ newState }) => {
     this.input.value = this.#selectedLinkUrl
     this.input.required = newState === "open"
   }
 
-  #handleSubmit(event) {
+  #handleSubmit = (event) => {
     const command = event.submitter?.value
     this.editor.dispatchCommand(command, this.input.value)
     this.close()
   }
 
-  #handleUnlink() {
+  #handleUnlink = () => {
     this.editor.dispatchCommand("unlink")
     this.close()
   }

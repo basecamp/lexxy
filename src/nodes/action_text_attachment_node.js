@@ -1,5 +1,6 @@
 import Lexxy from "../config/lexxy"
-import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
+import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG, SKIP_DOM_SELECTION_TAG } from "lexical"
+import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
 import { parseBoolean } from "../helpers/string_helper"
@@ -79,12 +80,13 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return Lexxy.global.get("attachmentTagName")
   }
 
-  constructor({ tagName, sgid, src, previewable, altText, caption, contentType, fileName, fileSize, width, height }, key) {
+  constructor({ tagName, sgid, src, previewSrc, previewable, altText, caption, contentType, fileName, fileSize, width, height, uploadError }, key) {
     super(key)
 
     this.tagName = tagName || ActionTextAttachmentNode.TAG_NAME
     this.sgid = sgid
     this.src = src
+    this.previewSrc = previewSrc
     this.previewable = parseBoolean(previewable)
     this.altText = altText || ""
     this.caption = caption || ""
@@ -93,11 +95,14 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     this.fileSize = fileSize
     this.width = width
     this.height = height
+    this.uploadError = uploadError
 
     this.editor = $getEditor()
   }
 
   createDOM() {
+    if (this.uploadError) return this.createDOMForError()
+
     const figure = this.createAttachmentFigure()
 
     if (this.isPreviewableAttachment) {
@@ -111,7 +116,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return figure
   }
 
-  updateDOM(_prevNode, dom) {
+  updateDOM(prevNode, dom) {
+    if (this.uploadError !== prevNode.uploadError) return true
+
     const caption = dom.querySelector("figcaption textarea")
     if (caption && this.caption) {
       caption.value = this.caption
@@ -168,8 +175,15 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return null
   }
 
-  createAttachmentFigure() {
-    const figure = createAttachmentFigure(this.contentType, this.isPreviewableAttachment, this.fileName)
+  createDOMForError() {
+    const figure = this.createAttachmentFigure()
+    figure.classList.add("attachment--error")
+    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.fileName || "file"}` }))
+    return figure
+  }
+
+  createAttachmentFigure(previewable = this.isPreviewableAttachment) {
+    const figure = createAttachmentFigure(this.contentType, previewable, this.fileName)
     figure.draggable = true
     figure.dataset.lexicalNodeKey = this.__key
 
@@ -188,15 +202,62 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #createDOMForImage(options = {}) {
-    const img = createElement("img", { src: this.src, draggable: false, alt: this.altText, ...this.#imageDimensions, ...options })
+    const initialSrc = this.previewSrc || this.src
+    const img = createElement("img", { src: initialSrc, draggable: false, alt: this.altText, ...this.#imageDimensions, ...options })
 
     if (this.previewable && !this.isPreviewableImage) {
       img.onerror = () => this.#swapPreviewToFileDOM(img)
     }
 
+    if (this.previewSrc) {
+      this.#preloadAndSwapSrc(img)
+    }
+
     const container = createElement("div", { className: "attachment__container" })
     container.appendChild(img)
     return container
+  }
+
+  #preloadAndSwapSrc(img) {
+    const previewSrc = this.previewSrc
+    const serverImage = new Image()
+
+    serverImage.onload = () => this.#handleImageLoaded(img, previewSrc)
+    serverImage.onerror = () => this.#handleImageLoadError(previewSrc)
+    serverImage.src = this.src
+  }
+
+  #handleImageLoaded(img, previewSrc) {
+    img.src = this.src
+    this.editor.update(() => {
+      if (this.isAttached()) this.getWritable().previewSrc = null
+    }, { tag: this.#backgroundUpdateTags })
+    this.#revokePreviewSrc(previewSrc)
+  }
+
+  #handleImageLoadError(previewSrc) {
+    this.editor.update(() => {
+      if (this.isAttached()) {
+        this.getWritable().previewSrc = null
+        this.getWritable().uploadError = true
+      }
+    }, { tag: this.#backgroundUpdateTags })
+    this.#revokePreviewSrc(previewSrc)
+  }
+
+  get #backgroundUpdateTags() {
+    const rootElement = this.editor.getRootElement()
+    const editorHasFocus = rootElement !== null && rootElement.contains(document.activeElement)
+
+    if (editorHasFocus) {
+      return SILENT_UPDATE_TAGS
+    } else {
+      return [ ...SILENT_UPDATE_TAGS, SKIP_DOM_SELECTION_TAG ]
+    }
+  }
+
+  #revokePreviewSrc(previewSrc) {
+    if (previewSrc?.startsWith("blob:")) URL.revokeObjectURL(previewSrc)
   }
 
   #swapPreviewToFileDOM(img) {

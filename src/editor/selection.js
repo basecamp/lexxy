@@ -14,8 +14,11 @@ import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } f
 import { LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
 export default class Selection {
+  #listeners = new ListenerBin()
+
   constructor(editorElement) {
     this.editorElement = editorElement
     this.editorContentElement = editorElement.editorContentElement
@@ -272,6 +275,15 @@ export default class Selection {
     return this.#findPreviousSiblingUp(anchorNode)
   }
 
+  dispose() {
+    this.editorElement = null
+    this.editorContentElement = null
+    this.editor = null
+    this.previouslySelectedKeys = null
+
+    this.#listeners.dispose()
+  }
+
   // When all inline code text is deleted, Lexical's selection retains the stale
   // code format flag. Verify the flag is backed by actual code-formatted content:
   // a code block ancestor or a text node that carries the code format.
@@ -287,7 +299,7 @@ export default class Selection {
   // detects that stale state and clears it so newly typed text won't be
   // code-formatted.
   #clearStaleInlineCodeFormat() {
-    this.editor.registerUpdateListener(({ editorState, tags }) => {
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState, tags }) => {
       if (tags.has("history-merge") || tags.has("skip-dom-selection")) return
 
       let isStale = false
@@ -316,7 +328,7 @@ export default class Selection {
           })
         }, 0)
       }
-    })
+    }))
   }
 
   get #currentlySelectedKeys() {
@@ -335,29 +347,32 @@ export default class Selection {
   }
 
   #processSelectionChangeCommands() {
-    this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, this.#selectPreviousNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#selectNextNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
+    this.#listeners.track(
+      this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, this.#selectPreviousNode.bind(this), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#selectNextNode.bind(this), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousTopLevelNode.bind(this), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextTopLevelNode.bind(this), COMMAND_PRIORITY_LOW),
 
-    this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW)
+      this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW),
 
-    this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
-      this.current = $getSelection()
-    }, COMMAND_PRIORITY_LOW)
+      this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
+        this.current = $getSelection()
+      }, COMMAND_PRIORITY_LOW)
+    )
   }
 
   #listenForNodeSelections() {
-    this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
+    this.#listeners.track(this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
       if (!isDOMNode(target)) return false
 
       const targetNode = $getNearestNodeFromDOMNode(target)
       return $isDecoratorNode(targetNode) && this.#selectInLexical(targetNode)
-    }, COMMAND_PRIORITY_LOW)
+    }, COMMAND_PRIORITY_LOW))
 
-    this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
-      this.#selectOrAppendNextLine()
-    })
+    const rootElement = this.editor.getRootElement()
+    this.#listeners.track(
+      registerEventListener(rootElement, "lexxy:internal:move-to-next-line", () => this.#selectOrAppendNextLine())
+    )
   }
 
   #containEditorFocus() {

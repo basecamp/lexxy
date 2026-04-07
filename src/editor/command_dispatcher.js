@@ -16,10 +16,12 @@ import {
   UNDO_COMMAND
 } from "lexical"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
+import { CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { REMOVE_HIGHLIGHT_COMMAND, TOGGLE_HIGHLIGHT_COMMAND } from "../extensions/highlight_extension"
@@ -37,12 +39,15 @@ const COMMANDS = [
   "setFormatHeadingMedium",
   "setFormatHeadingSmall",
   "setFormatParagraph",
+  "clearFormatting",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
   "insertCodeBlock",
+  "setCodeLanguage",
   "insertHorizontalDivider",
-  "uploadAttachments",
+  "uploadImage",
+  "uploadFile",
 
   "insertTable",
 
@@ -52,9 +57,10 @@ const COMMANDS = [
 
 export class CommandDispatcher {
   #selectionBeforeDrag = null
+  #listeners = new ListenerBin()
 
   static configureFor(editorElement) {
-    new CommandDispatcher(editorElement)
+    return new CommandDispatcher(editorElement)
   }
 
   constructor(editorElement) {
@@ -114,7 +120,14 @@ export class CommandDispatcher {
   }
 
   dispatchUnlink() {
-    this.#toggleLink(null)
+    this.editor.update(() => {
+      // Let adapters signal whether unlink should target a frozen link key.
+      if (this.editorElement.adapter.unlinkFrozenNode?.()) {
+        return
+      }
+
+      $toggleLink(null)
+    })
   }
 
   dispatchInsertUnorderedList() {
@@ -205,6 +218,17 @@ export class CommandDispatcher {
     }
   }
 
+  dispatchSetCodeLanguage(language) {
+    this.editor.update(() => {
+      if (!this.selection.isInsideCodeBlock) return
+
+      const codeNode = this.selection.nearestNodeOfType(CodeNode)
+      if (!codeNode) return
+
+      codeNode.setLanguage(language)
+    })
+  }
+
   dispatchInsertHorizontalDivider() {
     this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
     this.editor.focus()
@@ -226,15 +250,31 @@ export class CommandDispatcher {
     this.contents.applyParagraphFormat()
   }
 
-  dispatchUploadAttachments() {
-    const input = createElement("input", {
+  dispatchClearFormatting() {
+    this.contents.clearFormatting()
+  }
+
+  dispatchUploadImage() {
+    this.#dispatchUploadAttachment("image/*,video/*")
+  }
+
+  dispatchUploadFile() {
+    this.#dispatchUploadAttachment()
+  }
+
+  #dispatchUploadAttachment(accept = null) {
+    const attributes = {
       type: "file",
       multiple: true,
       style: "display: none;",
       onchange: ({ target: { files } }) => {
         this.contents.uploadFiles(files, { selectLast: true })
       }
-    })
+    }
+
+    if (accept) attributes.accept = accept
+
+    const input = createElement("input", attributes)
 
     // Append and remove to make testable
     this.editorElement.appendChild(input)
@@ -254,6 +294,10 @@ export class CommandDispatcher {
     this.editor.dispatchCommand(REDO_COMMAND, undefined)
   }
 
+  dispose() {
+    this.#listeners.dispose()
+  }
+
   #registerCommands() {
     for (const command of COMMANDS) {
       const methodName = `dispatch${capitalize(command)}`
@@ -264,12 +308,12 @@ export class CommandDispatcher {
   }
 
   #registerCommandHandler(command, priority, handler) {
-    this.editor.registerCommand(command, handler, priority)
+    this.#listeners.track(this.editor.registerCommand(command, handler, priority))
   }
 
   #registerKeyboardCommands() {
-    this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#handleArrowRightKey.bind(this), COMMAND_PRIORITY_NORMAL)
-    this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleTabKey.bind(this), COMMAND_PRIORITY_NORMAL)
+    this.#registerCommandHandler(KEY_ARROW_RIGHT_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleArrowRightKey.bind(this))
+    this.#registerCommandHandler(KEY_TAB_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleTabKey.bind(this))
   }
 
   #handleArrowRightKey(event) {
@@ -289,10 +333,13 @@ export class CommandDispatcher {
   #registerDragAndDropHandlers() {
     if (this.editorElement.supportsAttachments) {
       this.dragCounter = 0
-      this.editor.getRootElement().addEventListener("dragover", this.#handleDragOver.bind(this))
-      this.editor.getRootElement().addEventListener("drop", this.#handleDrop.bind(this))
-      this.editor.getRootElement().addEventListener("dragenter", this.#handleDragEnter.bind(this))
-      this.editor.getRootElement().addEventListener("dragleave", this.#handleDragLeave.bind(this))
+      const root = this.editor.getRootElement()
+      this.#listeners.track(
+        registerEventListener(root, "dragover", this.#handleDragOver.bind(this)),
+        registerEventListener(root, "drop", this.#handleDrop.bind(this)),
+        registerEventListener(root, "dragenter", this.#handleDragEnter.bind(this)),
+        registerEventListener(root, "dragleave", this.#handleDragLeave.bind(this))
+      )
     }
   }
 
@@ -384,16 +431,6 @@ export class CommandDispatcher {
     return $isRangeSelection(selection) && selection.isCollapsed()
   }
 
-  // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
-  #toggleLink(url) {
-    this.editor.update(() => {
-      if (url === null) {
-        $toggleLink(null)
-      } else {
-        $toggleLink(url)
-      }
-    })
-  }
 }
 
 function capitalize(str) {

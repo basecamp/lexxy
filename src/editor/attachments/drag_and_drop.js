@@ -11,6 +11,7 @@ import {
 import { $isListItemNode, $isListNode } from "@lexical/list"
 import { $isActionTextAttachmentNode } from "../../nodes/action_text_attachment_node"
 import { $findOrCreateGalleryForImage } from "../../nodes/image_gallery_node"
+import { ListenerBin } from "../../helpers/listener_helper"
 
 const MIME_TYPE = "application/x-lexxy-node-key"
 
@@ -19,21 +20,21 @@ export class AttachmentDragAndDrop {
   #draggedNodeKey = null
   #rafId = null
   #draggingRafId = null
-  #cleanupFns = []
+  #listeners = new ListenerBin()
 
   constructor(editor) {
     this.#editor = editor
 
     // Register Lexical commands at HIGH priority to intercept before the
     // base @lexical/rich-text handlers (which return true and consume the events).
-    this.#cleanupFns.push(
+    this.#listeners.track(
       editor.registerCommand(DRAGSTART_COMMAND, (event) => this.#handleDragStart(event), COMMAND_PRIORITY_HIGH),
       editor.registerCommand(DROP_COMMAND, (event) => this.#handleDrop(event), COMMAND_PRIORITY_HIGH),
     )
 
     // Use a root listener to register DOM-level dragover/dragend handlers
     // (these events need throttled rAF handling that works better as DOM listeners).
-    const unregister = editor.registerRootListener((root, prevRoot) => {
+    this.#listeners.track(editor.registerRootListener((root, prevRoot) => {
       if (prevRoot) {
         prevRoot.removeEventListener("dragover", this.#onDragOver)
         prevRoot.removeEventListener("dragend", this.#onDragEnd)
@@ -42,14 +43,12 @@ export class AttachmentDragAndDrop {
         root.addEventListener("dragover", this.#onDragOver)
         root.addEventListener("dragend", this.#onDragEnd)
       }
-    })
-    this.#cleanupFns.push(unregister)
+    }))
   }
 
   destroy() {
     this.#cleanup()
-    for (const fn of this.#cleanupFns) fn()
-    this.#cleanupFns = []
+    this.#listeners.dispose()
   }
 
   // -- Event handlers --------------------------------------------------------

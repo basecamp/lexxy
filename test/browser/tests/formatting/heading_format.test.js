@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
-import { clickFormatButton } from "../../helpers/toolbar.js"
+import { clickToolbarButton } from "../../helpers/toolbar.js"
 
 test.describe("Heading format", () => {
   test.beforeEach(async ({ page }) => {
@@ -14,7 +14,7 @@ test.describe("Heading format", () => {
     await editor.setValue("<p>Lexxy</p>")
     await editor.select("Lexxy")
 
-    await clickFormatButton(page, "setFormatHeadingLarge")
+    await clickToolbarButton(page, "setFormatHeadingLarge")
     await assertEditorHtml(editor, "<h2>Lexxy</h2>")
   })
 
@@ -22,7 +22,7 @@ test.describe("Heading format", () => {
     await editor.setValue("<p>Lexxy</p>")
     await editor.select("Lexxy")
 
-    await clickFormatButton(page, "setFormatHeadingMedium")
+    await clickToolbarButton(page, "setFormatHeadingMedium")
     await assertEditorHtml(editor, "<h3>Lexxy</h3>")
   })
 
@@ -30,7 +30,7 @@ test.describe("Heading format", () => {
     await editor.setValue("<p>Lexxy</p>")
     await editor.select("Lexxy")
 
-    await clickFormatButton(page, "setFormatHeadingSmall")
+    await clickToolbarButton(page, "setFormatHeadingSmall")
     await assertEditorHtml(editor, "<h4>Lexxy</h4>")
   })
 
@@ -38,7 +38,7 @@ test.describe("Heading format", () => {
     await editor.setValue("<h2>Lexxy</h2>")
     await editor.select("Lexxy")
 
-    await clickFormatButton(page, "setFormatParagraph")
+    await clickToolbarButton(page, "setFormatParagraph")
     await assertEditorHtml(editor, "<p>Lexxy</p>")
   })
 
@@ -46,13 +46,13 @@ test.describe("Heading format", () => {
     await editor.setValue("<p>Lexxy</p>")
     await editor.select("Lexxy")
 
-    await clickFormatButton(page, "setFormatHeadingLarge")
+    await clickToolbarButton(page, "setFormatHeadingLarge")
     await editor.select("Lexxy")
-    await clickFormatButton(page, "insertQuoteBlock")
+    await clickToolbarButton(page, "insertQuoteBlock")
     await assertEditorHtml(editor, "<blockquote><h2>Lexxy</h2></blockquote>")
 
     await editor.select("Lexxy")
-    await clickFormatButton(page, "setFormatParagraph")
+    await clickToolbarButton(page, "setFormatParagraph")
     await assertEditorHtml(editor, "<blockquote><p>Lexxy</p></blockquote>")
   })
 
@@ -61,11 +61,11 @@ test.describe("Heading format", () => {
     await editor.select("Lexxy")
 
     // Apply large heading, then wrap in blockquote
-    await clickFormatButton(page, "setFormatHeadingLarge")
+    await clickToolbarButton(page, "setFormatHeadingLarge")
     await assertEditorHtml(editor, "<h2>Lexxy</h2>")
 
     await editor.select("Lexxy")
-    await clickFormatButton(page, "insertQuoteBlock")
+    await clickToolbarButton(page, "insertQuoteBlock")
     await assertEditorHtml(editor, "<blockquote><h2>Lexxy</h2></blockquote>")
 
     // Click into the heading to place cursor and trigger button state update

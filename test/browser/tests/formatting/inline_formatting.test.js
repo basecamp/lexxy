@@ -3,7 +3,7 @@ import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
 import {
   HELLO_EVERYONE,
-  clickFormatButton,
+  clickToolbarButton,
   placeCaretAtEndOfInlineCode,
 } from "../../helpers/toolbar.js"
 
@@ -31,7 +31,7 @@ test.describe("Inline formatting", () => {
   test("strikethrough", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
-    await clickFormatButton(page, "strikethrough")
+    await clickToolbarButton(page, "strikethrough")
     await assertEditorHtml(editor, "<p>Hello <s>everyone</s></p>")
   })
 

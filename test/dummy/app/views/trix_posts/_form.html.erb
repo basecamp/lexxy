@@ -11,7 +11,7 @@
   </div>
 
   <div class="body">
-    <%= hidden_field_tag "post[body]", post.body.to_trix_html, id: "trix_post_body_input" %>
+    <%= hidden_field_tag "post[body]", to_trix_html(post.body), id: "trix_post_body_input" %>
     <trix-editor input="trix_post_body_input"
       data-direct-upload-url="<%= main_app.rails_direct_uploads_url %>"
       data-blob-url-template="<%= main_app.rails_service_blob_url(":signed_id", ":filename") %>"></trix-editor>

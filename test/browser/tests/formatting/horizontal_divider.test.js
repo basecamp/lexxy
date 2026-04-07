@@ -93,3 +93,72 @@ test.describe("Horizontal divider", () => {
     )
   })
 })
+
+test.describe("Horizontal divider markdown shortcut", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await page.waitForSelector("lexxy-toolbar[connected]")
+  })
+
+  test("typing --- then Enter inserts a horizontal divider", async ({ editor }) => {
+    await editor.send("---", "Enter")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("figure.horizontal-divider hr")).toBeVisible()
+    })
+
+    await editor.send("After")
+    await assertEditorHtml(editor, "<hr><p>After</p>")
+  })
+
+  test("typing --- then Space inserts a horizontal divider", async ({ editor }) => {
+    await editor.send("---")
+    await editor.content.press("Space")
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("figure.horizontal-divider hr")).toBeVisible()
+    })
+
+    await editor.send("After")
+    await assertEditorHtml(editor, "<hr><p>After</p>")
+  })
+
+  test("cursor is positioned below the divider after shortcut", async ({ editor }) => {
+    await editor.send("---", "Enter")
+    await editor.send("Text after divider")
+
+    await assertEditorHtml(editor, "<hr><p>Text after divider</p>")
+  })
+
+  test("shortcut with text on previous line", async ({ editor }) => {
+    await editor.send("Before", "Enter")
+    await editor.send("---", "Enter")
+    await editor.send("After")
+
+    await assertEditorHtml(
+      editor,
+      "<p>Before</p><hr><p>After</p>",
+    )
+  })
+
+  test("four or more dashes also trigger the shortcut", async ({ editor }) => {
+    await editor.send("----", "Enter")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("figure.horizontal-divider hr")).toBeVisible()
+    })
+
+    await editor.send("After")
+    await assertEditorHtml(editor, "<hr><p>After</p>")
+  })
+
+  test("two dashes do not trigger the shortcut", async ({ editor }) => {
+    await editor.send("--", "Enter")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("figure.horizontal-divider")).toHaveCount(0)
+    })
+  })
+})
