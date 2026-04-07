@@ -28,6 +28,8 @@ export default class Contents {
     this.editor = null
   }
 
+  get selection() { return this.editorElement.selection }
+
   insertHtml(html, { tag } = {}) {
     this.insertDOM(parseHtml(html), { tag })
   }
@@ -37,9 +39,6 @@ export default class Contents {
 
     this.editor.update(() => {
       if ($hasUpdateTag(PASTE_TAG)) this.#stripTableCellColorStyles(doc)
-
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
 
       const nodes = $generateNodesFromDOM(this.editor, doc)
       if (!this.#insertUploadNodes(nodes)) {
