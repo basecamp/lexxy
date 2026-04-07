@@ -378,6 +378,13 @@ export default class Contents {
     codeNode.remove()
   }
 
+  splitParagraphsAtLineBreaks() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    this.#splitParagraphsAtLineBreaks(selection)
+  }
+
   #splitParagraphsAtLineBreaks(selection) {
     const anchorKey = selection.anchor.getNode().getKey()
     const focusKey = selection.focus.getNode().getKey()

@@ -139,6 +139,7 @@ export class CommandDispatcher {
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "bullet") {
       this.contents.applyParagraphFormat()
     } else {
+      this.contents.splitParagraphsAtLineBreaks()
       this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
     }
   }
@@ -152,6 +153,7 @@ export class CommandDispatcher {
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "number") {
       this.contents.applyParagraphFormat()
     } else {
+      this.contents.splitParagraphsAtLineBreaks()
       this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
     }
   }
