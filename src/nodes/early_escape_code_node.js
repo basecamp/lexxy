@@ -17,6 +17,13 @@ export class EarlyEscapeCodeNode extends CodeNode {
   insertNewAfter(selection, restoreSelection) {
     if (!selection.isCollapsed()) return super.insertNewAfter(selection, restoreSelection)
 
+    if (this.#isCursorAtStart(selection)) {
+      const paragraph = $createParagraphNode()
+      this.insertBefore(paragraph)
+      this.selectStart()
+      return null
+    }
+
     if (this.#isCursorOnEmptyLastLine(selection)) {
       $trimTrailingBlankNodes(this)
 
@@ -26,6 +33,17 @@ export class EarlyEscapeCodeNode extends CodeNode {
     }
 
     return super.insertNewAfter(selection, restoreSelection)
+  }
+
+  #isCursorAtStart(selection) {
+    const { anchor } = selection
+    if (anchor.offset !== 0) return false
+
+    const anchorNode = anchor.getNode()
+    if (anchorNode === this) return true
+
+    const firstChild = this.getFirstChild()
+    return firstChild !== null && anchorNode === firstChild
   }
 
   #isCursorOnEmptyLastLine(selection) {
