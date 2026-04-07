@@ -110,7 +110,12 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       figure.appendChild(this.#createEditableCaption())
     } else {
       figure.appendChild(this.#createDOMForFile())
-      figure.appendChild(this.#createDOMForNotImage())
+
+      if (this.isVideo) {
+        figure.appendChild(this.#createEditableCaption())
+      } else {
+        figure.appendChild(this.#createDOMForNotImage())
+      }
     }
 
     return figure
@@ -199,6 +204,10 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   get isPreviewableImage() {
     return isPreviewableImage(this.contentType)
+  }
+
+  get isVideo() {
+    return this.contentType.startsWith("video/")
   }
 
   #createDOMForImage(options = {}) {
