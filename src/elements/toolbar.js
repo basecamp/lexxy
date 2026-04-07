@@ -178,7 +178,13 @@ export class LexicalToolbarElement extends HTMLElement {
   #monitorSelectionChanges() {
     this.#listeners.track(this.editor.registerUpdateListener(() => {
       this.editor.getEditorState().read(() => {
-        this.#updateButtonStates()
+        try {
+          this.#updateButtonStates()
+        } catch {
+          // Selection may reference nodes removed during a transform (e.g.
+          // code block toggle replacing paragraphs). Swallow the error so
+          // the toolbar recovers on the next update cycle.
+        }
         this.#closeDropdowns()
       })
     }))

@@ -126,7 +126,9 @@ export default class Selection {
     const anchorNode = selection.anchor.getNode()
     if (!anchorNode.getParent()) return {}
 
-    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+    const topLevelElement = anchorNode.getTopLevelElement()
+    if (!topLevelElement) return {}
+
     const listType = getListType(anchorNode)
     const headingNode = this.#getNearestHeadingNode(anchorNode)
 
@@ -518,7 +520,8 @@ export default class Selection {
   }
 
   #getNearestHeadingNode(anchorNode) {
-    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+    const topLevelElement = anchorNode.getTopLevelElement()
+    if (!topLevelElement) return null
 
     let headingNode = $isHeadingNode(topLevelElement) ? topLevelElement : null
     if (!headingNode) {
