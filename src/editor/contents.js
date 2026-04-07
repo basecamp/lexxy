@@ -48,27 +48,10 @@ export default class Contents {
   }
 
   insertAtCursor(...nodes) {
-    let selection = $getSelection() ?? $getRoot().selectEnd()
-    const selectedNodes = selection?.getNodes()
+    const selection  = $getSelection() ?? $getRoot().selectEnd()
+    const inserter = NodeInserter.for(selection)
 
-    if ($isRangeSelection(selection)) {
-      const anchorNode = selection.anchor.getNode()
-      if ($isShadowRoot(anchorNode)) {
-        const paragraph = $createParagraphNode()
-        anchorNode.append(paragraph)
-        selection = paragraph.selectStart()
-      }
-
-      const inserter = NodeInserter.for(selection)
-      inserter.insertNodes(nodes)
-    } else if ($isNodeSelection(selection) && selectedNodes.length > 0) {
-      // Overrides Lexical's default behavior of _removing_ the currently selected nodes
-      // https://github.com/facebook/lexical/blob/v0.38.2/packages/lexical/src/LexicalSelection.ts#L412
-      let lastNode = selectedNodes.at(-1)
-      for (const node of nodes) {
-        lastNode = lastNode.insertAfter(node)
-      }
-    }
+    inserter.insertNodes(nodes)
   }
 
   insertAtCursorEnsuringLineBelow(node) {
@@ -601,6 +584,50 @@ function $isShadowRoot(node) {
 
 class NodeInserter {
   static for(selection) {
-    return selection
+    const INSERTERS = [
+      RangeSelectionNodeInserter,
+      NodeSelectionNodeInserter
+    ]
+    const Inserter = INSERTERS.find(inserter => inserter.handles(selection))
+    return Inserter ? new Inserter(selection) : selection
+  }
+
+  constructor(selection) {
+    this.selection = selection
+  }
+}
+
+class RangeSelectionNodeInserter extends NodeInserter {
+  static handles(selection) {
+    return $isRangeSelection(selection)
+  }
+
+  insertNodes(nodes) {
+    let selection = this.selection
+
+    const anchorNode = selection.anchor.getNode()
+    if ($isShadowRoot(anchorNode)) {
+      const paragraph = $createParagraphNode()
+      anchorNode.append(paragraph)
+      selection = paragraph.selectStart()
+    }
+    selection.insertNodes(nodes)
+  }
+}
+
+class NodeSelectionNodeInserter extends NodeInserter {
+  static handles(selection) {
+    return $isNodeSelection(selection)
+  }
+
+  insertNodes(nodes) {
+    const selectedNodes = this.selection.getNodes()
+
+    // Overrides Lexical's default behavior of _removing_ the currently selected nodes
+    // https://github.com/facebook/lexical/blob/v0.38.2/packages/lexical/src/LexicalSelection.ts#L412
+    let lastNode = selectedNodes.at(-1)
+    for (const node of nodes) {
+      lastNode = lastNode.insertAfter(node)
+    }
   }
 }
