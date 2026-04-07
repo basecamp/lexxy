@@ -1,4 +1,4 @@
-import { $getNodeByKey, $getState, $hasUpdateTag, $setState, COMMAND_PRIORITY_NORMAL, PASTE_TAG, TextNode, createCommand, createState, defineExtension } from "lexical"
+import { $getNodeByKey, $getState, $hasUpdateTag, $isTextNode, $setState, COMMAND_PRIORITY_NORMAL, PASTE_TAG, TextNode, createCommand, createState, defineExtension } from "lexical"
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty, $patchStyleText, getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 import { $createCodeHighlightNode, $createCodeNode, $isCodeHighlightNode, $isCodeNode, CodeHighlightNode, CodeNode } from "@lexical/code"
@@ -273,7 +273,7 @@ function $buildChildRanges(codeNode) {
   let charOffset = 0
 
   for (const child of codeNode.getChildren()) {
-    if ($isCodeHighlightNode(child)) {
+    if ($isCodeHighlightNode(child) || $isTextNode(child)) {
       const text = child.getTextContent()
       childRanges.push({ node: child, start: charOffset, end: charOffset + text.length })
       charOffset += text.length
@@ -284,6 +284,23 @@ function $buildChildRanges(codeNode) {
   }
 
   return childRanges
+}
+
+// Extract highlight ranges from the Lexical node tree of a CodeNode.
+// This mirrors extractHighlightRanges (which works on DOM elements during
+// HTML import) but reads from live CodeHighlightNode children instead.
+function $extractHighlightRangesFromCodeNode(codeNode) {
+  const ranges = []
+  const childRanges = $buildChildRanges(codeNode)
+
+  for (const { node, start, end } of childRanges) {
+    const style = node.getStyle()
+    if (style && hasHighlightStyles(style)) {
+      ranges.push({ start, end, style })
+    }
+  }
+
+  return ranges
 }
 
 function buildCanonicalizers(config) {
@@ -313,15 +330,23 @@ function $toggleSelectionStyles(editor, styles) {
 function $selectionIsInCodeBlock(selection) {
   const nodes = selection.getNodes()
   return nodes.some((node) => {
-    const parent = $isCodeHighlightNode(node) ? node.getParent() : node
-    return $isCodeNode(parent)
+    // A text node inside a code block may be either a CodeHighlightNode
+    // (after retokenization) or a plain TextNode (after splitText or before
+    // the retokenizer has run). Check the parent in both cases.
+    if ($isCodeHighlightNode(node) || $isTextNode(node)) {
+      return $isCodeNode(node.getParent())
+    }
+    return $isCodeNode(node)
   })
 }
 
 function $patchCodeHighlightStyles(editor, selection, patch) {
-  // Capture selection state and node keys before the nested update
+  // Capture selection state and node keys before the nested update.
+  // Accept both CodeHighlightNode and TextNode children of a CodeNode
+  // because splitText creates TextNode instances and the retokenizer
+  // may not have converted them back to CodeHighlightNodes yet.
   const nodeKeys = selection.getNodes()
-    .filter((node) => $isCodeHighlightNode(node))
+    .filter((node) => ($isCodeHighlightNode(node) || $isTextNode(node)) && $isCodeNode(node.getParent()))
     .map((node) => ({
       key: node.getKey(),
       startOffset: $getNodeSelectionOffsets(node, selection)[0],
@@ -335,13 +360,17 @@ function $patchCodeHighlightStyles(editor, selection, patch) {
   // are committed before editor.focus() triggers a second update cycle
   // that would re-run transforms and wipe out the styles.
   editor.update(() => {
+    const affectedCodeNodes = new Set()
+
     for (const { key, startOffset, endOffset, textSize } of nodeKeys) {
       const node = $getNodeByKey(key)
-      if (!node || !$isCodeHighlightNode(node)) continue
+      if (!node) continue
 
       const parent = node.getParent()
       if (!$isCodeNode(parent)) continue
       if (startOffset === endOffset) continue
+
+      affectedCodeNodes.add(parent)
 
       if (startOffset === 0 && endOffset === textSize) {
         $applyStylePatchToNode(node, patch)
@@ -349,6 +378,17 @@ function $patchCodeHighlightStyles(editor, selection, patch) {
         const splitNodes = node.splitText(startOffset, endOffset)
         const targetNode = splitNodes[startOffset === 0 ? 0 : 1]
         $applyStylePatchToNode(targetNode, patch)
+      }
+    }
+
+    // After applying styles, save highlight ranges for each affected CodeNode.
+    // The code retokenizer will replace the styled nodes with fresh unstyled
+    // tokens when transforms run. The pending highlights are picked up by the
+    // CodeNode mutation listener and reapplied after retokenization.
+    for (const codeNode of affectedCodeNodes) {
+      const ranges = $extractHighlightRangesFromCodeNode(codeNode)
+      if (ranges.length > 0) {
+        $getPendingHighlights(editor).set(codeNode.getKey(), ranges)
       }
     }
   }, { skipTransforms: true, discrete: true })
