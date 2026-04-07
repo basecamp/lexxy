@@ -1,0 +1,68 @@
+.main-content {
+  lexxy-editor {
+
+    lexxy-toolbar {
+      font-size: 0.9em;
+    }
+
+    .lexxy-editor__content {
+      h1, h2, h3, h4, h5, h6 {
+        margin-block: 0 var(--lexxy-content-margin);
+      }
+
+      h1 { font-size: 2rem !important; }
+      h2 { font-size: 1.5rem !important; }
+      h3 { font-size: 1.25rem !important; }
+      h4 { font-size: 1rem !important; }
+      h5 { font-size: 0.875rem !important; }
+      h6 { font-size: 0.75rem !important; }
+
+      h4 {
+        letter-spacing: 0;
+        text-transform: none;
+      }
+
+      a {
+        text-decoration-color: var(--lexxy-color-link);
+      }
+
+      ol {
+        list-style: decimal;
+      }
+
+      ul {
+        list-style: disc;
+      }
+
+      ol, ul:not(.lexxy-prompt-menu) {
+        margin-inline-start: calc(var(--lexxy-content-margin) * 1.5);
+        padding: 0;
+      }
+
+      li {
+        margin: 0;
+
+        &:before { display: none; }
+      }
+
+      li.lexxy-nested-listitem {
+        ol, ul {
+          margin-block: 0;
+        }
+      }
+
+      code, pre {
+        background: var(--lexxy-color-ink-lightest);
+      }
+
+      table {
+        min-width: 0;
+
+        th, td {
+          border: 1px solid var(--lexxy-color-ink-lighter);
+          font-size: inherit !important;
+        }
+      }
+    }
+  }
+}
