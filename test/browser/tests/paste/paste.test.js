@@ -160,6 +160,34 @@ test.describe("Paste — Blockquote", () => {
     })
   })
 
+  test("pasting HTML with headings and code blocks into a blockquote keeps all inside", async ({
+    page,
+    editor,
+  }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.click()
+    await page.getByRole("button", { name: "Quote" }).click()
+    await editor.flush()
+
+    // Paste HTML with heading and code block elements (common when copying from docs/READMEs)
+    await editor.paste("heading\nsome code\nparagraph", {
+      html: "<h1>heading</h1><pre><code>some code</code></pre><p>paragraph</p>",
+    })
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("blockquote")).toHaveCount(1)
+      const outerParagraphs = content.locator(":scope > p")
+      await expect(outerParagraphs).toHaveCount(0)
+      const outerHeadings = content.locator(":scope > h1, :scope > h2, :scope > h3")
+      await expect(outerHeadings).toHaveCount(0)
+      const outerCode = content.locator(":scope > pre")
+      await expect(outerCode).toHaveCount(0)
+    })
+  })
+
   test("pasting plain text into blockquote with existing content keeps all inside", async ({
     page,
     editor,
