@@ -223,7 +223,7 @@ test.describe("Inline formatting", () => {
 
     await assertEditorHtml(
       editor,
-      '<pre data-language="plain" data-highlight-language="plain">Line one<br>Line two</pre>',
+      '<blockquote><pre data-language="plain" data-highlight-language="plain">Line one<br>Line two</pre></blockquote>',
     )
   })
 })
