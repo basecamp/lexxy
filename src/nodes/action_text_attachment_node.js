@@ -274,16 +274,10 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     const figure = img.closest("figure.attachment")
     if (!figure) return
 
-    figure.className = figure.className.replace("attachment--preview", "attachment--file")
-
-    const container = figure.querySelector(".attachment__container")
-    if (container) container.remove()
-
-    const caption = figure.querySelector("figcaption")
-    if (caption) caption.remove()
-
-    figure.appendChild(this.#createDOMForFile())
-    figure.appendChild(this.#createDOMForNotImage())
+    this.#swapFigureContent(figure, "attachment--preview", "attachment--file", () => {
+      figure.appendChild(this.#createDOMForFile())
+      figure.appendChild(this.#createDOMForNotImage())
+    })
   }
 
   #pollForPreview(figure) {
@@ -324,23 +318,28 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #swapToPreviewDOM(figure, previewSrc) {
-    figure.className = figure.className.replace("attachment--file", "attachment--preview")
-
-    const icon = figure.querySelector(".attachment__icon")
-    if (icon) icon.remove()
-    const caption = figure.querySelector("figcaption")
-    if (caption) caption.remove()
-
-    const img = createElement("img", { src: previewSrc, draggable: false, alt: this.altText })
-    img.onerror = () => this.#swapPreviewToFileDOM(img)
-    const container = createElement("div", { className: "attachment__container" })
-    container.appendChild(img)
-    figure.appendChild(container)
-    figure.appendChild(this.#createEditableCaption())
+    this.#swapFigureContent(figure, "attachment--file", "attachment--preview", () => {
+      const img = createElement("img", { src: previewSrc, draggable: false, alt: this.altText })
+      img.onerror = () => this.#swapPreviewToFileDOM(img)
+      const container = createElement("div", { className: "attachment__container" })
+      container.appendChild(img)
+      figure.appendChild(container)
+      figure.appendChild(this.#createEditableCaption())
+    })
 
     this.editor.update(() => {
       if (this.isAttached()) this.getWritable().pendingPreview = false
     }, { tag: this.#backgroundUpdateTags })
+  }
+
+  #swapFigureContent(figure, fromClass, toClass, renderContent) {
+    figure.className = figure.className.replace(fromClass, toClass)
+
+    for (const child of [...figure.querySelectorAll(".attachment__container, .attachment__icon, figcaption")]) {
+      child.remove()
+    }
+
+    renderContent()
   }
 
   get #imageDimensions() {
