@@ -1,9 +1,9 @@
 // Configure Prism for manual highlighting mode
 // This must be set before importing prismjs
-window.Prism = window.Prism || {}
+window.Prism ||= {}
 window.Prism.manual = true
 
-import "prismjs"
+import Prism from "prismjs"
 
 // Import base language dependencies first
 import "prismjs/components/prism-clike"
@@ -17,3 +17,5 @@ import "prismjs/components/prism-go"
 import "prismjs/components/prism-bash"
 import "prismjs/components/prism-json"
 import "prismjs/components/prism-diff"
+
+export default Prism

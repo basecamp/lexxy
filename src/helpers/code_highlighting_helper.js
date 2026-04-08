@@ -1,5 +1,5 @@
 import { createElement } from "./html_helper"
-import Prism from "prismjs"
+import Prism from "../config/prism"
 
 export function highlightCode() {
   const elements = document.querySelectorAll("pre[data-language]")
