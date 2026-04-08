@@ -80,7 +80,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return Lexxy.global.get("attachmentTagName")
   }
 
-  constructor({ tagName, sgid, src, previewSrc, previewable, altText, caption, contentType, fileName, fileSize, width, height, uploadError }, key) {
+  constructor({ tagName, sgid, src, previewSrc, previewable, pendingPreview, altText, caption, contentType, fileName, fileSize, width, height, uploadError }, key) {
     super(key)
 
     this.tagName = tagName || ActionTextAttachmentNode.TAG_NAME
@@ -88,6 +88,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     this.src = src
     this.previewSrc = previewSrc
     this.previewable = parseBoolean(previewable)
+    this.pendingPreview = pendingPreview || false
     this.altText = altText || ""
     this.caption = caption || ""
     this.contentType = contentType || ""
@@ -102,6 +103,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   createDOM() {
     if (this.uploadError) return this.createDOMForError()
+    if (this.pendingPreview) return this.#createDOMForPendingPreview()
 
     const figure = this.createAttachmentFigure()
 
@@ -201,6 +203,14 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return isPreviewableImage(this.contentType)
   }
 
+  #createDOMForPendingPreview() {
+    const figure = this.createAttachmentFigure(false)
+    figure.appendChild(this.#createDOMForFile())
+    figure.appendChild(this.#createDOMForNotImage())
+    this.#pollForPreview(figure)
+    return figure
+  }
+
   #createDOMForImage(options = {}) {
     const initialSrc = this.previewSrc || this.src
     const img = createElement("img", { src: initialSrc, draggable: false, alt: this.altText, ...this.#imageDimensions, ...options })
@@ -274,6 +284,63 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
     figure.appendChild(this.#createDOMForFile())
     figure.appendChild(this.#createDOMForNotImage())
+  }
+
+  #pollForPreview(figure) {
+    let attempt = 0
+    const maxAttempts = 10
+
+    const tryLoad = () => {
+      if (!this.isAttached()) return
+
+      const img = new Image()
+      const cacheBustedSrc = `${this.src}${this.src.includes("?") ? "&" : "?"}_=${Date.now()}`
+
+      img.onload = () => {
+        if (!this.isAttached()) return
+
+        // The placeholder is a file-type icon SVG (86×100). A real thumbnail
+        // generated from PDF/video content is significantly larger.
+        if (img.naturalWidth > 150 && img.naturalHeight > 150) {
+          this.#swapToPreviewDOM(figure, cacheBustedSrc)
+        } else {
+          retry()
+        }
+      }
+      img.onerror = () => retry()
+      img.src = cacheBustedSrc
+    }
+
+    const retry = () => {
+      attempt++
+      if (attempt < maxAttempts && this.isAttached()) {
+        const delay = Math.min(2000 * Math.pow(1.5, attempt), 15000)
+        setTimeout(tryLoad, delay)
+      }
+    }
+
+    // Give the server time to start processing before the first attempt
+    setTimeout(tryLoad, 3000)
+  }
+
+  #swapToPreviewDOM(figure, previewSrc) {
+    figure.className = figure.className.replace("attachment--file", "attachment--preview")
+
+    const icon = figure.querySelector(".attachment__icon")
+    if (icon) icon.remove()
+    const caption = figure.querySelector("figcaption")
+    if (caption) caption.remove()
+
+    const img = createElement("img", { src: previewSrc, draggable: false, alt: this.altText })
+    img.onerror = () => this.#swapPreviewToFileDOM(img)
+    const container = createElement("div", { className: "attachment__container" })
+    container.appendChild(img)
+    figure.appendChild(container)
+    figure.appendChild(this.#createEditableCaption())
+
+    this.editor.update(() => {
+      if (this.isAttached()) this.getWritable().pendingPreview = false
+    }, { tag: this.#backgroundUpdateTags })
   }
 
   get #imageDimensions() {

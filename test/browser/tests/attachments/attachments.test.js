@@ -83,6 +83,20 @@ test.describe("Attachments", () => {
     await expect(figure.locator(".attachment__name")).toHaveText("note.txt")
   })
 
+  test("upload previewable PDF shows file icon initially while preview loads", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.uploadFile("test/fixtures/files/dummy.pdf", { via: "file" })
+
+    const figure = page.locator("figure.attachment[data-content-type='application/pdf']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+
+    // Should show as file attachment initially (not a giant placeholder image)
+    await expect(figure).toHaveClass(/attachment--file/)
+    await expect(figure.locator("img")).toHaveCount(0)
+    await expect(figure.locator(".attachment__icon")).toBeVisible()
+    await expect(figure.locator(".attachment__name")).toHaveText("dummy.pdf")
+  })
+
   test("delete attachment with keyboard", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
