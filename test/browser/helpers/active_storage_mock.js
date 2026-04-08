@@ -46,8 +46,9 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
 
     calls.blobCreations.push(blob)
 
-    const previewable = blob.content_type.startsWith("image/") ||
-      blob.content_type === "application/pdf" ||
+    // Non-image previewable types (PDFs, videos) get a preview URL from the
+    // server. Images are handled via isPreviewableImage and don't need this.
+    const previewable = blob.content_type === "application/pdf" ||
       blob.content_type.startsWith("video/")
 
     const fulfill = async () => {
@@ -63,7 +64,7 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
           checksum: blob.checksum,
           signed_id: signedId,
           attachable_sgid: `mock-sgid-${blobId}`,
-          previewable,
+          previewable: previewable || undefined,
           url: previewable ? `/rails/active_storage/blobs/${signedId}/previews/full` : undefined,
           direct_upload: {
             url: `/rails/active_storage/disk/${signedId}`,
