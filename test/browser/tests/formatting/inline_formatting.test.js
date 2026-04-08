@@ -175,4 +175,55 @@ test.describe("Inline formatting", () => {
     await page.getByRole("button", { name: "Code" }).click()
     await assertEditorHtml(editor, "<p>Hello everyone</p>")
   })
+
+  test("selecting multiple lines and toggling code block creates a single code block", async ({ page, editor }) => {
+    await editor.send("Line one")
+    await editor.send("Enter")
+    await editor.send("Line two")
+    await editor.send("Enter")
+    await editor.send("Line three")
+
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<pre data-language="plain" data-highlight-language="plain">Line one<br>Line two<br>Line three</pre>',
+    )
+  })
+
+  test("toggling off a multi-line code block restores separate paragraphs", async ({ page, editor }) => {
+    await editor.send("Line one")
+    await editor.send("Enter")
+    await editor.send("Line two")
+    await editor.send("Enter")
+    await editor.send("Line three")
+
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<pre data-language="plain" data-highlight-language="plain">Line one<br>Line two<br>Line three</pre>',
+    )
+
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>Line one</p><p>Line two</p><p>Line three</p>",
+    )
+  })
+
+  test("toggling code block on a blockquote with multiple paragraphs preserves all lines", async ({ page, editor }) => {
+    await editor.setValue("<blockquote><p>Line one</p><p>Line two</p></blockquote>")
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<blockquote><pre data-language="plain" data-highlight-language="plain">Line one<br>Line two</pre></blockquote>',
+    )
+  })
 })

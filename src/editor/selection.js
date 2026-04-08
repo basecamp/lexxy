@@ -168,6 +168,15 @@ export default class Selection {
     const anchorElement = anchorNode.getTopLevelElement()
     if (!anchorElement) return false
 
+    // When anchor and focus are in different block-level children of the same
+    // top-level element (e.g. two paragraphs inside a blockquote), this is a
+    // multi-line selection, not a single-line one.
+    const anchorBlock = $isElementNode(anchorNode) ? anchorNode : anchorNode.getParent()
+    const focusBlock = $isElementNode(focusNode) ? focusNode : focusNode.getParent()
+    if (anchorBlock !== focusBlock && anchorBlock !== anchorElement) {
+      return false
+    }
+
     const nodes = selection.getNodes()
     for (const node of nodes) {
       if ($isLineBreakNode(node)) {
