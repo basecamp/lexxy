@@ -13,9 +13,27 @@ export default class Extensions {
   }
 
   initializeToolbars() {
-    if (this.#lexxyToolbar) {
-      this.enabledExtensions.forEach(ext => ext.initializeToolbar(this.#lexxyToolbar))
-    }
+    const toolbar = this.#lexxyToolbar
+    if (!toolbar) return
+
+    this.#clearPreviousExtensionToolbarButtons(toolbar)
+    this.#addExtensionToolbarButtons(toolbar)
+  }
+
+  #clearPreviousExtensionToolbarButtons(toolbar) {
+    toolbar.querySelectorAll("[data-lexxy-extension]").forEach(el => el.remove())
+  }
+
+  #addExtensionToolbarButtons(toolbar) {
+    this.enabledExtensions.forEach(ext => {
+      const childrenBefore = new Set(toolbar.children)
+      ext.initializeToolbar(toolbar)
+      for (const child of toolbar.children) {
+        if (!childrenBefore.has(child)) {
+          child.setAttribute("data-lexxy-extension", "")
+        }
+      }
+    })
   }
 
   get #lexxyToolbar() {
