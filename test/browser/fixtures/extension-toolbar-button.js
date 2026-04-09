@@ -1,5 +1,4 @@
 import { configure, Extension } from "lexxy"
-import "./events_logger.js"
 
 class ToolbarButtonExtension extends Extension {
   initializeToolbar(toolbar) {
