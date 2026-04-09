@@ -18,7 +18,7 @@ import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
 import { isAttachmentSpacerTextNode } from "../helpers/lexical_helper"
-import { sanitize } from "../helpers/sanitization_helper"
+import { sanitize, setSanitizerConfig } from "../helpers/sanitization_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
@@ -228,7 +228,7 @@ export class LexicalEditorElement extends HTMLElement {
   get value() {
     if (!this.cachedValue) {
       this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null), this.#allowedElements)
+        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
       })
     }
 
@@ -287,6 +287,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#registerFocusEvents()
     this.#attachDebugHooks()
     this.#attachToolbar()
+    this.#configureSanitizer()
     this.#loadInitialValue()
     this.#resetBeforeTurboCaches()
   }
@@ -568,6 +569,10 @@ export class LexicalEditorElement extends HTMLElement {
     } else {
       this.internals.setValidity(this.#validationTextArea.validity, this.#validationTextArea.validationMessage, this.editorContentElement)
     }
+  }
+
+  #configureSanitizer() {
+    setSanitizerConfig(this.#allowedElements)
   }
 
   get #allowedElements() {

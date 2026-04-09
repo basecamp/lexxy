@@ -1,8 +1,12 @@
-import DOMPurify from "dompurify"
-import { buildConfig } from "../config/dom_purify"
+import { DOMPurify, buildConfig } from "../config/dom_purify"
 
-export function sanitize(html, allowedElements) {
-  return DOMPurify.sanitize(html, buildConfig(allowedElements))
+export function setSanitizerConfig(allowedTags) {
+  DOMPurify.clearConfig()
+  DOMPurify.setConfig(buildConfig(allowedTags))
+}
+
+export function sanitize(html) {
+  return DOMPurify.sanitize(html)
 }
 
 // Sanitize HTML for custom attachment content (mentions, cards, etc.).
