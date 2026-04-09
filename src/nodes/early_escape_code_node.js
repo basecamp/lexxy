@@ -1,7 +1,7 @@
 import { $createParagraphNode } from "lexical"
 import { CodeNode } from "@lexical/code"
 import { $getNearestNodeOfType } from "@lexical/utils"
-import { $isCursorOnLastLine, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
+import { $isAtNodeStart, $isCursorOnLastLine, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
 
 export class EarlyEscapeCodeNode extends CodeNode {
   $config() {
@@ -35,7 +35,7 @@ export class EarlyEscapeCodeNode extends CodeNode {
 
   #isCursorAtStart(selection) {
     const { anchor } = selection
-    if (anchor.offset !== 0) return false
+    if (!$isAtNodeStart(anchor)) return false
 
     const anchorNode = anchor.getNode()
     if (anchorNode === this) return true
