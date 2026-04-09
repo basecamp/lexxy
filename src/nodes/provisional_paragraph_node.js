@@ -1,5 +1,4 @@
 import { $createParagraphNode, $getSelection, $isElementNode, $isRangeSelection, $isRootOrShadowRoot, ParagraphNode } from "lexical"
-import { $isCodeNode } from "@lexical/code"
 
 export class ProvisionalParagraphNode extends ParagraphNode {
   $config() {
@@ -99,13 +98,5 @@ export function $isProvisionalParagraphNode(node) {
 }
 
 function $isSelectableElement(node, direction) {
-  if (!$isElementNode(node)) return false
-
-  // Code blocks report canInsertTextBefore/After as true, but placing the
-  // cursor at their boundary puts you *inside* the code block, not before/after
-  // it in the normal document flow. Treat them as non-selectable so provisional
-  // paragraphs are inserted around them.
-  if ($isCodeNode(node)) return false
-
-  return direction === "next" ? node.canInsertTextBefore() : node.canInsertTextAfter()
+  return $isElementNode(node) && (direction === "next" ? node.canInsertTextBefore() : node.canInsertTextAfter())
 }
