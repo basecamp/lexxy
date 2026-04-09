@@ -13,6 +13,7 @@ module Lexxy
 
       initializer "lexxy.action_text_editor", before: "action_text.editors" do |app|
         app.config.action_text.editors[:lexxy] = {}
+        app.config.action_text.editor = :lexxy
       end
     else
       # Rails 8.0/8.1 fallback: monkey-patch Action Text helpers
