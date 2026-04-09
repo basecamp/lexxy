@@ -44,3 +44,25 @@ test.describe("Reconnect", () => {
     await expect(editorEl.locator("lexxy-code-language-picker")).toHaveCount(1)
   })
 })
+
+test.describe("Reconnect with extension toolbar buttons", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/extension-toolbar-button.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+  })
+
+  test("extension toolbar button is not duplicated after reconnect", async ({ page, editor }) => {
+    await expect(page.locator("lexxy-toolbar button[name='custom-extension-button']")).toHaveCount(1)
+
+    await page.evaluate(() => {
+      const el = document.querySelector("lexxy-editor")
+      const parent = el.parentElement
+      parent.removeChild(el)
+      parent.appendChild(el)
+    })
+
+    await editor.waitForConnected()
+
+    await expect(page.locator("lexxy-toolbar button[name='custom-extension-button']")).toHaveCount(1)
+  })
+})
