@@ -18,9 +18,7 @@ export class EarlyEscapeCodeNode extends CodeNode {
     if (!selection.isCollapsed()) return super.insertNewAfter(selection, restoreSelection)
 
     if (this.#isCursorAtStart(selection)) {
-      const paragraph = $createParagraphNode()
-      this.insertBefore(paragraph)
-      this.selectStart()
+      this.insertBefore($createParagraphNode())
       return null
     }
 
