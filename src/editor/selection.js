@@ -586,13 +586,20 @@ export default class Selection {
   }
 
   // When backspace is pressed on an empty list item that has siblings,
-  // remove the empty item and place the cursor appropriately. Without this,
-  // Lexical's default collapseAtStart converts the empty item into a paragraph
-  // above the list, causing the cursor to jump away from the list content.
+  // handle the deletion appropriately:
   //
-  // This only applies when there IS a next sibling — if the empty item is the
-  // last one in the list, Lexical's default (convert to paragraph) provides
-  // the standard "exit list" behavior.
+  // - Middle/end items (has previous sibling): remove the empty item and
+  //   place the cursor at the end of the previous sibling. Without this,
+  //   Lexical's default collapseAtStart converts the empty item into a
+  //   paragraph above the list, causing the cursor to jump away.
+  //
+  // - First item (no previous sibling): convert to a paragraph above the
+  //   list, matching the standard "unwrap list formatting" behavior that
+  //   users expect from pressing backspace at the start of a list item.
+  //
+  // When the empty item is the last/only one in the list, we return false
+  // and let Lexical's default (convert to paragraph) provide the standard
+  // "exit list" behavior.
   #removeEmptyListItem() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
@@ -609,11 +616,17 @@ export default class Selection {
     const previousSibling = listItem.getPreviousSibling()
     if (previousSibling) {
       previousSibling.selectEnd()
-    } else {
-      nextSibling.selectStart()
+      listItem.remove()
+      return true
     }
 
+    const listNode = $getNearestNodeOfType(listItem, ListNode)
+    if (!listNode) return false
+
+    const paragraph = $createParagraphNode()
+    listNode.insertBefore(paragraph)
     listItem.remove()
+    paragraph.selectStart()
     return true
   }
 
