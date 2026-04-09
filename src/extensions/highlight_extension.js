@@ -225,6 +225,13 @@ function $applyHighlightRangesToCodeNode(codeNode, highlights) {
     const childRanges = $buildChildRanges(codeNode)
 
     for (const { node, start: nodeStart, end: nodeEnd } of childRanges) {
+      // Skip plain TextNodes: only CodeHighlightNodes can be split into
+      // styled replacements here. The retokenizer normally converts any
+      // TextNode children back to CodeHighlightNodes before this runs,
+      // but the iteration over $buildChildRanges has to keep counting
+      // them so character offsets stay aligned with the saved ranges.
+      if (!$isCodeHighlightNode(node)) continue
+
       // Check if this child overlaps with the highlight range
       const overlapStart = Math.max(hlStart, nodeStart)
       const overlapEnd = Math.min(hlEnd, nodeEnd)

@@ -1,5 +1,4 @@
 import { test } from "../../test_helper.js"
-import { assertEditorContent } from "../../helpers/assertions.js"
 import { applyHighlightOption } from "../../helpers/toolbar.js"
 import { expect } from "@playwright/test"
 
