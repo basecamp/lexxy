@@ -88,7 +88,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     this.src = src
     this.previewSrc = previewSrc
     this.previewable = parseBoolean(previewable)
-    this.pendingPreview = pendingPreview || false
+    this.pendingPreview = pendingPreview
     this.altText = altText || ""
     this.caption = caption || ""
     this.contentType = contentType || ""
@@ -285,13 +285,13 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     const maxAttempts = 10
 
     const tryLoad = () => {
-      if (!this.isAttached()) return
+      if (!this.editor.read(() => this.isAttached())) return
 
       const img = new Image()
       const cacheBustedSrc = `${this.src}${this.src.includes("?") ? "&" : "?"}_=${Date.now()}`
 
       img.onload = () => {
-        if (!this.isAttached()) return
+        if (!this.editor.read(() => this.isAttached())) return
 
         // The placeholder is a file-type icon SVG (86×100). A real thumbnail
         // generated from PDF/video content is significantly larger.
@@ -307,7 +307,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
     const retry = () => {
       attempt++
-      if (attempt < maxAttempts && this.isAttached()) {
+      if (attempt < maxAttempts && this.editor.read(() => this.isAttached())) {
         const delay = Math.min(2000 * Math.pow(1.5, attempt), 15000)
         setTimeout(tryLoad, delay)
       }
@@ -335,7 +335,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   #swapFigureContent(figure, fromClass, toClass, renderContent) {
     figure.className = figure.className.replace(fromClass, toClass)
 
-    for (const child of [...figure.querySelectorAll(".attachment__container, .attachment__icon, figcaption")]) {
+    for (const child of [ ...figure.querySelectorAll(".attachment__container, .attachment__icon, figcaption") ]) {
       child.remove()
     }
 
