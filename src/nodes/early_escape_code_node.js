@@ -38,10 +38,7 @@ export class EarlyEscapeCodeNode extends CodeNode {
     if (!$isAtNodeStart(anchor)) return false
 
     const anchorNode = anchor.getNode()
-    if (anchorNode === this) return true
-
-    const firstChild = this.getFirstChild()
-    return firstChild !== null && anchorNode === firstChild
+    return this.is(anchorNode) || this.getFirstChild()?.is(anchorNode)
   }
 
   #isCursorOnEmptyLastLine(selection) {
