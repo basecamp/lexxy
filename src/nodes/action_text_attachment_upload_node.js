@@ -275,7 +275,8 @@ class AttachmentNodeConversion {
       ...this.uploadNode,
       ...this.#propertiesFromBlob,
       src: this.#src,
-      previewSrc: this.previewSrc
+      previewSrc: this.previewSrc,
+      pendingPreview: this.blob.previewable && !this.uploadNode.isPreviewableImage
     })
   }
 
