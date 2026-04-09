@@ -24,6 +24,10 @@ export class TablesExtension extends LexxyExtension {
     return this.editorElement.supportsRichText
   }
 
+  get allowedElements() {
+    return [ "figure", "tbody" ]
+  }
+
   get lexicalExtension() {
     return defineExtension({
       name: "lexxy/tables",
