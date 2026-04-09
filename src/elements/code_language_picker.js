@@ -70,6 +70,8 @@ export class CodeLanguagePicker extends HTMLElement {
     languages.bash ||= "Bash"
     languages.json ||= "JSON"
     languages.diff ||= "Diff"
+    languages.kotlin ||= "Kotlin"
+
 
     // Place the "plain" entry first, then the rest of language sorted alphabetically
     delete languages.plain
