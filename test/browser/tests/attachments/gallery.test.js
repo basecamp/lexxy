@@ -26,7 +26,7 @@ test.describe("Gallery", () => {
     await editor.uploadFile("test/fixtures/files/example.png")
     await assertAttachmentVisible(page, "image/png")
 
-    await page.locator("figure.attachment img").click()
+    await selectAttachment(page)
 
     await editor.uploadFile("test/fixtures/files/example2.png")
     await assertGalleryWithImages(editor, 2)
@@ -53,7 +53,7 @@ test.describe("Gallery", () => {
     await editor.uploadFile("test/fixtures/files/example.png")
     await assertAttachmentVisible(page, "image/png")
 
-    await page.locator("figure.attachment img").click()
+    await selectAttachment(page)
 
     await editor.uploadFile([
       "test/fixtures/files/example2.png",
@@ -386,6 +386,12 @@ async function assertGalleryImageSelected(page, index, galleryIndex = 0) {
   const gallery = page.locator(".attachment-gallery").nth(galleryIndex)
   const figure = gallery.locator("figure.attachment").nth(index)
   await expect(figure).toHaveClass(/node--selected/)
+}
+
+async function selectAttachment(page) {
+  await page.locator("figure.attachment img[src*='/blobs/']").waitFor()
+  await page.locator("figure.attachment img").click()
+  await expect(page.locator("figure.attachment")).toHaveClass(/node--selected/)
 }
 
 // Mirrors Ruby helper: select image and use arrow keys to position cursor at offset
