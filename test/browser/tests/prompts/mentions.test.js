@@ -81,4 +81,24 @@ test.describe("Mentions", () => {
     expect(positions.textTop).toBeLessThan(positions.mentionBottom)
     expect(positions.textBottom).toBeGreaterThan(positions.mentionTop)
   })
+
+  test("popover stays within viewport when triggered near right edge", async ({ page, editor }) => {
+    await page.setViewportSize({ width: 400, height: 600 })
+    await editor.locator.evaluate((el) => {
+      el.style.width = "150px"
+      el.style.marginLeft = "auto"
+    })
+
+    await editor.send("Some text @")
+
+    const popover = page.locator(".lexxy-prompt-menu--visible")
+    await expect(popover).toBeVisible({ timeout: 5_000 })
+
+    const rect = await popover.evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      return { left: r.left, right: r.right }
+    })
+    expect(rect.right).toBeLessThanOrEqual(400)
+    expect(rect.left).toBeGreaterThanOrEqual(0)
+  })
 })
