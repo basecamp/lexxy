@@ -15,7 +15,6 @@ import {
   REDO_COMMAND,
   UNDO_COMMAND
 } from "lexical"
-import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
@@ -139,7 +138,7 @@ export class CommandDispatcher {
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "bullet") {
       this.contents.applyParagraphFormat()
     } else {
-      this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
+      this.contents.applyUnorderedListFormat()
     }
   }
 
@@ -152,7 +151,7 @@ export class CommandDispatcher {
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "number") {
       this.contents.applyParagraphFormat()
     } else {
-      this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
+      this.contents.applyOrderedListFormat()
     }
   }
 

@@ -214,6 +214,51 @@ test.describe("Block formatting", () => {
     )
   })
 
+  test("bullet list only the selected line from soft line breaks", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>First line<br>Second line<br>Third line</p>")
+    await editor.select("Second line")
+
+    await page.getByRole("button", { name: "Bullet list" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>First line</p><ul><li>Second line</li></ul><p>Third line</p>",
+    )
+  })
+
+  test("numbered list only the selected line from soft line breaks", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>First line<br>Second line<br>Third line</p>")
+    await editor.select("Second line")
+
+    await page.getByRole("button", { name: "Numbered list" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>First line</p><ol><li>Second line</li></ol><p>Third line</p>",
+    )
+  })
+
+  test("shift+enter inside a list item creates a line break, not a new item", async ({
+    editor,
+  }) => {
+    await editor.setValue("<ul><li>First item</li></ul>")
+    await editor.select("First item")
+    await editor.send("End")
+    await editor.send("Shift+Enter")
+    await editor.send("continuation")
+
+    await assertEditorHtml(
+      editor,
+      "<ul><li>First item<br>continuation</li></ul>",
+    )
+  })
+
   test("links", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
