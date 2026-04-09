@@ -9,6 +9,7 @@ import {
 import { $generateNodesFromDOM } from "@lexical/html"
 import { $createCodeNode, $isCodeNode, CodeNode } from "@lexical/code"
 import { $createHeadingNode, $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
+import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
@@ -72,6 +73,16 @@ export default class Contents {
     if (!$isRangeSelection(selection)) return
 
     $setBlocksType(selection, () => $createHeadingNode(tag))
+  }
+
+  applyUnorderedListFormat() {
+    this.#splitParagraphsAtLineBreaksUnlessInsideList()
+    this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
+  }
+
+  applyOrderedListFormat() {
+    this.#splitParagraphsAtLineBreaksUnlessInsideList()
+    this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
   }
 
   clearFormatting() {
@@ -378,7 +389,9 @@ export default class Contents {
     codeNode.remove()
   }
 
-  splitParagraphsAtLineBreaks() {
+  #splitParagraphsAtLineBreaksUnlessInsideList() {
+    if (this.selection.isInsideList) return
+
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
@@ -386,8 +399,8 @@ export default class Contents {
   }
 
   #splitParagraphsAtLineBreaks(selection) {
-    const anchorKey = selection.anchor.getNode().getKey()
-    const focusKey = selection.focus.getNode().getKey()
+    const anchorTopLevel = selection.anchor.getNode().getTopLevelElement()
+    const focusTopLevel = selection.focus.getNode().getTopLevelElement()
     const topLevelElements = this.#topLevelElementsInSelection(selection)
 
     for (const element of topLevelElements) {
@@ -399,10 +412,9 @@ export default class Contents {
       // Check whether this paragraph needs splitting: skip only if neither
       // selection endpoint is inside it (meaning it's a middle paragraph
       // fully between anchor and focus with no partial lines to split off).
-      const hasEndpoint = children.some(child =>
-        child.getKey() === anchorKey || child.getKey() === focusKey
-      )
-      if (!hasEndpoint) continue
+      // Compare top-level elements so endpoints inside nested inline nodes
+      // (e.g. text inside a LinkNode) are still recognized.
+      if (element !== anchorTopLevel && element !== focusTopLevel) continue
 
       const groups = [ [] ]
       for (const child of children) {
