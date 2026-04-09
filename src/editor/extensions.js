@@ -16,8 +16,15 @@ export default class Extensions {
     const toolbar = this.#lexxyToolbar
     if (!toolbar) return
 
-    toolbar.querySelectorAll("[data-lexxy-extension]").forEach(el => el.remove())
+    this.#clearPreviousExtensionToolbarButtons(toolbar)
+    this.#addExtensionToolbarButtons(toolbar)
+  }
 
+  #clearPreviousExtensionToolbarButtons(toolbar) {
+    toolbar.querySelectorAll("[data-lexxy-extension]").forEach(el => el.remove())
+  }
+
+  #addExtensionToolbarButtons(toolbar) {
     this.enabledExtensions.forEach(ext => {
       const childrenBefore = new Set(toolbar.children)
       ext.initializeToolbar(toolbar)
