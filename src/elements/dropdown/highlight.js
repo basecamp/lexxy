@@ -1,6 +1,7 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
 import { ToolbarDropdown } from "../toolbar_dropdown"
+import { registerEventListener } from "../../helpers/listener_helper"
 
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
@@ -11,26 +12,26 @@ const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 const NO_STYLE = Symbol("no_style")
 
 export class HighlightDropdown extends ToolbarDropdown {
-  connectedCallback() {
-    super.connectedCallback()
-    this.#registerToggleHandler()
-  }
-
   initialize() {
     this.#setUpButtons()
     this.#registerButtonHandlers()
   }
 
-  #registerToggleHandler() {
-    this.container.addEventListener("toggle", this.#handleToggle.bind(this))
+  connectedCallback() {
+    super.connectedCallback()
+    this.track(registerEventListener(this.container, "toggle", this.#handleToggle))
   }
 
   #registerButtonHandlers() {
-    this.#colorButtons.forEach(button => button.addEventListener("click", this.#handleColorButtonClick.bind(this)))
-    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).addEventListener("click", this.#handleRemoveHighlightClick.bind(this))
+    this.#colorButtons.forEach(button => {
+      this.track(registerEventListener(button, "click", this.#handleColorButtonClick))
+    })
+    this.track(registerEventListener(this.querySelector(REMOVE_HIGHLIGHT_SELECTOR), "click", this.#handleRemoveHighlightClick))
   }
 
   #setUpButtons() {
+    this.#buttonContainer.innerHTML = ""
+
     const colorGroups = this.editorElement.config.get("highlight.buttons")
 
     this.#populateButtonGroup("color", colorGroups.color)
@@ -56,7 +57,7 @@ export class HighlightDropdown extends ToolbarDropdown {
     return button
   }
 
-  #handleToggle({ newState }) {
+  #handleToggle = ({ newState }) => {
     if (newState === "open") {
       this.editor.getEditorState().read(() => {
         this.#updateColorButtonStates($getSelection())
@@ -64,7 +65,7 @@ export class HighlightDropdown extends ToolbarDropdown {
     }
   }
 
-  #handleColorButtonClick(event) {
+  #handleColorButtonClick = (event) => {
     event.preventDefault()
 
     const button = event.target.closest(APPLY_HIGHLIGHT_SELECTOR)
@@ -77,7 +78,7 @@ export class HighlightDropdown extends ToolbarDropdown {
     this.close()
   }
 
-  #handleRemoveHighlightClick(event) {
+  #handleRemoveHighlightClick = (event) => {
     event.preventDefault()
 
     this.editor.dispatchCommand("removeHighlight")

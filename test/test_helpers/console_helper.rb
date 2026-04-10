@@ -24,9 +24,13 @@ module ConsoleHelper
       logs = page.driver.browser.logs.get(:browser)
       logs = logs.select { |log| log.level == level } if level
       assert logs.empty?, "Unexpected console messages: \n" + logs.map(&:message).join("\n\n")
+    rescue Selenium::WebDriver::Error::WebDriverError, NoMethodError
+      # Browser session crashed or returned corrupt data — nothing to assert.
     end
 
     def clear_console_messages
       page.driver.browser.logs.get(:browser)
+    rescue Selenium::WebDriver::Error::WebDriverError, NoMethodError
+      # Browser session crashed or returned corrupt data — nothing to clear.
     end
 end

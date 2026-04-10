@@ -1,10 +1,10 @@
-<h1>Editing post</h1>
+<div class="container">
+  <%= link_to "← Back to posts", posts_path, class: "btn" %>
+  <%= link_to "Edit in Trix", edit_trix_post_path(@post), class: "btn" %>
 
-<%= render "form", post: @post %>
+  <h1>Editing post</h1>
 
-<br>
-
-<div>
-  <%= link_to "Show this post", @post %> |
-  <%= link_to "Back to posts", posts_path %>
+  <article class="post">
+    <%= render "form", post: @post %>
+  </article>
 </div>

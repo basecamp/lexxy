@@ -22,12 +22,11 @@
 <%= form_with model: post, data: { controller: "events-logger file-acceptance unfurl-link",
   file_acceptance_type_value: params[:attachment_type],
   action: "lexxy:focus->events-logger#log lexxy:blur->events-logger#log lexxy:change->events-logger#log lexxy:insert-link->events-logger#log lexxy:insert-link->unfurl-link#unfurl lexxy:insert-markdown->events-logger#log lexxy:file-accept->file-acceptance#acceptFile lexxy:upload-start->events-logger#log lexxy:upload-progress->events-logger#log lexxy:upload-end->events-logger#log"  } do |form| %>
-  <div>
-    <%= form.label :title, style: "display: block" %>
-    <%= form.text_field :title %>
+  <div class="title">
+    <%= form.text_field :title, placeholder: "Post title", "aria-label": "Post title" %>
   </div>
 
-  <div>
+  <div class="body">
     <% if params[:toolbar_external] %>
       <lexxy-toolbar id="external_toolbar">
         <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="Bold">bold</button>
@@ -38,7 +37,6 @@
       </lexxy-toolbar>
     <% end %>
 
-    <%= form.label :body, style: "display: block" %>
     <%= form.rich_text_area :body, placeholder: "Write something...",
           autofocus: params[:autofocus] ? "true" : nil,
           attachments: (params[:attachments_disabled] != "true"),
@@ -75,11 +73,11 @@
     <% end %>
   </div>
 
-  <div>
-    <button type="reset">Reset</button>
+  <div class="actions">
+    <button type="reset" class="btn">Reset</button>
     <%= form.submit %>
   </div>
 
-  <div id="events" data-events-logger-target="log">
+  <div class="events" data-events-logger-target="log">
   </div>
 <% end %>

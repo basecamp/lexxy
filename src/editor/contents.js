@@ -1,122 +1,149 @@
 import {
-  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection,
-  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $setSelection
- } from "lexical"
+  $createLineBreakNode, $createParagraphNode, $createTextNode, $getChildCaretAtIndex, $getNodeByKey, $getRoot, $getSelection,
+  $hasUpdateTag,
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $setSelection,
+  HISTORY_MERGE_TAG,
+  PASTE_TAG
+} from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
+import { $createCodeNode, $isCodeNode, CodeNode } from "@lexical/code"
+import { $createHeadingNode, $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
+import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
-import { $isListNode, ListItemNode } from "@lexical/list"
-import { $getNearestNodeOfType } from "@lexical/utils"
-import FormatEscaper from "./contents/format_escaper"
+import { $ensureForwardRangeSelection, $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
+import { $getNearestBlockElementAncestorOrThrow, $getNearestNodeOfType } from "@lexical/utils"
 
 export default class Contents {
   constructor(editorElement) {
     this.editorElement = editorElement
     this.editor = editorElement.editor
-
-    new FormatEscaper(editorElement).monitor()
   }
+
+  dispose() {
+    this.editorElement = null
+    this.editor = null
+  }
+
+  get selection() { return this.editorElement.selection }
 
   insertHtml(html, { tag } = {}) {
     this.insertDOM(parseHtml(html), { tag })
   }
 
   insertDOM(doc, { tag } = {}) {
+    this.#unwrapPlaceholderAnchors(doc)
+
     this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+      if ($hasUpdateTag(PASTE_TAG)) this.#stripTableCellColorStyles(doc)
 
       const nodes = $generateNodesFromDOM(this.editor, doc)
       if (!this.#insertUploadNodes(nodes)) {
-        selection.insertNodes(nodes)
+        this.insertAtCursor(...nodes)
       }
     }, { tag })
   }
 
-  insertAtCursor(node) {
+  insertAtCursor(...nodes) {
     const selection = $getSelection() ?? $getRoot().selectEnd()
-    const selectedNodes = selection?.getNodes()
+    const inserter = NodeInserter.for(selection)
 
-    if ($isRangeSelection(selection)) {
-      selection.insertNodes([ node ])
-    } else if ($isNodeSelection(selection) && selectedNodes.length > 0) {
-      // Overrides Lexical's default behavior of _removing_ the currently selected nodes
-      // https://github.com/facebook/lexical/blob/v0.38.2/packages/lexical/src/LexicalSelection.ts#L412
-      const lastNode = selectedNodes.at(-1)
-      lastNode.insertAfter(node)
-    }
-}
+    inserter.insertNodes(nodes)
+  }
 
   insertAtCursorEnsuringLineBelow(node) {
     this.insertAtCursor(node)
     this.#insertLineBelowIfLastNode(node)
   }
 
-  insertNodeWrappingEachSelectedLine(newNodeFn) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+  applyParagraphFormat() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
 
-      const selectedNodes = selection.extract()
-
-      selectedNodes.forEach((node) => {
-        const parent = node.getParent()
-        if (!parent) { return }
-
-        const topLevelElement = node.getTopLevelElementOrThrow()
-        const wrappingNode = newNodeFn()
-        wrappingNode.append(...topLevelElement.getChildren())
-        topLevelElement.replace(wrappingNode)
-      })
-    })
+    $setBlocksType(selection, () => $createParagraphNode())
   }
 
-  toggleNodeWrappingAllSelectedLines(isFormatAppliedFn, newNodeFn) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+  applyHeadingFormat(tag) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
 
-      const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
-
-      // Check if format is already applied
-      if (isFormatAppliedFn(topLevelElement)) {
-        this.removeFormattingFromSelectedLines()
-      } else {
-        this.#insertNodeWrappingAllSelectedLines(newNodeFn)
-      }
-    })
+    $setBlocksType(selection, () => $createHeadingNode(tag))
   }
 
-  toggleNodeWrappingAllSelectedNodes(isFormatAppliedFn, newNodeFn) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const topLevelElement = selection.anchor.getNode().getTopLevelElement()
-
-      // Check if format is already applied
-      if (topLevelElement && isFormatAppliedFn(topLevelElement)) {
-        this.#unwrap(topLevelElement)
-      } else {
-        this.#insertNodeWrappingAllSelectedNodes(newNodeFn)
-      }
-    })
+  applyUnorderedListFormat() {
+    this.#splitParagraphsAtLineBreaksUnlessInsideList()
+    this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
   }
 
-  removeFormattingFromSelectedLines() {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+  applyOrderedListFormat() {
+    this.#splitParagraphsAtLineBreaksUnlessInsideList()
+    this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
+  }
 
-      const topLevelElement = selection.anchor.getNode().getTopLevelElementOrThrow()
-      const paragraph = $createParagraphNode()
-      paragraph.append(...topLevelElement.getChildren())
-      topLevelElement.replace(paragraph)
+  clearFormatting() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    $forEachSelectedTextNode(node => {
+      node.setFormat(0)
+      node.setStyle("")
     })
+
+    $toggleLink(null)
+
+    this.#topLevelElementsInSelection(selection).filter($isQuoteNode).forEach(node => this.#unwrap(node))
+
+    $setBlocksType(selection, () => $createParagraphNode())
+  }
+
+  toggleCodeBlock() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    if (this.#insertNodeIfRoot($createCodeNode("plain"))) return
+
+    const blockElements = this.#blockLevelElementsInSelection(selection)
+    const allCode = blockElements.every($isCodeNode)
+
+    if (allCode) {
+      blockElements.forEach(node => this.#unwrapCodeBlock(node))
+    } else {
+      const codeNode = $createCodeNode("plain")
+      blockElements.at(-1).insertAfter(codeNode)
+      codeNode.selectEnd()
+      this.insertAtCursor(...blockElements)
+    }
+  }
+
+  toggleBlockquote() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    if (this.#insertNodeIfRoot($createQuoteNode())) return
+
+    const topLevelElements = this.#topLevelElementsInSelection(selection)
+
+    const allQuoted = topLevelElements.length > 0 && topLevelElements.every($isQuoteNode)
+
+    if (allQuoted) {
+      topLevelElements.forEach(node => this.#unwrap(node))
+    } else {
+      topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
+
+      this.#splitParagraphsAtLineBreaks(selection)
+
+      const elements = this.#topLevelElementsInSelection(selection)
+      if (elements.length === 0) return
+
+      const blockquote = $createQuoteNode()
+      elements[0].insertBefore(blockquote)
+      elements.forEach((element) => blockquote.append(element))
+    }
   }
 
   hasSelectedText() {
@@ -128,20 +155,6 @@ export default class Contents {
     })
 
     return result
-  }
-
-  unwrapSelectedListItems() {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const { listItems, parentLists } = this.#collectSelectedListItems(selection)
-      if (listItems.size > 0) {
-        const newParagraphs = this.#convertListItemsToParagraphs(listItems)
-        this.#removeEmptyParentLists(parentLists)
-        this.#selectNewParagraphs(newParagraphs)
-      }
-    })
   }
 
   createLink(url) {
@@ -223,39 +236,14 @@ export default class Contents {
   replaceTextBackUntil(stringToReplace, replacementNodes) {
     replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ]
 
-    this.editor.update(() => {
-      const { anchorNode, offset } = this.#getTextAnchorData()
-      if (!anchorNode) return
+    const selection = $getSelection()
+    const { anchorNode, offset } = this.#getTextAnchorData()
+    if (!anchorNode) return
 
-      const lastIndex = this.#findLastIndexBeforeCursor(anchorNode, offset, stringToReplace)
-      if (lastIndex === -1) return
+    const lastIndex = this.#findLastIndexBeforeCursor(anchorNode, offset, stringToReplace)
+    if (lastIndex === -1) return
 
-      this.#performTextReplacement(anchorNode, offset, lastIndex, replacementNodes)
-    })
-  }
-
-  createParagraphAfterNode(node, text) {
-    const newParagraph = $createParagraphNode()
-    node.insertAfter(newParagraph)
-    newParagraph.selectStart()
-
-    // Insert the typed text
-    if (text) {
-      newParagraph.append($createTextNode(text))
-      newParagraph.select(1, 1) // Place cursor after the text
-    }
-  }
-
-  createParagraphBeforeNode(node, text) {
-    const newParagraph = $createParagraphNode()
-    node.insertBefore(newParagraph)
-    newParagraph.selectStart()
-
-    // Insert the typed text
-    if (text) {
-      newParagraph.append($createTextNode(text))
-      newParagraph.select(1, 1) // Place cursor after the text
-    }
+    this.#performTextReplacement(anchorNode, selection, offset, lastIndex, replacementNodes)
   }
 
   uploadFiles(files, { selectLast } = {}) {
@@ -272,8 +260,56 @@ export default class Contents {
       if (selectLast && uploader.nodes?.length) {
         const lastNode = uploader.nodes.at(-1)
         lastNode.selectEnd()
+        this.#normalizeSelectionInShadowRoot()
       }
     })
+  }
+
+  insertPendingAttachment(file) {
+    if (!this.editorElement.supportsAttachments) return null
+
+    let nodeKey = null
+    this.editor.update(() => {
+      const uploadNode = new ActionTextAttachmentUploadNode({
+        file,
+        uploadUrl: null,
+        blobUrlTemplate: this.editorElement.blobUrlTemplate,
+        editor: this.editor
+      })
+      this.insertAtCursor(uploadNode)
+      nodeKey = uploadNode.getKey()
+    }, { tag: HISTORY_MERGE_TAG })
+
+    if (!nodeKey) return null
+
+    const editor = this.editor
+    return {
+      setAttributes(blob) {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (!(node instanceof ActionTextAttachmentUploadNode)) return
+
+          const replacementNodeKey = node.showUploadedAttachment(blob)
+          if (replacementNodeKey) {
+            nodeKey = replacementNodeKey
+          }
+        }, { tag: HISTORY_MERGE_TAG })
+      },
+      setUploadProgress(progress) {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (!(node instanceof ActionTextAttachmentUploadNode)) return
+
+          node.getWritable().progress = progress
+        }, { tag: HISTORY_MERGE_TAG })
+      },
+      remove() {
+        editor.update(() => {
+          const node = $getNodeByKey(nodeKey)
+          if (node) node.remove()
+        })
+      }
+    }
   }
 
   replaceNodeWithHTML(nodeKey, html, options = {}) {
@@ -312,6 +348,110 @@ export default class Contents {
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
       previousNode.insertAfter(newNode)
     })
+  }
+
+  #insertNodeIfRoot(node) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return false
+
+    const anchorNode = selection.anchor.getNode()
+    if ($isRootOrShadowRoot(anchorNode)) {
+      anchorNode.append(node)
+      node.selectEnd()
+
+      return true
+    }
+
+    return false
+  }
+
+  #unwrapCodeBlock(codeNode) {
+    const children = codeNode.getChildren()
+    const groups = [ [] ]
+
+    for (const child of children) {
+      if ($isLineBreakNode(child)) {
+        groups.push([])
+      } else {
+        groups[groups.length - 1].push(child.getTextContent())
+      }
+    }
+
+    for (const group of groups) {
+      const paragraph = $createParagraphNode()
+      const text = group.join("")
+      if (text) {
+        paragraph.append($createTextNode(text))
+      }
+      codeNode.insertBefore(paragraph)
+    }
+
+    codeNode.remove()
+  }
+
+  #splitParagraphsAtLineBreaksUnlessInsideList() {
+    if (this.selection.isInsideList) return
+
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    this.#splitParagraphsAtLineBreaks(selection)
+  }
+
+  #splitParagraphsAtLineBreaks(selection) {
+    const anchorTopLevel = selection.anchor.getNode().getTopLevelElement()
+    const focusTopLevel = selection.focus.getNode().getTopLevelElement()
+    const topLevelElements = this.#topLevelElementsInSelection(selection)
+
+    for (const element of topLevelElements) {
+      if (!$isParagraphNode(element)) continue
+
+      const children = element.getChildren()
+      if (!children.some($isLineBreakNode)) continue
+
+      // Check whether this paragraph needs splitting: skip only if neither
+      // selection endpoint is inside it (meaning it's a middle paragraph
+      // fully between anchor and focus with no partial lines to split off).
+      // Compare top-level elements so endpoints inside nested inline nodes
+      // (e.g. text inside a LinkNode) are still recognized.
+      if (element !== anchorTopLevel && element !== focusTopLevel) continue
+
+      const groups = [ [] ]
+      for (const child of children) {
+        if ($isLineBreakNode(child)) {
+          groups.push([])
+          child.remove()
+        } else {
+          groups[groups.length - 1].push(child)
+        }
+      }
+
+      for (const group of groups) {
+        if (group.length === 0) continue
+        const paragraph = $createParagraphNode()
+        group.forEach(child => paragraph.append(child))
+        element.insertBefore(paragraph)
+      }
+      if (groups.some(group => group.length > 0)) element.remove()
+    }
+  }
+
+  #blockLevelElementsInSelection(selection) {
+    const blocks = new Set()
+    for (const node of selection.getNodes()) {
+      blocks.add($getNearestBlockElementAncestorOrThrow(node))
+    }
+
+    return Array.from(blocks)
+  }
+
+  #topLevelElementsInSelection(selection) {
+    const elements = new Set()
+    for (const node of selection.getNodes()) {
+      const topLevel = node.getTopLevelElement()
+      if (topLevel) elements.add(topLevel)
+    }
+    return Array.from(elements)
   }
 
   #insertUploadNodes(nodes) {
@@ -354,264 +494,27 @@ export default class Contents {
     node.remove()
   }
 
-  #insertNodeWrappingAllSelectedNodes(newNodeFn) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const selectedNodes = selection.extract()
-      if (selectedNodes.length === 0) {
-        return
-      }
-
-      const topLevelElements = new Set()
-      selectedNodes.forEach((node) => {
-        const topLevel = node.getTopLevelElementOrThrow()
-        topLevelElements.add(topLevel)
-      })
-
-      const elements = this.#withoutTrailingEmptyParagraphs(Array.from(topLevelElements))
-      if (elements.length === 0) {
-        this.#removeStandaloneEmptyParagraph()
-        this.insertAtCursor(newNodeFn())
-        return
-      }
-
-      const wrappingNode = newNodeFn()
-      elements[0].insertBefore(wrappingNode)
-      elements.forEach((element) => {
-        wrappingNode.append(element)
-      })
-    })
-  }
-
-  #withoutTrailingEmptyParagraphs(elements) {
-    let lastNonEmptyIndex = elements.length - 1
-
-    // Find the last non-empty paragraph
-    while (lastNonEmptyIndex >= 0) {
-      const element = elements[lastNonEmptyIndex]
-      if (!$isParagraphNode(element) || !this.#isElementEmpty(element)) {
-        break
-      }
-      lastNonEmptyIndex--
-    }
-
-    return elements.slice(0, lastNonEmptyIndex + 1)
-  }
-
-  #isElementEmpty(element) {
-    // Check text content first
-    if (element.getTextContent().trim() !== "") return false
-
-    // Check if it only contains line breaks
-    const children = element.getChildren()
-    return children.length === 0 || children.every(child => $isLineBreakNode(child))
-  }
-
-  #removeStandaloneEmptyParagraph() {
-    const root = $getRoot()
-    if (root.getChildrenSize() === 1) {
-      const firstChild = root.getFirstChild()
-      if (firstChild && $isParagraphNode(firstChild) && this.#isElementEmpty(firstChild)) {
-        firstChild.remove()
+  // Anchors with non-meaningful hrefs (e.g. "#", "") appear in content copied
+  // from rendered views where mentions and interactive elements are wrapped in
+  // <a href="#"> tags. Unwrap them so their text content pastes as plain text
+  // and real links are preserved.
+  #unwrapPlaceholderAnchors(doc) {
+    for (const anchor of doc.querySelectorAll("a")) {
+      const href = anchor.getAttribute("href") || ""
+      if (href === "" || href === "#") {
+        anchor.replaceWith(...anchor.childNodes)
       }
     }
   }
 
-  #insertNodeWrappingAllSelectedLines(newNodeFn) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      if (selection.isCollapsed()) {
-        this.#wrapCurrentLine(selection, newNodeFn)
-      } else {
-        this.#wrapMultipleSelectedLines(selection, newNodeFn)
-      }
-    })
-  }
-
-  #wrapCurrentLine(selection, newNodeFn) {
-    const anchorNode = selection.anchor.getNode()
-
-    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
-
-    if (topLevelElement.getTextContent()) {
-      const wrappingNode = newNodeFn()
-      wrappingNode.append(...topLevelElement.getChildren())
-      topLevelElement.replace(wrappingNode)
-    } else {
-      selection.insertNodes([ newNodeFn() ])
-    }
-  }
-
-  #wrapMultipleSelectedLines(selection, newNodeFn) {
-    const selectedParagraphs = this.#extractSelectedParagraphs(selection)
-    if (selectedParagraphs.length === 0) return
-
-    const { lineSet, nodesToDelete } = this.#extractUniqueLines(selectedParagraphs)
-    if (lineSet.size === 0) return
-
-    const wrappingNode = this.#createWrappingNodeWithLines(newNodeFn, lineSet)
-    this.#replaceWithWrappingNode(selection, wrappingNode)
-    this.#removeNodes(nodesToDelete)
-  }
-
-  #extractSelectedParagraphs(selection) {
-    const selectedNodes = selection.extract()
-    const selectedParagraphs = selectedNodes
-      .map((node) => this.#getParagraphFromNode(node))
-      .filter(Boolean)
-
-    $setSelection(null)
-    return selectedParagraphs
-  }
-
-  #getParagraphFromNode(node) {
-    if ($isParagraphNode(node)) return node
-    if ($isTextNode(node) && node.getParent() && $isParagraphNode(node.getParent())) {
-      return node.getParent()
-    }
-    return null
-  }
-
-  #extractUniqueLines(selectedParagraphs) {
-    const lineSet = new Set()
-    const nodesToDelete = new Set()
-
-    selectedParagraphs.forEach((paragraphNode) => {
-      const textContent = paragraphNode.getTextContent()
-      if (textContent) {
-        textContent.split("\n").forEach((line) => {
-          if (line.trim()) lineSet.add(line)
-        })
-      }
-      nodesToDelete.add(paragraphNode)
-    })
-
-    return { lineSet, nodesToDelete }
-  }
-
-  #createWrappingNodeWithLines(newNodeFn, lineSet) {
-    const wrappingNode = newNodeFn()
-    const lines = Array.from(lineSet)
-
-    lines.forEach((lineText, index) => {
-      wrappingNode.append($createTextNode(lineText))
-      if (index < lines.length - 1) {
-        wrappingNode.append($createLineBreakNode())
-      }
-    })
-
-    return wrappingNode
-  }
-
-  #replaceWithWrappingNode(selection, wrappingNode) {
-    const anchorNode = selection.anchor.getNode()
-    const parent = anchorNode.getParent()
-    if (parent) {
-      parent.replace(wrappingNode)
-    }
-  }
-
-  #removeNodes(nodesToDelete) {
-    nodesToDelete.forEach((node) => node.remove())
-  }
-
-  #collectSelectedListItems(selection) {
-    const nodes = selection.getNodes()
-    const listItems = new Set()
-    const parentLists = new Set()
-
-    for (const node of nodes) {
-      const listItem = $getNearestNodeOfType(node, ListItemNode)
-      if (listItem) {
-        listItems.add(listItem)
-        const parentList = listItem.getParent()
-        if (parentList && $isListNode(parentList)) {
-          parentLists.add(parentList)
-        }
-      }
-    }
-
-    return { listItems, parentLists }
-  }
-
-  #convertListItemsToParagraphs(listItems) {
-    const newParagraphs = []
-
-    for (const listItem of listItems) {
-      const paragraph = this.#convertListItemToParagraph(listItem)
-      if (paragraph) {
-        newParagraphs.push(paragraph)
-      }
-    }
-
-    return newParagraphs
-  }
-
-  #convertListItemToParagraph(listItem) {
-    const parentList = listItem.getParent()
-    if (!parentList || !$isListNode(parentList)) return null
-
-    const paragraph = $createParagraphNode()
-    const sublists = this.#extractSublistsAndContent(listItem, paragraph)
-
-    listItem.insertAfter(paragraph)
-    this.#insertSublists(paragraph, sublists)
-    listItem.remove()
-
-    return paragraph
-  }
-
-  #extractSublistsAndContent(listItem, paragraph) {
-    const sublists = []
-
-    listItem.getChildren().forEach((child) => {
-      if ($isListNode(child)) {
-        sublists.push(child)
-      } else {
-        paragraph.append(child)
-      }
-    })
-
-    return sublists
-  }
-
-  #insertSublists(paragraph, sublists) {
-    sublists.forEach((sublist) => {
-      paragraph.insertAfter(sublist)
-    })
-  }
-
-  #removeEmptyParentLists(parentLists) {
-    for (const parentList of parentLists) {
-      if ($isListNode(parentList) && parentList.getChildrenSize() === 0) {
-        parentList.remove()
-      }
-    }
-  }
-
-  #selectNewParagraphs(newParagraphs) {
-    if (newParagraphs.length === 0) return
-
-    const firstParagraph = newParagraphs[0]
-    const lastParagraph = newParagraphs[newParagraphs.length - 1]
-
-    if (newParagraphs.length === 1) {
-      firstParagraph.selectEnd()
-    } else {
-      this.#selectParagraphRange(firstParagraph, lastParagraph)
-    }
-  }
-
-  #selectParagraphRange(firstParagraph, lastParagraph) {
-    firstParagraph.selectStart()
-    const currentSelection = $getSelection()
-    if (currentSelection && $isRangeSelection(currentSelection)) {
-      currentSelection.anchor.set(firstParagraph.getKey(), 0, "element")
-      currentSelection.focus.set(lastParagraph.getKey(), lastParagraph.getChildrenSize(), "element")
+  // Table cells copied from a page inherit the source theme's inline color
+  // styles (e.g. dark-mode backgrounds). Strip them so pasted tables adopt
+  // the current theme instead of carrying stale colors.
+  #stripTableCellColorStyles(doc) {
+    for (const cell of doc.querySelectorAll("td, th")) {
+      cell.style.removeProperty("background-color")
+      cell.style.removeProperty("background")
+      cell.style.removeProperty("color")
     }
   }
 
@@ -633,13 +536,13 @@ export default class Contents {
     return textBeforeCursor.lastIndexOf(stringToReplace)
   }
 
-  #performTextReplacement(anchorNode, offset, lastIndex, replacementNodes) {
+  #performTextReplacement(anchorNode, selection, offset, lastIndex, replacementNodes) {
     const fullText = anchorNode.getTextContent()
     const textBeforeString = fullText.slice(0, lastIndex)
     const textAfterCursor = fullText.slice(offset)
 
-    const textNodeBefore = $createTextNode(textBeforeString)
-    const textNodeAfter = $createTextNode(textAfterCursor || " ")
+    const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, selection, textBeforeString)
+    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, selection, textAfterCursor || " ")
 
     anchorNode.replace(textNodeBefore)
 
@@ -649,6 +552,20 @@ export default class Contents {
     this.#appendLineBreakIfNeeded(textNodeAfter.getParentOrThrow())
     const cursorOffset = textAfterCursor ? 0 : 1
     textNodeAfter.select(cursorOffset, cursorOffset)
+  }
+
+  #cloneTextNodeFormatting(anchorNode, selection, text) {
+    const parent = anchorNode.getParent()
+    const fallbackFormat = parent?.getTextFormat?.() || 0
+    const fallbackStyle = parent?.getTextStyle?.() || ""
+    const format = $isRangeSelection(selection) && selection.format ? selection.format : (anchorNode.getFormat() || fallbackFormat)
+    const style = $isRangeSelection(selection) && selection.style ? selection.style : (anchorNode.getStyle() || fallbackStyle)
+
+    return $createTextNode(text)
+      .setFormat(format)
+      .setDetail(anchorNode.getDetail())
+      .setMode(anchorNode.getMode())
+      .setStyle(style)
   }
 
   #insertReplacementNodes(startNode, replacementNodes) {
@@ -689,5 +606,131 @@ export default class Contents {
 
   #shouldUploadFile(file) {
     return dispatch(this.editorElement, "lexxy:file-accept", { file }, true)
+  }
+
+  // When the selection anchor is on a shadow root (e.g. a table cell), Lexical's
+  // insertNodes can't find a block parent and fails silently. Normalize the
+  // selection to point inside the shadow root's content instead.
+  #normalizeSelectionInShadowRoot() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    const anchorNode = selection.anchor.getNode()
+    if (!$isShadowRoot(anchorNode)) return
+
+    // Append a paragraph inside the shadow root so there's a valid text-level
+    // target for subsequent insertions. This is necessary because decorator
+    // nodes (e.g. attachments) at the end of a table cell leave the selection
+    // on the cell itself with no block-level descendant to anchor to.
+    const paragraph = $createParagraphNode()
+    anchorNode.append(paragraph)
+    paragraph.selectStart()
+  }
+}
+
+function $isShadowRoot(node) {
+  return $isElementNode(node) && $isRootOrShadowRoot(node) && !$isRootNode(node)
+}
+
+class NodeInserter {
+  static for(selection) {
+    const INSERTERS = [
+      CodeNodeInserter,
+      QuoteNodeInserter,
+      ShadowRootNodeInserter,
+      NodeSelectionNodeInserter
+    ]
+    const Inserter = INSERTERS.find(inserter => inserter.handles(selection))
+    return Inserter ? new Inserter(selection) : selection
+  }
+
+  constructor(selection) {
+    this.selection = selection
+  }
+}
+
+class CodeNodeInserter extends NodeInserter {
+  static handles(selection) {
+    return $getNearestNodeOfType(selection.anchor?.getNode(), CodeNode)
+  }
+
+  insertNodes(nodes) {
+    if (!this.selection.isCollapsed()) { this.selection.removeText() }
+
+    $ensureForwardRangeSelection(this.selection)
+    const focusNode = this.selection.focus.getNode()
+    const codeNode = $getNearestNodeOfType(focusNode, CodeNode)
+    const insertionIndex = focusNode.is(codeNode) ? 0 : focusNode.getIndexWithinParent()
+
+    const caret = $getChildCaretAtIndex(codeNode, insertionIndex + 1, "previous")
+
+    for (const node of nodes) {
+      if (!node.isAttached()) continue
+      if (caret.getNodeAtCaret() && $isElementNode(node)) { caret.insert($createLineBreakNode()) }
+
+      caret.insert(this.#convertNodeToCodeChild(node))
+    }
+
+    caret.getNodeAtCaret().selectEnd()
+  }
+
+  #convertNodeToCodeChild(node) {
+    if ($isLineBreakNode(node)) {
+      return node
+    } else {
+      node.remove()
+      return $createTextNode(node.getTextContent())
+    }
+  }
+
+}
+
+// Lexical will split a QuoteNode when inserting other Elements - we want them simply inserted as-is
+class QuoteNodeInserter extends NodeInserter {
+  static handles(selection) {
+    return $getNearestNodeOfType(selection.anchor?.getNode(), QuoteNode)
+  }
+
+  insertNodes(nodes) {
+    if (!this.selection.isCollapsed()) { this.selection.removeText() }
+
+    $ensureForwardRangeSelection(this.selection)
+    let lastNode = this.selection.focus.getNode()
+    for (const node of nodes) {
+      lastNode = lastNode.insertAfter(node)
+    }
+
+    lastNode.selectEnd()
+  }
+}
+
+class ShadowRootNodeInserter extends NodeInserter {
+  static handles(selection) {
+    return $isShadowRoot(selection?.anchor.getNode())
+  }
+
+  insertNodes(nodes) {
+    const anchorNode = this.selection.anchor.getNode()
+    const paragraph = $createParagraphNode()
+    anchorNode.append(paragraph)
+
+    paragraph.selectStart().insertNodes(nodes)
+  }
+}
+
+class NodeSelectionNodeInserter extends NodeInserter {
+  static handles(selection) {
+    return $isNodeSelection(selection)
+  }
+
+  insertNodes(nodes) {
+    const selectedNodes = this.selection.getNodes()
+
+    // Overrides Lexical's default behavior of _removing_ the currently selected nodes
+    // https://github.com/facebook/lexical/blob/v0.38.2/packages/lexical/src/LexicalSelection.ts#L412
+    let lastNode = selectedNodes.at(-1)
+    for (const node of nodes) {
+      lastNode = lastNode.insertAfter(node)
+    }
   }
 }

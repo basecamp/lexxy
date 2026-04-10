@@ -1,4 +1,4 @@
-import { $isRangeSelection } from "lexical"
+import { $isRangeSelection, $isTextNode } from "lexical"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 import { createElement } from "./html_helper"
 
@@ -10,6 +10,24 @@ export function isSelectionHighlighted(selection) {
   } else {
     return selection.hasFormat("highlight")
   }
+}
+
+export function getHighlightStyles(selection) {
+  if (!$isRangeSelection(selection)) return null
+
+  let styles = getStyleObjectFromCSS(selection.style)
+  if (!styles.color && !styles["background-color"]) {
+    const anchorNode = selection.anchor.getNode()
+    if ($isTextNode(anchorNode)) {
+      styles = getStyleObjectFromCSS(anchorNode.getStyle())
+    }
+  }
+
+  const color = styles.color || null
+  const backgroundColor = styles["background-color"] || null
+  if (!color && !backgroundColor) return null
+
+  return { color, backgroundColor }
 }
 
 export function hasHighlightStyles(cssOrStyles) {
