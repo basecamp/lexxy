@@ -315,13 +315,6 @@ export class CommandDispatcher {
     this.#registerCommandHandler(KEY_TAB_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleTabKey.bind(this))
   }
 
-  // Prevent native text drag-and-drop within the editor. When the
-  // browser processes a text D&D, it fires insertFromDrop then
-  // deleteByDrag which can leave Lexical's selection referencing
-  // nodes that were removed during the operation, causing
-  // "Point.getNode: node not found" crashes on subsequent actions.
-  //
-
   #handleArrowRightKey(event) {
     const selection = $getSelection()
     if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
