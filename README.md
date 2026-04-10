@@ -5,6 +5,8 @@ A modern rich text editor for Rails.
 > [!IMPORTANT]
 > This is an early beta. It hasn't been battle-tested yet. Please try it out and report any issues you find.
 
+**[Try it out!](https://basecamp.github.io/lexxy/try-it)**
+
 ## Features
 
 - Built on top of [Lexical](https://lexical.dev), the powerful text editor framework from Meta.
@@ -32,7 +34,7 @@ This is an early beta. Here's what's coming next:
     - [x] Text highlighting
 - [x] Configuration hooks.
 - [x] Standalone JS package: to use in non-Rails environments.
-- [ ] Image galleries: The only remaining feature for full Action Text compatibility
+- [x] Image galleries: The only remaining feature for full Action Text compatibility
 - [ ] Install task that generates the necessary JS and adds stylesheets.
 
 ## Contributing
@@ -43,3 +45,7 @@ This is an early beta. Here's what's coming next:
 ## License
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+
+---
+
+[![CI](https://github.com/basecamp/lexxy/actions/workflows/ci.yml/badge.svg)](https://github.com/basecamp/lexxy/actions/workflows/ci.yml)

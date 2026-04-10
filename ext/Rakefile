@@ -1,0 +1,31 @@
+task :default do
+  root = File.expand_path("..", __dir__)
+  target = File.join(root, "app", "assets", "javascript", "lexxy.js")
+
+  next if File.exist?(target)
+
+  puts <<~MSG
+
+    Lexxy: JavaScript assets not found — building from source.
+
+    This is expected when using Lexxy via `git:` in your Gemfile.
+    It requires Node.js and Yarn to be installed.
+
+  MSG
+
+  Dir.chdir(root) do
+    unless system("command -v yarn > /dev/null 2>&1")
+      abort <<~MSG
+
+        Lexxy: `yarn` is not installed. Lexxy needs Node.js and Yarn
+        to build its JavaScript assets when installed from git.
+
+        Install Yarn: https://yarnpkg.com/getting-started/install
+
+      MSG
+    end
+
+    sh "yarn install --frozen-lockfile"
+    sh "yarn build"
+  end
+end

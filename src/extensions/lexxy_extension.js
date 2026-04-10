@@ -22,6 +22,10 @@ export default class LexxyExtension {
     return null
   }
 
+  get allowedElements() {
+    return []
+  }
+
   initializeToolbar(_lexxyToolbar) {
 
   }

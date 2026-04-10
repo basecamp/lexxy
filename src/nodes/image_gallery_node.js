@@ -1,5 +1,5 @@
 import { $createParagraphNode, $splitNode, ElementNode } from "lexical"
-import { $descendantsMatching, $firstToLastIterator, $getNearestNodeOfType, $insertFirst, $unwrapAndFilterDescendants, $wrapNodeInElement } from "@lexical/utils"
+import { $firstToLastIterator, $getNearestNodeOfType, $insertFirst, $unwrapAndFilterDescendants, $wrapNodeInElement } from "@lexical/utils"
 
 import { $isActionTextAttachmentNode, ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { $makeSafeForRoot } from "../helpers/lexical_helper"
@@ -22,14 +22,12 @@ export class ImageGalleryNode extends ElementNode {
   static importDOM() {
     return {
       div: (element) => {
-        const containsAttachment = element.querySelector(`:scope > :is(${this.#attachmentTags.join()})`)
-        if (!containsAttachment) return null
+        if (!this.#isGalleryElement(element)) return null
 
         return {
           conversion: () => {
             return {
-              node: $createImageGalleryNode(),
-              after: children => $descendantsMatching(children, this.isValidChild)
+              node: $createImageGalleryNode()
             }
           },
           priority: 2
@@ -44,6 +42,13 @@ export class ImageGalleryNode extends ElementNode {
 
   static isValidChild(node) {
     return $isActionTextAttachmentNode(node) && node.isPreviewableImage
+  }
+
+  static #isGalleryElement(element) {
+    const attachmentChildren = element.querySelectorAll(`:scope > :is(${this.#attachmentTags.join()})`)
+    return element.textContent.trim() === ""
+      && attachmentChildren.length > 0
+      && element.children.length === attachmentChildren.length
   }
 
   static get #attachmentTags() {

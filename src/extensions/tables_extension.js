@@ -24,6 +24,10 @@ export class TablesExtension extends LexxyExtension {
     return this.editorElement.supportsRichText
   }
 
+  get allowedElements() {
+    return [ "figure", "tbody" ]
+  }
+
   get lexicalExtension() {
     return defineExtension({
       name: "lexxy/tables",
@@ -38,11 +42,12 @@ export class TablesExtension extends LexxyExtension {
         TableRowNode
       ],
       register(editor) {
+        setScrollableTablesActive(editor, true)
+
         return mergeRegister(
           // Register Lexical table plugins
           registerTablePlugin(editor),
           registerTableSelectionObserver(editor, true),
-          setScrollableTablesActive(editor, true),
 
           // Bug fix: Prevent hardcoded background color (Lexical #8089)
           editor.registerNodeTransform(TableCellNode, (node) => {

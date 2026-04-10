@@ -4,11 +4,13 @@ import {
   SKIP_DOM_SELECTION_TAG
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import ToolbarIcons from "./toolbar_icons"
 
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
+  #listeners = new ListenerBin()
 
   constructor() {
     super()
@@ -25,14 +27,30 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   disconnectedCallback() {
-    this.#uninstallResizeObserver()
-    this.#unbindHotkeys()
-    this.#unbindFocusListeners()
+    this.dispose()
+  }
+
+  dispose() {
+    this.#listeners.dispose()
+
+    this.editorElement = null
+    this.editor = null
+    this.selection = null
+
+    this.#createEditorPromise()
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
     if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
       requestAnimationFrame(() => this.#reconnect())
+    }
+  }
+
+  configure(config) {
+    if (typeof config === "object" && config !== null) {
+      for (const [ button, value ] of Object.entries(config)) {
+        this.setAttribute(`data-${button}`, value)
+      }
     }
   }
 
@@ -63,29 +81,25 @@ export class LexicalToolbarElement extends HTMLElement {
     this.connectedCallback()
   }
 
-  #createEditorPromise() {
+  async #createEditorPromise() {
     this.editorPromise = new Promise((resolve) => {
       this.resolveEditorPromise = resolve
     })
+
+    this.editorElement = await this.editorPromise
   }
 
   #installResizeObserver() {
-    this.resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
-    this.resizeObserver.observe(this)
-  }
-
-  #uninstallResizeObserver() {
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect()
-      this.resizeObserver = null
-    }
+    const resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
+    resizeObserver.observe(this)
+    this.#listeners.track(() => resizeObserver.disconnect())
   }
 
   #bindButtons() {
-    this.addEventListener("click", this.#handleButtonClicked.bind(this))
+    this.#listeners.track(registerEventListener(this, "click", this.#handleButtonClicked))
   }
 
-  #handleButtonClicked(event) {
+  #handleButtonClicked = (event) => {
     this.#handleTargetClicked(event, "[data-command]", this.#dispatchButtonCommand.bind(this))
   }
 
@@ -102,14 +116,12 @@ export class LexicalToolbarElement extends HTMLElement {
     this.editor.update(() => {
       this.editor.dispatchCommand(command, payload)
     }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined })
+
+    if (!isKeyboard) this.editor.focus()
   }
 
   #bindHotkeys() {
-    this.editorElement.addEventListener("keydown", this.#handleHotkey)
-  }
-
-  #unbindHotkeys() {
-    this.editorElement?.removeEventListener("keydown", this.#handleHotkey)
+    this.#listeners.track(registerEventListener(this.editorElement, "keydown", this.#handleHotkey))
   }
 
   #handleHotkey = (event) => {
@@ -137,15 +149,11 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #bindFocusListeners() {
-    this.editorElement.addEventListener("lexxy:focus", this.#handleEditorFocus)
-    this.editorElement.addEventListener("lexxy:blur", this.#handleEditorBlur)
-    this.addEventListener("keydown", this.#handleKeydown)
-  }
-
-  #unbindFocusListeners() {
-    this.editorElement.removeEventListener("lexxy:focus", this.#handleEditorFocus)
-    this.editorElement.removeEventListener("lexxy:blur", this.#handleEditorBlur)
-    this.removeEventListener("keydown", this.#handleKeydown)
+    this.#listeners.track(
+      registerEventListener(this.editorElement, "lexxy:focus", this.#handleEditorFocus),
+      registerEventListener(this.editorElement, "lexxy:blur", this.#handleEditorBlur),
+      registerEventListener(this, "keydown", this.#handleKeydown)
+    )
   }
 
   #handleEditorFocus = () => {
@@ -168,18 +176,18 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.editor.registerUpdateListener(() => {
+    this.#listeners.track(this.editor.registerUpdateListener(() => {
       this.editor.getEditorState().read(() => {
         this.#updateButtonStates()
         this.#closeDropdowns()
       })
-    })
+    }))
   }
 
   #monitorHistoryChanges() {
-    this.editor.registerUpdateListener(() => {
+    this.#listeners.track(this.editor.registerUpdateListener(() => {
       this.#updateUndoRedoButtonStates()
-    })
+    }))
   }
 
   #updateUndoRedoButtonStates() {
@@ -199,20 +207,31 @@ export class LexicalToolbarElement extends HTMLElement {
     const anchorNode = selection.anchor.getNode()
     if (!anchorNode.getParent()) { return }
 
-    const { isBold, isItalic, isStrikethrough, isHighlight, isInLink, isInQuote, isInHeading, headingTag,
-      isInCode, isInList, listType, isInTable } = this.selection.getFormat()
+    const { isBold, isItalic, isStrikethrough, isUnderline, isHighlight, isInLink, isInQuote, isInHeading,
+      headingTag, isInCode, isInList, listType, isInTable } = this.selection.getFormat()
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
+
+    this.#setButtonPressed("format", isInHeading || isStrikethrough || isUnderline)
+    this.#setButtonPressed("paragraph", !isInHeading)
+    this.#setButtonPressed("heading-large", headingTag === "h2")
+    this.#setButtonPressed("heading-medium", headingTag === "h3")
+    this.#setButtonPressed("heading-small", headingTag === "h4")
     this.#setButtonPressed("strikethrough", isStrikethrough)
+    this.#setButtonPressed("underline", isUnderline)
+
+    this.#setButtonPressed("lists", isInList)
+    this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
+    this.#setButtonPressed("ordered-list", isInList && listType === "number")
+
     this.#setButtonPressed("highlight", isHighlight)
     this.#setButtonPressed("link", isInLink)
     this.#setButtonPressed("quote", isInQuote)
     this.#setButtonPressed("heading", isInHeading)
     this.#updateHeadingLabel(headingTag)
     this.#setButtonPressed("code", isInCode)
-    this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
-    this.#setButtonPressed("ordered-list", isInList && listType === "number")
+
     this.#setButtonPressed("table", isInTable)
 
     this.#updateUndoRedoButtonStates()
@@ -234,7 +253,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #updateHeadingLabel(headingTag) {
-    const summary = this.querySelector(`[name="heading"]`)
+    const summary = this.querySelector("[name='heading']")
     if (!summary) return
 
     const label = summary.querySelector(".lexxy-heading-label")
@@ -317,7 +336,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   get #buttons() {
-    return Array.from(this.querySelectorAll(":scope > button"))
+    return Array.from(this.querySelectorAll(":scope > button:not([data-prevent-overflow='true'])"))
   }
 
   get #focusableItems() {
@@ -330,6 +349,14 @@ export class LexicalToolbarElement extends HTMLElement {
 
   static get defaultTemplate() {
     return `
+      <button class="lexxy-editor__toolbar-button" type="button" name="image" data-command="uploadImage" data-prevent-overflow="true" title="Add images and video">
+        ${ToolbarIcons.image}
+      </button>
+
+      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="file" data-command="uploadFile" title="Upload files">
+        ${ToolbarIcons.attachment}
+      </button>
+
       <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="Bold">
         ${ToolbarIcons.bold}
       </button>
@@ -338,9 +365,36 @@ export class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.italic}
       </button>
 
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
-      ${ToolbarIcons.strikethrough}
-      </button>
+      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron" name="lexxy-dropdown">
+        <summary class="lexxy-editor__toolbar-button" name="format" title="Text formatting">
+          ${ToolbarIcons.heading}
+        </summary>
+        <div class="lexxy-editor__toolbar-dropdown-list">
+          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph">
+            ${ToolbarIcons.paragraph} <span>Normal</span>
+          </button>
+          <button type="button" name="heading-large" data-command="setFormatHeadingLarge" title="Large heading">
+            ${ToolbarIcons.h2} <span>Large Heading</span>
+          </button>
+          <button type="button" name="heading-medium" data-command="setFormatHeadingMedium" title="Medium heading">
+            ${ToolbarIcons.h3} <span>Medium Heading</span>
+          </button>
+          <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading">
+            ${ToolbarIcons.h4} <span>Small Heading</span>
+          </button>
+          <div class="lexxy-editor__toolbar-separator" role="separator"></div>
+          <button type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
+            ${ToolbarIcons.strikethrough} <span>Strikethrough</span>
+          </button>
+          <button type="button" name="underline" data-command="underline" title="Underline">
+            ${ToolbarIcons.underline} <span>Underline</span>
+          </button>
+          <div class="lexxy-editor__toolbar-separator" role="separator"></div>
+          <button type="button" name="clear-formatting" data-command="clearFormatting" title="Clear formatting">
+            ${ToolbarIcons.clearFormatting} <span>Clear formatting</span>
+          </button>
+        </div>
+      </details>
 
       <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" name="heading" title="Heading">
@@ -352,7 +406,7 @@ export class LexicalToolbarElement extends HTMLElement {
         </lexxy-heading-dropdown>
       </details>
 
-      <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
+      <details class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron" name="lexxy-dropdown">
         <summary class="lexxy-editor__toolbar-button" name="highlight" title="Color highlight">
           ${ToolbarIcons.highlight}
         </summary>
@@ -363,17 +417,15 @@ export class LexicalToolbarElement extends HTMLElement {
       </details>
 
       <details class="lexxy-editor__toolbar-dropdown" name="lexxy-dropdown">
-        <summary class="lexxy-editor__toolbar-button" name="link" title="Link" data-hotkey="cmd+k ctrl+k">
+        <summary class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" name="link" title="Link" data-hotkey="cmd+k ctrl+k">
           ${ToolbarIcons.link}
         </summary>
         <lexxy-link-dropdown class="lexxy-editor__toolbar-dropdown-content">
-          <form method="dialog">
-            <input type="url" placeholder="Enter a URL…" class="input">
-            <div class="lexxy-editor__toolbar-dropdown-actions">
-              <button type="submit" class="lexxy-editor__toolbar-button" value="link">Link</button>
-              <button type="button" class="lexxy-editor__toolbar-button" value="unlink">Unlink</button>
-            </div>
-          </form>
+          <input type="url" placeholder="Enter a URL…" class="input">
+          <div class="lexxy-editor__toolbar-dropdown-actions">
+            <button type="button" class="lexxy-editor__toolbar-button" value="link">Link</button>
+            <button type="button" class="lexxy-editor__toolbar-button" value="unlink">Unlink</button>
+          </div>
         </lexxy-link-dropdown>
       </details>
 
@@ -381,20 +433,15 @@ export class LexicalToolbarElement extends HTMLElement {
         ${ToolbarIcons.quote}
       </button>
 
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="code" data-command="insertCodeBlock" title="Code">
+      <button class="lexxy-editor__toolbar-button" type="button" name="code" data-command="insertCodeBlock" title="Code">
         ${ToolbarIcons.code}
       </button>
 
       <button class="lexxy-editor__toolbar-button" type="button" name="unordered-list" data-command="insertUnorderedList" title="Bullet list">
         ${ToolbarIcons.ul}
       </button>
-
       <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="ordered-list" data-command="insertOrderedList" title="Numbered list">
         ${ToolbarIcons.ol}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="upload" data-command="uploadAttachments" title="Upload file">
-        ${ToolbarIcons.attachment}
       </button>
 
       <button class="lexxy-editor__toolbar-button" type="button" name="table" data-command="insertTable" title="Insert a table">
@@ -404,9 +451,9 @@ export class LexicalToolbarElement extends HTMLElement {
       <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
         ${ToolbarIcons.hr}
       </button>
- 
+
       <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
- 
+
       <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo">
         ${ToolbarIcons.undo}
       </button>

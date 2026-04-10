@@ -1,17 +1,22 @@
 import { nextFrame } from "../helpers/timing_helpers"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
 export class ToolbarDropdown extends HTMLElement {
+  #listeners = new ListenerBin()
+
   connectedCallback() {
     this.container = this.closest("details")
 
-    this.container.addEventListener("toggle", this.#handleToggle.bind(this))
-    this.container.addEventListener("keydown", this.#handleKeyDown.bind(this))
+    this.#listeners.track(
+      registerEventListener(this.container, "toggle", this.#handleToggle),
+      registerEventListener(this.container, "keydown", this.#handleKeyDown)
+    )
 
     this.#onToolbarEditor(this.initialize.bind(this))
   }
 
   disconnectedCallback() {
-    this.container.removeEventListener("keydown", this.#handleKeyDown.bind(this))
+    this.#listeners.dispose()
   }
 
   get toolbar() {
@@ -26,6 +31,10 @@ export class ToolbarDropdown extends HTMLElement {
     return this.toolbar.editor
   }
 
+  track(...listeners) {
+    this.#listeners.track(...listeners)
+  }
+
   initialize() {
     // Any post-editor initialization
   }
@@ -36,11 +45,11 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   async #onToolbarEditor(callback) {
-    await this.toolbar.editorConnected
+    await this.toolbar.editorElement
     callback()
   }
 
-  #handleToggle() {
+  #handleToggle = () => {
     if (this.container.open) {
       this.#handleOpen()
     }
@@ -51,7 +60,7 @@ export class ToolbarDropdown extends HTMLElement {
     this.#resetTabIndexValues()
   }
 
-  #handleKeyDown(event) {
+  #handleKeyDown = (event) => {
     if (event.key === "Escape") {
       event.stopPropagation()
       this.close()

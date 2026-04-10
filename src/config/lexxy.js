@@ -14,7 +14,9 @@ const presets = new Configuration({
     markdown: true,
     multiLine: true,
     richText: true,
-    toolbar: true,
+    toolbar: {
+      upload: "both"
+    },
     headings: [ "h2", "h3", "h4" ],
     highlight: {
       buttons: {

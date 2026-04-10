@@ -13,6 +13,7 @@ class PageRefreshesTest < ApplicationSystemTestCase
     find_editor.send "\n"
 
     find_editor.send "1"
+    wait_until { find_editor.open_prompt? }
     click_on_prompt "Peter Johnson"
     assert_mention_attachment people(:peter)
   end
