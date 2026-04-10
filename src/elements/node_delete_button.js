@@ -11,21 +11,16 @@ export class NodeDeleteButton extends HTMLElement {
     this.editor = this.editorElement.editor
     this.classList.add("lexxy-floating-controls")
 
-    if (!this.deleteButton) {
+    if (!this.querySelector(".lexxy-node-delete")) {
       this.#attachDeleteButton()
     }
   }
 
   disconnectedCallback() {
-    if (this.deleteButton && this.handleDeleteClick) {
-      this.deleteButton.removeEventListener("click", this.handleDeleteClick)
-    }
-
-    this.handleDeleteClick = null
-    this.deleteButton = null
     this.editor = null
     this.editorElement = null
   }
+
   #attachDeleteButton() {
     const container = createElement("div", { className: "lexxy-floating-controls__group" })
 

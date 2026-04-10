@@ -76,7 +76,7 @@
       position: relative;
       transition: all 0.1s ease-in-out;
 
-      /* Used for column and row adding visualisations */
+      /* Used for column and row adding visualizations */
       &:after {
         box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent inset;
         content: "";
@@ -185,9 +185,129 @@
     cursor: pointer;
   }
 
+  .attachment {
+    background-color: var(--lexxy-color-canvas);
+
+    progress {
+      max-inline-size: 10ch;
+      margin: auto;
+    }
+
+    &.attachment--preview {
+      progress {
+        inset-block-start: 2ch;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
+        position: absolute;
+      }
+
+      lexxy-node-delete-button {
+        inset-block-start: 1.5ch;
+        inset-inline-end: 1.5ch;
+        inset-inline-start: unset;
+      }
+    }
+
+    &.attachment--error {
+      background: color-mix(var(--lexxy-color-red) 10%, transparent);
+      padding: 2ch;
+
+      &:before {
+        align-items: center;
+        aspect-ratio: 1;
+        background: var(--lexxy-color-red);
+        block-size: 1.5lh;
+        border-radius: 50%;
+        color: white;
+        content: "!";
+        display: flex;
+        justify-content: center;
+        margin: auto;
+      }
+
+      > div {
+        flex: 1;
+        font-size: 0.85em;
+        padding: 1ch;
+        text-align: start;
+      }
+    }
+  }
+
+  .attachment[draggable] {
+    cursor: grab;
+  }
+
+  .attachment.lexxy-dragging {
+    opacity: 0.4;
+  }
+
+  [class*="lexxy-drop-target--"] {
+    position: relative;
+  }
+
+  /* Horizontal line indicator for block and list drops */
+  .lexxy-drop-target--block-before::before,
+  .lexxy-drop-target--block-after::after,
+  .lexxy-drop-target--list-before::before,
+  .lexxy-drop-target--list-after::after {
+    background-color: var(--lexxy-focus-ring-color);
+    block-size: 3px;
+    border-radius: 1px;
+    content: "";
+    inset-inline: 0;
+    pointer-events: none;
+    position: absolute;
+    transform: translate(0, 0.5ch);
+  }
+
+  .lexxy-drop-target--block-before::before,
+  .lexxy-drop-target--list-before::before {
+    transform: translate(0, -0.5ch);
+  }
+
+  .lexxy-drop-target--block-before::before,
+  .lexxy-drop-target--list-before::before {
+    inset-block-start: -2px;
+  }
+
+  .lexxy-drop-target--block-after::after,
+  .lexxy-drop-target--list-after::after {
+    inset-block-end: -2px;
+  }
+
+  /* Vertical line indicator for gallery merge and reorder */
+  .lexxy-drop-target--gallery-before::before,
+  .lexxy-drop-target--gallery-after::after {
+    background-color: var(--lexxy-focus-ring-color);
+    border-radius: 1px;
+    content: "";
+    inset-block: 0;
+    inline-size: 3px;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  .lexxy-drop-target--gallery-before::before {
+    inset-inline-start: -4px;
+  }
+
+  .lexxy-drop-target--gallery-after::after {
+    inset-inline-end: -4px;
+  }
+
   .attachment:hover:not(.node--selected) {
     outline: var(--lexxy-focus-ring-size) solid color-mix(in oklch, var(--lexxy-focus-ring-color) 30%, transparent);
     outline-offset: var(--lexxy-focus-ring-offset);
+  }
+
+  .attachment--file {
+    lexxy-node-delete-button {
+      inset-block-start: 50%;
+      inset-inline-end: 1ch;
+      inset-inline-start: unset;
+      transform: translate(0, -50%);
+    }
   }
 
   /* Image galleries */
@@ -198,47 +318,35 @@
     --lexxy-attachment-gallery-gap: 0.4ch;
     --lexxy-focus-ring-offset: -6px;
 
-    display: block;
     padding: 0;
 
     .attachment {
+      background: transparent;
       box-sizing: border-box;
-      display: inline-flex;
-      flex-direction: column;
-      gap: 0;
-      inline-size: calc(100% / var(--lexxy-attachment-gallery-columns) - var(--lexxy-attachment-gallery-gap) * 2);
       margin: var(--lexxy-attachment-gallery-gap);
       padding: 0;
       padding-block-end: var(--lexxy-attachment-gap);
       vertical-align: top;
 
-      .attachment__container {
-        display: block;
-        margin: 0;
+      img {
+        box-sizing: border-box;
         padding: 1ch;
         padding-block-end: 0;
       }
 
-      img {
-        block-size: auto;
-        box-sizing: border-box;
-        inline-size: auto;
-        margin: auto;
-        max-block-size: 50rem;
-        max-inline-size: 100%;
-        object-fit: contain;
-      }
-    }
 
-    &:has(> .attachment:nth-child(2):last-of-type),
-    &:has(> .attachment:nth-child(4):last-of-type) {
-      --lexxy-attachment-gallery-columns: 2;
+      &.attachment--error {
+        background: color-mix(var(--lexxy-color-red) 10%, transparent);
+        padding: 2ch;
+
+        > div {
+          text-align: center;
+        }
+      }
     }
   }
 
   .attachment__caption {
-    padding: 0 1ch;
-
     textarea {
       background: transparent;
       block-size: fit-content;
@@ -251,9 +359,9 @@
       font-family: inherit;
       inline-size: 100%;
       max-inline-size: 100%;
+      padding: 0;
       resize: none;
       text-align: center;
-      padding: 1ch 0;
 
       &:focus {
         background: var(--lexxy-color-canvas);
@@ -276,7 +384,7 @@
 
 /* Placeholder */
 :where(.lexxy-editor--empty) {
-  .lexxy-editor__content:not(:has(ul, ol))::before {
+  .lexxy-editor__content:not(:has(h1, h2, h3, h4, h5, h6, table, ul, ol, figure, .attachment-gallery))::before {
     content: attr(placeholder);
     color: currentColor;
     cursor: text;
@@ -328,10 +436,19 @@
   padding: 2px;
   position: relative;
 
-  &[data-attachments="false"] button[name="upload"]{
+  &[data-attachments="false"] button[name="image"],
+  &[data-attachments="false"] button[name="file"] {
     display: none;
   }
-  
+
+  &[data-upload="file"] button[name="image"] {
+    display: none;
+  }
+
+  &[data-upload="image"] button[name="file"] {
+    display: none;
+  }
+
   .lexxy-editor__toolbar-button {
     aspect-ratio: 1;
     block-size: var(--lexxy-toolbar-button-size);
@@ -371,14 +488,15 @@
 
       &:after {
         background-color: var(--lexxy-color-ink-lighter);
+        block-size: var(--lexxy-toolbar-icon-size);
         content: "";
         display: block;
-        width: 1px;
-        height: 60%;
+        inline-size: 1px;
         inset-inline-end: calc(-1 * var(--lexxy-toolbar-spacing));
-        inset-block-start: 20%;
-        position: absolute;
+        inset-block: 0;
+        margin: auto;
         pointer-events: none;
+        position: absolute;
       }
     }
   }
@@ -394,6 +512,25 @@
 :where(.lexxy-editor__toolbar-dropdown) {
   user-select: none;
   -webkit-user-select: none;
+
+  &.lexxy-editor__toolbar-dropdown--chevron {
+    summary {
+      aspect-ratio: unset;
+      gap: 0.5ch;
+      grid-template-columns: 2fr 1fr;
+      padding-inline: 0.75ch;
+
+      &:after {
+        block-size: 0.3ch;
+        border-block-end: 2px solid currentcolor;
+        border-inline-end: 2px solid currentcolor;
+        content: "";
+        display: inline-block;
+        inline-size: 0.3ch;
+        transform: rotate(45deg);
+      }
+    }
+  }
 
   summary ~ * {
     background-color: var(--lexxy-color-canvas);
@@ -420,16 +557,60 @@
     }
   }
 
-  [overflowing] &:not(.lexxy-editor__toolbar-overflow) summary ~ * {
-    inset-inline-end: var(--lexxy-toolbar-spacing);
-    inset-inline-start: var(--lexxy-toolbar-spacing);
-  }
-
   button {
     color: var(--lexxy-color-text);
 
     &:hover {
       opacity: 0.8;
+    }
+  }
+
+  .lexxy-editor__toolbar-dropdown-list {
+    border-start-start-radius: 0;
+    flex-direction: column;
+    padding: 0.1ch;
+
+    button {
+      align-items: center;
+      display: flex;
+      flex-direction: row;
+      gap: 1ch;
+      padding: 1ch;
+      position: relative;
+
+      &[aria-pressed="true"] {
+        background-color: var(--lexxy-color-selected);
+
+        &:hover {
+          background-color: var(--lexxy-color-selected-hover);
+        }
+      }
+
+      span {
+        font-size: var(--lexxy-text-small);
+      }
+
+      svg {
+        block-size: 1lh;
+        inline-size: 1lh;
+      }
+    }
+
+    .lexxy-editor__toolbar-separator {
+      background: var(--lexxy-color-ink-lighter);
+      block-size: 1px;
+      inline-size: 100%;
+    }
+
+    [overflowing] & {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+
+      button span { display: none; }
+
+      .lexxy-editor__toolbar-separator {
+        grid-column: 1 / -1;
+      }
     }
   }
 
@@ -456,22 +637,18 @@
 
   lexxy-link-dropdown {
     font-size: var(--lexxy-text-small);
+    gap: var(--lexxy-toolbar-spacing);
     inset-inline-start: var(--lexxy-toolbar-spacing);
     inset-inline-end: var(--lexxy-toolbar-spacing);
 
-    form {
-      display: flex;
-      flex: 1;
-      gap: var(--lexxy-toolbar-spacing);
+    [overflowing] [open] & {
+      display: block;
 
-      [overflowing] & {
-        display: block;
-
-        .lexxy-editor__toolbar-dropdown-actions {
-          margin-block-start: var(--lexxy-toolbar-spacing);
-        }
+      .lexxy-editor__toolbar-dropdown-actions {
+        margin-block-start: var(--lexxy-toolbar-spacing);
       }
     }
+
 
     .lexxy-editor__toolbar-dropdown-actions {
       display: flex;
@@ -500,7 +677,7 @@
       padding-inline: 2ch;
     }
 
-    button[type="submit"] {
+    button[value="link"] {
       background-color: var(--lexxy-color-accent-dark);
       color: var(--lexxy-color-ink-inverted);
 
@@ -531,6 +708,11 @@
     font-size: var(--lexxy-text-small);
     inset-inline-start: 0;
     max-inline-size: var(--max-inline-size);
+
+    [overflowing] & {
+      inset-inline-end: var(--lexxy-toolbar-spacing);
+      inset-inline-start: var(--lexxy-toolbar-spacing);
+    }
 
     button {
       position: relative;
@@ -583,7 +765,7 @@
 /* Floating controls */
 :where(.lexxy-floating-controls) {
   --button-size: 2.3lh;
-  --table-tools-radius: calc(var(--lexxy-radius) * 1.5);
+  --floating-tools-radius: calc(var(--lexxy-radius) * 1.5);
 
   color: var(--lexxy-color-ink-inverted);
   font-size: var(--lexxy-text-small);
@@ -599,7 +781,7 @@
     color: var(--lexxy-color-ink-inverted);
     display: flex;
     justify-content: center;
-    line-height: 1;
+    line-height: inherit;
     min-block-size: var(--button-size);
     min-inline-size: var(--button-size);
     user-select: none;
@@ -645,7 +827,7 @@
 
   .lexxy-floating-controls__group {
     background-color: var(--lexxy-color-ink);
-    border-radius: var(--table-tools-radius);
+    border-radius: var(--floating-tools-radius);
     padding: 0.25ch;
   }
 
@@ -672,7 +854,7 @@
 
         .lexxy-table-control__more-menu-details {
           background: var(--lexxy-color-ink);
-          border-radius: var(--table-tools-radius);
+          border-radius: var(--floating-tools-radius);
           display: flex;
           flex-direction: column;
           gap: 0.25ch;
@@ -721,7 +903,7 @@
         span {
           align-items: center;
           background: var(--lexxy-color-ink);
-          border-radius: var(--table-tools-radius);
+          border-radius: var(--floating-tools-radius);
           color: color-mix(in srgb, var(--lexxy-color-ink-inverted) 80%, transparent);
           display: flex;
           inset-inline-end: calc(var(--button-size) + 1ch);
@@ -755,11 +937,10 @@
   /* Attachment delete button */
 
   &:is(lexxy-node-delete-button) {
-    inset-block-start: 0.5ch;
-    inset-inline-end: 0.5ch;
+    inset-block-start: 0;
+    inset-inline-start: 100%;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.1s ease-in-out;
 
     .node--selected & {
       opacity: 1;
@@ -810,8 +991,10 @@
 
 :where(.lexxy-prompt-menu) {
   --lexxy-prompt-avatar-size: 24px;
-  --lexxy-prompt-min-width: 20ch;
   --lexxy-prompt-padding: 0.5ch;
+
+  --lexxy-prompt-offset-x: 0;
+  --lexxy-prompt-offset-y: 0;
 
   background-color: var(--lexxy-color-canvas);
   border-radius: calc(var(--lexxy-prompt-padding) * 2);
@@ -820,13 +1003,28 @@
   font-family: var(--lexxy-font-base);
   font-size: var(--lexxy-text-small);
   list-style: none;
+  inset-block-start: var(--lexxy-prompt-offset-y);
+  inset-inline-start: var(--lexxy-prompt-offset-x);
   margin: 0;
   max-block-size: 200px;
-  min-inline-size: var(--lexxy-prompt-min-width);
+  max-inline-size: min(20ch, calc(100% - var(--lexxy-prompt-offset-x)));
+  min-inline-size: 20ch;
   overflow: auto;
   padding: var(--lexxy-prompt-padding);
+  position: absolute;
   visibility: hidden;
   z-index: var(--lexxy-z-popup);
+
+  &[data-clipped-at-right] {
+    inset-inline-start: unset;
+    inset-inline-end: 1ch;
+    max-inline-size: calc(100% - 1ch);
+  }
+
+  &[data-clipped-at-bottom] {
+    inset-block-start: unset;
+    inset-block-end: var(--lexxy-prompt-offset-y);
+  }
 }
 
 :where(.lexxy-prompt-menu--visible) {
@@ -840,7 +1038,6 @@
   display: flex;
   gap: var(--lexxy-prompt-padding);
   padding: var(--lexxy-prompt-padding);
-  white-space: nowrap;
 
   &:hover {
     background-color: var(--lexxy-color-ink-lightest);
@@ -866,4 +1063,32 @@
 :where(.lexxy-prompt-menu__item--empty) {
   color: var(--lexxy-color-ink-medium);
   padding: var(--lexxy-prompt-padding);
+}
+
+
+/* --------------------------------------------------------------------------
+/* Custom attachments */
+action-text-attachment[content-type^="application/vnd.actiontext"] {
+  &.node--selected {
+    --lexxy-attachment-bg-color: var(--lexxy-color-accent-dark);
+    --lexxy-attachment-text-color: var(--lexxy-color-ink-inverted);
+
+    outline: none;
+  }
+
+  lexxy-node-delete-button {
+    inset-inline-start: 0;
+    line-height: 1lh;
+
+    .lexxy-floating-controls__group {
+      --button-size: 1lh;
+
+      background-color: var(--lexxy-color-accent-dark);
+      padding: 0;
+
+      button {
+        border-radius: 50%;
+      }
+    }
+  }
 }

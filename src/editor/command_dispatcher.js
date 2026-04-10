@@ -2,24 +2,25 @@ import {
   $createTextNode,
   $getSelection,
   $isRangeSelection,
-  $isRootOrShadowRoot,
+  $isTextNode,
+  $setSelection,
   COMMAND_PRIORITY_LOW,
   COMMAND_PRIORITY_NORMAL,
   FORMAT_TEXT_COMMAND,
   INDENT_CONTENT_COMMAND,
+  KEY_ARROW_RIGHT_COMMAND,
   KEY_TAB_COMMAND,
   OUTDENT_CONTENT_COMMAND,
   PASTE_COMMAND,
   REDO_COMMAND,
   UNDO_COMMAND
 } from "lexical"
-import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
-import { $createHeadingNode, $createQuoteNode, $isQuoteNode, HeadingNode } from "@lexical/rich-text"
-import { $isCodeNode, CodeNode } from "@lexical/code"
+import { CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { REMOVE_HIGHLIGHT_COMMAND, TOGGLE_HIGHLIGHT_COMMAND } from "../extensions/highlight_extension"
@@ -28,17 +29,24 @@ const COMMANDS = [
   "bold",
   "italic",
   "strikethrough",
+  "underline",
   "link",
   "unlink",
   "toggleHighlight",
   "removeHighlight",
-  "rotateHeadingFormat",
+  "setFormatHeadingLarge",
+  "setFormatHeadingMedium",
+  "setFormatHeadingSmall",
+  "setFormatParagraph",
+  "clearFormatting",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
   "insertCodeBlock",
+  "setCodeLanguage",
   "insertHorizontalDivider",
-  "uploadAttachments",
+  "uploadImage",
+  "uploadFile",
 
   "insertTable",
 
@@ -47,8 +55,11 @@ const COMMANDS = [
 ]
 
 export class CommandDispatcher {
+  #selectionBeforeDrag = null
+  #listeners = new ListenerBin()
+
   static configureFor(editorElement) {
-    new CommandDispatcher(editorElement)
+    return new CommandDispatcher(editorElement)
   }
 
   constructor(editorElement) {
@@ -79,6 +90,10 @@ export class CommandDispatcher {
     this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "strikethrough")
   }
 
+  dispatchUnderline() {
+    this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline")
+  }
+
   dispatchToggleHighlight(styles) {
     this.editor.dispatchCommand(TOGGLE_HIGHLIGHT_COMMAND, styles)
   }
@@ -104,7 +119,14 @@ export class CommandDispatcher {
   }
 
   dispatchUnlink() {
-    this.#toggleLink(null)
+    this.editor.update(() => {
+      // Let adapters signal whether unlink should target a frozen link key.
+      if (this.editorElement.adapter.unlinkFrozenNode?.()) {
+        return
+      }
+
+      $toggleLink(null)
+    })
   }
 
   dispatchInsertUnorderedList() {
@@ -114,9 +136,9 @@ export class CommandDispatcher {
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "bullet") {
-      this.contents.unwrapSelectedListItems()
+      this.contents.applyParagraphFormat()
     } else {
-      this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
+      this.contents.applyUnorderedListFormat()
     }
   }
 
@@ -127,23 +149,82 @@ export class CommandDispatcher {
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "number") {
-      this.contents.unwrapSelectedListItems()
+      this.contents.applyParagraphFormat()
     } else {
-      this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
+      this.contents.applyOrderedListFormat()
     }
   }
 
   dispatchInsertQuoteBlock() {
-    this.contents.toggleNodeWrappingAllSelectedNodes((node) => $isQuoteNode(node), () => $createQuoteNode())
+    this.contents.toggleBlockquote()
   }
 
   dispatchInsertCodeBlock() {
-    this.editor.update(() => {
-      if (this.selection.hasSelectedWordsInSingleLine) {
-        this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
-      } else {
-        this.contents.toggleNodeWrappingAllSelectedLines((node) => $isCodeNode(node), () => new CodeNode("plain"))
+    if (this.selection.hasSelectedWordsInSingleLine) {
+      this.#toggleInlineCode()
+    } else {
+      this.contents.toggleCodeBlock()
+    }
+  }
+
+  #toggleInlineCode() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    if (!selection.isCollapsed()) {
+      const textNodes = selection.getNodes().filter($isTextNode)
+      const applyingCode = !textNodes.every((node) => node.hasFormat("code"))
+
+      if (applyingCode) {
+        this.#stripInlineFormattingFromSelection(selection, textNodes)
       }
+    }
+
+    this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
+  }
+
+  // Strip all inline formatting (bold, italic, etc.) from the selected text
+  // nodes so that applying code produces a single merged <code> element instead
+  // of one per differently-formatted span.
+  #stripInlineFormattingFromSelection(selection, textNodes) {
+    const isBackward = selection.isBackward()
+    const startPoint = isBackward ? selection.focus : selection.anchor
+    const endPoint = isBackward ? selection.anchor : selection.focus
+
+    for (let i = 0; i < textNodes.length; i++) {
+      const node = textNodes[i]
+      if (node.getFormat() === 0) continue
+
+      const isFirst = i === 0
+      const isLast = i === textNodes.length - 1
+      const startOffset = isFirst && startPoint.type === "text" ? startPoint.offset : 0
+      const endOffset = isLast && endPoint.type === "text" ? endPoint.offset : node.getTextContentSize()
+
+      if (startOffset === 0 && endOffset === node.getTextContentSize()) {
+        node.setFormat(0)
+      } else {
+        const splits = node.splitText(startOffset, endOffset)
+        const target = startOffset === 0 ? splits[0] : splits[1]
+        target.setFormat(0)
+
+        if (isFirst && startPoint.type === "text") {
+          startPoint.set(target.getKey(), 0, "text")
+        }
+        if (isLast && endPoint.type === "text") {
+          endPoint.set(target.getKey(), endOffset - startOffset, "text")
+        }
+      }
+    }
+  }
+
+  dispatchSetCodeLanguage(language) {
+    this.editor.update(() => {
+      if (!this.selection.isInsideCodeBlock) return
+
+      const codeNode = this.selection.nearestNodeOfType(CodeNode)
+      if (!codeNode) return
+
+      codeNode.setLanguage(language)
     })
   }
 
@@ -152,43 +233,47 @@ export class CommandDispatcher {
     this.editor.focus()
   }
 
-  get #configuredHeadings() {
-    return this.editorElement.config.get("headings")
+  dispatchSetFormatHeadingLarge() {
+    this.contents.applyHeadingFormat("h2")
   }
 
-  dispatchRotateHeadingFormat() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return false
-
-    const headings = this.#configuredHeadings
-    if (headings.length === 0) return false
-
-    if ($isRootOrShadowRoot(selection.anchor.getNode())) {
-      selection.insertNodes([ $createHeadingNode(headings[0]) ])
-      return
-    }
-
-    const currentHeading = this.selection.nearestNodeOfType(HeadingNode)
-    const currentTag = currentHeading?.getTag()
-    const currentIndex = headings.indexOf(currentTag)
-    const nextTag = headings[currentIndex + 1]
-
-    if (nextTag) {
-      this.contents.insertNodeWrappingEachSelectedLine(() => $createHeadingNode(nextTag))
-    } else {
-      this.contents.removeFormattingFromSelectedLines()
-    }
+  dispatchSetFormatHeadingMedium() {
+    this.contents.applyHeadingFormat("h3")
   }
 
-  dispatchUploadAttachments() {
-    const input = createElement("input", {
+  dispatchSetFormatHeadingSmall() {
+    this.contents.applyHeadingFormat("h4")
+  }
+
+  dispatchSetFormatParagraph() {
+    this.contents.applyParagraphFormat()
+  }
+
+  dispatchClearFormatting() {
+    this.contents.clearFormatting()
+  }
+
+  dispatchUploadImage() {
+    this.#dispatchUploadAttachment("image/*,video/*")
+  }
+
+  dispatchUploadFile() {
+    this.#dispatchUploadAttachment()
+  }
+
+  #dispatchUploadAttachment(accept = null) {
+    const attributes = {
       type: "file",
       multiple: true,
       style: "display: none;",
       onchange: ({ target: { files } }) => {
         this.contents.uploadFiles(files, { selectLast: true })
       }
-    })
+    }
+
+    if (accept) attributes.accept = accept
+
+    const input = createElement("input", attributes)
 
     // Append and remove to make testable
     this.editorElement.appendChild(input)
@@ -208,6 +293,10 @@ export class CommandDispatcher {
     this.editor.dispatchCommand(REDO_COMMAND, undefined)
   }
 
+  dispose() {
+    this.#listeners.dispose()
+  }
+
   #registerCommands() {
     for (const command of COMMANDS) {
       const methodName = `dispatch${capitalize(command)}`
@@ -218,42 +307,70 @@ export class CommandDispatcher {
   }
 
   #registerCommandHandler(command, priority, handler) {
-    this.editor.registerCommand(command, handler, priority)
+    this.#listeners.track(this.editor.registerCommand(command, handler, priority))
   }
 
   #registerKeyboardCommands() {
-    this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleTabKey.bind(this), COMMAND_PRIORITY_NORMAL)
+    this.#registerCommandHandler(KEY_ARROW_RIGHT_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleArrowRightKey.bind(this))
+    this.#registerCommandHandler(KEY_TAB_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleTabKey.bind(this))
+  }
+
+  #handleArrowRightKey(event) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+    if (this.selection.isInsideCodeBlock || !selection.hasFormat("code")) return false
+
+    const anchorNode = selection.anchor.getNode()
+    if (!$isTextNode(anchorNode) || selection.anchor.offset !== anchorNode.getTextContentSize()) return false
+    if (anchorNode.getNextSibling() !== null) return false
+
+    event.preventDefault()
+    selection.toggleFormat("code")
+    return true
   }
 
   #registerDragAndDropHandlers() {
     if (this.editorElement.supportsAttachments) {
       this.dragCounter = 0
-      this.editor.getRootElement().addEventListener("dragover", this.#handleDragOver.bind(this))
-      this.editor.getRootElement().addEventListener("drop", this.#handleDrop.bind(this))
-      this.editor.getRootElement().addEventListener("dragenter", this.#handleDragEnter.bind(this))
-      this.editor.getRootElement().addEventListener("dragleave", this.#handleDragLeave.bind(this))
+      const root = this.editor.getRootElement()
+      this.#listeners.track(
+        registerEventListener(root, "dragover", this.#handleDragOver.bind(this)),
+        registerEventListener(root, "drop", this.#handleDrop.bind(this)),
+        registerEventListener(root, "dragenter", this.#handleDragEnter.bind(this)),
+        registerEventListener(root, "dragleave", this.#handleDragLeave.bind(this))
+      )
     }
   }
 
   #handleDragEnter(event) {
+    if (this.#isInternalDrag(event)) return
+
     this.dragCounter++
     if (this.dragCounter === 1) {
+      this.#saveSelectionBeforeDrag()
       this.editor.getRootElement().classList.add("lexxy-editor--drag-over")
     }
   }
 
   #handleDragLeave(event) {
+    if (this.#isInternalDrag(event)) return
+
     this.dragCounter--
     if (this.dragCounter === 0) {
+      this.#selectionBeforeDrag = null
       this.editor.getRootElement().classList.remove("lexxy-editor--drag-over")
     }
   }
 
   #handleDragOver(event) {
+    if (this.#isInternalDrag(event)) return
+
     event.preventDefault()
   }
 
   #handleDrop(event) {
+    if (this.#isInternalDrag(event)) return
+
     event.preventDefault()
 
     this.dragCounter = 0
@@ -265,9 +382,30 @@ export class CommandDispatcher {
     const files = Array.from(dataTransfer.files)
     if (!files.length) return
 
+    this.#restoreSelectionBeforeDrag()
     this.contents.uploadFiles(files, { selectLast: true })
 
     this.editor.focus()
+  }
+
+  #saveSelectionBeforeDrag() {
+    this.editor.getEditorState().read(() => {
+      this.#selectionBeforeDrag = $getSelection()?.clone()
+    })
+  }
+
+  #restoreSelectionBeforeDrag() {
+    if (!this.#selectionBeforeDrag) return
+
+    this.editor.update(() => {
+      $setSelection(this.#selectionBeforeDrag)
+    })
+
+    this.#selectionBeforeDrag = null
+  }
+
+  #isInternalDrag(event) {
+    return event.dataTransfer?.types.includes("application/x-lexxy-node-key")
   }
 
   #handleTabKey(event) {
@@ -292,16 +430,6 @@ export class CommandDispatcher {
     return $isRangeSelection(selection) && selection.isCollapsed()
   }
 
-  // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
-  #toggleLink(url) {
-    this.editor.update(() => {
-      if (url === null) {
-        $toggleLink(null)
-      } else {
-        $toggleLink(url)
-      }
-    })
-  }
 }
 
 function capitalize(str) {

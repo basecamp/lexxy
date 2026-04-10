@@ -11,10 +11,28 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_mention_attachment people(:peter)
   end
 
+  test "clicking a prompt option preserves bold formatting around the inserted mention" do
+    start_bold_prompt_insertion
+
+    click_on_prompt "Peter Johnson"
+    find_editor.send " there"
+
+    assert_bold_mention_surrounded_by_bold_text
+  end
+
   test "deferred prompt" do
     find_editor.send "2"
     click_on_prompt "Peter Johnson"
     assert_mention_attachment people(:peter)
+  end
+
+  test "pressing enter to insert a prompt option preserves bold formatting around the inserted mention" do
+    start_bold_prompt_insertion
+
+    find_editor.send :enter
+    find_editor.send " there"
+
+    assert_bold_mention_surrounded_by_bold_text
   end
 
   test "remote filtering prompt with editable-text insertion" do
@@ -30,6 +48,16 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     find_editor.send "1"
     find_editor.send "peter "
     assert_mention_attachment people(:peter)
+  end
+
+  test "comma selects the focused option and preserves the comma" do
+    find_editor.send "1"
+    find_editor.send "peter,"
+    assert_mention_attachment people(:peter)
+
+    find_editor.within_contents do
+      assert_text ","
+    end
   end
 
   test "hasOpenPrompt reports correct status" do
@@ -77,6 +105,13 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
   test "multichar prompt not triggered without space" do
     find_editor.send "hellogroup:"
+
+    assert_no_css ".lexxy-prompt-menu--visible"
+  end
+
+  test "prompt does not trigger inside code block" do
+    find_editor.toggle_command("insertCodeBlock")
+    find_editor.send "1"
 
     assert_no_css ".lexxy-prompt-menu--visible"
   end
@@ -133,6 +168,21 @@ class ActionTextLoadTest < ApplicationSystemTestCase
   end
 
   private
+    def start_bold_prompt_insertion
+      find_editor.toggle_command("bold")
+      find_editor.send "Hello 1"
+
+      wait_until { find_editor.open_prompt? }
+    end
+
+    def assert_bold_mention_surrounded_by_bold_text
+      assert_editor_html do
+        assert_selector "p > strong", text: "Hello "
+        assert_selector %(p > action-text-attachment[content-type="application/vnd.actiontext.mention"])
+        assert_selector "p > strong", text: " there"
+      end
+    end
+
     def within_popover(&block)
       within(".lexxy-prompt-menu", &block)
     end
