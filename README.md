@@ -3,7 +3,7 @@
 A modern rich text editor for Rails.
 
 > [!IMPORTANT]
-> This is an early beta. It hasn't been battle-tested yet. Please try it out and report any issues you find.
+> This is a beta. It hasn't been battle-tested yet. Please try it out and report any issues you find.
 
 **[Try it out!](https://basecamp.github.io/lexxy/try-it)**
 
@@ -26,7 +26,7 @@ Visit the **[documentation site](https://basecamp.github.io/lexxy)**.
 
 ## Roadmap
 
-This is an early beta. Here's what's coming next:
+This is a beta. Here's what's coming next:
 
 - [x] Configurable editors in Action Text: Choose your editor like you choose your database.
 - [x] More editing features:
