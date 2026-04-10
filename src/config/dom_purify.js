@@ -32,7 +32,9 @@ DOMPurify.addHook("uponSanitizeElement", (node, data) => {
   }
 })
 
-export function buildConfig(allowedElements) {
+export { DOMPurify }
+
+export function buildConfig(allowedElements ) {
   const tagAttributes = {}
 
   for (const element of allowedElements) {
