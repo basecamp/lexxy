@@ -131,7 +131,7 @@ export class CommandDispatcher {
 
   dispatchInsertUnorderedList() {
     const selection = $getSelection()
-    if (!selection) return
+    if (!$isRangeSelection(selection)) return
 
     const anchorNode = selection.anchor.getNode()
 
@@ -144,7 +144,7 @@ export class CommandDispatcher {
 
   dispatchInsertOrderedList() {
     const selection = $getSelection()
-    if (!selection) return
+    if (!$isRangeSelection(selection)) return
 
     const anchorNode = selection.anchor.getNode()
 
