@@ -6,7 +6,6 @@ import {
   $setSelection,
   COMMAND_PRIORITY_LOW,
   COMMAND_PRIORITY_NORMAL,
-  DRAGSTART_COMMAND,
   FORMAT_TEXT_COMMAND,
   INDENT_CONTENT_COMMAND,
   KEY_ARROW_RIGHT_COMMAND,
@@ -72,7 +71,6 @@ export class CommandDispatcher {
 
     this.#registerCommands()
     this.#registerKeyboardCommands()
-    this.#preventNativeTextDragAndDrop()
     this.#registerDragAndDropHandlers()
   }
 
@@ -323,15 +321,6 @@ export class CommandDispatcher {
   // nodes that were removed during the operation, causing
   // "Point.getNode: node not found" crashes on subsequent actions.
   //
-  // Attachment D&D is handled separately by AttachmentDragAndDrop
-  // at COMMAND_PRIORITY_HIGH which returns true and stops the
-  // command chain before this handler runs.
-  #preventNativeTextDragAndDrop() {
-    this.#registerCommandHandler(DRAGSTART_COMMAND, COMMAND_PRIORITY_NORMAL, (event) => {
-      event.preventDefault()
-      return true
-    })
-  }
 
   #handleArrowRightKey(event) {
     const selection = $getSelection()

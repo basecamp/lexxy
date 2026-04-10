@@ -54,9 +54,9 @@ export class AttachmentDragAndDrop {
   // -- Event handlers --------------------------------------------------------
 
   #handleDragStart(event) {
-    if (event.target.closest("textarea")) return false
+    if (event.target.closest?.("textarea")) return false
 
-    const figure = event.target.closest("figure.attachment[data-lexical-node-key]")
+    const figure = event.target.closest?.("figure.attachment[data-lexical-node-key]")
     if (!figure) return false
 
     this.#draggedNodeKey = figure.dataset.lexicalNodeKey
