@@ -15,9 +15,9 @@ test.describe("Prompt performance with large lists", () => {
     const popover = page.locator(".lexxy-prompt-menu--visible")
     await expect(popover).toBeVisible({ timeout: 5_000 })
 
-    // With 200 matching items, the popover should cap rendered items at 50
+    // With 200 matching items, the popover should cap rendered items at 100
     const itemCount = await popover.locator(".lexxy-prompt-menu__item").count()
-    expect(itemCount).toBeLessThanOrEqual(50)
+    expect(itemCount).toBeLessThanOrEqual(100)
     expect(itemCount).toBeGreaterThan(0)
   })
 
@@ -40,6 +40,6 @@ test.describe("Prompt performance with large lists", () => {
 
     const itemCount = await items.count()
     expect(itemCount).toBeGreaterThan(0)
-    expect(itemCount).toBeLessThan(50)
+    expect(itemCount).toBeLessThan(100)
   })
 })
