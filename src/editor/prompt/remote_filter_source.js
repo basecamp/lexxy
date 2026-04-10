@@ -2,6 +2,7 @@ import BaseSource from "./base_source"
 import { debounceAsync } from "../../helpers/timing_helpers"
 
 const DEBOUNCE_INTERVAL = 200
+const MAX_RENDERED_SUGGESTIONS = 50
 
 export default class RemoteFilterSource extends BaseSource {
   constructor(url) {
@@ -35,6 +36,8 @@ export default class RemoteFilterSource extends BaseSource {
     this.promptItemByListItem = new WeakMap()
 
     for (const promptItem of promptItems) {
+      if (listItems.length >= MAX_RENDERED_SUGGESTIONS) break
+
       const listItem = this.buildListItemElementFor(promptItem)
       this.promptItemByListItem.set(listItem, promptItem)
       listItems.push(listItem)

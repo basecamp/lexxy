@@ -7,14 +7,16 @@ import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
 import RemoteFilterSource from "../editor/prompt/remote_filter_source"
 import { $generateNodesFromDOM } from "@lexical/html"
-import { nextFrame } from "../helpers/timing_helpers"
+import { debounce, nextFrame } from "../helpers/timing_helpers"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
 const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found"
+const FILTER_DEBOUNCE_INTERVAL = 50
 
 export class LexicalPromptElement extends HTMLElement {
   #globalListeners = new ListenerBin()
   #popoverListeners = new ListenerBin()
+  #debouncedFilterOptions = debounce(() => this.#filterOptions(), FILTER_DEBOUNCE_INTERVAL)
 
   constructor() {
     super()
@@ -172,7 +174,7 @@ export class LexicalPromptElement extends HTMLElement {
 
     this.#popoverListeners.track(
       registerEventListener(this.#editorElement, "keydown", this.#handleKeydownOnPopover),
-      registerEventListener(this.#editorElement, "lexxy:change", this.#filterOptions)
+      registerEventListener(this.#editorElement, "lexxy:change", this.#debouncedFilterOptions)
     )
 
     this.#registerKeyListeners()

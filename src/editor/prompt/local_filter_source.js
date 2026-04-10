@@ -1,6 +1,8 @@
 import BaseSource from "./base_source"
 import { filterMatches } from "../../helpers/string_helper"
 
+const MAX_RENDERED_SUGGESTIONS = 50
+
 export default class LocalFilterSource extends BaseSource {
   async buildListItems(filter = "") {
     const promptItems = await this.fetchPromptItems()
@@ -19,7 +21,10 @@ export default class LocalFilterSource extends BaseSource {
   #buildListItemsFromPromptItems(promptItems, filter) {
     const listItems = []
     this.promptItemByListItem = new WeakMap()
-    promptItems.forEach((promptItem) => {
+
+    for (const promptItem of promptItems) {
+      if (listItems.length >= MAX_RENDERED_SUGGESTIONS) break
+
       const searchableText = promptItem.getAttribute("search")
 
       if (!filter || filterMatches(searchableText, filter)) {
@@ -27,7 +32,7 @@ export default class LocalFilterSource extends BaseSource {
         this.promptItemByListItem.set(listItem, promptItem)
         listItems.push(listItem)
       }
-    })
+    }
 
     return listItems
   }
