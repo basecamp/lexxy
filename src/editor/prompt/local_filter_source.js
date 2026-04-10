@@ -1,7 +1,7 @@
 import BaseSource from "./base_source"
 import { filterMatches } from "../../helpers/string_helper"
 
-const MAX_RENDERED_SUGGESTIONS = 50
+const MAX_RENDERED_SUGGESTIONS = 100
 
 export default class LocalFilterSource extends BaseSource {
   async buildListItems(filter = "") {
