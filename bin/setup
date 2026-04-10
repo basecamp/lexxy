@@ -50,6 +50,10 @@ echo "== Installing Playwright browsers =="
 npx playwright install
 
 echo "== Preparing database =="
-bin/rails db:prepare
+if [ "${USE_RAILS_WITHOUT_ACTION_TEXT_ADAPTER:-false}" != "true" ]; then
+  bin/rails app:db:prepare
+else
+  bin/rails db:prepare
+fi
 
 echo "== Setup complete! =="
