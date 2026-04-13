@@ -14,7 +14,7 @@ test.describe("Mention filtering", () => {
     await expect(popover).toBeVisible({ timeout: 5_000 })
 
     await editor.content.pressSequentially("ja")
-    await page.waitForTimeout(200)
+    await editor.flush()
 
     const items = popover.locator(".lexxy-prompt-menu__item")
     await expect(items).toHaveCount(4)
@@ -35,7 +35,7 @@ test.describe("Mention filtering", () => {
     await expect(popover).toBeVisible({ timeout: 5_000 })
 
     await editor.content.pressSequentially("mid")
-    await page.waitForTimeout(200)
+    await editor.flush()
 
     const items = popover.locator(".lexxy-prompt-menu__item")
     await expect(items).toHaveCount(0)

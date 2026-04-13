@@ -27,12 +27,16 @@ export function filterMatchPosition(text, potentialMatch) {
 
   if (!normalizedMatch) return 0
 
-  const match = normalizedText.match(new RegExp(`(?:^|\\b)${RegExp.escape(normalizedMatch)}`))
+  const match = normalizedText.match(new RegExp(`(?:^|\\b)${escapeForRegExp(normalizedMatch)}`))
   return match ? match.index : -1
 }
 
 export function upcaseFirst(string) {
   return string.charAt(0).toUpperCase() + string.slice(1)
+}
+
+function escapeForRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
 // Parses a value that may arrive as a boolean or as a string (e.g. from DOM
