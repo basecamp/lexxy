@@ -1,5 +1,5 @@
 import BaseSource from "./base_source"
-import { filterMatches } from "../../helpers/string_helper"
+import { filterMatchPosition } from "../../helpers/string_helper"
 
 const MAX_RENDERED_SUGGESTIONS = 100
 
@@ -19,21 +19,41 @@ export default class LocalFilterSource extends BaseSource {
   }
 
   #buildListItemsFromPromptItems(promptItems, filter) {
-    const listItems = []
     this.promptItemByListItem = new WeakMap()
 
+    if (!filter) {
+      return this.#buildAllListItems(promptItems)
+    }
+
+    const matches = []
     for (const promptItem of promptItems) {
-      if (listItems.length >= MAX_RENDERED_SUGGESTIONS) break
-
       const searchableText = promptItem.getAttribute("search")
-
-      if (!filter || filterMatches(searchableText, filter)) {
-        const listItem = this.buildListItemElementFor(promptItem)
-        this.promptItemByListItem.set(listItem, promptItem)
-        listItems.push(listItem)
+      const position = filterMatchPosition(searchableText, filter)
+      if (position >= 0) {
+        matches.push({ promptItem, position })
       }
     }
 
+    matches.sort((a, b) => a.position - b.position)
+
+    const listItems = []
+    for (const { promptItem } of matches) {
+      if (listItems.length >= MAX_RENDERED_SUGGESTIONS) break
+      const listItem = this.buildListItemElementFor(promptItem)
+      this.promptItemByListItem.set(listItem, promptItem)
+      listItems.push(listItem)
+    }
+    return listItems
+  }
+
+  #buildAllListItems(promptItems) {
+    const listItems = []
+    for (const promptItem of promptItems) {
+      if (listItems.length >= MAX_RENDERED_SUGGESTIONS) break
+      const listItem = this.buildListItemElementFor(promptItem)
+      this.promptItemByListItem.set(listItem, promptItem)
+      listItems.push(listItem)
+    }
     return listItems
   }
 }
