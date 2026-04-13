@@ -325,4 +325,48 @@ test.describe("Block formatting", () => {
     const submitCount = await page.evaluate(() => window.__submitCount)
     expect(submitCount).toBe(0)
   })
+
+  test("link dialog shows existing URL when link is selected", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      '<p>Hello <a href="https://37signals.com">everyone</a></p>',
+    )
+    await editor.select("everyone")
+    await editor.flush()
+
+    await page.evaluate(() => {
+      const details = document.querySelector(
+        "details:has(summary[name='link'])",
+      )
+      details.open = true
+      details.dispatchEvent(new Event("toggle"))
+    })
+
+    const input = page.locator("lexxy-link-dropdown input[type='url']").first()
+    await expect(input).toBeVisible({ timeout: 2_000 })
+    await expect(input).toHaveValue("https://37signals.com")
+  })
+
+  test("link dialog shows empty input when no link is selected", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(HELLO_EVERYONE)
+    await editor.select("everyone")
+    await editor.flush()
+
+    await page.evaluate(() => {
+      const details = document.querySelector(
+        "details:has(summary[name='link'])",
+      )
+      details.open = true
+      details.dispatchEvent(new Event("toggle"))
+    })
+
+    const input = page.locator("lexxy-link-dropdown input[type='url']").first()
+    await expect(input).toBeVisible({ timeout: 2_000 })
+    await expect(input).toHaveValue("")
+  })
 })
