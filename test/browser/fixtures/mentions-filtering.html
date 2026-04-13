@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — Mention Filtering</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <form>
+    <div class="body">
+      <lexxy-editor class="lexxy-content" placeholder="Write something...">
+        <lexxy-prompt trigger="@" name="mention">
+          <lexxy-prompt-item search="Clara Jackson" sgid="test-sgid-clara">
+            <template type="menu"><span>Clara Jackson</span></template>
+            <template type="editor"><span>Clara Jackson</span></template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="Frank Smith" sgid="test-sgid-frank">
+            <template type="menu"><span>Frank Smith</span></template>
+            <template type="editor"><span>Frank Smith</span></template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="Jack Franklin" sgid="test-sgid-jack">
+            <template type="menu"><span>Jack Franklin</span></template>
+            <template type="editor"><span>Jack Franklin</span></template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="Jason Clack" sgid="test-sgid-jason">
+            <template type="menu"><span>Jason Clack</span></template>
+            <template type="editor"><span>Jason Clack</span></template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="Sam Smidjam" sgid="test-sgid-sam">
+            <template type="menu"><span>Sam Smidjam</span></template>
+            <template type="editor"><span>Sam Smidjam</span></template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="Thomas Jaiden" sgid="test-sgid-thomas">
+            <template type="menu"><span>Thomas Jaiden</span></template>
+            <template type="editor"><span>Thomas Jaiden</span></template>
+          </lexxy-prompt-item>
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+  </form>
+
+  <script type="module" src="/editor.js"></script>
+</body>
+</html>

@@ -21,12 +21,22 @@ export function normalizeFilteredText(string) {
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove diacritics
 }
 
-export function filterMatches(text, potentialMatch) {
-  return normalizeFilteredText(text).includes(normalizeFilteredText(potentialMatch))
+export function filterMatchPosition(text, potentialMatch) {
+  const normalizedText = normalizeFilteredText(text)
+  const normalizedMatch = normalizeFilteredText(potentialMatch)
+
+  if (!normalizedMatch) return 0
+
+  const match = normalizedText.match(new RegExp(`(?:^|\\b)${escapeForRegExp(normalizedMatch)}`))
+  return match ? match.index : -1
 }
 
 export function upcaseFirst(string) {
   return string.charAt(0).toUpperCase() + string.slice(1)
+}
+
+function escapeForRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
 // Parses a value that may arrive as a boolean or as a string (e.g. from DOM
