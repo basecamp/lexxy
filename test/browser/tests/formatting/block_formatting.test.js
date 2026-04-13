@@ -348,4 +348,25 @@ test.describe("Block formatting", () => {
     await expect(input).toBeVisible({ timeout: 2_000 })
     await expect(input).toHaveValue("https://37signals.com")
   })
+
+  test("link dialog shows empty input when no link is selected", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(HELLO_EVERYONE)
+    await editor.select("everyone")
+    await editor.flush()
+
+    await page.evaluate(() => {
+      const details = document.querySelector(
+        "details:has(summary[name='link'])",
+      )
+      details.open = true
+      details.dispatchEvent(new Event("toggle"))
+    })
+
+    const input = page.locator("lexxy-link-dropdown input[type='url']").first()
+    await expect(input).toBeVisible({ timeout: 2_000 })
+    await expect(input).toHaveValue("")
+  })
 })
