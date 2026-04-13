@@ -21,27 +21,14 @@ export function normalizeFilteredText(string) {
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove diacritics
 }
 
-export function filterMatches(text, potentialMatch) {
-  return filterMatchPosition(text, potentialMatch) >= 0
-}
-
 export function filterMatchPosition(text, potentialMatch) {
   const normalizedText = normalizeFilteredText(text)
   const normalizedMatch = normalizeFilteredText(potentialMatch)
 
   if (!normalizedMatch) return 0
 
-  let i = 0
-  while (i < normalizedText.length) {
-    if (normalizedText.startsWith(normalizedMatch, i)) {
-      return i
-    }
-    const nextSpace = normalizedText.indexOf(" ", i)
-    if (nextSpace === -1) break
-    i = nextSpace + 1
-  }
-
-  return -1
+  const match = normalizedText.match(new RegExp(`(?:^|\\b)${RegExp.escape(normalizedMatch)}`))
+  return match ? match.index : -1
 }
 
 export function upcaseFirst(string) {
