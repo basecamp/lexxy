@@ -39,6 +39,7 @@ const COMMANDS = [
   "setFormatHeadingSmall",
   "setFormatParagraph",
   "clearFormatting",
+  "applyHeadingFormat",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
@@ -243,6 +244,14 @@ export class CommandDispatcher {
 
   dispatchSetFormatHeadingSmall() {
     this.contents.applyHeadingFormat("h4")
+  }
+
+  dispatchApplyHeadingFormat(tag) {
+    if (tag) {
+      this.contents.applyHeadingFormat(tag)
+    } else {
+      this.contents.applyParagraphFormat()
+    }
   }
 
   dispatchSetFormatParagraph() {

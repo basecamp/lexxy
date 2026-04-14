@@ -49,6 +49,17 @@ Editors support the following options, configurable using presets and element at
 - `markdown`: Pass `false` to disable Markdown support.
 - `multiLine`: Pass `false` to force single line editing.
 - `richText`: Pass `false` to disable rich text editing.
+- `headings`: Pass an array of heading tags to configure which heading levels are available. The toolbar displays a dropdown for selecting among the configured levels. Defaults to `["h2", "h3", "h4"]`. Pass an empty array to disable headings entirely.
+
+  ```js
+  // Via preset
+  Lexxy.configure({
+    default: { headings: ["h1", "h2", "h3"] }
+  })
+
+  // Via element attribute
+  <lexxy-editor headings='["h2", "h3"]'></lexxy-editor>
+  ```
 
 The toolbar is considered part of the editor for `lexxy:focus` and `lexxy:blur` events. If the toolbar registers event or lexical handlers, it should expose a `dispose()` function which will be called on editor disconnect.
 
