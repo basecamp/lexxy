@@ -394,7 +394,9 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #handleTurboBeforeCache = (event) => {
-    this.#reset()
+    if (!this.closest("[data-turbo-permanent]")) {
+      this.#reset()
+    }
   }
 
   #synchronizeWithChanges() {
