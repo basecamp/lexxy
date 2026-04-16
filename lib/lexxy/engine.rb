@@ -55,7 +55,7 @@ module Lexxy
         ActionText::ContentHelper.allowed_tags = default_allowed_tags + %w[ video audio source embed table tbody tr th td ]
 
         default_allowed_attributes = Class.new.include(ActionText::ContentHelper).new.sanitizer_allowed_attributes
-        ActionText::ContentHelper.allowed_attributes = default_allowed_attributes + %w[ controls poster data-language style ]
+        ActionText::ContentHelper.allowed_attributes = default_allowed_attributes + %w[ controls poster data-language style value ]
 
         Loofah::HTML5::SafeList::ALLOWED_CSS_FUNCTIONS << "var"
       end
