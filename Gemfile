@@ -9,7 +9,7 @@ else
   gem "rails", github: "rails/rails", branch: "main"
 end
 
-gem "puma", "~> 7.0"
+gem "puma", "~> 8.0"
 
 gem "sqlite3", "~> 2.0"
 
