@@ -36,6 +36,7 @@ import { TrixContentExtension } from "../extensions/trix_content_extension"
 import { TablesExtension } from "../extensions/tables_extension"
 import { AttachmentsExtension } from "../extensions/attachments_extension.js"
 import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
+import { LinkOpenerExtension } from "../extensions/link_opener_extension.js"
 
 
 export class LexicalEditorElement extends HTMLElement {
@@ -142,7 +143,8 @@ export class LexicalEditorElement extends HTMLElement {
       TrixContentExtension,
       TablesExtension,
       AttachmentsExtension,
-      FormatEscapeExtension
+      FormatEscapeExtension,
+      LinkOpenerExtension
     ]
   }
 
