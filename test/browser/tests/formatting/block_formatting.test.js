@@ -95,6 +95,11 @@ test.describe("Block formatting", () => {
     await assertEditorHtml(editor, "<p>Alpha</p><p>Bravo</p><p>Charlie</p>")
   })
 
+  test("ordered list exports li value attribute", async ({ editor }) => {
+    await editor.setValue("<ol><li>First</li><li>Second</li></ol>")
+    await assertEditorHtml(editor, '<ol><li value="1">First</li><li value="2">Second</li></ol>')
+  })
+
   test("insert quote without selection", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await page.getByRole("button", { name: "Quote" }).click()
