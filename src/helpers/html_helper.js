@@ -59,3 +59,7 @@ export function generateDomId(prefix) {
 export function extractPlainTextFromHtml(innerHtml = "") {
   return parseHtml(innerHtml).body.textContent.trim()
 }
+
+export function isActiveAndVisible(element) {
+  return element && !element.disabled && element.checkVisibility()
+}

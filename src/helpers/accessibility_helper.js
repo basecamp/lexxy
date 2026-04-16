@@ -1,3 +1,5 @@
+import { isActiveAndVisible } from "./html_helper"
+
 export function handleRollingTabIndex(elements, event) {
   const previousActiveElement = document.activeElement
 
@@ -79,8 +81,4 @@ class NextElementFinder {
   #unsetTabIndex(elements) {
     elements.forEach(element => element.tabIndex = -1)
   }
-}
-
-function isActiveAndVisible(element) {
-  return element && !element.disabled && element.checkVisibility()
 }

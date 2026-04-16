@@ -7,6 +7,7 @@ import { getNonce } from "../helpers/csp_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import ToolbarIcons from "./toolbar_icons"
+import { isActiveAndVisible } from "../helpers/html_helper"
 
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
@@ -328,7 +329,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   get #focusableItems() {
-    return Array.from(this.querySelectorAll(":scope button, :scope > details > summary"))
+    return Array.from(this.querySelectorAll(":scope button, :scope > details > summary")).filter(isActiveAndVisible)
   }
 
   get #toolbarItems() {
