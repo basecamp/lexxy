@@ -7,6 +7,7 @@ import { getNonce } from "../helpers/csp_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import ToolbarIcons from "./toolbar_icons"
+import { isActiveAndVisible } from "../helpers/html_helper"
 
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
@@ -157,7 +158,8 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #handleEditorFocus = () => {
-    this.#focusableItems[0].tabIndex = 0
+    const firstVisible = this.#focusableItems.find(isActiveAndVisible)
+    if (firstVisible) firstVisible.tabIndex = 0
   }
 
   #handleEditorBlur = () => {
