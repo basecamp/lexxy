@@ -16,7 +16,8 @@ import {
   UNDO_COMMAND
 } from "lexical"
 import { CodeNode } from "@lexical/code"
-import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
+import { $createAutoLinkNode, $toggleLink, LinkNode } from "@lexical/link"
+import { $getNearestNodeOfType } from "@lexical/utils"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
@@ -107,7 +108,9 @@ export class CommandDispatcher {
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
-      if (selection.isCollapsed()) {
+      const anchorNode = selection.anchor.getNode()
+
+      if (selection.isCollapsed() && !$getNearestNodeOfType(anchorNode, LinkNode)) {
         const autoLinkNode = $createAutoLinkNode(url)
         const textNode = $createTextNode(url)
         autoLinkNode.append(textNode)
