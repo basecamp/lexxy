@@ -11,7 +11,7 @@ test.describe("List item deletion cursor position", () => {
     editor,
   }) => {
     // Set up a bullet list with one item
-    await editor.setValue("<ul><li>Some text</li></ul>")
+    await editor.setValue("<ul><li value=\"1\">Some text</li></ul>")
     await editor.flush()
 
     // Place cursor at the very start of "Some text"
@@ -33,14 +33,14 @@ test.describe("List item deletion cursor position", () => {
     await editor.send("Backspace")
     await editor.flush()
 
-    await assertEditorHtml(editor, "<p><br></p><ul><li>Some text</li></ul>")
+    await assertEditorHtml(editor, "<p><br></p><ul><li value=\"1\">Some text</li></ul>")
 
     // Type a marker character to verify cursor position.
     // Cursor should be in the new paragraph, so marker appears there.
     await editor.send("X")
     await editor.flush()
 
-    await assertEditorHtml(editor, "<p>X</p><ul><li>Some text</li></ul>")
+    await assertEditorHtml(editor, "<p>X</p><ul><li value=\"1\">Some text</li></ul>")
   })
 
   test("backspace on empty first list item with paragraph above converts to paragraph", async ({
@@ -48,7 +48,7 @@ test.describe("List item deletion cursor position", () => {
   }) => {
     // Set up content before the list, then a list
     await editor.setValue(
-      "<p>Paragraph above</p><ul><li>List item text</li></ul>",
+      "<p>Paragraph above</p><ul><li value=\"1\">List item text</li></ul>",
     )
     await editor.flush()
 
@@ -76,7 +76,7 @@ test.describe("List item deletion cursor position", () => {
 
     await assertEditorHtml(
       editor,
-      "<p>Paragraph above</p><p>X</p><ul><li>List item text</li></ul>",
+      "<p>Paragraph above</p><p>X</p><ul><li value=\"1\">List item text</li></ul>",
     )
   })
 
@@ -85,7 +85,7 @@ test.describe("List item deletion cursor position", () => {
   }) => {
     // Set up a bullet list with two items
     await editor.setValue(
-      "<ul><li>First item</li><li>Second item</li></ul>",
+      "<ul><li value=\"1\">First item</li><li value=\"2\">Second item</li></ul>",
     )
     await editor.flush()
 
@@ -109,7 +109,7 @@ test.describe("List item deletion cursor position", () => {
 
     await assertEditorHtml(
       editor,
-      "<ul><li>First item</li><li>Second item</li></ul>",
+      "<ul><li value=\"1\">First item</li><li value=\"2\">Second item</li></ul>",
     )
 
     // Type a marker to verify cursor is at the end of "First item"
@@ -118,7 +118,7 @@ test.describe("List item deletion cursor position", () => {
 
     await assertEditorHtml(
       editor,
-      "<ul><li>First itemX</li><li>Second item</li></ul>",
+      "<ul><li value=\"1\">First itemX</li><li value=\"2\">Second item</li></ul>",
     )
   })
 })

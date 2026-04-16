@@ -16,7 +16,7 @@ test.describe("List indentation", () => {
 
     await assertEditorHtml(
       editor,
-      '<ul><li>First item</li><li class="lexxy-nested-listitem"><ul><li>Second item</li></ul></li></ul>',
+      '<ul><li value="1">First item</li><li value="2" class="lexxy-nested-listitem"><ul><li value="1">Second item</li></ul></li></ul>',
     )
   })
 
@@ -31,7 +31,7 @@ test.describe("List indentation", () => {
 
     await assertEditorHtml(
       editor,
-      '<ul><li>First</li><li class="lexxy-nested-listitem"><ul><li class="lexxy-nested-listitem"><ul><li>Second</li></ul></li></ul></li></ul>',
+      '<ul><li value="1">First</li><li value="2" class="lexxy-nested-listitem"><ul><li value="1" class="lexxy-nested-listitem"><ul><li value="1">Second</li></ul></li></ul></li></ul>',
     )
   })
 
@@ -47,7 +47,7 @@ test.describe("List indentation", () => {
 
     await assertEditorHtml(
       editor,
-      '<ul><li>First</li><li class="lexxy-nested-listitem"><ul><li>Second</li></ul></li></ul>',
+      '<ul><li value="1">First</li><li value="2" class="lexxy-nested-listitem"><ul><li value="1">Second</li></ul></li></ul>',
     )
   })
 
@@ -61,7 +61,7 @@ test.describe("List indentation", () => {
 
     await assertEditorHtml(
       editor,
-      "<ul><li>First item</li><li>Nested item</li></ul>",
+      '<ul><li value="1">First item</li><li value="2">Nested item</li></ul>',
     )
   })
 
@@ -74,7 +74,7 @@ test.describe("List indentation", () => {
 
     await assertEditorHtml(
       editor,
-      '<ol><li>First item</li><li class="lexxy-nested-listitem"><ol><li>Second item</li></ol></li></ol>',
+      '<ol><li value="1">First item</li><li value="2" class="lexxy-nested-listitem"><ol><li value="1">Second item</li></ol></li></ol>',
     )
   })
 
@@ -88,7 +88,7 @@ test.describe("List indentation", () => {
 
     await assertEditorHtml(
       editor,
-      "<ol><li>First item</li><li>Nested item</li></ol>",
+      '<ol><li value="1">First item</li><li value="2">Nested item</li></ol>',
     )
   })
 
