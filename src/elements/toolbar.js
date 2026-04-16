@@ -158,7 +158,8 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #handleEditorFocus = () => {
-    this.#focusableItems[0].tabIndex = 0
+    const firstVisible = this.#focusableItems.find(isActiveAndVisible)
+    if (firstVisible) firstVisible.tabIndex = 0
   }
 
   #handleEditorBlur = () => {
@@ -329,7 +330,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   get #focusableItems() {
-    return Array.from(this.querySelectorAll(":scope button, :scope > details > summary")).filter(isActiveAndVisible)
+    return Array.from(this.querySelectorAll(":scope button, :scope > details > summary"))
   }
 
   get #toolbarItems() {
