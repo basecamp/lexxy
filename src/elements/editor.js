@@ -27,6 +27,7 @@ import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
 import { BrowserAdapter } from "../editor/adapters/browser_adapter"
 import { getHighlightStyles } from "../helpers/format_helper"
+import { styleResolverRoot } from "../helpers/style_resolver_root"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { exportTextNodeDOM } from "../helpers/text_node_export_helper"
@@ -47,6 +48,7 @@ export class LexicalEditorElement extends HTMLElement {
   static observedAttributes = [ "connected", "required" ]
 
   #initialValue = ""
+  #initialValueLoaded = false
   #validationTextArea = document.createElement("textarea")
   #editorInitializedRafId = null
   #listeners = new ListenerBin()
@@ -224,7 +226,17 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   focus() {
+    // `editor.focus()` commits a reconciler update to position the cursor.
+    // Skip if the contenteditable already owns focus — the update would be a
+    // no-op but still triggers a full style/layout pass on pages with large
+    // DOMs.
+    if (this.#isContentFocused) return
+
     this.editor.focus(() => this.#onFocus())
+  }
+
+  get #isContentFocused() {
+    return !!this.editorContentElement && this.editorContentElement.contains(document.activeElement)
   }
 
   get value() {
@@ -238,6 +250,8 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
+    const wasEmpty = !this.#initialValueLoaded
+
     this.editor.update(() => {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       const root = $getRoot()
@@ -247,11 +261,17 @@ export class LexicalEditorElement extends HTMLElement {
 
       this.#toggleEmptyStatus()
 
-      // The first time you set the value, when the editor is empty, it seems to leave Lexical
-      // in an inconsistent state until, at least, you focus. You can type but adding attachments
-      // fails because no root node detected. This is a workaround to deal with the issue.
-      requestAnimationFrame(() => this.editor?.update(() => { }))
+      // The first time you set the value on an empty editor, Lexical can be
+      // left in an inconsistent state until the next update (adding attachments
+      // fails because no root node is detected). A no-op update works around
+      // it. Only fire on the first load — subsequent set value calls don't hit
+      // the inconsistent state and the extra reconciler cycle is pure overhead.
+      if (wasEmpty) {
+        requestAnimationFrame(() => this.editor?.update(() => { }))
+      }
     })
+
+    this.#initialValueLoaded = true
   }
 
   #parseHtmlIntoLexicalNodes(html) {
@@ -692,7 +712,7 @@ export class LexicalEditorElement extends HTMLElement {
       return { element, name: cssValue }
     })
 
-    this.appendChild(container)
+    styleResolverRoot().appendChild(container)
 
     const resolved = resolvers.map(({ element, name }) => ({
       name,
