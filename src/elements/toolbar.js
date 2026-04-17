@@ -252,12 +252,6 @@ export class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  #toolbarIsOverflowing() {
-    // Safari can report inconsistent clientWidth values on more than 100% window zoom level,
-    // that was affecting the toolbar overflow calculation. We're adding +1 to get around this issue.
-    return (this.scrollWidth - this.#overflow.clientWidth) > this.clientWidth + 1
-  }
-
   #refreshToolbarOverflow = () => {
     this.#resetToolbarOverflow()
     this.#compactMenu()
@@ -270,18 +264,35 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
   }
 
+  // Separates layout reads from DOM writes to avoid forced reflows during init.
+  // Measures every button's right edge in a single read pass, figures out which
+  // buttons overflow using math, and then moves them in a single write pass.
+  // The previous implementation interleaved `scrollWidth`/`clientWidth` reads with
+  // `prepend()` writes inside a loop, forcing one full browser reflow per button.
   #compactMenu() {
-    const buttons = this.#buttons.reverse()
-    let movedToOverflow = false
+    const buttons = this.#buttons
+    if (buttons.length === 0) return
 
-    for (const button of buttons) {
-      if (this.#toolbarIsOverflowing()) {
-        this.#overflowMenu.prepend(button)
-        movedToOverflow = true
-      } else {
-        if (movedToOverflow) this.#overflowMenu.prepend(button)
+    const availableWidth = this.clientWidth + 1 // +1 for Safari zoom rounding
+    const buttonRightEdges = buttons.map(button => button.offsetLeft + button.offsetWidth)
+
+    let firstOverflowing = -1
+    for (let i = 0; i < buttons.length; i++) {
+      if (buttonRightEdges[i] > availableWidth) {
+        firstOverflowing = i
         break
       }
+    }
+
+    if (firstOverflowing === -1) return
+
+    // Move one extra button to reserve space for the overflow control, which is
+    // `display: none` until we show it — matching the previous implementation's
+    // "move one more after it stops overflowing" behaviour.
+    const overflowIndex = Math.max(0, firstOverflowing - 1)
+    const overflowButtons = buttons.slice(overflowIndex).reverse()
+    for (const button of overflowButtons) {
+      this.#overflowMenu.prepend(button)
     }
   }
 
@@ -289,10 +300,10 @@ export class LexicalToolbarElement extends HTMLElement {
     const items = Array.from(this.#overflowMenu.children)
     items.sort((a, b) => this.#itemPosition(b) - this.#itemPosition(a))
 
-    items.forEach((item) => {
+    for (const item of items) {
       const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.#overflow
       this.insertBefore(item, nextItem)
-    })
+    }
   }
 
   #itemPosition(item) {

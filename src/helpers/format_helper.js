@@ -71,24 +71,36 @@ export class StyleCanonicalizer {
 
   #resolveCannonicalValue(value) {
     let index = this.#computedAllowedValues.indexOf(value)
-    index ||= this.#computedAllowedValues.indexOf(getComputedStyleForProperty(this._property, value))
+    if (index === -1) {
+      index = this.#computedAllowedValues.indexOf(computeStyleValues(this._property, [ value ])[0])
+    }
     return index === -1 ? null : this._allowedValues[index]
   }
 
   get #computedAllowedValues() {
-    return this._computedAllowedValues ||= this._allowedValues.map(
-      value => getComputedStyleForProperty(this._property, value)
-    )
+    return this._computedAllowedValues ||= computeStyleValues(this._property, this._allowedValues)
   }
 }
 
-function getComputedStyleForProperty(property, value) {
-  const style = `${property}: ${value};`
+// Separates DOM writes from layout reads to avoid forced reflows. All resolver
+// elements are built inside a fragment, attached once, then read in a single pass.
+// Reading `getComputedStyle` after a write forces the browser to recompute layout,
+// so interleaving writes and reads inside a loop turns one reflow into N.
+function computeStyleValues(property, values) {
+  const fragment = document.createDocumentFragment()
 
-  // the element has to be attached to the DOM have computed styles
-  const element = document.body.appendChild(createElement("span", { style: "display: none;" + style }))
-  const computedStyle = window.getComputedStyle(element).getPropertyValue(property)
-  element.remove()
+  const elements = values.map(value => {
+    const element = createElement("span", { style: `display: none; ${property}: ${value};` })
+    fragment.appendChild(element)
+    return element
+  })
 
-  return computedStyle
+  document.body.appendChild(fragment)
+
+  const computed = elements.map(element =>
+    window.getComputedStyle(element).getPropertyValue(property)
+  )
+
+  elements.forEach(element => element.remove())
+  return computed
 }

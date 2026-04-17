@@ -676,19 +676,30 @@ export class LexicalEditorElement extends HTMLElement {
     ]
   }
 
+  // Builds one resolver element per CSS value inside a hidden container, attaches
+  // the container in a single DOM write, then reads all computed values in one pass
+  // — triggering at most one forced reflow. The previous implementation interleaved
+  // setProperty/getComputedStyle/removeProperty on the same element, forcing a style
+  // recalc on every iteration during editor initialization.
   #resolveColors(property, cssValues) {
-    const resolver = document.createElement("span")
-    resolver.style.display = "none"
-    this.appendChild(resolver)
+    const container = document.createElement("span")
+    container.style.display = "none"
 
-    const resolved = cssValues.map(cssValue => {
-      resolver.style.setProperty(property, cssValue)
-      const value = window.getComputedStyle(resolver).getPropertyValue(property)
-      resolver.style.removeProperty(property)
-      return { name: cssValue, value }
+    const resolvers = cssValues.map(cssValue => {
+      const element = document.createElement("span")
+      element.style.setProperty(property, cssValue)
+      container.appendChild(element)
+      return { element, name: cssValue }
     })
 
-    resolver.remove()
+    this.appendChild(container)
+
+    const resolved = resolvers.map(({ element, name }) => ({
+      name,
+      value: window.getComputedStyle(element).getPropertyValue(property)
+    }))
+
+    container.remove()
     return resolved
   }
 
