@@ -226,7 +226,17 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   focus() {
+    // `editor.focus()` commits a reconciler update to position the cursor.
+    // Skip if the contenteditable already owns focus — the update would be a
+    // no-op but still triggers a full style/layout pass on pages with large
+    // DOMs.
+    if (this.#isContentFocused) return
+
     this.editor.focus(() => this.#onFocus())
+  }
+
+  get #isContentFocused() {
+    return !!this.editorContentElement && this.editorContentElement.contains(document.activeElement)
   }
 
   get value() {
