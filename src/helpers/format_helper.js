@@ -80,9 +80,10 @@ export class StyleCanonicalizer {
   }
 }
 
-// Batches style computation to avoid layout thrashing: appends all elements in a single
-// DOM write, reads all computed values afterwards (triggering at most one reflow), then
-// cleans them up.
+// Separates DOM writes from layout reads to avoid forced reflows. All resolver
+// elements are built inside a fragment, attached once, then read in a single pass.
+// Reading `getComputedStyle` after a write forces the browser to recompute layout,
+// so interleaving writes and reads inside a loop turns one reflow into N.
 function computeStyleValues(property, values) {
   const fragment = document.createDocumentFragment()
 

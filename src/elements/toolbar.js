@@ -270,6 +270,11 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
   }
 
+  // Separates layout reads from DOM writes to avoid forced reflows during init.
+  // Measures the toolbar and every button width in a single read pass, figures out
+  // which buttons overflow using math, and then moves them in a single write pass.
+  // The previous implementation interleaved `scrollWidth`/`clientWidth` reads with
+  // `prepend()` writes inside a loop, forcing one full browser reflow per button.
   #compactMenu() {
     const availableWidth = this.clientWidth + 1 // +1 for Safari zoom rounding
     const overflowWidth = this.#overflow.clientWidth

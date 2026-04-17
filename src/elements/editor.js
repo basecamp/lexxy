@@ -676,6 +676,11 @@ export class LexicalEditorElement extends HTMLElement {
     ]
   }
 
+  // Builds one resolver element per CSS value inside a fragment (off-DOM writes),
+  // attaches the fragment in a single DOM write, then reads all computed values in
+  // one pass — triggering at most one forced reflow. The previous implementation
+  // interleaved setProperty/getComputedStyle/removeProperty on the same element,
+  // forcing a style recalc on every iteration during editor initialization.
   #resolveColors(property, cssValues) {
     const fragment = document.createDocumentFragment()
 
