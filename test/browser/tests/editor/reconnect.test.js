@@ -43,6 +43,26 @@ test.describe("Reconnect", () => {
     await expect(editorEl.locator("lexxy-table-tools")).toHaveCount(1)
     await expect(editorEl.locator("lexxy-code-language-picker")).toHaveCount(1)
   })
+
+  test("editor recovers when turbo:before-cache fires without a body replacement", async ({ page, editor }) => {
+    await editor.focus()
+    await editor.send("Hello")
+
+    await page.evaluate(() => {
+      document.dispatchEvent(new Event("turbo:before-cache"))
+      document.dispatchEvent(new Event("turbo:load"))
+    })
+
+    await editor.waitForConnected()
+    await expect(page.locator("lexxy-editor .lexxy-editor__content")).toBeVisible()
+
+    await editor.focus()
+    await editor.send(" world")
+
+    const text = await editor.plainTextValue()
+    expect(text).toContain("Hello")
+    expect(text).toContain(" world")
+  })
 })
 
 test.describe("Reconnect with extension toolbar buttons", () => {
