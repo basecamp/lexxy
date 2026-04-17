@@ -3,7 +3,9 @@ import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection
 
 const ALLOWED_HTML_ATTRIBUTES = [ "class", "contenteditable", "href", "src", "style", "title" ]
 
-const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
+const DEFAULT_ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
+
+let allowedStyleProperties = new Set(DEFAULT_ALLOWED_STYLE_PROPERTIES)
 
 function styleFilterHook(_currentNode, hookEvent) {
   if (hookEvent.attrName === "style" && hookEvent.attrValue) {
@@ -11,7 +13,7 @@ function styleFilterHook(_currentNode, hookEvent) {
     const sanitizedStyles = { }
 
     for (const property in styles) {
-      if (ALLOWED_STYLE_PROPERTIES.includes(property)) {
+      if (allowedStyleProperties.has(property)) {
         sanitizedStyles[property] = styles[property]
       }
     }
@@ -34,7 +36,7 @@ DOMPurify.addHook("uponSanitizeElement", (node, data) => {
 
 export { DOMPurify }
 
-export function buildConfig(allowedElements ) {
+export function buildConfig(allowedElements, allowedStyles = []) {
   const tagAttributes = {}
 
   for (const element of allowedElements) {
@@ -45,6 +47,8 @@ export function buildConfig(allowedElements ) {
       tagAttributes[element.tag].push(...element.attributes)
     }
   }
+
+  allowedStyleProperties = new Set([ ...DEFAULT_ALLOWED_STYLE_PROPERTIES, ...allowedStyles ])
 
   return {
     ALLOWED_TAGS: Object.keys(tagAttributes),
