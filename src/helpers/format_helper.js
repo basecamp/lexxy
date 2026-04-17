@@ -1,6 +1,7 @@
 import { $isRangeSelection, $isTextNode } from "lexical"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 import { createElement } from "./html_helper"
+import { styleResolverRoot } from "./style_resolver_root"
 
 export function isSelectionHighlighted(selection) {
   if (!$isRangeSelection(selection)) return false
@@ -82,10 +83,11 @@ export class StyleCanonicalizer {
   }
 }
 
-// Separates DOM writes from layout reads to avoid forced reflows. All resolver
-// elements are built inside a fragment, attached once, then read in a single pass.
-// Reading `getComputedStyle` after a write forces the browser to recompute layout,
-// so interleaving writes and reads inside a loop turns one reflow into N.
+// Separates DOM writes from layout reads to avoid forced reflows, and attaches
+// resolver elements to a strictly-contained root (outside the normal document
+// flow) so neither the attach nor the detach invalidate styles on the rest of
+// the page. Without containment, appending to `document.body` triggered a
+// page-wide style recalc on every canonicalization pass.
 function computeStyleValues(property, values) {
   const fragment = document.createDocumentFragment()
 
@@ -95,7 +97,7 @@ function computeStyleValues(property, values) {
     return element
   })
 
-  document.body.appendChild(fragment)
+  styleResolverRoot().appendChild(fragment)
 
   const computed = elements.map(element =>
     window.getComputedStyle(element).getPropertyValue(property)

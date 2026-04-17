@@ -27,6 +27,7 @@ import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
 import { BrowserAdapter } from "../editor/adapters/browser_adapter"
 import { getHighlightStyles } from "../helpers/format_helper"
+import { styleResolverRoot } from "../helpers/style_resolver_root"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { exportTextNodeDOM } from "../helpers/text_node_export_helper"
@@ -692,7 +693,7 @@ export class LexicalEditorElement extends HTMLElement {
       return { element, name: cssValue }
     })
 
-    this.appendChild(container)
+    styleResolverRoot().appendChild(container)
 
     const resolved = resolvers.map(({ element, name }) => ({
       name,
