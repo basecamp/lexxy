@@ -100,6 +100,11 @@ test.describe("Block formatting", () => {
     await assertEditorHtml(editor, '<ol><li value="1">First</li><li value="2">Second</li></ol>')
   })
 
+  test("nested ordered list numbering is calculated correctly", async ({ editor }) => {
+    await editor.setValue('<ol><li>First</li><li><ol><li>Nested</li></ol></li><li>Second</li></ol>')
+    await assertEditorHtml(editor, '<ol><li value="1">First</li><li value="2" class="lexxy-nested-listitem"><ol><li value="1">Nested</li></ol></li><li value="2">Second</li></ol>')
+  })
+
   test("insert quote without selection", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await page.getByRole("button", { name: "Quote" }).click()
