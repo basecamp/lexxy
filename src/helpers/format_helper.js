@@ -71,7 +71,9 @@ export class StyleCanonicalizer {
 
   #resolveCannonicalValue(value) {
     let index = this.#computedAllowedValues.indexOf(value)
-    index ||= this.#computedAllowedValues.indexOf(computeStyleValues(this._property, [ value ])[0])
+    if (index === -1) {
+      index = this.#computedAllowedValues.indexOf(computeStyleValues(this._property, [ value ])[0])
+    }
     return index === -1 ? null : this._allowedValues[index]
   }
 

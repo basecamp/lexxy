@@ -265,32 +265,34 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   // Separates layout reads from DOM writes to avoid forced reflows during init.
-  // Measures the toolbar and every button width in a single read pass, figures out
-  // which buttons overflow using math, and then moves them in a single write pass.
+  // Measures every button's right edge in a single read pass, figures out which
+  // buttons overflow using math, and then moves them in a single write pass.
   // The previous implementation interleaved `scrollWidth`/`clientWidth` reads with
   // `prepend()` writes inside a loop, forcing one full browser reflow per button.
   #compactMenu() {
-    const availableWidth = this.clientWidth + 1 // +1 for Safari zoom rounding
-    const overflowWidth = this.#overflow.clientWidth
     const buttons = this.#buttons
-    const buttonWidths = buttons.map(button => button.offsetWidth)
+    if (buttons.length === 0) return
 
-    let totalWidth = overflowWidth
-    let overflowIndex = buttons.length
+    const availableWidth = this.clientWidth + 1 // +1 for Safari zoom rounding
+    const buttonRightEdges = buttons.map(button => button.offsetLeft + button.offsetWidth)
 
+    let firstOverflowing = -1
     for (let i = 0; i < buttons.length; i++) {
-      totalWidth += buttonWidths[i]
-      if (totalWidth > availableWidth) {
-        overflowIndex = i
+      if (buttonRightEdges[i] > availableWidth) {
+        firstOverflowing = i
         break
       }
     }
 
-    if (overflowIndex < buttons.length) {
-      const overflowButtons = buttons.slice(overflowIndex).reverse()
-      for (const button of overflowButtons) {
-        this.#overflowMenu.prepend(button)
-      }
+    if (firstOverflowing === -1) return
+
+    // Move one extra button to reserve space for the overflow control, which is
+    // `display: none` until we show it — matching the previous implementation's
+    // "move one more after it stops overflowing" behaviour.
+    const overflowIndex = Math.max(0, firstOverflowing - 1)
+    const overflowButtons = buttons.slice(overflowIndex).reverse()
+    for (const button of overflowButtons) {
+      this.#overflowMenu.prepend(button)
     }
   }
 
