@@ -399,6 +399,13 @@
   min-block-size: var(--lexxy-editor-rows);
   outline: 0;
   padding: var(--lexxy-editor-padding);
+
+  /* Isolate the contenteditable root's layout and style. Lexical's reconciler
+     commits mutations inside this element (nodes appended, text inserted,
+     class flipped) on every update; containment keeps those mutations from
+     invalidating ancestor-dependent selectors and sibling layout elsewhere
+     in the editor. */
+  contain: layout style;
 }
 
 :where(.lexxy-editor--drag-over) {
