@@ -48,6 +48,7 @@ export class LexicalEditorElement extends HTMLElement {
   static observedAttributes = [ "connected", "required" ]
 
   #initialValue = ""
+  #initialValueLoaded = false
   #validationTextArea = document.createElement("textarea")
   #editorInitializedRafId = null
   #listeners = new ListenerBin()
@@ -239,6 +240,8 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
+    const wasEmpty = !this.#initialValueLoaded
+
     this.editor.update(() => {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       const root = $getRoot()
@@ -248,11 +251,17 @@ export class LexicalEditorElement extends HTMLElement {
 
       this.#toggleEmptyStatus()
 
-      // The first time you set the value, when the editor is empty, it seems to leave Lexical
-      // in an inconsistent state until, at least, you focus. You can type but adding attachments
-      // fails because no root node detected. This is a workaround to deal with the issue.
-      requestAnimationFrame(() => this.editor?.update(() => { }))
+      // The first time you set the value on an empty editor, Lexical can be
+      // left in an inconsistent state until the next update (adding attachments
+      // fails because no root node is detected). A no-op update works around
+      // it. Only fire on the first load — subsequent set value calls don't hit
+      // the inconsistent state and the extra reconciler cycle is pure overhead.
+      if (wasEmpty) {
+        requestAnimationFrame(() => this.editor?.update(() => { }))
+      }
     })
+
+    this.#initialValueLoaded = true
   }
 
   #parseHtmlIntoLexicalNodes(html) {
