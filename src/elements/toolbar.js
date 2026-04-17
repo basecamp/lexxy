@@ -271,16 +271,26 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #compactMenu() {
-    const buttons = this.#buttons.reverse()
-    let movedToOverflow = false
+    const availableWidth = this.clientWidth + 1 // +1 for Safari zoom rounding
+    const overflowWidth = this.#overflow.clientWidth
+    const buttons = this.#buttons
+    const buttonWidths = buttons.map(button => button.offsetWidth)
 
-    for (const button of buttons) {
-      if (this.#toolbarIsOverflowing()) {
-        this.#overflowMenu.prepend(button)
-        movedToOverflow = true
-      } else {
-        if (movedToOverflow) this.#overflowMenu.prepend(button)
+    let totalWidth = overflowWidth
+    let overflowIndex = buttons.length
+
+    for (let i = 0; i < buttons.length; i++) {
+      totalWidth += buttonWidths[i]
+      if (totalWidth > availableWidth) {
+        overflowIndex = i
         break
+      }
+    }
+
+    if (overflowIndex < buttons.length) {
+      const overflowButtons = buttons.slice(overflowIndex).reverse()
+      for (const button of overflowButtons) {
+        this.#overflowMenu.prepend(button)
       }
     }
   }
@@ -289,10 +299,10 @@ export class LexicalToolbarElement extends HTMLElement {
     const items = Array.from(this.#overflowMenu.children)
     items.sort((a, b) => this.#itemPosition(b) - this.#itemPosition(a))
 
-    items.forEach((item) => {
+    for (const item of items) {
       const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.#overflow
       this.insertBefore(item, nextItem)
-    })
+    }
   }
 
   #itemPosition(item) {

@@ -677,18 +677,24 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #resolveColors(property, cssValues) {
-    const resolver = document.createElement("span")
-    resolver.style.display = "none"
-    this.appendChild(resolver)
+    const fragment = document.createDocumentFragment()
 
-    const resolved = cssValues.map(cssValue => {
-      resolver.style.setProperty(property, cssValue)
-      const value = window.getComputedStyle(resolver).getPropertyValue(property)
-      resolver.style.removeProperty(property)
-      return { name: cssValue, value }
+    const resolvers = cssValues.map(cssValue => {
+      const element = document.createElement("span")
+      element.style.display = "none"
+      element.style.setProperty(property, cssValue)
+      fragment.appendChild(element)
+      return { element, name: cssValue }
     })
 
-    resolver.remove()
+    this.appendChild(fragment)
+
+    const resolved = resolvers.map(({ element, name }) => ({
+      name,
+      value: window.getComputedStyle(element).getPropertyValue(property)
+    }))
+
+    resolvers.forEach(({ element }) => element.remove())
     return resolved
   }
 
