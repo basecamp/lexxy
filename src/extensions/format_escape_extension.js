@@ -14,6 +14,10 @@ export class FormatEscapeExtension extends LexxyExtension {
     return this.editorElement.supportsRichText
   }
 
+  get allowedElements() {
+    return [ { tag: "li", attributes: [ "value" ] } ]
+  }
+
   get lexicalExtension() {
     return defineExtension({
       name: "lexxy/format-escape",

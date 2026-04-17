@@ -34,14 +34,14 @@ test.describe("Block formatting", () => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
     await page.getByRole("button", { name: "Bullet list" }).click()
-    await assertEditorHtml(editor, "<ul><li>Hello everyone</li></ul>")
+    await assertEditorHtml(editor, '<ul><li value="1">Hello everyone</li></ul>')
   })
 
   test("toggle bullet list off", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
     await page.getByRole("button", { name: "Bullet list" }).click()
-    await assertEditorHtml(editor, "<ul><li>Hello everyone</li></ul>")
+    await assertEditorHtml(editor, '<ul><li value="1">Hello everyone</li></ul>')
 
     await editor.select("everyone")
     await page.getByRole("button", { name: "Bullet list" }).click()
@@ -52,7 +52,7 @@ test.describe("Block formatting", () => {
     await editor.setValue("<p>Alpha</p><p>Bravo</p><p>Charlie</p>")
     await editor.selectAll()
     await page.getByRole("button", { name: "Bullet list" }).click()
-    await assertEditorHtml(editor, "<ul><li>Alpha</li><li>Bravo</li><li>Charlie</li></ul>")
+    await assertEditorHtml(editor, '<ul><li value="1">Alpha</li><li value="2">Bravo</li><li value="3">Charlie</li></ul>')
 
     await editor.selectAll()
     await page.getByRole("button", { name: "Bullet list" }).click()
@@ -70,14 +70,14 @@ test.describe("Block formatting", () => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
     await page.getByRole("button", { name: "Numbered list" }).click()
-    await assertEditorHtml(editor, "<ol><li>Hello everyone</li></ol>")
+    await assertEditorHtml(editor, '<ol><li value="1">Hello everyone</li></ol>')
   })
 
   test("toggle numbered list off", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
     await page.getByRole("button", { name: "Numbered list" }).click()
-    await assertEditorHtml(editor, "<ol><li>Hello everyone</li></ol>")
+    await assertEditorHtml(editor, '<ol><li value="1">Hello everyone</li></ol>')
 
     await editor.select("everyone")
     await page.getByRole("button", { name: "Numbered list" }).click()
@@ -88,11 +88,21 @@ test.describe("Block formatting", () => {
     await editor.setValue("<p>Alpha</p><p>Bravo</p><p>Charlie</p>")
     await editor.selectAll()
     await page.getByRole("button", { name: "Numbered list" }).click()
-    await assertEditorHtml(editor, "<ol><li>Alpha</li><li>Bravo</li><li>Charlie</li></ol>")
+    await assertEditorHtml(editor, '<ol><li value="1">Alpha</li><li value="2">Bravo</li><li value="3">Charlie</li></ol>')
 
     await editor.selectAll()
     await page.getByRole("button", { name: "Numbered list" }).click()
     await assertEditorHtml(editor, "<p>Alpha</p><p>Bravo</p><p>Charlie</p>")
+  })
+
+  test("ordered list exports li value attribute", async ({ editor }) => {
+    await editor.setValue("<ol><li>First</li><li>Second</li></ol>")
+    await assertEditorHtml(editor, '<ol><li value="1">First</li><li value="2">Second</li></ol>')
+  })
+
+  test("nested ordered list numbering is calculated correctly", async ({ editor }) => {
+    await editor.setValue('<ol><li>First</li><li><ol><li>Nested</li></ol></li><li>Second</li></ol>')
+    await assertEditorHtml(editor, '<ol><li value="1">First</li><li value="2" class="lexxy-nested-listitem"><ol><li value="1">Nested</li></ol></li><li value="2">Second</li></ol>')
   })
 
   test("insert quote without selection", async ({ page, editor }) => {
@@ -225,7 +235,7 @@ test.describe("Block formatting", () => {
 
     await assertEditorHtml(
       editor,
-      "<p>First line</p><ul><li>Second line</li></ul><p>Third line</p>",
+      '<p>First line</p><ul><li value="1">Second line</li></ul><p>Third line</p>',
     )
   })
 
@@ -240,7 +250,7 @@ test.describe("Block formatting", () => {
 
     await assertEditorHtml(
       editor,
-      "<p>First line</p><ol><li>Second line</li></ol><p>Third line</p>",
+      '<p>First line</p><ol><li value="1">Second line</li></ol><p>Third line</p>',
     )
   })
 
@@ -255,7 +265,7 @@ test.describe("Block formatting", () => {
 
     await assertEditorHtml(
       editor,
-      "<ul><li>First item<br>continuation</li></ul>",
+      '<ul><li value="1">First item<br>continuation</li></ul>',
     )
   })
 

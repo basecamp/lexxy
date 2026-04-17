@@ -15,12 +15,12 @@ test.describe("Escape format", () => {
     await editor.selectAll()
 
     await page.getByRole("button", { name: "Bullet list" }).click()
-    await assertEditorHtml(editor, "<ul><li>First line</li></ul>")
+    await assertEditorHtml(editor, "<ul><li value=\"1\">First line</li></ul>")
 
     await clickToolbarButton(page, "insertQuoteBlock")
     await assertEditorHtml(
       editor,
-      "<blockquote><ul><li>First line</li></ul></blockquote>",
+      "<blockquote><ul><li value=\"1\">First line</li></ul></blockquote>",
     )
 
     await editor.send("ArrowRight")
@@ -30,7 +30,7 @@ test.describe("Escape format", () => {
 
     await assertEditorHtml(
       editor,
-      "<blockquote><ul><li>First line</li></ul></blockquote><p>Outside quote</p>",
+      "<blockquote><ul><li value=\"1\">First line</li></ul></blockquote><p>Outside quote</p>",
     )
   })
 
@@ -74,7 +74,7 @@ test.describe("Escape format", () => {
     await clickToolbarButton(page, "insertQuoteBlock")
     await assertEditorHtml(
       editor,
-      "<blockquote><ul><li>Item one</li><li>Item two</li><li>Item three</li></ul></blockquote>",
+      "<blockquote><ul><li value=\"1\">Item one</li><li value=\"2\">Item two</li><li value=\"3\">Item three</li></ul></blockquote>",
     )
 
     await editor.select("Item two")
@@ -86,7 +86,7 @@ test.describe("Escape format", () => {
 
     await assertEditorHtml(
       editor,
-      "<blockquote><ul><li>Item one</li><li>Item two</li></ul></blockquote><p>Middle text</p><blockquote><ul><li>Item three</li></ul></blockquote>",
+      "<blockquote><ul><li value=\"1\">Item one</li><li value=\"2\">Item two</li></ul></blockquote><p>Middle text</p><blockquote><ul><li value=\"1\">Item three</li></ul></blockquote>",
     )
   })
 
@@ -101,7 +101,7 @@ test.describe("Escape format", () => {
     await clickToolbarButton(page, "insertQuoteBlock")
     await assertEditorHtml(
       editor,
-      "<blockquote><ul><li>Item one</li></ul></blockquote>",
+      "<blockquote><ul><li value=\"1\">Item one</li></ul></blockquote>",
     )
 
     await editor.send("ArrowRight")
@@ -111,7 +111,7 @@ test.describe("Escape format", () => {
 
     await assertEditorHtml(
       editor,
-      "<blockquote><ul><li>Item one</li></ul></blockquote><p>After escape</p>",
+      "<blockquote><ul><li value=\"1\">Item one</li></ul></blockquote><p>After escape</p>",
     )
   })
 
