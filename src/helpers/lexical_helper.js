@@ -1,4 +1,4 @@
-import { $createNodeSelection, $createParagraphNode, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isTextNode, TextNode } from "lexical"
+import { $createNodeSelection, $createParagraphNode, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isRootNode, $isRootOrShadowRoot, $isTextNode, TextNode } from "lexical"
 import { HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
@@ -13,6 +13,10 @@ export function $createNodeSelectionWith(...nodes) {
   const selection = $createNodeSelection()
   nodes.forEach(node => selection.add(node.getKey()))
   return selection
+}
+
+export function $isShadowRoot(node) {
+  return $isElementNode(node) && $isRootOrShadowRoot(node) && !$isRootNode(node)
 }
 
 export function $makeSafeForRoot(node) {
