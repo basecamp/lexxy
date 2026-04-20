@@ -100,7 +100,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   #createDOMForImage() {
-    return createElement("img")
+    return createElement("img", { draggable: "false" })
   }
 
   #createDOMForFile() {
