@@ -26,6 +26,10 @@ export function debounceAsync(fn, wait) {
   }
 }
 
+export function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 export function nextFrame() {
   return new Promise(requestAnimationFrame)
 }

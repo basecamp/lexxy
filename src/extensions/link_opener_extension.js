@@ -1,7 +1,9 @@
-import { defineExtension } from "lexical"
-import { IS_APPLE, mergeRegister } from "@lexical/utils"
-import { registerEventListener } from "../helpers/listener_helper.js"
-import LexxyExtension from "./lexxy_extension.js"
+import { $findMatchingParent, $getNearestNodeFromDOMNode, CLICK_COMMAND, COMMAND_PRIORITY_NORMAL, defineExtension, mergeRegister } from "lexical"
+import { $isLinkNode } from "@lexical/link"
+import { IS_APPLE } from "@lexical/utils"
+import { registerEventListener } from "../helpers/listener_helper"
+import { delay } from "../helpers/timing_helpers"
+import LexxyExtension from "./lexxy_extension"
 
 export class LinkOpenerExtension extends LexxyExtension {
   get enabled() {
@@ -11,53 +13,57 @@ export class LinkOpenerExtension extends LexxyExtension {
   get lexicalExtension() {
     return defineExtension({
       name: "lexxy/link-opener",
-      register: () => {
-        return mergeRegister(
-          registerEventListener(window, "keydown", this.#update.bind(this)),
-          registerEventListener(window, "keyup", this.#update.bind(this)),
-          registerEventListener(window, "blur", this.#disable.bind(this)),
-          registerEventListener(window, "focus", this.#refresh.bind(this))
-        )
-      }
+      register: (editor) => mergeRegister(
+        editor.registerCommand(CLICK_COMMAND, this.#handleClick.bind(this), COMMAND_PRIORITY_NORMAL),
+        registerEventListener(this.editorElement.editorContentElement, "auxclick", this.#handleAuxClick.bind(this)),
+        registerEventListener(window, "keydown", this.#handleKey.bind(this)),
+        registerEventListener(window, "keyup", this.#handleKey.bind(this)),
+        registerEventListener(window, "focus", this.#handleFocus.bind(this))
+      )
     })
   }
 
-  #update(event) {
+  #handleClick(event) {
     if (this.#isModified(event)) {
-      this.#enable()
+      return $openLink(event.target)
     } else {
-      this.#disable()
+      return false
     }
   }
 
-  #refresh() {
-    // Chrome dispatches events without modifier keys *for a while* after changing tabs
-    setTimeout(() => {
-      window.addEventListener("mousemove", this.#update.bind(this), { once: true })
-    }, 200)
+  #handleAuxClick(event) {
+    if (event.button === 1) {
+      this.editorElement.editor.read(() => $openLink(event.target))
+    }
+  }
+
+  #handleKey(event) {
+    this.#updateOpenableAttribute(event)
+  }
+
+  // Chrome dispatches events without modifier keys *for a while* after changing tabs
+  async #handleFocus() {
+    await delay(200)
+    this.editorElement.addEventListener("mousemove", this.#updateOpenableAttribute.bind(this), { once: true })
+  }
+
+  #updateOpenableAttribute(event) {
+    this.editorElement.toggleAttribute("data-links-openable", this.#isModified(event))
   }
 
   #isModified(event) {
     return IS_APPLE ? event.metaKey : event.ctrlKey
   }
+}
 
-  #enable() {
-    for (const anchor of this.#anchors) {
-      anchor.setAttribute("contenteditable", "false")
-      anchor.setAttribute("target", "_blank")
-      anchor.setAttribute("rel", "noopener noreferrer")
-    }
-  }
-
-  #disable() {
-    for (const anchor of this.#anchors) {
-      anchor.removeAttribute("contenteditable")
-      anchor.removeAttribute("target")
-      anchor.removeAttribute("rel")
-    }
-  }
-
-  get #anchors() {
-    return this.editorElement.editorContentElement?.querySelectorAll("a") ?? []
+function $openLink(target) {
+  const node = $getNearestNodeFromDOMNode(target)
+  const linkNode = $findMatchingParent(node, $isLinkNode)
+  if (linkNode) {
+    const url = linkNode.sanitizeUrl(linkNode.getURL())
+    window.open(url, "_blank", "noopener,noreferrer")
+    return true
+  } else {
+    return false
   }
 }

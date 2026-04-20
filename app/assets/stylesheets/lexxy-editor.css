@@ -68,6 +68,10 @@
     outline-offset: var(--lexxy-focus-ring-offset);
   }
 
+  &[data-links-openable] a {
+    cursor: pointer;
+  }
+
   /* Tables */
   /* ------------------------------------------------------------------------ */
 
