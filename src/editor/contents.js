@@ -1,23 +1,23 @@
 import {
-  $createLineBreakNode, $createParagraphNode, $createTextNode, $getChildCaretAtIndex, $getNodeByKey, $getRoot, $getSelection,
-  $hasUpdateTag,
-  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $setSelection,
-  HISTORY_MERGE_TAG,
-  PASTE_TAG
+  $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $hasUpdateTag,
+  $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
+  HISTORY_MERGE_TAG, PASTE_TAG
 } from "lexical"
 
 import { $generateNodesFromDOM } from "@lexical/html"
-import { $createCodeNode, $isCodeNode, CodeNode } from "@lexical/code"
-import { $createHeadingNode, $createQuoteNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
+import { $createCodeNode, $isCodeNode } from "@lexical/code"
+import { $createHeadingNode, $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
-import { $ensureForwardRangeSelection, $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
+import { $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
-import { $getNearestBlockElementAncestorOrThrow, $getNearestNodeOfType } from "@lexical/utils"
+import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
+import NodeInserter from "./contents/node_inserter"
+import { $isShadowRoot } from "../helpers/lexical_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -625,112 +625,5 @@ export default class Contents {
     const paragraph = $createParagraphNode()
     anchorNode.append(paragraph)
     paragraph.selectStart()
-  }
-}
-
-function $isShadowRoot(node) {
-  return $isElementNode(node) && $isRootOrShadowRoot(node) && !$isRootNode(node)
-}
-
-class NodeInserter {
-  static for(selection) {
-    const INSERTERS = [
-      CodeNodeInserter,
-      QuoteNodeInserter,
-      ShadowRootNodeInserter,
-      NodeSelectionNodeInserter
-    ]
-    const Inserter = INSERTERS.find(inserter => inserter.handles(selection))
-    return Inserter ? new Inserter(selection) : selection
-  }
-
-  constructor(selection) {
-    this.selection = selection
-  }
-}
-
-class CodeNodeInserter extends NodeInserter {
-  static handles(selection) {
-    return $getNearestNodeOfType(selection.anchor?.getNode(), CodeNode)
-  }
-
-  insertNodes(nodes) {
-    if (!this.selection.isCollapsed()) { this.selection.removeText() }
-
-    $ensureForwardRangeSelection(this.selection)
-    const focusNode = this.selection.focus.getNode()
-    const codeNode = $getNearestNodeOfType(focusNode, CodeNode)
-    const insertionIndex = focusNode.is(codeNode) ? 0 : focusNode.getIndexWithinParent()
-
-    const caret = $getChildCaretAtIndex(codeNode, insertionIndex + 1, "previous")
-
-    for (const node of nodes) {
-      if (!node.isAttached()) continue
-      if (caret.getNodeAtCaret() && $isElementNode(node)) { caret.insert($createLineBreakNode()) }
-
-      caret.insert(this.#convertNodeToCodeChild(node))
-    }
-
-    caret.getNodeAtCaret().selectEnd()
-  }
-
-  #convertNodeToCodeChild(node) {
-    if ($isLineBreakNode(node)) {
-      return node
-    } else {
-      node.remove()
-      return $createTextNode(node.getTextContent())
-    }
-  }
-
-}
-
-// Lexical will split a QuoteNode when inserting other Elements - we want them simply inserted as-is
-class QuoteNodeInserter extends NodeInserter {
-  static handles(selection) {
-    return $getNearestNodeOfType(selection.anchor?.getNode(), QuoteNode)
-  }
-
-  insertNodes(nodes) {
-    if (!this.selection.isCollapsed()) { this.selection.removeText() }
-
-    $ensureForwardRangeSelection(this.selection)
-    let lastNode = this.selection.focus.getNode()
-    for (const node of nodes) {
-      lastNode = lastNode.insertAfter(node)
-    }
-
-    lastNode.selectEnd()
-  }
-}
-
-class ShadowRootNodeInserter extends NodeInserter {
-  static handles(selection) {
-    return $isShadowRoot(selection?.anchor.getNode())
-  }
-
-  insertNodes(nodes) {
-    const anchorNode = this.selection.anchor.getNode()
-    const paragraph = $createParagraphNode()
-    anchorNode.append(paragraph)
-
-    paragraph.selectStart().insertNodes(nodes)
-  }
-}
-
-class NodeSelectionNodeInserter extends NodeInserter {
-  static handles(selection) {
-    return $isNodeSelection(selection)
-  }
-
-  insertNodes(nodes) {
-    const selectedNodes = this.selection.getNodes()
-
-    // Overrides Lexical's default behavior of _removing_ the currently selected nodes
-    // https://github.com/facebook/lexical/blob/v0.38.2/packages/lexical/src/LexicalSelection.ts#L412
-    let lastNode = selectedNodes.at(-1)
-    for (const node of nodes) {
-      lastNode = lastNode.insertAfter(node)
-    }
   }
 }
