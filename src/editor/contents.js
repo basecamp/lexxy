@@ -289,7 +289,7 @@ export default class Contents {
           const node = $getNodeByKey(nodeKey)
           if (!(node instanceof ActionTextAttachmentUploadNode)) return
 
-          const replacementNodeKey = node.showUploadedAttachment(blob)
+          const replacementNodeKey = node.$showUploadedAttachment(blob)
           if (replacementNodeKey) {
             nodeKey = replacementNodeKey
           }

@@ -1,9 +1,9 @@
 import Lexxy from "../config/lexxy"
-import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG, SKIP_DOM_SELECTION_TAG } from "lexical"
-import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
+import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
 import { parseBoolean } from "../helpers/string_helper"
+import { REWRITE_HISTORY_COMMAND } from "../extensions/rewritable_history_extension"
 
 
 export class ActionTextAttachmentNode extends DecoratorNode {
@@ -218,6 +218,18 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return figure
   }
 
+  patchAndRewriteHistory(patch) {
+    this.editor.dispatchCommand(REWRITE_HISTORY_COMMAND, {
+      [this.getKey()]: { patch }
+    })
+  }
+
+  replaceAndRewriteHistory(node) {
+    this.editor.dispatchCommand(REWRITE_HISTORY_COMMAND, {
+      [this.getKey()]: { replace: node }
+    })
+  }
+
   #createDOMForImage(options = {}) {
     const initialSrc = this.previewSrc || this.src
     const img = createElement("img", { src: initialSrc, draggable: false, alt: this.altText, ...this.#imageDimensions, ...options })
@@ -246,31 +258,16 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   #handleImageLoaded(img, previewSrc) {
     img.src = this.src
-    this.editor.update(() => {
-      if (this.isAttached()) this.getWritable().previewSrc = null
-    }, { tag: this.#backgroundUpdateTags })
+    this.patchAndRewriteHistory({ previewSrc: null })
     this.#revokePreviewSrc(previewSrc)
   }
 
   #handleImageLoadError(previewSrc) {
-    this.editor.update(() => {
-      if (this.isAttached()) {
-        this.getWritable().previewSrc = null
-        this.getWritable().uploadError = true
-      }
-    }, { tag: this.#backgroundUpdateTags })
+    this.patchAndRewriteHistory({
+      previewSrc: null,
+      uploadError: true
+    })
     this.#revokePreviewSrc(previewSrc)
-  }
-
-  get #backgroundUpdateTags() {
-    const rootElement = this.editor.getRootElement()
-    const editorHasFocus = rootElement !== null && rootElement.contains(document.activeElement)
-
-    if (editorHasFocus) {
-      return SILENT_UPDATE_TAGS
-    } else {
-      return [ ...SILENT_UPDATE_TAGS, SKIP_DOM_SELECTION_TAG ]
-    }
   }
 
   #revokePreviewSrc(previewSrc) {
@@ -334,9 +331,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       figure.appendChild(this.#createEditableCaption())
     })
 
-    this.editor.update(() => {
-      if (this.isAttached()) this.getWritable().pendingPreview = false
-    }, { tag: this.#backgroundUpdateTags })
+    this.patchAndRewriteHistory({ pendingPreview: false })
   }
 
   #swapFigureContent(figure, fromClass, toClass, renderContent) {

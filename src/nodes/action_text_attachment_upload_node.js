@@ -1,17 +1,10 @@
-import {
-  $createParagraphNode, $getNodeByKey, $getRoot, $getSelection, $isRangeSelection, $isRootOrShadowRoot, HISTORIC_TAG, HISTORY_PUSH_TAG, SKIP_DOM_SELECTION_TAG,
-  SKIP_SCROLL_INTO_VIEW_TAG
-} from "lexical"
 import Lexxy from "../config/lexxy"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
-import { $isProvisionalParagraphNode } from "./provisional_paragraph_node"
 import { createElement, dispatch } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 
 export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
-  static #activeUploads = new WeakSet()
-
   static getType() {
     return "action_text_attachment_upload"
   }
@@ -30,10 +23,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   constructor(node, key) {
-    const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError } = node
-    super({ ...node, contentType: file.type }, key)
-    this.file = file
-    this.fileName = file.name
+    const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError, fileName, contentType } = node
+    super({ ...node, contentType: file?.type ?? contentType }, key)
+    this.file = file ?? null
+    this.fileName = file?.name ?? fileName
     this.uploadUrl = uploadUrl
     this.blobUrlTemplate = blobUrlTemplate
     this.progress = progress ?? null
@@ -90,6 +83,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       ...super.exportJSON(),
       type: "action_text_attachment_upload",
       version: 1,
+      fileName: this.fileName,
+      contentType: this.contentType,
       uploadUrl: this.uploadUrl,
       blobUrlTemplate: this.blobUrlTemplate,
       progress: this.progress,
@@ -114,14 +109,14 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   #getFileExtension() {
-    return this.file.name.split(".").pop().toLowerCase()
+    return (this.fileName || "").split(".").pop().toLowerCase()
   }
 
   #createCaption() {
     const figcaption = createElement("figcaption", { className: "attachment__caption" })
 
-    const nameSpan = createElement("span", { className: "attachment__name", textContent: this.caption || this.file.name || "" })
-    const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.file.size) })
+    const nameSpan = createElement("span", { className: "attachment__name", textContent: this.caption || this.fileName || "" })
+    const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.file?.size) })
     figcaption.appendChild(nameSpan)
     figcaption.appendChild(sizeSpan)
 
@@ -135,11 +130,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   #setDimensionsFromImage({ width, height }) {
     if (this.#hasDimensions) return
 
-    this.editor.update(() => {
-      const writable = this.getWritable()
-      writable.width = width
-      writable.height = height
-    }, { tag: this.#transientUpdateTags })
+    this.patchAndRewriteHistory({ width, height })
   }
 
   get #hasDimensions() {
@@ -149,10 +140,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   async #startUploadIfNeeded() {
     if (this.#uploadStarted) return
     if (!this.uploadUrl) return // Bridge-managed upload — skip DirectUpload
-    if (ActionTextAttachmentUploadNode.#activeUploads.has(this.file)) return
 
-    ActionTextAttachmentUploadNode.#activeUploads.add(this.file)
-    const uploadNodeKey = this.getKey()
     this.#setUploadStarted()
 
     const { DirectUpload } = await import("@rails/activestorage")
@@ -169,77 +157,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       } else {
         this.#dispatchEvent("lexxy:upload-end", { file: this.file, error: null })
         this.editor.update(() => {
-          const uploadNode = $getNodeByKey(uploadNodeKey)
-          if (!(uploadNode instanceof ActionTextAttachmentUploadNode)) return
-
-          uploadNode.showUploadedAttachment(blob)
-        }, {
-          tag: this.#backgroundUpdateTags,
-          onUpdate: () => requestAnimationFrame(() => this.#collapseUploadHistory(uploadNodeKey))
+          this.$showUploadedAttachment(blob)
         })
       }
     })
-  }
-
-  // Upload completion uses HISTORY_PUSH_TAG so Lexical creates the undo boundary.
-  // Then we rewrite any upload-node snapshots to their clean (node-stripped) form
-  // and collapse duplicates to avoid no-op undo steps.
-  #collapseUploadHistory(uploadNodeKey) {
-    const historyState = this.#historyState
-    if (!historyState) return
-
-    const currentSignature = historyState.current && this.#contentSignatureFor(historyState.current.editorState)
-    const rewrittenStack = []
-    let prevSignature = null
-
-    for (const entry of historyState.undoStack) {
-      const hasUploadNode = entry.editorState.read(() =>
-        $getNodeByKey(uploadNodeKey) instanceof ActionTextAttachmentUploadNode
-      )
-
-      const editorState = hasUploadNode
-        ? this.#editorStateStrippingUploadNodes(entry.editorState)
-        : entry.editorState
-
-      const signature = this.#contentSignatureFor(editorState)
-      if (signature !== prevSignature && signature !== currentSignature) {
-        rewrittenStack.push(hasUploadNode ? { editor: entry.editor, editorState } : entry)
-      }
-      prevSignature = signature
-    }
-
-    historyState.undoStack = rewrittenStack
-    historyState.redoStack = []
-
-    // Force listeners (toolbar undo/redo button states) to observe the stack rewrite.
-    this.editor.update(() => {}, { tag: HISTORIC_TAG })
-  }
-
-  // Upload nodes can't survive a JSON round-trip (File isn't serializable),
-  // so strip them from the serialized state before parseEditorState calls importJSON.
-  #editorStateStrippingUploadNodes(editorState) {
-    const json = editorState.toJSON()
-    this.#stripNodesFromJSON(json.root, n => n.type === "action_text_attachment_upload")
-    return this.editor.parseEditorState(json, () => {
-      if ($getRoot().getChildrenSize() === 0) $getRoot().append($createParagraphNode())
-    })
-  }
-
-  #stripNodesFromJSON(node, predicate) {
-    if (!node.children) return
-    node.children = node.children.filter(child => {
-      if (predicate(child)) return false
-      this.#stripNodesFromJSON(child, predicate)
-      return true
-    })
-  }
-
-  #contentSignatureFor(editorState) {
-    return JSON.stringify(editorState.toJSON().root)
-  }
-
-  get #historyState() {
-    return this.editor.getRootElement()?.closest("lexxy-editor")?.historyState
   }
 
   #createUploadDelegate() {
@@ -273,70 +194,22 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   #setProgress(progress) {
-    this.editor.update(() => {
-      this.getWritable().progress = progress
-    }, { tag: this.#transientUpdateTags })
+    this.patchAndRewriteHistory({ progress })
   }
 
   #handleUploadError(error) {
     console.warn(`Upload error for ${this.file?.name ?? "file"}: ${error}`)
-    this.editor.update(() => {
-      this.getWritable().uploadError = true
-    }, { tag: this.#transientUpdateTags })
+
+    this.patchAndRewriteHistory({ uploadError: true })
   }
 
-  showUploadedAttachment(blob) {
+  $showUploadedAttachment(blob) {
     const previewSrc = this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
 
     const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
-    const shouldSelectAfterReplacement = this.#selectionIncludesUploadNode
-    this.replace(replacementNode)
-
-    if (shouldSelectAfterReplacement && $isRootOrShadowRoot(replacementNode.getParent())) {
-      replacementNode.selectNext()
-    }
+    this.replaceAndRewriteHistory(replacementNode)
 
     return replacementNode.getKey()
-  }
-
-  // Transient updates (progress, dimensions, errors) are completely invisible to
-  // the undo history via HISTORIC_TAG.
-  get #transientUpdateTags() {
-    if (this.#editorHasFocus) {
-      return [ HISTORIC_TAG ]
-    } else {
-      return [ HISTORIC_TAG, SKIP_DOM_SELECTION_TAG ]
-    }
-  }
-
-  // Use HISTORY_PUSH_TAG to force a stable undo boundary at upload completion.
-  // SKIP_SCROLL_INTO_VIEW_TAG avoids scroll jumps, and SKIP_DOM_SELECTION_TAG
-  // prevents focus theft when the editor is not active.
-  get #backgroundUpdateTags() {
-    if (this.#editorHasFocus) {
-      return [ HISTORY_PUSH_TAG, SKIP_SCROLL_INTO_VIEW_TAG ]
-    } else {
-      return [ HISTORY_PUSH_TAG, SKIP_SCROLL_INTO_VIEW_TAG, SKIP_DOM_SELECTION_TAG ]
-    }
-  }
-
-  get #editorHasFocus() {
-    const rootElement = this.editor.getRootElement()
-    return rootElement !== null && rootElement.contains(document.activeElement)
-  }
-
-  get #selectionIncludesUploadNode() {
-    const selection = $getSelection()
-    if (selection === null) return false
-
-    if (selection.getNodes().some((node) => node.is(this))) return true
-    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
-
-    const anchorNode = selection.anchor.getNode()
-    if (!$isProvisionalParagraphNode(anchorNode) || !anchorNode.isEmpty()) return false
-
-    const previousSibling = anchorNode.getPreviousSibling()
-    return previousSibling !== null && previousSibling.is(this)
   }
 
   #toActionTextAttachmentNodeWith(blob, previewSrc) {
