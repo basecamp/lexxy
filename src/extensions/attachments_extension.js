@@ -3,8 +3,8 @@ import { mergeRegister } from "@lexical/utils"
 
 import { $findOrCreateGalleryForImage, $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
-import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node.js"
 import { AttachmentDragAndDrop } from "../editor/attachments/drag_and_drop"
+import AttachmentManager from "../editor/attachments/attachment_manager"
 
 import LexxyExtension from "./lexxy_extension"
 import { $isAtNodeEdge } from "../helpers/lexical_helper.js"
@@ -26,13 +26,14 @@ export class AttachmentsExtension extends LexxyExtension {
       name: "lexxy/action-text-attachments",
       nodes: [
         ActionTextAttachmentNode,
-        ActionTextAttachmentUploadNode,
         ImageGalleryNode
       ],
       register(editor) {
+        const manager = new AttachmentManager(editor)
         const dragAndDrop = new AttachmentDragAndDrop(editor)
 
         return mergeRegister(
+          manager.register(),
           editor.registerNodeTransform(ActionTextAttachmentNode, $extractAttachmentFromParagraph),
           editor.registerCommand(DELETE_CHARACTER_COMMAND, $collapseIntoGallery, COMMAND_PRIORITY_NORMAL),
           () => dragAndDrop.destroy()

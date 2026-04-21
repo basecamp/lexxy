@@ -1,8 +1,11 @@
-import { $getSelection } from "lexical"
+import { $getNodeByKey, $getSelection } from "lexical"
 import { isPreviewableImage } from "../../helpers/html_helper"
-import { $createActionTextAttachmentUploadNode } from "../../nodes/action_text_attachment_upload_node"
+import { $createActionTextAttachmentNode, $isActionTextAttachmentNode } from "../../nodes/action_text_attachment_node"
 import { $createImageGalleryNode, $findOrCreateGalleryForImage, ImageGalleryNode } from "../../nodes/image_gallery_node"
 import { $getNearestNodeOfType } from "@lexical/utils"
+import Lexxy from "../../config/lexxy"
+import { dispatch } from "../../helpers/html_helper"
+import { SILENT_UPDATE_TAGS } from "../../helpers/lexical_helper"
 
 export default class Uploader {
   #files
@@ -24,30 +27,96 @@ export default class Uploader {
     return Array.from(this.#files)
   }
 
-  $uploadFiles() {
-    this.$createUploadNodes()
-    this.$insertUploadNodes()
+  // Insert nodes immediately, then upload in the background.
+  // Called inside editor.update().
+  $insertAndUpload() {
+    this.$createNodes()
+    this.$insertNodes()
+
+    // Kick off uploads after nodes are in the document.
+    // Each upload updates its node with sgid when complete.
+    const entries = this.nodes.map((node, i) => [ node.getKey(), this.files[i] ])
+    setTimeout(() => this.#uploadAll(entries), 0)
   }
 
-  $createUploadNodes() {
+  $createNodes() {
     this.nodes = this.files.map(file =>
-      $createActionTextAttachmentUploadNode({
-        ...this.#nodeUrlProperties,
-        file: file,
+      $createActionTextAttachmentNode({
+        fileName: file.name,
         contentType: file.type
       })
     )
   }
 
-  $insertUploadNodes() {
+  $insertNodes() {
     this.contents.insertAtCursor(...this.nodes)
   }
 
-  get #nodeUrlProperties() {
-    return {
-      uploadUrl: this.editorElement.directUploadUrl,
-      blobUrlTemplate: this.editorElement.blobUrlTemplate
+  async #uploadAll(entries) {
+    await Promise.all(entries.map(([ nodeKey, file ]) => this.#uploadFile(nodeKey, file)))
+  }
+
+  async #uploadFile(nodeKey, file) {
+    const uploadUrl = this.editorElement.directUploadUrl
+    if (!uploadUrl) return
+
+    dispatch(this.editorElement, "lexxy:upload-start", { file })
+
+    try {
+      const { DirectUpload } = await import("@rails/activestorage")
+      const upload = new DirectUpload(file, uploadUrl, this.#createDelegate(file))
+
+      const blob = await new Promise((resolve, reject) => {
+        upload.create((error, blob) => error ? reject(error) : resolve(blob))
+      })
+
+      this.#applyBlob(nodeKey, blob)
+      dispatch(this.editorElement, "lexxy:upload-end", { file, error: null })
+    } catch (error) {
+      console.warn(`Upload error for ${file.name}: ${error}`)
+      dispatch(this.editorElement, "lexxy:upload-end", { file, error })
     }
+  }
+
+  #applyBlob(nodeKey, blob) {
+    this.editorElement.editor.update(() => {
+      const node = $getNodeByKey(nodeKey)
+      if (!node || !$isActionTextAttachmentNode(node)) return
+
+      const writable = node.getWritable()
+      writable.sgid = blob.attachable_sgid
+      writable.src = blob.previewable ? blob.url : this.#blobSrc(blob)
+      writable.contentType = blob.content_type
+      writable.fileName = blob.filename
+      writable.fileSize = blob.byte_size
+      writable.previewable = blob.previewable
+    }, { tag: SILENT_UPDATE_TAGS })
+  }
+
+  #createDelegate(file) {
+    const shouldAuthenticate = Lexxy.global.get("authenticatedUploads")
+
+    return {
+      directUploadWillCreateBlobWithXHR: (request) => {
+        if (shouldAuthenticate) request.withCredentials = true
+      },
+      directUploadWillStoreFileWithXHR: (request) => {
+        if (shouldAuthenticate) request.withCredentials = true
+
+        request.upload.addEventListener("progress", (event) => {
+          const progress = Math.round(event.loaded / event.total * 100)
+          dispatch(this.editorElement, "lexxy:upload-progress", { file, progress })
+        })
+      }
+    }
+  }
+
+  #blobSrc(blob) {
+    const template = this.editorElement.blobUrlTemplate
+    if (!template) return null
+    return template
+      .replace(":signed_id", blob.signed_id)
+      .replace(":filename", encodeURIComponent(blob.filename))
   }
 }
 
@@ -74,7 +143,7 @@ class GalleryUploader extends Uploader {
     return $getNearestNodeOfType(selectedNode, ImageGalleryNode) !== null
   }
 
-  $insertUploadNodes() {
+  $insertNodes() {
     this.#findOrCreateGallery()
     this.#insertImagesInGallery()
     this.#insertNonImagesAfterGallery()

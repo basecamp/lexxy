@@ -13,11 +13,9 @@ import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { dispatch, parseHtml } from "../helpers/html_helper"
 import { $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
-import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
-import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
+import { $createActionTextAttachmentNode, $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
-import { $isShadowRoot } from "../helpers/lexical_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -246,7 +244,7 @@ export default class Contents {
     this.#performTextReplacement(anchorNode, selection, offset, lastIndex, replacementNodes)
   }
 
-  uploadFiles(files, { selectLast } = {}) {
+  uploadFiles(files) {
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
       return
@@ -255,13 +253,7 @@ export default class Contents {
 
     this.editor.update(() => {
       const uploader = Uploader.for(this.editorElement, validFiles)
-      uploader.$uploadFiles()
-
-      if (selectLast && uploader.nodes?.length) {
-        const lastNode = uploader.nodes.at(-1)
-        lastNode.selectEnd()
-        this.#normalizeSelectionInShadowRoot()
-      }
+      uploader.$insertAndUpload()
     })
   }
 
@@ -270,14 +262,12 @@ export default class Contents {
 
     let nodeKey = null
     this.editor.update(() => {
-      const uploadNode = new ActionTextAttachmentUploadNode({
-        file,
-        uploadUrl: null,
-        blobUrlTemplate: this.editorElement.blobUrlTemplate,
-        editor: this.editor
+      const node = $createActionTextAttachmentNode({
+        fileName: file.name,
+        contentType: file.type
       })
-      this.insertAtCursor(uploadNode)
-      nodeKey = uploadNode.getKey()
+      this.insertAtCursor(node)
+      nodeKey = node.getKey()
     }, { tag: HISTORY_MERGE_TAG })
 
     if (!nodeKey) return null
@@ -287,21 +277,19 @@ export default class Contents {
       setAttributes(blob) {
         editor.update(() => {
           const node = $getNodeByKey(nodeKey)
-          if (!(node instanceof ActionTextAttachmentUploadNode)) return
+          if (!node || !$isActionTextAttachmentNode(node)) return
 
-          const replacementNodeKey = node.showUploadedAttachment(blob)
-          if (replacementNodeKey) {
-            nodeKey = replacementNodeKey
-          }
+          const writable = node.getWritable()
+          writable.sgid = blob.attachable_sgid
+          writable.src = blob.url
+          writable.contentType = blob.content_type
+          writable.fileName = blob.filename
+          writable.fileSize = blob.byte_size
+          writable.previewable = blob.previewable
         }, { tag: HISTORY_MERGE_TAG })
       },
-      setUploadProgress(progress) {
-        editor.update(() => {
-          const node = $getNodeByKey(nodeKey)
-          if (!(node instanceof ActionTextAttachmentUploadNode)) return
-
-          node.getWritable().progress = progress
-        }, { tag: HISTORY_MERGE_TAG })
+      setUploadProgress(_progress) {
+        // Progress is now a DOM-only concern handled by the renderer
       },
       remove() {
         editor.update(() => {
@@ -608,22 +596,4 @@ export default class Contents {
     return dispatch(this.editorElement, "lexxy:file-accept", { file }, true)
   }
 
-  // When the selection anchor is on a shadow root (e.g. a table cell), Lexical's
-  // insertNodes can't find a block parent and fails silently. Normalize the
-  // selection to point inside the shadow root's content instead.
-  #normalizeSelectionInShadowRoot() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return
-
-    const anchorNode = selection.anchor.getNode()
-    if (!$isShadowRoot(anchorNode)) return
-
-    // Append a paragraph inside the shadow root so there's a valid text-level
-    // target for subsequent insertions. This is necessary because decorator
-    // nodes (e.g. attachments) at the end of a table cell leave the selection
-    // on the cell itself with no block-level descendant to anchor to.
-    const paragraph = $createParagraphNode()
-    anchorNode.append(paragraph)
-    paragraph.selectStart()
-  }
 }
