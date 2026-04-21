@@ -33,3 +33,25 @@ export function delay(ms) {
 export function nextFrame() {
   return new Promise(requestAnimationFrame)
 }
+
+// Wraps `fn` so that repeated invocations within the same animation frame
+// collapse into a single call on the next frame, using the latest arguments.
+// Useful for observer callbacks (e.g. Lexical `registerUpdateListener`) that
+// reflect editor state to UI and don't need to run synchronously inside the
+// triggering event's frame.
+export function coalesceOnFrame(fn) {
+  let rafId = null
+  let latestArgs = null
+
+  return function (...args) {
+    latestArgs = args
+    if (rafId !== null) return
+
+    rafId = requestAnimationFrame(() => {
+      rafId = null
+      const call = latestArgs
+      latestArgs = null
+      fn.apply(this, call)
+    })
+  }
+}

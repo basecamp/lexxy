@@ -8,6 +8,7 @@ import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import ToolbarIcons from "./toolbar_icons"
 import { isActiveAndVisible } from "../helpers/html_helper"
+import { coalesceOnFrame } from "../helpers/timing_helpers"
 
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
@@ -178,18 +179,18 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.#listeners.track(this.editor.registerUpdateListener(() => {
+    const refresh = coalesceOnFrame(() => {
       this.editor.getEditorState().read(() => {
         this.#updateButtonStates()
         this.#closeDropdowns()
       })
-    }))
+    })
+    this.#listeners.track(this.editor.registerUpdateListener(refresh))
   }
 
   #monitorHistoryChanges() {
-    this.#listeners.track(this.editor.registerUpdateListener(() => {
-      this.#updateUndoRedoButtonStates()
-    }))
+    const refresh = coalesceOnFrame(() => this.#updateUndoRedoButtonStates())
+    this.#listeners.track(this.editor.registerUpdateListener(refresh))
   }
 
   #updateUndoRedoButtonStates() {

@@ -20,6 +20,7 @@ import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/ht
 import { isAttachmentSpacerTextNode } from "../helpers/lexical_helper"
 import { sanitize, setSanitizerConfig } from "../helpers/sanitization_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
+import { coalesceOnFrame } from "../helpers/timing_helpers"
 import LexicalToolbar from "./toolbar"
 import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
@@ -420,13 +421,14 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #synchronizeWithChanges() {
-    this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
+    const synchronize = coalesceOnFrame(() => {
       this.#clearCachedValues()
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
       this.#setValidity()
       this.#dispatchAttributesChange()
-    }))
+    })
+    this.#listeners.track(this.editor.registerUpdateListener(synchronize))
   }
 
   #clearCachedValues() {
