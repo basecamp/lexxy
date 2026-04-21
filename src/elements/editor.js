@@ -10,7 +10,6 @@ import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transformer"
 import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_tag_handler"
-import { createEmptyHistoryState, registerHistory } from "@lexical/history"
 
 import theme from "../config/theme"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
@@ -35,9 +34,11 @@ import { ProvisionalParagraphExtension } from "../extensions/provisional_paragra
 import { HighlightExtension } from "../extensions/highlight_extension"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 import { TablesExtension } from "../extensions/tables_extension"
+import { RewritableHistoryExtension } from "../extensions/rewritable_history_extension.js"
 import { AttachmentsExtension } from "../extensions/attachments_extension.js"
 import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 import { LinkOpenerExtension } from "../extensions/link_opener_extension.js"
+import { HistoryExtension } from "@lexical/history"
 
 
 export class LexicalEditorElement extends HTMLElement {
@@ -145,6 +146,7 @@ export class LexicalEditorElement extends HTMLElement {
       HighlightExtension,
       TrixContentExtension,
       TablesExtension,
+      RewritableHistoryExtension,
       AttachmentsExtension,
       FormatEscapeExtension,
       LinkOpenerExtension
@@ -464,8 +466,6 @@ export class LexicalEditorElement extends HTMLElement {
     } else {
       registered.push(registerPlainText(this.editor))
     }
-    this.historyState = createEmptyHistoryState()
-    registered.push(registerHistory(this.editor, this.historyState, 20))
 
     this.#listeners.track(...registered)
   }

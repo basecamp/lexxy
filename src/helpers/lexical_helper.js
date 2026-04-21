@@ -1,13 +1,10 @@
 import { $createNodeSelection, $createParagraphNode, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isRootNode, $isRootOrShadowRoot, $isTextNode, TextNode } from "lexical"
-import { HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
 import { $isAtNodeEnd } from "@lexical/selection"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-
-export const SILENT_UPDATE_TAGS = [ HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG ]
 
 export function $createNodeSelectionWith(...nodes) {
   const selection = $createNodeSelection()
@@ -33,6 +30,11 @@ export function $makeSafeForRoot(node) {
 export function getListType(node) {
   const list = $getNearestNodeOfType(node, ListNode)
   return list?.getListType() ?? null
+}
+
+export function isEditorFocused(editor) {
+  const rootElement = editor.getRootElement()
+  return rootElement !== null && rootElement.contains(document.activeElement)
 }
 
 export function $isAtNodeEdge(point, atStart = null) {
