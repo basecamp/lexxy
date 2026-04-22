@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -53,6 +53,7 @@ export class LexicalEditorElement extends HTMLElement {
   #editorInitializedRafId = null
   #listeners = new ListenerBin()
   #disposables = []
+  #historyState = { undo: false, redo: false }
 
   constructor() {
     super()
@@ -274,6 +275,14 @@ export class LexicalEditorElement extends HTMLElement {
     this.#initialValueLoaded = true
   }
 
+  get canUndo() {
+    return this.#historyState.undo
+  }
+
+  get canRedo() {
+    return this.#historyState.redo
+  }
+
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>"
     const nodes = $generateNodesFromDOM(this.editor, parseHtml(`${html}`))
@@ -307,6 +316,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#registerComponents()
     this.#handleEnter()
     this.#registerFocusEvents()
+    this.#registerHistoryEvents()
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#configureSanitizer()
@@ -538,6 +548,12 @@ export class LexicalEditorElement extends HTMLElement {
     }
   }
 
+  #registerHistoryEvents() {
+    this.#listeners.track(
+      this.editor.registerCommand(CAN_UNDO_COMMAND, (enabled) => { this.#historyState.undo = enabled }, COMMAND_PRIORITY_NORMAL),
+      this.editor.registerCommand(CAN_REDO_COMMAND, (enabled) => { this.#historyState.redo = enabled }, COMMAND_PRIORITY_NORMAL)
+    )
+  }
 
   #attachDebugHooks() {
     if (!LexicalEditorElement.debug) return
@@ -635,8 +651,8 @@ export class LexicalEditorElement extends HTMLElement {
         heading: { active: format.isInHeading, enabled: true },
         "unordered-list": { active: format.isInList && format.listType === "bullet", enabled: true },
         "ordered-list": { active: format.isInList && format.listType === "number", enabled: true },
-        undo: { active: false, enabled: this.historyState?.undoStack.length > 0 },
-        redo: { active: false, enabled: this.historyState?.redoStack.length > 0 }
+        undo: { active: false, enabled: this.canUndo },
+        redo: { active: false, enabled: this.canRedo }
       }
 
       linkHref = linkNode ? linkNode.getURL() : null
