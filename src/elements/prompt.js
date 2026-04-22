@@ -224,7 +224,7 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   #selectOption(listItem) {
-    this.#clearSelection()
+    this.#clearListItemSelection()
     listItem.toggleAttribute("aria-selected", true)
     listItem.scrollIntoView({ block: "nearest", behavior: "smooth" })
     listItem.focus()
@@ -234,16 +234,26 @@ export class LexicalPromptElement extends HTMLElement {
       this.#editorElement.focus()
     })
 
-    this.#editorContentElement.setAttribute("aria-controls", this.popoverElement.id)
-    this.#editorContentElement.setAttribute("aria-activedescendant", listItem.id)
-    this.#editorContentElement.setAttribute("aria-haspopup", "listbox")
+    this.#setEditorAssociationAttribute("aria-controls", this.popoverElement.id)
+    this.#setEditorAssociationAttribute("aria-activedescendant", listItem.id)
+    this.#setEditorAssociationAttribute("aria-haspopup", "listbox")
+  }
+
+  #clearListItemSelection() {
+    this.#listItemElements.forEach((item) => { item.toggleAttribute("aria-selected", false) })
   }
 
   #clearSelection() {
-    this.#listItemElements.forEach((item) => { item.toggleAttribute("aria-selected", false) })
+    this.#clearListItemSelection()
     this.#editorContentElement.removeAttribute("aria-controls")
     this.#editorContentElement.removeAttribute("aria-activedescendant")
     this.#editorContentElement.removeAttribute("aria-haspopup")
+  }
+
+  #setEditorAssociationAttribute(name, value) {
+    if (this.#editorContentElement.getAttribute(name) !== value) {
+      this.#editorContentElement.setAttribute(name, value)
+    }
   }
 
   #positionPopover() {
