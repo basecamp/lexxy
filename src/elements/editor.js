@@ -251,28 +251,14 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
-    const wasEmpty = !this.#initialValueLoaded
-
     this.editor.update(() => {
-      $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       $getRoot()
         .clear()
         .selectEnd()
         .insertNodes(this.#parseHtmlIntoLexicalNodes(html))
 
       this.#toggleEmptyStatus()
-
-      // The first time you set the value on an empty editor, Lexical can be
-      // left in an inconsistent state until the next update (adding attachments
-      // fails because no root node is detected). A no-op update works around
-      // it. Only fire on the first load — subsequent set value calls don't hit
-      // the inconsistent state and the extra reconciler cycle is pure overhead.
-      if (wasEmpty) {
-        requestAnimationFrame(() => this.editor?.update(() => { }))
-      }
-    })
-
-    this.#initialValueLoaded = true
+    }, { discrete: true, tag: SKIP_DOM_SELECTION_TAG })
   }
 
   get canUndo() {
