@@ -252,7 +252,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       directUploadWillStoreFileWithXHR: (request) => {
         if (shouldAuthenticateUploads) request.withCredentials = true
 
-        const uploadProgressHandler = (event) => this.#handleUploadProgress(event)
+        const uploadProgressHandler = (event) => this.#handleUploadProgress(event, request)
         request.upload.addEventListener("progress", uploadProgressHandler)
       }
     }
@@ -262,10 +262,14 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     this.#setProgress(1)
   }
 
-  #handleUploadProgress(event) {
+  #handleUploadProgress(event, request) {
     const progress = Math.round(event.loaded / event.total * 100)
-    this.#setProgress(progress)
-    this.#dispatchEvent("lexxy:upload-progress", { file: this.file, progress })
+    try {
+      this.#setProgress(progress)
+      this.#dispatchEvent("lexxy:upload-progress", { file: this.file, progress })
+    } catch {
+      request.abort()
+    }
   }
 
   #setProgress(progress) {
