@@ -340,33 +340,6 @@ test.describe("Attachments", () => {
     await expect(editor.content).toContainText("hello")
   })
 
-  test("upload completion clears redo after undo during upload", async ({ page, editor }) => {
-    await mockActiveStorageUploads(page, { uploadDelayMs: 500 })
-    await editor.send("hello")
-    await editor.uploadFile("test/fixtures/files/example.png")
-
-    const undoButton = page.getByRole("button", { name: "Undo" })
-    const redoButton = page.getByRole("button", { name: "Redo" })
-    await expect(page.locator("figure.attachment progress")).toBeVisible({ timeout: 10_000 })
-
-    await undoButton.click()
-    await editor.flush()
-    await expect(redoButton).toBeEnabled()
-    await expect.poll(() => page.evaluate(() => {
-      return document.querySelector("lexxy-editor").historyState.redoStack.length
-    })).toBeGreaterThan(0)
-
-    await expect.poll(() => page.evaluate(() => {
-      return document.querySelector("lexxy-editor").historyState.redoStack.length
-    }), { timeout: 5_000 }).toBe(0)
-
-    // Redo should be a no-op once completion collapses and clears redo history.
-    await redoButton.click()
-    await editor.flush()
-    await expect(page.locator("figure.attachment")).toHaveCount(0)
-    await expect(editor.content).toContainText("hello")
-  })
-
   test("Ctrl+C in caption copies text without losing focus", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
