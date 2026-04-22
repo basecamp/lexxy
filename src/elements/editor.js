@@ -1,4 +1,4 @@
-import { $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, HISTORY_MERGE_TAG, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -399,8 +399,10 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #loadInitialValue() {
-    const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p></p>"
-    this.value = this.#initialValue = initialHtml
+    const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p><br></p>"
+    this.editor.update(() => {
+      this.value = this.#initialValue = initialHtml
+    }, { tag: HISTORY_MERGE_TAG })
   }
 
   #resetBeforeTurboCaches() {
