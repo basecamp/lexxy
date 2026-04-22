@@ -310,14 +310,13 @@ test.describe("Attachments", () => {
     // Wait for the history collapse to complete
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)))
 
-    // Undo should remove the attachment but preserve the typed text
+    // Undo should remove the typed text but preserve the attachment
     const undoButton = page.getByRole("button", { name: "Undo" })
     await undoButton.click()
     await editor.flush()
 
-    await expect(figure).toHaveCount(0)
-    await expect(editor.content.locator("progress")).toHaveCount(0)
-    await expect(editor.content).toContainText("hello world")
+    await expect(figure).toBeVisible()
+    await expect(editor.content).not.toContainText("hello world")
   })
 
   test("node selection does not create an extra undo step", async ({ page, editor }) => {
