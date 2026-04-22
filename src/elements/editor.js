@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -38,7 +38,6 @@ import { RewritableHistoryExtension } from "../extensions/rewritable_history_ext
 import { AttachmentsExtension } from "../extensions/attachments_extension.js"
 import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 import { LinkOpenerExtension } from "../extensions/link_opener_extension.js"
-import { HistoryExtension } from "@lexical/history"
 
 
 export class LexicalEditorElement extends HTMLElement {
@@ -49,7 +48,6 @@ export class LexicalEditorElement extends HTMLElement {
   static observedAttributes = [ "connected", "required" ]
 
   #initialValue = ""
-  #initialValueLoaded = false
   #validationTextArea = document.createElement("textarea")
   #editorInitializedRafId = null
   #listeners = new ListenerBin()
@@ -257,10 +255,10 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.editor.update(() => {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
-      const root = $getRoot()
-      root.clear()
-      root.append(...this.#parseHtmlIntoLexicalNodes(html))
-      root.selectEnd()
+      $getRoot()
+        .clear()
+        .selectEnd()
+        .insertNodes(this.#parseHtmlIntoLexicalNodes(html))
 
       this.#toggleEmptyStatus()
 
