@@ -168,12 +168,7 @@ export class EditorHandle {
 
   async flush() {
     await this.locator.evaluate((el) => {
-      return new Promise((resolve) => {
-        el.editor.update(
-          () => {},
-          { onUpdate: () => requestAnimationFrame(resolve) },
-        )
-      })
+      return el.editor.getEditorState().read(() => {})
     })
   }
 
