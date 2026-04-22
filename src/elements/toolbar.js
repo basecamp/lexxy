@@ -1,6 +1,9 @@
 import {
   $getSelection,
   $isRangeSelection,
+  CAN_REDO_COMMAND,
+  CAN_UNDO_COMMAND,
+  COMMAND_PRIORITY_LOW,
   SKIP_DOM_SELECTION_TAG
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
@@ -187,19 +190,10 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorHistoryChanges() {
-    this.#listeners.track(this.editor.registerUpdateListener(() => {
-      this.#updateUndoRedoButtonStates()
-    }))
-  }
-
-  #updateUndoRedoButtonStates() {
-    this.editor.getEditorState().read(() => {
-      const historyState = this.editorElement.historyState
-      if (historyState) {
-        this.#setButtonDisabled("undo", historyState.undoStack.length === 0)
-        this.#setButtonDisabled("redo", historyState.redoStack.length === 0)
-      }
-    })
+    this.#listeners.track(
+      this.editor.registerCommand(CAN_UNDO_COMMAND, (enabled) => { this.#setButtonDisabled("undo", !enabled) }, COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(CAN_REDO_COMMAND, (enabled) => { this.#setButtonDisabled("redo", !enabled) }, COMMAND_PRIORITY_LOW),
+    )
   }
 
   #updateButtonStates() {
@@ -233,8 +227,6 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("code", isInCode)
 
     this.#setButtonPressed("table", isInTable)
-
-    this.#updateUndoRedoButtonStates()
   }
 
   #setButtonPressed(name, isPressed) {
@@ -445,11 +437,11 @@ export class LexicalToolbarElement extends HTMLElement {
 
       <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo">
+      <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo" disabled aria-disabled="true">
         ${ToolbarIcons.undo}
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo">
+      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo" disabled aria-disabled="true">
         ${ToolbarIcons.redo}
       </button>
 
