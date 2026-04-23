@@ -175,7 +175,7 @@ export class LexicalEditorElement extends HTMLElement {
   #parsePermittedAttachmentTypes() {
     const raw = this.dataset.permittedAttachmentTypes
     if (raw == null) return null
-    return raw.split(/\s+/).filter(t => t && t !== "false")
+    return Object.freeze(raw.split(/\s+/).filter(t => t && t !== "false"))
   }
 
   get isEmpty() {
