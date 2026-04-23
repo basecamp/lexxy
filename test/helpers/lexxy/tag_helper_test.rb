@@ -17,7 +17,7 @@ class Lexxy::TagHelperTest < ActionView::TestCase
         attachment = value.at("action-text-attachment")
 
         assert_equal "Hello ", value.text
-        assert_equal "<em>James Anderson</em> (<strong>JA</strong>)", JSON.parse(attachment["content"])
+        assert_equal %(<bc-mention gid="#{people(:james).to_gid}"><em>James Anderson</em> (<strong>JA</strong>)</bc-mention>), JSON.parse(attachment["content"])
       end
     end
   end

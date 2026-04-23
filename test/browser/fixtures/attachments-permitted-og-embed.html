@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — Attachments permitted: OG embed</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module">
+    import * as Lexxy from "lexxy"
+    Lexxy.configure({ global: { attachmentTagName: "bc-attachment" }})
+  </script>
+</head>
+<body>
+  <form>
+    <div class="body">
+      <lexxy-editor
+        class="lexxy-content"
+        placeholder="Write something..."
+        attachments="true"
+        data-permitted-attachment-types="application/vnd.basecamp.opengraph-embed">
+      </lexxy-editor>
+    </div>
+  </form>
+  <script type="module" src="/editor.js"></script>
+</body>
+</html>

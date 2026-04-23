@@ -5,7 +5,8 @@ import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
-import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
+import { $generateHtmlFromNodes } from "@lexical/html"
+import { $generateFilteredNodesFromDOM } from "../helpers/attachment_filter_helper"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transformer"
@@ -53,6 +54,7 @@ export class LexicalEditorElement extends HTMLElement {
   #listeners = new ListenerBin()
   #disposables = []
   #historyState = { undo: false, redo: false }
+  #permittedAttachmentTypes = null
 
   constructor() {
     super()
@@ -64,6 +66,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.id ||= generateDomId("lexxy-editor")
     this.config = new Configuration(this)
     this.extensions = new Extensions(this)
+    this.#permittedAttachmentTypes = this.#parsePermittedAttachmentTypes()
 
     this.editor = this.#createEditor()
     this.#disposables.push(this.editor)
@@ -157,6 +160,22 @@ export class LexicalEditorElement extends HTMLElement {
 
   get blobUrlTemplate() {
     return this.dataset.blobUrlTemplate
+  }
+
+  get permittedAttachmentTypes() {
+    return this.#permittedAttachmentTypes
+  }
+
+  permitsAttachmentContentType(contentType) {
+    if (this.getAttribute("attachments") === "false") return false
+    const list = this.#permittedAttachmentTypes
+    return list === null || list.includes(contentType)
+  }
+
+  #parsePermittedAttachmentTypes() {
+    const raw = this.dataset.permittedAttachmentTypes
+    if (raw == null) return null
+    return raw.split(/\s+/).filter(t => t && t !== "false")
   }
 
   get isEmpty() {
@@ -281,7 +300,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>"
-    const nodes = $generateNodesFromDOM(this.editor, parseHtml(`${html}`))
+    const nodes = $generateFilteredNodesFromDOM(this.editor, parseHtml(`${html}`), this)
 
     return nodes
       .filter(this.#isNotWhitespaceOnlyNode)
@@ -313,11 +332,22 @@ export class LexicalEditorElement extends HTMLElement {
     this.#handleEnter()
     this.#registerFocusEvents()
     this.#registerHistoryEvents()
+    this.#registerFileAcceptFilter()
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#configureSanitizer()
     this.#loadInitialValue()
     this.#resetBeforeTurboCaches()
+  }
+
+  #registerFileAcceptFilter() {
+    this.#listeners.track(
+      registerEventListener(this, "lexxy:file-accept", (event) => {
+        if (!this.permitsAttachmentContentType(event.detail.file.type)) {
+          event.preventDefault()
+        }
+      })
+    )
   }
 
   #createEditor() {

@@ -109,4 +109,22 @@ test.describe("Paste — XSS sanitization via action-text-attachment content", (
       await expect(content.locator("action-text-attachment .person--name")).toHaveText("Michael Berger")
     })
   })
+
+  test("strips onclick handler from bc-attachment wrapper while preserving sgid", async ({ page, editor }) => {
+    await page.goto("/mentions-custom-element.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+
+    const mentionWithOnclick = `<div><bc-attachment onclick="alert(1)" sgid="test-sgid-alice" content-type="application/vnd.basecamp.mention" content="&lt;bc-mention class=&quot;mentionable-person&quot; gid=&quot;gid://test/Person/1&quot;&gt;&lt;span class=&quot;person--inline&quot;&gt;Alice&lt;/span&gt;&lt;/bc-mention&gt;"></bc-attachment></div>`
+
+    await editor.setValue(mentionWithOnclick)
+    await editor.flush()
+
+    const attachment = editor.content.locator("bc-attachment[content-type='application/vnd.basecamp.mention']")
+    await expect(attachment).toHaveCount(1)
+    await expect(attachment).not.toHaveAttribute("onclick", /.*/)
+
+    const serialized = await editor.value()
+    expect(serialized).not.toContain("onclick")
+    expect(serialized).toContain(`sgid="test-sgid-alice"`)
+  })
 })
