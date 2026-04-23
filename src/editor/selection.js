@@ -31,12 +31,6 @@ export default class Selection {
     this.#clearStaleInlineCodeFormat()
   }
 
-  set current(selection) {
-    this.editor.getEditorState().read(() => {
-      this.#syncSelectedClasses()
-    })
-  }
-
   get hasNodeSelection() {
     return this.editor.getEditorState().read(() => {
       const selection = $getSelection()
@@ -365,7 +359,7 @@ export default class Selection {
       this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW),
 
       this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
-        this.current = $getSelection()
+        this.#syncSelectedClasses()
       }, COMMAND_PRIORITY_LOW)
     )
   }
