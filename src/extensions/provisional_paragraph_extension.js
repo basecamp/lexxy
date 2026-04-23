@@ -1,4 +1,4 @@
-import { $addUpdateTag, $getRoot, COMMAND_PRIORITY_HIGH, HISTORY_MERGE_TAG, RootNode, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
+import { $addUpdateTag, $getRoot, $getSelection, $isRootOrShadowRoot, COMMAND_PRIORITY_HIGH, HISTORY_MERGE_TAG, RootNode, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
 import { $descendantsMatching, $firstToLastIterator, $insertFirst, mergeRegister } from "@lexical/utils"
 import { $isProvisionalParagraphNode, ProvisionalParagraphNode } from "../nodes/provisional_paragraph_node"
 import LexxyExtension from "./lexxy_extension"
@@ -25,6 +25,8 @@ export class ProvisionalParagraphExtension extends LexxyExtension {
 }
 
 function $insertRequiredProvisionalParagraphs(rootNode) {
+  const nodeBeforeRootSelection = $nodeBeforeRootSelection(rootNode)
+
   const firstNode = rootNode.getFirstChild()
   if (ProvisionalParagraphNode.neededBetween(null, firstNode)) {
     $insertFirst(rootNode, new ProvisionalParagraphNode)
@@ -34,8 +36,16 @@ function $insertRequiredProvisionalParagraphs(rootNode) {
     const nextNode = node.getNextSibling()
     if (ProvisionalParagraphNode.neededBetween(node, nextNode)) {
       node.insertAfter(new ProvisionalParagraphNode)
+      if (node.is(nodeBeforeRootSelection)) node.selectNext()
     }
   }
+}
+
+function $nodeBeforeRootSelection(rootNode) {
+  const selection = $getSelection()
+  if (!$isRootOrShadowRoot(selection?.anchor?.getNode())) return null
+
+  return rootNode.getChildAtIndex(selection.anchor.offset - 1)
 }
 
 function $removeUnneededProvisionalParagraphs(rootNode) {
