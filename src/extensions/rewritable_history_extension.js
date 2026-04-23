@@ -40,6 +40,13 @@ export class RewritableHistoryExtension extends LexxyExtension {
   }
 
   #rewriteHistory(rewrites) {
+    this.#applyRewritesImmediatelyToCurrentState(rewrites)
+    this.#applyRewritesToHistory(rewrites)
+
+    return true
+  }
+
+  #applyRewritesImmediatelyToCurrentState(rewrites) {
     $getEditor().update(() => {
       for (const [ nodeKey, { patch, replace } ] of Object.entries(rewrites)) {
         const node = $getNodeByKey(nodeKey)
@@ -49,27 +56,27 @@ export class RewritableHistoryExtension extends LexxyExtension {
         if (replace) node.replace(replace)
       }
     }, { discrete: true, tag: this.#getBackgroundUpdateTags() })
+  }
 
+  #applyRewritesToHistory(rewrites) {
     const nodeKeys = Object.keys(rewrites)
 
     for (const entry of this.#allHistoryEntries) {
       if (!this.#entryHasSomeKeys(entry, nodeKeys)) continue
 
+      const editorState = entry.editorState = safeCloneEditorState(entry.editorState)
+
       for (const [ nodeKey, { patch, replace } ] of Object.entries(rewrites)) {
-        const node = entry.editorState._nodeMap.get(nodeKey)
+        const node = editorState._nodeMap.get(nodeKey)
         if (!node) continue
 
-        entry.editorState = safeCloneEditorState(entry.editorState)
-
         if (patch) {
-          entry.editorState._nodeMap.set(nodeKey, $cloneNodeWithPatch(node, patch))
+          this.#patchNodeInEditorState(editorState, node, patch)
         } else if (replace) {
-          entry.editorState._nodeMap.set(nodeKey, $cloneNodeAdoptingKey(replace, node))
+          this.#replaceNodeInEditorState(editorState, node, replace)
         }
       }
     }
-
-    return true
   }
 
   #entryHasSomeKeys(entry, nodeKeys) {
@@ -81,6 +88,14 @@ export class RewritableHistoryExtension extends LexxyExtension {
     if (!isEditorFocused(this.editorElement.editor)) { tags.push(SKIP_DOM_SELECTION_TAG) }
     return tags
   }
+
+  #patchNodeInEditorState(editorState, node, patch) {
+    editorState._nodeMap.set(node.__key, $cloneNodeWithPatch(node, patch))
+  }
+
+  #replaceNodeInEditorState(editorState, node, replaceWith) {
+    editorState._nodeMap.set(node.__key, $cloneNodeAdoptingKeys(replaceWith, node))
+  }
 }
 
 function $cloneNodeWithPatch(node, patch) {
@@ -89,12 +104,12 @@ function $cloneNodeWithPatch(node, patch) {
   return clone
 }
 
-function $cloneNodeAdoptingKey(source, keyNode) {
-  const clone = $cloneWithProperties(source)
-  clone.__key = keyNode.__key
-  clone.__parent = keyNode.__parent
-  clone.__prev = keyNode.__prev
-  clone.__next = keyNode.__next
+function $cloneNodeAdoptingKeys(node, previousNode) {
+  const clone = $cloneWithProperties(node)
+  clone.__key = previousNode.__key
+  clone.__parent = previousNode.__parent
+  clone.__prev = previousNode.__prev
+  clone.__next = previousNode.__next
   return clone
 }
 
