@@ -57,7 +57,7 @@ test.describe("Attachment Drag and Drop", () => {
     test("drag a standalone image above a text paragraph", async ({ page, editor }) => {
       await editor.send("Hello world", "Enter")
       await editor.uploadFile("test/fixtures/files/example.png")
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       await simulateDrag(page, "figure.attachment--preview", "p:not(.provisional-paragraph)", "before")
 
@@ -68,7 +68,7 @@ test.describe("Attachment Drag and Drop", () => {
     test("drag a file attachment above a text paragraph", async ({ page, editor }) => {
       await editor.send("Hello world", "Enter")
       await editor.uploadFile("test/fixtures/files/dummy.pdf", { via: "file" })
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       await simulateDrag(page, "figure.attachment--file", "p:not(.provisional-paragraph)", "before")
 
@@ -79,7 +79,7 @@ test.describe("Attachment Drag and Drop", () => {
     test("drag an image and drop in same position causes no change", async ({ page, editor }) => {
       await editor.send("Before", "Enter")
       await editor.uploadFile("test/fixtures/files/example.png")
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       const valueBefore = await editor.value()
 
@@ -97,7 +97,7 @@ test.describe("Attachment Drag and Drop", () => {
       await editor.uploadFile("test/fixtures/files/example.png")
       await editor.send("Enter")
       await editor.uploadFile("test/fixtures/files/example2.png")
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       await simulateDragByIndex(page, 1, 0, "onto")
 
@@ -110,11 +110,11 @@ test.describe("Attachment Drag and Drop", () => {
         "test/fixtures/files/example2.png",
       ])
       await assertGalleryWithImages(editor, 2)
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       await editor.send("Enter")
       await editor.uploadFile("test/fixtures/files/example.png")
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       const standalone = page.locator(".lexxy-editor__content > figure.attachment")
       const galleryImg = page.locator(".attachment-gallery figure.attachment").first()
@@ -130,11 +130,12 @@ test.describe("Attachment Drag and Drop", () => {
         "test/fixtures/files/example2.png",
       ])
       await assertGalleryWithImages(editor, 2)
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       await editor.send("Enter")
       await editor.uploadFile("test/fixtures/files/example.png")
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
+      await editor.flush()
 
       const standalone = page.locator(".lexxy-editor__content > figure.attachment")
       const galleryImg = page.locator(".attachment-gallery figure.attachment").first()
@@ -153,7 +154,7 @@ test.describe("Attachment Drag and Drop", () => {
         "test/fixtures/files/example.png",
       ])
       await assertGalleryWithImages(editor, 3)
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       const images = page.locator(".attachment-gallery figure.attachment")
       const firstKey = await images.nth(0).getAttribute("data-lexical-node-key")
@@ -171,7 +172,7 @@ test.describe("Attachment Drag and Drop", () => {
         "test/fixtures/files/example.png",
       ])
       await assertGalleryWithImages(editor, 3)
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       const images = page.locator(".attachment-gallery figure.attachment")
       const lastKey = await images.nth(2).getAttribute("data-lexical-node-key")
@@ -192,7 +193,7 @@ test.describe("Attachment Drag and Drop", () => {
         "test/fixtures/files/example.png",
       ])
       await assertGalleryWithImages(editor, 3)
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       const galleryImage = page.locator(".attachment-gallery figure.attachment").first()
       const paragraph = page.locator(".lexxy-editor__content p:not(.provisional-paragraph)")
@@ -210,7 +211,7 @@ test.describe("Attachment Drag and Drop", () => {
         "test/fixtures/files/example2.png",
       ])
       await assertGalleryWithImages(editor, 2)
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       const galleryImage = page.locator(".attachment-gallery figure.attachment").first()
       const paragraph = page.locator(".lexxy-editor__content p:not(.provisional-paragraph)")
@@ -237,7 +238,7 @@ test.describe("Attachment Drag and Drop", () => {
       ])
 
       await expect(page.locator(".attachment-gallery")).toHaveCount(2)
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       const gallery1Image = page.locator(".attachment-gallery").nth(0).locator("figure.attachment").first()
       const gallery2Image = page.locator(".attachment-gallery").nth(1).locator("figure.attachment").first()
@@ -255,7 +256,7 @@ test.describe("Attachment Drag and Drop", () => {
       await editor.uploadFile("test/fixtures/files/example.png")
       await editor.send("Enter")
       await editor.uploadFile("test/fixtures/files/example2.png")
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       await simulateDragByIndex(page, 1, 0, "onto")
       await assertGalleryWithImages(editor, 2)
@@ -269,7 +270,7 @@ test.describe("Attachment Drag and Drop", () => {
     test("undo reverses repositioning", async ({ page, editor }) => {
       await editor.send("Hello world", "Enter")
       await editor.uploadFile("test/fixtures/files/example.png")
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       await simulateDrag(page, "figure.attachment--preview", "p:not(.provisional-paragraph)", "before")
 
@@ -286,7 +287,7 @@ test.describe("Attachment Drag and Drop", () => {
     test("source has lexxy-dragging class during drag", async ({ page, editor }) => {
       await editor.send("Target", "Enter")
       await editor.uploadFile("test/fixtures/files/example.png")
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       const hasDraggingClass = await page.evaluate(() => {
         const figure = document.querySelector("figure.attachment")
@@ -317,7 +318,7 @@ test.describe("Attachment Drag and Drop", () => {
       await editor.uploadFile("test/fixtures/files/example.png")
       await editor.send("Enter")
       await editor.uploadFile("test/fixtures/files/example2.png")
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       const hasHighlight = await page.evaluate(() => {
         const figures = document.querySelectorAll("figure.attachment")
@@ -362,7 +363,7 @@ test.describe("Attachment Drag and Drop", () => {
       await editor.setValue("<ul><li>First</li><li>Second</li><li>Third</li></ul>")
       await editor.send("ArrowDown", "ArrowDown", "ArrowDown", "Enter")
       await editor.uploadFile("test/fixtures/files/example.png")
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       const figure = page.locator("figure.attachment")
       const secondLi = page.locator(".lexxy-editor__content li").nth(1)
@@ -381,7 +382,7 @@ test.describe("Attachment Drag and Drop", () => {
       await editor.setValue("<ul><li>First</li><li>Second</li></ul>")
       await editor.send("ArrowDown", "ArrowDown", "Enter")
       await editor.uploadFile("test/fixtures/files/example.png")
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       const figure = page.locator("figure.attachment")
       const firstLi = page.locator(".lexxy-editor__content li").first()
@@ -397,7 +398,7 @@ test.describe("Attachment Drag and Drop", () => {
       await editor.setValue("<ul><li>First</li><li>Second</li></ul>")
       await editor.send("ArrowDown", "ArrowDown", "Enter")
       await editor.uploadFile("test/fixtures/files/example.png")
-      await waitForUploadsComplete(page)
+      await waitForUploadsComplete(page, editor)
 
       const figure = page.locator("figure.attachment")
       const lastLi = page.locator(".lexxy-editor__content li").last()
@@ -424,8 +425,10 @@ test.describe("Attachment Drag and Drop", () => {
 
 // --- Helpers ---
 
-async function waitForUploadsComplete(page) {
+async function waitForUploadsComplete(page, editor) {
   await expect(page.locator("figure.attachment > progress")).toHaveCount(0, { timeout: 10_000 })
+  await expect(page.locator("figure.attachment img[src^=data]")).toHaveCount(0, { timeout: 10_000 })
+  await editor.flush()
 }
 
 async function assertAttachmentVisible(page, contentType) {
