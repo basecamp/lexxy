@@ -414,8 +414,22 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #handleTurboBeforeCache = (event) => {
-    if (!this.closest("[data-turbo-permanent]")) {
-      this.#reset()
+    if (this.closest("[data-turbo-permanent]")) return
+
+    this.valueBeforeDisconnect = this.value
+    this.#reset()
+
+    // turbo:before-cache can fire without a subsequent body replacement (e.g. when
+    // a Turbo visit's URL matches the current page, or this editor lives inside a
+    // turbo-frame that isn't being rendered). If we're still connected when the
+    // next load fires, reinitialize — otherwise the editor is left with no
+    // contenteditable and the user can't type.
+    registerEventListener(document, "turbo:load", this.#reinitializeIfStranded, { once: true })
+  }
+
+  #reinitializeIfStranded = () => {
+    if (this.isConnected && !this.editorContentElement) {
+      this.connectedCallback()
     }
   }
 
