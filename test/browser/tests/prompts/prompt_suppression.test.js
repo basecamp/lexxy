@@ -31,4 +31,14 @@ test.describe("Prompt activation is gated on data-permitted-attachment-types", (
     const popover = page.locator(".lexxy-prompt-menu--visible")
     await expect(popover).toHaveCount(0)
   })
+
+  test("prompt activates when any template resolves to a permitted content-type, including templates without an explicit content-type attribute", async ({ page, editor }) => {
+    await page.goto("/prompt-mixed-templates.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+
+    await editor.send("@")
+
+    const popover = page.locator(".lexxy-prompt-menu--visible")
+    await expect(popover).toBeVisible({ timeout: 5_000 })
+  })
 })
