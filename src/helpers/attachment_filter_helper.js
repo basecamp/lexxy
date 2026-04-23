@@ -3,8 +3,8 @@ import { $descendantsMatching } from "@lexical/utils"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 
-export function $generateFilteredNodesFromDOM(editor, doc, editorElement) {
-  const nodes = $generateNodesFromDOM(editor, doc)
+export function $generateFilteredNodesFromDOM(editorElement, doc) {
+  const nodes = $generateNodesFromDOM(editorElement.editor, doc)
   return filterDisallowedAttachmentNodes(nodes, editorElement)
 }
 

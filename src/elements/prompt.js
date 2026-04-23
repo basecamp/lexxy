@@ -436,7 +436,7 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   #buildEditableTextNodes(template) {
-    return $generateFilteredNodesFromDOM(this.#editor, parseHtml(`${template.innerHTML}`), this.#editorElement)
+    return $generateFilteredNodesFromDOM(this.#editorElement, parseHtml(`${template.innerHTML}`))
   }
 
   #insertTemplatesAsAttachments(templates, stringToReplace, fallbackSgid = null) {

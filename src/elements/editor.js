@@ -300,7 +300,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>"
-    const nodes = $generateFilteredNodesFromDOM(this.editor, parseHtml(`${html}`), this)
+    const nodes = $generateFilteredNodesFromDOM(this, parseHtml(`${html}`))
 
     return nodes
       .filter(this.#isNotWhitespaceOnlyNode)

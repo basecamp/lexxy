@@ -42,7 +42,7 @@ export default class Contents {
     this.editor.update(() => {
       if ($hasUpdateTag(PASTE_TAG)) this.#stripTableCellColorStyles(doc)
 
-      const nodes = $generateFilteredNodesFromDOM(this.editor, doc, this.editorElement)
+      const nodes = $generateFilteredNodesFromDOM(this.editorElement, doc)
       if (!this.#insertUploadNodes(nodes)) {
         this.insertAtCursor(...nodes)
       }
@@ -603,7 +603,7 @@ export default class Contents {
   }
 
   #createHtmlNodeWith(html) {
-    const htmlNodes = $generateFilteredNodesFromDOM(this.editor, parseHtml(html), this.editorElement)
+    const htmlNodes = $generateFilteredNodesFromDOM(this.editorElement, parseHtml(html))
     return htmlNodes[0] || $createParagraphNode()
   }
 
