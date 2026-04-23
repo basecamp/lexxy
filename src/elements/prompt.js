@@ -121,13 +121,15 @@ export class LexicalPromptElement extends HTMLElement {
 
   get #promptContentTypePermitted() {
     const el = this.#editorElement
-    if (el.getAttribute("attachments") === "false") return false
-
-    const templates = Array.from(this.querySelectorAll("template[type='editor']"))
-    const types = templates.length
-      ? templates.map(t => t.getAttribute("content-type") || this.#defaultPromptContentType)
-      : [ this.#defaultPromptContentType ]
-    return types.some(t => el.permitsAttachmentContentType(t))
+    if (el.getAttribute("attachments") === "false") {
+      return false
+    } else {
+      const templates = Array.from(this.querySelectorAll("template[type='editor']"))
+      const types = templates.length
+        ? templates.map(t => t.getAttribute("content-type") || this.#defaultPromptContentType)
+        : [ this.#defaultPromptContentType ]
+      return types.some(t => el.permitsAttachmentContentType(t))
+    }
   }
 
   #addCursorPositionListener() {

@@ -167,15 +167,21 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   permitsAttachmentContentType(contentType) {
-    if (this.getAttribute("attachments") === "false") return false
-    const list = this.#permittedAttachmentTypes
-    return list === null || list.includes(contentType)
+    if (this.getAttribute("attachments") === "false") {
+      return false
+    } else {
+      const list = this.#permittedAttachmentTypes
+      return list === null || list.includes(contentType)
+    }
   }
 
   #parsePermittedAttachmentTypes() {
     const raw = this.dataset.permittedAttachmentTypes
-    if (raw == null) return null
-    return Object.freeze(raw.split(/\s+/).filter(t => t && t !== "false"))
+    if (raw == null) {
+      return null
+    } else {
+      return Object.freeze(raw.split(/\s+/).filter(t => t && t !== "false"))
+    }
   }
 
   get isEmpty() {
