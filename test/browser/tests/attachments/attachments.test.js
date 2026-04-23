@@ -230,8 +230,8 @@ test.describe("Attachments", () => {
     // attachment so typing inserts text there. The trailing provisional paragraph
     // must be visible (not collapsed as hidden) so the caret renders correctly.
     const paragraphAfterAttachment = figure.locator("xpath=following-sibling::p[1]")
-    await expect(paragraphAfterAttachment).toHaveClass(/provisional-paragraph/)
-    await expect(paragraphAfterAttachment).not.toHaveClass(/hidden/)
+    await expect(paragraphAfterAttachment).toContainClass("provisional-paragraph")
+    await expect(paragraphAfterAttachment).not.toContainClass("hidden")
   })
 
   test("typing after uploading image into empty editor inserts text below the attachment", async ({ page, editor }) => {
@@ -256,13 +256,15 @@ test.describe("Attachments", () => {
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
     await editor.send("hello")
-    await expect.poll(() => editor.plainTextValue()).toContain("hello")
+    const paragraph = figure.locator("xpath=following-sibling::p[1]")
+    await expect(paragraph).toHaveText("hello")
+
 
     await calls.releaseDirectUploadResponses()
     await editor.flush()
 
     await editor.send(" world")
-    await expect.poll(() => editor.plainTextValue()).toContain("hello world")
+    await expect(paragraph).toHaveText("hello world")
   })
 
   test("undo after uploading into empty editor restores empty state", async ({ page, editor }) => {
