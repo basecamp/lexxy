@@ -1,4 +1,5 @@
 import { $generateNodesFromDOM } from "@lexical/html"
+import { $descendantsMatching } from "@lexical/utils"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 
@@ -11,7 +12,8 @@ export function filterDisallowedAttachmentNodes(nodes, editorElement) {
   return nodes
     .filter(node => !isDisallowedAttachment(node, editorElement))
     .map(node => {
-      walkChildren(node, editorElement)
+      $descendantsMatching([ node ], descendant => isDisallowedAttachment(descendant, editorElement))
+        .forEach(descendant => descendant.remove())
       return node
     })
 }
@@ -22,15 +24,4 @@ function isDisallowedAttachment(node, editorElement) {
     node instanceof ActionTextAttachmentNode
   return isAttachmentNode &&
          !editorElement.permitsAttachmentContentType(node.contentType)
-}
-
-function walkChildren(node, editorElement) {
-  if (typeof node.getChildren !== "function") return
-  node.getChildren().forEach(child => {
-    if (isDisallowedAttachment(child, editorElement)) {
-      child.remove()
-    } else {
-      walkChildren(child, editorElement)
-    }
-  })
 }
