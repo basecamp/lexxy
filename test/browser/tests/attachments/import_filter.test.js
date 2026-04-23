@@ -73,8 +73,8 @@ test.describe("Attachment import filter honors data-permitted-attachment-types",
     await editor.send("Enter")
     await editor.flush()
 
-    await expect(editor.content.locator("action-text-attachment")).toHaveCount(0)
-    await expect(editor.content.locator("bc-attachment")).toHaveCount(0)
+    await expect(editor.content.locator("figure.attachment")).toHaveCount(0)
+    await expect(editor.content.locator("img")).toHaveCount(0)
 
     const serialized = await editor.value()
     expect(serialized).not.toContain("action-text-attachment")
