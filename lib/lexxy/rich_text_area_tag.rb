@@ -30,6 +30,7 @@ module Lexxy
               if node["url"].blank?
                 attachment = ActionText::Attachment.from_node(node)
                 node["content"] = render_action_text_attachment(attachment).to_json
+                node["content-type"] ||= attachment.content_type
               end
               node
             end
