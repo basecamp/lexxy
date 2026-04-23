@@ -176,7 +176,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #parsePermittedAttachmentTypes() {
-    const raw = this.dataset.permittedAttachmentTypes
+    const raw = this.getAttribute("permitted-attachment-types")
     if (raw == null) {
       return null
     } else {

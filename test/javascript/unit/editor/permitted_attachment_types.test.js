@@ -10,7 +10,7 @@ afterEach(async () => {
 describe("permittedAttachmentTypes getter", () => {
   test("returns a frozen array so hosts cannot mutate internal state", async () => {
     editorElement = await createTestEditor({
-      attributes: { "data-permitted-attachment-types": "application/vnd.basecamp.mention" }
+      attributes: { "permitted-attachment-types": "application/vnd.basecamp.mention" }
     })
 
     const list = editorElement.permittedAttachmentTypes

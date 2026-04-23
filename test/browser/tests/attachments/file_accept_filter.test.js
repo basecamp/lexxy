@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 
-test.describe("Internal lexxy:file-accept listener honors data-permitted-attachment-types", () => {
+test.describe("Internal lexxy:file-accept listener honors permitted-attachment-types", () => {
   test("disallowed file MIME is rejected by the internal lexxy:file-accept listener", async ({ page }) => {
     await page.goto("/mentions-custom-element.html")
     await page.waitForSelector("lexxy-editor[connected]")

@@ -7,7 +7,7 @@ const mixedAttachments = [
   `<div><bc-attachment sgid="test-sgid-image" content-type="image/png" content="&lt;img src=&quot;/example.png&quot;&gt;"></bc-attachment></div>`,
 ].join("")
 
-test.describe("data-permitted-attachment-types default and sentinel behavior", () => {
+test.describe("permitted-attachment-types default and sentinel behavior", () => {
   test("unset attribute accepts all content-types on import", async ({ page, editor }) => {
     await page.goto("/attachments-unset-permitted-list.html")
     await page.waitForSelector("lexxy-editor[connected]")

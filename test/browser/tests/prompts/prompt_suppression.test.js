@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 
-test.describe("Prompt activation is gated on data-permitted-attachment-types", () => {
+test.describe("Prompt activation is gated on permitted-attachment-types", () => {
   test("prompt does not activate when its content-type is not in the editor's allowlist", async ({ page, editor }) => {
     await page.goto("/prompt-disallowed-content-type.html")
     await page.waitForSelector("lexxy-editor[connected]")

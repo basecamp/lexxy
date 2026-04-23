@@ -9,7 +9,7 @@ const imageAttachmentInTable = `<figure class="lexxy-content__table-wrapper"><ta
 
 const attachmentWithoutContentType = `<div><bc-attachment sgid="test-sgid-untyped" content="&lt;img src=&quot;/example.png&quot;&gt;"></bc-attachment></div>`
 
-test.describe("Attachment import filter honors data-permitted-attachment-types", () => {
+test.describe("Attachment import filter honors permitted-attachment-types", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/mentions-custom-element.html")
     await page.waitForSelector("lexxy-editor[connected]")
