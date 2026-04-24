@@ -188,6 +188,40 @@ test.describe("Block formatting", () => {
     )
   })
 
+  test("quoting across paragraphs splits soft breaks in middle paragraphs", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      "<p>First</p><p>Middle A<br>Middle B</p><p>Last</p>",
+    )
+    await editor.selectAll()
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<blockquote><p>First</p><p>Middle A</p><p>Middle B</p><p>Last</p></blockquote>",
+    )
+  })
+
+  test("quoting across paragraphs splits soft breaks in multiple middle paragraphs", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      "<p>First</p><p>A<br>B</p><p>C<br>D</p><p>Last</p>",
+    )
+    await editor.selectAll()
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<blockquote><p>First</p><p>A</p><p>B</p><p>C</p><p>D</p><p>Last</p></blockquote>",
+    )
+  })
+
   test("quote only selected lines across paragraphs with mixed break types", async ({
     page,
     editor,
