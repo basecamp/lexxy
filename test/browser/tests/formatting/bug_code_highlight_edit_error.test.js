@@ -122,4 +122,39 @@ test.describe("Bug: Editing code block with highlights throws error", () => {
 
     await expect(editor.content.locator("code mark")).toHaveText("df")
   })
+
+  test("pressing Enter to create a new line below a highlight preserves it", async ({ editor }) => {
+    const savedHTML = '<pre data-language="plain"><code>as<mark style="background-color: var(--highlight-bg-1);">df</mark> </code></pre>'
+
+    await editor.setValue(savedHTML)
+
+    // Wait for the highlight to be applied after retokenization
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toHaveCount(1)
+    }).toPass({ timeout: 5_000 })
+
+    await expect(editor.content.locator("code mark")).toHaveText("df")
+
+    // Place cursor at the end of the line (after the trailing space)
+    await editor.content.locator("code").click()
+    await editor.send("End")
+
+    // Press Enter to create a new line below the highlighted region
+    await editor.send("Enter")
+    await editor.flush()
+
+    // Type text on the new line
+    await editor.send("xyz")
+    await editor.flush()
+
+    // Wait for retokenization to complete after the edit, then assert
+    // that the highlight mark element is still present on the original line
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toHaveCount(1)
+    }).toPass({ timeout: 5_000 })
+
+    await expect(editor.content.locator("code mark")).toHaveText("df")
+  })
 })
