@@ -1,4 +1,4 @@
-import { $createParagraphNode } from "lexical"
+import { $createParagraphNode, $hasUpdateTag, PASTE_TAG } from "lexical"
 import { CodeNode } from "@lexical/code"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $isAtNodeStart, $isCursorOnLastLine, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
@@ -15,9 +15,9 @@ export class EarlyEscapeCodeNode extends CodeNode {
   }
 
   insertNewAfter(selection, restoreSelection) {
-    if (!selection.isCollapsed()) return super.insertNewAfter(selection, restoreSelection)
-
-    if (this.#isCursorAtStart(selection)) {
+    if ($hasUpdateTag(PASTE_TAG) || !selection.isCollapsed()) {
+      return super.insertNewAfter(selection, restoreSelection)
+    } else if (this.#isCursorAtStart(selection)) {
       return this.#insertParagraphBefore()
     } else if (this.#isCursorOnWhitespaceOnlyLastLine(selection)) {
       return this.#insertBlankLineBelow(selection, restoreSelection)
