@@ -237,7 +237,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   get #isContentFocused() {
-    return !!this.editorContentElement && this.editorContentElement.contains(document.activeElement)
+    return !!this.editor && isEditorFocused(this.editor)
   }
 
   get value() {
@@ -251,7 +251,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
-    const editorHasFocus = isEditorFocused(this.editor)
+    const editorHasFocus = this.#isContentFocused
 
     this.editor.update(() => {
       if (!editorHasFocus) $addUpdateTag(SKIP_DOM_SELECTION_TAG)
