@@ -18,24 +18,14 @@ export class EarlyEscapeCodeNode extends CodeNode {
     if (!selection.isCollapsed()) return super.insertNewAfter(selection, restoreSelection)
 
     if (this.#isCursorAtStart(selection)) {
-      this.insertBefore($createParagraphNode())
-      return null
-    }
-
-    if (this.#isCursorOnWhitespaceOnlyLastLine(selection)) {
-      $trimTrailingBlankNodes(this)
+      return this.#insertParagraphBefore()
+    } else if (this.#isCursorOnWhitespaceOnlyLastLine(selection)) {
+      return this.#insertBlankLineBelow(selection, restoreSelection)
+    } else if (this.#isCursorOnEmptyLastLine(selection)) {
+      return this.#escapeToNewParagraphAfter()
+    } else {
       return super.insertNewAfter(selection, restoreSelection)
     }
-
-    if (this.#isCursorOnEmptyLastLine(selection)) {
-      $trimTrailingBlankNodes(this)
-
-      const paragraph = $createParagraphNode()
-      this.insertAfter(paragraph)
-      return paragraph
-    }
-
-    return super.insertNewAfter(selection, restoreSelection)
   }
 
   #isCursorAtStart(selection) {
@@ -62,4 +52,21 @@ export class EarlyEscapeCodeNode extends CodeNode {
     return lastLine.length > 0 && lastLine.trim() === ""
   }
 
+  #insertParagraphBefore() {
+    this.insertBefore($createParagraphNode())
+    return null
+  }
+
+  #insertBlankLineBelow(selection, restoreSelection) {
+    super.insertNewAfter(selection, restoreSelection)
+    this.getLastChild().remove()
+    return null
+  }
+
+  #escapeToNewParagraphAfter() {
+    $trimTrailingBlankNodes(this)
+    const paragraph = $createParagraphNode()
+    this.insertAfter(paragraph)
+    return paragraph
+  }
 }
