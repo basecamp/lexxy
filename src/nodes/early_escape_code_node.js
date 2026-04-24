@@ -45,7 +45,13 @@ export class EarlyEscapeCodeNode extends CodeNode {
     if (!$isCursorOnLastLine(selection)) return false
 
     const textContent = this.getTextContent()
-    return textContent === "" || textContent.endsWith("\n")
+    if (textContent === "" || textContent.endsWith("\n")) return true
+
+    const lastNewlineIndex = textContent.lastIndexOf("\n")
+    if (lastNewlineIndex === -1) return false
+
+    const lastLine = textContent.slice(lastNewlineIndex + 1)
+    return lastLine.trim() === ""
   }
 
 }
