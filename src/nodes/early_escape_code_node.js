@@ -17,6 +17,15 @@ export class EarlyEscapeCodeNode extends CodeNode {
   insertNewAfter(selection, restoreSelection) {
     if (!selection.isCollapsed()) return super.insertNewAfter(selection, restoreSelection)
 
+    // Clamp element-type selection offsets that may have been invalidated
+    // by the code retokenizer. The retokenizer's $updateAndRetainSelection
+    // restores the element offset verbatim after re-tokenizing, but when
+    // highlight splits changed the child count before retokenization, the
+    // restored offset can exceed the current child count. Without clamping,
+    // CodeNode.insertNewAfter passes the stale offset to splice(), which
+    // throws "start + deleteCount > oldSize".
+    this.#clampSelectionOffset(selection)
+
     if (this.#isCursorAtStart(selection)) {
       this.insertBefore($createParagraphNode())
       return null
@@ -31,6 +40,15 @@ export class EarlyEscapeCodeNode extends CodeNode {
     }
 
     return super.insertNewAfter(selection, restoreSelection)
+  }
+
+  #clampSelectionOffset(selection) {
+    const childrenSize = this.getChildrenSize()
+    for (const point of [ selection.anchor, selection.focus ]) {
+      if (point.type === "element" && point.key === this.__key && point.offset > childrenSize) {
+        point.set(this.__key, childrenSize, "element")
+      }
+    }
   }
 
   #isCursorAtStart(selection) {
