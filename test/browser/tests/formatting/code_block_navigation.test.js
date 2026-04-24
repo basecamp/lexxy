@@ -49,17 +49,17 @@ test.describe("Code block navigation", () => {
     await editor.send("   ")
     await editor.flush()
 
-    // First Enter: should clear the whitespace, making the last line empty
+    // First Enter: clears the whitespace-only line, cursor lands on an empty last line
     await editor.send("Enter")
     await editor.flush()
 
-    // Verify cursor is still inside the code block after first Enter
+    // Still inside the code block — no paragraphs should exist at all
     await assertEditorContent(editor, async (content) => {
       await expect(content.locator("code")).toContainText("hello")
-      await expect(content.locator("p").filter({ hasText: /\S/ })).toHaveCount(0)
+      await expect(content.locator("p:not(.provisional-paragraph)")).toHaveCount(0)
     })
 
-    // Second Enter: should exit the code block
+    // Second Enter: cursor is on an empty last line, so it escapes the code block
     await editor.send("Enter")
     await editor.flush()
 
