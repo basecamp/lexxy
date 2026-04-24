@@ -2,11 +2,37 @@ import { createElement } from "./html_helper"
 import Prism from "../config/prism"
 
 export function highlightCode() {
-  const elements = document.querySelectorAll("pre[data-language]")
+  const elements = document.querySelectorAll("pre[data-language], pre:has(> code)")
 
   elements.forEach(preElement => {
+    normalizeNestedCodeElement(preElement)
     highlightElement(preElement)
   })
+}
+
+// CLI tools and markdown converters produce <pre><code class="language-ruby">...</code></pre>.
+// Normalize this to <pre data-language="ruby">...</pre> so highlightElement() can process it,
+// and prevent double styling from nested <pre> + <code> elements.
+function normalizeNestedCodeElement(preElement) {
+  const codeChild = preElement.querySelector(":scope > code")
+  if (!codeChild) return
+
+  if (!preElement.hasAttribute("data-language")) {
+    const language = languageFromClassList(codeChild)
+    if (language) {
+      preElement.setAttribute("data-language", language)
+    }
+  }
+
+  codeChild.replaceWith(...codeChild.childNodes)
+}
+
+function languageFromClassList(element) {
+  for (const cls of element.classList) {
+    const match = cls.match(/^language-(.+)$/)
+    if (match) return match[1]
+  }
+  return null
 }
 
 function highlightElement(preElement) {
