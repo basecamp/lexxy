@@ -29,7 +29,7 @@ function highlightElement(preElement) {
     applyHighlightRanges(codeElement, highlights)
   }
 
-  preElement.replaceWith(codeElement)
+  preElement.replaceChildren(codeElement)
 }
 
 // Walk the DOM tree inside a <pre> element and build a list of
