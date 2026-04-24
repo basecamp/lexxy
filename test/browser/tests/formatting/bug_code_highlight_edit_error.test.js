@@ -93,4 +93,33 @@ test.describe("Bug: Editing code block with highlights throws error", () => {
 
     await expect(editor.content.locator("code mark")).toHaveText("df")
   })
+
+  test("typing after a highlight on the same line preserves it", async ({ editor }) => {
+    const savedHTML = '<pre data-language="plain"><code>as<mark style="background-color: var(--highlight-bg-1);">df</mark> </code></pre>'
+
+    await editor.setValue(savedHTML)
+
+    // Wait for the highlight to be applied after retokenization
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toHaveCount(1)
+    }).toPass({ timeout: 5_000 })
+
+    await expect(editor.content.locator("code mark")).toHaveText("df")
+
+    // Place cursor at the end of the line (after the trailing space)
+    await editor.content.locator("code").click()
+    await editor.send("End")
+    await editor.send("xyz")
+    await editor.flush()
+
+    // Wait for retokenization to complete after the edit, then assert
+    // that the highlight mark element is still present
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toHaveCount(1)
+    }).toPass({ timeout: 5_000 })
+
+    await expect(editor.content.locator("code mark")).toHaveText("df")
+  })
 })
