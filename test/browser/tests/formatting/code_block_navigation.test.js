@@ -53,6 +53,12 @@ test.describe("Code block navigation", () => {
     await editor.send("Enter")
     await editor.flush()
 
+    // Verify cursor is still inside the code block after first Enter
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code")).toContainText("hello")
+      await expect(content.locator("p").filter({ hasText: /\S/ })).toHaveCount(0)
+    })
+
     // Second Enter: should exit the code block
     await editor.send("Enter")
     await editor.flush()
