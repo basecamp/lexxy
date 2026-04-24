@@ -57,3 +57,4 @@ Two important additional notes to use action text with custom attachments:
 
 * Each `<lexxy-prompt-item>` must include a `sgid` attribute with the [global id that Action Text will use to find the associated model](https://guides.rubyonrails.org/action_text_overview.html#signed-globalid).
 * The `<lexxy-prompt>` must include a `name` attribute that will determine the content type of the attachment. For example, for `name= "mention"`, the attachment will be saved as `application/vnd.actiontext.mention`.
+* The editor must have `attachments` enabled and, if `permittedAttachmentTypes` is set, the prompt's content type must be in the allowlist. Otherwise the prompt will not activate.
