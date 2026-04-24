@@ -1,6 +1,5 @@
 import { $createLineBreakNode, $createParagraphNode, $createTextNode, $getChildCaretAtIndex, $isElementNode, $isLineBreakNode, $isNodeSelection } from "lexical"
 import { CodeNode } from "@lexical/code"
-import { QuoteNode } from "@lexical/rich-text"
 import { $ensureForwardRangeSelection } from "@lexical/selection"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $isShadowRoot } from "../../helpers/lexical_helper"
@@ -9,7 +8,6 @@ export default class NodeInserter {
   static for(selection) {
     const INSERTERS = [
       CodeNodeInserter,
-      QuoteNodeInserter,
       ShadowRootNodeInserter,
       NodeSelectionNodeInserter
     ]
@@ -56,25 +54,6 @@ class CodeNodeInserter extends NodeInserter {
     }
   }
 
-}
-
-// Lexical will split a QuoteNode when inserting other Elements - we want them simply inserted as-is
-class QuoteNodeInserter extends NodeInserter {
-  static handles(selection) {
-    return $getNearestNodeOfType(selection.anchor?.getNode(), QuoteNode)
-  }
-
-  insertNodes(nodes) {
-    if (!this.selection.isCollapsed()) { this.selection.removeText() }
-
-    $ensureForwardRangeSelection(this.selection)
-    let lastNode = this.selection.focus.getNode()
-    for (const node of nodes) {
-      lastNode = lastNode.insertAfter(node)
-    }
-
-    lastNode.selectEnd()
-  }
 }
 
 class ShadowRootNodeInserter extends NodeInserter {
