@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, HISTORY_MERGE_TAG, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, HISTORY_MERGE_TAG, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -254,7 +254,13 @@ export class LexicalEditorElement extends HTMLElement {
     const editorHasFocus = this.#isContentFocused
 
     this.editor.update(() => {
-      if (!editorHasFocus) $addUpdateTag(SKIP_DOM_SELECTION_TAG)
+      if (editorHasFocus) {
+        // Address Safari inconsistently placing the cursor in the contenteditable by forcing focus back onto the editor
+        // Use direct `editor.focus` to bypass the pre-existing focus optimization and skip the callback
+        $onUpdate(() => this.editor.focus())
+      } else {
+        $addUpdateTag(SKIP_DOM_SELECTION_TAG)
+      }
 
       $getRoot()
         .clear()
