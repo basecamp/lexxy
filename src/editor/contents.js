@@ -17,7 +17,7 @@ import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_nod
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
-import { $isShadowRoot } from "../helpers/lexical_helper"
+import { $isShadowRoot, $splitParagraphsAtLineBreakBoundaries } from "../helpers/lexical_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -135,7 +135,7 @@ export default class Contents {
     } else {
       topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
-      this.#splitParagraphsAtLineBreaks(selection)
+      $splitParagraphsAtLineBreakBoundaries(selection)
 
       const elements = this.#topLevelElementsInSelection(selection)
       if (elements.length === 0) return
