@@ -175,6 +175,7 @@ function $getPendingHighlights(editor) {
   return map
 }
 
+
 // Accepts either a CodeNode or a CodeHighlightNode (resolves its parent).
 // Captures existing highlight ranges from the CodeNode's children and
 // stores them in pendingCodeHighlights so the mutation listener can
@@ -232,7 +233,29 @@ function $applyPendingCodeHighlights(editor, mutations) {
   // transforms (e.g. markdown) that hold stale node references from
   // the just-committed state.
   queueMicrotask(() => {
+    // Before entering editor.update(), read the current state to check
+    // if highlights are already correctly applied. This avoids a no-op
+    // update that would split/replace nodes and disrupt the DOM selection
+    // on subsequent user edits (e.g., pressing Enter).
+    const needsUpdate = editor.getEditorState().read(() => {
+      for (const { key, highlights } of highlightData) {
+        if (!highlights) continue
+        const codeNode = $getNodeByKey(key)
+        if (!codeNode || !$isCodeNode(codeNode) || !codeNode.isAttached()) continue
+        if (!$highlightsAlreadyApplied(codeNode, highlights)) return true
+      }
+      return false
+    })
+
+    if (!needsUpdate) return
+
     editor.update(() => {
+      const selBefore = $getSelection()
+      if ($isRangeSelection(selBefore)) {
+        window.__hlDebug = window.__hlDebug || []
+        window.__hlDebug.push({ when: "before", anchorType: selBefore.anchor.type, anchorKey: selBefore.anchor.key, anchorOffset: selBefore.anchor.offset, focusType: selBefore.focus.type, focusKey: selBefore.focus.key, focusOffset: selBefore.focus.offset })
+      }
+
       for (const { key, highlights } of highlightData) {
         if (!highlights) continue
 
@@ -240,6 +263,12 @@ function $applyPendingCodeHighlights(editor, mutations) {
         if (!codeNode || !$isCodeNode(codeNode) || !codeNode.isAttached()) continue
 
         $applyHighlightRangesToCodeNode(codeNode, highlights)
+      }
+
+      const selAfter = $getSelection()
+      if ($isRangeSelection(selAfter)) {
+        window.__hlDebug = window.__hlDebug || []
+        window.__hlDebug.push({ when: "after", anchorType: selAfter.anchor.type, anchorKey: selAfter.anchor.key, anchorOffset: selAfter.anchor.offset, focusType: selAfter.focus.type, focusKey: selAfter.focus.key, focusOffset: selAfter.focus.offset })
       }
     }, { skipTransforms: true, discrete: true })
   })
@@ -250,8 +279,24 @@ function $applyPendingCodeHighlights(editor, mutations) {
 // We can't use TextNode.splitText() because it creates TextNode
 // instances (not CodeHighlightNodes) for the split parts. Instead,
 // we manually create CodeHighlightNode replacements.
+//
+// Selection is carefully preserved across node splits. When a node
+// that the selection points to is replaced, the selection is remapped
+// to the appropriate replacement node. Element-type selections on
+// the CodeNode have their offsets adjusted to account for the
+// additional children created by splits.
 function $applyHighlightRangesToCodeNode(codeNode, highlights) {
   if (highlights.length === 0) return
+
+  // Snapshot the selection before modifying the tree. We track which
+  // node keys are replaced and by what, so we can remap afterwards.
+  const selection = $getSelection()
+  const isRange = $isRangeSelection(selection)
+  const codeNodeKey = codeNode.getKey()
+
+  // Map from removed node key → { replacements, relStart }
+  // so we can remap text-type selection points after splits.
+  const replacementMap = new Map()
 
   for (const { start: hlStart, end: hlEnd, style } of highlights) {
     // Rebuild the child-to-offset mapping for each highlight range because
@@ -286,18 +331,29 @@ function $applyHighlightRangesToCodeNode(codeNode, highlights) {
         const text = node.getTextContent()
         const highlightType = node.getHighlightType()
         const replacements = []
+        const splitOffsets = []
 
         if (relStart > 0) {
-          replacements.push($createCodeHighlightNode(text.slice(0, relStart), highlightType))
+          const preNode = $createCodeHighlightNode(text.slice(0, relStart), highlightType)
+          replacements.push(preNode)
+          splitOffsets.push({ start: 0, end: relStart, node: preNode })
         }
 
         const styledNode = $createCodeHighlightNode(text.slice(relStart, relEnd), highlightType)
         styledNode.setStyle(style)
         $setCodeHighlightFormat(styledNode, true)
         replacements.push(styledNode)
+        splitOffsets.push({ start: relStart, end: relEnd, node: styledNode })
 
         if (relEnd < nodeLength) {
-          replacements.push($createCodeHighlightNode(text.slice(relEnd), highlightType))
+          const postNode = $createCodeHighlightNode(text.slice(relEnd), highlightType)
+          replacements.push(postNode)
+          splitOffsets.push({ start: relEnd, end: nodeLength, node: postNode })
+        }
+
+        // Record the replacement for selection remapping
+        if (isRange) {
+          replacementMap.set(node.getKey(), { splitOffsets, count: replacements.length })
         }
 
         for (const replacement of replacements) {
@@ -305,6 +361,44 @@ function $applyHighlightRangesToCodeNode(codeNode, highlights) {
         }
         node.remove()
       }
+    }
+  }
+
+  // Remap the selection to account for node splits.
+  if (isRange && (replacementMap.size > 0)) {
+    $remapSelectionAfterHighlightSplits(selection, codeNodeKey, codeNode, replacementMap)
+  }
+}
+
+// After splitting CodeHighlightNodes for highlight application, remap
+// the selection's anchor/focus so the cursor doesn't jump.
+// `childIndexMap` maps original child index → number of extra children
+// inserted before that position (cumulative shift).
+function $remapSelectionAfterHighlightSplits(selection, codeNodeKey, codeNode, replacementMap) {
+  // Compute the total shift: sum of (replacements.count - 1) for each split
+  let totalShift = 0
+  for (const { count } of replacementMap.values()) {
+    totalShift += count - 1
+  }
+
+  for (const point of [ selection.anchor, selection.focus ]) {
+    if (point.type === "text" && replacementMap.has(point.key)) {
+      // Text selection was on a node that got split.
+      // Find which replacement node the offset falls into.
+      const { splitOffsets } = replacementMap.get(point.key)
+      for (const { start, end, node } of splitOffsets) {
+        if (point.offset >= start && point.offset <= end) {
+          point.set(node.getKey(), point.offset - start, "text")
+          break
+        }
+      }
+    } else if (point.type === "element" && point.key === codeNodeKey && point.offset > 0) {
+      // Element selection on the CodeNode. Splits insert additional
+      // children before the original offset position, shifting it.
+      // Since all highlights are typically on the first line, and the
+      // selection is on a later line (after a LineBreak), the full
+      // totalShift applies.
+      point.set(codeNodeKey, point.offset + totalShift, "element")
     }
   }
 }
@@ -342,6 +436,27 @@ function $extractHighlightRangesFromCodeNode(codeNode) {
   }
 
   return ranges
+}
+
+// Check if the pending highlights are already correctly applied in the tree.
+// Returns true when the current CodeNode children already have exactly the
+// same highlight ranges, making re-application unnecessary. This avoids
+// a no-op editor.update() that splits/replaces nodes and disrupts the DOM
+// selection on subsequent user edits (e.g., pressing Enter).
+function $highlightsAlreadyApplied(codeNode, pendingHighlights) {
+  const currentRanges = $extractHighlightRangesFromCodeNode(codeNode)
+
+  if (currentRanges.length !== pendingHighlights.length) return false
+
+  for (let i = 0; i < currentRanges.length; i++) {
+    const current = currentRanges[i]
+    const pending = pendingHighlights[i]
+    if (current.start !== pending.start || current.end !== pending.end || current.style !== pending.style) {
+      return false
+    }
+  }
+
+  return true
 }
 
 function buildCanonicalizers(config) {
