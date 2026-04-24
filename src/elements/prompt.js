@@ -121,7 +121,7 @@ export class LexicalPromptElement extends HTMLElement {
 
   get #promptContentTypePermitted() {
     const el = this.#editorElement
-    if (el.getAttribute("attachments") === "false") {
+    if (!el.supportsAttachments) {
       return false
     } else {
       const templates = Array.from(this.querySelectorAll("template[type='editor']"))

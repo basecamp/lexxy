@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, test } from "vitest"
 import { createTestEditor, destroyTestEditor } from "../helpers/editor_helper"
+import Lexxy from "src/config/lexxy"
 
 let editorElement
 
 afterEach(async () => {
   await destroyTestEditor(editorElement)
+  Lexxy.configure({ default: { permittedAttachmentTypes: null } })
 })
 
 describe("permittedAttachmentTypes getter", () => {
@@ -17,5 +19,13 @@ describe("permittedAttachmentTypes getter", () => {
 
     expect(Object.isFrozen(list)).toBe(true)
     expect(() => list.push("image/png")).toThrow(TypeError)
+  })
+
+  test("reflects JS configuration", async () => {
+    Lexxy.configure({ default: { permittedAttachmentTypes: [ "application/vnd.basecamp.mention" ] } })
+
+    editorElement = await createTestEditor()
+
+    expect([ ...editorElement.permittedAttachmentTypes ]).toEqual([ "application/vnd.basecamp.mention" ])
   })
 })

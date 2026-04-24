@@ -54,7 +54,6 @@ export class LexicalEditorElement extends HTMLElement {
   #listeners = new ListenerBin()
   #disposables = []
   #historyState = { undo: false, redo: false }
-  #permittedAttachmentTypes = null
 
   constructor() {
     super()
@@ -66,7 +65,6 @@ export class LexicalEditorElement extends HTMLElement {
     this.id ||= generateDomId("lexxy-editor")
     this.config = new Configuration(this)
     this.extensions = new Extensions(this)
-    this.#permittedAttachmentTypes = this.#parsePermittedAttachmentTypes()
 
     this.editor = this.#createEditor()
     this.#disposables.push(this.editor)
@@ -163,24 +161,21 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   get permittedAttachmentTypes() {
-    return this.#permittedAttachmentTypes
-  }
-
-  permitsAttachmentContentType(contentType) {
-    if (this.getAttribute("attachments") === "false") {
-      return false
-    } else {
-      const list = this.#permittedAttachmentTypes
-      return list === null || list.includes(contentType)
-    }
-  }
-
-  #parsePermittedAttachmentTypes() {
-    const raw = this.getAttribute("permitted-attachment-types")
+    const raw = this.config.get("permittedAttachmentTypes")
     if (raw == null) {
       return null
     } else {
-      return Object.freeze(raw.split(/\s+/).filter(t => t && t !== "false"))
+      const tokens = Array.isArray(raw) ? raw : String(raw).split(/\s+/)
+      return Object.freeze(tokens.filter(t => t && t !== "false"))
+    }
+  }
+
+  permitsAttachmentContentType(contentType) {
+    if (!this.supportsAttachments) {
+      return false
+    } else {
+      const list = this.permittedAttachmentTypes
+      return list === null || list.includes(contentType)
     }
   }
 
