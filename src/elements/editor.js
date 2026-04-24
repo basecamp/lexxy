@@ -1,4 +1,4 @@
-import { $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, HISTORY_MERGE_TAG, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, HISTORY_MERGE_TAG, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -16,7 +16,7 @@ import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
-import { isAttachmentSpacerTextNode } from "../helpers/lexical_helper"
+import { isAttachmentSpacerTextNode, isEditorFocused } from "../helpers/lexical_helper"
 import { sanitize, setSanitizerConfig } from "../helpers/sanitization_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
@@ -251,14 +251,18 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
+    const editorHasFocus = isEditorFocused(this.editor)
+
     this.editor.update(() => {
+      if (!editorHasFocus) $addUpdateTag(SKIP_DOM_SELECTION_TAG)
+
       $getRoot()
         .clear()
         .selectEnd()
         .insertNodes(this.#parseHtmlIntoLexicalNodes(html))
 
       this.#toggleEmptyStatus()
-    }, { discrete: true, tag: SKIP_DOM_SELECTION_TAG })
+    }, { discrete: true })
   }
 
   get canUndo() {
