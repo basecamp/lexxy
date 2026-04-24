@@ -16,7 +16,13 @@ export default class Clipboard {
   paste(event) {
     const clipboardData = event.clipboardData
 
-    if (!clipboardData || this.#isPastingIntoCodeBlock()) return false
+    if (!clipboardData) return false
+
+    if (this.#isPastingIntoCodeBlock()) {
+      this.#pastePlainTextIntoCodeBlock(clipboardData)
+      event.preventDefault()
+      return true
+    }
 
     if (this.#isPlainTextOrURLPasted(clipboardData)) {
       this.#pastePlainText(clipboardData)
@@ -63,6 +69,16 @@ export default class Clipboard {
     })
 
     return result
+  }
+
+  #pastePlainTextIntoCodeBlock(clipboardData) {
+    const text = clipboardData.getData("text/plain")
+    if (!text) return
+
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if ($isRangeSelection(selection)) selection.insertRawText(text)
+    }, { tag: PASTE_TAG })
   }
 
   #pastePlainText(clipboardData) {
