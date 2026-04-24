@@ -22,6 +22,11 @@ export class EarlyEscapeCodeNode extends CodeNode {
       return null
     }
 
+    if (this.#isCursorOnWhitespaceOnlyLastLine(selection)) {
+      $trimTrailingBlankNodes(this)
+      return super.insertNewAfter(selection, restoreSelection)
+    }
+
     if (this.#isCursorOnEmptyLastLine(selection)) {
       $trimTrailingBlankNodes(this)
 
@@ -45,13 +50,16 @@ export class EarlyEscapeCodeNode extends CodeNode {
     if (!$isCursorOnLastLine(selection)) return false
 
     const textContent = this.getTextContent()
-    if (textContent === "" || textContent.endsWith("\n")) return true
+    return textContent === "" || textContent.endsWith("\n")
+  }
 
+  #isCursorOnWhitespaceOnlyLastLine(selection) {
+    if (!$isCursorOnLastLine(selection)) return false
+
+    const textContent = this.getTextContent()
     const lastNewlineIndex = textContent.lastIndexOf("\n")
-    if (lastNewlineIndex === -1) return false
-
-    const lastLine = textContent.slice(lastNewlineIndex + 1)
-    return lastLine.trim() === ""
+    const lastLine = lastNewlineIndex === -1 ? textContent : textContent.slice(lastNewlineIndex + 1)
+    return lastLine.length > 0 && lastLine.trim() === ""
   }
 
 }
