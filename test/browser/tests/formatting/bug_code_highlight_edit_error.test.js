@@ -21,7 +21,7 @@ test.describe("Bug: Editing code block with highlights throws error", () => {
       await expect(editor.content.locator("code mark")).toHaveCount(1)
     }).toPass({ timeout: 5_000 })
 
-    // Collect console errors
+    // Collect uncaught page errors
     const errors = []
     page.on("pageerror", (error) => errors.push(error.message))
 
@@ -62,5 +62,35 @@ test.describe("Bug: Editing code block with highlights throws error", () => {
     await editor.send("hello")
     const text = await editor.plainTextValue()
     expect(text).toContain("hello")
+  })
+
+  test("highlights survive after editing a re-imported code block", async ({ editor }) => {
+    const savedHTML = '<pre data-language="plain"><code>as<mark style="background-color: var(--highlight-bg-1);">df</mark> </code></pre>'
+
+    await editor.setValue(savedHTML)
+
+    // Wait for the highlight to be applied after retokenization
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toHaveCount(1)
+    }).toPass({ timeout: 5_000 })
+
+    // Verify the highlighted text content
+    await expect(editor.content.locator("code mark")).toHaveText("df")
+
+    // Place cursor at the start of the code block and type
+    await editor.content.locator("code").click()
+    await editor.send("Home")
+    await editor.send("x")
+    await editor.flush()
+
+    // Wait for retokenization to complete after the edit, then assert
+    // that the highlight mark element is still present
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toHaveCount(1)
+    }).toPass({ timeout: 5_000 })
+
+    await expect(editor.content.locator("code mark")).toHaveText("df")
   })
 })

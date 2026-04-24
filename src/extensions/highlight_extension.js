@@ -54,7 +54,9 @@ export class HighlightExtension extends LexxyExtension {
           editor.registerCommand(REMOVE_HIGHLIGHT_COMMAND, () => $toggleSelectionStyles(editor, BLANK_STYLES), COMMAND_PRIORITY_NORMAL),
           editor.registerNodeTransform(TextNode, $syncHighlightWithStyle),
           editor.registerNodeTransform(CodeHighlightNode, $syncHighlightWithCodeHighlightNode),
+          editor.registerNodeTransform(CodeHighlightNode, (node) => $saveHighlightRangesBeforeRetokenize(editor, node)),
           editor.registerNodeTransform(TextNode, (textNode) => $canonicalizePastedStyles(textNode, canonicalizers)),
+          editor.registerNodeTransform(CodeNode, (codeNode) => $saveHighlightRangesBeforeRetokenize(editor, codeNode)),
           editor.registerMutationListener(CodeNode, (mutations) => {
             $applyPendingCodeHighlights(editor, mutations)
           }, { skipInitialization: true })
@@ -173,6 +175,26 @@ function $getPendingHighlights(editor) {
   return map
 }
 
+// Accepts either a CodeNode or a CodeHighlightNode (resolves its parent).
+// Captures existing highlight ranges from the CodeNode's children and
+// stores them in pendingCodeHighlights so the mutation listener can
+// re-apply them after the retokenizer replaces children with fresh tokens.
+function $saveHighlightRangesBeforeRetokenize(editor, node) {
+  const codeNode = $isCodeNode(node) ? node : ($isCodeHighlightNode(node) && $isCodeNode(node.getParent()) ? node.getParent() : null)
+  if (!codeNode || !codeNode.isAttached()) return
+
+  // Skip if we already have pending highlights for this node in this cycle.
+  // Multiple children may trigger this in the same update; the first one
+  // captures the snapshot before the retokenizer touches anything.
+  const pending = $getPendingHighlights(editor)
+  if (pending.has(codeNode.getKey())) return
+
+  const ranges = $extractHighlightRangesFromCodeNode(codeNode)
+  if (ranges.length > 0) {
+    pending.set(codeNode.getKey(), ranges)
+  }
+}
+
 function extractHighlightStyleFromElement(element) {
   const styles = {}
   if (element.style?.color) styles.color = element.style.color
@@ -195,20 +217,32 @@ function $applyPendingCodeHighlights(editor, mutations) {
 
   if (keysToProcess.length === 0) return
 
-  // Use a deferred update so the retokenizer has finished its
-  // skipTransforms update before we touch the nodes.
-  editor.update(() => {
-    for (const key of keysToProcess) {
-      const highlights = pending.get(key)
-      pending.delete(key)
-      if (!highlights) continue
+  // Snapshot the highlight data we need before scheduling. The pending
+  // map entries may be overwritten if another mutation fires before
+  // the microtask runs.
+  const highlightData = keysToProcess.map((key) => {
+    const highlights = pending.get(key)
+    pending.delete(key)
+    return { key, highlights }
+  })
 
-      const codeNode = $getNodeByKey(key)
-      if (!codeNode || !$isCodeNode(codeNode)) continue
+  // Schedule the re-application as a microtask so we don't run
+  // inside Lexical's mutation-dispatch cycle. Running a discrete
+  // editor.update() during mutation dispatch can trigger enqueued
+  // transforms (e.g. markdown) that hold stale node references from
+  // the just-committed state.
+  queueMicrotask(() => {
+    editor.update(() => {
+      for (const { key, highlights } of highlightData) {
+        if (!highlights) continue
 
-      $applyHighlightRangesToCodeNode(codeNode, highlights)
-    }
-  }, { skipTransforms: true, discrete: true })
+        const codeNode = $getNodeByKey(key)
+        if (!codeNode || !$isCodeNode(codeNode) || !codeNode.isAttached()) continue
+
+        $applyHighlightRangesToCodeNode(codeNode, highlights)
+      }
+    }, { skipTransforms: true, discrete: true })
+  })
 }
 
 // Apply saved highlight ranges to the CodeHighlightNode children

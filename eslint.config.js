@@ -44,7 +44,8 @@ export default [
         Prism: "readonly",
         ResizeObserver: "readonly",
         PointerEvent: "readonly",
-        Image: "readonly"
+        Image: "readonly",
+        queueMicrotask: "readonly"
       }
     },
     rules: {
