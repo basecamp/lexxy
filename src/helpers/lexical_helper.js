@@ -1,8 +1,8 @@
-import { $createNodeSelection, $createParagraphNode, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isRootNode, $isRootOrShadowRoot, $isTextNode, TextNode } from "lexical"
+import { $createNodeSelection, $createParagraphNode, $getSiblingCaret, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isParagraphNode, $isRootNode, $isRootOrShadowRoot, $isTextNode, $splitNode, LineBreakNode, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
-import { $isAtNodeEnd } from "@lexical/selection"
+import { $ensureForwardRangeSelection, $isAtNodeEnd } from "@lexical/selection"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 
@@ -143,4 +143,38 @@ export function isAttachmentSpacerTextNode(node, previousNode, index, childCount
     && node.getTextContent() === " "
     && index === childCount - 1
     && previousNode instanceof CustomActionTextAttachmentNode
+}
+
+export function $splitParagraphsAtLineBreakBoundaries(selection) {
+  $ensureForwardRangeSelection(selection)
+
+  // Split focus first so the anchor split position stays valid.
+  $splitAtNearestLineBreak(selection.focus, "next")
+  $splitAtNearestLineBreak(selection.anchor, "previous")
+}
+
+function $splitAtNearestLineBreak(point, direction) {
+  const paragraph = point.getNode().getTopLevelElement()
+  if (!paragraph || !$isParagraphNode(paragraph)) return
+
+  const pointNode = point.getNode()
+  const selectionChild = pointNode.getParent().is(paragraph) ? pointNode : pointNode.getParentOrThrow()
+  const lineBreakCaret = $caretAtNearestNodeOfType(selectionChild, LineBreakNode, direction)
+  if (!lineBreakCaret) return
+
+  const lineBreak = lineBreakCaret.origin
+  const isEdge = lineBreakCaret.getNodeAtCaret() === null
+
+  if (!isEdge) {
+    $splitNode(paragraph, lineBreak.getIndexWithinParent())
+  }
+
+  lineBreak.remove()
+}
+
+function $caretAtNearestNodeOfType(node, klass, direction) {
+  for (const caret of $getSiblingCaret(node, direction)) {
+    if (caret.origin instanceof klass) return caret
+  }
+  return null
 }

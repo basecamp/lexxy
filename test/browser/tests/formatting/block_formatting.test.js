@@ -154,12 +154,12 @@ test.describe("Block formatting", () => {
     )
   })
 
-  test("quote soft-break lines splits them into separate paragraphs in the blockquote", async ({
+  test("quote preserves line breaks when entire paragraph with BRs is selected", async ({
     page,
     editor,
   }) => {
-    // Selecting two soft-break lines and quoting should split them into
-    // separate paragraphs inside the blockquote, not merge them into one.
+    // When the whole paragraph with BRs is selected, BRs should be preserved
+    // inside the blockquote — not split into separate paragraphs.
     await editor.setValue(
       "<p>Before</p><p>First line<br>Second line</p><p>After</p>",
     )
@@ -184,7 +184,7 @@ test.describe("Block formatting", () => {
 
     await assertEditorHtml(
       editor,
-      "<p>Before</p><blockquote><p>First line</p><p>Second line</p></blockquote><p>After</p>",
+      "<p>Before</p><blockquote><p>First line<br>Second line</p></blockquote><p>After</p>",
     )
   })
 
@@ -193,13 +193,12 @@ test.describe("Block formatting", () => {
     editor,
   }) => {
     // Line one (Shift+Enter) Line two (Enter) Line three (Shift+Enter) Line four
-    // Selecting "Line two" through "Line three" and applying quote should only
-    // quote those two lines, not all four.
+    // Selecting "Line two" through "Line three" should quote only those lines,
+    // not the entire paragraphs.
     await editor.setValue(
       "<p>Line one<br>Line two</p><p>Line three<br>Line four</p>",
     )
 
-    // Select from "Line two" in the first <p> through "Line three" in the second <p>
     await editor.content.evaluate((el) => {
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
       let startNode, endNode
@@ -221,6 +220,23 @@ test.describe("Block formatting", () => {
     await assertEditorHtml(
       editor,
       "<p>Line one</p><blockquote><p>Line two</p><p>Line three</p></blockquote><p>Line four</p>",
+    )
+  })
+
+  test("quote preserves BRs when all text with line breaks is selected", async ({
+    page,
+    editor,
+  }) => {
+    // Selecting all content of a paragraph with BRs and quoting should
+    // preserve the BRs inside the blockquote.
+    await editor.setValue("<p>Line one<br>Line two<br>Line three</p>")
+    await editor.selectAll()
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<blockquote><p>Line one<br>Line two<br>Line three</p></blockquote>",
     )
   })
 
