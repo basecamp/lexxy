@@ -36,6 +36,36 @@ test.describe("Code block navigation", () => {
     })
   })
 
+  test("pressing Enter twice exits code block when last line contains only whitespace", async ({ editor }) => {
+    // Create a code block and type content with a whitespace-only last line
+    await editor.click()
+    await editor.send("```")
+    await editor.send("Enter")
+    await editor.flush()
+
+    // Type some content, then a new line with only spaces
+    await editor.send("hello")
+    await editor.send("Enter")
+    await editor.send("   ")
+    await editor.flush()
+
+    // First Enter: should clear the whitespace, making the last line empty
+    await editor.send("Enter")
+    await editor.flush()
+
+    // Second Enter: should exit the code block
+    await editor.send("Enter")
+    await editor.flush()
+
+    await editor.send("outside text")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code")).toContainText("hello")
+      await expect(content.locator("code")).not.toContainText("outside text")
+      await expect(content.locator("p").filter({ hasText: "outside text" })).toHaveCount(1)
+    })
+  })
+
   test("code block content is preserved after inserting paragraph before it", async ({ editor }) => {
     await editor.setValue("<pre><code>line one\nline two</code></pre>")
 
