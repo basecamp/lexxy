@@ -111,23 +111,30 @@ While in beta we are flagging the releases as pre-release.
 
 Lexxy also ships a browser benchmark harness for the JS side of the editor. These benchmarks run against the Vite fixture app in `test/browser/fixtures/`, just like the Playwright browser tests, so they measure editor bootstrap and content-loading cost without involving Rails, Action Text persistence, or Active Storage uploads.
 
+Each sample runs the scenario in a tight loop for a fixed time budget (default 5 seconds) and reports the per-operation median duration. Per-op timing amortizes frame-quantized waits across many operations, which is why this gives stable numbers for scenarios whose work is dominated by `requestAnimationFrame` / vsync alignment.
+
 To run the full browser benchmark suite locally:
 
 ```bash
 yarn benchmark:browser
 ```
 
-Results are written to `tmp/browser-benchmarks.json`.
+Results are written to `tmp/browser-benchmarks.json` by default. Use `--output <path>` to write elsewhere.
 
-For quicker iteration, you can narrow the run to a single scenario or reduce the sample counts:
+For quicker iteration, you can narrow the run to a single scenario, reduce the sample counts, or shorten the time budget:
 
 ```bash
 # List scenarios
 yarn benchmark:browser --list-scenarios
 
 # Run one scenario with smaller sample sizes
-yarn benchmark:browser --scenario load-very-large-table --warmup 1 --iterations 5
+yarn benchmark:browser --scenario load-very-large-table --warmup 1 --iterations 3
+
+# Use a shorter time budget per sample (default is 5000 ms)
+yarn benchmark:browser --time-budget 2000
 ```
+
+The same knobs are available as environment variables: `BENCHMARK_ITERATIONS`, `BENCHMARK_WARMUP_ITERATIONS`, and `BENCHMARK_TIME_BUDGET_MS`.
 
 The current benchmark scenarios are:
 
@@ -136,6 +143,8 @@ The current benchmark scenarios are:
 - `load-large-content`
 - `load-very-large-table`
 - `load-many-attachments`
+
+Each scenario's per-sample time budget defaults to 5 seconds (set in `test/browser/fixtures/benchmarks.js`). Slower scenarios fit fewer ops in that window, so their per-op variance is wider — `load-very-large-table` is the practical worst case at ~16 ops per sample. To tighten that scenario's spread at the cost of CI time, raise its `timeBudgetMs` in the scenario definition.
 
 To compare two result files locally:
 
