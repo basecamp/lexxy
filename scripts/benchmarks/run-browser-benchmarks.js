@@ -7,8 +7,9 @@ import process from "node:process"
 import { createServer } from "vite"
 
 const DEFAULT_OUTPUT_PATH = path.resolve("tmp/browser-benchmarks.json")
-const DEFAULT_ITERATIONS = numberFromEnv("BENCHMARK_ITERATIONS", 10)
-const DEFAULT_WARMUP_ITERATIONS = numberFromEnv("BENCHMARK_WARMUP_ITERATIONS", 2)
+const DEFAULT_ITERATIONS = numberFromEnv("BENCHMARK_ITERATIONS", 3)
+const DEFAULT_WARMUP_ITERATIONS = numberFromEnv("BENCHMARK_WARMUP_ITERATIONS", 1)
+const DEFAULT_TIME_BUDGET_MS = numberFromEnv("BENCHMARK_TIME_BUDGET_MS", 5_000)
 const BENCHMARK_PAGE_PATH = "/benchmarks.html"
 const VIEWPORT = { width: 1440, height: 1200 }
 const SCENARIOS = [
@@ -130,15 +131,15 @@ async function runScenario({ baseUrl, context, options, scenario }) {
   console.log(`Running ${scenario.name} (${options.warmupIterations} warmup, ${options.iterations} measured)`)
 
   for (let iteration = 0; iteration < options.warmupIterations; iteration += 1) {
-    await runScenarioSample({ baseUrl, context, scenario })
+    await runScenarioSample({ baseUrl, context, options, scenario })
   }
 
   const samples = []
   let details = null
 
   for (let iteration = 0; iteration < options.iterations; iteration += 1) {
-    const sample = await runScenarioSample({ baseUrl, context, scenario })
-    samples.push(roundNumber(sample.durationMs))
+    const sample = await runScenarioSample({ baseUrl, context, options, scenario })
+    samples.push(roundNumber(sample.details.perOpDurationMs))
     details ||= sample.details
   }
 
@@ -153,13 +154,20 @@ async function runScenario({ baseUrl, context, options, scenario }) {
   }
 }
 
-async function runScenarioSample({ baseUrl, context, scenario }) {
+async function runScenarioSample({ baseUrl, context, options, scenario }) {
   const page = await openBenchmarkPage(context, baseUrl)
+  const scenarioWithBudget = {
+    ...scenario,
+    options: {
+      ...scenario.options,
+      timeBudgetMs: scenario.options?.timeBudgetMs ?? options.timeBudgetMs,
+    },
+  }
 
   try {
     return await page.evaluate(async (scenarioDefinition) => {
       return await window.lexxyBenchmarks.measureScenario(scenarioDefinition)
-    }, scenario)
+    }, scenarioWithBudget)
   } finally {
     await page.close()
   }
@@ -191,6 +199,7 @@ async function collectEnvironment({ baseUrl, browser, context, options, port }) 
       port,
       warmupIterations: options.warmupIterations,
       iterations: options.iterations,
+      timeBudgetMs: options.timeBudgetMs,
     }
   } finally {
     await page.close()
@@ -247,6 +256,7 @@ function parseArgs(args) {
     outputPath: DEFAULT_OUTPUT_PATH,
     port: null,
     scenarioNames: null,
+    timeBudgetMs: DEFAULT_TIME_BUDGET_MS,
     warmupIterations: DEFAULT_WARMUP_ITERATIONS,
   }
 
@@ -280,6 +290,11 @@ function parseArgs(args) {
 
     if (arg === "--scenario") {
       options.scenarioNames = args[++index].split(",").map((name) => name.trim()).filter(Boolean)
+      continue
+    }
+
+    if (arg === "--time-budget") {
+      options.timeBudgetMs = parsePositiveInteger(args[++index], "--time-budget")
       continue
     }
 
