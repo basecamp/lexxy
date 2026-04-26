@@ -5,7 +5,8 @@ import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
-import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html"
+import { $generateHtmlFromNodes } from "@lexical/html"
+import { $generateFilteredNodesFromDOM } from "../helpers/attachment_filter_helper"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transformer"
@@ -159,6 +160,25 @@ export class LexicalEditorElement extends HTMLElement {
     return this.dataset.blobUrlTemplate
   }
 
+  get permittedAttachmentTypes() {
+    const raw = this.config.get("permittedAttachmentTypes")
+    if (raw == null) {
+      return null
+    } else {
+      const tokens = Array.isArray(raw) ? raw : String(raw).split(/\s+/)
+      return Object.freeze(tokens.filter(t => t && t !== "false"))
+    }
+  }
+
+  permitsAttachmentContentType(contentType) {
+    if (!this.supportsAttachments) {
+      return false
+    } else {
+      const list = this.permittedAttachmentTypes
+      return list === null || list.includes(contentType)
+    }
+  }
+
   get isEmpty() {
     return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
   }
@@ -281,7 +301,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>"
-    const nodes = $generateNodesFromDOM(this.editor, parseHtml(`${html}`))
+    const nodes = $generateFilteredNodesFromDOM(this, parseHtml(`${html}`))
 
     return nodes
       .filter(this.#isNotWhitespaceOnlyNode)
@@ -313,11 +333,22 @@ export class LexicalEditorElement extends HTMLElement {
     this.#handleEnter()
     this.#registerFocusEvents()
     this.#registerHistoryEvents()
+    this.#registerFileAcceptFilter()
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#configureSanitizer()
     this.#loadInitialValue()
     this.#resetBeforeTurboCaches()
+  }
+
+  #registerFileAcceptFilter() {
+    this.#listeners.track(
+      registerEventListener(this, "lexxy:file-accept", (event) => {
+        if (!this.permitsAttachmentContentType(event.detail.file.type)) {
+          event.preventDefault()
+        }
+      })
+    )
   }
 
   #createEditor() {

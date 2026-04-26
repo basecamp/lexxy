@@ -4,7 +4,7 @@ import {
   HISTORY_MERGE_TAG, PASTE_TAG
 } from "lexical"
 
-import { $generateNodesFromDOM } from "@lexical/html"
+import { $generateFilteredNodesFromDOM } from "../helpers/attachment_filter_helper"
 import { $createCodeNode, $isCodeNode } from "@lexical/code"
 import { $createHeadingNode, $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
@@ -42,7 +42,7 @@ export default class Contents {
     this.editor.update(() => {
       if ($hasUpdateTag(PASTE_TAG)) this.#stripTableCellColorStyles(doc)
 
-      const nodes = $generateNodesFromDOM(this.editor, doc)
+      const nodes = $generateFilteredNodesFromDOM(this.editorElement, doc)
       if (!this.#insertUploadNodes(nodes)) {
         this.insertAtCursor(...nodes)
       }
@@ -591,16 +591,19 @@ export default class Contents {
 
   #createCustomAttachmentNodeWithHtml(html, options = {}) {
     const attachmentConfig = typeof options === "object" ? options : {}
-
+    const contentType = attachmentConfig.contentType || "text/html"
+    if (!this.editorElement.permitsAttachmentContentType(contentType)) {
+      return this.#createHtmlNodeWith(html)
+    }
     return new CustomActionTextAttachmentNode({
       sgid: attachmentConfig.sgid || null,
-      contentType: "text/html",
-      innerHtml: html
+      contentType,
+      innerHtml: html,
     })
   }
 
   #createHtmlNodeWith(html) {
-    const htmlNodes = $generateNodesFromDOM(this.editor, parseHtml(html))
+    const htmlNodes = $generateFilteredNodesFromDOM(this.editorElement, parseHtml(html))
     return htmlNodes[0] || $createParagraphNode()
   }
 

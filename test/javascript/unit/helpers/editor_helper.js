@@ -35,6 +35,12 @@ export async function createTestEditor(options = {}) {
     element.setAttribute("value", options.value)
   }
 
+  if (options.attributes) {
+    for (const [ name, value ] of Object.entries(options.attributes)) {
+      element.setAttribute(name, value)
+    }
+  }
+
   document.body.appendChild(element)
 
   // Wait for requestAnimationFrame callbacks (lexxy:initialize, dispatchHighlightColors)

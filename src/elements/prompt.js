@@ -6,7 +6,7 @@ import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_atta
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
 import RemoteFilterSource from "../editor/prompt/remote_filter_source"
-import { $generateNodesFromDOM } from "@lexical/html"
+import { $generateFilteredNodesFromDOM } from "../helpers/attachment_filter_helper"
 import { debounce, nextFrame } from "../helpers/timing_helpers"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
@@ -84,6 +84,8 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   #addTriggerListener() {
+    if (!this.#promptContentTypePermitted) return
+
     this.#popoverListeners.track(this.#editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
         if (this.#selection.isInsideCodeBlock) return
@@ -115,6 +117,19 @@ export class LexicalPromptElement extends HTMLElement {
         }
       })
     }))
+  }
+
+  get #promptContentTypePermitted() {
+    const el = this.#editorElement
+    if (!el.supportsAttachments) {
+      return false
+    } else {
+      const templates = Array.from(this.querySelectorAll("template[type='editor']"))
+      const types = templates.length
+        ? templates.map(t => t.getAttribute("content-type") || this.#defaultPromptContentType)
+        : [ this.#defaultPromptContentType ]
+      return types.some(t => el.permitsAttachmentContentType(t))
+    }
   }
 
   #addCursorPositionListener() {
@@ -423,7 +438,7 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   #buildEditableTextNodes(template) {
-    return $generateNodesFromDOM(this.#editor, parseHtml(`${template.innerHTML}`))
+    return $generateFilteredNodesFromDOM(this.#editorElement, parseHtml(`${template.innerHTML}`))
   }
 
   #insertTemplatesAsAttachments(templates, stringToReplace, fallbackSgid = null) {
@@ -435,8 +450,10 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   #buildAttachmentNodes(templates, fallbackSgid = null) {
-    return templates.map(
-      template => this.#buildAttachmentNode(
+    return templates
+      .filter(template => this.#editorElement.permitsAttachmentContentType(
+        template.getAttribute("content-type") || this.#defaultPromptContentType))
+      .map(template => this.#buildAttachmentNode(
         template.innerHTML,
         template.getAttribute("content-type") || this.#defaultPromptContentType,
         template.getAttribute("sgid") || fallbackSgid
