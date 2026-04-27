@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest"
 import { $setSelection } from "lexical"
-import { createTestEditor, destroyTestEditor, selectAll, setContent, tick } from "../unit/helpers/editor_helper"
+import { createMockAdapter, createTestEditor, destroyTestEditor, selectAll, setContent, tick } from "../unit/helpers/editor_helper"
 import { BrowserAdapter } from "../../../src/editor/adapters/browser_adapter"
 
 let editorElement
@@ -19,13 +19,7 @@ describe("adapter registration", () => {
   test("registerAdapter replaces the default adapter", async () => {
     editorElement = await createTestEditor()
 
-    const customAdapter = {
-      frozenLinkKey: null,
-      dispatchEditorInitialized() {},
-      dispatchAttributesChange() {},
-      freeze() {},
-      thaw() {}
-    }
+    const { adapter: customAdapter } = createMockAdapter()
 
     editorElement.registerAdapter(customAdapter)
 
@@ -37,22 +31,7 @@ describe("adapter registration", () => {
     await setContent(editorElement, "<p>hello world</p>")
     selectAll(editorElement)
 
-    const initializedPayloads = []
-    const attributesPayloads = []
-    const customAdapter = {
-      frozenLinkKey: null,
-      dispatchEditorInitialized(detail) {
-        initializedPayloads.push(detail)
-      },
-      dispatchAttributesChange(attributes, linkHref, highlight, headingTag) {
-        attributesPayloads.push({ attributes, linkHref, highlight, headingTag })
-      },
-      freeze() {},
-      thaw() {},
-      unlinkFrozenNode() {
-        return false
-      }
-    }
+    const { initialized: initializedPayloads, attrs: attributesPayloads, adapter: customAdapter } = createMockAdapter()
 
     editorElement.registerAdapter(customAdapter)
 
@@ -74,19 +53,7 @@ describe("adapter registration", () => {
   test("registerAdapter does not double-dispatch initialized before first frame", async () => {
     editorElement = await createTestEditor({ skipTick: true })
 
-    const initializedPayloads = []
-    const customAdapter = {
-      frozenLinkKey: null,
-      dispatchEditorInitialized(detail) {
-        initializedPayloads.push(detail)
-      },
-      dispatchAttributesChange() {},
-      freeze() {},
-      thaw() {},
-      unlinkFrozenNode() {
-        return false
-      }
-    }
+    const { initialized: initializedPayloads, adapter: customAdapter } = createMockAdapter()
 
     editorElement.registerAdapter(customAdapter)
     await tick()
@@ -110,22 +77,7 @@ describe("adapter registration", () => {
     })
     await tick()
 
-    const initialized = []
-    const attrs = []
-    const adapter = {
-      frozenLinkKey: null,
-      dispatchEditorInitialized(detail) {
-        initialized.push(detail)
-      },
-      dispatchAttributesChange(attributes, linkHref, highlight, headingTag) {
-        attrs.push({ attributes, linkHref, highlight, headingTag })
-      },
-      freeze() {},
-      thaw() {},
-      unlinkFrozenNode() {
-        return false
-      }
-    }
+    const { initialized, attrs, adapter } = createMockAdapter()
 
     editorElement.registerAdapter(adapter)
 
@@ -142,22 +94,7 @@ describe("adapter registration", () => {
     })
     await tick()
 
-    const initialized = []
-    const attrs = []
-    const adapter = {
-      frozenLinkKey: null,
-      dispatchEditorInitialized(detail) {
-        initialized.push(detail)
-      },
-      dispatchAttributesChange(attributes, linkHref, highlight, headingTag) {
-        attrs.push({ attributes, linkHref, highlight, headingTag })
-      },
-      freeze() {},
-      thaw() {},
-      unlinkFrozenNode() {
-        return false
-      }
-    }
+    const { initialized, attrs, adapter } = createMockAdapter()
 
     editorElement.registerAdapter(adapter)
 
@@ -168,66 +105,43 @@ describe("adapter registration", () => {
   test("replacing adapter A with adapter B routes subsequent events only to B", async () => {
     editorElement = await createTestEditor()
 
-    const initializedA = []
-    const attrsA = []
-    const adapterA = {
-      frozenLinkKey: null,
-      dispatchEditorInitialized(detail) {
-        initializedA.push(detail)
-      },
-      dispatchAttributesChange(attributes, linkHref, highlight, headingTag) {
-        attrsA.push({ attributes, linkHref, highlight, headingTag })
-      },
-      freeze() {},
-      thaw() {},
-      unlinkFrozenNode() {
-        return false
-      }
-    }
+    const { initialized: initializedA, attrs: attrsA, adapter: adapterA } = createMockAdapter()
 
     editorElement.registerAdapter(adapterA)
 
-    const initializedABaseline = initializedA.length
-    const attrsABaseline = attrsA.length
-
     await setContent(editorElement, "<p>hello world</p>")
     selectAll(editorElement)
+    // Capture baselines after async update-listener dispatches from setContent
+    // and selectAll have settled, so the next assertion isolates the explicit
+    // dispatchAttributesChange() call.
+    const attrsABaselineAfterSelect = attrsA.length
     editorElement.dispatchAttributesChange()
 
-    expect(attrsA.length).toBeGreaterThan(attrsABaseline)
+    // dispatchAttributesChange() emits exactly one attributes-change.
+    expect(attrsA.length).toBe(attrsABaselineAfterSelect + 1)
     const attrsAAfterFirstDispatch = attrsA.length
     const initializedAAfterFirstDispatch = initializedA.length
 
-    const initializedB = []
-    const attrsB = []
-    const adapterB = {
-      frozenLinkKey: null,
-      dispatchEditorInitialized(detail) {
-        initializedB.push(detail)
-      },
-      dispatchAttributesChange(attributes, linkHref, highlight, headingTag) {
-        attrsB.push({ attributes, linkHref, highlight, headingTag })
-      },
-      freeze() {},
-      thaw() {},
-      unlinkFrozenNode() {
-        return false
-      }
-    }
+    const { initialized: initializedB, attrs: attrsB, adapter: adapterB } = createMockAdapter()
 
     expect(initializedB).toHaveLength(0)
     expect(attrsB).toHaveLength(0)
 
     editorElement.registerAdapter(adapterB)
 
-    const initializedBBaseline = initializedB.length
-    const attrsBBaseline = attrsB.length
+    // registerAdapter is synchronous and emits exactly one editor-initialized
+    // plus one attributes-change (a RangeSelection exists from the selectAll).
+    expect(initializedB).toHaveLength(1)
+    expect(attrsB).toHaveLength(1)
 
     editorElement.dispatchAttributesChange()
 
+    // A is no longer the registered adapter and must not receive new events.
     expect(attrsA.length).toBe(attrsAAfterFirstDispatch)
     expect(initializedA.length).toBe(initializedAAfterFirstDispatch)
-    expect(attrsB.length).toBeGreaterThan(attrsBBaseline)
-    expect(initializedB.length).toBeGreaterThanOrEqual(initializedBBaseline)
+    // dispatchAttributesChange() emits exactly one attributes-change on B
+    // and zero editor-initialized.
+    expect(attrsB).toHaveLength(2)
+    expect(initializedB).toHaveLength(1)
   })
 })
