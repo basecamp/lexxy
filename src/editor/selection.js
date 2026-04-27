@@ -208,6 +208,11 @@ export default class Selection {
     return $isActionTextAttachmentNode(firstNode) && firstNode.isPreviewableImage
   }
 
+  get isAtNodeStart() {
+    const { anchorNode, offset } = this.#getCollapsedSelectionData()
+    return anchorNode && offset === 0
+  }
+
   get nodeAfterCursor() {
     const { anchorNode, offset } = this.#getCollapsedSelectionData()
     if (!anchorNode) return null
