@@ -5,16 +5,18 @@ export class ToolbarDropdown extends HTMLElement {
   #listeners = new ListenerBin()
 
   connectedCallback() {
+    this.#onToolbarEditor(this.initialize.bind(this))
+
     this.container = this.closest(".lexxy-editor__toolbar-dropdown")
     this.trigger = this.container?.querySelector("[aria-haspopup='menu']")
 
-    this.#listeners.track(
-      registerEventListener(this.trigger, "click", this.#handleTriggerClick),
-      registerEventListener(this.container, "lexxy:toolbar-dropdown-toggle", this.#handleToggle),
-      registerEventListener(this.container, "keydown", this.#handleKeyDown)
-    )
+    if (!this.container || !this.trigger) return
 
-    this.#onToolbarEditor(this.initialize.bind(this))
+    this.#listeners.track(
+      registerEventListener(this.container, "lexxy:toolbar-dropdown-toggle", this.#handleToggle),
+      registerEventListener(this.container, "keydown", this.#handleKeyDown),
+      registerEventListener(this.trigger, "click", this.#handleTriggerClick)
+    )
   }
 
   disconnectedCallback() {
