@@ -1,11 +1,11 @@
 import { $createParagraphNode, $getSelection, $isRangeSelection, $splitNode, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, INSERT_PARAGRAPH_COMMAND, KEY_ARROW_DOWN_COMMAND, ParagraphNode, defineExtension } from "lexical"
 import { CodeNode } from "@lexical/code"
 import { ListItemNode } from "@lexical/list"
-import { $isQuoteNode } from "@lexical/rich-text"
+import { $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType, mergeRegister } from "@lexical/utils"
 import { EarlyEscapeCodeNode } from "../nodes/early_escape_code_node"
 import { EarlyEscapeListItemNode } from "../nodes/early_escape_list_item_node"
-import { $isBlankNode, $isCursorOnLastLine, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
+import { $containsRangeSelection, $isBlankNode, $isCursorOnLastLine, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
 import LexxyExtension from "./lexxy_extension"
 
 export class FormatEscapeExtension extends LexxyExtension {
@@ -38,7 +38,8 @@ export class FormatEscapeExtension extends LexxyExtension {
             KEY_ARROW_DOWN_COMMAND,
             (event) => $handleArrowDownInCodeBlock(event),
             COMMAND_PRIORITY_NORMAL
-          )
+          ),
+          editor.registerNodeTransform(QuoteNode, $ensureQuoteHasParagraphChild)
         )
       }
     })
@@ -89,4 +90,11 @@ function $handleArrowDownInCodeBlock(event) {
   }
 
   return false
+}
+
+function $ensureQuoteHasParagraphChild(quoteNode) {
+  if (!quoteNode.isEmpty()) return
+
+  quoteNode.append($createParagraphNode())
+  if ($containsRangeSelection(quoteNode)) quoteNode.getFirstChild().select()
 }

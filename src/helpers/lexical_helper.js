@@ -1,10 +1,19 @@
-import { $createNodeSelection, $createParagraphNode, $getSiblingCaret, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isParagraphNode, $isRootNode, $isRootOrShadowRoot, $isTextNode, $splitNode, LineBreakNode, TextNode } from "lexical"
+import { $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCommonAncestor, $getSelection, $getSiblingCaret, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $splitNode, LineBreakNode, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
 import { $ensureForwardRangeSelection, $isAtNodeEnd } from "@lexical/selection"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
+
+export function $containsRangeSelection(node, selection = $getSelection()) {
+  if ($isRangeSelection(selection)) {
+    const { commonAncestor } = $getCommonAncestor(selection.focus.getNode(), selection.anchor.getNode())
+    return $findMatchingParent(commonAncestor, parent => parent.is(node))
+  } else {
+    return false
+  }
+}
 
 export function $createNodeSelectionWith(...nodes) {
   const selection = $createNodeSelection()
