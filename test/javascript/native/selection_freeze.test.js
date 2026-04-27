@@ -103,6 +103,81 @@ describe("selection freeze and thaw", () => {
     expect(handled).toBe(false)
   })
 
+  test("unlinkFrozenNode unwraps the link even when no RangeSelection is present", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p><a href='https://example.com'>link text</a></p>")
+
+    let handled = false
+    editorElement.editor.update(() => {
+      const root = $getRoot()
+      const linkNode = root.getFirstDescendant().getParent()
+      editorElement.adapter.frozenLinkKey = linkNode.getKey()
+      $setSelection(null)
+      handled = editorElement.adapter.unlinkFrozenNode()
+    })
+    await tick()
+
+    expect(handled).toBe(true)
+    expect(editorElement.value).not.toContain("<a ")
+    expect(editorElement.adapter.frozenLinkKey).toBeNull()
+    expect(editorElement.editor.getEditorState().read(() => $getRoot().getTextContent())).toBe("link text")
+  })
+
+  test("calling freezeSelection twice replaces the captured frozen link key", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p><a href='https://a.example'>A</a> <a href='https://b.example'>B</a></p>")
+
+    let textInAKey = null
+    let textInBKey = null
+    editorElement.editor.getEditorState().read(() => {
+      const paragraph = $getRoot().getFirstChild()
+      const children = paragraph.getChildren()
+      textInAKey = children[0].getFirstDescendant().getKey()
+      textInBKey = children[children.length - 1].getFirstDescendant().getKey()
+    })
+
+    editorElement.editor.update(() => {
+      const selection = $createRangeSelection()
+      selection.anchor.set(textInAKey, 0, "text")
+      selection.focus.set(textInAKey, 1, "text")
+      $setSelection(selection)
+    })
+    await tick()
+
+    editorElement.freezeSelection()
+    const keyA = editorElement.adapter.frozenLinkKey
+
+    editorElement.thawSelection()
+
+    editorElement.editor.update(() => {
+      const selection = $createRangeSelection()
+      selection.anchor.set(textInBKey, 0, "text")
+      selection.focus.set(textInBKey, 1, "text")
+      $setSelection(selection)
+    })
+    await tick()
+
+    editorElement.freezeSelection()
+    const keyB = editorElement.adapter.frozenLinkKey
+
+    expect(keyA).not.toBeNull()
+    expect(keyB).not.toBeNull()
+    expect(keyA).not.toBe(keyB)
+  })
+
+  test("thawSelection without a prior freeze leaves contentEditable enabled", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p>hello</p>")
+
+    // Baseline: contentEditable has not been frozen, so it is not "false".
+    expect(editorElement.editorContentElement.contentEditable).not.toBe("false")
+
+    editorElement.thawSelection()
+
+    expect(editorElement.editorContentElement.contentEditable).toBe("true")
+    expect(editorElement.adapter.frozenLinkKey).toBeNull()
+  })
+
   test("unlinkFrozenNode handles links without text descendants", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
 
