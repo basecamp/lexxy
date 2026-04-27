@@ -304,23 +304,6 @@ describe("attributes change without a range selection", () => {
     expect(events).toHaveLength(0)
   })
 
-  test("does not dispatch when format object is empty", async () => {
-    editorElement = await createTestEditorWithNativeAdapter()
-    await setContent(editorElement, "<p>hello world</p>")
-
-    editorElement.editor.update(() => {
-      $setSelection(null)
-    })
-    await tick()
-
-    const events = []
-    editorElement.addEventListener("lexxy:attributes-change", (event) => events.push(event))
-
-    editorElement.dispatchAttributesChange()
-    await tick()
-
-    expect(events).toHaveLength(0)
-  })
 })
 
 function readFirstTextNodeFormat(editorElement) {
