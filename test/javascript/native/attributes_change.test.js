@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest"
-import { $getRoot, $setSelection } from "lexical"
+import { $getRoot, $setSelection, FORMAT_TEXT_COMMAND } from "lexical"
+import { TOGGLE_HIGHLIGHT_COMMAND } from "../../../src/extensions/highlight_extension"
 import { createTestEditorWithNativeAdapter, destroyTestEditor, setContent, selectAll, captureEvent, tick } from "../unit/helpers/editor_helper"
 
 let editorElement
@@ -197,6 +198,73 @@ describe("attributes change event", () => {
     await setContent(editorElement, "<p><s>struck</s></p>")
     format = readFirstTextNodeFormat(editorElement)
     expect(format & 4).toBe(4) // strikethrough bit
+  })
+})
+
+describe("attributes change for formatting combinations", () => {
+  test("reports bold + italic both active when wrapping the same text", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p>x</p>")
+    selectAll(editorElement)
+    editorElement.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")
+    editorElement.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")
+    await tick()
+
+    const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
+      editorElement.dispatchAttributesChange()
+    })
+
+    expect(event.detail.attributes.bold.active).toBe(true)
+    expect(event.detail.attributes.italic.active).toBe(true)
+  })
+
+  test("reports bold + link active for bold text inside a link", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p><a href='https://example.com'>x</a></p>")
+    selectAll(editorElement)
+    editorElement.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")
+    await tick()
+
+    const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
+      editorElement.dispatchAttributesChange()
+    })
+
+    expect(event.detail.attributes.bold.active).toBe(true)
+    expect(event.detail.attributes.link.active).toBe(true)
+    expect(event.detail.link.href).toBe("https://example.com")
+  })
+
+  test("reports code + highlight when both apply", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p>x</p>")
+    selectAll(editorElement)
+    editorElement.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
+    editorElement.editor.dispatchCommand(TOGGLE_HIGHLIGHT_COMMAND, { color: "red" })
+    await tick()
+
+    const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
+      editorElement.dispatchAttributesChange()
+    })
+
+    expect(event.detail.attributes.code.active).toBe(true)
+    expect(event.detail.attributes.highlight.active).toBe(true)
+    expect(event.detail.highlight).toBeTruthy()
+  })
+
+  test("reports heading + bold active for bold text inside an h2", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<h2>x</h2>")
+    selectAll(editorElement)
+    editorElement.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")
+    await tick()
+
+    const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
+      editorElement.dispatchAttributesChange()
+    })
+
+    expect(event.detail.attributes.bold.active).toBe(true)
+    expect(event.detail.attributes.heading.active).toBe(true)
+    expect(event.detail.headingTag).toBe("h2")
   })
 })
 
