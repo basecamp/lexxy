@@ -1,11 +1,11 @@
 export const HELLO_EVERYONE = "<p>Hello everyone</p>"
 
 export async function openFormatDropdown(page) {
-  await page.evaluate(() => {
-    const details = document.querySelector("summary[name='format']").closest("details")
-    details.open = true
-    details.dispatchEvent(new Event("toggle"))
-  })
+  await openToolbarDropdown(page, "format")
+}
+
+export async function openToolbarDropdown(page, name) {
+  await page.locator(`button[name='${name}'][aria-haspopup='menu']`).click()
 }
 
 const FORMAT_DROPDOWN_COMMANDS = new Set([
