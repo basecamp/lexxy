@@ -28,11 +28,11 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   get editorElement() {
-    return this.toolbar.editorElement
+    return this.toolbar?.editorElement
   }
 
   get editor() {
-    return this.toolbar.editor
+    return this.toolbar?.editor
   }
 
   get isOpen() {
@@ -72,8 +72,11 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   async #onToolbarEditor(callback) {
-    await this.toolbar.editorElement
-    callback()
+    const toolbar = this.toolbar
+    if (!toolbar) return
+
+    await toolbar.getEditorElement()
+    if (this.isConnected && this.toolbar === toolbar) callback()
   }
 
   #handleToggle = (event) => {
