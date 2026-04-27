@@ -327,7 +327,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   get #dropdowns() {
-    return this.querySelectorAll(":scope .lexxy-editor__toolbar-dropdown > [role='menu']")
+    return this.querySelectorAll(":scope [role='menu'], :scope [role='dialog']")
   }
 
   get #overflow() {
@@ -413,13 +413,13 @@ export class LexicalToolbarElement extends HTMLElement {
 
       <div class="lexxy-editor__toolbar-dropdown">
         <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="link"
-                aria-haspopup="menu" aria-expanded="false" title="Link" data-hotkey="cmd+k ctrl+k">
+                aria-haspopup="dialog" aria-expanded="false" title="Link" data-hotkey="cmd+k ctrl+k">
           ${ToolbarIcons.link}
         </button>
-        <lexxy-link-dropdown role="menu" hidden>
+        <lexxy-link-dropdown role="dialog" hidden>
           <input type="url" placeholder="Enter a URL…" class="input" name="lexxy-link-url">
           <div class="lexxy-editor__toolbar-dropdown-actions">
-            <button type="button" class="lexxy-editor__toolbar-button" value="link">Link</button>
+            <button type="button" class="lexxy-editor__toolbar-button" value="link" >Link</button>
             <button type="button" class="lexxy-editor__toolbar-button" value="unlink">Unlink</button>
           </div>
         </lexxy-link-dropdown>

@@ -8,7 +8,7 @@ export class ToolbarDropdown extends HTMLElement {
     this.#onToolbarEditor(this.initialize.bind(this))
 
     this.container = this.closest(".lexxy-editor__toolbar-dropdown")
-    this.trigger = this.container?.querySelector("[aria-haspopup='menu']")
+    this.trigger = this.container?.querySelector("button")
 
     if (!this.container || !this.trigger) return
 
