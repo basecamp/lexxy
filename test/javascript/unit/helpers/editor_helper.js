@@ -63,6 +63,20 @@ export async function destroyTestEditor(element) {
   await tick()
 }
 
+// Simulates the native-app kill/resume cycle: detach the element from the DOM
+// (firing disconnectedCallback / #reset), then re-attach it to fire
+// connectedCallback. Returns the same element. Awaits a tick so the
+// post-reconnect requestAnimationFrame settles.
+export async function recreateEditor(element) {
+  const parent = element.parentNode
+  const nextSibling = element.nextSibling
+  element.remove()
+  await tick()
+  parent.insertBefore(element, nextSibling)
+  await tick()
+  return element
+}
+
 export async function setContent(editorElement, html) {
   editorElement.value = html
   await tick()

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest"
-import { $getRoot } from "lexical"
-import { createTestEditorWithNativeAdapter, destroyTestEditor, setContent, selectAll, captureEvent } from "../unit/helpers/editor_helper"
+import { $getRoot, $setSelection } from "lexical"
+import { createTestEditorWithNativeAdapter, destroyTestEditor, setContent, selectAll, captureEvent, tick } from "../unit/helpers/editor_helper"
 
 let editorElement
 
@@ -145,6 +145,61 @@ describe("attributes change event", () => {
     await setContent(editorElement, "<p><s>struck</s></p>")
     format = readFirstTextNodeFormat(editorElement)
     expect(format & 4).toBe(4) // strikethrough bit
+  })
+})
+
+describe("attributes change without a range selection", () => {
+  test("does not dispatch attributes-change for a freshly created editor with no selection", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    // Drop any selection that may have been set during initialization.
+    editorElement.editor.update(() => {
+      $setSelection(null)
+    })
+    await tick()
+
+    const events = []
+    editorElement.addEventListener("lexxy:attributes-change", (event) => events.push(event))
+
+    editorElement.dispatchAttributesChange()
+    await tick()
+
+    expect(events).toHaveLength(0)
+  })
+
+  test("does not dispatch attributes-change after setContent without selectAll", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p>hello world</p>")
+    // jsdom may leave a selection at end-of-content after setContent; clear it.
+    editorElement.editor.update(() => {
+      $setSelection(null)
+    })
+    await tick()
+
+    const events = []
+    editorElement.addEventListener("lexxy:attributes-change", (event) => events.push(event))
+
+    editorElement.dispatchAttributesChange()
+    await tick()
+
+    expect(events).toHaveLength(0)
+  })
+
+  test("does not dispatch when format object is empty", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p>hello world</p>")
+
+    editorElement.editor.update(() => {
+      $setSelection(null)
+    })
+    await tick()
+
+    const events = []
+    editorElement.addEventListener("lexxy:attributes-change", (event) => events.push(event))
+
+    editorElement.dispatchAttributesChange()
+    await tick()
+
+    expect(events).toHaveLength(0)
   })
 })
 
