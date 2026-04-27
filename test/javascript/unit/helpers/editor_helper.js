@@ -110,6 +110,25 @@ export function captureEvent(element, eventName, fn) {
   })
 }
 
+export function createMockAdapter() {
+  const initialized = []
+  const attrs = []
+  return {
+    initialized,
+    attrs,
+    adapter: {
+      frozenLinkKey: null,
+      dispatchEditorInitialized(detail) { initialized.push(detail) },
+      dispatchAttributesChange(attributes, linkHref, highlight, headingTag) {
+        attrs.push({ attributes, linkHref, highlight, headingTag })
+      },
+      freeze() {},
+      thaw() {},
+      unlinkFrozenNode() { return false },
+    }
+  }
+}
+
 export function tick() {
   // jsdom implements requestAnimationFrame as setTimeout(cb, ~16ms).
   // We need to wait for RAFs to fire (e.g., from connectedCallback, value setter).
