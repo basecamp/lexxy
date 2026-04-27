@@ -206,6 +206,9 @@ describe("attributes change for formatting combinations", () => {
     editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p>x</p>")
     selectAll(editorElement)
+    // Apply bold via FORMAT_TEXT_COMMAND, not via <strong> in the HTML —
+    // selection.hasFormat() reads the selection's format register, not
+    // TextNode flags, so HTML-applied bold won't satisfy the assertion.
     editorElement.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold")
     editorElement.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic")
     await tick()
