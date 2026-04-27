@@ -73,6 +73,9 @@ export async function recreateEditor(element) {
   element.remove()
   await tick()
   parent.insertBefore(element, nextSibling)
+  // connectedCallback schedules editor-initialized via RAF; one tick flushes
+  // the RAF, a second flushes any work it scheduled.
+  await tick()
   await tick()
   return element
 }
