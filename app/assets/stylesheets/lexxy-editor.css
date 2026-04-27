@@ -525,7 +525,7 @@
   -webkit-user-select: none;
 
   &.lexxy-editor__toolbar-dropdown--chevron {
-    summary {
+    > .lexxy-editor__toolbar-button {
       aspect-ratio: unset;
       gap: 0.5ch;
       grid-template-columns: 2fr 1fr;
@@ -543,7 +543,7 @@
     }
   }
 
-  summary ~ * {
+  [role="menu"] {
     background-color: var(--lexxy-color-canvas);
     border: 2px solid var(--lexxy-color-selected-hover);
     border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
@@ -556,9 +556,13 @@
     padding: var(--lexxy-toolbar-spacing);
     position: absolute;
     z-index: 3;
+
+    &[hidden] {
+      display: none;
+    }
   }
 
-  &:is([open]) > .lexxy-editor__toolbar-button {
+  > .lexxy-editor__toolbar-button[aria-expanded="true"] {
     background-color: var(--lexxy-color-selected-hover);
     border-end-end-radius: 0;
     border-end-start-radius: 0;
@@ -568,7 +572,7 @@
     }
   }
 
-  button {
+  .lexxy-editor__toolbar-button {
     color: var(--lexxy-color-text);
 
     &:hover {
@@ -576,7 +580,7 @@
     }
   }
 
-  .lexxy-editor__toolbar-dropdown-list {
+  .lexxy-editor__toolbar-dropdown-list[role="menu"]:not([hidden]) {
     border-start-start-radius: 0;
     flex-direction: column;
     padding: 0.1ch;
@@ -634,7 +638,7 @@
     justify-self: flex-end;
     z-index: 1;
 
-    summary ~ * {
+    [role="menu"]:not([hidden]) {
       border-start-end-radius: 0;
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -652,7 +656,7 @@
     inset-inline-start: var(--lexxy-toolbar-spacing);
     inset-inline-end: var(--lexxy-toolbar-spacing);
 
-    [overflowing] [open] & {
+    [overflowing] &[role="menu"]:not([hidden]) {
       display: block;
 
       .lexxy-editor__toolbar-dropdown-actions {
@@ -710,7 +714,7 @@
     }
   }
 
-  lexxy-highlight-dropdown {
+  lexxy-highlight-dropdown[role="menu"]:not([hidden]) {
     --max-inline-size: calc(var(--max-colors) * (var(--lexxy-toolbar-button-size) + var(--lexxy-toolbar-spacing)));
     border-start-start-radius: 0;
     display: flex;
@@ -721,6 +725,7 @@
     max-inline-size: var(--max-inline-size);
 
     [overflowing] & {
+      border-start-start-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
       inset-inline-end: var(--lexxy-toolbar-spacing);
       inset-inline-start: var(--lexxy-toolbar-spacing);
     }

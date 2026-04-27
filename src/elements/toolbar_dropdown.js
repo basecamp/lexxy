@@ -5,10 +5,12 @@ export class ToolbarDropdown extends HTMLElement {
   #listeners = new ListenerBin()
 
   connectedCallback() {
-    this.container = this.closest("details")
+    this.container = this.closest(".lexxy-editor__toolbar-dropdown")
+    this.trigger = this.container?.querySelector("[aria-haspopup='menu']")
 
     this.#listeners.track(
-      registerEventListener(this.container, "toggle", this.#handleToggle),
+      registerEventListener(this.trigger, "click", this.#handleTriggerClick),
+      registerEventListener(this.container, "lexxy:toolbar-dropdown-toggle", this.#handleToggle),
       registerEventListener(this.container, "keydown", this.#handleKeyDown)
     )
 
@@ -31,6 +33,10 @@ export class ToolbarDropdown extends HTMLElement {
     return this.toolbar.editor
   }
 
+  get isOpen() {
+    return this.trigger?.getAttribute("aria-expanded") === "true"
+  }
+
   track(...listeners) {
     this.#listeners.track(...listeners)
   }
@@ -39,9 +45,28 @@ export class ToolbarDropdown extends HTMLElement {
     // Any post-editor initialization
   }
 
-  close() {
-    this.editor.focus()
-    this.container.open = false
+  open() {
+    if (!this.trigger || this.isOpen) return
+    this.trigger.setAttribute("aria-expanded", "true")
+    this.hidden = false
+    this.#dispatchToggle("open")
+  }
+
+  close({ focusEditor = true } = {}) {
+    if (focusEditor) this.editor?.focus()
+    if (!this.trigger || !this.isOpen) return
+    this.trigger.setAttribute("aria-expanded", "false")
+    this.hidden = true
+    this.#dispatchToggle("closed")
+  }
+
+  #handleTriggerClick = () => {
+    if (this.isOpen) {
+      this.close({ focusEditor: false })
+    } else {
+      this.toolbar?.closeDropdowns({ except: this })
+      this.open()
+    }
   }
 
   async #onToolbarEditor(callback) {
@@ -49,8 +74,8 @@ export class ToolbarDropdown extends HTMLElement {
     callback()
   }
 
-  #handleToggle = () => {
-    if (this.container.open) {
+  #handleToggle = (event) => {
+    if (event.detail?.newState === "open") {
       this.#handleOpen()
     }
   }
@@ -72,6 +97,13 @@ export class ToolbarDropdown extends HTMLElement {
     this.#buttons.forEach((element, index) => {
       element.setAttribute("tabindex", index === 0 ? 0 : "-1")
     })
+  }
+
+  #dispatchToggle(newState) {
+    this.container.dispatchEvent(new CustomEvent("lexxy:toolbar-dropdown-toggle", {
+      bubbles: true,
+      detail: { newState }
+    }))
   }
 
   get #interactiveElements() {

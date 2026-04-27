@@ -19,7 +19,7 @@ export class HighlightDropdown extends ToolbarDropdown {
 
   connectedCallback() {
     super.connectedCallback()
-    this.track(registerEventListener(this.container, "toggle", this.#handleToggle))
+    this.track(registerEventListener(this.container, "lexxy:toolbar-dropdown-toggle", this.#handleToggle))
   }
 
   #registerButtonHandlers() {
@@ -57,7 +57,7 @@ export class HighlightDropdown extends ToolbarDropdown {
     return button
   }
 
-  #handleToggle = ({ newState }) => {
+  #handleToggle = ({ detail: { newState } }) => {
     if (newState === "open") {
       this.editor.getEditorState().read(() => {
         this.#updateColorButtonStates($getSelection())
