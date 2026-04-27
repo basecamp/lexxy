@@ -548,7 +548,8 @@
     }
   }
 
-  [role="menu"] {
+  [role="menu"],
+  [role="dialog"] {
     background-color: var(--lexxy-color-canvas);
     border: 2px solid var(--lexxy-color-selected-hover);
     border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
@@ -661,7 +662,7 @@
     inset-inline-start: var(--lexxy-toolbar-spacing);
     inset-inline-end: var(--lexxy-toolbar-spacing);
 
-    [overflowing] &[role="menu"]:not([hidden]) {
+    [overflowing] &[role="dialog"]:not([hidden]) {
       display: block;
 
       .lexxy-editor__toolbar-dropdown-actions {

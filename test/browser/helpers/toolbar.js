@@ -5,7 +5,7 @@ export async function openFormatDropdown(page) {
 }
 
 export async function openToolbarDropdown(page, name) {
-  await page.locator(`button[name='${name}'][aria-haspopup='menu']`).click()
+  await page.locator(`button[name='${name}']`).click()
 }
 
 const FORMAT_DROPDOWN_COMMANDS = new Set([
