@@ -115,6 +115,58 @@ describe("attributes change event", () => {
     expect(event.detail.headingTag).toBe("h2")
   })
 
+  test("reports h3 heading tag", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<h3>medium</h3>")
+    selectAll(editorElement)
+
+    const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
+      editorElement.dispatchAttributesChange()
+    })
+
+    expect(event.detail.attributes.heading.active).toBe(true)
+    expect(event.detail.headingTag).toBe("h3")
+  })
+
+  test("reports h4 heading tag", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<h4>small</h4>")
+    selectAll(editorElement)
+
+    const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
+      editorElement.dispatchAttributesChange()
+    })
+
+    expect(event.detail.attributes.heading.active).toBe(true)
+    expect(event.detail.headingTag).toBe("h4")
+  })
+
+  test("reports unordered-list as active when cursor is in a <ul>", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<ul><li>item</li></ul>")
+    selectAll(editorElement)
+
+    const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
+      editorElement.dispatchAttributesChange()
+    })
+
+    expect(event.detail.attributes["unordered-list"].active).toBe(true)
+    expect(event.detail.attributes["ordered-list"].active).toBe(false)
+  })
+
+  test("reports ordered-list as active when cursor is in an <ol>", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<ol><li>item</li></ol>")
+    selectAll(editorElement)
+
+    const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
+      editorElement.dispatchAttributesChange()
+    })
+
+    expect(event.detail.attributes["ordered-list"].active).toBe(true)
+    expect(event.detail.attributes["unordered-list"].active).toBe(false)
+  })
+
   test("includes undo/redo state", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p>hello</p>")
