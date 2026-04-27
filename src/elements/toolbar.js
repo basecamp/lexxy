@@ -320,7 +320,7 @@ export class LexicalToolbarElement extends HTMLElement {
 
   closeDropdowns({ except } = {}) {
     this.#dropdowns.forEach((dropdown) => {
-      if (dropdown !== except && typeof dropdown.close === "function") {
+      if (dropdown !== except) {
         dropdown.close({ focusEditor: false })
       }
     })
