@@ -9,7 +9,7 @@ export class LinkDropdown extends ToolbarDropdown {
     this.input = this.querySelector("input")
 
     this.track(
-      registerEventListener(this.container, "toggle", this.#handleToggle),
+      registerEventListener(this.container, "lexxy:toolbar-dropdown-toggle", this.#handleToggle),
       registerEventListener(this.input, "keydown", this.#handleEnter),
       registerEventListener(this.linkButton, "click", this.#handleLink),
       registerEventListener(this.unlinkButton, "click", this.#handleUnlink)
@@ -24,7 +24,7 @@ export class LinkDropdown extends ToolbarDropdown {
     return this.querySelector("[value='unlink']")
   }
 
-  #handleToggle = ({ newState }) => {
+  #handleToggle = ({ detail: { newState } }) => {
     this.input.value = this.#selectedLinkUrl
     this.input.required = newState === "open"
   }
