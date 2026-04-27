@@ -12,6 +12,7 @@
   border: 1px solid var(--lexxy-color-ink-lighter);
   border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
   background-color: var(--lexxy-color-canvas);
+  container-type: inline-size;
   display: block;
   overflow: visible;
   position: relative;
@@ -446,6 +447,10 @@
   max-inline-size: 100%;
   padding: 2px;
   position: relative;
+
+  @container (width < 300px) {
+    font-size: 0.8em;
+  }
 
   &[data-attachments="false"] button[name="image"],
   &[data-attachments="false"] button[name="file"] {
