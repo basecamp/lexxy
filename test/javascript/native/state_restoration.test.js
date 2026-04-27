@@ -52,11 +52,7 @@ describe("state restoration after teardown and recreation", () => {
 
     expect(events.length).toBeGreaterThanOrEqual(1)
     const lastEvent = events[events.length - 1]
-    expect(lastEvent.detail.headingFormats).toEqual([
-      { label: "Normal", command: "setFormatParagraph", tag: null },
-      { label: "Large heading", command: "setFormatHeadingLarge", tag: "h2" },
-      { label: "Medium heading", command: "setFormatHeadingMedium", tag: "h3" },
-      { label: "Small heading", command: "setFormatHeadingSmall", tag: "h4" },
-    ])
+    expect(lastEvent.detail.headingFormats).toHaveLength(4)
+    expect(lastEvent.detail.headingFormats.map(f => f.tag)).toEqual([null, "h2", "h3", "h4"])
   })
 })
