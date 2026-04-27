@@ -54,6 +54,7 @@ export class HighlightDropdown extends ToolbarDropdown {
     button.dataset.value = value
     button.classList.add("lexxy-editor__toolbar-button", "lexxy-highlight-button")
     button.name = attribute + "-" + index
+    button.role = "menuitem"
     return button
   }
 

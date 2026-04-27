@@ -374,27 +374,27 @@ export class LexicalToolbarElement extends HTMLElement {
           ${ToolbarIcons.heading}
         </button>
         <lexxy-toolbar-dropdown role="menu" class="lexxy-editor__toolbar-dropdown-list" hidden>
-          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph">
+          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph" role="menuitem">
             ${ToolbarIcons.paragraph} <span>Normal</span>
           </button>
-          <button type="button" name="heading-large" data-command="setFormatHeadingLarge" title="Large heading">
+          <button type="button" name="heading-large" data-command="setFormatHeadingLarge" title="Large heading" role="menuitem">
             ${ToolbarIcons.h2} <span>Large Heading</span>
           </button>
-          <button type="button" name="heading-medium" data-command="setFormatHeadingMedium" title="Medium heading">
+          <button type="button" name="heading-medium" data-command="setFormatHeadingMedium" title="Medium heading" role="menuitem">
             ${ToolbarIcons.h3} <span>Medium Heading</span>
           </button>
-          <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading">
+          <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading" role="menuitem">
             ${ToolbarIcons.h4} <span>Small Heading</span>
           </button>
           <div class="lexxy-editor__toolbar-separator" role="separator"></div>
-          <button type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
+          <button type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough" role="menuitem">
             ${ToolbarIcons.strikethrough} <span>Strikethrough</span>
           </button>
-          <button type="button" name="underline" data-command="underline" title="Underline">
+          <button type="button" name="underline" data-command="underline" title="Underline" role="menuitem">
             ${ToolbarIcons.underline} <span>Underline</span>
           </button>
           <div class="lexxy-editor__toolbar-separator" role="separator"></div>
-          <button type="button" name="clear-formatting" data-command="clearFormatting" title="Clear formatting">
+          <button type="button" name="clear-formatting" data-command="clearFormatting" title="Clear formatting" role="menuitem">
             ${ToolbarIcons.clearFormatting} <span>Clear formatting</span>
           </button>
         </lexxy-toolbar-dropdown>
@@ -407,7 +407,7 @@ export class LexicalToolbarElement extends HTMLElement {
         </button>
         <lexxy-highlight-dropdown role="menu" hidden>
           <div class="lexxy-highlight-colors"></div>
-          <button data-command="removeHighlight" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset">Remove all coloring</button>
+          <button data-command="removeHighlight" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset" role="menuitem">Remove all coloring</button>
         </lexxy-highlight-dropdown>
       </div>
 
