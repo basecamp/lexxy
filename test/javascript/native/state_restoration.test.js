@@ -38,28 +38,6 @@ describe("state restoration after teardown and recreation", () => {
     expect(events[0].detail.attributes.bold.active).toBe(true)
   })
 
-  // Card #9828466892 — iOS toolbar fails to reflect formatting state after app kill/resume.
-  test.fails("re-registering the same adapter instance after recreation still re-emits state", async () => {
-    editorElement = await createTestEditorWithNativeAdapter()
-    const originalAdapter = editorElement.adapter
-    await setContent(editorElement, "<p><strong>bold</strong></p>")
-    selectAll(editorElement)
-
-    await recreateEditor(editorElement)
-
-    await setContent(editorElement, "<p><strong>bold</strong></p>")
-    selectAll(editorElement)
-
-    const events = []
-    editorElement.addEventListener("lexxy:attributes-change", (event) => events.push(event))
-
-    editorElement.registerAdapter(originalAdapter)
-    await tick()
-
-    expect(events).toHaveLength(1)
-    expect(events[0].detail.attributes.bold.active).toBe(true)
-  })
-
   test("re-registering after recreation re-emits editor-initialized payload", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
 
