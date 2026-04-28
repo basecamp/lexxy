@@ -97,7 +97,14 @@ test.describe("Paste into quote", () => {
     // unlike the toolbar button which wraps an existing paragraph.
     await editor.click()
     await editor.send("> ")
-    await editor.flush()
+    // Wait for the QuoteNode transform to add the <p> child before pasting,
+    // otherwise the paste can race the transform and escape the quote.
+    await expect
+      .poll(async () => {
+        await editor.flush()
+        return await editor.value()
+      })
+      .toBe("<blockquote><p><br></p></blockquote>")
 
     await editor.paste("First paragraph\nSecond paragraph", {
       html: "<p>First paragraph</p><p>Second paragraph</p>",
