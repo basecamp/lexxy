@@ -554,7 +554,7 @@
     }
   }
 
-  &[aria-expanded="true"] > .lexxy-editor__toolbar-button {
+  > .lexxy-editor__toolbar-button[aria-expanded="true"] {
     background-color: var(--lexxy-color-selected-hover);
     border-end-end-radius: 0;
     border-end-start-radius: 0;

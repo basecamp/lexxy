@@ -285,6 +285,7 @@ export class LexicalToolbarElement extends HTMLElement {
     const overflowButtons = buttons.slice(overflowIndex).reverse()
     for (const button of overflowButtons) {
       this.#overflowMenu.prepend(button)
+      button.role = "menuitem"
     }
   }
 
@@ -294,6 +295,7 @@ export class LexicalToolbarElement extends HTMLElement {
 
     for (const item of items) {
       const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.#overflow
+      item.removeAttribute("role")
       this.insertBefore(item, nextItem)
     }
   }
@@ -360,8 +362,8 @@ export class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.italic}
       </button>
 
-      <lexxy-toolbar-dropdown aria-expanded="false">
-        <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="format" data-dropdown-trigger aria-haspopup="menu" title="Text formatting">
+      <lexxy-toolbar-dropdown>
+        <button data-dropdown-trigger class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="format" title="Text formatting" aria-haspopup="menu" aria-expanded="false">
           ${ToolbarIcons.heading}
         </button>
         <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-dropdown-list" hidden>
@@ -391,8 +393,8 @@ export class LexicalToolbarElement extends HTMLElement {
         </div>
       </lexxy-toolbar-dropdown>
 
-      <lexxy-toolbar-dropdown data-content="highlight" aria-expanded="false">
-        <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="highlight" data-dropdown-trigger aria-haspopup="menu" title="Color highlight">
+      <lexxy-toolbar-dropdown data-content="highlight">
+        <button data-dropdown-trigger class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="highlight" title="Color highlight" aria-haspopup="menu" aria-expanded="false">
           ${ToolbarIcons.highlight}
         </button>
         <div data-dropdown-panel role="menu" hidden>
@@ -401,12 +403,12 @@ export class LexicalToolbarElement extends HTMLElement {
         </div>
       </lexxy-toolbar-dropdown>
 
-      <lexxy-toolbar-dropdown data-content="link" aria-expanded="false">
-        <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="link" data-dropdown-trigger aria-haspopup="dialog" title="Link" data-hotkey="cmd+k ctrl+k">
+      <lexxy-toolbar-dropdown data-content="link">
+        <button data-dropdown-trigger class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="link" title="Link" data-hotkey="cmd+k ctrl+k" aria-haspopup="dialog" aria-expanded="false">
           ${ToolbarIcons.link}
         </button>
         <div data-dropdown-panel role="dialog" hidden>
-          <input type="url" placeholder="Enter a URL…" class="input" name="lexxy-link-url">
+          <input type="url" placeholder="Enter a URL…" class="input" id="lexxy-link-url">
           <div class="lexxy-editor__toolbar-dropdown-actions">
             <button type="button" class="lexxy-editor__toolbar-button" value="link" >Link</button>
             <button type="button" class="lexxy-editor__toolbar-button" value="unlink">Unlink</button>
@@ -448,7 +450,7 @@ export class LexicalToolbarElement extends HTMLElement {
       </button>
 
       <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-overflow">
-        <button class="lexxy-editor__toolbar-button" type="button" data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" aria-label="Show more toolbar buttons">
+        <button data-dropdown-trigger class="lexxy-editor__toolbar-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Show more toolbar buttons">
           ${ToolbarIcons.overflow}
         </button>
         <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons" hidden></div>

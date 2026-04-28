@@ -43,7 +43,7 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   get isOpen() {
-    return this.getAttribute("aria-expanded") === "true"
+    return this.trigger?.getAttribute("aria-expanded") === "true"
   }
 
   track(...listeners) {
@@ -52,7 +52,7 @@ export class ToolbarDropdown extends HTMLElement {
 
   open() {
     if (!this.trigger || this.isOpen) return
-    this.setAttribute("aria-expanded", "true")
+    this.trigger.setAttribute("aria-expanded", "true")
     this.panel.hidden = false
     this.content?.onOpen?.()
     this.#focusFirstInteractive()
@@ -61,7 +61,7 @@ export class ToolbarDropdown extends HTMLElement {
   close({ focusEditor = true } = {}) {
     if (focusEditor) this.editor?.focus()
     if (!this.trigger || !this.isOpen) return
-    this.setAttribute("aria-expanded", "false")
+    this.trigger.setAttribute("aria-expanded", "false")
     this.panel.hidden = true
     this.content?.onClose?.()
   }
