@@ -639,7 +639,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #configureSanitizer() {
-    setSanitizerConfig(this.#allowedElements)
+    setSanitizerConfig(this.#allowedElements, this.extensions.allowedStyles)
   }
 
   get #allowedElements() {

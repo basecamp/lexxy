@@ -40,6 +40,10 @@ export default class Extensions {
     return this.enabledExtensions.flatMap(ext => ext.allowedElements)
   }
 
+  get allowedStyles() {
+    return this.enabledExtensions.flatMap(ext => ext.allowedStyles)
+  }
+
   get #lexxyToolbar() {
     return this.lexxyElement.toolbar
   }
