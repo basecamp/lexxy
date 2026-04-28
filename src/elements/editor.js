@@ -77,6 +77,8 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(this.selection)
 
     this.clipboard = new Clipboard(this)
+    this.#disposables.push(this.clipboard)
+
     this.adapter = new BrowserAdapter()
 
     const commandDispatcher = CommandDispatcher.configureFor(this)

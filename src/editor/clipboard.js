@@ -3,14 +3,28 @@ import { isUrl } from "../helpers/string_helper"
 import { nextFrame } from "../helpers/timing_helpers"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
-import { $getSelection, $isRangeSelection, PASTE_TAG } from "lexical"
+import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
 import { $insertDataTransferForRichText } from "@lexical/clipboard"
+import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
+import { ListenerBin } from "../helpers/listener_helper"
 
 export default class Clipboard {
+  #listeners = new ListenerBin()
+
   constructor(editorElement) {
     this.editorElement = editorElement
     this.editor = editorElement.editor
     this.contents = editorElement.contents
+
+    this.#registerPasteCommands()
+  }
+
+  dispose() {
+    this.editorElement = null
+    this.editor = null
+    this.contents = null
+
+    this.#listeners.dispose()
   }
 
   paste(event) {
@@ -33,6 +47,25 @@ export default class Clipboard {
     const handled = this.#handlePastedFiles(clipboardData)
     if (handled) event.preventDefault()
     return handled
+  }
+
+  #registerPasteCommands() {
+    this.#listeners.track(
+      this.editor.registerCommand(PASTE_COMMAND, this.paste.bind(this), COMMAND_PRIORITY_NORMAL),
+      this.editor.registerCommand(
+        SELECTION_INSERT_CLIPBOARD_NODES_COMMAND,
+        (payload) => this.#handleParsedClipboardNodes(payload),
+        COMMAND_PRIORITY_NORMAL
+      )
+    )
+  }
+
+  #handleParsedClipboardNodes({ nodes, selection }) {
+    const url = $bareUrlFromSingleLink(nodes)
+    if (!url) return false
+
+    this.#insertSingleLinkAt(selection, url)
+    return true
   }
 
   #isPlainTextOrURLPasted(clipboardData) {
@@ -95,6 +128,24 @@ export default class Clipboard {
         this.#pasteRichText(clipboardData)
       }
     })
+  }
+
+  #insertSingleLinkAt(selection, url) {
+    if (!$isRangeSelection(selection)) return
+
+    if (!selection.isCollapsed()) {
+      $toggleLink(null)
+      $toggleLink(url)
+      return
+    }
+
+    const linkNode = $createLinkNode(url).append($createTextNode(url))
+    selection.insertNodes([ linkNode ])
+
+    // Defer the lexxy:insert-link event until after the active update commits;
+    // listeners may run editor mutations of their own.
+    const nodeKey = linkNode.getKey()
+    Promise.resolve().then(() => this.#dispatchLinkInsertEvent(nodeKey, { url }))
   }
 
   #dispatchLinkInsertEvent(nodeKey, payload) {
@@ -186,4 +237,26 @@ export default class Clipboard {
     window.scrollTo(scrollX, scrollY)
     this.editor.focus()
   }
+}
+
+function $bareUrlFromSingleLink(nodes) {
+  if (nodes.length !== 1) return null
+
+  const node = nodes[0]
+  if ($isLinkNode(node)) return $bareUrlFromLink(node)
+
+  if ($isParagraphNode(node)) {
+    const children = node.getChildren()
+    if (children.length === 1 && $isLinkNode(children[0])) {
+      return $bareUrlFromLink(children[0])
+    }
+  }
+
+  return null
+}
+
+function $bareUrlFromLink(linkNode) {
+  const url = linkNode.getURL()
+  if (!url) return null
+  return linkNode.getTextContent() === url ? url : null
 }

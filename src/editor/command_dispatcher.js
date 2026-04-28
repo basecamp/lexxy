@@ -4,14 +4,12 @@ import {
   $isRangeSelection,
   $isTextNode,
   $setSelection,
-  COMMAND_PRIORITY_LOW,
   COMMAND_PRIORITY_NORMAL,
   FORMAT_TEXT_COMMAND,
   INDENT_CONTENT_COMMAND,
   KEY_ARROW_RIGHT_COMMAND,
   KEY_TAB_COMMAND,
   OUTDENT_CONTENT_COMMAND,
-  PASTE_COMMAND,
   REDO_COMMAND,
   UNDO_COMMAND
 } from "lexical"
@@ -68,15 +66,10 @@ export class CommandDispatcher {
     this.editor = editorElement.editor
     this.selection = editorElement.selection
     this.contents = editorElement.contents
-    this.clipboard = editorElement.clipboard
 
     this.#registerCommands()
     this.#registerKeyboardCommands()
     this.#registerDragAndDropHandlers()
-  }
-
-  dispatchPaste(event) {
-    return this.clipboard.paste(event)
   }
 
   dispatchBold() {
@@ -305,8 +298,6 @@ export class CommandDispatcher {
       const methodName = `dispatch${capitalize(command)}`
       this.#registerCommandHandler(command, 0, this[methodName].bind(this))
     }
-
-    this.#registerCommandHandler(PASTE_COMMAND, COMMAND_PRIORITY_LOW, this.dispatchPaste.bind(this))
   }
 
   #registerCommandHandler(command, priority, handler) {
