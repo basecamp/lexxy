@@ -327,15 +327,15 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   get #dropdowns() {
-    return this.querySelectorAll(":scope [role='menu'], :scope [role='dialog']")
+    return this.querySelectorAll(":scope lexxy-toolbar-dropdown")
   }
 
   get #overflow() {
-    return this.querySelector(".lexxy-editor__toolbar-overflow")
+    return this.querySelector("lexxy-toolbar-dropdown.lexxy-editor__toolbar-overflow")
   }
 
   get #overflowMenu() {
-    return this.querySelector(".lexxy-editor__toolbar-overflow-menu")
+    return this.#overflow?.querySelector(":scope > [data-dropdown-panel]")
   }
 
   get #overflowButtons() {
@@ -368,12 +368,11 @@ export class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.italic}
       </button>
 
-      <div class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron">
-        <button class="lexxy-editor__toolbar-button" type="button" name="format"
-                aria-haspopup="menu" aria-expanded="false" title="Text formatting">
+      <lexxy-toolbar-dropdown aria-expanded="false">
+        <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="format" data-dropdown-trigger aria-haspopup="menu" title="Text formatting">
           ${ToolbarIcons.heading}
         </button>
-        <lexxy-toolbar-dropdown role="menu" class="lexxy-editor__toolbar-dropdown-list" hidden>
+        <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-dropdown-list" hidden>
           <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph" role="menuitem">
             ${ToolbarIcons.paragraph} <span>Normal</span>
           </button>
@@ -397,33 +396,31 @@ export class LexicalToolbarElement extends HTMLElement {
           <button type="button" name="clear-formatting" data-command="clearFormatting" title="Clear formatting" role="menuitem">
             ${ToolbarIcons.clearFormatting} <span>Clear formatting</span>
           </button>
-        </lexxy-toolbar-dropdown>
-      </div>
+        </div>
+      </lexxy-toolbar-dropdown>
 
-      <div class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--chevron">
-        <button class="lexxy-editor__toolbar-button" type="button" name="highlight"
-                aria-haspopup="menu" aria-expanded="false" title="Color highlight">
+      <lexxy-toolbar-dropdown data-content="highlight" aria-expanded="false">
+        <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="highlight" data-dropdown-trigger aria-haspopup="menu" title="Color highlight">
           ${ToolbarIcons.highlight}
         </button>
-        <lexxy-highlight-dropdown role="menu" hidden>
+        <div data-dropdown-panel role="menu" hidden>
           <div class="lexxy-highlight-colors"></div>
           <button data-command="removeHighlight" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset" role="menuitem">Remove all coloring</button>
-        </lexxy-highlight-dropdown>
-      </div>
+        </div>
+      </lexxy-toolbar-dropdown>
 
-      <div class="lexxy-editor__toolbar-dropdown">
-        <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="link"
-                aria-haspopup="dialog" aria-expanded="false" title="Link" data-hotkey="cmd+k ctrl+k">
+      <lexxy-toolbar-dropdown data-content="link" aria-expanded="false">
+        <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="link" data-dropdown-trigger aria-haspopup="dialog" title="Link" data-hotkey="cmd+k ctrl+k">
           ${ToolbarIcons.link}
         </button>
-        <lexxy-link-dropdown role="dialog" hidden>
+        <div data-dropdown-panel role="dialog" hidden>
           <input type="url" placeholder="Enter a URL…" class="input" name="lexxy-link-url">
           <div class="lexxy-editor__toolbar-dropdown-actions">
             <button type="button" class="lexxy-editor__toolbar-button" value="link" >Link</button>
             <button type="button" class="lexxy-editor__toolbar-button" value="unlink">Unlink</button>
           </div>
-        </lexxy-link-dropdown>
-      </div>
+        </div>
+      </lexxy-toolbar-dropdown>
 
       <button class="lexxy-editor__toolbar-button" type="button" name="quote" data-command="insertQuoteBlock" title="Quote">
         ${ToolbarIcons.quote}
@@ -458,11 +455,12 @@ export class LexicalToolbarElement extends HTMLElement {
         ${ToolbarIcons.redo}
       </button>
 
-      <div class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-overflow">
-        <button class="lexxy-editor__toolbar-button" type="button"
-                aria-haspopup="menu" aria-expanded="false" aria-label="Show more toolbar buttons">${ToolbarIcons.overflow}</button>
-        <lexxy-toolbar-dropdown role="menu" class="lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons" hidden></lexxy-toolbar-dropdown>
-      </div>
+      <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-overflow">
+        <button class="lexxy-editor__toolbar-button" type="button" data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" aria-label="Show more toolbar buttons">
+          ${ToolbarIcons.overflow}
+        </button>
+        <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons" hidden></div>
+      </lexxy-toolbar-dropdown>
     `
   }
 }
