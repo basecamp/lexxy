@@ -1,6 +1,5 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
-import { ToolbarDropdown } from "../toolbar_dropdown"
 import { registerEventListener } from "../../helpers/listener_helper"
 
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button"
@@ -11,22 +10,39 @@ const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 // see https://github.com/facebook/lexical/issues/8013
 const NO_STYLE = Symbol("no_style")
 
-export class HighlightDropdown extends ToolbarDropdown {
-  initialize() {
+export class HighlightContent {
+  constructor(dropdown) {
+    this.dropdown = dropdown
+  }
+
+  connect() {
     this.#setUpButtons()
     this.#registerButtonHandlers()
   }
 
-  connectedCallback() {
-    super.connectedCallback()
-    this.track(registerEventListener(this.container, "lexxy:toolbar-dropdown-toggle", this.#handleToggle))
+  onOpen() {
+    this.editor.getEditorState().read(() => {
+      this.#updateColorButtonStates($getSelection())
+    })
+  }
+
+  get panel() {
+    return this.dropdown.panel
+  }
+
+  get editor() {
+    return this.dropdown.editor
+  }
+
+  get editorElement() {
+    return this.dropdown.editorElement
   }
 
   #registerButtonHandlers() {
     this.#colorButtons.forEach(button => {
-      this.track(registerEventListener(button, "click", this.#handleColorButtonClick))
+      this.dropdown.track(registerEventListener(button, "click", this.#handleColorButtonClick))
     })
-    this.track(registerEventListener(this.querySelector(REMOVE_HIGHLIGHT_SELECTOR), "click", this.#handleRemoveHighlightClick))
+    this.dropdown.track(registerEventListener(this.panel.querySelector(REMOVE_HIGHLIGHT_SELECTOR), "click", this.#handleRemoveHighlightClick))
   }
 
   #setUpButtons() {
@@ -38,7 +54,7 @@ export class HighlightDropdown extends ToolbarDropdown {
     this.#populateButtonGroup("background-color", colorGroups["background-color"])
 
     const maxNumberOfColors = Math.max(colorGroups.color.length, colorGroups["background-color"].length)
-    this.style.setProperty("--max-colors", maxNumberOfColors)
+    this.panel.style.setProperty("--max-colors", maxNumberOfColors)
   }
 
   #populateButtonGroup(attribute, values) {
@@ -58,14 +74,6 @@ export class HighlightDropdown extends ToolbarDropdown {
     return button
   }
 
-  #handleToggle = ({ detail: { newState } }) => {
-    if (newState === "open") {
-      this.editor.getEditorState().read(() => {
-        this.#updateColorButtonStates($getSelection())
-      })
-    }
-  }
-
   #handleColorButtonClick = (event) => {
     event.preventDefault()
 
@@ -76,14 +84,14 @@ export class HighlightDropdown extends ToolbarDropdown {
     const value = button.dataset.value
 
     this.editor.dispatchCommand("toggleHighlight", { [attribute]: value })
-    this.close()
+    this.dropdown.close()
   }
 
   #handleRemoveHighlightClick = (event) => {
     event.preventDefault()
 
     this.editor.dispatchCommand("removeHighlight")
-    this.close()
+    this.dropdown.close()
   }
 
   #updateColorButtonStates(selection) {
@@ -99,16 +107,16 @@ export class HighlightDropdown extends ToolbarDropdown {
     })
 
     const hasHighlight = textColor !== NO_STYLE || backgroundColor !== NO_STYLE
-    this.querySelector(REMOVE_HIGHLIGHT_SELECTOR).disabled = !hasHighlight
+    this.panel.querySelector(REMOVE_HIGHLIGHT_SELECTOR).disabled = !hasHighlight
   }
 
   get #buttonContainer() {
-    return this.querySelector(".lexxy-highlight-colors")
+    return this.panel.querySelector(".lexxy-highlight-colors")
   }
 
   get #colorButtons() {
-    return Array.from(this.querySelectorAll(APPLY_HIGHLIGHT_SELECTOR))
+    return Array.from(this.panel.querySelectorAll(APPLY_HIGHLIGHT_SELECTOR))
   }
 }
 
-export default HighlightDropdown
+export default HighlightContent

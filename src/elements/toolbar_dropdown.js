@@ -1,26 +1,33 @@
 import { nextFrame } from "../helpers/timing_helpers"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
+import { dropdownContents } from "./dropdown/registry"
 
 export class ToolbarDropdown extends HTMLElement {
   #listeners = new ListenerBin()
+  content = null
 
   connectedCallback() {
-    this.#onToolbarEditor(this.initialize.bind(this))
-
-    this.container = this.closest(".lexxy-editor__toolbar-dropdown")
-    this.trigger = this.container?.querySelector("button")
-
-    if (!this.container || !this.trigger) return
+    if (!this.trigger || !this.panel) return
 
     this.#listeners.track(
-      registerEventListener(this.container, "lexxy:toolbar-dropdown-toggle", this.#handleToggle),
-      registerEventListener(this.container, "keydown", this.#handleKeyDown),
+      registerEventListener(this, "keydown", this.#handleKeyDown),
       registerEventListener(this.trigger, "click", this.#handleTriggerClick)
     )
+
+    this.#onToolbarEditor(() => this.#connectContent())
   }
 
   disconnectedCallback() {
     this.#listeners.dispose()
+    this.content = null
+  }
+
+  get trigger() {
+    return this.querySelector(":scope > [data-dropdown-trigger]")
+  }
+
+  get panel() {
+    return this.querySelector(":scope > [data-dropdown-panel]")
   }
 
   get toolbar() {
@@ -36,30 +43,36 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   get isOpen() {
-    return this.trigger?.getAttribute("aria-expanded") === "true"
+    return this.getAttribute("aria-expanded") === "true"
   }
 
   track(...listeners) {
     this.#listeners.track(...listeners)
   }
 
-  initialize() {
-    // Any post-editor initialization
-  }
-
   open() {
     if (!this.trigger || this.isOpen) return
-    this.trigger.setAttribute("aria-expanded", "true")
-    this.hidden = false
-    this.#dispatchToggle("open")
+    this.setAttribute("aria-expanded", "true")
+    this.panel.hidden = false
+    this.content?.onOpen?.()
+    this.#focusFirstInteractive()
   }
 
   close({ focusEditor = true } = {}) {
     if (focusEditor) this.editor?.focus()
     if (!this.trigger || !this.isOpen) return
-    this.trigger.setAttribute("aria-expanded", "false")
-    this.hidden = true
-    this.#dispatchToggle("closed")
+    this.setAttribute("aria-expanded", "false")
+    this.panel.hidden = true
+    this.content?.onClose?.()
+  }
+
+  #connectContent() {
+    const name = this.dataset.content
+    const ContentClass = name ? dropdownContents[name] : null
+    if (!ContentClass) return
+
+    this.content = new ContentClass(this)
+    this.content.connect?.()
   }
 
   #handleTriggerClick = () => {
@@ -79,22 +92,16 @@ export class ToolbarDropdown extends HTMLElement {
     if (this.isConnected && this.toolbar === toolbar) callback()
   }
 
-  #handleToggle = (event) => {
-    if (event.detail?.newState === "open") {
-      this.#handleOpen()
-    }
-  }
-
-  async #handleOpen() {
-    this.#interactiveElements[0].focus()
-    this.#resetTabIndexValues()
-  }
-
   #handleKeyDown = (event) => {
     if (event.key === "Escape") {
       event.stopPropagation()
       this.close()
     }
+  }
+
+  async #focusFirstInteractive() {
+    this.#interactiveElements[0]?.focus()
+    await this.#resetTabIndexValues()
   }
 
   async #resetTabIndexValues() {
@@ -104,19 +111,12 @@ export class ToolbarDropdown extends HTMLElement {
     })
   }
 
-  #dispatchToggle(newState) {
-    this.container.dispatchEvent(new CustomEvent("lexxy:toolbar-dropdown-toggle", {
-      bubbles: true,
-      detail: { newState }
-    }))
-  }
-
   get #interactiveElements() {
-    return Array.from(this.querySelectorAll("button, input"))
+    return Array.from(this.panel.querySelectorAll("button, input"))
   }
 
   get #buttons() {
-    return Array.from(this.querySelectorAll("button"))
+    return Array.from(this.panel.querySelectorAll("button"))
   }
 }
 
