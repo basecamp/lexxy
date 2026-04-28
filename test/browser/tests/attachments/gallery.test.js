@@ -219,6 +219,31 @@ test.describe("Gallery", () => {
     await assertGalleryCount(page, 1)
   })
 
+  test("delete at gallery end absorbs next gallery", async ({
+    page,
+    editor,
+  }) => {
+    await editor.uploadFile([
+      "test/fixtures/files/example.png",
+      "test/fixtures/files/example2.png",
+      "test/fixtures/files/example.png",
+      "test/fixtures/files/example2.png",
+    ])
+
+    await assertGalleryWithImages(editor, 4)
+
+    await selectGalleryAtOffset(page, editor, 2)
+    await editor.send("Enter")
+
+    await assertGalleryCount(page, 2)
+
+    await selectGalleryAtOffset(page, editor, 2, 0)
+    await editor.send("Delete")
+
+    await assertGalleryCount(page, 1)
+    await assertGalleryWithImages(editor, 4)
+  })
+
   test("backspace at gallery start absorbs previous image", async ({
     page,
     editor,
@@ -251,42 +276,16 @@ test.describe("Gallery", () => {
       "test/fixtures/files/example2.png",
     ])
 
-    await editor.send("Enter")
+    await assertGalleryWithImages(editor, 2)
 
-    await editor.uploadFile("test/fixtures/files/example.png")
-
+    await uploadStandaloneAfter(editor, "image_gallery", "test/fixtures/files/example.png")
     await assertGalleryWithImages(editor, 2)
     await expect(page.locator("figure.attachment--preview")).toHaveCount(3)
 
-    await selectGalleryAtOffset(page, editor, 2)
+    await selectGalleryNode(editor)
     await editor.send("Delete")
 
     await assertGalleryWithImages(editor, 3)
-  })
-
-  test("delete at gallery end absorbs next gallery", async ({
-    page,
-    editor,
-  }) => {
-    await editor.uploadFile([
-      "test/fixtures/files/example.png",
-      "test/fixtures/files/example2.png",
-    ])
-
-    await editor.send("Enter")
-
-    await editor.uploadFile([
-      "test/fixtures/files/example.png",
-      "test/fixtures/files/example2.png",
-    ])
-
-    await assertGalleryCount(page, 2)
-
-    await selectGalleryAtOffset(page, editor, 2, 0)
-    await editor.send("Delete")
-
-    await assertGalleryCount(page, 1)
-    await assertGalleryWithImages(editor, 4)
   })
 
   test("backspace at gallery start with empty paragraph above removes paragraph", async ({
@@ -403,4 +402,64 @@ async function selectGalleryAtOffset(page, editor, offset, galleryIndex = 0) {
     await selectGalleryImage(page, offset - 1, galleryIndex)
     await editor.send("ArrowRight")
   }
+}
+
+async function uploadStandaloneAfter(editor, anchorType, filePath) {
+  await positionCursorAfterNode(editor, anchorType)
+  await editor.send("x", "Enter")
+  await editor.uploadFile(filePath)
+  await expect(editor.content.locator("figure.attachment--preview > progress")).toHaveCount(0)
+  await editor.flush()
+  await removeBufferParagraphsBetweenImages(editor)
+}
+
+async function positionCursorAfterNode(editor, anchorType) {
+  await editor.locator.evaluate((el, type) => {
+    return new Promise((resolve) => {
+      el.editor.update(() => {
+        const root = el.editor.getEditorState()._nodeMap.get("root")
+        for (const child of root.getChildren()) {
+          if (child.getType() === type) {
+            const next = child.getNextSibling()
+            if (next?.getType() === "provisonal_paragraph") {
+              next.selectStart()
+            } else {
+              child.selectNext(0, 0)
+            }
+            return
+          }
+        }
+      }, { onUpdate: resolve })
+    })
+  }, anchorType)
+}
+
+async function removeBufferParagraphsBetweenImages(editor) {
+  await editor.locator.evaluate((el) => {
+    return new Promise((resolve) => {
+      el.editor.update(() => {
+        const root = el.editor.getEditorState()._nodeMap.get("root")
+        const isImageNode = (n) =>
+          n?.getType() === "action_text_attachment" || n?.getType() === "image_gallery"
+        for (const node of root.getChildren()) {
+          const type = node.getType()
+          if (type !== "paragraph" && type !== "provisonal_paragraph") continue
+          if (!isImageNode(node.getPreviousSibling()) || !isImageNode(node.getNextSibling())) continue
+          if (node.getTextContent().replace(/x/g, "") === "") node.remove()
+        }
+      }, { onUpdate: resolve })
+    })
+  })
+}
+
+async function selectGalleryNode(editor, galleryIndex = 0) {
+  await editor.locator.evaluate((el, idx) => {
+    return new Promise((resolve) => {
+      el.editor.update(() => {
+        const root = el.editor.getEditorState()._nodeMap.get("root")
+        const galleries = root.getChildren().filter((c) => c.getType() === "image_gallery")
+        if (galleries[idx]) galleries[idx].select()
+      }, { onUpdate: resolve })
+    })
+  }, galleryIndex)
 }

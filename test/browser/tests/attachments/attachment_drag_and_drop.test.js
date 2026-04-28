@@ -112,8 +112,7 @@ test.describe("Attachment Drag and Drop", () => {
       await assertGalleryWithImages(editor, 2)
       await waitForUploadsComplete(page, editor)
 
-      await editor.send("Enter")
-      await editor.uploadFile("test/fixtures/files/example.png")
+      await uploadStandaloneAfter(editor, "image_gallery", "test/fixtures/files/example.png")
       await waitForUploadsComplete(page, editor)
 
       const standalone = page.locator(".lexxy-editor__content > figure.attachment")
@@ -132,8 +131,7 @@ test.describe("Attachment Drag and Drop", () => {
       await assertGalleryWithImages(editor, 2)
       await waitForUploadsComplete(page, editor)
 
-      await editor.send("Enter")
-      await editor.uploadFile("test/fixtures/files/example.png")
+      await uploadStandaloneAfter(editor, "image_gallery", "test/fixtures/files/example.png")
       await waitForUploadsComplete(page, editor)
       await editor.flush()
 
@@ -254,8 +252,9 @@ test.describe("Attachment Drag and Drop", () => {
 
     test("undo reverses gallery creation", async ({ page, editor }) => {
       await editor.uploadFile("test/fixtures/files/example.png")
-      await editor.send("Enter")
-      await editor.uploadFile("test/fixtures/files/example2.png")
+      await waitForUploadsComplete(page, editor)
+
+      await uploadStandaloneAfter(editor, "action_text_attachment", "test/fixtures/files/example2.png")
       await waitForUploadsComplete(page, editor)
 
       await simulateDragByIndex(page, 1, 0, "onto")
@@ -445,6 +444,54 @@ async function assertGalleryWithImages(editor, count) {
 
 async function assertNoGallery(page) {
   await expect(page.locator(".attachment-gallery")).toHaveCount(0)
+}
+
+async function uploadStandaloneAfter(editor, anchorType, filePath) {
+  await positionCursorAfterNode(editor, anchorType)
+  await editor.send("x", "Enter")
+  await editor.uploadFile(filePath)
+  await expect(editor.content.locator("figure.attachment--preview > progress")).toHaveCount(0)
+  await editor.flush()
+  await removeBufferParagraphsBetweenImages(editor)
+}
+
+async function positionCursorAfterNode(editor, anchorType) {
+  await editor.locator.evaluate((el, type) => {
+    return new Promise((resolve) => {
+      el.editor.update(() => {
+        const root = el.editor.getEditorState()._nodeMap.get("root")
+        for (const child of root.getChildren()) {
+          if (child.getType() === type) {
+            const next = child.getNextSibling()
+            if (next?.getType() === "provisonal_paragraph") {
+              next.selectStart()
+            } else {
+              child.selectNext(0, 0)
+            }
+            return
+          }
+        }
+      }, { onUpdate: resolve })
+    })
+  }, anchorType)
+}
+
+async function removeBufferParagraphsBetweenImages(editor) {
+  await editor.locator.evaluate((el) => {
+    return new Promise((resolve) => {
+      el.editor.update(() => {
+        const root = el.editor.getEditorState()._nodeMap.get("root")
+        const isImageNode = (n) =>
+          n?.getType() === "action_text_attachment" || n?.getType() === "image_gallery"
+        for (const node of root.getChildren()) {
+          const type = node.getType()
+          if (type !== "paragraph" && type !== "provisonal_paragraph") continue
+          if (!isImageNode(node.getPreviousSibling()) || !isImageNode(node.getNextSibling())) continue
+          if (node.getTextContent().replace(/x/g, "") === "") node.remove()
+        }
+      }, { onUpdate: resolve })
+    })
+  })
 }
 
 async function simulateDrag(page, sourceSelector, targetSelector, position = "after") {
