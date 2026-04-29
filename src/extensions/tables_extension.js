@@ -47,7 +47,13 @@ export class TablesExtension extends LexxyExtension {
         return mergeRegister(
           // Register Lexical table plugins
           registerTablePlugin(editor),
-          registerTableSelectionObserver(editor, true),
+          // Lexxy registers extensions before setRootElement(), but table
+          // drag-selection needs a root before wiring its pointer handlers.
+          editor.registerRootListener((rootElement) => {
+            if (rootElement) {
+              return registerTableSelectionObserver(editor, true)
+            }
+          }),
 
           // Bug fix: Prevent hardcoded background color (Lexical #8089)
           editor.registerNodeTransform(TableCellNode, (node) => {
