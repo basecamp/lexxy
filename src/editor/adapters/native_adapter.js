@@ -3,6 +3,23 @@ import { $getNodeByKey, $getSelection, $isElementNode, $isRangeSelection, $isTex
 import { $isLinkNode, LinkNode } from "@lexical/link"
 import { $getNearestNodeOfType } from "@lexical/utils"
 
+const INACTIVE = Object.freeze({ active: false, enabled: false })
+
+export const DEFAULT_ATTRIBUTES = Object.freeze({
+  bold: INACTIVE,
+  italic: INACTIVE,
+  strikethrough: INACTIVE,
+  code: INACTIVE,
+  highlight: Object.freeze({ active: false, enabled: false, color: null, backgroundColor: null }),
+  link: Object.freeze({ active: false, enabled: false, href: null }),
+  quote: INACTIVE,
+  heading: Object.freeze({ active: null, enabled: false, tag: null }),
+  "unordered-list": INACTIVE,
+  "ordered-list": INACTIVE,
+  undo: INACTIVE,
+  redo: INACTIVE
+})
+
 export class NativeAdapter {
   frozenLinkKey = null
 
@@ -11,13 +28,10 @@ export class NativeAdapter {
     this.editorContentElement = editorElement.editorContentElement
   }
 
-  dispatchAttributesChange(attributes, linkHref, highlight, headingTag) {
-    dispatch(this.editorElement, "lexxy:attributes-change", {
-      attributes,
-      link: linkHref ? { href: linkHref } : null,
-      highlight,
-      headingTag
-    })
+  dispatchAttributesChange(editorState) {
+    const { link, highlight, ...attributes } = { ...DEFAULT_ATTRIBUTES, ...this.#computeAttributesPayload(editorState) }
+
+    dispatch(this.editorElement, "lexxy:attributes-change", { attributes, link, highlight, headingTag: attributes.heading.tag })
   }
 
   dispatchEditorInitialized(detail) {
@@ -75,6 +89,39 @@ export class NativeAdapter {
     return true
   }
 
+  #computeAttributesPayload(editorState) {
+    return editorState.read(() => {
+      const format = this.editorElement.selection.getFormat()
+      if (Object.keys(format).length === 0) return DEFAULT_ATTRIBUTES
+
+      return {
+        ...DEFAULT_ATTRIBUTES,
+
+        bold: { active: format.isBold, enabled: true },
+        italic: { active: format.isItalic, enabled: true },
+        strikethrough: { active: format.isStrikethrough, enabled: true },
+        code: { active: format.isInCode, enabled: true },
+        highlight: {
+          active: format.isHighlight,
+          enabled: true,
+          color: format.highlightStyles?.color ?? null,
+          backgroundColor: format.highlightStyles?.backgroundColor ?? null
+        },
+        link: {
+          active: format.isInLink,
+          enabled: true,
+          href: format.linkURL
+        },
+        quote: { active: format.isInQuote, enabled: true },
+        heading: { active: format.isInHeading, enabled: true, tag: format.headingTag },
+        "unordered-list": { active: format.listType === "bullet", enabled: true },
+        "ordered-list": { active: format.listType === "number", enabled: true },
+        undo: { active: false, enabled: this.editorElement.canUndo },
+        redo: { active: false, enabled: this.editorElement.canRedo }
+      }
+    })
+  }
+
   #findFirstTextDescendant(nodes) {
     for (const node of nodes) {
       if ($isTextNode(node)) return node
@@ -89,7 +136,7 @@ export class NativeAdapter {
 
   #findLastTextDescendant(nodes) {
     for (let index = nodes.length - 1; index >= 0; index--) {
-      const node = nodes[index]
+      const node = nodes
       if ($isTextNode(node)) return node
       if ($isElementNode(node)) {
         const nestedTextNode = this.#findLastTextDescendant(node.getChildren())

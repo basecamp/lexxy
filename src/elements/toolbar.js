@@ -1,6 +1,4 @@
 import {
-  $getSelection,
-  $isRangeSelection,
   CAN_REDO_COMMAND,
   CAN_UNDO_COMMAND,
   COMMAND_PRIORITY_LOW,
@@ -197,12 +195,6 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #updateButtonStates() {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return
-
-    const anchorNode = selection.anchor.getNode()
-    if (!anchorNode.getParent()) { return }
-
     const { isBold, isItalic, isStrikethrough, isUnderline, isHighlight, isInLink, isInQuote, isInHeading,
       headingTag, isInCode, isInList, listType, isInTable } = this.selection.getFormat()
 
@@ -218,8 +210,8 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("underline", isUnderline)
 
     this.#setButtonPressed("lists", isInList)
-    this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
-    this.#setButtonPressed("ordered-list", isInList && listType === "number")
+    this.#setButtonPressed("unordered-list", listType === "bullet")
+    this.#setButtonPressed("ordered-list", listType === "number")
 
     this.#setButtonPressed("highlight", isHighlight)
     this.#setButtonPressed("link", isInLink)
@@ -232,7 +224,7 @@ export class LexicalToolbarElement extends HTMLElement {
   #setButtonPressed(name, isPressed) {
     const button = this.querySelector(`[name="${name}"]`)
     if (button) {
-      button.setAttribute("aria-pressed", isPressed.toString())
+      button.setAttribute("aria-pressed", Boolean(isPressed).toString())
     }
   }
 
