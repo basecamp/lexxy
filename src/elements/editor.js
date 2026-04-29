@@ -1,8 +1,7 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, HISTORY_MERGE_TAG, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $isElementNode, $isLineBreakNode, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, HISTORY_MERGE_TAG, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
-import { $getNearestNodeOfType } from "@lexical/utils"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes } from "@lexical/html"
@@ -26,7 +25,6 @@ import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
 import { BrowserAdapter } from "../editor/adapters/browser_adapter"
-import { getHighlightStyles } from "../helpers/format_helper"
 import { styleResolverRoot } from "../helpers/style_resolver_root"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
@@ -218,7 +216,7 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.#cancelEditorInitializedDispatch()
     this.#dispatchEditorInitialized()
-    this.#dispatchAttributesChange()
+    this.dispatchAttributesChange()
   }
 
   freezeSelection() {
@@ -229,8 +227,8 @@ export class LexicalEditorElement extends HTMLElement {
     this.adapter.thaw()
   }
 
-  dispatchAttributesChange() {
-    this.#dispatchAttributesChange()
+  dispatchAttributesChange(editorOrState = this.editor) {
+    this.adapter.dispatchAttributesChange(editorOrState)
   }
 
   dispatchEditorInitialized() {
@@ -464,7 +462,7 @@ export class LexicalEditorElement extends HTMLElement {
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
       this.#setValidity()
-      this.#dispatchAttributesChange()
+      this.dispatchAttributesChange(editorState)
     }))
   }
 
@@ -536,6 +534,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #registerFocusEvents() {
+    this.currentlyFocused = false
     this.#listeners.track(
       registerEventListener(this, "focusin", this.#handleFocusIn),
       registerEventListener(this, "focusout", this.#handleFocusOut)
@@ -544,7 +543,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
-      this.#dispatchAttributesChange()
+      this.dispatchAttributesChange()
       dispatch(this, "lexxy:focus")
       this.currentlyFocused = true
     }
@@ -649,47 +648,6 @@ export class LexicalEditorElement extends HTMLElement {
   get #importableTags() {
     const tags = Array.from(this.editor._htmlConversions.keys())
     return tags.filter(tag => !tag.startsWith("#"))
-  }
-
-  #dispatchAttributesChange() {
-    let attributes = null
-    let linkHref = null
-    let highlight = null
-    let headingTag = null
-
-    this.editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const format = this.selection.getFormat()
-      if (Object.keys(format).length === 0) return
-
-      const anchorNode = selection.anchor.getNode()
-      const linkNode = $getNearestNodeOfType(anchorNode, LinkNode)
-
-      attributes = {
-        bold: { active: format.isBold, enabled: true },
-        italic: { active: format.isItalic, enabled: true },
-        strikethrough: { active: format.isStrikethrough, enabled: true },
-        code: { active: format.isInCode, enabled: true },
-        highlight: { active: format.isHighlight, enabled: true },
-        link: { active: format.isInLink, enabled: true },
-        quote: { active: format.isInQuote, enabled: true },
-        heading: { active: format.isInHeading, enabled: true },
-        "unordered-list": { active: format.isInList && format.listType === "bullet", enabled: true },
-        "ordered-list": { active: format.isInList && format.listType === "number", enabled: true },
-        undo: { active: false, enabled: this.canUndo },
-        redo: { active: false, enabled: this.canRedo }
-      }
-
-      linkHref = linkNode ? linkNode.getURL() : null
-      highlight = format.isHighlight ? getHighlightStyles(selection) : null
-      headingTag = format.headingTag ?? null
-    })
-
-    if (attributes) {
-      this.adapter.dispatchAttributesChange(attributes, linkHref, highlight, headingTag)
-    }
   }
 
   #dispatchEditorInitialized() {

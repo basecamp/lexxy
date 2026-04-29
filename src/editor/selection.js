@@ -8,7 +8,7 @@ import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
 import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
 import { nextFrame } from "../helpers/timing_helpers"
-import { isSelectionHighlighted } from "../helpers/format_helper"
+import { getHighlightStyles, isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
 import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } from "../helpers/lexical_helper"
 import { LinkNode } from "@lexical/link"
@@ -123,6 +123,10 @@ export default class Selection {
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
     const listType = getListType(anchorNode)
     const headingNode = this.#getNearestHeadingNode(anchorNode)
+    const linkNode = $getNearestNodeOfType(anchorNode, LinkNode)
+
+    const isHighlight = isSelectionHighlighted(selection)
+    const highlightStyles = isHighlight ? getHighlightStyles(selection) : null
 
     return {
       isBold: selection.hasFormat("bold"),
@@ -130,14 +134,16 @@ export default class Selection {
       isStrikethrough: selection.hasFormat("strikethrough"),
       isUnderline: selection.hasFormat("underline"),
       isHighlight: isSelectionHighlighted(selection),
-      isInLink: $getNearestNodeOfType(anchorNode, LinkNode) !== null,
+      highlightStyles,
+      isInLink: Boolean(linkNode),
+      linkURL: linkNode?.getURL() ?? null,
       isInQuote: $isQuoteNode(topLevelElement),
-      isInHeading: headingNode !== null,
-      isInCode: this.#isInCode(selection, anchorNode),
+      isInHeading: Boolean(headingNode),
       headingTag: headingNode?.getTag() ?? null,
-      isInList: listType !== null,
+      isInCode: this.#isInCode(selection, anchorNode),
+      isInList: Boolean(listType),
       listType,
-      isInTable: $getTableCellNodeFromLexicalNode(anchorNode) !== null
+      isInTable: Boolean($getTableCellNodeFromLexicalNode(anchorNode))
     }
   }
 
