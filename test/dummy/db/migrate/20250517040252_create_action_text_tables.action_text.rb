@@ -13,6 +13,16 @@ class CreateActionTextTables < ActiveRecord::Migration[6.0]
 
       t.index [ :record_type, :record_id, :name ], name: "index_action_text_rich_texts_uniqueness", unique: true
     end
+
+
+    create_table :action_text_encrypted_rich_texts, id: primary_key_type do |t|
+      t.text :body, size: :long
+      t.string :name, null: false
+      t.references :record, null: false, polymorphic: true, index: false, type: foreign_key_type
+      t.string :locale
+      t.timestamps
+      t.index [ "record_type", "record_id", "name", "locale" ], name: "index_action_text_encrypted_rich_texts_uniqueness", unique: true
+    end
   end
 
   private

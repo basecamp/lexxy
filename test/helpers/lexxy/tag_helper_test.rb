@@ -45,4 +45,22 @@ class Lexxy::TagHelperTest < ActionView::TestCase
       assert_not_includes value, "<div>"
     end
   end
+
+  test "#lexxy_rich_textarea_tag renders persisted encrypted rich text content" do
+    note = Note.create!(title: "Hello World")
+    note.body = "<p>This is encrypted contents</p>"
+    note.save!
+    note.reload
+
+    render inline: <<~ERB, locals: { note: note }
+      <%= lexxy_rich_textarea_tag :body, note.body %>
+    ERB
+
+    assert_dom "lexxy-editor", count: 1 do |lexxy_editor, *|
+      value = lexxy_editor["value"]
+      decrypted_html = note.body.to_s
+
+      assert_includes decrypted_html, value
+    end
+  end
 end
