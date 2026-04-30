@@ -45,8 +45,8 @@ export class TablesExtension extends LexxyExtension {
         setScrollableTablesActive(editor, true)
 
         return mergeRegister(
-          // Register Lexical table plugins
           registerTablePlugin(editor),
+
           // Lexxy registers extensions before setRootElement(), but table
           // drag-selection needs a root before wiring its pointer handlers.
           editor.registerRootListener((rootElement) => {
