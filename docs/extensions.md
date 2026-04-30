@@ -18,6 +18,13 @@ Lexxy Extensions are a wrapper around [Lexical Extensions](https://lexical.dev/d
 
 An instance of the extension will be initialized per editor: `new MyLexxyExtension(lexxyElement)`. There is no need to supply a constructor as the base class provides `this.editorElement` to access Lexxy. If you specify a custom constructor you must pass the `lexxyElement` to `super`. If the return of `lexicalExtension` is truthy, it will be loaded at the time of Lexical editor creation. You can optionally provide an `enabled` getter which will be checked to see if your extension should be loaded by Lexxy.
 
+## Lifecycle
+
+- `initializeToolbar(lexxyToolbar)` is called when the editor toolbar is initialized. Use it to add toolbar buttons or attach listeners to existing toolbar DOM.
+- `dispose()` is called when the editor disconnects or reconnects. Use it to release anything that would otherwise leak across editor lifecycles: DOM listeners, global listeners, observers, timers, inserted DOM, or pending async state.
+
+A new extension instance is created on every editor `connectedCallback`, so any state that survives in the surrounding DOM (for example, listeners attached to the toolbar in `initializeToolbar`) must be cleaned up in `dispose()` to avoid duplication after reconnects.
+
 Should you need to extend any of Lexxy's nodes, they are exported at the top-level module:
 
 ```javascript

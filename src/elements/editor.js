@@ -65,6 +65,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.id ||= generateDomId("lexxy-editor")
     this.config = new Configuration(this)
     this.extensions = new Extensions(this)
+    this.#disposables.push(this.extensions)
 
     this.editor = this.#createEditor()
     this.#disposables.push(this.editor)

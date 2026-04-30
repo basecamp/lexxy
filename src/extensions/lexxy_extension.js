@@ -29,4 +29,7 @@ export default class LexxyExtension {
   initializeToolbar(_lexxyToolbar) {
 
   }
+
+  dispose() {
+  }
 }
