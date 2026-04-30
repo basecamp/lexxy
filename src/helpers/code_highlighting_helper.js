@@ -1,4 +1,3 @@
-import { createElement } from "./html_helper"
 import Prism from "../config/prism"
 
 export function highlightCode() {
@@ -23,13 +22,11 @@ function highlightElement(preElement) {
   code = new DOMParser().parseFromString(code, "text/html").body.textContent || ""
 
   const highlightedHtml = Prism.highlight(code, grammar, language)
-  const codeElement = createElement("code", { "data-language": language, innerHTML: highlightedHtml })
+  preElement.innerHTML = highlightedHtml
 
   if (highlights.length > 0) {
-    applyHighlightRanges(codeElement, highlights)
+    applyHighlightRanges(preElement, highlights)
   }
-
-  preElement.replaceChildren(codeElement)
 }
 
 // Walk the DOM tree inside a <pre> element and build a list of

@@ -46,10 +46,5 @@ test("highlightCode preserves the pre wrapper around the highlighted code elemen
 
   highlightCode()
 
-  const code = document.querySelector("code[data-language='javascript']")
-  expect(code).toBeTruthy()
-  expect(code.parentElement.tagName).toBe("PRE")
-  expect(code.textContent).toContain("const a = 1\nconst b = 2")
-
-  code.parentElement.remove()
+  expect(pre.textContent).toContain("const a = 1\nconst b = 2")
 })
