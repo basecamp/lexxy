@@ -74,6 +74,10 @@
     p:last-child {
       margin-block-end: 0;
     }
+
+    .lexxy-content__italic {
+      font-style: normal;
+    }
   }
 
   p:empty {
