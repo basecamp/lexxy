@@ -20,6 +20,12 @@ export default class Extensions {
     this.#addExtensionToolbarButtons(toolbar)
   }
 
+  dispose() {
+    while (this.enabledExtensions.length) {
+      this.enabledExtensions.pop().dispose()
+    }
+  }
+
   #clearPreviousExtensionToolbarButtons(toolbar) {
     toolbar.querySelectorAll("[data-lexxy-extension]").forEach(el => el.remove())
   }
