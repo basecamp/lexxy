@@ -1,15 +1,12 @@
 import { LinkNode } from "@lexical/link"
+import { ToolbarDropdown } from "../toolbar_dropdown"
 import { registerEventListener } from "../../helpers/listener_helper"
 
-export class LinkContent {
-  constructor(dropdown) {
-    this.dropdown = dropdown
-  }
-
-  connect() {
+export class LinkDropdown extends ToolbarDropdown {
+  editorReady() {
     this.input = this.panel.querySelector("input")
 
-    this.dropdown.track(
+    this.track(
       registerEventListener(this.input, "keydown", this.#handleEnter),
       registerEventListener(this.linkButton, "click", this.#handleLink),
       registerEventListener(this.unlinkButton, "click", this.#handleUnlink)
@@ -23,18 +20,6 @@ export class LinkContent {
 
   onClose() {
     this.input.required = false
-  }
-
-  get panel() {
-    return this.dropdown.panel
-  }
-
-  get editor() {
-    return this.dropdown.editor
-  }
-
-  get editorElement() {
-    return this.dropdown.editorElement
   }
 
   get linkButton() {
@@ -60,12 +45,12 @@ export class LinkContent {
     }
 
     this.editor.dispatchCommand("link", this.input.value)
-    this.dropdown.close()
+    this.close()
   }
 
   #handleUnlink = () => {
     this.editor.dispatchCommand("unlink")
-    this.dropdown.close()
+    this.close()
   }
 
   get #selectedLinkUrl() {
@@ -76,4 +61,4 @@ export class LinkContent {
   }
 }
 
-export default LinkContent
+export default LinkDropdown

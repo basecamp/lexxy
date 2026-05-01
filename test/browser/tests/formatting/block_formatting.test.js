@@ -292,11 +292,11 @@ test.describe("Block formatting", () => {
 
     await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-toolbar-dropdown[data-content='link'] [data-dropdown-panel] input[type='url']").first()
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input[type='url']").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await input.fill("https://37signals.com")
     await page
-      .locator("lexxy-toolbar-dropdown[data-content='link'] [data-dropdown-panel] button[value='link']")
+      .locator("lexxy-link-dropdown [data-dropdown-panel] button[value='link']")
       .first()
       .click()
 
@@ -324,7 +324,7 @@ test.describe("Block formatting", () => {
 
     await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-toolbar-dropdown[data-content='link'] [data-dropdown-panel] input[type='url']").first()
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input[type='url']").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await input.fill("https://37signals.com")
     await input.press("Enter")
@@ -350,7 +350,7 @@ test.describe("Block formatting", () => {
 
     await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-toolbar-dropdown[data-content='link'] [data-dropdown-panel] input[type='url']").first()
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input[type='url']").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await expect(input).toHaveValue("https://37signals.com")
   })
@@ -365,7 +365,7 @@ test.describe("Block formatting", () => {
 
     await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-toolbar-dropdown[data-content='link'] [data-dropdown-panel] input[type='url']").first()
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input[type='url']").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await expect(input).toHaveValue("")
   })

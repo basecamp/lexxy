@@ -1,10 +1,8 @@
 import { nextFrame } from "../helpers/timing_helpers"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
-import { dropdownContents } from "./dropdown/registry"
 
 export class ToolbarDropdown extends HTMLElement {
   #listeners = new ListenerBin()
-  content = null
 
   connectedCallback() {
     if (!this.trigger || !this.panel) return
@@ -14,13 +12,16 @@ export class ToolbarDropdown extends HTMLElement {
       registerEventListener(this.trigger, "click", this.#handleTriggerClick)
     )
 
-    this.#onToolbarEditor(() => this.#connectContent())
+    this.#onToolbarEditor(() => this.editorReady())
   }
 
   disconnectedCallback() {
     this.#listeners.dispose()
-    this.content = null
   }
+
+  editorReady() {}
+  onOpen() {}
+  onClose() {}
 
   get trigger() {
     return this.querySelector(":scope > [data-dropdown-trigger]")
@@ -43,7 +44,11 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   get isOpen() {
-    return this.trigger?.getAttribute("aria-expanded") === "true"
+    return this.panel.hidden === false
+  }
+
+  get isClosed() {
+    return !this.isOpen
   }
 
   track(...listeners) {
@@ -51,28 +56,20 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   open() {
-    if (!this.trigger || this.isOpen) return
+    if (this.isOpen) return
     this.trigger.setAttribute("aria-expanded", "true")
     this.panel.hidden = false
-    this.content?.onOpen?.()
+    this.onOpen()
     this.#focusFirstInteractive()
   }
 
   close({ focusEditor = true } = {}) {
     if (focusEditor) this.editor?.focus()
-    if (!this.trigger || !this.isOpen) return
+
+    if (this.isClosed) return
     this.trigger.setAttribute("aria-expanded", "false")
     this.panel.hidden = true
-    this.content?.onClose?.()
-  }
-
-  #connectContent() {
-    const name = this.dataset.content
-    const ContentClass = name ? dropdownContents[name] : null
-    if (!ContentClass) return
-
-    this.content = new ContentClass(this)
-    this.content.connect?.()
+    this.onClose()
   }
 
   #handleTriggerClick = () => {

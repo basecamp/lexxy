@@ -525,7 +525,7 @@
 /* --------------------------------------------------------------------------
 /* Dropdowns */
 
-:where(lexxy-toolbar-dropdown) {
+:where(.lexxy-editor__toolbar-dropdown) {
   user-select: none;
   -webkit-user-select: none;
 
@@ -654,7 +654,7 @@
   /* --------------------------------------------------------------------------
   /* Link dropdown */
 
-  &[data-content="link"] {
+  &.lexxy-editor__toolbar-dropdown--link {
     [data-dropdown-panel] {
       font-size: var(--lexxy-text-small);
       gap: var(--lexxy-toolbar-spacing);
@@ -710,7 +710,7 @@
   /* --------------------------------------------------------------------------
   /* Color dropdown */
 
-  &[data-content="highlight"] {
+  &.lexxy-editor__toolbar-dropdown--highlight {
     position: relative;
 
     [overflowing] & {

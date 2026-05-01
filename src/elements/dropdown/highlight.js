@@ -1,5 +1,6 @@
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
+import { ToolbarDropdown } from "../toolbar_dropdown"
 import { registerEventListener } from "../../helpers/listener_helper"
 
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button"
@@ -10,12 +11,8 @@ const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
 // see https://github.com/facebook/lexical/issues/8013
 const NO_STYLE = Symbol("no_style")
 
-export class HighlightContent {
-  constructor(dropdown) {
-    this.dropdown = dropdown
-  }
-
-  connect() {
+export class HighlightDropdown extends ToolbarDropdown {
+  editorReady() {
     this.#setUpButtons()
     this.#registerButtonHandlers()
   }
@@ -26,23 +23,11 @@ export class HighlightContent {
     })
   }
 
-  get panel() {
-    return this.dropdown.panel
-  }
-
-  get editor() {
-    return this.dropdown.editor
-  }
-
-  get editorElement() {
-    return this.dropdown.editorElement
-  }
-
   #registerButtonHandlers() {
     this.#colorButtons.forEach(button => {
-      this.dropdown.track(registerEventListener(button, "click", this.#handleColorButtonClick))
+      this.track(registerEventListener(button, "click", this.#handleColorButtonClick))
     })
-    this.dropdown.track(registerEventListener(this.panel.querySelector(REMOVE_HIGHLIGHT_SELECTOR), "click", this.#handleRemoveHighlightClick))
+    this.track(registerEventListener(this.panel.querySelector(REMOVE_HIGHLIGHT_SELECTOR), "click", this.#handleRemoveHighlightClick))
   }
 
   #setUpButtons() {
@@ -84,14 +69,14 @@ export class HighlightContent {
     const value = button.dataset.value
 
     this.editor.dispatchCommand("toggleHighlight", { [attribute]: value })
-    this.dropdown.close()
+    this.close()
   }
 
   #handleRemoveHighlightClick = (event) => {
     event.preventDefault()
 
     this.editor.dispatchCommand("removeHighlight")
-    this.dropdown.close()
+    this.close()
   }
 
   #updateColorButtonStates(selection) {
@@ -122,4 +107,4 @@ export class HighlightContent {
   }
 }
 
-export default HighlightContent
+export default HighlightDropdown
