@@ -1,11 +1,11 @@
 export const HELLO_EVERYONE = "<p>Hello everyone</p>"
 
 export async function openFormatDropdown(page) {
-  await page.evaluate(() => {
-    const details = document.querySelector("summary[name='format']").closest("details")
-    details.open = true
-    details.dispatchEvent(new Event("toggle"))
-  })
+  await openToolbarDropdown(page, "format")
+}
+
+export async function openToolbarDropdown(page, name) {
+  await page.locator(`button[name='${name}']`).click()
 }
 
 const FORMAT_DROPDOWN_COMMANDS = new Set([
@@ -23,7 +23,7 @@ export async function clickToolbarButton(page, command) {
 export async function applyHighlightOption(page, attribute, buttonIndex) {
   await page.locator("[name='highlight']").click()
   const buttons = page.locator(
-    `lexxy-highlight-dropdown .lexxy-highlight-colors .lexxy-highlight-button[data-style='${attribute}']`,
+    `lexxy-toolbar-dropdown[data-content='highlight'] [data-dropdown-panel] .lexxy-highlight-colors .lexxy-highlight-button[data-style='${attribute}']`,
   )
   await buttons.nth(buttonIndex - 1).click()
 }

@@ -1,32 +1,48 @@
 import { LinkNode } from "@lexical/link"
-import { ToolbarDropdown } from "../toolbar_dropdown"
 import { registerEventListener } from "../../helpers/listener_helper"
 
-export class LinkDropdown extends ToolbarDropdown {
-  connectedCallback() {
-    super.connectedCallback()
+export class LinkContent {
+  constructor(dropdown) {
+    this.dropdown = dropdown
+  }
 
-    this.input = this.querySelector("input")
+  connect() {
+    this.input = this.panel.querySelector("input")
 
-    this.track(
-      registerEventListener(this.container, "toggle", this.#handleToggle),
+    this.dropdown.track(
       registerEventListener(this.input, "keydown", this.#handleEnter),
       registerEventListener(this.linkButton, "click", this.#handleLink),
       registerEventListener(this.unlinkButton, "click", this.#handleUnlink)
     )
   }
 
+  onOpen() {
+    this.input.value = this.#selectedLinkUrl
+    this.input.required = true
+  }
+
+  onClose() {
+    this.input.required = false
+  }
+
+  get panel() {
+    return this.dropdown.panel
+  }
+
+  get editor() {
+    return this.dropdown.editor
+  }
+
+  get editorElement() {
+    return this.dropdown.editorElement
+  }
+
   get linkButton() {
-    return this.querySelector("[value='link']")
+    return this.panel.querySelector("[value='link']")
   }
 
   get unlinkButton() {
-    return this.querySelector("[value='unlink']")
-  }
-
-  #handleToggle = ({ newState }) => {
-    this.input.value = this.#selectedLinkUrl
-    this.input.required = newState === "open"
+    return this.panel.querySelector("[value='unlink']")
   }
 
   #handleEnter = (event) => {
@@ -44,12 +60,12 @@ export class LinkDropdown extends ToolbarDropdown {
     }
 
     this.editor.dispatchCommand("link", this.input.value)
-    this.close()
+    this.dropdown.close()
   }
 
   #handleUnlink = () => {
     this.editor.dispatchCommand("unlink")
-    this.close()
+    this.dropdown.close()
   }
 
   get #selectedLinkUrl() {
@@ -60,4 +76,4 @@ export class LinkDropdown extends ToolbarDropdown {
   }
 }
 
-export default LinkDropdown
+export default LinkContent

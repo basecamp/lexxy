@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
-import { HELLO_EVERYONE, clickToolbarButton } from "../../helpers/toolbar.js"
+import { HELLO_EVERYONE, clickToolbarButton, openToolbarDropdown } from "../../helpers/toolbar.js"
 
 test.describe("Block formatting", () => {
   test.beforeEach(async ({ page }) => {
@@ -290,21 +290,13 @@ test.describe("Block formatting", () => {
     await editor.select("everyone")
     await editor.flush()
 
-    // Open the link dropdown programmatically to avoid focus/selection loss
-    // that occurs with a real click on the summary element
-    await page.evaluate(() => {
-      const details = document.querySelector(
-        "details:has(summary[name='link'])",
-      )
-      details.open = true
-      details.dispatchEvent(new Event("toggle"))
-    })
+    await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-link-dropdown input[type='url']").first()
+    const input = page.locator("lexxy-toolbar-dropdown[data-content='link'] [data-dropdown-panel] input[type='url']").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await input.fill("https://37signals.com")
     await page
-      .locator("lexxy-link-dropdown button[value='link']")
+      .locator("lexxy-toolbar-dropdown[data-content='link'] [data-dropdown-panel] button[value='link']")
       .first()
       .click()
 
@@ -330,15 +322,9 @@ test.describe("Block formatting", () => {
     await editor.select("everyone")
     await editor.flush()
 
-    await page.evaluate(() => {
-      const details = document.querySelector(
-        "details:has(summary[name='link'])",
-      )
-      details.open = true
-      details.dispatchEvent(new Event("toggle"))
-    })
+    await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-link-dropdown input[type='url']").first()
+    const input = page.locator("lexxy-toolbar-dropdown[data-content='link'] [data-dropdown-panel] input[type='url']").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await input.fill("https://37signals.com")
     await input.press("Enter")
@@ -362,15 +348,9 @@ test.describe("Block formatting", () => {
     await editor.select("everyone")
     await editor.flush()
 
-    await page.evaluate(() => {
-      const details = document.querySelector(
-        "details:has(summary[name='link'])",
-      )
-      details.open = true
-      details.dispatchEvent(new Event("toggle"))
-    })
+    await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-link-dropdown input[type='url']").first()
+    const input = page.locator("lexxy-toolbar-dropdown[data-content='link'] [data-dropdown-panel] input[type='url']").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await expect(input).toHaveValue("https://37signals.com")
   })
@@ -383,15 +363,9 @@ test.describe("Block formatting", () => {
     await editor.select("everyone")
     await editor.flush()
 
-    await page.evaluate(() => {
-      const details = document.querySelector(
-        "details:has(summary[name='link'])",
-      )
-      details.open = true
-      details.dispatchEvent(new Event("toggle"))
-    })
+    await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-link-dropdown input[type='url']").first()
+    const input = page.locator("lexxy-toolbar-dropdown[data-content='link'] [data-dropdown-panel] input[type='url']").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await expect(input).toHaveValue("")
   })
