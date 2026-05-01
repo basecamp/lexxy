@@ -167,7 +167,6 @@ export class LexicalToolbarElement extends HTMLElement {
 
   #handleEditorBlur = () => {
     this.#resetTabIndexValues()
-    this.closeDropdowns()
   }
 
   #handleKeydown = (event) => {
