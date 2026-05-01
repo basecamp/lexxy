@@ -570,7 +570,7 @@
     border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
     box-sizing: border-box;
     box-shadow: var(--lexxy-shadow);
-    color: var(--lexxy-color-ink);
+    color: var(--lexxy-color-text);
     display: flex;
     gap: var(--lexxy-toolbar-gap);
     margin: 0;
@@ -591,6 +591,7 @@
 
     button {
       align-items: center;
+      color: var(--lexxy-color-text);
       display: flex;
       flex-direction: row;
       gap: 1ch;
@@ -611,6 +612,7 @@
 
       svg {
         block-size: 1lh;
+        fill: currentColor;
         inline-size: 1lh;
       }
     }
