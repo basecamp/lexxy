@@ -21,6 +21,8 @@ export function defineElements() {
   }
 
   Object.entries(elements).forEach(([ name, element ]) => {
-    customElements.define(name, element)
+    if (!customElements.get(name)) {
+      customElements.define(name, element)
+    }
   })
 }
