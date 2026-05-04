@@ -18,6 +18,7 @@ const presets = new Configuration({
     toolbar: {
       upload: "both"
     },
+    headings: [ "h2", "h3", "h4" ],
     highlight: {
       buttons: {
         color: range(1, 9).map(n => `var(--highlight-${n})`),
