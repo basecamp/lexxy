@@ -366,7 +366,7 @@ export class LexicalPromptElement extends HTMLElement {
 
   #showEmptyResults() {
     this.popoverElement.classList.add("lexxy-prompt-menu--empty")
-    const el = createElement("li", { innerHTML: this.#emptyResultsMessage })
+    const el = createElement("li", { textContent: this.#emptyResultsMessage })
     el.classList.add("lexxy-prompt-menu__item--empty")
     this.popoverElement.append(el)
   }
