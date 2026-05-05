@@ -54,9 +54,11 @@ jobs:
       - name: Set up baseline worktree
         if: steps.baseline.outputs.sha != ''
         working-directory: current
+        env:
+          BASELINE_SHA: ${{ steps.baseline.outputs.sha }}
         run: |
-          git fetch --depth=1 origin ${{ steps.baseline.outputs.sha }}
-          git worktree add ../baseline ${{ steps.baseline.outputs.sha }}
+          git fetch --depth=1 origin "$BASELINE_SHA"
+          git worktree add ../baseline "$BASELINE_SHA"
 
       - name: Set up Node.js
         if: steps.baseline.outputs.sha != ''
