@@ -5,14 +5,10 @@ export class ToolbarDropdown extends HTMLElement {
   #listeners = new ListenerBin()
 
   connectedCallback() {
-    if (!this.trigger || !this.panel) return
-
-    this.#listeners.track(
-      registerEventListener(this, "keydown", this.#handleKeyDown),
-      registerEventListener(this.trigger, "click", this.#handleTriggerClick)
-    )
-
-    this.#onToolbarEditor(() => this.editorReady())
+    this.#onToolbarEditor(() => {
+      this.#registerListeners()
+      this.editorReady()
+    })
   }
 
   disconnectedCallback() {
@@ -72,6 +68,13 @@ export class ToolbarDropdown extends HTMLElement {
     this.onClose()
   }
 
+  #registerListeners() {
+    this.#listeners.track(
+      registerEventListener(this, "keydown", this.#handleKeyDown),
+      registerEventListener(this.trigger, "click", this.#handleTriggerClick)
+    )
+  }
+
   #handleTriggerClick = () => {
     if (this.isOpen) {
       this.close({ focusEditor: false })
@@ -82,11 +85,10 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   async #onToolbarEditor(callback) {
-    const toolbar = this.toolbar
-    if (!toolbar) return
+    if (!this.toolbar) return
 
-    await toolbar.getEditorElement()
-    if (this.isConnected && this.toolbar === toolbar) callback()
+    await this.toolbar.getEditorElement()
+    if (this.isConnected && this.toolbar) callback()
   }
 
   #handleKeyDown = (event) => {
