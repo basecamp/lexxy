@@ -10,11 +10,15 @@ import TableTools from "./table/table_tools"
 
 export function defineElements() {
   const elements = {
+    // Toolbar must be registered BEFORE Editor
     "lexxy-toolbar": Toolbar,
     "lexxy-toolbar-dropdown": ToolbarDropdown,
     "lexxy-highlight-dropdown": HighlightDropdown,
     "lexxy-link-dropdown": LinkDropdown,
+
     "lexxy-editor": Editor,
+
+    // Prompt must be registered AFTER Editor
     "lexxy-prompt": Prompt,
     "lexxy-code-language-picker": CodeLanguagePicker,
     "lexxy-node-delete-button": NodeDeleteButton,
