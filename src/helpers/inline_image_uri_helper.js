@@ -1,6 +1,5 @@
 import { $descendantsMatching } from "@lexical/utils"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
-import { $createActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { mimeTypeToExtension } from "./storage_helper"
 
 // Replaces inline `data:image/...` attachments with upload nodes that flow through the normal
@@ -41,12 +40,7 @@ function isInlineImageDataURIAttachment(node) {
 function $tryCreateUploadFromDataURI(node, editorElement) {
   const file = dataURIToFile(node.src)
   if (file && editorElement.acceptsFile(file)) {
-    return $createActionTextAttachmentUploadNode({
-      file,
-      uploadUrl: editorElement.directUploadUrl,
-      blobUrlTemplate: editorElement.blobUrlTemplate,
-      contentType: file.type,
-    })
+    return editorElement.contents.$createUploadNode(file)
   }
   return null
 }

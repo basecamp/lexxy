@@ -15,7 +15,7 @@ import { parseHtml } from "../helpers/html_helper"
 import { $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
-import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
+import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
 import { $isShadowRoot, $splitParagraphsAtLineBreakBoundaries } from "../helpers/lexical_helper"
@@ -264,6 +264,15 @@ export default class Contents {
         lastNode.selectEnd()
         this.#normalizeSelectionInShadowRoot()
       }
+    })
+  }
+
+  $createUploadNode(file) {
+    return $createActionTextAttachmentUploadNode({
+      file,
+      uploadUrl: this.editorElement.directUploadUrl,
+      blobUrlTemplate: this.editorElement.blobUrlTemplate,
+      contentType: file.type,
     })
   }
 
