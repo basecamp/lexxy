@@ -1,7 +1,6 @@
 import { $descendantsMatching } from "@lexical/utils"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { $createActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
-import { dispatch } from "./html_helper"
 import { mimeTypeToExtension } from "./storage_helper"
 
 // Replaces inline `data:image/...` attachments with upload nodes that flow through the normal
@@ -16,22 +15,22 @@ import { mimeTypeToExtension } from "./storage_helper"
 // pipeline; on refusal, the node is dropped silently — matching how `Contents#uploadFiles` handles
 // file-picker rejections.
 export function $convertInlineImageDataURIs(nodes, editorElement) {
-  return nodes.flatMap(node => {
-    if (isInlineImageDataURIAttachment(node)) {
-      const upload = $tryConvertToUpload(node, editorElement)
-      return upload ? [ upload ] : []
+  const topLevel = nodes
+    .map(node => isInlineImageDataURIAttachment(node) ? $tryCreateUploadFromDataURI(node, editorElement) : node)
+    .filter(node => node !== null)
+
+  for (const node of topLevel) {
+    for (const desc of $descendantsMatching([ node ], isInlineImageDataURIAttachment)) {
+      const upload = $tryCreateUploadFromDataURI(desc, editorElement)
+      if (upload) {
+        desc.replace(upload)
+      } else {
+        desc.remove()
+      }
     }
-    $descendantsMatching([ node ], isInlineImageDataURIAttachment)
-      .forEach(desc => {
-        const upload = $tryConvertToUpload(desc, editorElement)
-        if (upload) {
-          desc.replace(upload)
-        } else {
-          desc.remove()
-        }
-      })
-    return [ node ]
-  })
+  }
+
+  return topLevel
 }
 
 function isInlineImageDataURIAttachment(node) {
@@ -39,9 +38,9 @@ function isInlineImageDataURIAttachment(node) {
     /^data:image\//i.test(node.src ?? "")
 }
 
-function $tryConvertToUpload(node, editorElement) {
+function $tryCreateUploadFromDataURI(node, editorElement) {
   const file = dataURIToFile(node.src)
-  if (file && dispatch(editorElement, "lexxy:file-accept", { file }, true)) {
+  if (file && editorElement.acceptsFile(file)) {
     return $createActionTextAttachmentUploadNode({
       file,
       uploadUrl: editorElement.directUploadUrl,
@@ -49,6 +48,7 @@ function $tryConvertToUpload(node, editorElement) {
       contentType: file.type,
     })
   }
+  return null
 }
 
 function dataURIToFile(dataURI) {

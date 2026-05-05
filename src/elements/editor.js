@@ -182,6 +182,10 @@ export class LexicalEditorElement extends HTMLElement {
     }
   }
 
+  acceptsFile(file) {
+    return dispatch(this, "lexxy:file-accept", { file }, true)
+  }
+
   get isEmpty() {
     return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
   }

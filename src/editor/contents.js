@@ -11,7 +11,7 @@ import { $createHeadingNode, $createQuoteNode, $isQuoteNode } from "@lexical/ric
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
-import { dispatch, parseHtml } from "../helpers/html_helper"
+import { parseHtml } from "../helpers/html_helper"
 import { $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
@@ -253,7 +253,7 @@ export default class Contents {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
       return
     }
-    const validFiles = Array.from(files).filter(this.#shouldUploadFile.bind(this))
+    const validFiles = Array.from(files).filter(file => this.editorElement.acceptsFile(file))
 
     this.editor.update(() => {
       const uploader = Uploader.for(this.editorElement, validFiles)
@@ -607,10 +607,6 @@ export default class Contents {
   #createHtmlNodeWith(html) {
     const htmlNodes = $generateFilteredNodesFromDOM(this.editorElement, parseHtml(html))
     return htmlNodes[0] || $createParagraphNode()
-  }
-
-  #shouldUploadFile(file) {
-    return dispatch(this.editorElement, "lexxy:file-accept", { file }, true)
   }
 
   // When the selection anchor is on a shadow root (e.g. a table cell), Lexical's
