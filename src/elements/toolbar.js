@@ -180,8 +180,8 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.#listeners.track(this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
         this.#updateButtonStates()
         this.closeDropdowns()
       })
