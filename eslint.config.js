@@ -12,6 +12,7 @@ export default [
       sourceType: "module",
       globals: {
         AbortController: "readonly",
+        atob: "readonly",
         console: "readonly",
         document: "readonly",
         window: "readonly",

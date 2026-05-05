@@ -5,6 +5,7 @@ import {
 } from "lexical"
 
 import { $generateFilteredNodesFromDOM } from "../helpers/attachment_filter_helper"
+import { $convertInlineImageDataURIs } from "../helpers/inline_image_uri_helper"
 import { $createCodeNode, $isCodeNode } from "@lexical/code"
 import { $createHeadingNode, $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
 import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
@@ -42,7 +43,8 @@ export default class Contents {
     this.editor.update(() => {
       if ($hasUpdateTag(PASTE_TAG)) this.#stripTableCellColorStyles(doc)
 
-      const nodes = $generateFilteredNodesFromDOM(this.editorElement, doc)
+      let nodes = $generateFilteredNodesFromDOM(this.editorElement, doc)
+      if ($hasUpdateTag(PASTE_TAG)) nodes = $convertInlineImageDataURIs(nodes, this.editorElement)
       if (!this.#insertUploadNodes(nodes)) {
         this.insertAtCursor(...nodes)
       }
