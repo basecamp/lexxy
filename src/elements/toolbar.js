@@ -414,7 +414,7 @@ export class LexicalToolbarElement extends HTMLElement {
         <button data-dropdown-trigger class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="link" title="Link" data-hotkey="cmd+k ctrl+k" aria-haspopup="dialog" aria-expanded="false">
           ${ToolbarIcons.link}
         </button>
-        <div data-dropdown-panel role="dialog" hidden>
+        <div data-dropdown-panel role="dialog" aria-label="Link" hidden>
           <input type="url" placeholder="Enter a URL…" class="input" id="lexxy-link-url">
           <div class="lexxy-editor__toolbar-dropdown-actions">
             <button type="button" class="lexxy-editor__toolbar-button" value="link">Link</button>
