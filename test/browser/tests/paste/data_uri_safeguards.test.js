@@ -135,6 +135,21 @@ test.describe("Paste — Inline image data URIs", () => {
     expect(value).not.toContain("data:image/png")
   })
 
+  test("converts a permitted image data URI even with a restrictive allowlist", async ({ page, editor }) => {
+    await page.goto("/attachments-permitted-image-png.html")
+    await editor.waitForConnected()
+    const calls = await mockActiveStorageUploads(page)
+
+    await editor.paste("", { html: `<img src="${PNG_DATA_URI}">` })
+
+    await expect.poll(() => calls.blobCreations.length, { timeout: 10_000 }).toBe(1)
+    expect(calls.blobCreations[0].content_type).toBe("image/png")
+
+    await expect(
+      editor.content.locator("figure.attachment[data-content-type='image/png']"),
+    ).toHaveCount(1)
+  })
+
   test("silently drops a non-permitted image data URI", async ({ page, editor }) => {
     await page.goto("/attachments-permitted-image-png.html")
     await editor.waitForConnected()
