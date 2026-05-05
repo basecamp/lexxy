@@ -406,7 +406,7 @@ export class LexicalToolbarElement extends HTMLElement {
         </button>
         <div data-dropdown-panel role="menu" hidden>
           <div class="lexxy-highlight-colors"></div>
-          <button data-command="removeHighlight" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset" role="menuitem">Remove all coloring</button>
+          <button data-command="removeHighlight" type="button" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset" role="menuitem">Remove all coloring</button>
         </div>
       </lexxy-highlight-dropdown>
 

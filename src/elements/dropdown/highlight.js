@@ -27,7 +27,6 @@ export class HighlightDropdown extends ToolbarDropdown {
     this.#colorButtons.forEach(button => {
       this.track(registerEventListener(button, "click", this.#handleColorButtonClick))
     })
-    this.track(registerEventListener(this.panel.querySelector(REMOVE_HIGHLIGHT_SELECTOR), "click", this.#handleRemoveHighlightClick))
   }
 
   #setUpButtons() {
@@ -65,17 +64,9 @@ export class HighlightDropdown extends ToolbarDropdown {
     const button = event.target.closest(APPLY_HIGHLIGHT_SELECTOR)
     if (!button) return
 
-    const attribute = button.dataset.style
-    const value = button.dataset.value
+    const { style, value } = button.dataset
 
-    this.editor.dispatchCommand("toggleHighlight", { [attribute]: value })
-    this.close()
-  }
-
-  #handleRemoveHighlightClick = (event) => {
-    event.preventDefault()
-
-    this.editor.dispatchCommand("removeHighlight")
+    this.editor.dispatchCommand("toggleHighlight", { [style]: value })
     this.close()
   }
 
