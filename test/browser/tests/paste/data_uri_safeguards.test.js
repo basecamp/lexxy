@@ -185,6 +185,21 @@ test.describe("Paste — Inline image data URIs", () => {
     expect(await editor.value()).toContain(pdfDataURI)
   })
 
+  test("leaves a non-base64 image data URI untouched in the saved HTML", async ({ page, editor }) => {
+    await page.goto("/attachments.html")
+    await editor.waitForConnected()
+    const calls = await mockActiveStorageUploads(page)
+
+    const svgDataURI = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3C/svg%3E"
+    await editor.paste("", {
+      html: `<p>before</p><img src="${svgDataURI}"><p>after</p>`,
+    })
+    await editor.flush()
+
+    expect(calls.blobCreations).toHaveLength(0)
+    expect(await editor.value()).toContain(svgDataURI)
+  })
+
   test("silently drops a malformed data URI", async ({ page, editor }) => {
     await page.goto("/attachments.html")
     await editor.waitForConnected()

@@ -34,7 +34,7 @@ export function $convertInlineImageDataURIs(nodes, editorElement) {
 
 function isInlineImageDataURIAttachment(node) {
   return node instanceof ActionTextAttachmentNode &&
-    /^data:image\//i.test(node.src ?? "")
+    /^data:image\/[^,]*;base64,/i.test(node.src ?? "")
 }
 
 function $tryCreateUploadFromDataURI(node, editorElement) {
