@@ -158,7 +158,6 @@ The compare script checks per-scenario median regressions against coarse thresho
 
 GitHub Actions runs the browser benchmark workflow from `.github/workflows/benchmarks.yml` on pull requests, pushes to `main`, and manual dispatches.
 
-- Each run uploads `tmp/browser-benchmarks.json` as the `browser-benchmarks` artifact.
-- Pull requests compare their results against the latest successful benchmark run from `main`.
+- Pull requests run benchmarks against the latest commit on `main` for which there's a successful benchmark run, and use that as the baseline for comparison.
 - The workflow only fails when a scenario median regresses by more than both the configured absolute and relative threshold.
 - The comparison is written to the workflow summary, so you can inspect the deltas without downloading artifacts manually.
