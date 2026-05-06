@@ -2,6 +2,7 @@ import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty } from "@lexical/selection"
 import { ToolbarDropdown } from "../toolbar_dropdown"
 import { registerEventListener } from "../../helpers/listener_helper"
+import { createElement } from "../../helpers/html_helper"
 
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
@@ -48,14 +49,14 @@ export class HighlightDropdown extends ToolbarDropdown {
   }
 
   #createButton(attribute, value, index) {
-    const button = document.createElement("button")
-    button.dataset.style = attribute
-    button.style.setProperty(attribute, value)
-    button.dataset.value = value
-    button.classList.add("lexxy-editor__toolbar-button", "lexxy-highlight-button")
-    button.name = attribute + "-" + index
-    button.role = "menuitem"
-    return button
+    return createElement("button", {
+      type: "button",
+      dataset: { value, style: attribute },
+      style: `${attribute}: ${value}`,
+      class: "lexxy-editor__toolbar-button lexxy-highlight-button",
+      name: `${attribute}-${index}`,
+      role: "menuitem"
+    })
   }
 
   #handleColorButtonClick = (event) => {
