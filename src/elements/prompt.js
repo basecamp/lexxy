@@ -238,20 +238,34 @@ export class LexicalPromptElement extends HTMLElement {
     return Array.from(this.popoverElement.querySelectorAll(".lexxy-prompt-menu__item"))
   }
 
-  #selectOption(listItem) {
+  #selectOption(listItem, { scrollIntoView = false } = {}) {
     this.#clearListItemSelection()
     listItem.toggleAttribute("aria-selected", true)
-    listItem.scrollIntoView({ block: "nearest", behavior: "smooth" })
-    listItem.focus()
+    if (scrollIntoView) this.#scrollItemIntoPopover(listItem)
 
-    // Preserve selection to prevent cursor jump
+    listItem.focus({ preventScroll: true })
+
+    // Focus the contenteditable directly — the editor wrapper's focus()
+    // drops options.
     this.#selection.preservingSelection(() => {
-      this.#editorElement.focus()
-    })
+      this.#editorContentElement.focus({ preventScroll: true })
+    }, { preventScroll: true })
 
     this.#setEditorAssociationAttribute("aria-controls", this.popoverElement.id)
     this.#setEditorAssociationAttribute("aria-activedescendant", listItem.id)
     this.#setEditorAssociationAttribute("aria-haspopup", "listbox")
+  }
+
+  #scrollItemIntoPopover(listItem) {
+    const popover = this.popoverElement
+    const itemRect = listItem.getBoundingClientRect()
+    const popoverRect = popover.getBoundingClientRect()
+
+    if (itemRect.bottom > popoverRect.bottom) {
+      popover.scrollTo({ top: popover.scrollTop + (itemRect.bottom - popoverRect.bottom), behavior: "smooth" })
+    } else if (itemRect.top < popoverRect.top) {
+      popover.scrollTo({ top: popover.scrollTop - (popoverRect.top - itemRect.top), behavior: "smooth" })
+    }
   }
 
   #clearListItemSelection() {
@@ -289,10 +303,25 @@ export class LexicalPromptElement extends HTMLElement {
       this.popoverElement.toggleAttribute("data-clipped-at-right", true)
     }
 
-    if (popoverRect.bottom > window.innerHeight) {
+    if (popoverRect.bottom > this.#viewportBottom) {
       this.#setPopoverOffsetY(contentRect.height - y + fontSize)
       this.popoverElement.toggleAttribute("data-clipped-at-bottom", true)
     }
+  }
+
+  // Embedded hosts that manage keyboard insets natively can leave both
+  // innerHeight and visualViewport at layout size; they can publish the
+  // visible-area height via --lexxy-host-viewport-height.
+  get #viewportBottom() {
+    const override = this.#hostViewportHeight
+    if (override != null) return override
+    const vv = window.visualViewport
+    return vv ? vv.offsetTop + vv.height : window.innerHeight
+  }
+
+  get #hostViewportHeight() {
+    const value = parseFloat(window.getComputedStyle(document.documentElement).getPropertyValue("--lexxy-host-viewport-height"))
+    return Number.isFinite(value) ? value : null
   }
 
   #setPopoverOffsetX(value) {
@@ -396,12 +425,12 @@ export class LexicalPromptElement extends HTMLElement {
 
   #moveSelectionDown() {
     const nextIndex = this.#selectedIndex + 1
-    if (nextIndex < this.#listItemElements.length) this.#selectOption(this.#listItemElements[nextIndex])
+    if (nextIndex < this.#listItemElements.length) this.#selectOption(this.#listItemElements[nextIndex], { scrollIntoView: true })
   }
 
   #moveSelectionUp() {
     const previousIndex = this.#selectedIndex - 1
-    if (previousIndex >= 0) this.#selectOption(this.#listItemElements[previousIndex])
+    if (previousIndex >= 0) this.#selectOption(this.#listItemElements[previousIndex], { scrollIntoView: true })
   }
 
   get #selectedIndex() {

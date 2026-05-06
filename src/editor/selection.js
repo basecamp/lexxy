@@ -1,7 +1,7 @@
 import {
   $addUpdateTag, $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
   $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND,
-  HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
+  HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, SKIP_SCROLL_INTO_VIEW_TAG, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
@@ -87,7 +87,7 @@ export default class Selection {
     return { node: null, offset: 0 }
   }
 
-  preservingSelection(fn) {
+  preservingSelection(fn, { preventScroll = false } = {}) {
     let selectionState = null
 
     this.editor.getEditorState().read(() => {
@@ -108,6 +108,7 @@ export default class Selection {
         if (selection && $isRangeSelection(selection)) {
           selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text")
           selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text")
+          if (preventScroll) $addUpdateTag(SKIP_SCROLL_INTO_VIEW_TAG)
         }
       })
     }
