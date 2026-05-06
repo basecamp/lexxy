@@ -50,6 +50,6 @@ echo "== Installing Playwright browsers =="
 npx playwright install
 
 echo "== Preparing database =="
-bin/rails db:prepare
+bin/rails app:db:prepare
 
 echo "== Setup complete! =="
