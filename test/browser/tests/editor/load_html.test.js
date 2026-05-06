@@ -35,4 +35,11 @@ test.describe("Load HTML", () => {
       await expect(paragraphs.last()).toHaveText("Second paragraph.")
     })
   })
+
+  test("preserves inline image data URIs untouched (no paste-time conversion)", async ({ editor }) => {
+    const dataURI = `data:image/png;base64,${Buffer.from("\x89PNG\r\n\x1a\n", "binary").toString("base64")}`
+    await editor.setValue(`<p>before</p><img src="${dataURI}"><p>after</p>`)
+
+    expect(await editor.value()).toContain(dataURI)
+  })
 })

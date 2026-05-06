@@ -1,12 +1,13 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, HISTORY_MERGE_TAG, KEY_ENTER_COMMAND, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, HISTORY_MERGE_TAG, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
-import { $generateHtmlFromNodes } from "@lexical/html"
-import { $generateFilteredNodesFromDOM } from "../helpers/attachment_filter_helper"
+import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
+import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
+import { $convertInlineImageDataURIs } from "../helpers/inline_image_uri_helper"
 import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transformer"
@@ -182,6 +183,16 @@ export class LexicalEditorElement extends HTMLElement {
     }
   }
 
+  acceptsFile(file) {
+    return dispatch(this, "lexxy:file-accept", { file }, true)
+  }
+
+  $generateNodesFromDOM(doc) {
+    let nodes = $generateLexicalNodesFromDOM(this.editor, doc)
+    if ($hasUpdateTag(PASTE_TAG)) nodes = $convertInlineImageDataURIs(nodes, this)
+    return filterDisallowedAttachmentNodes(nodes, this)
+  }
+
   get isEmpty() {
     return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
   }
@@ -304,7 +315,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #parseHtmlIntoLexicalNodes(html) {
     if (!html) html = "<p></p>"
-    const nodes = $generateFilteredNodesFromDOM(this, parseHtml(`${html}`))
+    const nodes = this.$generateNodesFromDOM(parseHtml(`${html}`))
 
     return nodes
       .filter(this.#isNotWhitespaceOnlyNode)

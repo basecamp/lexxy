@@ -13,7 +13,9 @@
         class="lexxy-content"
         placeholder="Write something..."
         attachments="true"
-        permitted-attachment-types="image/png"></lexxy-editor>
+        permitted-attachment-types="image/png"
+        data-direct-upload-url="/rails/active_storage/direct_uploads"
+        data-blob-url-template="/rails/active_storage/blobs/:signed_id/:filename"></lexxy-editor>
     </div>
   </form>
 

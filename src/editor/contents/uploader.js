@@ -1,6 +1,5 @@
 import { $getSelection } from "lexical"
 import { isPreviewableImage } from "../../helpers/html_helper"
-import { $createActionTextAttachmentUploadNode } from "../../nodes/action_text_attachment_upload_node"
 import { $createImageGalleryNode, $findOrCreateGalleryForImage, ImageGalleryNode } from "../../nodes/image_gallery_node"
 
 export default class Uploader {
@@ -30,24 +29,11 @@ export default class Uploader {
   }
 
   $createUploadNodes() {
-    this.nodes = this.files.map(file =>
-      $createActionTextAttachmentUploadNode({
-        ...this.#nodeUrlProperties,
-        file: file,
-        contentType: file.type
-      })
-    )
+    this.nodes = this.files.map(file => this.contents.$createUploadNode(file))
   }
 
   $insertUploadNodes() {
     this.contents.insertAtCursor(...this.nodes)
-  }
-
-  get #nodeUrlProperties() {
-    return {
-      uploadUrl: this.editorElement.directUploadUrl,
-      blobUrlTemplate: this.editorElement.blobUrlTemplate
-    }
   }
 }
 
