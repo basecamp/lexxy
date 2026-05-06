@@ -530,7 +530,7 @@
   -webkit-user-select: none;
 
   .lexxy-editor__toolbar-button {
-    color: var(--lexxy-color-text);
+    color: currentColor;
 
     &:hover {
       opacity: 0.8;
@@ -544,8 +544,8 @@
 
       &:after {
         block-size: 0.3ch;
-        border-block-end: 2px solid currentcolor;
-        border-inline-end: 2px solid currentcolor;
+        border-block-end: 2px solid currentColor;
+        border-inline-end: 2px solid currentColor;
         content: "";
         display: inline-block;
         inline-size: 0.3ch;
