@@ -1,5 +1,5 @@
 import { marked } from "marked"
-import { isUrl } from "../helpers/string_helper"
+import { isAutolinkableURL } from "../helpers/string_helper"
 import { nextFrame } from "../helpers/timing_helpers"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
@@ -117,9 +117,9 @@ export default class Clipboard {
   #pastePlainText(clipboardData) {
     const item = clipboardData.items[0]
     item.getAsString((text) => {
-      if (isUrl(text) && this.contents.hasSelectedText()) {
+      if (isAutolinkableURL(text) && this.contents.hasSelectedText()) {
         this.contents.createLinkWithSelectedText(text)
-      } else if (isUrl(text)) {
+      } else if (isAutolinkableURL(text)) {
         const nodeKey = this.contents.createLink(text)
         this.#dispatchLinkInsertEvent(nodeKey, { url: text })
       } else if (this.editorElement.supportsMarkdown) {
