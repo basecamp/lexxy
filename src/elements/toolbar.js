@@ -25,7 +25,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   connectedCallback() {
-    requestAnimationFrame(() => this.#refreshToolbarOverflow())
+    requestAnimationFrame(() => this.refreshOverflow())
     this.setAttribute("role", "toolbar")
     this.#installResizeObserver()
   }
@@ -68,7 +68,7 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setItemPositionValues()
     this.#monitorSelectionChanges()
     this.#monitorHistoryChanges()
-    this.#refreshToolbarOverflow()
+    this.refreshOverflow()
     this.#bindFocusListeners()
 
     this.resolveEditorPromise(editorElement)
@@ -94,7 +94,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #installResizeObserver() {
-    const resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
+    const resizeObserver = new ResizeObserver(() => this.refreshOverflow())
     resizeObserver.observe(this)
     this.#listeners.track(() => resizeObserver.disconnect())
   }
@@ -251,7 +251,7 @@ export class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  #refreshToolbarOverflow = () => {
+  refreshOverflow = () => {
     this.#resetToolbarOverflow()
     this.#compactMenu()
 
