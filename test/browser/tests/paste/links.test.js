@@ -48,6 +48,45 @@ test.describe("Paste — Links", () => {
     )
   })
 
+  const thingsThatMightBeURIs = [
+    [ "https://example.com/", true ],
+    [ "http://example.com/", true ],
+    [ "https://user:pass@example.com/", true ],
+    [ "www.example.com", true, "https://www.example.com" ],
+    [ "HTTPS://example.com/", true ],
+    [ "Http://example.com/", true ],
+    [ "WWW.example.com", true, "https://WWW.example.com" ],
+    [ "example.com", false ],
+
+    [ "http::parser", false ],
+    [ "https::client", false ],
+    [ "mailto::linker", false ],
+    [ "ftp::client", false ],
+
+    [ "Nokogiri::HTML", false ],
+    [ "Net::HTTP", false ],
+    [ "Foo::Bar::Baz", false ],
+
+    [ "port:8080", false ],
+    [ "key:value", false ],
+    [ "time:9:00", false ],
+  ]
+
+  for (const [ text, shouldLink, expectedHref = text ] of thingsThatMightBeURIs) {
+    test(`'${text}' ${shouldLink ? "is" : "is not"} auto-linked when pasted as plain text`, async ({ editor }) => {
+      await editor.paste(text)
+
+      await assertEditorContent(editor, async (content) => {
+        if (shouldLink) {
+          await expect(content.locator(`a[href="${expectedHref}"]`)).toHaveText(text)
+        } else {
+          await expect(content).toContainText(text)
+          await expect(content.locator("a")).toHaveCount(0)
+        }
+      })
+    })
+  }
+
   test("merge adjacent links when pasting URL over multiple words", async ({
     page,
     editor,
