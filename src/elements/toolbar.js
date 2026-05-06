@@ -65,7 +65,6 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#bindButtons()
     this.#bindHotkeys()
     this.#resetTabIndexValues()
-    this.#setItemPositionValues()
     this.#monitorSelectionChanges()
     this.#monitorHistoryChanges()
     this.refreshOverflow()
@@ -251,8 +250,9 @@ export class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  refreshOverflow = () => {
+  refreshOverflow() {
     this.#resetToolbarOverflow()
+    this.#reindexToolbarItems()
     this.#compactMenu()
 
     this.#overflow.style.display = this.#overflowMenu.children.length ? "block" : "none"
@@ -311,11 +311,9 @@ export class LexicalToolbarElement extends HTMLElement {
     return parseInt(item.dataset.position ?? "999")
   }
 
-  #setItemPositionValues() {
+  #reindexToolbarItems() {
     this.#toolbarItems.forEach((item, index) => {
-      if (item.dataset.position === undefined) {
-        item.dataset.position = index
-      }
+      item.dataset.position = index
     })
   }
 
