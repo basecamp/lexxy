@@ -10,7 +10,7 @@ import { getNonce } from "../helpers/csp_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import ToolbarIcons from "./toolbar_icons"
-import { isActiveAndVisible } from "../helpers/html_helper"
+import { generateDomId, isActiveAndVisible } from "../helpers/html_helper"
 
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
@@ -352,6 +352,8 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   static get defaultTemplate() {
+    const linkInputId = generateDomId("lexxy-link-url")
+
     return `
       <button class="lexxy-editor__toolbar-button" type="button" name="image" data-command="uploadImage" data-prevent-overflow="true" title="Add images and video">
         ${ToolbarIcons.image}
@@ -415,7 +417,7 @@ export class LexicalToolbarElement extends HTMLElement {
           ${ToolbarIcons.link}
         </button>
         <div data-dropdown-panel role="dialog" aria-label="Link" hidden>
-          <input type="url" placeholder="Enter a URL…" class="input" id="lexxy-link-url">
+          <input type="url" placeholder="Enter a URL…" class="input" id="${linkInputId}">
           <div class="lexxy-editor__toolbar-dropdown-actions">
             <button type="button" class="lexxy-editor__toolbar-button" value="link">Link</button>
             <button type="button" class="lexxy-editor__toolbar-button" value="unlink">Unlink</button>
