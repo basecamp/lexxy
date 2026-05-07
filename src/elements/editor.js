@@ -95,20 +95,14 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.toggleAttribute("connected", true)
 
-    if (this.hasAttribute("defer")) {
-      this.#deferredInitRafId = requestAnimationFrame(() => {
-        this.#deferredInitRafId = null
-        this.editor.setRootElement(this.editorContentElement)
-        this.#loadInitialValue()
-        this.#handleAutofocus()
-        this.#scheduleEditorInitializedDispatch()
-        this.valueBeforeDisconnect = null
-      })
-    } else {
-      this.#scheduleEditorInitializedDispatch()
+    this.#deferredInitRafId = requestAnimationFrame(() => {
+      this.#deferredInitRafId = null
+      this.editor.setRootElement(this.editorContentElement)
+      this.#loadInitialValue()
       this.#handleAutofocus()
+      this.#scheduleEditorInitializedDispatch()
       this.valueBeforeDisconnect = null
-    }
+    })
   }
 
   disconnectedCallback() {
@@ -393,7 +387,6 @@ export class LexicalEditorElement extends HTMLElement {
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#configureSanitizer()
-    if (!this.hasAttribute("defer")) this.#loadInitialValue()
     this.#resetBeforeTurboCaches()
   }
 
@@ -422,8 +415,6 @@ export class LexicalEditorElement extends HTMLElement {
     },
       ...this.extensions.lexicalExtensions
     )
-
-    if (!this.hasAttribute("defer")) editor.setRootElement(this.editorContentElement)
 
     return editor
   }
