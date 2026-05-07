@@ -64,7 +64,7 @@ test.describe("Events", () => {
     await page.locator("[name='highlight']").click()
     await page
       .locator(
-        "lexxy-highlight-dropdown .lexxy-highlight-colors .lexxy-highlight-button[data-style='background-color']",
+        "lexxy-highlight-dropdown [data-dropdown-panel] .lexxy-highlight-colors .lexxy-highlight-button[data-style='background-color']",
       )
       .first()
       .click()

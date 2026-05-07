@@ -91,6 +91,7 @@ test.describe("Color highlighter", () => {
     await editor.flush()
 
     await assertEditorContent(editor, async (content) => {
+      await expect(content).toContainText("some log output")
       await expect(content.locator("code mark")).toContainText("log output")
     })
 
@@ -99,6 +100,7 @@ test.describe("Color highlighter", () => {
     await editor.flush()
 
     await assertEditorContent(editor, async (content) => {
+      await expect(content).toContainText("some log output")
       await expect(content.locator("code mark")).toHaveCount(0)
     })
   })
