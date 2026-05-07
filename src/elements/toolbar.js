@@ -271,13 +271,11 @@ export class LexicalToolbarElement extends HTMLElement {
   // Separates layout reads from DOM writes to avoid forced reflows during init.
   // Measures every button's right edge in a single read pass, figures out which
   // buttons overflow using math, and then moves them in a single write pass.
-  // The previous implementation interleaved `scrollWidth`/`clientWidth` reads with
-  // `prepend()` writes inside a loop, forcing one full browser reflow per button.
   #compactMenu() {
     const buttons = this.#overflowButtons
     if (buttons.length === 0) return
 
-    const availableWidth = this.clientWidth // +1 for Safari zoom rounding
+    const availableWidth = this.clientWidth
     const buttonRightEdges = buttons.map(button => {
       const style = window.getComputedStyle(button)
       return button.offsetLeft + button.offsetWidth + parseFloat(style.marginRight)
@@ -294,8 +292,7 @@ export class LexicalToolbarElement extends HTMLElement {
     if (firstOverflowing === -1) return
 
     // Move one extra button to reserve space for the overflow control, which is
-    // `display: none` until we show it — matching the previous implementation's
-    // "move one more after it stops overflowing" behaviour.
+    // `display: none` until we show it
     const overflowIndex = Math.max(0, firstOverflowing - 1)
     const overflowButtons = buttons.slice(overflowIndex).reverse()
     for (const button of overflowButtons) {
