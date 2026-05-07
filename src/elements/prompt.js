@@ -6,7 +6,8 @@ import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_atta
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
 import RemoteFilterSource from "../editor/prompt/remote_filter_source"
-import { debounce, nextFrame } from "../helpers/timing_helpers"
+import { $generateFilteredNodesFromDOM } from "../helpers/attachment_filter_helper"
+import { debounce, nextFrame } from "../helpers/timing_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
 const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found"

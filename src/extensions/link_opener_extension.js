@@ -2,7 +2,7 @@ import { $findMatchingParent, $getNearestNodeFromDOMNode, CLICK_COMMAND, COMMAND
 import { $isLinkNode } from "@lexical/link"
 import { IS_APPLE } from "@lexical/utils"
 import { registerEventListener } from "../helpers/listener_helper"
-import { delay } from "../helpers/timing_helpers"
+import { delay } from "../helpers/timing_helper"
 import LexxyExtension from "./lexxy_extension"
 
 export class LinkOpenerExtension extends LexxyExtension {

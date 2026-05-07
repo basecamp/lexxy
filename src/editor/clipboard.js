@@ -1,6 +1,7 @@
 import { marked } from "marked"
 import { isAutolinkableURL } from "../helpers/string_helper"
-import { nextFrame } from "../helpers/timing_helpers"
+import { isUrl } from "../helpers/string_helper"
+import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
 import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"

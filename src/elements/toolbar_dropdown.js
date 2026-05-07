@@ -1,4 +1,4 @@
-import { nextFrame } from "../helpers/timing_helpers"
+import { nextFrame } from "../helpers/timing_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
 export class ToolbarDropdown extends HTMLElement {

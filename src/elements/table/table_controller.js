@@ -19,7 +19,7 @@ import {
 } from "@lexical/table"
 
 import { upcaseFirst } from "../../helpers/string_helper"
-import { nextFrame } from "../../helpers/timing_helpers"
+import { nextFrame } from "../../helpers/timing_helper"
 import { ListenerBin } from "../../helpers/listener_helper"
 
 export class TableController {

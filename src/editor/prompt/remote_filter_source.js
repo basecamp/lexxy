@@ -1,5 +1,5 @@
 import BaseSource from "./base_source"
-import { debounceAsync } from "../../helpers/timing_helpers"
+import { debounceAsync } from "../../helpers/timing_helper"
 
 const DEBOUNCE_INTERVAL = 200
 const MAX_RENDERED_SUGGESTIONS = 100
