@@ -89,10 +89,20 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.#initialize()
 
-    this.#scheduleEditorInitializedDispatch()
     this.toggleAttribute("connected", true)
 
-    this.#handleAutofocus()
+    if (this.hasAttribute("defer")) {
+      requestAnimationFrame(() => {
+        if (!this.isConnected) return
+        this.editor.setRootElement(this.editorContentElement)
+        this.#loadInitialValue()
+        this.#handleAutofocus()
+        this.#scheduleEditorInitializedDispatch()
+      })
+    } else {
+      this.#scheduleEditorInitializedDispatch()
+      this.#handleAutofocus()
+    }
 
     this.valueBeforeDisconnect = null
   }
@@ -353,7 +363,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#configureSanitizer()
-    this.#loadInitialValue()
+    if (!this.hasAttribute("defer")) this.#loadInitialValue()
     this.#resetBeforeTurboCaches()
   }
 
@@ -383,7 +393,7 @@ export class LexicalEditorElement extends HTMLElement {
       ...this.extensions.lexicalExtensions
     )
 
-    editor.setRootElement(this.editorContentElement)
+    if (!this.hasAttribute("defer")) editor.setRootElement(this.editorContentElement)
 
     return editor
   }

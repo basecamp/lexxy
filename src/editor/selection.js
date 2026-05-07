@@ -377,9 +377,8 @@ export default class Selection {
       return $isDecoratorNode(targetNode) && this.#selectInLexical(targetNode)
     }, COMMAND_PRIORITY_LOW))
 
-    const rootElement = this.editor.getRootElement()
     this.#listeners.track(
-      registerEventListener(rootElement, "lexxy:internal:move-to-next-line", () => this.#selectOrAppendNextLine())
+      registerEventListener(this.editorContentElement, "lexxy:internal:move-to-next-line", () => this.#selectOrAppendNextLine())
     )
   }
 
