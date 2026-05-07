@@ -1,6 +1,5 @@
 import { marked } from "marked"
 import { isAutolinkableURL } from "../helpers/string_helper"
-import { isUrl } from "../helpers/string_helper"
 import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"

@@ -277,9 +277,9 @@ export class LexicalToolbarElement extends HTMLElement {
     const buttons = this.#overflowButtons
     if (buttons.length === 0) return
 
-    const availableWidth = this.clientWidth
+    const availableWidth = this.clientWidth // +1 for Safari zoom rounding
     const buttonRightEdges = buttons.map(button => {
-      const style = getComputedStyle(button)
+      const style = window.getComputedStyle(button)
       return button.offsetLeft + button.offsetWidth + parseFloat(style.marginRight)
     })
 
