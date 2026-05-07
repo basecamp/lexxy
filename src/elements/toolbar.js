@@ -16,6 +16,7 @@ import { nextFrame } from "../helpers/timing_helper"
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
   #listeners = new ListenerBin()
+  #inFlightOverflowRefresh = null
 
   constructor() {
     super()
@@ -80,21 +81,9 @@ export class LexicalToolbarElement extends HTMLElement {
     return this.editorElement || await this.editorPromise
   }
 
-  async refreshOverflow() {
-    await nextFrame()
-
-    this.#resetToolbarOverflow()
-    this.#reindexToolbarItems()
-    this.#compactMenu()
-
-    const isOverflowing = this.#overflowMenu.children.length > 0
-
-    this.toggleAttribute("overflowing", isOverflowing)
-
-    this.#overflow.style.display = isOverflowing ? "block" : "none"
-    this.#overflow.setAttribute("nonce", getNonce())
-
-    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
+  refreshOverflow() {
+    this.#inFlightOverflowRefresh ??= this.#runRefreshOverflow()
+    return this.#inFlightOverflowRefresh
   }
 
   #reconnect() {
@@ -265,6 +254,31 @@ export class LexicalToolbarElement extends HTMLElement {
       if (button.getAttribute("aria-disabled") !== next) {
         button.setAttribute("aria-disabled", next)
       }
+    }
+  }
+
+  // Coalesces concurrent calls into a single per-frame pass. Init fires this from
+  // connectedCallback, setEditor, extensions, and the ResizeObserver in quick
+  // succession; without coalescing, each would run its own reset/reindex/compact
+  // on the same frame.
+  async #runRefreshOverflow() {
+    try {
+      await nextFrame()
+
+      this.#resetToolbarOverflow()
+      this.#reindexToolbarItems()
+      this.#compactMenu()
+
+      const isOverflowing = this.#overflowMenu.children.length > 0
+
+      this.toggleAttribute("overflowing", isOverflowing)
+
+      this.#overflow.style.display = isOverflowing ? "block" : "none"
+      this.#overflow.setAttribute("nonce", getNonce())
+
+      this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
+    } finally {
+      this.#inFlightOverflowRefresh = null
     }
   }
 
