@@ -451,9 +451,7 @@ export class LexicalToolbarElement extends HTMLElement {
         ${ToolbarIcons.hr}
       </button>
 
-      <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo" disabled aria-disabled="true">
+      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--push-right" type="button" name="undo" data-command="undo" title="Undo" disabled aria-disabled="true">
         ${ToolbarIcons.undo}
       </button>
 
@@ -461,7 +459,7 @@ export class LexicalToolbarElement extends HTMLElement {
         ${ToolbarIcons.redo}
       </button>
 
-      <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-overflow">
+      <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-button--push-right lexxy-editor__toolbar-overflow">
         <button data-dropdown-trigger class="lexxy-editor__toolbar-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Show more toolbar buttons">
           ${ToolbarIcons.overflow}
         </button>
