@@ -11,6 +11,7 @@ import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import ToolbarIcons from "./toolbar_icons"
 import { generateDomId, isActiveAndVisible } from "../helpers/html_helper"
+import { nextFrame } from "../helpers/timing_helper"
 
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
@@ -25,7 +26,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   connectedCallback() {
-    requestAnimationFrame(() => this.refreshOverflow())
+    this.refreshOverflow()
     this.setAttribute("role", "toolbar")
     this.#installResizeObserver()
   }
@@ -77,6 +78,23 @@ export class LexicalToolbarElement extends HTMLElement {
 
   async getEditorElement() {
     return this.editorElement || await this.editorPromise
+  }
+
+  async refreshOverflow() {
+    await nextFrame()
+
+    this.#resetToolbarOverflow()
+    this.#reindexToolbarItems()
+    this.#compactMenu()
+
+    const isOverflowing = this.#overflowMenu.children.length > 0
+
+    this.toggleAttribute("overflowing", isOverflowing)
+
+    this.#overflow.style.display = isOverflowing ? "block" : "none"
+    this.#overflow.setAttribute("nonce", getNonce())
+
+    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
   }
 
   #reconnect() {
@@ -248,19 +266,6 @@ export class LexicalToolbarElement extends HTMLElement {
         button.setAttribute("aria-disabled", next)
       }
     }
-  }
-
-  refreshOverflow() {
-    this.#resetToolbarOverflow()
-    this.#reindexToolbarItems()
-    this.#compactMenu()
-
-    this.#overflow.style.display = this.#overflowMenu.children.length ? "block" : "none"
-    this.#overflow.setAttribute("nonce", getNonce())
-
-    const isOverflowing = this.#overflowMenu.children.length > 0
-    this.toggleAttribute("overflowing", isOverflowing)
-    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
   }
 
   // Separates layout reads from DOM writes to avoid forced reflows during init.
