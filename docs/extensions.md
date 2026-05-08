@@ -34,7 +34,6 @@ import { ActionTextAttachmentNode } from "@37signals/lexxy"
 ## Example
 
 ```js
-import { defineExtension } from "lexical"
 import * as Lexxy from "@37signals/lexxy"
 
 Lexxy.configure({
@@ -57,8 +56,13 @@ class MyLexxyExtension extends Lexxy.Extension {
     return this.#config.enableCoolFeature
   }
 
+  // optional: allow additional elements
+  get allowedElements() {
+    return [ { tag: "iframe", attributes: [ "src", "loading", "allow" ] } ]
+  }
+
   get lexicalExtension() {
-    return defineExtension({
+    return Lexxy.Lexical.defineExtension({
       name: "lexxy/my_lexical_extension",
       config: this.#config
       ///...
