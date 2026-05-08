@@ -136,7 +136,7 @@ test.describe("Toolbar", () => {
       button.className = "lexxy-editor__toolbar-button"
       button.textContent = "X"
       tb.insertBefore(button, tb.querySelector(".lexxy-editor__toolbar-overflow"))
-      await tb.refreshOverflow()
+      await tb.requestOverflowRefresh()
     })
 
     const injected = page.locator("button[name='async-injected']")

@@ -11,12 +11,11 @@ import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import ToolbarIcons from "./toolbar_icons"
 import { generateDomId, isActiveAndVisible } from "../helpers/html_helper"
-import { nextFrame } from "../helpers/timing_helper"
 
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
   #listeners = new ListenerBin()
-  #inFlightOverflowRefresh = null
+  #refreshToolbarAF = null
 
   constructor() {
     super()
@@ -27,7 +26,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   connectedCallback() {
-    this.refreshOverflow()
+    this.requestOverflowRefresh()
     this.setAttribute("role", "toolbar")
     this.#installResizeObserver()
   }
@@ -69,7 +68,7 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#resetTabIndexValues()
     this.#monitorSelectionChanges()
     this.#monitorHistoryChanges()
-    this.refreshOverflow()
+    this.requestOverflowRefresh()
     this.#bindFocusListeners()
 
     this.resolveEditorPromise(editorElement)
@@ -81,9 +80,18 @@ export class LexicalToolbarElement extends HTMLElement {
     return this.editorElement || await this.editorPromise
   }
 
-  refreshOverflow() {
-    this.#inFlightOverflowRefresh ??= this.#runRefreshOverflow()
-    return this.#inFlightOverflowRefresh
+
+  // Coalesces concurrent calls into a single per-frame pass. Init fires this from
+  // connectedCallback, setEditor, extensions, and the ResizeObserver in quick
+  // succession; without coalescing, each would run its own reset/reindex/compact
+  // on the same frame.
+  requestOverflowRefresh() {
+    if (this.#refreshToolbarAF != null) return
+
+    this.#refreshToolbarAF = requestAnimationFrame(() => {
+      this.#refreshOverflow()
+      this.#refreshToolbarAF = null
+    })
   }
 
   #reconnect() {
@@ -100,7 +108,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #installResizeObserver() {
-    const resizeObserver = new ResizeObserver(() => this.refreshOverflow())
+    const resizeObserver = new ResizeObserver(() => this.requestOverflowRefresh())
     resizeObserver.observe(this)
     this.#listeners.track(() => resizeObserver.disconnect())
   }
@@ -257,29 +265,19 @@ export class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  // Coalesces concurrent calls into a single per-frame pass. Init fires this from
-  // connectedCallback, setEditor, extensions, and the ResizeObserver in quick
-  // succession; without coalescing, each would run its own reset/reindex/compact
-  // on the same frame.
-  async #runRefreshOverflow() {
-    try {
-      await nextFrame()
+  #refreshOverflow() {
+    this.#resetToolbarOverflow()
+    this.#reindexToolbarItems()
+    this.#compactMenu()
 
-      this.#resetToolbarOverflow()
-      this.#reindexToolbarItems()
-      this.#compactMenu()
+    const isOverflowing = this.#overflowMenu.children.length > 0
 
-      const isOverflowing = this.#overflowMenu.children.length > 0
+    this.toggleAttribute("overflowing", isOverflowing)
 
-      this.toggleAttribute("overflowing", isOverflowing)
+    this.#overflow.style.display = isOverflowing ? "block" : "none"
+    this.#overflow.setAttribute("nonce", getNonce())
 
-      this.#overflow.style.display = isOverflowing ? "block" : "none"
-      this.#overflow.setAttribute("nonce", getNonce())
-
-      this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
-    } finally {
-      this.#inFlightOverflowRefresh = null
-    }
+    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
   }
 
   // Separates layout reads from DOM writes to avoid forced reflows during init.
