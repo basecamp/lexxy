@@ -80,11 +80,6 @@ export class LexicalToolbarElement extends HTMLElement {
     return this.editorElement || await this.editorPromise
   }
 
-
-  // Coalesces concurrent calls into a single per-frame pass. Init fires this from
-  // connectedCallback, setEditor, extensions, and the ResizeObserver in quick
-  // succession; without coalescing, each would run its own reset/reindex/compact
-  // on the same frame.
   requestOverflowRefresh() {
     if (this.#refreshToolbarAF != null) return
 
