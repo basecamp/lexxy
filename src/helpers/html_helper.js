@@ -63,5 +63,18 @@ export function extractPlainTextFromHtml(innerHtml = "") {
 }
 
 export function isActiveAndVisible(element) {
-  return element && !element.disabled && element.checkVisibility()
+  return element && !element.disabled && checkVisibility(element)
+}
+
+// no `checkVisibility` in Safari < 17.4
+// https://developer.mozilla.org/en-US/docs/Web/API/Element/checkVisibility#browser_compatibility
+function checkVisibility(element, options) {
+  if (element.checkVisibility) {
+    return element.checkVisibility(options)
+  } else {
+    if (options) throw new Error("Polyfilled checkVisibility does not support options")
+    // Will not work for body or a fixed position element child of the body
+    // which is OK since that doesn't apply in the toolbar where this is used
+    return Boolean(element.offsetParent)
+  }
 }
