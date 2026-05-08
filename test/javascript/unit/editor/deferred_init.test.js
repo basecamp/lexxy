@@ -53,4 +53,48 @@ describe("deferred initialization", () => {
 
     expect(editorElement.value).toContain("initial")
   })
+
+  test("does not steal focus when value is set externally before rAF fires", async () => {
+    editorElement = await createTestEditor({ value: "<p>initial</p>", skipTick: true })
+
+    let focusEvents = 0
+    editorElement.addEventListener("lexxy:focus", () => focusEvents++)
+
+    editorElement.value = "<p>external write</p>"
+
+    await tick()
+
+    expect(focusEvents).toBe(0)
+  })
+
+  test("value is loaded synchronously so background-tab forms still submit content", async () => {
+    editorElement = await createTestEditor({ value: "<p>initial</p>", skipTick: true })
+
+    expect(editorElement.value).toContain("initial")
+  })
+
+  test("formResetCallback restores initial value before first frame", async () => {
+    editorElement = await createTestEditor({ value: "<p>initial</p>", skipTick: true })
+
+    editorElement.value = "<p>edited</p>"
+    editorElement.formResetCallback()
+
+    expect(editorElement.value).toContain("initial")
+  })
+
+  test("stale rAF firing while disconnected does not poison state on reconnect", async () => {
+    editorElement = await createTestEditor({ value: "<p>initial</p>", skipTick: true })
+
+    editorElement.value = "<p>external</p>"
+
+    const parent = editorElement.parentNode
+    parent.removeChild(editorElement)
+
+    await tick()
+
+    parent.appendChild(editorElement)
+    await tick()
+
+    expect(editorElement.value).toContain("external")
+  })
 })

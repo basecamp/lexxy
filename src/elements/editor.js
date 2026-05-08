@@ -52,7 +52,9 @@ export class LexicalEditorElement extends HTMLElement {
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
-  #initializeDispatched = false
+  #initializeEventDispatched = false
+  #editorInitializedDispatched = false
+  #valueLoaded = false
   #listeners = new ListenerBin()
   #disposables = []
   #historyState = { undo: false, redo: false }
@@ -92,17 +94,21 @@ export class LexicalEditorElement extends HTMLElement {
     this.toggleAttribute("connected", true)
 
     requestAnimationFrame(() => {
-      this.editor.setRootElement(this.editorContentElement)
+      this.#mountRoot()
       this.#handleAutofocus()
       this.#dispatchInitialize()
     })
-
-    this.valueBeforeDisconnect = null
   }
 
   disconnectedCallback() {
-    this.#initializeDispatched = false
-    this.valueBeforeDisconnect = this.value
+    this.#initializeEventDispatched = false
+    this.#editorInitializedDispatched = false
+    if (this.#valueLoaded) {
+      this.valueBeforeDisconnect = this.value
+    } else {
+      this.valueBeforeDisconnect = null
+    }
+    this.#valueLoaded = false
     this.#reset() // Prevent hangs with Safari when morphing
   }
 
@@ -235,7 +241,7 @@ export class LexicalEditorElement extends HTMLElement {
 
     if (!this.editor) return
 
-    this.#initializeDispatched = true
+    this.#editorInitializedDispatched = true
     this.#dispatchEditorInitialized()
     this.#dispatchAttributesChange()
   }
@@ -290,6 +296,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
+    this.#valueLoaded = true
     const editorHasFocus = this.#isContentFocused
 
     this.editor.update(() => {
@@ -389,6 +396,14 @@ export class LexicalEditorElement extends HTMLElement {
     return editor
   }
 
+  // Toggling editable around setRootElement skips Lexical's DOM-selection sync,
+  // which would otherwise steal focus from elsewhere on the page.
+  #mountRoot() {
+    this.editor.setEditable(false)
+    this.editor.setRootElement(this.editorContentElement)
+    this.editor.setEditable(true)
+  }
+
   get #lexicalNodes() {
     const nodes = [ CustomActionTextAttachmentNode ]
 
@@ -457,10 +472,12 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #loadInitialValue() {
-    const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p><br></p>"
-    this.editor.update(() => {
-      this.value = this.#initialValue = initialHtml
-    }, { tag: HISTORY_MERGE_TAG })
+    if (!this.#valueLoaded) {
+      const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p><br></p>"
+      this.editor.update(() => {
+        this.value = this.#initialValue = initialHtml
+      }, { tag: HISTORY_MERGE_TAG })
+    }
   }
 
   #resetBeforeTurboCaches() {
@@ -719,10 +736,16 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #dispatchInitialize() {
-    if (!this.#initializeDispatched && this.isConnected && this.adapter) {
-      this.#initializeDispatched = true
-      dispatch(this, "lexxy:initialize")
-      this.#dispatchEditorInitialized()
+    if (this.isConnected && this.adapter) {
+      if (!this.#initializeEventDispatched) {
+        this.#initializeEventDispatched = true
+        dispatch(this, "lexxy:initialize")
+      }
+
+      if (!this.#editorInitializedDispatched) {
+        this.#editorInitializedDispatched = true
+        this.#dispatchEditorInitialized()
+      }
     }
   }
 
