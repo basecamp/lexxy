@@ -38,9 +38,12 @@ export class LexicalToolbarElement extends HTMLElement {
   dispose() {
     this.#listeners.dispose()
 
+    cancelAnimationFrame(this.#refreshToolbarAF)
+
     this.editorElement = null
     this.editor = null
     this.selection = null
+    this.#refreshToolbarAF = null
 
     this.#createEditorPromise()
   }
