@@ -53,7 +53,6 @@ export class LexicalEditorElement extends HTMLElement {
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
   #editorInitializedRafId = null
-  #deferredInitRafId = null
   #listeners = new ListenerBin()
   #disposables = []
   #historyState = { undo: false, redo: false }
@@ -92,18 +91,16 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.toggleAttribute("connected", true)
 
-    this.#deferredInitRafId = requestAnimationFrame(() => {
-      this.#deferredInitRafId = null
+    requestAnimationFrame(() => {
       this.editor.setRootElement(this.editorContentElement)
-      this.#loadInitialValue()
       this.#handleAutofocus()
       this.#scheduleEditorInitializedDispatch()
-      this.valueBeforeDisconnect = null
     })
+
+    this.valueBeforeDisconnect = null
   }
 
   disconnectedCallback() {
-    this.#cancelDeferredInit()
     this.#cancelEditorInitializedDispatch()
     this.valueBeforeDisconnect = this.value
     this.#reset() // Prevent hangs with Safari when morphing
@@ -359,6 +356,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#configureSanitizer()
+    this.#loadInitialValue()
     this.#resetBeforeTurboCaches()
   }
 
@@ -736,13 +734,6 @@ export class LexicalEditorElement extends HTMLElement {
 
     cancelAnimationFrame(this.#editorInitializedRafId)
     this.#editorInitializedRafId = null
-  }
-
-  #cancelDeferredInit() {
-    if (this.#deferredInitRafId == null) return
-
-    cancelAnimationFrame(this.#deferredInitRafId)
-    this.#deferredInitRafId = null
   }
 
   get #resolvedHighlightColors() {
