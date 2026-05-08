@@ -117,7 +117,7 @@ test.describe("Toolbar", () => {
     await expect(toolbar).not.toHaveAttribute("overflowing")
   })
 
-  test("refreshOverflow() recalculates after a toolbar button is injected asynchronously", async ({ page }) => {
+  test("requestOverflowRefresh() recalculates after a toolbar button is injected asynchronously", async ({ page }) => {
     const toolbar = page.locator("lexxy-toolbar")
     const overflowMenu = toolbar.locator(".lexxy-editor__toolbar-overflow-menu")
 
@@ -136,7 +136,8 @@ test.describe("Toolbar", () => {
       button.className = "lexxy-editor__toolbar-button"
       button.textContent = "X"
       tb.insertBefore(button, tb.querySelector(".lexxy-editor__toolbar-overflow"))
-      await tb.requestOverflowRefresh()
+      tb.requestOverflowRefresh()
+      await new Promise((resolve) => requestAnimationFrame(resolve))
     })
 
     const injected = page.locator("button[name='async-injected']")
