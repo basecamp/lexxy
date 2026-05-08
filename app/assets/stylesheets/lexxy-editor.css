@@ -686,7 +686,7 @@
         font-size: var(--lexxy-text-small);
         flex: 2;
         inline-size: 100%;
-        line-height: normal;
+        line-height: inherit;
         padding-block: 0;
         padding-inline: 1ch;
 
