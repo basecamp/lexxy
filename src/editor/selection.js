@@ -361,7 +361,7 @@ export default class Selection {
     // above when navigating UP/DOWN when Lexical shows its fake cursor on custom decorator nodes.
     this.editorContentElement.addEventListener("keydown", (event) => {
       if (event.key === "ArrowUp") {
-        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
+        const lexicalCursor = this.editorContentElement.querySelector("[data-lexical-cursor]")
 
         if (lexicalCursor) {
           let currentElement = lexicalCursor.previousElementSibling
@@ -376,7 +376,7 @@ export default class Selection {
       }
 
       if (event.key === "ArrowDown") {
-        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
+        const lexicalCursor = this.editorContentElement.querySelector("[data-lexical-cursor]")
 
         if (lexicalCursor) {
           let currentElement = lexicalCursor.nextElementSibling
@@ -694,7 +694,7 @@ export default class Selection {
   }
 
   #calculateCursorPosition(rect, range) {
-    const rootRect = this.editor.getRootElement().getBoundingClientRect()
+    const rootRect = this.editorContentElement.getBoundingClientRect()
     const x = rect.left - rootRect.left
     let y = rect.top - rootRect.top
 
