@@ -52,7 +52,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #initialValue = ""
   #validationTextArea = document.createElement("textarea")
-  #editorInitializedRafId = null
+  #initializeDispatched = false
   #listeners = new ListenerBin()
   #disposables = []
   #historyState = { undo: false, redo: false }
@@ -94,14 +94,14 @@ export class LexicalEditorElement extends HTMLElement {
     requestAnimationFrame(() => {
       this.editor.setRootElement(this.editorContentElement)
       this.#handleAutofocus()
-      this.#scheduleEditorInitializedDispatch()
+      this.#dispatchInitialize()
     })
 
     this.valueBeforeDisconnect = null
   }
 
   disconnectedCallback() {
-    this.#cancelEditorInitializedDispatch()
+    this.#initializeDispatched = false
     this.valueBeforeDisconnect = this.value
     this.#reset() // Prevent hangs with Safari when morphing
   }
@@ -235,7 +235,7 @@ export class LexicalEditorElement extends HTMLElement {
 
     if (!this.editor) return
 
-    this.#cancelEditorInitializedDispatch()
+    this.#initializeDispatched = true
     this.#dispatchEditorInitialized()
     this.#dispatchAttributesChange()
   }
@@ -718,22 +718,12 @@ export class LexicalEditorElement extends HTMLElement {
     })
   }
 
-  #scheduleEditorInitializedDispatch() {
-    this.#cancelEditorInitializedDispatch()
-    this.#editorInitializedRafId = requestAnimationFrame(() => {
-      this.#editorInitializedRafId = null
-      if (!this.isConnected || !this.adapter) return
-
+  #dispatchInitialize() {
+    if (!this.#initializeDispatched && this.isConnected && this.adapter) {
+      this.#initializeDispatched = true
       dispatch(this, "lexxy:initialize")
       this.#dispatchEditorInitialized()
-    })
-  }
-
-  #cancelEditorInitializedDispatch() {
-    if (this.#editorInitializedRafId == null) return
-
-    cancelAnimationFrame(this.#editorInitializedRafId)
-    this.#editorInitializedRafId = null
+    }
   }
 
   get #resolvedHighlightColors() {
@@ -784,7 +774,6 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #reset() {
-    this.#cancelEditorInitializedDispatch()
     this.#dispose()
     this.editorContentElement?.remove()
     this.editorContentElement = null
