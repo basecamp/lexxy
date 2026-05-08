@@ -342,7 +342,7 @@ export class CommandDispatcher {
     this.dragCounter++
     if (this.dragCounter === 1) {
       this.#saveSelectionBeforeDrag()
-      this.editor.getRootElement().classList.add("lexxy-editor--drag-over")
+      this.editorElement.editorContentElement.classList.add("lexxy-editor--drag-over")
     }
   }
 
@@ -352,7 +352,7 @@ export class CommandDispatcher {
     this.dragCounter--
     if (this.dragCounter === 0) {
       this.#selectionBeforeDrag = null
-      this.editor.getRootElement().classList.remove("lexxy-editor--drag-over")
+      this.editorElement.editorContentElement.classList.remove("lexxy-editor--drag-over")
     }
   }
 
@@ -368,7 +368,7 @@ export class CommandDispatcher {
     event.preventDefault()
 
     this.dragCounter = 0
-    this.editor.getRootElement().classList.remove("lexxy-editor--drag-over")
+    this.editorElement.editorContentElement.classList.remove("lexxy-editor--drag-over")
 
     const dataTransfer = event.dataTransfer
     if (!dataTransfer) return
