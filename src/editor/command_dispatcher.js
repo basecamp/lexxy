@@ -326,12 +326,18 @@ export class CommandDispatcher {
   #registerDragAndDropHandlers() {
     if (this.editorElement.supportsAttachments) {
       this.dragCounter = 0
-      const root = this.editorElement.editorContentElement
       this.#listeners.track(
-        registerEventListener(root, "dragover", this.#handleDragOver.bind(this)),
-        registerEventListener(root, "drop", this.#handleDrop.bind(this)),
-        registerEventListener(root, "dragenter", this.#handleDragEnter.bind(this)),
-        registerEventListener(root, "dragleave", this.#handleDragLeave.bind(this))
+        this.editor.registerRootListener((rootElement) => {
+          if (rootElement) {
+            const teardowns = [
+              registerEventListener(rootElement, "dragover", this.#handleDragOver.bind(this)),
+              registerEventListener(rootElement, "drop", this.#handleDrop.bind(this)),
+              registerEventListener(rootElement, "dragenter", this.#handleDragEnter.bind(this)),
+              registerEventListener(rootElement, "dragleave", this.#handleDragLeave.bind(this))
+            ]
+            return () => teardowns.forEach((teardown) => teardown())
+          }
+        })
       )
     }
   }
@@ -342,7 +348,7 @@ export class CommandDispatcher {
     this.dragCounter++
     if (this.dragCounter === 1) {
       this.#saveSelectionBeforeDrag()
-      this.editorElement.editorContentElement.classList.add("lexxy-editor--drag-over")
+      this.editor.getRootElement().classList.add("lexxy-editor--drag-over")
     }
   }
 
@@ -352,7 +358,7 @@ export class CommandDispatcher {
     this.dragCounter--
     if (this.dragCounter === 0) {
       this.#selectionBeforeDrag = null
-      this.editorElement.editorContentElement.classList.remove("lexxy-editor--drag-over")
+      this.editor.getRootElement().classList.remove("lexxy-editor--drag-over")
     }
   }
 
@@ -368,7 +374,7 @@ export class CommandDispatcher {
     event.preventDefault()
 
     this.dragCounter = 0
-    this.editorElement.editorContentElement.classList.remove("lexxy-editor--drag-over")
+    this.editor.getRootElement().classList.remove("lexxy-editor--drag-over")
 
     const dataTransfer = event.dataTransfer
     if (!dataTransfer) return
