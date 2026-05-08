@@ -15,6 +15,7 @@ import { generateDomId, isActiveAndVisible } from "../helpers/html_helper"
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
   #listeners = new ListenerBin()
+  #refreshToolbarAF = null
 
   constructor() {
     super()
@@ -25,7 +26,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   connectedCallback() {
-    requestAnimationFrame(() => this.#refreshToolbarOverflow())
+    this.requestOverflowRefresh()
     this.setAttribute("role", "toolbar")
     this.#installResizeObserver()
   }
@@ -37,9 +38,12 @@ export class LexicalToolbarElement extends HTMLElement {
   dispose() {
     this.#listeners.dispose()
 
+    cancelAnimationFrame(this.#refreshToolbarAF)
+
     this.editorElement = null
     this.editor = null
     this.selection = null
+    this.#refreshToolbarAF = null
 
     this.#createEditorPromise()
   }
@@ -65,10 +69,9 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#bindButtons()
     this.#bindHotkeys()
     this.#resetTabIndexValues()
-    this.#setItemPositionValues()
     this.#monitorSelectionChanges()
     this.#monitorHistoryChanges()
-    this.#refreshToolbarOverflow()
+    this.requestOverflowRefresh()
     this.#bindFocusListeners()
 
     this.resolveEditorPromise(editorElement)
@@ -78,6 +81,15 @@ export class LexicalToolbarElement extends HTMLElement {
 
   async getEditorElement() {
     return this.editorElement || await this.editorPromise
+  }
+
+  requestOverflowRefresh() {
+    if (this.#refreshToolbarAF != null) return
+
+    this.#refreshToolbarAF = requestAnimationFrame(() => {
+      this.#refreshOverflow()
+      this.#refreshToolbarAF = null
+    })
   }
 
   #reconnect() {
@@ -94,7 +106,7 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #installResizeObserver() {
-    const resizeObserver = new ResizeObserver(() => this.#refreshToolbarOverflow())
+    const resizeObserver = new ResizeObserver(() => this.requestOverflowRefresh())
     resizeObserver.observe(this)
     this.#listeners.track(() => resizeObserver.disconnect())
   }
@@ -251,29 +263,33 @@ export class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  #refreshToolbarOverflow = () => {
+  #refreshOverflow() {
     this.#resetToolbarOverflow()
+    this.#reindexToolbarItems()
     this.#compactMenu()
 
-    this.#overflow.style.display = this.#overflowMenu.children.length ? "block" : "none"
+    const isOverflowing = this.#overflowMenu.children.length > 0
+
+    this.toggleAttribute("overflowing", isOverflowing)
+
+    this.#overflow.style.display = isOverflowing ? "block" : "none"
     this.#overflow.setAttribute("nonce", getNonce())
 
-    const isOverflowing = this.#overflowMenu.children.length > 0
-    this.toggleAttribute("overflowing", isOverflowing)
     this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
   }
 
   // Separates layout reads from DOM writes to avoid forced reflows during init.
   // Measures every button's right edge in a single read pass, figures out which
   // buttons overflow using math, and then moves them in a single write pass.
-  // The previous implementation interleaved `scrollWidth`/`clientWidth` reads with
-  // `prepend()` writes inside a loop, forcing one full browser reflow per button.
   #compactMenu() {
     const buttons = this.#overflowButtons
     if (buttons.length === 0) return
 
-    const availableWidth = this.clientWidth + 1 // +1 for Safari zoom rounding
-    const buttonRightEdges = buttons.map(button => button.offsetLeft + button.offsetWidth)
+    const availableWidth = this.clientWidth
+    const buttonRightEdges = buttons.map(button => {
+      const style = window.getComputedStyle(button)
+      return button.offsetLeft + button.offsetWidth + parseFloat(style.marginRight)
+    })
 
     let firstOverflowing = -1
     for (let i = 0; i < buttons.length; i++) {
@@ -286,8 +302,7 @@ export class LexicalToolbarElement extends HTMLElement {
     if (firstOverflowing === -1) return
 
     // Move one extra button to reserve space for the overflow control, which is
-    // `display: none` until we show it — matching the previous implementation's
-    // "move one more after it stops overflowing" behaviour.
+    // `display: none` until we show it
     const overflowIndex = Math.max(0, firstOverflowing - 1)
     const overflowButtons = buttons.slice(overflowIndex).reverse()
     for (const button of overflowButtons) {
@@ -311,11 +326,9 @@ export class LexicalToolbarElement extends HTMLElement {
     return parseInt(item.dataset.position ?? "999")
   }
 
-  #setItemPositionValues() {
+  #reindexToolbarItems() {
     this.#toolbarItems.forEach((item, index) => {
-      if (item.dataset.position === undefined) {
-        item.dataset.position = index
-      }
+      item.dataset.position = index
     })
   }
 
@@ -448,9 +461,7 @@ export class LexicalToolbarElement extends HTMLElement {
         ${ToolbarIcons.hr}
       </button>
 
-      <div class="lexxy-editor__toolbar-spacer" role="separator"></div>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="undo" data-command="undo" title="Undo" disabled aria-disabled="true">
+      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--push-right" type="button" name="undo" data-command="undo" title="Undo" disabled aria-disabled="true">
         ${ToolbarIcons.undo}
       </button>
 
@@ -458,7 +469,7 @@ export class LexicalToolbarElement extends HTMLElement {
         ${ToolbarIcons.redo}
       </button>
 
-      <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-overflow">
+      <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-button--push-right lexxy-editor__toolbar-overflow">
         <button data-dropdown-trigger class="lexxy-editor__toolbar-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Show more toolbar buttons">
           ${ToolbarIcons.overflow}
         </button>

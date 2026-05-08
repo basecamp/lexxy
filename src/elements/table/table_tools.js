@@ -6,7 +6,7 @@ import TableIcons from "./table_icons"
 import theme from "../../config/theme"
 import { handleRollingTabIndex } from "../../helpers/accessibility_helper"
 import { createElement } from "../../helpers/html_helper"
-import { nextFrame } from "../../helpers/timing_helpers"
+import { nextFrame } from "../../helpers/timing_helper"
 import { ListenerBin, registerEventListener } from "../../helpers/listener_helper"
 
 export class TableTools extends HTMLElement {

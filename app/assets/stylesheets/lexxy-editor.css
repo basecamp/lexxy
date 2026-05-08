@@ -517,8 +517,8 @@
     }
   }
 
-  .lexxy-editor__toolbar-spacer {
-    flex: 1;
+  .lexxy-editor__toolbar-button--push-right {
+    margin-inline-start: auto;
   }
 }
 
@@ -540,6 +540,7 @@
       aspect-ratio: unset;
       gap: 0.5ch;
       grid-template-columns: 2fr 1fr;
+      min-inline-size: calc(var(--lexxy-toolbar-button-size) + 1.2ch);
       padding-inline: 0.75ch;
 
       &:after {

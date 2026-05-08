@@ -18,6 +18,7 @@ export default class Extensions {
 
     this.#clearPreviousExtensionToolbarButtons(toolbar)
     this.#addExtensionToolbarButtons(toolbar)
+    toolbar.requestOverflowRefresh()
   }
 
   dispose() {
