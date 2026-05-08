@@ -31,4 +31,26 @@ describe("deferred initialization", () => {
 
     expect(editorElement.value).toContain("edited content")
   })
+
+  test("preserves external value set after connectedCallback returns but before rAF fires", async () => {
+    editorElement = await createTestEditor({ value: "<p>initial</p>", skipTick: true })
+
+    editorElement.value = "<p>external write</p>"
+
+    await tick()
+
+    expect(editorElement.value).toContain("external write")
+  })
+
+  test("preserves value attribute across synchronous disconnect/reconnect before rAF fires", async () => {
+    editorElement = await createTestEditor({ value: "<p>initial</p>", skipTick: true })
+
+    const parent = editorElement.parentNode
+    parent.removeChild(editorElement)
+    parent.appendChild(editorElement)
+
+    await tick()
+
+    expect(editorElement.value).toContain("initial")
+  })
 })
