@@ -1,6 +1,7 @@
 import { defineConfig } from "eslint/config"
 import globals from "globals"
 import js from "@eslint/js"
+import compat from "eslint-plugin-compat"
 
 export default defineConfig([
   {
@@ -8,7 +9,7 @@ export default defineConfig([
   },
   {
     files: ["src/**/*.js"],
-    plugins: { js },
+    plugins: { js, compat },
     extends: ["js/recommended"],
     languageOptions: {
       ecmaVersion: 2022,
@@ -16,6 +17,8 @@ export default defineConfig([
       globals: globals.browser
     },
     rules: {
+      "compat/compat": ["error"],
+
       "array-bracket-spacing": ["error", "always"],
       "block-spacing": ["error", "always"],
       "camelcase": ["error"],

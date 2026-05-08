@@ -14,6 +14,10 @@
   "repository": "https://github.com/basecamp/lexxy.git",
   "author": "Jorge Manrubia <jorge@37signals.com>",
   "license": "MIT",
+  "browserslist": [
+    "baseline 2023",
+    "not dead"
+  ],
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.52.0",
@@ -24,6 +28,7 @@
     "@rollup/plugin-terser": "^0.4.4",
     "eslint": "^10.3.0",
     "globals": "^17.6.0",
+    "eslint-plugin-compat": "^7.0.2",
     "jsdom": "^27.3.0",
     "rollup": "^4.44.1",
     "rollup-plugin-copy": "^3.5.0",
