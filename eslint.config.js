@@ -1,52 +1,19 @@
+import { defineConfig } from "eslint/config"
+import globals from "globals"
 import js from "@eslint/js"
 
-export default [
+export default defineConfig([
   {
-    ignores: ["dist/**", "app/**", "node_modules/**", "pkg/**", "test/**", "lib/**", "bin/**", "config/**", "docs/**", "vendor/**", ".claude/worktrees/**"]
+    ignores: ["dist/**", "app/assets/javascript/**", "node_modules/**", "pkg/**", "test/**", "lib/**", "bin/**", "config/**", "docs/**", "vendor/**", ".claude/worktrees/**"]
   },
-  js.configs.recommended,
   {
-    files: ["src/**/*.js", "app/*.*js"],
+    files: ["src/**/*.js"],
+    plugins: { js },
+    extends: ["js/recommended"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
-      globals: {
-        AbortController: "readonly",
-        atob: "readonly",
-        console: "readonly",
-        document: "readonly",
-        window: "readonly",
-        navigator: "readonly",
-        HTMLElement: "readonly",
-        CustomEvent: "readonly",
-        Element: "readonly",
-        Node: "readonly",
-        NodeList: "readonly",
-        Event: "readonly",
-        MutationObserver: "readonly",
-        DOMParser: "readonly",
-        Blob: "readonly",
-        File: "readonly",
-        FileReader: "readonly",
-        URL: "readonly",
-        URLSearchParams: "readonly",
-        Request: "readonly",
-        Response: "readonly",
-        FormData: "readonly",
-        fetch: "readonly",
-        setTimeout: "readonly",
-        clearTimeout: "readonly",
-        setInterval: "readonly",
-        clearInterval: "readonly",
-        XMLHttpRequest: "readonly",
-        requestAnimationFrame: "readonly",
-        cancelAnimationFrame: "readonly",
-        customElements: "readonly",
-        Prism: "readonly",
-        ResizeObserver: "readonly",
-        PointerEvent: "readonly",
-        Image: "readonly"
-      }
+      globals: globals.browser
     },
     rules: {
       "array-bracket-spacing": ["error", "always"],
@@ -75,20 +42,14 @@ export default [
   },
   {
     files: ["scripts/**/*.js"],
+    plugins: { js },
+    extends: ["js/recommended"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
       globals: {
-        AbortController: "readonly",
-        URL: "readonly",
-        URLSearchParams: "readonly",
-        clearTimeout: "readonly",
-        console: "readonly",
-        fetch: "readonly",
-        performance: "readonly",
-        process: "readonly",
-        setTimeout: "readonly",
-        window: "readonly"
+        window: "readonly",
+        ...globals.node
       }
     },
     rules: {
@@ -116,4 +77,4 @@ export default [
       "sort-imports": ["error", { "ignoreDeclarationSort": true }]
     }
   }
-]
+])
