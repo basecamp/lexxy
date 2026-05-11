@@ -161,7 +161,7 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
-    const html = marked(text, { breaks: true })
+    const html = marked(preserveConsecutiveSpaces(text), { breaks: true })
     const doc = parseHtml(html)
     const detail = Object.freeze({
       markdown: text,
@@ -237,6 +237,10 @@ export default class Clipboard {
     window.scrollTo(scrollX, scrollY)
     this.editor.focus()
   }
+}
+
+function preserveConsecutiveSpaces(text) {
+  return text.replace(/ {2,}/g, (run) => " " + "\u00A0".repeat(run.length - 1))
 }
 
 function $bareUrlFromSingleLink(nodes) {
