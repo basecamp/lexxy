@@ -3,6 +3,7 @@
 :where(lexxy-editor) {
   --lexxy-editor-padding: 1ch;
   --lexxy-editor-rows: 8lh;
+  /* eslint-disable-next-line css/no-invalid-properties */
   @supports (min-block-size: attr(rows lh)) {
     --lexxy-editor-rows: attr(rows lh, 8lh);
   }
@@ -401,6 +402,7 @@
 }
 
 :where(.lexxy-editor__content) {
+  /* eslint-disable-next-line css/no-invalid-properties */
   min-block-size: var(--lexxy-editor-rows);
   outline: 0;
   padding: var(--lexxy-editor-padding);

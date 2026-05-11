@@ -232,6 +232,23 @@
   dependencies:
     "@types/json-schema" "^7.0.15"
 
+"@eslint/css-tree@^4.0.2":
+  version "4.0.3"
+  resolved "https://registry.yarnpkg.com/@eslint/css-tree/-/css-tree-4.0.3.tgz#0e04b1ae2e9bf62fbc222de0aaafcf1dcbbee943"
+  integrity sha512-lMgQJ5zg4YwsGPWtKS7Rc5Z4xqc2B9iOTtmDvhjMRa8GJ8/9zoKRtz26D7gCtWquy0J7oyeOJBwRP5M8slM/4w==
+  dependencies:
+    mdn-data "2.28.0"
+    source-map-js "^1.2.1"
+
+"@eslint/css@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@eslint/css/-/css-1.2.0.tgz#8732465fd4c01339c8c97af84abe48bbed195ece"
+  integrity sha512-aVASadH1EVw+6A+JuzRmV+v2MIsoVolj/k6/jqAXlP6bB0LYrTwH9DI4RO1Z/vvM3BZxMyqsB9QGnnOm78z9iQ==
+  dependencies:
+    "@eslint/core" "^1.2.1"
+    "@eslint/css-tree" "^4.0.2"
+    "@eslint/plugin-kit" "^0.7.1"
+
 "@eslint/js@^10.0.1":
   version "10.0.1"
   resolved "https://registry.yarnpkg.com/@eslint/js/-/js-10.0.1.tgz#1e8a876f50117af8ab67e47d5ad94d38d6622583"
@@ -1690,6 +1707,11 @@ mdn-data@2.12.2:
   version "2.12.2"
   resolved "https://registry.yarnpkg.com/mdn-data/-/mdn-data-2.12.2.tgz#9ae6c41a9e65adf61318b32bff7b64fbfb13f8cf"
   integrity sha512-IEn+pegP1aManZuckezWCO+XZQDplx1366JoVhTpMpBB1sPey/SbveZQUosKiKiGYjg1wH4pMlNgXbCiYgihQA==
+
+mdn-data@2.28.0:
+  version "2.28.0"
+  resolved "https://registry.yarnpkg.com/mdn-data/-/mdn-data-2.28.0.tgz#e6c1270e55958f9e9b16ff816bfad5a8dc583d1e"
+  integrity sha512-uy9AS1yt+wW5eUEefgE3lOpqPghanUttycV0GXKbiXyBjwvbeE8XPj4u1C+voRfz7dEjwU4NDHTMfZ/s/JtZrQ==
 
 merge2@^1.2.3, merge2@^1.3.0:
   version "1.4.1"
