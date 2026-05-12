@@ -134,9 +134,7 @@ export default class Contents {
     } else {
       topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
-      $splitParagraphsAtLineBreakBoundaries(selection)
-
-      const elements = this.#topLevelElementsInSelection(selection)
+      const elements = $splitParagraphsAtLineBreakBoundaries(selection)
       if (elements.length === 0) return
 
       const blockquote = $createQuoteNode()
