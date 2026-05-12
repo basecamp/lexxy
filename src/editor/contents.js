@@ -134,9 +134,7 @@ export default class Contents {
     } else {
       topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
-      $splitParagraphsAtLineBreakBoundaries(selection)
-
-      const elements = this.#topLevelElementsInSelection(selection)
+      const elements = $splitParagraphsAtLineBreakBoundaries(selection)
       if (elements.length === 0) return
 
       const blockquote = $createQuoteNode()
@@ -407,8 +405,6 @@ export default class Contents {
   }
 
   #splitParagraphsAtLineBreaks(selection) {
-    const anchorTopLevel = selection.anchor.getNode().getTopLevelElement()
-    const focusTopLevel = selection.focus.getNode().getTopLevelElement()
     const topLevelElements = this.#topLevelElementsInSelection(selection)
 
     for (const element of topLevelElements) {
@@ -416,13 +412,6 @@ export default class Contents {
 
       const children = element.getChildren()
       if (!children.some($isLineBreakNode)) continue
-
-      // Check whether this paragraph needs splitting: skip only if neither
-      // selection endpoint is inside it (meaning it's a middle paragraph
-      // fully between anchor and focus with no partial lines to split off).
-      // Compare top-level elements so endpoints inside nested inline nodes
-      // (e.g. text inside a LinkNode) are still recognized.
-      if (element !== anchorTopLevel && element !== focusTopLevel) continue
 
       const groups = [ [] ]
       for (const child of children) {
