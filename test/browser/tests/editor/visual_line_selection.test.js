@@ -505,6 +505,29 @@ test.describe("Triple-click edge cases", () => {
     }
   })
 
+  test("falls back to caretRangeFromPoint when caretPositionFromPoint is unavailable", async ({ page, editor }) => {
+    await editor.setValue("<p>X line.<br>Y line.</p>")
+    await editor.flush()
+
+    await stubCaretAPIs(page, () => {
+      document.caretPositionFromPoint = undefined
+      document.caretRangeFromPoint = () => {
+        const xText = document.querySelector("lexxy-editor p span").firstChild
+        const range = document.createRange()
+        range.setStart(xText, 0)
+        return range
+      }
+    })
+
+    try {
+      const yLine = editor.content.locator("p span", { hasText: "Y line." }).first()
+      const selected = await tripleClickAndRead(page, yLine)
+      expect(selected).toBe("X line.")
+    } finally {
+      await restoreCaretAPIs(page)
+    }
+  })
+
   test("single-click produces a collapsed selection and does not trigger the clamp", async ({ page, editor }) => {
     await editor.setValue("<p>hello world<br>second line</p>")
     await editor.flush()
