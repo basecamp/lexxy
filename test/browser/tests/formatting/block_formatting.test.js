@@ -352,6 +352,21 @@ test.describe("Block formatting", () => {
     )
   })
 
+  test("bullet list explodes BRs in middle paragraphs of a multi-paragraph selection", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>aa<br>bb</p><p>cc<br>dd</p><p>ee<br>ff</p>")
+    await editor.selectAll()
+
+    await page.getByRole("button", { name: "Bullet list" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<ul><li value="1">aa</li><li value="2">bb</li><li value="3">cc</li><li value="4">dd</li><li value="5">ee</li><li value="6">ff</li></ul>',
+    )
+  })
+
   test("shift+enter inside a list item creates a line break, not a new item", async ({
     editor,
   }) => {
