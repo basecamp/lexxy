@@ -40,6 +40,7 @@ import { RewritableHistoryExtension } from "../extensions/rewritable_history_ext
 import { AttachmentsExtension } from "../extensions/attachments_extension.js"
 import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 import { LinkOpenerExtension } from "../extensions/link_opener_extension.js"
+import { PreventLexicalTripleClickExtension } from "../extensions/prevent_lexical_triple_click_extension.js"
 
 
 export class LexicalEditorElement extends HTMLElement {
@@ -152,7 +153,8 @@ export class LexicalEditorElement extends HTMLElement {
       RewritableHistoryExtension,
       AttachmentsExtension,
       FormatEscapeExtension,
-      LinkOpenerExtension
+      LinkOpenerExtension,
+      PreventLexicalTripleClickExtension
     ]
   }
 
