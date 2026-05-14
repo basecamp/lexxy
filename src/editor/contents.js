@@ -64,6 +64,7 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
+    $splitParagraphsAtLineBreakBoundaries(selection)
     $setBlocksType(selection, () => $createParagraphNode())
   }
 
@@ -71,6 +72,7 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
+    $splitParagraphsAtLineBreakBoundaries(selection)
     $setBlocksType(selection, () => $createHeadingNode(tag))
   }
 
@@ -112,10 +114,20 @@ export default class Contents {
     if (allCode) {
       blockElements.forEach(node => this.#unwrapCodeBlock(node))
     } else {
+      // We first split the enclosing paragraph at the <br>s on either side of
+      // the selection, so that a one-line selection out of a paragraph with
+      // soft line breaks becomes its own paragraph. We then re-collect block
+      // elements from the updated selection, because the split above is a
+      // no-op when the selection lives inside a container like a blockquote,
+      // where the elements to convert are the container's child paragraphs.
+      $splitParagraphsAtLineBreakBoundaries(selection)
+      const elements = this.#blockLevelElementsInSelection(selection)
+      if (elements.length === 0) return
+
       const codeNode = $createCodeNode("plain")
-      blockElements.at(-1).insertAfter(codeNode)
+      elements.at(-1).insertAfter(codeNode)
       codeNode.selectEnd()
-      this.insertAtCursor(...blockElements)
+      this.insertAtCursor(...elements)
     }
   }
 
@@ -134,9 +146,7 @@ export default class Contents {
     } else {
       topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
-      $splitParagraphsAtLineBreakBoundaries(selection)
-
-      const elements = this.#topLevelElementsInSelection(selection)
+      const elements = $splitParagraphsAtLineBreakBoundaries(selection)
       if (elements.length === 0) return
 
       const blockquote = $createQuoteNode()
@@ -403,12 +413,15 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
+    // Two-pass: first isolate the selected range as its own paragraph so that
+    // <br>s outside the selection stay grouped (boundary-aware); then explode
+    // every <br> within the isolated paragraph so each selected line becomes
+    // its own list item.
+    $splitParagraphsAtLineBreakBoundaries(selection)
     this.#splitParagraphsAtLineBreaks(selection)
   }
 
   #splitParagraphsAtLineBreaks(selection) {
-    const anchorTopLevel = selection.anchor.getNode().getTopLevelElement()
-    const focusTopLevel = selection.focus.getNode().getTopLevelElement()
     const topLevelElements = this.#topLevelElementsInSelection(selection)
 
     for (const element of topLevelElements) {
@@ -416,13 +429,6 @@ export default class Contents {
 
       const children = element.getChildren()
       if (!children.some($isLineBreakNode)) continue
-
-      // Check whether this paragraph needs splitting: skip only if neither
-      // selection endpoint is inside it (meaning it's a middle paragraph
-      // fully between anchor and focus with no partial lines to split off).
-      // Compare top-level elements so endpoints inside nested inline nodes
-      // (e.g. text inside a LinkNode) are still recognized.
-      if (element !== anchorTopLevel && element !== focusTopLevel) continue
 
       const groups = [ [] ]
       for (const child of children) {
