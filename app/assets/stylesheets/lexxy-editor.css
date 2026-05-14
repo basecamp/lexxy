@@ -19,6 +19,13 @@
   position: relative;
   transition: opacity 150ms;
 
+  /* Isolate the editor's style/layout so changes inside don't invalidate the
+     rest of the page. Editor init mutates many descendants (adapter nodes,
+     toolbar, content root) and without containment each mutation invalidates
+     ancestor selectors (`:has()`, cascaded custom properties) across the
+     whole document. */
+  contain: layout style;
+
   p.provisional-paragraph {
     display: block;
 
