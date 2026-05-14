@@ -6,7 +6,7 @@ const helperChunks = [
 ]
 
 export default {
-  input: { lexxy: "src/index.js" },
+  input: { lexxy: "src/index.js", lexical: "src/helpers/lexical_helper.js" },
   output: {
     dir: "./dist",
     format: "esm",

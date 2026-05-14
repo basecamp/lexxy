@@ -1,4 +1,5 @@
 /*** Only import from lexical packages in this file to prevent breaking npm package export chunking ***/
+export * from "lexical"
 
 import { $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCommonAncestor, $getSelection, $getSiblingCaret, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $splitNode, LineBreakNode, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
