@@ -76,11 +76,15 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true })
 
     figure.insertAdjacentHTML("beforeend", sanitize(this.innerHtml))
-
-    const deleteButton = createElement("lexxy-node-delete-button")
-    figure.appendChild(deleteButton)
+    this.#markImagesAsDecorative(figure)
 
     return figure
+  }
+
+  #markImagesAsDecorative(figure) {
+    for (const img of figure.querySelectorAll("img:not([alt])")) {
+      img.alt = ""
+    }
   }
 
   updateDOM() {
@@ -93,6 +97,10 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
   getReadableTextContent() {
     return this.plainText || `[${this.contentType}]`
+  }
+
+  get label() {
+    return this.getReadableTextContent()
   }
 
   isInline() {
