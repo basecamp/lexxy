@@ -1,10 +1,10 @@
+/*** Only import from lexical packages in this file to prevent breaking npm package export chunking ***/
+
 import { $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCommonAncestor, $getSelection, $getSiblingCaret, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $splitNode, LineBreakNode, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
 import { $ensureForwardRangeSelection, $isAtNodeEnd } from "@lexical/selection"
-
-import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 
 export function $containsRangeSelection(node, selection = $getSelection()) {
   if ($isRangeSelection(selection)) {
@@ -145,13 +145,6 @@ export function $isListItemStructurallyEmpty(listItem) {
     }
   }
   return true
-}
-
-export function isAttachmentSpacerTextNode(node, previousNode, index, childCount) {
-  return $isTextNode(node)
-    && node.getTextContent() === " "
-    && index === childCount - 1
-    && previousNode instanceof CustomActionTextAttachmentNode
 }
 
 export function $splitParagraphsAtLineBreakBoundaries(selection) {

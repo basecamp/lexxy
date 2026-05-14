@@ -1,5 +1,5 @@
 import Lexxy from "../config/lexxy"
-import { $createTextNode, DecoratorNode } from "lexical"
+import { $createTextNode, $isTextNode, DecoratorNode } from "lexical"
 
 import { createElement, extractPlainTextFromHtml } from "../helpers/html_helper"
 import { sanitize } from "../helpers/sanitization_helper"
@@ -124,4 +124,11 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   decorate() {
     return null
   }
+}
+
+export function isAttachmentSpacerTextNode(node, previousNode, index, childCount) {
+  return $isTextNode(node)
+    && node.getTextContent() === " "
+    && index === childCount - 1
+    && previousNode instanceof CustomActionTextAttachmentNode
 }
