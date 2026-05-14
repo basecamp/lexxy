@@ -111,16 +111,17 @@ test.describe("Attachments", () => {
     await assertEditorHtml(editor, "")
   })
 
-  test("delete attachment with delete button", async ({ page, editor }) => {
+  test("delete attachment with toolbar button", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
 
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
-    await figure.locator("img").click()
-    await expect(page.locator("lexxy-node-delete-button")).toBeVisible()
-    await page.locator("lexxy-node-delete-button button[aria-label='Remove']").click()
+    await figure.click({ position: { x: 8, y: 8 } })
+    const toolbar = page.locator("lexxy-attachment-toolbar")
+    await expect(toolbar).toBeVisible()
+    await toolbar.locator("button[aria-label='Remove']").click()
 
     await expect(figure).toHaveCount(0)
     await assertEditorHtml(editor, "")

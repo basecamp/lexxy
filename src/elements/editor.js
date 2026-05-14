@@ -82,6 +82,9 @@ export class LexicalEditorElement extends HTMLElement {
     this.clipboard = new Clipboard(this)
     this.#disposables.push(this.clipboard)
 
+    this.liveRegion = this.querySelector("lexxy-live-region") ?? createElement("lexxy-live-region")
+    this.append(this.liveRegion)
+
     this.adapter = new BrowserAdapter()
 
     const commandDispatcher = CommandDispatcher.configureFor(this)
@@ -187,6 +190,10 @@ export class LexicalEditorElement extends HTMLElement {
 
   acceptsFile(file) {
     return dispatch(this, "lexxy:file-accept", { file }, true)
+  }
+
+  announce(message) {
+    this.liveRegion?.announce(message)
   }
 
   $generateNodesFromDOM(doc) {
@@ -499,6 +506,9 @@ export class LexicalEditorElement extends HTMLElement {
       )
       this.#registerTableComponents()
       this.#registerCodeHiglightingComponents()
+      if (this.supportsAttachments) {
+        this.#registerAttachmentToolbar()
+      }
       if (this.supportsMarkdown) {
         const transformers = [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ]
         registered.push(
@@ -518,6 +528,13 @@ export class LexicalEditorElement extends HTMLElement {
     tableTools ??= createElement("lexxy-table-tools")
     this.append(tableTools)
     this.#disposables.push(tableTools)
+  }
+
+  #registerAttachmentToolbar() {
+    let attachmentToolbar = this.querySelector("lexxy-attachment-toolbar")
+    attachmentToolbar ??= createElement("lexxy-attachment-toolbar")
+    this.append(attachmentToolbar)
+    this.#disposables.push(attachmentToolbar)
   }
 
   #registerCodeHiglightingComponents() {

@@ -206,12 +206,6 @@
         inset-inline-end: 0;
         position: absolute;
       }
-
-      lexxy-node-delete-button {
-        inset-block-start: 1.5ch;
-        inset-inline-end: 1.5ch;
-        inset-inline-start: unset;
-      }
     }
 
     &.attachment--error {
@@ -305,15 +299,6 @@
   .attachment:hover:not(.node--selected) {
     outline: var(--lexxy-focus-ring-size) solid color-mix(in oklch, var(--lexxy-focus-ring-color) 30%, transparent);
     outline-offset: var(--lexxy-focus-ring-offset);
-  }
-
-  .attachment--file {
-    lexxy-node-delete-button {
-      inset-block-start: 50%;
-      inset-inline-end: 1ch;
-      inset-inline-start: unset;
-      transform: translate(0, -50%);
-    }
   }
 
   /* Image galleries */
@@ -956,20 +941,18 @@
 
 
   /* --------------------------------------------------------------------------
-  /* Attachment delete button */
+  /* Attachment toolbar */
 
-  &:is(lexxy-node-delete-button) {
-    inset-block-start: 0;
-    inset-inline-start: 100%;
-    opacity: 0;
-    pointer-events: none;
+  &:is(lexxy-attachment-toolbar) {
+    display: flex;
+    transform: translate(-100%, 0);
 
-    .node--selected & {
-      opacity: 1;
-      pointer-events: auto;
+    &[hidden] {
+      display: none;
     }
 
-    .lexxy-node-delete:hover {
+    .lexxy-attachment-toolbar__remove:hover,
+    .lexxy-attachment-toolbar__remove:focus-visible {
       background-color: var(--lexxy-color-red);
     }
   }
@@ -1097,20 +1080,28 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
 
     outline: none;
   }
+}
 
-  lexxy-node-delete-button {
-    inset-inline-start: 0;
-    line-height: 1lh;
+/* --------------------------------------------------------------------------
+/* Visually-hidden content kept reachable by assistive tech: announcements
+ * from <lexxy-live-region>, the fake selection that gives screen readers a
+ * label to read when a decorator is selected, and the caption text that
+ * mirrors the editable textarea in browse mode. */
+:where(lexxy-live-region, .lexxy-fake-selection, .attachment__caption-text) {
+  block-size: 1px;
+  border: 0;
+  clip-path: inset(50%);
+  inline-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+}
 
-    .lexxy-floating-controls__group {
-      --button-size: 1lh;
-
-      background-color: var(--lexxy-color-accent-dark);
-      padding: 0;
-
-      button {
-        border-radius: 50%;
-      }
-    }
-  }
+/* The DOM Selection API needs user-select:text to park a range on the fake
+ * selection span while it stays invisible to sighted users. */
+.lexxy-fake-selection {
+  user-select: text;
+  -webkit-user-select: text;
 }
