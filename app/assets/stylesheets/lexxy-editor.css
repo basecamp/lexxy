@@ -3,6 +3,7 @@
 :where(lexxy-editor) {
   --lexxy-editor-padding: 1ch;
   --lexxy-editor-rows: 8lh;
+  /* eslint-disable-next-line css/no-invalid-properties */
   @supports (min-block-size: attr(rows lh)) {
     --lexxy-editor-rows: attr(rows lh, 8lh);
   }
@@ -401,6 +402,7 @@
 }
 
 :where(.lexxy-editor__content) {
+  /* eslint-disable-next-line css/no-invalid-properties */
   min-block-size: var(--lexxy-editor-rows);
   outline: 0;
   padding: var(--lexxy-editor-padding);
@@ -684,7 +686,7 @@
         font-size: var(--lexxy-text-small);
         flex: 2;
         inline-size: 100%;
-        line-height: normal;
+        line-height: inherit;
         padding-block: 0;
         padding-inline: 1ch;
 
@@ -750,15 +752,13 @@
           inline-size: 100%;
 
           &:after {
-            align-self: center;
+            align-items: center;
             content: "Aa";
-            display: inline-block;
+            display: flex;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            inset: 0;
+            justify-content: center;
             position: absolute;
-            inset-block-start: 0;
-            inset-block-end: 0;
-            inset-inline-end: 0;
-            inset-inline-start: 0;
           }
 
           &[aria-pressed="true"] {
