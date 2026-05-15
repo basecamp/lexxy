@@ -32,6 +32,28 @@ test.describe("Paste — Links", () => {
     )
   })
 
+  test("creates a link when pasting a solo text/uri-list payload (App ShareSheet)", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello everyone</p>")
+
+    await editor.paste(null, { uriList: "https://37signals.com" })
+
+    await assertEditorHtml(
+      editor,
+      '<p>Hello everyone<a href="https://37signals.com">https://37signals.com</a></p>',
+    )
+  })
+
+  test("creates a link when pasting text/uri-list with a text/plain companion (Safari)", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello everyone</p>")
+
+    await editor.paste("https://37signals.com", { uriList: "https://37signals.com" })
+
+    await assertEditorHtml(
+      editor,
+      '<p>Hello everyone<a href="https://37signals.com">https://37signals.com</a></p>',
+    )
+  })
+
   test("create links when pasting URLs keeps formatting", async ({
     page,
     editor,
