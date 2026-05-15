@@ -79,8 +79,12 @@ export default class Clipboard {
 
   #isOnlyURLPasted(clipboardData) {
     // Safari URLs are copied as a text/plain + text/uri-list object
+    // App ShareSheet URLs are copied as solo text/uri-list object
     const types = Array.from(clipboardData.types)
-    return types.length === 2 && types.includes("text/uri-list") && types.includes("text/plain")
+    return types.length
+      && types.length <= 2
+      && types.includes("text/uri-list")
+      && (types.length < 2 || types.includes("text/plain"))
   }
 
   #isPastingIntoCodeBlock() {
