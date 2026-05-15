@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
-import { uploadStandaloneAfter } from "../../helpers/gallery_test_helpers.js"
+import { assertGalleryWithImages, selectGalleryAtOffset, selectGalleryImage, uploadStandaloneAfter } from "../../helpers/gallery_test_helpers.js"
 
 test.describe("Gallery", () => {
   test.beforeEach(async ({ page }) => {
@@ -363,23 +363,12 @@ async function assertAttachmentVisible(page, contentType) {
   ).toBeVisible({ timeout: 10_000 })
 }
 
-async function assertGalleryWithImages(editor, count) {
-  const gallery = editor.content.locator(".attachment-gallery").first()
-  await expect(gallery).toBeVisible({ timeout: 10_000 })
-  await expect(gallery.locator("figure.attachment")).toHaveCount(count)
-}
-
 async function assertNoGallery(page) {
   await expect(page.locator(".attachment-gallery")).toHaveCount(0)
 }
 
 async function assertGalleryCount(page, count) {
   await expect(page.locator(".attachment-gallery")).toHaveCount(count)
-}
-
-async function selectGalleryImage(page, index, galleryIndex = 0) {
-  const gallery = page.locator(".attachment-gallery").nth(galleryIndex)
-  await gallery.locator("figure.attachment img").nth(index).click()
 }
 
 async function assertGalleryImageSelected(page, index, galleryIndex = 0) {
@@ -392,17 +381,6 @@ async function selectAttachment(page) {
   await page.locator("figure.attachment img[src*='/blobs/']").waitFor()
   await page.locator("figure.attachment img").click()
   await expect(page.locator("figure.attachment")).toHaveClass(/node--selected/)
-}
-
-// Mirrors Ruby helper: select image and use arrow keys to position cursor at offset
-async function selectGalleryAtOffset(page, editor, offset, galleryIndex = 0) {
-  if (offset === 0) {
-    await selectGalleryImage(page, 0, galleryIndex)
-    await editor.send("ArrowLeft")
-  } else {
-    await selectGalleryImage(page, offset - 1, galleryIndex)
-    await editor.send("ArrowRight")
-  }
 }
 
 async function selectGalleryNode(editor, galleryIndex = 0) {

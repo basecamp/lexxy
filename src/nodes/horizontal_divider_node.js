@@ -31,14 +31,13 @@ export class HorizontalDividerNode extends DecoratorNode {
     super(key)
   }
 
+  // The figure wraps the <hr> only for layout; assistive tech reads the
+  // separator role on the <hr> itself and doesn't need a figure boundary
+  // around it.
   createDOM() {
-    const figure = createElement("figure", { className: "horizontal-divider" })
-    const hr = createElement("hr")
-
-    figure.appendChild(hr)
-
-    const deleteButton = createElement("lexxy-node-delete-button")
-    figure.appendChild(deleteButton)
+    const figure = createElement("figure", { className: "horizontal-divider", role: "presentation" })
+    figure.appendChild(createElement("hr"))
+    figure.dataset.lexicalNodeKey = this.__key
 
     return figure
   }
@@ -53,6 +52,10 @@ export class HorizontalDividerNode extends DecoratorNode {
 
   isInline() {
     return false
+  }
+
+  get label() {
+    return "Horizontal divider"
   }
 
   exportDOM() {

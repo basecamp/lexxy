@@ -1,13 +1,16 @@
-import { $getSelection, $isDecoratorNode, $isParagraphNode, $splitNode, COMMAND_PRIORITY_NORMAL, DELETE_CHARACTER_COMMAND, defineExtension } from "lexical"
+import { $getSelection, $isDecoratorNode, $isParagraphNode, $splitNode, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, DELETE_CHARACTER_COMMAND, KEY_TAB_COMMAND, defineExtension } from "lexical"
 import { mergeRegister } from "@lexical/utils"
 
 import { $findOrCreateGalleryForImage, $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
-import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { $isActionTextAttachmentNode, ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node.js"
 import { AttachmentDragAndDrop } from "../editor/attachments/drag_and_drop"
+import { AttachmentFakeSelection } from "../editor/attachments/fake_selection"
+import { AttachmentKeyboardMove } from "../editor/attachments/keyboard_move"
+import { DecoratorNodeCaret } from "../editor/attachments/decorator_node_caret"
+import { $isAtNodeEdge, $singleSelectedNode } from "../helpers/lexical_helper"
 
 import LexxyExtension from "./lexxy_extension"
-import { $isAtNodeEdge } from "../helpers/lexical_helper.js"
 
 const ATTACHMENT_ATTRIBUTES = [ "alt", "caption", "content", "content-type", "data-direct-upload-id",
   "data-sgid", "filename", "filesize", "height", "presentation", "previewable", "sgid", "url", "width" ]
@@ -31,11 +34,18 @@ export class AttachmentsExtension extends LexxyExtension {
       ],
       register(editor) {
         const dragAndDrop = new AttachmentDragAndDrop(editor)
+        const keyboardMove = new AttachmentKeyboardMove(editor)
+        const fakeSelection = new AttachmentFakeSelection(editor)
+        const decoratorNodeCaret = new DecoratorNodeCaret(editor)
 
         return mergeRegister(
           editor.registerNodeTransform(ActionTextAttachmentNode, $extractAttachmentFromParagraph),
           editor.registerCommand(DELETE_CHARACTER_COMMAND, $collapseIntoGallery, COMMAND_PRIORITY_NORMAL),
-          () => dragAndDrop.destroy()
+          editor.registerCommand(KEY_TAB_COMMAND, $focusCaptionFromSelectedAttachment(), COMMAND_PRIORITY_HIGH),
+          () => dragAndDrop.destroy(),
+          () => keyboardMove.destroy(),
+          () => fakeSelection.destroy(),
+          () => decoratorNodeCaret.destroy()
         )
       }
     })
@@ -105,6 +115,20 @@ function $collapseAtGalleryEdge(anchor, backwards) {
     anchorNode.select(selectionOffset, selectionOffset)
     return true
   } else {
+    return false
+  }
+}
+
+// Tab from a selected attachment moves focus into the caption textarea.
+function $focusCaptionFromSelectedAttachment() {
+  return (event) => {
+    if (!event.shiftKey) {
+      const node = $singleSelectedNode()
+      if ($isActionTextAttachmentNode(node) && node.focusCaption()) {
+        event.preventDefault()
+        return true
+      }
+    }
     return false
   }
 }

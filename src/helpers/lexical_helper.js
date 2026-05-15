@@ -1,4 +1,4 @@
-import { $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCommonAncestor, $getSelection, $getSiblingCaret, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $splitNode, LineBreakNode, TextNode } from "lexical"
+import { $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCommonAncestor, $getSelection, $getSiblingCaret, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isTextNode, $splitNode, LineBreakNode, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
@@ -21,6 +21,31 @@ export function $createNodeSelectionWith(...nodes) {
   return selection
 }
 
+export function $singleSelectedNode() {
+  const selection = $getSelection()
+  if ($isNodeSelection(selection)) {
+    const nodes = selection.getNodes()
+    return nodes.length === 1 ? nodes[0] : null
+  } else {
+    return null
+  }
+}
+
+export function $selectedLabelledDecoratorNode() {
+  const node = $singleSelectedNode()
+  if (typeof node?.label === "string") {
+    return { key: node.getKey(), label: node.label }
+  } else {
+    return null
+  }
+}
+
+export function registerLabelledDecoratorSelection(editor, onChange) {
+  return editor.registerUpdateListener(() => {
+    onChange(editor.getEditorState().read($selectedLabelledDecoratorNode))
+  })
+}
+
 export function $isShadowRoot(node) {
   return $isElementNode(node) && $isRootOrShadowRoot(node) && !$isRootNode(node)
 }
@@ -39,6 +64,10 @@ export function $makeSafeForRoot(node) {
 export function getListType(node) {
   const list = $getNearestNodeOfType(node, ListNode)
   return list?.getListType() ?? null
+}
+
+export function announceFromEditor(editor, message) {
+  editor.getRootElement()?.closest("lexxy-editor")?.announce(message)
 }
 
 export function isEditorFocused(editor) {
