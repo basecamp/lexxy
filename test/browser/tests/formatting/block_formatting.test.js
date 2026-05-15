@@ -369,4 +369,16 @@ test.describe("Block formatting", () => {
     await expect(input).toBeVisible({ timeout: 2_000 })
     await expect(input).toHaveValue("")
   })
+
+  test("italic inside blockquote renders upright so emphasis stands out", async ({ editor }) => {
+    await editor.setValue(
+      "<blockquote><p>Before <em>emphasised</em> after</p></blockquote>",
+    )
+
+    const paragraph = editor.content.locator("blockquote p")
+    const em = editor.content.locator("blockquote em")
+
+    await expect(paragraph).toHaveCSS("font-style", "italic")
+    await expect(em).toHaveCSS("font-style", "normal")
+  })
 })
