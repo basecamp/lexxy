@@ -88,10 +88,10 @@ export class EditorHandle {
     await this.flush()
   }
 
-  async paste(text, { html, files = [] } = {}) {
+  async paste(text, { html, files = [], uriList } = {}) {
     await this.#ensureFirstInteraction()
     await this.content.evaluate(
-      (el, { text, html, files }) => {
+      (el, { text, html, files, uriList }) => {
         const buildFiles = () => {
           return files.map(({ base64, name, type }) => {
             const binary = atob(base64)
@@ -127,13 +127,14 @@ export class EditorHandle {
             cancelable: true,
             clipboardData: new DataTransfer(),
           })
-          event.clipboardData.setData("text/plain", text)
+          if (typeof text === "string") event.clipboardData.setData("text/plain", text)
           if (html) event.clipboardData.setData("text/html", html)
+          if (uriList) event.clipboardData.setData("text/uri-list", uriList)
         }
 
         el.dispatchEvent(event)
       },
-      { text, html, files },
+      { text, html, files, uriList },
     )
   }
 
