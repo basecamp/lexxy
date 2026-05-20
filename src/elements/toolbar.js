@@ -92,6 +92,14 @@ export class LexicalToolbarElement extends HTMLElement {
     })
   }
 
+  closeDropdowns({ except } = {}) {
+    this.#dropdowns.forEach((dropdown) => {
+      if (dropdown !== except) {
+        dropdown.close({ focusEditor: false })
+      }
+    })
+  }
+
   #reconnect() {
     this.disconnectedCallback()
     this.connectedCallback()
@@ -284,27 +292,58 @@ export class LexicalToolbarElement extends HTMLElement {
 
     this.#overflow.style.display = "block"
 
-    while (this.#isToolbarOverflowing()) {
-      const button = this.#overflowButtons.at(-1)
-      if (!button) return
+    const overflowAmount = this.#toolbarOverflowAmount() + 1
+    const buttons = this.#overflowButtons
+    const overflowButtons = []
+    let recoveredWidth = 0
 
+    while (recoveredWidth < overflowAmount) {
+      const button = buttons.pop()
+      if (!button) break
+
+      overflowButtons.push(button)
+      recoveredWidth += this.#outerWidthFor(button) + this.#toolbarGap
+    }
+
+    for (const button of overflowButtons) {
       this.#overflowMenu.prepend(button)
       button.role = "menuitem"
     }
   }
 
   #isToolbarOverflowing() {
-    const toolbarRect = this.getBoundingClientRect()
+    return this.#toolbarOverflowAmount() > 0
+  }
 
-    return this.#visibleToolbarItems.some((item) => {
+  #outerWidthFor(item) {
+    const rect = item.getBoundingClientRect()
+    const style = window.getComputedStyle(item)
+
+    return rect.width + (parseFloat(style.marginLeft) || 0) + (parseFloat(style.marginRight) || 0)
+  }
+
+  get #toolbarGap() {
+    return parseFloat(window.getComputedStyle(this).columnGap) || 0
+  }
+
+  #toolbarOverflowAmount() {
+    const { left, right } = this.#toolbarContentBounds
+
+    return this.#visibleToolbarItems.reduce((amount, item) => {
       const rect = item.getBoundingClientRect()
-      const style = window.getComputedStyle(item)
 
-      return (
-        rect.left - parseFloat(style.marginLeft) < toolbarRect.left ||
-        rect.right + parseFloat(style.marginRight) > toolbarRect.right
-      )
-    })
+      return Math.max(amount, rect.right - right, left - rect.left)
+    }, 0)
+  }
+
+  get #toolbarContentBounds() {
+    const rect = this.getBoundingClientRect()
+    const style = window.getComputedStyle(this)
+
+    return {
+      left: rect.left + (parseFloat(style.paddingLeft) || 0),
+      right: rect.right - (parseFloat(style.paddingRight) || 0)
+    }
   }
 
   #resetToolbarOverflow() {
@@ -325,14 +364,6 @@ export class LexicalToolbarElement extends HTMLElement {
   #reindexToolbarItems() {
     this.#toolbarItems.forEach((item, index) => {
       item.dataset.position = index
-    })
-  }
-
-  closeDropdowns({ except } = {}) {
-    this.#dropdowns.forEach((dropdown) => {
-      if (dropdown !== except) {
-        dropdown.close({ focusEditor: false })
-      }
     })
   }
 

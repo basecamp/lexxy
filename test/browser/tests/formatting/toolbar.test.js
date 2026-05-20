@@ -186,11 +186,14 @@ test.describe("Toolbar", () => {
     await expect.poll(async () => {
       return await toolbar.evaluate((tb) => {
         const toolbarRect = tb.getBoundingClientRect()
-        const fixedButtons = Array.from(tb.querySelectorAll(":scope > button[name^='fixed-injected-']"))
+        const style = window.getComputedStyle(tb)
+        const contentLeft = toolbarRect.left + parseFloat(style.paddingLeft)
+        const contentRight = toolbarRect.right - parseFloat(style.paddingRight)
+        const items = Array.from(tb.children).filter((item) => item.getClientRects().length > 0)
 
-        return fixedButtons.every((button) => {
-          const rect = button.getBoundingClientRect()
-          return rect.left >= toolbarRect.left && rect.right <= toolbarRect.right
+        return items.every((item) => {
+          const rect = item.getBoundingClientRect()
+          return rect.left >= contentLeft && rect.right <= contentRight
         })
       })
     }).toBe(true)
