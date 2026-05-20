@@ -266,6 +266,7 @@ export class LexicalToolbarElement extends HTMLElement {
   #refreshOverflow() {
     this.#resetToolbarOverflow()
     this.#reindexToolbarItems()
+    this.#overflow.style.display = "none"
     this.#compactMenu()
 
     const isOverflowing = this.#overflowMenu.children.length > 0
@@ -278,37 +279,32 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
   }
 
-  // Separates layout reads from DOM writes to avoid forced reflows during init.
-  // Measures every button's right edge in a single read pass, figures out which
-  // buttons overflow using math, and then moves them in a single write pass.
   #compactMenu() {
-    const buttons = this.#overflowButtons
-    if (buttons.length === 0) return
+    if (!this.#isToolbarOverflowing()) return
 
-    const availableWidth = this.clientWidth
-    const buttonRightEdges = buttons.map(button => {
-      const style = window.getComputedStyle(button)
-      return button.offsetLeft + button.offsetWidth + parseFloat(style.marginRight)
-    })
+    this.#overflow.style.display = "block"
 
-    let firstOverflowing = -1
-    for (let i = 0; i < buttons.length; i++) {
-      if (buttonRightEdges[i] > availableWidth) {
-        firstOverflowing = i
-        break
-      }
-    }
+    while (this.#isToolbarOverflowing()) {
+      const button = this.#overflowButtons.at(-1)
+      if (!button) return
 
-    if (firstOverflowing === -1) return
-
-    // Move one extra button to reserve space for the overflow control, which is
-    // `display: none` until we show it
-    const overflowIndex = Math.max(0, firstOverflowing - 1)
-    const overflowButtons = buttons.slice(overflowIndex).reverse()
-    for (const button of overflowButtons) {
       this.#overflowMenu.prepend(button)
       button.role = "menuitem"
     }
+  }
+
+  #isToolbarOverflowing() {
+    const toolbarRect = this.getBoundingClientRect()
+
+    return this.#visibleToolbarItems.some((item) => {
+      const rect = item.getBoundingClientRect()
+      const style = window.getComputedStyle(item)
+
+      return (
+        rect.left - parseFloat(style.marginLeft) < toolbarRect.left ||
+        rect.right + parseFloat(style.marginRight) > toolbarRect.right
+      )
+    })
   }
 
   #resetToolbarOverflow() {
@@ -353,11 +349,15 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   get #overflowButtons() {
-    return Array.from(this.querySelectorAll(":scope > button:not([data-prevent-overflow='true'])"))
+    return Array.from(this.querySelectorAll(":scope > button:not([data-prevent-overflow])"))
   }
 
   get #buttons() {
     return Array.from(this.querySelectorAll(":scope button"))
+  }
+
+  get #visibleToolbarItems() {
+    return Array.from(this.children).filter((item) => item.getClientRects().length > 0)
   }
 
   get #toolbarItems() {

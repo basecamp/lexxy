@@ -155,6 +155,49 @@ test.describe("Toolbar", () => {
     await expect(toolbar.locator(":scope > button[name='async-injected']")).toHaveCount(1)
   })
 
+  test("overflow compaction accounts for injected buttons that cannot overflow", async ({ page }) => {
+    const toolbar = page.locator("lexxy-toolbar")
+    const overflowMenu = toolbar.locator(".lexxy-editor__toolbar-overflow-menu")
+
+    const originalSize = page.viewportSize()
+    await page.setViewportSize({ width: 360, height: originalSize.height })
+
+    await page.evaluate(async () => {
+      const tb = document.querySelector("lexxy-toolbar")
+      const overflow = tb.querySelector(".lexxy-editor__toolbar-overflow")
+
+      for (const index of [ 1, 2 ]) {
+        const button = document.createElement("button")
+        button.type = "button"
+        button.name = `fixed-injected-${index}`
+        button.className = "lexxy-editor__toolbar-button"
+        button.dataset.preventOverflow = "true"
+        button.textContent = `${index}`
+        tb.insertBefore(button, overflow)
+      }
+
+      tb.requestOverflowRefresh()
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    })
+
+    await expect(toolbar).toHaveAttribute("overflowing", "")
+    await expect(overflowMenu.locator("button[name^='fixed-injected-']")).toHaveCount(0)
+
+    await expect.poll(async () => {
+      return await toolbar.evaluate((tb) => {
+        const toolbarRect = tb.getBoundingClientRect()
+        const fixedButtons = Array.from(tb.querySelectorAll(":scope > button[name^='fixed-injected-']"))
+
+        return fixedButtons.every((button) => {
+          const rect = button.getBoundingClientRect()
+          return rect.left >= toolbarRect.left && rect.right <= toolbarRect.right
+        })
+      })
+    }).toBe(true)
+
+    await page.setViewportSize(originalSize)
+  })
+
   test("image button opens file picker restricted to images and videos", async ({ page }) => {
     const [fileChooser] = await Promise.all([
       page.waitForEvent("filechooser"),
