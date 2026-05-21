@@ -41,6 +41,7 @@ import { AttachmentsExtension } from "../extensions/attachments_extension.js"
 import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 import { LinkOpenerExtension } from "../extensions/link_opener_extension.js"
 import { PreventLexicalTripleClickExtension } from "../extensions/prevent_lexical_triple_click_extension.js"
+import { nextFrame } from "../helpers/timing_helper.js"
 
 
 export class LexicalEditorElement extends HTMLElement {
@@ -51,11 +52,13 @@ export class LexicalEditorElement extends HTMLElement {
   static observedAttributes = [ "connected", "required" ]
 
   #initialValue = ""
-  #validationTextArea = document.createElement("textarea")
   #editorInitializedRafId = null
   #listeners = new ListenerBin()
   #disposables = []
   #historyState = { undo: false, redo: false }
+
+  #validity = new Map()
+  #validationTextArea = document.createElement("textarea")
 
   constructor() {
     super()
@@ -104,14 +107,18 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
+    if (name === "connected") this.connectedChangedCallback(oldValue, newValue)
+    if (name === "required") this.requiredChangedCallback(oldValue, newValue)
+  }
+
+  connectedChangedCallback(oldValue, newValue) {
+    if (this.isConnected && oldValue != null && oldValue !== newValue) {
       requestAnimationFrame(() => this.#reconnect())
     }
+  }
 
-    if (name === "required" && this.isConnected) {
-      this.#validationTextArea.required = this.hasAttribute("required")
-      this.#setValidity()
-    }
+  requiredChangedCallback() {
+    if (this.isConnected) this.#requestValidityRefresh()
   }
 
   formResetCallback() {
@@ -135,6 +142,27 @@ export class LexicalEditorElement extends HTMLElement {
 
   get name() {
     return this.getAttribute("name")
+  }
+
+  get required() {
+    return this.hasAttribute("required")
+  }
+
+  get validity() {
+    return this.internals.validity
+  }
+
+  checkValidity() {
+    return this.internals.checkValidity()
+  }
+
+  reportValidity() {
+    return this.internals.reportValidity()
+  }
+
+  setElementValidity(key, flags, message) {
+    this.#validity.set(key, { flags, message })
+    this.#requestValidityRefresh()
   }
 
   get toolbarElement() {
@@ -444,7 +472,6 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.internals.setFormValue(html)
     this._internalFormValue = html
-    this.#validationTextArea.value = this.isEmpty ? "" : html
 
     if (changed) {
       dispatch(this, "lexxy:change")
@@ -479,9 +506,48 @@ export class LexicalEditorElement extends HTMLElement {
       this.#clearCachedValues()
       this.#internalFormValue = this.value
       this.#toggleEmptyStatus()
-      this.#setValidity()
+      this.#requestValidityRefresh()
       this.#dispatchAttributesChange()
     }))
+  }
+
+  async #requestValidityRefresh() {
+    await nextFrame()
+
+    if (this.isConnected) this.#refreshValidity()
+  }
+
+  #refreshValidity() {
+    this.#refreshInternalValidity()
+    const { validity, message } = this.#calculateValidity()
+    this.internals.setValidity(validity, message, this.editorContentElement)
+  }
+
+  #refreshInternalValidity() {
+    this.#validationTextArea.required = this.required && this.isBlank
+    const flags = this.#validationTextArea.validity
+    const message = this.#validationTextArea.validationMessage
+
+    this.#validity.set(this, { flags, message })
+  }
+
+  #calculateValidity() {
+    const validity = {}
+    const messages = []
+
+    for (const { flags, message } of this.#validity.values()) {
+      // internal TextArea's ValidityState can contain `valid: true`
+      if (flags.valid === true) continue
+
+      for (const flag in flags) {
+        if (flags[flag]) {
+          validity[flag] = true
+          messages.push(message)
+        }
+      }
+    }
+
+    return { validity, message: messages.join("\n") }
   }
 
   #clearCachedValues() {
@@ -646,14 +712,6 @@ export class LexicalEditorElement extends HTMLElement {
     this.classList.toggle("lexxy-editor--empty", this.isEmpty)
   }
 
-  #setValidity() {
-    if (this.#validationTextArea.validity.valid) {
-      this.internals.setValidity({})
-    } else {
-      this.internals.setValidity(this.#validationTextArea.validity, this.#validationTextArea.validationMessage, this.editorContentElement)
-    }
-  }
-
   #configureSanitizer() {
     setSanitizerConfig(this.#allowedElements)
   }
@@ -785,6 +843,7 @@ export class LexicalEditorElement extends HTMLElement {
   #reset() {
     this.#cancelEditorInitializedDispatch()
     this.#dispose()
+    this.#resetValidity()
     this.editorContentElement?.remove()
     this.editorContentElement = null
 
@@ -803,6 +862,10 @@ export class LexicalEditorElement extends HTMLElement {
     this.disconnectedCallback()
     this.valueBeforeDisconnect = null
     this.connectedCallback()
+  }
+
+  #resetValidity() {
+    this.#validity = new Map()
   }
 }
 
