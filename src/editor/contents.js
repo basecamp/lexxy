@@ -114,12 +114,6 @@ export default class Contents {
     if (allCode) {
       blockElements.forEach(node => this.#unwrapCodeBlock(node))
     } else {
-      // We first split the enclosing paragraph at the <br>s on either side of
-      // the selection, so that a one-line selection out of a paragraph with
-      // soft line breaks becomes its own paragraph. We then re-collect block
-      // elements from the updated selection, because the split above is a
-      // no-op when the selection lives inside a container like a blockquote,
-      // where the elements to convert are the container's child paragraphs.
       $splitParagraphsAtLineBreakBoundaries(selection)
       const elements = this.#blockLevelElementsInSelection(selection)
       if (elements.length === 0) return
