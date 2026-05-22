@@ -215,7 +215,7 @@ function $inwardEdgeLineBreak(caret, paragraph) {
   } else if ($isSiblingCaret(caret) && caret.origin.getParent()?.is(paragraph)) {
     candidateCaret = caret
   } else {
-    const childCaret = $paragraphChildAtInwardEdge(caret, paragraph)
+    const childCaret = $paragraphChildCaretAtInwardEdge(caret, paragraph)
     candidateCaret = childCaret ? $rewindSiblingCaret(childCaret) : null
   }
 
@@ -249,11 +249,11 @@ function $outwardWalkStartCaret(caret, paragraph) {
   ) {
     return caret
   } else {
-    return $paragraphChildContaining(caret, paragraph)
+    return $paragraphChildCaretContaining(caret, paragraph)
   }
 }
 
-function $paragraphChildContaining(caret, paragraph) {
+function $paragraphChildCaretContaining(caret, paragraph) {
   let cursor = caret.getSiblingCaret()
   while (cursor && !cursor.origin.getParent()?.is(paragraph)) {
     cursor = cursor.getParentCaret()
@@ -263,7 +263,7 @@ function $paragraphChildContaining(caret, paragraph) {
 
 // Only succeeds when the cursor is flush against the inward edge of every
 // ancestor between itself and the paragraph child.
-function $paragraphChildAtInwardEdge(caret, paragraph) {
+function $paragraphChildCaretAtInwardEdge(caret, paragraph) {
   let cursor = caret.getSiblingCaret()
   while (cursor && !cursor.origin.getParent()?.is(paragraph)) {
     if (cursor.getNodeAtCaret()) return null
