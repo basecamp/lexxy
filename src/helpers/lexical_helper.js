@@ -233,11 +233,11 @@ function $candidateUnlessShadowed(candidateCaret) {
 
 function $outwardLineBreak(caret, paragraph) {
   const startCaret = $outwardWalkStartCaret(caret, paragraph)
-  if (startCaret) {
-    for (const c of startCaret) {
-      if (!c.origin.getParent()?.is(paragraph)) break
-      if ($isLineBreakNode(c.origin)) return c.origin
-    }
+  if (!startCaret) return null
+
+  for (const { origin } of startCaret) {
+    if (!origin.getParent().is(paragraph)) break
+    if ($isLineBreakNode(origin)) return origin
   }
   return null
 }
