@@ -163,19 +163,19 @@ export function $splitParagraphsAtLineBreakBoundaries(selection) {
   // A collapsed cursor adjacent to a <br> would claim it from both sides via
   // inward-edge; force outward-only walks so each side finds its own boundary.
   const skipInwardEdge = selection.isCollapsed()
-  const focusBr = $getCaretAtLineBreakBoundary(focusCaret, skipInwardEdge)
-  let anchorBr = $getCaretAtLineBreakBoundary(anchorCaret, skipInwardEdge)
+  const focusBrCaret = $getCaretAtLineBreakBoundary(focusCaret, skipInwardEdge)
+  let anchorBrCaret = $getCaretAtLineBreakBoundary(anchorCaret, skipInwardEdge)
 
-  if (focusBr?.is(anchorBr)) {
-    anchorBr = null
+  if (focusBrCaret?.origin.is(anchorBrCaret?.origin)) {
+    anchorBrCaret = null
   }
 
   // Splitting focus first keeps the anchor <br>'s position stable.
-  const focusOuter = focusBr ? $splitAroundLineBreak($getSiblingCaret(focusBr, "next")) : null
-  const anchorOuter = anchorBr ? $splitAroundLineBreak($getSiblingCaret(anchorBr, "previous")) : null
+  const focusOuter = focusBrCaret && $splitAroundLineBreak(focusBrCaret)
+  const anchorOuter = anchorBrCaret && $splitAroundLineBreak(anchorBrCaret)
 
-  const innerStart = anchorOuter ? anchorOuter.getNextSibling() : selection.anchor.getNode().getTopLevelElement()
-  const innerEnd = focusOuter ? focusOuter.getPreviousSibling() : selection.focus.getNode().getTopLevelElement()
+  const innerStart = anchorOuter?.getNextSibling() ?? selection.anchor.getNode().getTopLevelElement()
+  const innerEnd = focusOuter?.getPreviousSibling() ?? selection.focus.getNode().getTopLevelElement()
   if (!innerStart || !innerEnd) return []
 
   const paragraphs = []
@@ -191,11 +191,10 @@ function $getCaretAtLineBreakBoundary(caret, skipInwardEdge = false) {
   const paragraph = caret.origin.getTopLevelElement()
   if (!paragraph || !$isParagraphNode(paragraph)) return null
 
-  if (!skipInwardEdge) {
-    const br = $inwardEdgeLineBreak(caret, paragraph)
-    if (br) return br
-  }
-  return $outwardLineBreak(caret, paragraph)
+  const lineBreak = (skipInwardEdge ? null : $inwardEdgeLineBreak(caret, paragraph))
+    ?? $outwardLineBreak(caret, paragraph)
+
+  return lineBreak ? $getSiblingCaret(lineBreak, caret.direction) : null
 }
 
 // Prefer a <br> the cursor is sitting flush against, except when a further <br>
