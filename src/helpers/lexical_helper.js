@@ -160,18 +160,14 @@ export function $splitParagraphsAtLineBreakBoundaries(selection) {
   const focusCaret = $caretFromPoint(selection.focus, "next")
   const anchorCaret = $caretFromPoint(selection.anchor, "previous")
 
-  let focusBr = $boundaryLineBreak(focusCaret)
-  let anchorBr = $boundaryLineBreak(anchorCaret)
+  // A collapsed cursor adjacent to a <br> would claim it from both sides via
+  // inward-edge; force outward-only walks so each side finds its own boundary.
+  const skipInwardEdge = selection.isCollapsed()
+  const focusBr = $getCaretAtLineBreakBoundary(focusCaret, skipInwardEdge)
+  let anchorBr = $getCaretAtLineBreakBoundary(anchorCaret, skipInwardEdge)
 
-  // A collapsed cursor adjacent to a <br> claims it via inward-edge on one
-  // side and outward walk on the other; force outward-only on both so each
-  // side finds its own boundary.
-  if (focusBr && anchorBr && focusBr.is(anchorBr)) {
-    focusBr = $boundaryLineBreak(focusCaret, true)
-    anchorBr = $boundaryLineBreak(anchorCaret, true)
-    if (focusBr && anchorBr && focusBr.is(anchorBr)) {
-      anchorBr = null
-    }
+  if (focusBr?.is(anchorBr)) {
+    anchorBr = null
   }
 
   // Splitting focus first keeps the anchor <br>'s position stable.
@@ -191,7 +187,7 @@ export function $splitParagraphsAtLineBreakBoundaries(selection) {
   return paragraphs
 }
 
-function $boundaryLineBreak(caret, skipInwardEdge = false) {
+function $getCaretAtLineBreakBoundary(caret, skipInwardEdge = false) {
   const paragraph = caret.origin.getTopLevelElement()
   if (!paragraph || !$isParagraphNode(paragraph)) return null
 
