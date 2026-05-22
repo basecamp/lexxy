@@ -1,4 +1,4 @@
-import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCommonAncestor, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $rewindSiblingCaret, $splitAtPointCaretNext, TextNode } from "lexical"
+import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
@@ -216,7 +216,15 @@ export function $expandSelectionToLineBreaksAndSplitAtEdges(selection) {
     paragraphs.push(c.origin)
     if (c.origin.is(innerEnd)) break
   }
-  $selectParagraphs(selection, paragraphs)
+
+  $setSelectionFromCaretRange($getCaretRange(
+    $normalizeCaret($getChildCaret(innerStart, "next")),
+    $getCaretInDirection(
+      $normalizeCaret($getChildCaret(innerEnd, "previous")),
+      "next",
+    ),
+  ))
+
   return paragraphs
 }
 
@@ -314,23 +322,3 @@ function $splitAroundLineBreak(lineBreakCaret) {
   return outer
 }
 
-function $selectParagraphs(selection, paragraphs) {
-  if (paragraphs.length > 0) {
-    const first = paragraphs[0]
-    const last = paragraphs[paragraphs.length - 1]
-    const firstLeaf = first.getFirstDescendant() ?? first
-    const lastLeaf = last.getLastDescendant() ?? last
-
-    if ($isTextNode(firstLeaf)) {
-      selection.anchor.set(firstLeaf.getKey(), 0, "text")
-    } else {
-      selection.anchor.set(first.getKey(), 0, "element")
-    }
-
-    if ($isTextNode(lastLeaf)) {
-      selection.focus.set(lastLeaf.getKey(), lastLeaf.getTextContentSize(), "text")
-    } else {
-      selection.focus.set(last.getKey(), last.getChildrenSize(), "element")
-    }
-  }
-}
