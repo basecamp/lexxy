@@ -212,7 +212,7 @@ function $inwardEdgeLineBreak(caret, paragraph) {
     ($isTextPointCaret(caret) && $isExtendableTextPointCaret(caret.getFlipped()))
   ) {
     candidateCaret = null
-  } else if ($isSiblingCaret(caret) && caret.origin.getParent()?.is(paragraph)) {
+  } else if ($isSiblingCaret(caret) && caret.getParentAtCaret().is(paragraph)) {
     candidateCaret = caret
   } else {
     const childCaret = $paragraphChildCaretAtInwardEdge(caret, paragraph)
