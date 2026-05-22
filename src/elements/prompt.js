@@ -237,16 +237,12 @@ export class LexicalPromptElement extends HTMLElement {
     return Array.from(this.popoverElement.querySelectorAll(".lexxy-prompt-menu__item"))
   }
 
-  #selectOption(listItem) {
+  #selectOption(listItem, { scrollIntoView = false } = {}) {
     this.#clearListItemSelection()
     listItem.toggleAttribute("aria-selected", true)
-    listItem.scrollIntoView({ block: "nearest", behavior: "smooth" })
-    listItem.focus()
-
-    // Preserve selection to prevent cursor jump
-    this.#selection.preservingSelection(() => {
-      this.#editorElement.focus()
-    })
+    if (scrollIntoView) {
+      listItem.scrollIntoView({ block: "nearest", container: "nearest", behavior: "smooth" })
+    }
 
     this.#setEditorAssociationAttribute("aria-controls", this.popoverElement.id)
     this.#setEditorAssociationAttribute("aria-activedescendant", listItem.id)
@@ -390,17 +386,17 @@ export class LexicalPromptElement extends HTMLElement {
         }
       })
     }
-    // Arrow keys are now handled via Lexical commands with HIGH priority
+    // Arrow keys are handled via Lexical commands
   }
 
   #moveSelectionDown() {
     const nextIndex = this.#selectedIndex + 1
-    if (nextIndex < this.#listItemElements.length) this.#selectOption(this.#listItemElements[nextIndex])
+    if (nextIndex < this.#listItemElements.length) this.#selectOption(this.#listItemElements[nextIndex], { scrollIntoView: true })
   }
 
   #moveSelectionUp() {
     const previousIndex = this.#selectedIndex - 1
-    if (previousIndex >= 0) this.#selectOption(this.#listItemElements[previousIndex])
+    if (previousIndex >= 0) this.#selectOption(this.#listItemElements[previousIndex], { scrollIntoView: true })
   }
 
   get #selectedIndex() {
