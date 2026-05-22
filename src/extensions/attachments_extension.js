@@ -12,7 +12,11 @@ import { $isAtNodeEdge } from "../helpers/lexical_helper.js"
 const ATTACHMENT_ATTRIBUTES = [ "alt", "caption", "content", "content-type", "data-direct-upload-id",
   "data-sgid", "filename", "filesize", "height", "presentation", "previewable", "sgid", "url", "width" ]
 
+const UPLOADS_BUSY_MESSAGE = "Please wait for all files to upload"
+
 export class AttachmentsExtension extends LexxyExtension {
+  #uploadsCount = 0
+
   get enabled() {
     return this.editorElement.supportsAttachments
   }
@@ -29,16 +33,40 @@ export class AttachmentsExtension extends LexxyExtension {
         ActionTextAttachmentUploadNode,
         ImageGalleryNode
       ],
-      register(editor) {
+      register: (editor) => {
         const dragAndDrop = new AttachmentDragAndDrop(editor)
 
         return mergeRegister(
           editor.registerNodeTransform(ActionTextAttachmentNode, $extractAttachmentFromParagraph),
           editor.registerCommand(DELETE_CHARACTER_COMMAND, $collapseIntoGallery, COMMAND_PRIORITY_NORMAL),
+          editor.registerMutationListener(ActionTextAttachmentUploadNode, this.#handleUploadMutations.bind(this)),
           () => dragAndDrop.destroy()
         )
       }
     })
+  }
+
+  #handleUploadMutations(mutations) {
+    const previousUploadsCount = this.#uploadsCount
+    for (const [ , mutation ] of mutations) {
+      if (mutation === "created") {
+        this.#uploadsCount++
+      } else if (mutation === "destroyed") {
+        this.#uploadsCount--
+      }
+    }
+
+    if (this.#uploadsCount !== previousUploadsCount) {
+      this.#setUploadsValidity()
+    }
+  }
+
+  #setUploadsValidity() {
+    if (this.#uploadsCount) {
+      this.setEditorValidity({ customError: true }, UPLOADS_BUSY_MESSAGE)
+    } else {
+      this.setEditorValidity({})
+    }
   }
 }
 
