@@ -16,7 +16,7 @@ import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_nod
 import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
-import { $isShadowRoot, $splitParagraphsAtLineBreakBoundaries } from "../helpers/lexical_helper"
+import { $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -64,7 +64,7 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    $splitParagraphsAtLineBreakBoundaries(selection)
+    $expandSelectionToLineBreaksAndSplitAtEdges(selection)
     $setBlocksType(selection, () => $createParagraphNode())
   }
 
@@ -72,7 +72,7 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    $splitParagraphsAtLineBreakBoundaries(selection)
+    $expandSelectionToLineBreaksAndSplitAtEdges(selection)
     $setBlocksType(selection, () => $createHeadingNode(tag))
   }
 
@@ -114,7 +114,7 @@ export default class Contents {
     if (allCode) {
       blockElements.forEach(node => this.#unwrapCodeBlock(node))
     } else {
-      $splitParagraphsAtLineBreakBoundaries(selection)
+      $expandSelectionToLineBreaksAndSplitAtEdges(selection)
       const elements = this.#blockLevelElementsInSelection(selection)
       if (elements.length === 0) return
 
@@ -140,7 +140,7 @@ export default class Contents {
     } else {
       topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
-      const elements = $splitParagraphsAtLineBreakBoundaries(selection)
+      const elements = $expandSelectionToLineBreaksAndSplitAtEdges(selection)
       if (elements.length === 0) return
 
       const blockquote = $createQuoteNode()
@@ -407,41 +407,8 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    // Two-pass: first isolate the selected range as its own paragraph so that
-    // <br>s outside the selection stay grouped (boundary-aware); then explode
-    // every <br> within the isolated paragraph so each selected line becomes
-    // its own list item.
-    $splitParagraphsAtLineBreakBoundaries(selection)
-    this.#splitParagraphsAtLineBreaks(selection)
-  }
-
-  #splitParagraphsAtLineBreaks(selection) {
-    const topLevelElements = this.#topLevelElementsInSelection(selection)
-
-    for (const element of topLevelElements) {
-      if (!$isParagraphNode(element)) continue
-
-      const children = element.getChildren()
-      if (!children.some($isLineBreakNode)) continue
-
-      const groups = [ [] ]
-      for (const child of children) {
-        if ($isLineBreakNode(child)) {
-          groups.push([])
-          child.remove()
-        } else {
-          groups[groups.length - 1].push(child)
-        }
-      }
-
-      for (const group of groups) {
-        if (group.length === 0) continue
-        const paragraph = $createParagraphNode()
-        group.forEach(child => paragraph.append(child))
-        element.insertBefore(paragraph)
-      }
-      if (groups.some(group => group.length > 0)) element.remove()
-    }
+    $expandSelectionToLineBreaksAndSplitAtEdges(selection)
+    $splitSelectedParagraphsAtInnerLineBreaks(selection)
   }
 
   #blockLevelElementsInSelection(selection) {
