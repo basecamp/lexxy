@@ -271,7 +271,7 @@ function $outwardLineBreak(caret, paragraph) {
 }
 
 function $outwardWalkStartCaret(caret, paragraph) {
-  if (caret.getParentAtCaret()?.is(paragraph)) {
+  if (caret.getParentAtCaret().is(paragraph)) {
     return caret
   } else {
     return $paragraphChildCaretContaining(caret, paragraph)
