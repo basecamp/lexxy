@@ -154,7 +154,40 @@ export function isAttachmentSpacerTextNode(node, previousNode, index, childCount
     && previousNode instanceof CustomActionTextAttachmentNode
 }
 
-export function $splitParagraphsAtLineBreakBoundaries(selection) {
+export function $splitSelectedParagraphsAtInnerLineBreaks(selection) {
+  const topLevelElements = new Set()
+  for (const node of selection.getNodes()) {
+    const topLevel = node.getTopLevelElement()
+    if (topLevel) topLevelElements.add(topLevel)
+  }
+
+  for (const element of topLevelElements) {
+    if (!$isParagraphNode(element)) continue
+
+    const children = element.getChildren()
+    if (!children.some($isLineBreakNode)) continue
+
+    const groups = [ [] ]
+    for (const child of children) {
+      if ($isLineBreakNode(child)) {
+        groups.push([])
+        child.remove()
+      } else {
+        groups[groups.length - 1].push(child)
+      }
+    }
+
+    for (const group of groups) {
+      if (group.length === 0) continue
+      const paragraph = $createParagraphNode()
+      group.forEach(child => paragraph.append(child))
+      element.insertBefore(paragraph)
+    }
+    if (groups.some(group => group.length > 0)) element.remove()
+  }
+}
+
+export function $expandSelectionToLineBreaksAndSplitAtEdges(selection) {
   $ensureForwardRangeSelection(selection)
 
   const focusCaret = $caretFromPoint(selection.focus, "next")
