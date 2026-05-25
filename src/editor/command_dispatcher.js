@@ -326,12 +326,18 @@ export class CommandDispatcher {
   #registerDragAndDropHandlers() {
     if (this.editorElement.supportsAttachments) {
       this.dragCounter = 0
-      const root = this.editor.getRootElement()
       this.#listeners.track(
-        registerEventListener(root, "dragover", this.#handleDragOver.bind(this)),
-        registerEventListener(root, "drop", this.#handleDrop.bind(this)),
-        registerEventListener(root, "dragenter", this.#handleDragEnter.bind(this)),
-        registerEventListener(root, "dragleave", this.#handleDragLeave.bind(this))
+        this.editor.registerRootListener((rootElement) => {
+          if (rootElement) {
+            const teardowns = [
+              registerEventListener(rootElement, "dragover", this.#handleDragOver.bind(this)),
+              registerEventListener(rootElement, "drop", this.#handleDrop.bind(this)),
+              registerEventListener(rootElement, "dragenter", this.#handleDragEnter.bind(this)),
+              registerEventListener(rootElement, "dragleave", this.#handleDragLeave.bind(this))
+            ]
+            return () => teardowns.forEach((teardown) => teardown())
+          }
+        })
       )
     }
   }

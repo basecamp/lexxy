@@ -52,7 +52,9 @@ export class LexicalEditorElement extends HTMLElement {
   static observedAttributes = [ "connected", "required" ]
 
   #initialValue = ""
-  #editorInitializedRafId = null
+  #initializeEventDispatched = false
+  #editorInitializedDispatched = false
+  #valueLoaded = false
   #listeners = new ListenerBin()
   #disposables = []
   #historyState = { undo: false, redo: false }
@@ -92,17 +94,24 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.#initialize()
 
-    this.#scheduleEditorInitializedDispatch()
     this.toggleAttribute("connected", true)
 
-    this.#handleAutofocus()
-
-    this.valueBeforeDisconnect = null
+    requestAnimationFrame(() => {
+      this.#mountRoot()
+      this.#handleAutofocus()
+      this.#dispatchInitialize()
+    })
   }
 
   disconnectedCallback() {
-    this.#cancelEditorInitializedDispatch()
-    this.valueBeforeDisconnect = this.value
+    this.#initializeEventDispatched = false
+    this.#editorInitializedDispatched = false
+    if (this.#valueLoaded) {
+      this.valueBeforeDisconnect = this.value
+    } else {
+      this.valueBeforeDisconnect = null
+    }
+    this.#valueLoaded = false
     this.#reset() // Prevent hangs with Safari when morphing
   }
 
@@ -260,7 +269,7 @@ export class LexicalEditorElement extends HTMLElement {
 
     if (!this.editor) return
 
-    this.#cancelEditorInitializedDispatch()
+    this.#editorInitializedDispatched = true
     this.#dispatchEditorInitialized()
     this.#dispatchAttributesChange()
   }
@@ -315,6 +324,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
+    this.#valueLoaded = true
     const editorHasFocus = this.#isContentFocused
 
     this.editor.update(() => {
@@ -411,9 +421,15 @@ export class LexicalEditorElement extends HTMLElement {
       ...this.extensions.lexicalExtensions
     )
 
-    editor.setRootElement(this.editorContentElement)
-
     return editor
+  }
+
+  // Toggling editable around setRootElement skips Lexical's DOM-selection sync,
+  // which would otherwise steal focus from elsewhere on the page.
+  #mountRoot() {
+    this.editor.setEditable(false)
+    this.editor.setRootElement(this.editorContentElement)
+    this.editor.setEditable(true)
   }
 
   get #lexicalNodes() {
@@ -483,10 +499,12 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #loadInitialValue() {
-    const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p><br></p>"
-    this.editor.update(() => {
-      this.value = this.#initialValue = initialHtml
-    }, { tag: HISTORY_MERGE_TAG })
+    if (!this.#valueLoaded) {
+      const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p><br></p>"
+      this.editor.update(() => {
+        this.value = this.#initialValue = initialHtml
+      }, { tag: HISTORY_MERGE_TAG })
+    }
   }
 
   #resetBeforeTurboCaches() {
@@ -775,22 +793,18 @@ export class LexicalEditorElement extends HTMLElement {
     })
   }
 
-  #scheduleEditorInitializedDispatch() {
-    this.#cancelEditorInitializedDispatch()
-    this.#editorInitializedRafId = requestAnimationFrame(() => {
-      this.#editorInitializedRafId = null
-      if (!this.isConnected || !this.adapter) return
+  #dispatchInitialize() {
+    if (this.isConnected && this.adapter) {
+      if (!this.#initializeEventDispatched) {
+        this.#initializeEventDispatched = true
+        dispatch(this, "lexxy:initialize")
+      }
 
-      dispatch(this, "lexxy:initialize")
-      this.#dispatchEditorInitialized()
-    })
-  }
-
-  #cancelEditorInitializedDispatch() {
-    if (this.#editorInitializedRafId == null) return
-
-    cancelAnimationFrame(this.#editorInitializedRafId)
-    this.#editorInitializedRafId = null
+      if (!this.#editorInitializedDispatched) {
+        this.#editorInitializedDispatched = true
+        this.#dispatchEditorInitialized()
+      }
+    }
   }
 
   get #resolvedHighlightColors() {
@@ -841,7 +855,6 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #reset() {
-    this.#cancelEditorInitializedDispatch()
     this.#dispose()
     this.#resetValidity()
     this.editorContentElement?.remove()
