@@ -140,7 +140,8 @@ export default class Contents {
     } else {
       topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
-      const elements = $expandSelectionToLineBreaksAndSplitAtEdges(selection)
+       $expandSelectionToLineBreaksAndSplitAtEdges(selection)
+      const elements = this.#topLevelElementsInSelection(selection)
       if (elements.length === 0) return
 
       const blockquote = $createQuoteNode()

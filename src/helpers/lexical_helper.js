@@ -209,13 +209,7 @@ export function $expandSelectionToLineBreaksAndSplitAtEdges(selection) {
 
   const innerStart = anchorOuter?.getNextSibling() ?? selection.anchor.getNode().getTopLevelElement()
   const innerEnd = focusOuter?.getPreviousSibling() ?? selection.focus.getNode().getTopLevelElement()
-  if (!innerStart || !innerEnd) return []
-
-  const paragraphs = []
-  for (const c of $rewindSiblingCaret($getSiblingCaret(innerStart, "next"))) {
-    paragraphs.push(c.origin)
-    if (c.origin.is(innerEnd)) break
-  }
+  if (!innerStart || !innerEnd) return
 
   $setSelectionFromCaretRange($getCaretRange(
     $normalizeCaret($getChildCaret(innerStart, "next")),
@@ -224,8 +218,6 @@ export function $expandSelectionToLineBreaksAndSplitAtEdges(selection) {
       "next",
     ),
   ))
-
-  return paragraphs
 }
 
 function $getCaretAtLineBreakBoundary(caret, skipInwardEdge = false) {
