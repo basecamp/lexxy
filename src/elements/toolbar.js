@@ -274,84 +274,66 @@ export class LexicalToolbarElement extends HTMLElement {
   #refreshOverflow() {
     this.#resetToolbarOverflow()
     this.#reindexToolbarItems()
-    this.#overflow.style.display = "none"
+    this.#overflowMenuButton.style.display = "none"
     this.#compactMenu()
 
-    const isOverflowing = this.#overflowMenu.children.length > 0
+    const isOverflowing = this.#overflowMenuDropdown.children.length > 0
 
     this.toggleAttribute("overflowing", isOverflowing)
 
-    this.#overflow.style.display = isOverflowing ? "block" : "none"
-    this.#overflow.setAttribute("nonce", getNonce())
+    this.#overflowMenuButton.style.display = isOverflowing ? "block" : "none"
+    this.#overflowMenuButton.setAttribute("nonce", getNonce())
 
-    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
+    this.#overflowMenuDropdown.toggleAttribute("disabled", !isOverflowing)
   }
 
   #compactMenu() {
-    if (!this.#isToolbarOverflowing()) return
+    this.#showOverflowMenu()
+    const overflowWidth = this.#getOverflowWidth()
 
-    this.#overflow.style.display = "block"
+    if (overflowWidth > 0) {
+      this.#reclaimWidth(overflowWidth)
+    }
+  }
 
-    const overflowAmount = this.#toolbarOverflowAmount() + 1
-    const buttons = this.#overflowButtons
+  #showOverflowMenu() {
+    this.#overflowMenuButton.style.display = "block"
+  }
+
+  #reclaimWidth(overflowWidth) {
+    const gap = this.#getToolbarGap()
+    const buttons = this.#overflowableButtons
     const overflowButtons = []
     let recoveredWidth = 0
 
-    while (recoveredWidth < overflowAmount) {
+    while (recoveredWidth < overflowWidth && buttons.length) {
       const button = buttons.pop()
       if (!button) break
 
       overflowButtons.push(button)
-      recoveredWidth += this.#outerWidthFor(button) + this.#toolbarGap
+      recoveredWidth += button.offsetWidth + gap
     }
 
     for (const button of overflowButtons) {
-      this.#overflowMenu.prepend(button)
+      this.#overflowMenuDropdown.prepend(button)
       button.role = "menuitem"
     }
   }
 
-  #isToolbarOverflowing() {
-    return this.#toolbarOverflowAmount() > 0
+  #getOverflowWidth() {
+    return this.scrollWidth - this.clientWidth
   }
 
-  #outerWidthFor(item) {
-    const rect = item.getBoundingClientRect()
-    const style = window.getComputedStyle(item)
-
-    return rect.width + (parseFloat(style.marginLeft) || 0) + (parseFloat(style.marginRight) || 0)
-  }
-
-  get #toolbarGap() {
+  #getToolbarGap() {
     return parseFloat(window.getComputedStyle(this).columnGap) || 0
   }
 
-  #toolbarOverflowAmount() {
-    const { left, right } = this.#toolbarContentBounds
-
-    return this.#visibleToolbarItems.reduce((amount, item) => {
-      const rect = item.getBoundingClientRect()
-
-      return Math.max(amount, rect.right - right, left - rect.left)
-    }, 0)
-  }
-
-  get #toolbarContentBounds() {
-    const rect = this.getBoundingClientRect()
-    const style = window.getComputedStyle(this)
-
-    return {
-      left: rect.left + (parseFloat(style.paddingLeft) || 0),
-      right: rect.right - (parseFloat(style.paddingRight) || 0)
-    }
-  }
-
   #resetToolbarOverflow() {
-    const items = Array.from(this.#overflowMenu.children)
+    const items = Array.from(this.#overflowMenuDropdown.children)
     items.sort((a, b) => this.#itemPosition(b) - this.#itemPosition(a))
 
     for (const item of items) {
-      const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.#overflow
+      const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.#overflowMenuButton
       item.removeAttribute("role")
       this.insertBefore(item, nextItem)
     }
@@ -371,24 +353,20 @@ export class LexicalToolbarElement extends HTMLElement {
     return this.querySelectorAll(":scope .lexxy-editor__toolbar-dropdown")
   }
 
-  get #overflow() {
+  get #overflowMenuButton() {
     return this.querySelector(".lexxy-editor__toolbar-overflow")
   }
 
-  get #overflowMenu() {
-    return this.#overflow?.querySelector(":scope > [data-dropdown-panel]")
+  get #overflowMenuDropdown() {
+    return this.#overflowMenuButton?.querySelector(":scope > [data-dropdown-panel]")
   }
 
-  get #overflowButtons() {
+  get #overflowableButtons() {
     return Array.from(this.querySelectorAll(":scope > button:not([data-prevent-overflow])"))
   }
 
   get #buttons() {
     return Array.from(this.querySelectorAll(":scope button"))
-  }
-
-  get #visibleToolbarItems() {
-    return Array.from(this.children).filter((item) => item.getClientRects().length > 0)
   }
 
   get #toolbarItems() {
