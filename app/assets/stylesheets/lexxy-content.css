@@ -12,7 +12,10 @@
     hyphens: auto;
     margin-block: 0 var(--lexxy-content-margin);
     overflow-wrap: break-word;
-    text-wrap: balance;
+
+    @supports (text-wrap: balance) {
+      text-wrap: balance;
+    }
   }
 
   h1 { font-size: 2rem; }
@@ -35,7 +38,10 @@
 
     &:not(lexxy-editor &) {
       overflow-wrap: break-word;
-      text-wrap: pretty;
+
+      @supports (text-wrap: pretty) {
+        text-wrap: pretty;
+      }
     }
   }
 
@@ -114,11 +120,14 @@
       hyphens: none;
       margin-block: 0 var(--lexxy-content-margin);
       overflow-x: auto;
+      overflow-wrap: break-word;
       padding: 1ch;
       tab-size: 2;
-      text-wrap: nowrap;
       white-space: pre;
-      word-break: break-word;
+
+      @supports (text-wrap: nowrap) {
+        text-wrap: nowrap;
+      }
     }
   }
 
@@ -275,8 +284,11 @@
 
       *:is(code, pre) {
         hyphens: auto;
-        text-wrap: wrap;
         white-space: pre-wrap;
+
+        @supports (text-wrap: wrap) {
+          text-wrap: wrap;
+        }
       }
     }
   }
@@ -338,7 +350,11 @@
       display: block;
       margin-inline: auto;
       max-inline-size: 100%;
-      user-select: none;
+      -webkit-user-select: none;
+
+      @supports (user-select: none) {
+        user-select: none;
+      }
     }
 
     > a {
