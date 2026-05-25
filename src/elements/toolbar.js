@@ -227,14 +227,14 @@ export class LexicalToolbarElement extends HTMLElement {
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
+    this.#setButtonPressed("strikethrough", isStrikethrough)
+    this.#setButtonPressed("underline", isUnderline)
 
-    this.#setButtonPressed("format", isInHeading || isStrikethrough || isUnderline)
+    this.#setButtonPressed("format", isInHeading)
     this.#setButtonPressed("paragraph", !isInHeading)
     this.#setButtonPressed("heading-large", headingTag === "h2")
     this.#setButtonPressed("heading-medium", headingTag === "h3")
     this.#setButtonPressed("heading-small", headingTag === "h4")
-    this.#setButtonPressed("strikethrough", isStrikethrough)
-    this.#setButtonPressed("underline", isUnderline)
 
     this.#setButtonPressed("lists", isInList)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
@@ -397,6 +397,14 @@ export class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.italic}
       </button>
 
+      <button class="lexxy-editor__toolbar-button" type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
+        ${ToolbarIcons.strikethrough}
+      </button>
+
+      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="underline" data-command="underline" title="Underline">
+        ${ToolbarIcons.underline}
+      </button>
+
       <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-dropdown">
         <button data-dropdown-trigger class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="format" title="Text formatting" aria-haspopup="menu" aria-expanded="false">
           ${ToolbarIcons.heading}
@@ -413,13 +421,6 @@ export class LexicalToolbarElement extends HTMLElement {
           </button>
           <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading" role="menuitem">
             ${ToolbarIcons.h4} <span>Small Heading</span>
-          </button>
-          <div class="lexxy-editor__toolbar-separator" role="separator"></div>
-          <button type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough" role="menuitem">
-            ${ToolbarIcons.strikethrough} <span>Strikethrough</span>
-          </button>
-          <button type="button" name="underline" data-command="underline" title="Underline" role="menuitem">
-            ${ToolbarIcons.underline} <span>Underline</span>
           </button>
           <div class="lexxy-editor__toolbar-separator" role="separator"></div>
           <button type="button" name="clear-formatting" data-command="clearFormatting" title="Clear formatting" role="menuitem">
