@@ -27,4 +27,22 @@ class ActionTextLoadTest < ApplicationSystemTestCase
       assert_selector "action-text-attachment[content-type='video/mp4']", count: 1
     end
   end
+
+  test "loads via turbo when content ends with a table" do
+    post = Post.create!(
+      title: "Ends with table",
+      body: <<~HTML
+        <figure class="lexxy-content__table-wrapper"><table><tbody><tr><th><p>Hello</p></th><td><p>there</p></td></tr></tbody></table></figure>
+      HTML
+    )
+
+    visit post_path(post)
+    click_on "Edit this post"
+
+    wait_for_editor
+    wait_until do
+      editor_html = Capybara.string(find_editor.value)
+      editor_html.has_selector?("table") && editor_html.has_text?("Hello") && editor_html.has_text?("there")
+    end
+  end
 end
