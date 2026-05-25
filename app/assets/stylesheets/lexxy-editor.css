@@ -166,6 +166,7 @@
     }
 
     &.lexxy-content__table--selection {
+      /* eslint-disable-next-line css/use-baseline */
       ::selection {
         background: transparent;
       }
@@ -366,8 +367,11 @@
       inline-size: 100%;
       max-inline-size: 100%;
       padding: 0;
-      resize: none;
       text-align: center;
+
+      @supports (resize: none) {
+        resize: none;
+      }
 
       &:focus {
         background: var(--lexxy-color-canvas);
@@ -497,7 +501,11 @@
       fill: currentColor;
       grid-area: 1/1;
       inline-size: var(--lexxy-toolbar-icon-size);
-      user-select: none;
+      -webkit-user-select: none;
+
+      @supports (user-select: none) {
+        user-select: none;
+      }
     }
 
     &.lexxy-editor__toolbar-group-end {
@@ -528,8 +536,11 @@
 /* Dropdowns */
 
 :where(.lexxy-editor__toolbar-dropdown) {
-  user-select: none;
   -webkit-user-select: none;
+
+  @supports (user-select: none) {
+    user-select: none;
+  }
 
   .lexxy-editor__toolbar-button {
     color: currentColor;
@@ -806,8 +817,11 @@
     line-height: inherit;
     min-block-size: var(--button-size);
     min-inline-size: var(--button-size);
-    user-select: none;
     -webkit-user-select: none;
+
+    @supports (user-select: none) {
+      user-select: none;
+    }
 
     @media(any-hover: hover) {
       &:hover:not([aria-disabled="true"]),
