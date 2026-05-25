@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $createTextNode, $getSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_CRITICAL, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $createTextNode, $getSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_CRITICAL, INPUT_COMMAND, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
@@ -204,6 +204,7 @@ export class LexicalPromptElement extends HTMLElement {
 
     if (this.#doesSpaceSelect) {
       this.#popoverListeners.track(this.#editor.registerCommand(KEY_SPACE_COMMAND, this.#handleSelectedOption.bind(this), COMMAND_PRIORITY_CRITICAL))
+      this.#popoverListeners.track(this.#editor.registerCommand(INPUT_COMMAND, this.#handleInputCommand.bind(this), COMMAND_PRIORITY_CRITICAL))
     }
 
     // Register arrow keys with CRITICAL priority to prevent Lexical's selection handlers from running
@@ -387,6 +388,11 @@ export class LexicalPromptElement extends HTMLElement {
       })
     }
     // Arrow keys are handled via Lexical commands
+  }
+
+  // Android Mobile keyboard doesn't trigger KEY_SPACE_COMMAND
+  #handleInputCommand(event) {
+    if (event.inputType === "insertText" && event.data === " ") return this.#handleSelectedOption(event)
   }
 
   #moveSelectionDown() {
