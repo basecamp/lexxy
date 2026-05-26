@@ -1,6 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
+import { startMonitoringConsole } from "../../helpers/assertions.js"
 import { uploadStandaloneAfter } from "../../helpers/gallery_test_helpers.js"
 
 test.describe("Gallery", () => {
@@ -195,6 +196,32 @@ test.describe("Gallery", () => {
     await editor.send("Backspace")
 
     await assertGalleryWithImages(editor, 2)
+  })
+
+  test("shift+enter inside a gallery does not throw any errors", async ({
+    page,
+    editor,
+    browserName,
+  }) => {
+    startMonitoringConsole(page)
+
+    await editor.uploadFile([
+      "test/fixtures/files/example.png",
+      "test/fixtures/files/example2.png",
+    ])
+
+    await assertGalleryWithImages(editor, 2)
+
+    await selectGalleryAtOffset(page, editor, 1)
+    await editor.send("Shift+Enter")
+
+    await editor.content.click()
+    await page.waitForTimeout(200)
+
+    // FIXME Firefox logs image-corruption console errors that trip the monitor
+    if (browserName !== "firefox") {
+      expect(page).toHaveNoErrors()
+    }
   })
 
   test("enter in middle of gallery splits it and backspace joins them", async ({
