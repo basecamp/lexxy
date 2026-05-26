@@ -216,9 +216,8 @@ export class TableTools extends HTMLElement {
 
   #monitorForTableSelection() {
     this.#listeners.track(this.#editor.registerUpdateListener(() => {
-      this.tableController.updateSelectedTable()
+      const tableNode = this.#editor.getRootElement() && this.tableController.updateSelectedTable()
 
-      const tableNode = this.tableController.currentTableNode
       if (tableNode) {
         this.#show()
       } else {
