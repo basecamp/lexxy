@@ -42,3 +42,44 @@ export async function assertEditorTableStructure(editor, cols, rows) {
     editor.content.locator("table tr").first().locator("td, th"),
   ).toHaveCount(cols)
 }
+
+// Monitor uncaught page errors and console errors. Errors are stashed per-page;
+// assert with `expect(page).toHaveNoErrors()`.
+//
+// Usage:
+//   startMonitoringConsole(page)
+//   // ... interact with the page ...
+//   expect(page).toHaveNoErrors()
+const consoleErrors = new WeakMap()
+
+export function startMonitoringConsole(page) {
+  const errors = []
+  consoleErrors.set(page, errors)
+  page.on("pageerror", (error) => errors.push(error.message))
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text())
+  })
+}
+
+expect.extend({
+  toHaveNoErrors(page) {
+    if (!consoleErrors.has(page)) {
+      return {
+        pass: false,
+        message: () => "expected page to have no errors, but startMonitoringConsole(page) was never called",
+      }
+    }
+    const errors = consoleErrors.get(page)
+    if (errors.length === 0) {
+      return {
+        pass: true,
+        message: () => "expected page to have errors, but none were captured",
+      }
+    }
+    const list = errors.map((error, index) => `  ${index + 1}. ${error}`).join("\n")
+    return {
+      pass: false,
+      message: () => `expected no page errors, but ${errors.length} were captured:\n${list}`,
+    }
+  },
+})
