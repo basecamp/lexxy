@@ -123,6 +123,8 @@ export class TableController {
 
     this.currentCellKey = cellNode?.getKey() ?? null
     this.currentTableNodeKey = tableNode?.getKey() ?? null
+
+    return tableNode
   }
 
   executeTableCommand(command, customIndex = null) {
