@@ -25,14 +25,15 @@ export function $isShadowRoot(node) {
   return $isElementNode(node) && $isRootOrShadowRoot(node) && !$isRootNode(node)
 }
 
+export function $isSafeForRoot(node) {
+  return ($isElementNode(node) || $isDecoratorNode(node)) && !node.isParentRequired()
+}
+
 export function $makeSafeForRoot(node) {
-  if ($isTextNode(node)) {
-    return $wrapNodeInElement(node, $createParagraphNode)
-  } else if (node.isParentRequired()) {
-    const parent = node.createRequiredParent()
-    return $wrapNodeInElement(node, parent)
-  } else {
+  if ($isSafeForRoot(node)) {
     return node
+  } else {
+    return $wrapNodeInElement(node, () => node.createParentElementNode())
   }
 }
 
