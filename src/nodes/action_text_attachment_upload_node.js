@@ -204,7 +204,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   $showUploadedAttachment(blob) {
-    const previewSrc = this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
+    // Bridge-managed uploads (uploadUrl is null) hand us a placeholder File with
+    // no real image bytes, so a local object URL would render as a broken image.
+    const canPreviewLocally = this.isPreviewableImage && this.file && this.uploadUrl != null
+    const previewSrc = canPreviewLocally ? URL.createObjectURL(this.file) : null
 
     const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
     this.replaceAndRewriteHistory(replacementNode)

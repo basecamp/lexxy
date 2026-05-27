@@ -13,6 +13,16 @@ function createFile(name = "test.png", type = "image/png") {
   return new File(["test"], name, { type })
 }
 
+function findMaterializedAttachmentNode() {
+  let found = null
+  const visit = (node) => {
+    if (node.getType?.() === "action_text_attachment") found = node
+    node.getChildren?.().forEach(visit)
+  }
+  $getRoot().getChildren().forEach(visit)
+  return found
+}
+
 describe("insertPendingAttachment", () => {
   test("returns a handle with setAttributes, setUploadProgress, and remove methods", async () => {
     editorElement = await createTestEditor()
@@ -121,5 +131,35 @@ describe("insertPendingAttachment", () => {
     await tick()
 
     expect(editorElement.value).not.toContain("action-text-attachment")
+  })
+
+  test("bridge-materialized image points at the server url, not a local blob preview", async () => {
+    editorElement = await createTestEditor()
+    await setContent(editorElement, "<p>hello</p>")
+    selectEnd(editorElement)
+
+    const handle = editorElement.contents.insertPendingAttachment(createFile("photo.png", "image/png"))
+    handle.setAttributes({
+      attachable_sgid: "sgid://app/ActiveStorage::Blob/1",
+      filename: "photo.png",
+      content_type: "image/png",
+      byte_size: 4,
+      previewable: true,
+      url: "https://example.com/photo.png",
+      signed_id: "signed-id"
+    })
+    await tick()
+
+    let previewSrc, src
+    editorElement.editor.read(() => {
+      const node = findMaterializedAttachmentNode()
+      previewSrc = node?.previewSrc
+      src = node?.src
+    })
+
+    // Bridge uploads hand Lexxy a placeholder File with no real image bytes,
+    // so a blob: previewSrc would render as a broken image until it's swapped.
+    expect(previewSrc ?? null).toBeNull()
+    expect(src).toBe("https://example.com/photo.png")
   })
 })
