@@ -25,23 +25,25 @@ After a Direct Upload completes, Lexxy reads the following fields from the blob 
 
 ## Deferred previews
 
-For previewable PDFs and videos, the server may need time to generate the preview image after the upload completes. There are two ways Lexxy can handle this:
+Generating a preview for a PDF or video is expensive. The default Active Storage path runs the transform (libvips, ffmpeg, etc.) on the request thread the first time the preview URL is hit — under load this becomes the dominant cost of a previewable upload, and concurrent hits to the same not-yet-generated variant can each pay the cost independently.
+
+Lexxy offers two ways to handle this:
 
 ### Default: render the preview URL directly
 
 When `preview_status_url` is not provided, Lexxy renders the preview URL once after upload. If the request fails, the attachment falls back to a file icon. The preview will appear on a subsequent render once the server has generated it.
 
-This is the right choice when your backend generates previews on demand and the preview URL either streams the bytes or errors while processing is in progress.
+This is the right choice when your backend generates previews on demand and the preview URL either streams the bytes or errors while processing is in progress. Be aware that the first request after upload will pay the generation cost.
 
 ### Opt-in: poll a status URL
 
-If your backend generates previews asynchronously and serves a temporary placeholder image while processing (so that the preview URL doesn't error during that window), supply a `preview_status_url` in the upload response. Lexxy will:
+If your backend can generate previews in the background (rather than on the request thread), supply a `preview_status_url` in the upload response. Lexxy will:
 
 1. Show a file icon while the preview is being generated.
 2. Poll the status URL with exponential backoff (up to 10 attempts).
 3. Replace the file icon with the preview image once the status URL signals that the preview is ready.
 
-This avoids polling the preview URL itself, which on backends that lazily generate previews can trigger preview generation on every request.
+This lets the host kick off background preview generation immediately after upload (for example, from an Active Job triggered by an `after_create_commit` on the blob) while keeping the editor's pending UI driven by a cheap status check. The preview URL itself is hit exactly once per upload — after the status endpoint says the preview is ready — so the expensive transform runs in the background, not on the polling path.
 
 #### Status URL contract
 
