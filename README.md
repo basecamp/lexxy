@@ -21,6 +21,7 @@ A modern rich text editor for Rails.
 
 - Bug reports and pull requests are welcome on [GitHub Issues](https://github.com/basecamp/lexxy/issues). Help is especially welcome with [those tagged as "Help Wanted"](https://github.com/basecamp/lexxy/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22help%20wanted%22).
 - For questions and general Lexxy discussion, please use the [Discussions section](https://github.com/basecamp/lexxy/discussions)
+- To build with a development version of Lexical, use `bin/link-to-local-lexical`.
 
 ## License
 
