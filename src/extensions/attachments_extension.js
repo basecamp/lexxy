@@ -4,6 +4,7 @@ import { mergeRegister } from "@lexical/utils"
 import { $findOrCreateGalleryForImage, $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node.js"
+import { ManagedAttachmentUploadNode } from "../nodes/managed_attachment_upload_node.js"
 import { AttachmentDragAndDrop } from "../editor/attachments/drag_and_drop"
 
 import LexxyExtension from "./lexxy_extension"
@@ -31,15 +32,18 @@ export class AttachmentsExtension extends LexxyExtension {
       nodes: [
         ActionTextAttachmentNode,
         ActionTextAttachmentUploadNode,
+        ManagedAttachmentUploadNode,
         ImageGalleryNode
       ],
       register: (editor) => {
         const dragAndDrop = new AttachmentDragAndDrop(editor)
+        const handleUploadMutations = this.#handleUploadMutations.bind(this)
 
         return mergeRegister(
           editor.registerNodeTransform(ActionTextAttachmentNode, $extractAttachmentFromParagraph),
           editor.registerCommand(DELETE_CHARACTER_COMMAND, $collapseIntoGallery, COMMAND_PRIORITY_NORMAL),
-          editor.registerMutationListener(ActionTextAttachmentUploadNode, this.#handleUploadMutations.bind(this)),
+          editor.registerMutationListener(ActionTextAttachmentUploadNode, handleUploadMutations),
+          editor.registerMutationListener(ManagedAttachmentUploadNode, handleUploadMutations),
           () => dragAndDrop.destroy()
         )
       }
