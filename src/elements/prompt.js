@@ -127,6 +127,10 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   get #promptContentTypePermitted() {
+    // `insert-editable-text` prompts never create attachments, so the
+    // editor's attachment support and content-type allowlist don't apply.
+    if (this.hasAttribute("insert-editable-text")) return true
+
     const el = this.#editorElement
     if (!el.supportsAttachments) {
       return false
