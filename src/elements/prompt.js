@@ -281,7 +281,7 @@ export class LexicalPromptElement extends HTMLElement {
 
     const popoverRect = this.popoverElement.getBoundingClientRect()
 
-    if (popoverRect.right > window.innerWidth) {
+    if (popoverRect.right > editorRect.right) {
       this.popoverElement.toggleAttribute("data-clipped-at-right", true)
     }
 
