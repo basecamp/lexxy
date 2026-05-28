@@ -80,7 +80,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return Lexxy.global.get("attachmentTagName")
   }
 
-  constructor({ tagName, sgid, src, previewSrc, previewable, pendingPreview, altText, caption, contentType, fileName, fileSize, width, height, uploadError }, key) {
+  constructor({ tagName, sgid, src, previewSrc, previewable, previewStatusUrl, pendingPreview, altText, caption, contentType, fileName, fileSize, width, height, uploadError }, key) {
     super(key)
 
     this.tagName = tagName || ActionTextAttachmentNode.TAG_NAME
@@ -88,6 +88,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     this.src = src
     this.previewSrc = previewSrc
     this.previewable = parseBoolean(previewable)
+    this.previewStatusUrl = previewStatusUrl
     this.pendingPreview = pendingPreview
     this.altText = altText || ""
     this.caption = caption || ""
@@ -166,6 +167,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       sgid: this.sgid,
       src: this.src,
       previewable: this.previewable,
+      previewStatusUrl: this.previewStatusUrl,
       altText: this.altText,
       caption: this.caption,
       contentType: this.contentType,
@@ -284,41 +286,47 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     })
   }
 
+  // Poll the status URL the host provided (see ActionTextAttachmentNode
+  // documentation). A 2xx response means the preview is still being
+  // generated; any other status means the preview is ready (or has failed
+  // permanently — the image will fall back to the file icon on error). We
+  // never poll the preview URL itself, since on hosts that serve a
+  // placeholder while processing, each poll would trigger inline preview
+  // generation on the server.
   #pollForPreview(figure) {
+    if (!this.previewStatusUrl) return
+
     let attempt = 0
     const maxAttempts = 10
 
-    const tryLoad = () => {
+    const tryStatus = async () => {
       if (!this.editor.read(() => this.isAttached())) return
 
-      const img = new Image()
-      const cacheBustedSrc = `${this.src}${this.src.includes("?") ? "&" : "?"}_=${Date.now()}`
+      try {
+        const response = await fetch(this.previewStatusUrl, { credentials: "include" })
 
-      img.onload = () => {
         if (!this.editor.read(() => this.isAttached())) return
 
-        // The placeholder is a file-type icon SVG (86×100). A real thumbnail
-        // generated from PDF/video content is significantly larger.
-        if (img.naturalWidth > 150 && img.naturalHeight > 150) {
-          this.#swapToPreviewDOM(figure, cacheBustedSrc)
-        } else {
+        if (response.ok) {
           retry()
+        } else {
+          this.#swapToPreviewDOM(figure, this.src)
         }
+      } catch {
+        retry()
       }
-      img.onerror = () => retry()
-      img.src = cacheBustedSrc
     }
 
     const retry = () => {
       attempt++
       if (attempt < maxAttempts && this.editor.read(() => this.isAttached())) {
         const delay = Math.min(2000 * Math.pow(1.5, attempt), 15000)
-        setTimeout(tryLoad, delay)
+        setTimeout(tryStatus, delay)
       }
     }
 
     // Give the server time to start processing before the first attempt
-    setTimeout(tryLoad, 3000)
+    setTimeout(tryStatus, 3000)
   }
 
   #swapToPreviewDOM(figure, previewSrc) {

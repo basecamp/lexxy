@@ -236,7 +236,7 @@ class AttachmentNodeConversion {
       ...this.#propertiesFromBlob,
       src: this.#src,
       previewSrc: this.previewSrc,
-      pendingPreview: this.blob.previewable && !this.uploadNode.isPreviewableImage
+      pendingPreview: this.#isPendingPreview
     })
   }
 
@@ -249,7 +249,17 @@ class AttachmentNodeConversion {
       fileName: blob.filename,
       fileSize: blob.byte_size,
       previewable: blob.previewable,
+      previewStatusUrl: blob.preview_status_url
     }
+  }
+
+  // Enter the pending-preview state only when the host provides a status
+  // URL telling us when the preview is ready. Without that signal the
+  // preview URL is rendered directly and falls back to the file icon on
+  // error — polling the preview URL itself triggers inline preview
+  // generation on servers that lazily produce previews.
+  get #isPendingPreview() {
+    return Boolean(this.blob.previewable && !this.uploadNode.isPreviewableImage && this.blob.preview_status_url)
   }
 
   get #src() {

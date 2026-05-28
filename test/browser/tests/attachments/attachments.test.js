@@ -84,7 +84,10 @@ test.describe("Attachments", () => {
   })
 
   test("upload previewable PDF shows file icon initially while preview loads", async ({ page, editor }) => {
-    await mockActiveStorageUploads(page)
+    // includePreviewStatusUrl makes the upload response include a
+    // preview_status_url so Lexxy enters the deferred-preview state and
+    // shows a file icon while it polls.
+    await mockActiveStorageUploads(page, { includePreviewStatusUrl: true })
     await editor.uploadFile("test/fixtures/files/dummy.pdf", { via: "file" })
 
     const figure = page.locator("figure.attachment[data-content-type='application/pdf']")
