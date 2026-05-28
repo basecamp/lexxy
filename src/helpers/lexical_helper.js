@@ -1,4 +1,4 @@
-import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
+import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
@@ -146,6 +146,39 @@ export function $isListItemStructurallyEmpty(listItem) {
     }
   }
   return true
+}
+
+// Returns the document text up to `offset` inside `targetNode`. Non-inline
+// element siblings are joined with `\n\n`, matching Lexical's own
+// ElementNode.getTextContent behavior.
+export function $textBeforeOffset(targetNode, offset) {
+  const parts = []
+  let done = false
+
+  function visit(node) {
+    if (done) return
+    if (node === targetNode) {
+      parts.push(node.getTextContent().slice(0, offset))
+      done = true
+      return
+    }
+    if ($isElementNode(node)) {
+      const children = node.getChildren()
+      for (let i = 0; i < children.length; i++) {
+        visit(children[i])
+        if (done) return
+        const child = children[i]
+        if ($isElementNode(child) && !child.isInline() && i < children.length - 1) {
+          parts.push("\n\n")
+        }
+      }
+    } else {
+      parts.push(node.getTextContent())
+    }
+  }
+
+  visit($getRoot())
+  return parts.join("")
 }
 
 export function isAttachmentSpacerTextNode(node, previousNode, index, childCount) {
