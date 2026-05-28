@@ -26,5 +26,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "capybara", "~> 3.0"
   spec.add_development_dependency "selenium-webdriver", "~> 4.0"
   spec.add_development_dependency "cuprite", "~> 0.17"
-  spec.add_development_dependency "image_processing", "~> 1.0"
+  spec.add_development_dependency "image_processing", "~> 2.0"
 end
