@@ -7,7 +7,7 @@ const TRANSPARENT_PNG = Buffer.from(
   "base64"
 )
 
-export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0 } = {}) {
+export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0, extraPreviewableTypes = [] } = {}) {
   let blobCounter = 0
   const calls = { blobCreations: [], fileUploads: [] }
   const pendingBlobRoutes = []
@@ -49,7 +49,8 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
     // Non-image previewable types (PDFs, videos) get a preview URL from the
     // server. Images are handled via isPreviewableImage and don't need this.
     const previewable = blob.content_type === "application/pdf" ||
-      blob.content_type.startsWith("video/")
+      blob.content_type.startsWith("video/") ||
+      extraPreviewableTypes.includes(blob.content_type)
 
     const fulfill = async () => {
       await route.fulfill({
