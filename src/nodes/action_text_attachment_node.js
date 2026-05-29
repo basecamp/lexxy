@@ -286,16 +286,28 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     })
   }
 
-  // Poll the status URL the host provided (see ActionTextAttachmentNode
-  // documentation). A 2xx response means the preview is still being
-  // generated; any other status means the preview is ready (or has failed
-  // permanently — the image will fall back to the file icon on error). We
-  // never poll the preview URL itself, since on hosts that serve a
-  // placeholder while processing, each poll would trigger inline preview
-  // generation on the server.
+  // The pending-preview state shows a file icon while the server prepares
+  // the preview image. There are two ways to detect when the preview is
+  // ready, picked by what the host returned in the upload response:
+  //
+  // 1. If `previewStatusUrl` is set, poll that cheap endpoint with `fetch`.
+  //    A 2xx response means "still processing"; any other status means
+  //    ready. We never poll the preview URL itself, since on hosts that
+  //    serve a placeholder image while processing, each poll would trigger
+  //    inline preview generation on the server.
+  //
+  // 2. Otherwise, preload the preview URL once with an off-screen Image
+  //    and swap it in when it loads. If it errors, the file icon stays.
+  //    No retries — refreshing the editor will re-fetch on next render.
   #pollForPreview(figure) {
-    if (!this.previewStatusUrl) return
+    if (this.previewStatusUrl) {
+      this.#waitForPreviewByPollingStatus(figure)
+    } else {
+      this.#waitForPreviewByPreloadingImage(figure)
+    }
+  }
 
+  #waitForPreviewByPollingStatus(figure) {
     let attempt = 0
     const maxAttempts = 10
 
@@ -327,6 +339,15 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
     // Give the server time to start processing before the first attempt
     setTimeout(tryStatus, 3000)
+  }
+
+  #waitForPreviewByPreloadingImage(figure) {
+    const img = new Image()
+    img.onload = () => {
+      if (!this.editor.read(() => this.isAttached())) return
+      this.#swapToPreviewDOM(figure, this.src)
+    }
+    img.src = this.src
   }
 
   #swapToPreviewDOM(figure, previewSrc) {

@@ -7,7 +7,7 @@ const TRANSPARENT_PNG = Buffer.from(
   "base64"
 )
 
-export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0, includePreviewStatusUrl = false, previewStatusInitiallyProcessing = true } = {}) {
+export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0, includePreviewStatusUrl = false, previewStatusInitiallyProcessing = true, failBlobResponses = false } = {}) {
   let blobCounter = 0
   const calls = { blobCreations: [], fileUploads: [], previewStatusRequests: [] }
   const pendingBlobRoutes = []
@@ -98,6 +98,11 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
     const contentType = blob?.content_type || "application/octet-stream"
 
     const fulfill = async () => {
+      if (failBlobResponses) {
+        await route.fulfill({ status: 500 })
+        return
+      }
+
       // Serve the fixture file if it exists, otherwise return a 1×1 transparent PNG.
       // The fixture file is only needed when delayBlobResponses is true (preview swap test).
       // For other tests, always serve the tiny PNG to avoid layout shifts from full-size

@@ -27,13 +27,13 @@ After a Direct Upload completes, Lexxy reads the following fields from the blob 
 
 Generating a preview for a PDF or video is expensive. The default Active Storage path runs the transform (libvips, ffmpeg, etc.) on the request thread the first time the preview URL is hit — under load this becomes the dominant cost of a previewable upload, and concurrent hits to the same not-yet-generated variant can each pay the cost independently.
 
-Lexxy offers two ways to handle this:
+After upload, Lexxy shows a file icon for the attachment until the preview image is ready, then swaps it in. There are two ways to detect when the preview is ready — picked by what the host returns in the upload response:
 
-### Default: render the preview URL directly
+### Default: preload the preview image
 
-When `preview_status_url` is not provided, Lexxy renders the preview URL once after upload. If the request fails, the attachment falls back to a file icon. The preview will appear on a subsequent render once the server has generated it.
+When `preview_status_url` is not provided, Lexxy loads the preview URL once into an off-screen `Image` and swaps the figure to show the preview when the image loads. If the image fails to load, the file icon stays. There are no retries and no cache-busting — the preview URL is hit exactly once.
 
-This is the right choice when your backend generates previews on demand and the preview URL either streams the bytes or errors while processing is in progress. Be aware that the first request after upload will pay the generation cost.
+This works for backends that serve the preview bytes when the URL is hit (blocking until ready or 404'ing while processing). It does not work for backends that respond with a placeholder image while processing — the placeholder will be displayed as if it were the preview. Those hosts should use the status URL path below.
 
 ### Opt-in: poll a status URL
 
