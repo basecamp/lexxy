@@ -380,6 +380,25 @@ test.describe("Gallery", () => {
       page.locator(".attachment-gallery.attachment-gallery--2"),
     ).toBeVisible()
   })
+
+  test("gallery with a nbsp child does not throw any errors", async ({
+    page,
+    editor,
+  }) => {
+    startMonitoringConsole(page)
+
+    // Value must contain two mentions before the &nbsp; to trigger the bug
+    await editor.setValue(`<div class="attachment-gallery attachment-gallery--2">
+      <action-text-attachment sgid="abc" content="Mention" content-type="application/vnd.basecamp.mention"></action-text-attachment>
+      <action-text-attachment sgid="abc" content="Mention" content-type="application/vnd.basecamp.mention"></action-text-attachment>
+      &nbsp;
+      </div>`)
+
+    await editor.content.click()
+    await page.waitForTimeout(200)
+
+    expect(page).toHaveNoErrors()
+  })
 })
 
 // --- Helpers ---
