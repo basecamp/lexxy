@@ -99,7 +99,12 @@ test.describe("Deferred preview rendering", () => {
       expect(await img.getAttribute("src")).not.toMatch(/[?&]_=/)
     })
 
-    test("treats a 3xx redirect as ready instead of following it", async ({ page, editor }) => {
+    test("treats a 3xx redirect as ready instead of following it", async ({ page, editor, browserName }) => {
+      // Playwright's WebKit driver refuses route.fulfill with a 3xx status,
+      // so we can't synthesize the redirect we want to assert against.
+      // Chromium and Firefox cover this case.
+      test.skip(browserName === "webkit", "WebKit Playwright cannot fulfill with 3xx status")
+
       // `previewReadyStatus: 302` makes the mock respond with a redirect
       // once we mark the preview ready. Without `redirect: "manual"` on the
       // status fetch, the browser would silently follow the Location and
