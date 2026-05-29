@@ -127,7 +127,7 @@ test.describe("Deferred preview rendering", () => {
       await expect(img).toBeVisible({ timeout: 20_000 })
     })
 
-    test("keeps polling the status URL until it flips to ready", async ({ page, editor }) => {
+    test("polls multiple times and hits the preview URL exactly once, without cache-busting", async ({ page, editor }) => {
       const calls = await mockActiveStorageUploads(page, { includePreviewStatusUrl: true })
 
       await editor.uploadFile("test/fixtures/files/dummy.pdf", { via: "file" })
@@ -138,15 +138,19 @@ test.describe("Deferred preview rendering", () => {
       // Wait for at least two polls — confirms the polling loop is running.
       await expect.poll(() => calls.previewStatusRequests.length, { timeout: 20_000 }).toBeGreaterThanOrEqual(2)
 
+      // No preview URL fetches during the polling window — this is the
+      // whole point of polling a status URL instead of the preview URL.
+      expect(calls.previewUrlRequests).toHaveLength(0)
+
       calls.markPreviewReady()
 
       const img = figure.locator(".attachment__container img")
       await expect(img).toBeVisible({ timeout: 20_000 })
 
-      // The preview URL is hit exactly once — only after polling stops.
-      // No cache-busted polls against PreviewsController.
-      const previewRequests = calls.fileUploads // sanity that mock is wired
-      expect(previewRequests).toBeDefined()
+      // Preview URL was hit exactly once, after status flipped — no
+      // cache-busted polls against the preview origin.
+      expect(calls.previewUrlRequests).toHaveLength(1)
+      expect(calls.previewUrlRequests[0]).not.toMatch(/[?&]_=/)
     })
   })
 })

@@ -9,7 +9,7 @@ const TRANSPARENT_PNG = Buffer.from(
 
 export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0, includePreviewStatusUrl = false, previewStatusInitiallyProcessing = true, previewReadyStatus = 410, failBlobResponses = false } = {}) {
   let blobCounter = 0
-  const calls = { blobCreations: [], fileUploads: [], previewStatusRequests: [] }
+  const calls = { blobCreations: [], fileUploads: [], previewStatusRequests: [], previewUrlRequests: [] }
   const pendingBlobRoutes = []
   const pendingDirectUploadRoutes = []
   let blobsReleased = false
@@ -93,6 +93,9 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
     if (request.method() !== "GET") return route.fallback()
 
     const url = new URL(request.url())
+    if (url.pathname.includes("/previews/")) {
+      calls.previewUrlRequests.push(request.url())
+    }
     const filename = decodeURIComponent(url.pathname.split("/").pop())
     const blob = calls.blobCreations.find(b => b.filename === filename)
     const contentType = blob?.content_type || "application/octet-stream"

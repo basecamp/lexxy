@@ -345,6 +345,13 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       if (!this.editor.read(() => this.isAttached())) return
       this.#swapToPreviewDOM(figure, this.src)
     }
+    img.onerror = () => {
+      // Clear pendingPreview so undo/redo or any JSON round-trip doesn't
+      // re-enter the pending flow and issue another fetch. The file icon
+      // stays as the stable fallback.
+      if (!this.editor.read(() => this.isAttached())) return
+      this.patchAndRewriteHistory({ pendingPreview: false })
+    }
     img.src = this.src
   }
 
