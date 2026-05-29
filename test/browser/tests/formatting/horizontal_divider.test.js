@@ -75,6 +75,19 @@ test.describe("Horizontal divider", () => {
     await assertEditorHtml(editor, "<p>Text before</p><p>Text after</p>")
   })
 
+  test("insert horizontal divider at start of heading", async ({ page, editor }) => {
+    await editor.setValue("<h2>Heading</h2>")
+    await editor.content.locator("h2").click()
+    await editor.send("Home")
+
+    await page.getByRole("button", { name: "Insert a divider" }).click()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("figure.horizontal-divider hr")).toBeVisible()
+    })
+    await assertEditorHtml(editor, "<h2><br></h2><hr><h2>Heading</h2>")
+  })
+
   test("horizontal divider with surrounding content", async ({
     page,
     editor,
