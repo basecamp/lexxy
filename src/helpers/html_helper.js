@@ -28,10 +28,6 @@ export function createAttachmentFigure(contentType, isPreviewable, fileName) {
   })
 }
 
-export function isPreviewableImage(contentType) {
-  return contentType.startsWith("image/") && !contentType.includes("svg")
-}
-
 export function dispatchCustomEvent(element, name, detail) {
   const event = new CustomEvent(name, {
     detail: detail,
