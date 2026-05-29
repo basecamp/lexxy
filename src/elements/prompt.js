@@ -2,6 +2,7 @@ import Lexxy from "../config/lexxy"
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
 import { $createTextNode, $getSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_CRITICAL, INPUT_COMMAND, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $textBeforeOffset } from "../helpers/lexical_helper"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
@@ -11,6 +12,9 @@ import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
 const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found"
 const FILTER_DEBOUNCE_INTERVAL = 50
+
+// Start of line, or after a space or newline.
+const DEFAULT_ONLY_AT_PATTERN = "^|[ \\n]"
 
 export class LexicalPromptElement extends HTMLElement {
   #globalListeners = new ListenerBin()
@@ -57,6 +61,10 @@ export class LexicalPromptElement extends HTMLElement {
     return this.hasAttribute("supports-space-in-searches")
   }
 
+  get onlyAt() {
+    return this.getAttribute("only-at")
+  }
+
   get open() {
     return this.popoverElement?.classList?.contains("lexxy-prompt-menu--visible")
   }
@@ -100,14 +108,10 @@ export class LexicalPromptElement extends HTMLElement {
           if (offset >= triggerLength) {
             const textBeforeCursor = fullText.slice(offset - triggerLength, offset)
 
-            // Check if trigger is at the start of the text node (new line case) or preceded by space or newline
             if (textBeforeCursor === this.trigger) {
-              const isAtStart = offset === triggerLength
+              const textBeforeTrigger = $textBeforeOffset(node, offset - triggerLength)
 
-              const charBeforeTrigger = offset > triggerLength ? fullText[offset - triggerLength - 1] : null
-              const isPrecededBySpaceOrNewline = charBeforeTrigger === " " || charBeforeTrigger === "\n"
-
-              if (isAtStart || isPrecededBySpaceOrNewline) {
+              if (this.#onlyAtRegExp.test(textBeforeTrigger)) {
                 this.#popoverListeners.dispose()
                 this.#showPopover()
               }
@@ -118,7 +122,15 @@ export class LexicalPromptElement extends HTMLElement {
     }))
   }
 
+  get #onlyAtRegExp() {
+    return new RegExp(`(?:${this.onlyAt ?? DEFAULT_ONLY_AT_PATTERN})$`)
+  }
+
   get #promptContentTypePermitted() {
+    // `insert-editable-text` prompts never create attachments, so the
+    // editor's attachment support and content-type allowlist don't apply.
+    if (this.hasAttribute("insert-editable-text")) return true
+
     const el = this.#editorElement
     if (!el.supportsAttachments) {
       return false
