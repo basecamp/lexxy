@@ -65,6 +65,10 @@ export class LexicalPromptElement extends HTMLElement {
     return this.getAttribute("only-at")
   }
 
+  get verticalDirection() {
+    return this.getAttribute("vertical-direction")
+  }
+
   get open() {
     return this.popoverElement?.classList?.contains("lexxy-prompt-menu--visible")
   }
@@ -297,7 +301,11 @@ export class LexicalPromptElement extends HTMLElement {
       this.popoverElement.toggleAttribute("data-clipped-at-right", true)
     }
 
-    if (popoverRect.bottom > window.innerHeight) {
+    const forceTop = this.verticalDirection === "top"
+    const forceBottom = this.verticalDirection === "bottom"
+    const overflowsWindow = popoverRect.bottom > window.innerHeight
+
+    if (!forceBottom && (forceTop || overflowsWindow)) {
       this.#setPopoverOffsetY(contentRect.height - y + fontSize)
       this.popoverElement.toggleAttribute("data-clipped-at-bottom", true)
     }

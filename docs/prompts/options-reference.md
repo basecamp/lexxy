@@ -18,6 +18,7 @@ nav_order: 6
 - `insert-editable-text`: Insert prompt item HTML directly as editable text instead of Action Text attachments.
 - `supports-space-in-searches`: Allow spaces in search queries (useful with remote filtering for full name searches).
 - `only-at`: Regular expression controlling where the trigger can open the prompt. The pattern is matched against the document text immediately before the trigger and the prompt opens only when it matches. Defaults to `^|[ \n]`, meaning the trigger fires at the very start of the document or right after a space or paragraph break. See [Restricting where the prompt opens](#restricting-where-the-prompt-opens-with-only-at).
+- `vertical-direction`: Can be set to `top` or `bottom`. Forces the prompt menu to open either upward or downward. By default, Lexxy uses the window viewport to calculate the best direction. Useful when there are floating elements that might cover up the prompt.
 
 ## `<lexxy-prompt-item>`
 
