@@ -15,7 +15,7 @@ import {
 } from "lexical"
 import { CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink, LinkNode } from "@lexical/link"
-import { $getNearestNodeOfType } from "@lexical/utils"
+import { $getNearestNodeOfType, $insertNodeToNearestRoot } from "@lexical/utils"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
@@ -225,8 +225,7 @@ export class CommandDispatcher {
   }
 
   dispatchInsertHorizontalDivider() {
-    this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
-    this.editor.focus()
+    $insertNodeToNearestRoot(new HorizontalDividerNode)
   }
 
   dispatchSetFormatHeadingLarge() {
