@@ -7,7 +7,7 @@ const TRANSPARENT_PNG = Buffer.from(
   "base64"
 )
 
-export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0, includePreviewStatusUrl = false, previewStatusInitiallyProcessing = true, failBlobResponses = false } = {}) {
+export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0, includePreviewStatusUrl = false, previewStatusInitiallyProcessing = true, previewReadyStatus = 410, failBlobResponses = false } = {}) {
   let blobCounter = 0
   const calls = { blobCreations: [], fileUploads: [], previewStatusRequests: [] }
   const pendingBlobRoutes = []
@@ -136,7 +136,12 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
     if (previewProcessing) {
       await route.fulfill({ status: 200 })
     } else {
-      await route.fulfill({ status: 410 })
+      await route.fulfill({
+        status: previewReadyStatus,
+        headers: previewReadyStatus >= 300 && previewReadyStatus < 400
+          ? { Location: "/rails/active_storage/blobs/elsewhere/previews/full" }
+          : {}
+      })
     }
   })
 

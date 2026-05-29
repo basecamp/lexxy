@@ -5,6 +5,10 @@ import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
 import { parseBoolean } from "../helpers/string_helper"
 import { REWRITE_HISTORY_COMMAND } from "../extensions/rewritable_history_extension"
 
+const INITIAL_PREVIEW_POLL_DELAY_MS = 3000
+const MAX_PREVIEW_POLL_DELAY_MS = 120000
+const MAX_PREVIEW_POLL_ATTEMPTS = 20
+
 
 export class ActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -168,6 +172,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       src: this.src,
       previewable: this.previewable,
       previewStatusUrl: this.previewStatusUrl,
+      pendingPreview: this.pendingPreview,
       altText: this.altText,
       caption: this.caption,
       contentType: this.contentType,
@@ -286,19 +291,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     })
   }
 
-  // The pending-preview state shows a file icon while the server prepares
-  // the preview image. There are two ways to detect when the preview is
-  // ready, picked by what the host returned in the upload response:
-  //
-  // 1. If `previewStatusUrl` is set, poll that cheap endpoint with `fetch`.
-  //    A 2xx response means "still processing"; any other status means
-  //    ready. We never poll the preview URL itself, since on hosts that
-  //    serve a placeholder image while processing, each poll would trigger
-  //    inline preview generation on the server.
-  //
-  // 2. Otherwise, preload the preview URL once with an off-screen Image
-  //    and swap it in when it loads. If it errors, the file icon stays.
-  //    No retries — refreshing the editor will re-fetch on next render.
+  // While the file-icon is shown, watch for the preview to become ready.
+  // With a status URL, poll it (2xx = processing, anything else = ready).
+  // Without one, preload the preview URL once and swap on load.
   #pollForPreview(figure) {
     if (this.previewStatusUrl) {
       this.#waitForPreviewByPollingStatus(figure)
@@ -309,13 +304,16 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   #waitForPreviewByPollingStatus(figure) {
     let attempt = 0
-    const maxAttempts = 10
 
     const tryStatus = async () => {
       if (!this.editor.read(() => this.isAttached())) return
 
       try {
-        const response = await fetch(this.previewStatusUrl, { credentials: "include" })
+        // redirect: "manual" prevents fetch from transparently following a
+        // 3xx response — without it, a status endpoint that redirected to,
+        // say, the preview URL would resolve to a 200 and look like
+        // "still processing." The contract is "any non-2xx means done."
+        const response = await fetch(this.previewStatusUrl, { credentials: "include", redirect: "manual" })
 
         if (!this.editor.read(() => this.isAttached())) return
 
@@ -331,14 +329,14 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
     const retry = () => {
       attempt++
-      if (attempt < maxAttempts && this.editor.read(() => this.isAttached())) {
-        const delay = Math.min(2000 * Math.pow(1.5, attempt), 15000)
+      if (attempt < MAX_PREVIEW_POLL_ATTEMPTS && this.editor.read(() => this.isAttached())) {
+        const delay = Math.min(2000 * Math.pow(1.5, attempt), MAX_PREVIEW_POLL_DELAY_MS)
         setTimeout(tryStatus, delay)
       }
     }
 
     // Give the server time to start processing before the first attempt
-    setTimeout(tryStatus, 3000)
+    setTimeout(tryStatus, INITIAL_PREVIEW_POLL_DELAY_MS)
   }
 
   #waitForPreviewByPreloadingImage(figure) {

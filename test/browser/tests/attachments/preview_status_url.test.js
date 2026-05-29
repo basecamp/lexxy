@@ -99,6 +99,29 @@ test.describe("Deferred preview rendering", () => {
       expect(await img.getAttribute("src")).not.toMatch(/[?&]_=/)
     })
 
+    test("treats a 3xx redirect as ready instead of following it", async ({ page, editor }) => {
+      // `previewReadyStatus: 302` makes the mock respond with a redirect
+      // once we mark the preview ready. Without `redirect: "manual"` on the
+      // status fetch, the browser would silently follow the Location and
+      // resolve to a 200 — looking like "still processing" — and Lexxy
+      // would never swap to the preview.
+      const calls = await mockActiveStorageUploads(page, {
+        includePreviewStatusUrl: true,
+        previewReadyStatus: 302
+      })
+
+      await editor.uploadFile("test/fixtures/files/dummy.pdf", { via: "file" })
+
+      const figure = page.locator("figure.attachment[data-content-type='application/pdf']")
+      await expect(figure).toBeVisible({ timeout: 10_000 })
+
+      await expect.poll(() => calls.previewStatusRequests.length, { timeout: 10_000 }).toBeGreaterThan(0)
+      calls.markPreviewReady()
+
+      const img = figure.locator(".attachment__container img")
+      await expect(img).toBeVisible({ timeout: 20_000 })
+    })
+
     test("keeps polling the status URL until it flips to ready", async ({ page, editor }) => {
       const calls = await mockActiveStorageUploads(page, { includePreviewStatusUrl: true })
 
