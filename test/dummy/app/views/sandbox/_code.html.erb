@@ -142,6 +142,26 @@ h1 {
 
 <p><br/></p>
 
+<h4>Elixir</h4>
+<pre data-language="elixir" data-highlight-language="elixir">
+defmodule Greeter do
+  @greeting "Hello"
+
+  def greet(name) when is_binary(name) do
+    "#{@greeting}, #{name}!"
+  end
+
+  def greet_all(names) do
+    names
+    |> Enum.map(&amp;greet/1)
+    |> Enum.join("\n")
+  end
+end
+
+IO.puts(Greeter.greet("Kate"))</pre>
+
+<p><br/></p>
+
 <h4>Go</h4>
 <pre data-language="go" data-highlight-language="go">
 package main

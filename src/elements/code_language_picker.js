@@ -71,6 +71,7 @@ export class CodeLanguagePicker extends HTMLElement {
     languages.json ||= "JSON"
     languages.diff ||= "Diff"
     languages.kotlin ||= "Kotlin"
+    languages.elixir ||= "Elixir"
 
 
     // Place the "plain" entry first, then the rest of language sorted alphabetically

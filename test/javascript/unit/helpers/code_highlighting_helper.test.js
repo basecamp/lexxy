@@ -31,7 +31,8 @@ const expectedGrammars = [
   "go",
   "bash",
   "json",
-  "kotlin"
+  "kotlin",
+  "elixir"
 ]
 
 test.each(expectedGrammars)("Prism includes the %s grammar", (grammar) => {

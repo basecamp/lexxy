@@ -34,5 +34,6 @@ import "prismjs/components/prism-go"
 import "prismjs/components/prism-bash"
 import "prismjs/components/prism-json"
 import "prismjs/components/prism-kotlin"
+import "prismjs/components/prism-elixir"
 
 export default Prism
