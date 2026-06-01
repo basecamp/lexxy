@@ -249,6 +249,7 @@ class AttachmentNodeConversion {
       fileName: blob.filename,
       fileSize: blob.byte_size,
       previewable: blob.previewable,
+      previewStatusUrl: blob.preview_status_url
     }
   }
 

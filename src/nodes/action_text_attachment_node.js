@@ -5,6 +5,10 @@ import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
 import { parseBoolean } from "../helpers/string_helper"
 import { REWRITE_HISTORY_COMMAND } from "../extensions/rewritable_history_extension"
 
+const INITIAL_PREVIEW_POLL_DELAY_MS = 3000
+const MAX_PREVIEW_POLL_DELAY_MS = 120000
+const MAX_PREVIEW_POLL_ATTEMPTS = 20
+
 
 export class ActionTextAttachmentNode extends DecoratorNode {
   static getType() {
@@ -80,7 +84,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return Lexxy.global.get("attachmentTagName")
   }
 
-  constructor({ tagName, sgid, src, previewSrc, previewable, pendingPreview, altText, caption, contentType, fileName, fileSize, width, height, uploadError }, key) {
+  constructor({ tagName, sgid, src, previewSrc, previewable, previewStatusUrl, pendingPreview, altText, caption, contentType, fileName, fileSize, width, height, uploadError }, key) {
     super(key)
 
     this.tagName = tagName || ActionTextAttachmentNode.TAG_NAME
@@ -88,6 +92,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     this.src = src
     this.previewSrc = previewSrc
     this.previewable = parseBoolean(previewable)
+    this.previewStatusUrl = previewStatusUrl
     this.pendingPreview = pendingPreview
     this.altText = altText || ""
     this.caption = caption || ""
@@ -166,6 +171,8 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       sgid: this.sgid,
       src: this.src,
       previewable: this.previewable,
+      previewStatusUrl: this.previewStatusUrl,
+      pendingPreview: this.pendingPreview,
       altText: this.altText,
       caption: this.caption,
       contentType: this.contentType,
@@ -284,41 +291,68 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     })
   }
 
+  // While the file-icon is shown, watch for the preview to become ready.
+  // With a status URL, poll it (2xx = processing, anything else = ready).
+  // Without one, preload the preview URL once and swap on load.
   #pollForPreview(figure) {
-    let attempt = 0
-    const maxAttempts = 10
+    if (this.previewStatusUrl) {
+      this.#waitForPreviewByPollingStatus(figure)
+    } else {
+      this.#waitForPreviewByPreloadingImage(figure)
+    }
+  }
 
-    const tryLoad = () => {
+  #waitForPreviewByPollingStatus(figure) {
+    let attempt = 0
+
+    const tryStatus = async () => {
       if (!this.editor.read(() => this.isAttached())) return
 
-      const img = new Image()
-      const cacheBustedSrc = `${this.src}${this.src.includes("?") ? "&" : "?"}_=${Date.now()}`
+      try {
+        // redirect: "manual" prevents fetch from transparently following a
+        // 3xx response — without it, a status endpoint that redirected to,
+        // say, the preview URL would resolve to a 200 and look like
+        // "still processing." The contract is "any non-2xx means done."
+        const response = await fetch(this.previewStatusUrl, { credentials: "include", redirect: "manual" })
 
-      img.onload = () => {
         if (!this.editor.read(() => this.isAttached())) return
 
-        // The placeholder is a file-type icon SVG (86×100). A real thumbnail
-        // generated from PDF/video content is significantly larger.
-        if (img.naturalWidth > 150 && img.naturalHeight > 150) {
-          this.#swapToPreviewDOM(figure, cacheBustedSrc)
-        } else {
+        if (response.ok) {
           retry()
+        } else {
+          this.#swapToPreviewDOM(figure, this.src)
         }
+      } catch {
+        retry()
       }
-      img.onerror = () => retry()
-      img.src = cacheBustedSrc
     }
 
     const retry = () => {
       attempt++
-      if (attempt < maxAttempts && this.editor.read(() => this.isAttached())) {
-        const delay = Math.min(2000 * Math.pow(1.5, attempt), 15000)
-        setTimeout(tryLoad, delay)
+      if (attempt < MAX_PREVIEW_POLL_ATTEMPTS && this.editor.read(() => this.isAttached())) {
+        const delay = Math.min(2000 * Math.pow(1.5, attempt), MAX_PREVIEW_POLL_DELAY_MS)
+        setTimeout(tryStatus, delay)
       }
     }
 
     // Give the server time to start processing before the first attempt
-    setTimeout(tryLoad, 3000)
+    setTimeout(tryStatus, INITIAL_PREVIEW_POLL_DELAY_MS)
+  }
+
+  #waitForPreviewByPreloadingImage(figure) {
+    const img = new Image()
+    img.onload = () => {
+      if (!this.editor.read(() => this.isAttached())) return
+      this.#swapToPreviewDOM(figure, this.src)
+    }
+    img.onerror = () => {
+      // Clear pendingPreview so undo/redo or any JSON round-trip doesn't
+      // re-enter the pending flow and issue another fetch. The file icon
+      // stays as the stable fallback.
+      if (!this.editor.read(() => this.isAttached())) return
+      this.patchAndRewriteHistory({ pendingPreview: false })
+    }
+    img.src = this.src
   }
 
   #swapToPreviewDOM(figure, previewSrc) {

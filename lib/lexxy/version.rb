@@ -1,3 +1,3 @@
 module Lexxy
-  VERSION = "0.9.15.alpha.1"
+  VERSION = "0.9.15.alpha.2"
 end

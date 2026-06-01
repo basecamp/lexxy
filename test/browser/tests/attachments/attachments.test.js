@@ -84,7 +84,9 @@ test.describe("Attachments", () => {
   })
 
   test("upload previewable PDF shows file icon initially while preview loads", async ({ page, editor }) => {
-    await mockActiveStorageUploads(page)
+    // delayBlobResponses holds the preview URL so the file-icon state is
+    // observable before the preload completes and swaps in the preview.
+    await mockActiveStorageUploads(page, { delayBlobResponses: true })
     await editor.uploadFile("test/fixtures/files/dummy.pdf", { via: "file" })
 
     const figure = page.locator("figure.attachment[data-content-type='application/pdf']")

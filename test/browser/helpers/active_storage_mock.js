@@ -7,13 +7,16 @@ const TRANSPARENT_PNG = Buffer.from(
   "base64"
 )
 
-export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0 } = {}) {
+export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0, includePreviewStatusUrl = false, previewStatusInitiallyProcessing = true, previewReadyStatus = 410, failBlobResponses = false } = {}) {
   let blobCounter = 0
-  const calls = { blobCreations: [], fileUploads: [] }
+  const calls = { blobCreations: [], fileUploads: [], previewStatusRequests: [], previewUrlRequests: [] }
   const pendingBlobRoutes = []
   const pendingDirectUploadRoutes = []
   let blobsReleased = false
   let directUploadReleased = false
+  let previewProcessing = previewStatusInitiallyProcessing
+
+  calls.markPreviewReady = () => { previewProcessing = false }
 
   // When delayBlobResponses is true, GET /blobs/* requests are held until
   // calls.releaseBlobResponses() is called. This lets tests assert the local
@@ -66,6 +69,9 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
           attachable_sgid: `mock-sgid-${blobId}`,
           previewable: previewable || undefined,
           url: previewable ? `/rails/active_storage/blobs/${signedId}/previews/full` : undefined,
+          preview_status_url: previewable && includePreviewStatusUrl
+            ? `/rails/active_storage/blobs/${signedId}/preview_status`
+            : undefined,
           direct_upload: {
             url: `/rails/active_storage/disk/${signedId}`,
             headers: { "Content-Type": blob.content_type },
@@ -87,11 +93,19 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
     if (request.method() !== "GET") return route.fallback()
 
     const url = new URL(request.url())
+    if (url.pathname.includes("/previews/")) {
+      calls.previewUrlRequests.push(request.url())
+    }
     const filename = decodeURIComponent(url.pathname.split("/").pop())
     const blob = calls.blobCreations.find(b => b.filename === filename)
     const contentType = blob?.content_type || "application/octet-stream"
 
     const fulfill = async () => {
+      if (failBlobResponses) {
+        await route.fulfill({ status: 500 })
+        return
+      }
+
       // Serve the fixture file if it exists, otherwise return a 1×1 transparent PNG.
       // The fixture file is only needed when delayBlobResponses is true (preview swap test).
       // For other tests, always serve the tiny PNG to avoid layout shifts from full-size
@@ -109,6 +123,28 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
       pendingBlobRoutes.push(fulfill)
     } else {
       await fulfill()
+    }
+  })
+
+  // GET /rails/active_storage/blobs/*/preview_status — status endpoint Lexxy
+  // polls when the host opts into deferred preview rendering. 200 = still
+  // processing, 410 (or any non-2xx) = ready. Registered after the general
+  // blobs route so it takes precedence (Playwright matches routes in reverse
+  // registration order).
+  await page.route("**/rails/active_storage/blobs/*/preview_status", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback()
+
+    calls.previewStatusRequests.push(route.request().url())
+
+    if (previewProcessing) {
+      await route.fulfill({ status: 200 })
+    } else {
+      await route.fulfill({
+        status: previewReadyStatus,
+        headers: previewReadyStatus >= 300 && previewReadyStatus < 400
+          ? { Location: "/rails/active_storage/blobs/elsewhere/previews/full" }
+          : {}
+      })
     }
   })
 
