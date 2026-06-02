@@ -3,7 +3,7 @@ import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection
 
 const ALLOWED_HTML_ATTRIBUTES = [ "class", "contenteditable", "href", "src", "style", "title" ]
 
-const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
+const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color", "text-align" ]
 
 function styleFilterHook(_currentNode, hookEvent) {
   if (hookEvent.attrName === "style" && hookEvent.attrValue) {

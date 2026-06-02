@@ -223,7 +223,7 @@ export class LexicalToolbarElement extends HTMLElement {
     if (!anchorNode.getParent()) { return }
 
     const { isBold, isItalic, isStrikethrough, isUnderline, isHighlight, isInLink, isInQuote, isInHeading,
-      headingTag, isInCode, isInList, listType, isInTable } = this.selection.getFormat()
+      headingTag, isInCode, isInList, listType, isInTable, blockAlignment } = this.selection.getFormat()
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
@@ -246,6 +246,11 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("code", isInCode)
 
     this.#setButtonPressed("table", isInTable)
+
+    this.#setButtonPressed("align-left", blockAlignment === "left")
+    this.#setButtonPressed("align-center", blockAlignment === "center")
+    this.#setButtonPressed("align-right", blockAlignment === "right")
+    this.#setButtonPressed("align-justify", blockAlignment === "justify")
   }
 
   #setButtonPressed(name, isPressed) {
@@ -425,6 +430,26 @@ export class LexicalToolbarElement extends HTMLElement {
           <div class="lexxy-editor__toolbar-separator" role="separator"></div>
           <button type="button" name="clear-formatting" data-command="clearFormatting" title="Clear formatting" role="menuitem">
             ${ToolbarIcons.clearFormatting} <span>Clear formatting</span>
+          </button>
+        </div>
+      </lexxy-toolbar-dropdown>
+
+      <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-dropdown">
+        <button data-dropdown-trigger class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="alignment" title="Text alignment" aria-haspopup="menu" aria-expanded="false">
+          ${ToolbarIcons.alignLeft}
+        </button>
+        <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-dropdown-list" hidden>
+          <button type="button" name="align-left" data-command="alignLeft" title="Align left" role="menuitem">
+            ${ToolbarIcons.alignLeft} <span>Left</span>
+          </button>
+          <button type="button" name="align-center" data-command="alignCenter" title="Align center" role="menuitem">
+            ${ToolbarIcons.alignCenter} <span>Center</span>
+          </button>
+          <button type="button" name="align-right" data-command="alignRight" title="Align right" role="menuitem">
+            ${ToolbarIcons.alignRight} <span>Right</span>
+          </button>
+          <button type="button" name="align-justify" data-command="alignJustify" title="Justify" role="menuitem">
+            ${ToolbarIcons.alignJustify} <span>Justify</span>
           </button>
         </div>
       </lexxy-toolbar-dropdown>
