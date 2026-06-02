@@ -136,13 +136,9 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   toString() {
-    if (this.cachedStringValue == null) {
-      this.editor?.getEditorState().read(() => {
-        this.cachedStringValue = $getReadableTextContent($getRoot())
-      })
-    }
-
-    return this.cachedStringValue
+    return this.cachedStringValue ??= this.editor?.read(() => {
+      return $getReadableTextContent($getRoot())
+    })
   }
 
   get form() {
@@ -314,13 +310,9 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   get value() {
-    if (!this.cachedValue) {
-      this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
-      })
-    }
-
-    return this.cachedValue
+    return this.cachedValue ??= this.editor?.read(() => {
+      return sanitize($generateHtmlFromNodes(this.editor, null))
+    }) ?? null
   }
 
   set value(html) {
