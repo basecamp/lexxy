@@ -54,7 +54,6 @@ export class LexicalEditorElement extends HTMLElement {
   #initialValue = ""
   #initializeEventDispatched = false
   #editorInitializedDispatched = false
-  #valueLoaded = false
   #listeners = new ListenerBin()
   #disposables = []
   #historyState = { undo: false, redo: false }
@@ -106,12 +105,7 @@ export class LexicalEditorElement extends HTMLElement {
   disconnectedCallback() {
     this.#initializeEventDispatched = false
     this.#editorInitializedDispatched = false
-    if (this.#valueLoaded) {
-      this.valueBeforeDisconnect = this.value
-    } else {
-      this.valueBeforeDisconnect = null
-    }
-    this.#valueLoaded = false
+    this.valueBeforeDisconnect = this.value
     this.#reset() // Prevent hangs with Safari when morphing
   }
 
@@ -316,7 +310,6 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   set value(html) {
-    this.#valueLoaded = true
     const editorHasFocus = this.#isContentFocused
 
     this.editor.update(() => {
