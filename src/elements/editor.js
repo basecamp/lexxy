@@ -259,7 +259,6 @@ export class LexicalEditorElement extends HTMLElement {
 
     if (!this.editor) return
 
-    this.#editorInitializedDispatched = true
     this.#dispatchEditorInitialized()
     this.#dispatchAttributesChange()
   }
@@ -775,6 +774,8 @@ export class LexicalEditorElement extends HTMLElement {
   #dispatchEditorInitialized() {
     if (!this.adapter) return
 
+    this.#editorInitializedDispatched = true
+
     this.adapter.dispatchEditorInitialized({
       highlightColors: this.#resolvedHighlightColors,
       headingFormats: this.#supportedHeadingFormats
@@ -789,7 +790,6 @@ export class LexicalEditorElement extends HTMLElement {
       }
 
       if (!this.#editorInitializedDispatched) {
-        this.#editorInitializedDispatched = true
         this.#dispatchEditorInitialized()
       }
     }
