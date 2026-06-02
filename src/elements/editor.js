@@ -52,6 +52,8 @@ export class LexicalEditorElement extends HTMLElement {
   static observedAttributes = [ "connected", "required" ]
 
   #initialValue = ""
+  #previousInternalFormValue = null
+
   #initializeEventDispatched = false
   #editorInitializedDispatched = false
   #listeners = new ListenerBin()
@@ -106,7 +108,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#initializeEventDispatched = false
     this.#editorInitializedDispatched = false
 
-    delete this._internalFormValue
+    this.#previousInternalFormValue = null
     this.valueBeforeDisconnect = this.value
 
     this.#clearCachedValues()
@@ -468,26 +470,22 @@ export class LexicalEditorElement extends HTMLElement {
     return Array.from(this.attributes).filter(attribute => attribute.name.startsWith("aria-"))
   }
 
-  set #internalFormValue(html) {
-    const changed = this.#internalFormValue !== undefined && this.#internalFormValue !== this.value
+  #setInternalFormValue(html) {
+    const changed = this.#previousInternalFormValue !== null && html !== this.#previousInternalFormValue
 
     this.internals.setFormValue(html)
-    this._internalFormValue = html
+    this.#previousInternalFormValue = html
 
     if (changed) {
       dispatch(this, "lexxy:change")
     }
   }
 
-  get #internalFormValue() {
-    return this._internalFormValue
-  }
-
   #loadInitialValue(editor) {
     const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p><br></p>"
 
     this.#initialValue = initialHtml
-    this.#internalFormValue = initialHtml
+    this.#setInternalFormValue(initialHtml)
     this.#setEditorHtml(initialHtml, { editor })
   }
 
@@ -513,7 +511,7 @@ export class LexicalEditorElement extends HTMLElement {
   #synchronizeWithChanges() {
     this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
       this.#clearCachedValues()
-      this.#internalFormValue = this.value
+      this.#setInternalFormValue(this.value)
       this.#toggleEmptyStatus()
       this.#requestValidityRefresh()
       this.#dispatchAttributesChange()
