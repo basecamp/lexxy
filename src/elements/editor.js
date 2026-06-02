@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, HISTORY_MERGE_TAG, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -226,8 +226,8 @@ export class LexicalEditorElement extends HTMLElement {
     return dispatch(this, "lexxy:file-accept", { file }, true)
   }
 
-  $generateNodesFromDOM(doc) {
-    let nodes = $generateLexicalNodesFromDOM(this.editor, doc)
+  $generateNodesFromDOM(doc, { editor = this.editor } = {}) {
+    let nodes = $generateLexicalNodesFromDOM(editor, doc)
     if ($hasUpdateTag(PASTE_TAG)) nodes = $convertInlineImageDataURIs(nodes, this)
     return filterDisallowedAttachmentNodes(nodes, this)
   }
@@ -336,11 +336,8 @@ export class LexicalEditorElement extends HTMLElement {
         $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       }
 
-      $getRoot()
-        .clear()
-        .selectEnd()
-        .insertNodes(this.#parseHtmlIntoLexicalNodes(html))
 
+      this.#setEditorHtml(html)
       this.#toggleEmptyStatus()
     }, { discrete: true })
   }
@@ -353,9 +350,9 @@ export class LexicalEditorElement extends HTMLElement {
     return this.#historyState.redo
   }
 
-  #parseHtmlIntoLexicalNodes(html) {
+  #parseHtmlIntoLexicalNodes(html, { editor = this.editor } = {}) {
     if (!html) html = "<p></p>"
-    const nodes = this.$generateNodesFromDOM(parseHtml(`${html}`))
+    const nodes = this.$generateNodesFromDOM(parseHtml(`${html}`), { editor })
 
     return nodes
       .filter(this.#isNotWhitespaceOnlyNode)
@@ -391,7 +388,6 @@ export class LexicalEditorElement extends HTMLElement {
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#configureSanitizer()
-    this.#loadInitialValue()
     this.#resetBeforeTurboCaches()
   }
 
@@ -416,7 +412,8 @@ export class LexicalEditorElement extends HTMLElement {
       nodes: this.#lexicalNodes,
       html: {
         export: new Map([ [ TextNode, exportTextNodeDOM ], [ CodeHighlightNode, exportTextNodeDOM ] ])
-      }
+      },
+      $initialEditorState: (editor) => this.#loadInitialValue(editor)
     },
       ...this.extensions.lexicalExtensions
     )
@@ -498,13 +495,19 @@ export class LexicalEditorElement extends HTMLElement {
     return this._internalFormValue
   }
 
-  #loadInitialValue() {
-    if (!this.#valueLoaded) {
-      const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p><br></p>"
-      this.editor.update(() => {
-        this.value = this.#initialValue = initialHtml
-      }, { tag: HISTORY_MERGE_TAG })
-    }
+  #loadInitialValue(editor) {
+    const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p><br></p>"
+
+    this.#initialValue = initialHtml
+    this.#internalFormValue = initialHtml
+    this.#setEditorHtml(initialHtml, { editor })
+  }
+
+  #setEditorHtml(html, { editor = this.editor } = { }) {
+    $getRoot()
+      .clear()
+      .selectEnd()
+      .insertNodes(this.#parseHtmlIntoLexicalNodes(html, { editor }))
   }
 
   #resetBeforeTurboCaches() {
