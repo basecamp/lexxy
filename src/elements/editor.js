@@ -105,7 +105,11 @@ export class LexicalEditorElement extends HTMLElement {
   disconnectedCallback() {
     this.#initializeEventDispatched = false
     this.#editorInitializedDispatched = false
+
+    delete this._internalFormValue
     this.valueBeforeDisconnect = this.value
+
+    this.#clearCachedValues()
     this.#reset() // Prevent hangs with Safari when morphing
   }
 
