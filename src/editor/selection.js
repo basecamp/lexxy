@@ -13,7 +13,7 @@ import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } f
 import { LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
-import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
+import { ListenerBin, handlingDefault, registerEventListener } from "../helpers/listener_helper"
 
 export default class Selection {
   #listeners = new ListenerBin()
@@ -329,10 +329,10 @@ export default class Selection {
 
   #processSelectionChangeCommands() {
     this.#listeners.track(
-      this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, this.#selectPreviousNode.bind(this), COMMAND_PRIORITY_LOW),
-      this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#selectNextNode.bind(this), COMMAND_PRIORITY_LOW),
-      this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousTopLevelNode.bind(this), COMMAND_PRIORITY_LOW),
-      this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextTopLevelNode.bind(this), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, handlingDefault(this.#selectPreviousNode.bind(this)), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, handlingDefault(this.#selectNextNode.bind(this)), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_UP_COMMAND, handlingDefault(this.#selectPreviousTopLevelNode.bind(this)), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, handlingDefault(this.#selectNextTopLevelNode.bind(this)), COMMAND_PRIORITY_LOW),
 
       this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW),
 
@@ -432,45 +432,32 @@ export default class Selection {
   }
 
   #selectPreviousNode(event) {
-    if (event?.shiftKey) return false
-
-    if (this.hasNodeSelection) {
-      return this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
-    } else {
-      return this.#selectInLexical(this.nodeBeforeCursor)
+    if (!event.shiftKey) {
+      return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.selectPrevious())
+        || this.#selectInLexical(this.nodeBeforeCursor)
     }
   }
 
   #selectNextNode(event) {
-    if (event?.shiftKey) return false
-
-    if (this.hasNodeSelection) {
-      return this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
-    } else {
-      return this.#selectInLexical(this.nodeAfterCursor)
+    if (!event.shiftKey) {
+      return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.selectNext(0, 0))
+        || this.#selectInLexical(this.nodeAfterCursor)
     }
   }
 
   #selectPreviousTopLevelNode() {
-    if (this.hasNodeSelection) {
-      return this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectPrevious())
-    } else {
-      return this.#selectInLexical(this.topLevelNodeBeforeCursor)
-    }
+    return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.getTopLevelElement().selectPrevious())
+      || this.#selectInLexical(this.topLevelNodeBeforeCursor)
   }
 
   #selectNextTopLevelNode() {
-    if (this.hasNodeSelection) {
-      return this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectNext(0, 0))
-    } else {
-      return this.#selectInLexical(this.topLevelNodeAfterCursor)
-    }
+    return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.getTopLevelElement().selectNext(0, 0))
+      || this.#selectInLexical(this.topLevelNodeAfterCursor)
   }
 
-  #withCurrentNode(fn) {
+  #withCurrentNodeSelectionNode(fn) {
     if (this.hasNodeSelection) {
-      fn($getSelection().getNodes()[0])
-      this.editor.focus()
+      return fn($getSelection().getNodes()[0])
     }
   }
 
