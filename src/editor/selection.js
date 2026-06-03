@@ -7,7 +7,6 @@ import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
 import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
-import { nextFrame } from "../helpers/timing_helper"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
 import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } from "../helpers/lexical_helper"
@@ -439,44 +438,43 @@ export default class Selection {
     }
   }
 
-  async #selectPreviousNode(event) {
+  #selectPreviousNode(event) {
     if (event?.shiftKey) return false
 
     if (this.hasNodeSelection) {
-      return await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
+      return this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
     } else {
       return this.#selectInLexical(this.nodeBeforeCursor)
     }
   }
 
-  async #selectNextNode(event) {
+  #selectNextNode(event) {
     if (event?.shiftKey) return false
 
     if (this.hasNodeSelection) {
-      return await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
+      return this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
     } else {
       return this.#selectInLexical(this.nodeAfterCursor)
     }
   }
 
-  async #selectPreviousTopLevelNode() {
+  #selectPreviousTopLevelNode() {
     if (this.hasNodeSelection) {
-      return await this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectPrevious())
+      return this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectPrevious())
     } else {
       return this.#selectInLexical(this.topLevelNodeBeforeCursor)
     }
   }
 
-  async #selectNextTopLevelNode() {
+  #selectNextTopLevelNode() {
     if (this.hasNodeSelection) {
-      return await this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectNext(0, 0))
+      return this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectNext(0, 0))
     } else {
       return this.#selectInLexical(this.topLevelNodeAfterCursor)
     }
   }
 
-  async #withCurrentNode(fn) {
-    await nextFrame()
+  #withCurrentNode(fn) {
     if (this.hasNodeSelection) {
       this.editor.update(() => {
         fn($getSelection().getNodes()[0])
