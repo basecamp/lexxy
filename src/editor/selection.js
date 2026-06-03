@@ -469,10 +469,8 @@ export default class Selection {
 
   #withCurrentNode(fn) {
     if (this.hasNodeSelection) {
-      this.editor.update(() => {
-        fn($getSelection().getNodes()[0])
-        this.editor.focus()
-      })
+      fn($getSelection().getNodes()[0])
+      this.editor.focus()
     }
   }
 
