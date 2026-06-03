@@ -1,5 +1,9 @@
-import { expect, test } from "vitest"
-import { highlightCode } from "../../../../src/helpers/code_highlighting_helper"
+import { afterEach, expect, test } from "vitest"
+import { highlightCode, highlightElement } from "../../../../src/helpers/code_highlighting_helper"
+
+afterEach(() => {
+  document.body.innerHTML = ""
+})
 
 const Prism = window.Prism
 
@@ -48,3 +52,49 @@ test("highlightCode preserves the pre wrapper around the highlighted code elemen
 
   expect(pre.textContent).toContain("const a = 1\nconst b = 2")
 })
+
+test("highlightCode only walks pre elements within the given root", () => {
+  const inside = appendPre("inside", "javascript", "const a = 1")
+  const outside = appendPre("outside", "javascript", "const b = 2")
+
+  const scope = document.createElement("div")
+  scope.appendChild(inside)
+  document.body.appendChild(scope)
+  document.body.appendChild(outside)
+
+  highlightCode(scope)
+
+  expect(inside.dataset.highlighted).toBe("true")
+  expect(outside.dataset.highlighted).toBeUndefined()
+})
+
+test("highlightCode is idempotent — already-highlighted blocks are skipped", () => {
+  const pre = appendPre("once", "javascript", "const a = 1")
+  document.body.appendChild(pre)
+
+  highlightCode()
+  const firstPassHtml = pre.innerHTML
+
+  highlightCode()
+
+  expect(pre.innerHTML).toBe(firstPassHtml)
+  expect(pre.dataset.highlighted).toBe("true")
+})
+
+test("highlightElement highlights a single pre element", () => {
+  const pre = appendPre("single", "javascript", "const a = 1")
+  document.body.appendChild(pre)
+
+  highlightElement(pre)
+
+  expect(pre.querySelector("span.token")).not.toBeNull()
+  expect(pre.dataset.highlighted).toBe("true")
+})
+
+function appendPre(id, language, code) {
+  const pre = document.createElement("pre")
+  pre.id = id
+  pre.setAttribute("data-language", language)
+  pre.innerHTML = code
+  return pre
+}

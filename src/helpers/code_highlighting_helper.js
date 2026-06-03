@@ -1,14 +1,16 @@
 import Prism from "../config/prism"
 
-export function highlightCode() {
-  const elements = document.querySelectorAll("pre[data-language]")
+export function highlightCode(root = document) {
+  const elements = root.querySelectorAll("pre[data-language]:not([data-highlighted])")
 
   elements.forEach(preElement => {
     highlightElement(preElement)
   })
 }
 
-function highlightElement(preElement) {
+export function highlightElement(preElement) {
+  if (preElement.dataset.highlighted === "true") return
+
   const language = preElement.getAttribute("data-language")
   let code = preElement.innerHTML.replace(/<br\s*\/?>/gi, "\n")
 
@@ -27,6 +29,8 @@ function highlightElement(preElement) {
   if (highlights.length > 0) {
     applyHighlightRanges(preElement, highlights)
   }
+
+  preElement.dataset.highlighted = "true"
 }
 
 // Walk the DOM tree inside a <pre> element and build a list of
