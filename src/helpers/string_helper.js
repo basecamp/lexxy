@@ -22,7 +22,7 @@ export function filterMatchPosition(text, potentialMatch) {
 
   if (!normalizedMatch) return 0
 
-  const match = normalizedText.match(new RegExp(`(?:^|\\b)${escapeForRegExp(normalizedMatch)}`))
+  const match = normalizedText.match(new RegExp(`(?<![\\p{L}\\p{N}])${escapeForRegExp(normalizedMatch)}`, "u"))
   return match ? match.index : -1
 }
 
