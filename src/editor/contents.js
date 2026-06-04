@@ -55,11 +55,6 @@ export default class Contents {
     inserter.insertNodes(nodes)
   }
 
-  insertAtCursorEnsuringLineBelow(node) {
-    this.insertAtCursor(node)
-    this.#insertLineBelowIfLastNode(node)
-  }
-
   applyParagraphFormat() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
@@ -437,17 +432,6 @@ export default class Contents {
       uploader.$insertUploadNodes()
       return true
     }
-  }
-
-  #insertLineBelowIfLastNode(node) {
-    this.editor.update(() => {
-      const nextSibling = node.getNextSibling()
-      if (!nextSibling) {
-        const newParagraph = $createParagraphNode()
-        node.insertAfter(newParagraph)
-        newParagraph.selectStart()
-      }
-    })
   }
 
   #unwrap(node) {
