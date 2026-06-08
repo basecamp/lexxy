@@ -309,9 +309,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   get value() {
-    return this.cachedValue ??= this.editor?.read(() => {
-      return sanitize($generateHtmlFromNodes(this.editor, null))
-    }) ?? null
+    return this.cachedValue ??= this.#readSanitizedEditorValue()
   }
 
   set value(html) {
@@ -338,6 +336,12 @@ export class LexicalEditorElement extends HTMLElement {
 
   get canRedo() {
     return this.#historyState.redo
+  }
+
+  #readSanitizedEditorValue(editor = this.editor) {
+    return editor?.read(() => {
+      return sanitize($generateHtmlFromNodes(this.editor, null))
+    }) ?? null
   }
 
   #parseHtmlIntoLexicalNodes(html, { editor = this.editor } = {}) {
@@ -377,7 +381,6 @@ export class LexicalEditorElement extends HTMLElement {
     this.#registerFileAcceptFilter()
     this.#attachDebugHooks()
     this.#attachToolbar()
-    this.#configureSanitizer()
     this.#resetBeforeTurboCaches()
   }
 
@@ -403,7 +406,11 @@ export class LexicalEditorElement extends HTMLElement {
       html: {
         export: new Map([ [ TextNode, exportTextNodeDOM ], [ CodeHighlightNode, exportTextNodeDOM ] ])
       },
-      $initialEditorState: (editor) => this.#loadInitialValue(editor)
+      $initialEditorState: (editor) => {
+        this.#configureSanitizer(editor)
+        this.#loadInitialValue(editor)
+        this.#setInternalFormValue(this.#readSanitizedEditorValue(editor))
+      },
     },
       ...this.extensions.lexicalExtensions
     )
@@ -485,7 +492,6 @@ export class LexicalEditorElement extends HTMLElement {
     const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p><br></p>"
 
     this.#initialValue = initialHtml
-    this.#setInternalFormValue(initialHtml)
     this.#setEditorHtml(initialHtml, { editor })
   }
 
@@ -719,16 +725,16 @@ export class LexicalEditorElement extends HTMLElement {
     this.classList.toggle("lexxy-editor--empty", this.isEmpty)
   }
 
-  #configureSanitizer() {
-    setSanitizerConfig(this.#allowedElements)
+  #configureSanitizer(editor) {
+    setSanitizerConfig(this.#getAllowedElements(editor))
   }
 
-  get #allowedElements() {
-    return this.#importableTags.concat(this.extensions.allowedElements)
+  #getAllowedElements(editor) {
+    return this.#getImportableTags(editor).concat(this.extensions.allowedElements)
   }
 
-  get #importableTags() {
-    const tags = Array.from(this.editor._htmlConversions.keys())
+  #getImportableTags(editor) {
+    const tags = Array.from(editor._htmlConversions.keys())
     return tags.filter(tag => !tag.startsWith("#"))
   }
 
