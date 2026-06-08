@@ -3,7 +3,7 @@ import { isAutolinkableURL } from "../helpers/string_helper"
 import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
-import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
+import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $onUpdate, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
 import { $insertDataTransferForRichText } from "@lexical/clipboard"
 import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
 import { ListenerBin } from "../helpers/listener_helper"
@@ -146,10 +146,7 @@ export default class Clipboard {
     const linkNode = $createLinkNode(url).append($createTextNode(url))
     selection.insertNodes([ linkNode ])
 
-    // Defer the lexxy:insert-link event until after the active update commits;
-    // listeners may run editor mutations of their own.
-    const nodeKey = linkNode.getKey()
-    Promise.resolve().then(() => this.#dispatchLinkInsertEvent(nodeKey, { url }))
+    $onUpdate(() => this.#dispatchLinkInsertEvent(linkNode.getKey(), { url }))
   }
 
   #dispatchLinkInsertEvent(nodeKey, payload) {
