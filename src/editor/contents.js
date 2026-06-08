@@ -1,7 +1,8 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $hasUpdateTag,
   $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
-  HISTORY_MERGE_TAG, PASTE_TAG
+  HISTORY_MERGE_TAG, PASTE_TAG,
+  SELECTION_INSERT_CLIPBOARD_NODES_COMMAND
 } from "lexical"
 
 import { $createCodeNode, $isCodeNode } from "@lexical/code"
@@ -36,14 +37,13 @@ export default class Contents {
   }
 
   insertDOM(doc, { tag } = {}) {
-    this.#unwrapPlaceholderAnchors(doc)
-
     this.editor.update(() => {
-      if ($hasUpdateTag(PASTE_TAG)) this.#stripTableCellColorStyles(doc)
+      if ($hasUpdateTag(PASTE_TAG)) this.#formatPastedDOM(doc)
 
       const nodes = this.editorElement.$generateNodesFromDOM(doc)
-      if (!this.#insertUploadNodes(nodes)) {
-        this.insertAtCursor(...nodes)
+
+      if (!$hasUpdateTag(PASTE_TAG) || !this.#dispatchPastedNodesCommand(nodes)) {
+        this.#insertUploadNodes(nodes) || this.insertAtCursor(...nodes)
       }
     }, { tag })
   }
@@ -360,6 +360,17 @@ export default class Contents {
 
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
       previousNode.insertAfter(newNode)
+    })
+  }
+
+  #formatPastedDOM(doc) {
+    this.#unwrapPlaceholderAnchors(doc)
+    this.#stripTableCellColorStyles(doc)
+  }
+
+  #dispatchPastedNodesCommand(nodes) {
+    return this.editor.dispatchCommand(SELECTION_INSERT_CLIPBOARD_NODES_COMMAND, {
+      nodes, selection: $getSelection()
     })
   }
 
