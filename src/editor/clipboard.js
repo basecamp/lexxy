@@ -62,10 +62,10 @@ export default class Clipboard {
 
   #handleParsedClipboardNodes({ nodes, selection }) {
     const url = $bareUrlFromSingleLink(nodes)
-    if (!url) return false
-
-    this.#insertSingleLinkAt(selection, url)
-    return true
+    if (url && $isRangeSelection(selection)) {
+      this.#insertSingleLinkAt(selection, url)
+      return true
+    }
   }
 
   #isPlainTextOrURLPasted(clipboardData) {
