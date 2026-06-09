@@ -50,5 +50,11 @@ test.describe("Form validity during uploads", () => {
     )
 
     await calls.releaseDirectUploadResponses()
+    await expect(page.locator("figure.attachment img")).toHaveAttribute(
+      "src",
+      /\/rails\/active_storage\/blobs\//,
+      { timeout: 10_000 },
+    )
+    await expect.poll(() => editor.locator.evaluate((el) => el.checkValidity())).toBe(true)
   })
 })
