@@ -32,4 +32,23 @@ test.describe("Form validity during uploads", () => {
 
     await expect.poll(() => editor.locator.evaluate((el) => el.checkValidity())).toBe(true)
   })
+
+  test("uses a custom uploads-busy-message when configured", async ({ page, editor }) => {
+    await page.goto("/attachments-uploads-busy-message.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await page.waitForSelector("lexxy-toolbar[connected]")
+
+    const calls = await mockActiveStorageUploads(page, { delayDirectUploadResponse: true })
+
+    await editor.send("Hello")
+    await editor.uploadFile("test/fixtures/files/example.png")
+    await expect(page.locator("figure.attachment progress")).toBeVisible({ timeout: 10_000 })
+
+    await expect.poll(() => editor.locator.evaluate((el) => el.checkValidity())).toBe(false)
+    expect(await editor.locator.evaluate((el) => el.internals.validationMessage)).toBe(
+      "Počkejte prosím na dokončení nahrávání souborů.",
+    )
+
+    await calls.releaseDirectUploadResponses()
+  })
 })

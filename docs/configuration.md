@@ -50,6 +50,7 @@ Editors support the following options, configurable using presets and element at
 - `multiLine`: Pass `false` to force single line editing.
 - `permittedAttachmentTypes`: Restrict the editor to a specific allowlist of attachment content types. Unset (the default) permits any content type. Example: `<lexxy-editor permitted-attachment-types="application/vnd.basecamp.mention application/vnd.basecamp.opengraph-embed"></lexxy-editor>`.
 - `richText`: Pass `false` to disable rich text editing.
+- `uploadsBusyMessage`: The form validation message shown while attachments are still uploading (the editor reports itself invalid until every upload finishes). Defaults to `"Please wait for all files to upload"`. Override it to localize the message, e.g. `<lexxy-editor uploads-busy-message="Počkejte prosím na dokončení nahrávání souborů."></lexxy-editor>`.
 
 The toolbar is considered part of the editor for `lexxy:focus` and `lexxy:blur` events. If the toolbar registers event or lexical handlers, it should expose a `dispose()` function which will be called on editor disconnect.
 
