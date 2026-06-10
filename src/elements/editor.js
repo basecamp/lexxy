@@ -338,8 +338,8 @@ export class LexicalEditorElement extends HTMLElement {
     return this.#historyState.redo
   }
 
-  #readSanitizedEditorValue(editor = this.editor) {
-    return editor?.read(() => {
+  #readSanitizedEditorValue() {
+    return this.editor?.read(() => {
       return sanitize($generateHtmlFromNodes(this.editor, null))
     }) ?? null
   }
@@ -373,7 +373,6 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #initialize() {
-    this.#synchronizeWithChanges()
     this.#registerComponents()
     this.#handleEnter()
     this.#registerFocusEvents()
@@ -382,6 +381,9 @@ export class LexicalEditorElement extends HTMLElement {
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#resetBeforeTurboCaches()
+
+    this.#setInternalFormValue(this.value, { suppressEvent: true })
+    this.#synchronizeWithChanges()
   }
 
   #registerFileAcceptFilter() {
@@ -409,7 +411,6 @@ export class LexicalEditorElement extends HTMLElement {
       $initialEditorState: (editor) => {
         this.#configureSanitizer(editor)
         this.#loadInitialValue(editor)
-        this.#setInternalFormValue(this.#readSanitizedEditorValue(editor))
       },
     },
       ...this.extensions.lexicalExtensions
@@ -477,13 +478,13 @@ export class LexicalEditorElement extends HTMLElement {
     return Array.from(this.attributes).filter(attribute => attribute.name.startsWith("aria-"))
   }
 
-  #setInternalFormValue(html) {
-    const changed = this.#previousInternalFormValue !== null && html !== this.#previousInternalFormValue
+  #setInternalFormValue(html, { suppressEvent = false } = {}) {
+    const changed = html !== this.#previousInternalFormValue
 
     this.internals.setFormValue(html)
     this.#previousInternalFormValue = html
 
-    if (changed) {
+    if (changed && !suppressEvent) {
       dispatch(this, "lexxy:change")
     }
   }
