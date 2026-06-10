@@ -1,4 +1,4 @@
-import { $createLineBreakNode, $createParagraphNode, $createTextNode, $getChildCaretAtIndex, $isElementNode, $isLineBreakNode, $isNodeSelection } from "lexical"
+import { $createLineBreakNode, $createParagraphNode, $createTextNode, $getChildCaretAtIndex, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isNodeSelection, $isRangeSelection, $normalizeSelection__EXPERIMENTAL as $normalizeSelection } from "lexical"
 import { CodeNode } from "@lexical/code"
 import { $ensureForwardRangeSelection } from "@lexical/selection"
 import { $getNearestNodeOfType } from "@lexical/utils"
@@ -9,7 +9,8 @@ export default class NodeInserter {
     const INSERTERS = [
       CodeNodeInserter,
       ShadowRootNodeInserter,
-      NodeSelectionNodeInserter
+      NodeSelectionNodeInserter,
+      BlockContainerNodeInserter
     ]
     const Inserter = INSERTERS.find(inserter => inserter.handles(selection))
     return Inserter ? new Inserter(selection) : selection
@@ -84,5 +85,30 @@ class NodeSelectionNodeInserter extends NodeInserter {
     for (const node of nodes) {
       lastNode = lastNode.insertAfter(node)
     }
+  }
+}
+
+// Lexical's RangeSelection.insertNodes requires every selection point to have a block
+// ancestor with inline children. An element point on a container of block nodes — e.g.
+// a quote holding paragraphs — has none, so Lexical throws invariant #211 or #212.
+// Descend such points to a leaf position before inserting.
+class BlockContainerNodeInserter extends NodeInserter {
+  static handles(selection) {
+    return $isRangeSelection(selection) &&
+      [ selection.anchor, selection.focus ].some($isPointOnBlockContainer)
+  }
+
+  insertNodes(nodes) {
+    $normalizeSelection(this.selection)
+    this.selection.insertNodes(nodes)
+  }
+}
+
+function $isPointOnBlockContainer(point) {
+  if (point.type === "element") {
+    const firstChild = point.getNode().getFirstChild()
+    return ($isElementNode(firstChild) || $isDecoratorNode(firstChild)) && !firstChild.isInline()
+  } else {
+    return false
   }
 }
