@@ -470,12 +470,16 @@ export default class Selection {
 
   async #withCurrentNode(fn) {
     await nextFrame()
-    if (this.hasNodeSelection) {
-      this.editor.update(() => {
-        fn($getSelection().getNodes()[0])
-        this.editor.focus()
-      })
-    }
+    if (!this.hasNodeSelection) return
+
+    this.editor.update(() => {
+      const selection = $getSelection()
+      const currentNode = $isNodeSelection(selection) ? selection.getNodes()[0] : null
+      if (!currentNode) return
+
+      fn(currentNode)
+      this.editor.focus()
+    })
   }
 
   async #selectOrAppendNextLine() {

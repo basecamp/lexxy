@@ -199,4 +199,43 @@ test.describe("Arrow key navigation near attachments", () => {
       .count()
     expect(attachmentSelected).toBe(1)
   })
+
+  test("arrow key on a selected attachment that is replaced before navigation runs does not throw", async ({ page, editor }) => {
+    await editor.setValue(
+      "<p>First paragraph</p>" +
+        '<action-text-attachment content-type="image/png" url="/test.png" filename="test.png" filesize="1024" width="100" height="100"></action-text-attachment>',
+    )
+    await editor.flush()
+
+    // Click the attachment to create a node selection
+    await page.locator("figure.attachment").click()
+    await expect(page.locator("figure.attachment.node--selected")).toHaveCount(1)
+
+    const pageErrors = []
+    page.on("pageerror", (error) => pageErrors.push(error.message))
+
+    // Arrow navigation on a node selection defers one frame before acting.
+    // Replace the selected node during that frame — like an upload finishing —
+    // so the node selection's key goes stale before the deferred update runs.
+    await editor.content.evaluate((el) => {
+      const editorElement = el.closest("lexxy-editor")
+      const lexicalEditor = editorElement.editor
+
+      el.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", code: "ArrowUp", keyCode: 38, bubbles: true, cancelable: true }))
+
+      lexicalEditor.update(() => {
+        const editorState = lexicalEditor.getEditorState()
+        const selectedKey = Array.from(editorState._selection._nodes)[0]
+        const attachmentNode = editorState._nodeMap.get(selectedKey)
+        const paragraphNode = Array.from(editorState._nodeMap.values()).find((node) => node.getType() === "paragraph")
+        attachmentNode.replace(paragraphNode)
+      })
+    })
+
+    // Give the deferred navigation time to run and any page error to reach the test
+    await editor.flush()
+    await page.waitForTimeout(250)
+
+    expect(pageErrors).toEqual([])
+  })
 })
