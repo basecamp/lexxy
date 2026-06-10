@@ -15,6 +15,7 @@ import { $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
+import { ManagedAttachmentUploadNode } from "../nodes/managed_attachment_upload_node"
 import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
 import { $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
@@ -283,9 +284,8 @@ export default class Contents {
 
     let nodeKey = null
     this.editor.update(() => {
-      const uploadNode = new ActionTextAttachmentUploadNode({
+      const uploadNode = new ManagedAttachmentUploadNode({
         file,
-        uploadUrl: null,
         blobUrlTemplate: this.editorElement.blobUrlTemplate,
         editor: this.editor
       })

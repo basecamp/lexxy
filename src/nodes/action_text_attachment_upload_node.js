@@ -41,11 +41,9 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     // This side-effect is trigged on DOM load to fire only once and avoid multiple
     // uploads through cloning. The upload is guarded from restarting in case the
     // node is reloaded from saved state such as from history.
-    this.#startUploadIfNeeded()
+    this.$startUploadIfNeeded()
 
-    // Bridge-managed uploads (uploadUrl is null) don't have file data to show
-    // an image preview, so always show the file icon during upload.
-    const canPreviewFile = this.isPreviewableAttachment && this.uploadUrl != null
+    const canPreviewFile = this.canPreviewFileLocally
     const figure = this.createAttachmentFigure(canPreviewFile)
 
     if (canPreviewFile) {
@@ -137,9 +135,12 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return Boolean(this.width && this.height)
   }
 
-  async #startUploadIfNeeded() {
+  get canPreviewFileLocally() {
+    return this.isPreviewableAttachment
+  }
+
+  async $startUploadIfNeeded() {
     if (this.#uploadStarted) return
-    if (!this.uploadUrl) return // Bridge-managed upload — skip DirectUpload
 
     this.#setUploadStarted()
 
@@ -204,12 +205,16 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   $showUploadedAttachment(blob) {
-    const previewSrc = this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
+    const previewSrc = this.$buildPreviewSrcForBlob(blob)
 
     const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
     this.replaceAndRewriteHistory(replacementNode)
 
     return replacementNode.getKey()
+  }
+
+  $buildPreviewSrcForBlob(_blob) {
+    return this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
   }
 
   #toActionTextAttachmentNodeWith(blob, previewSrc) {
