@@ -6,7 +6,12 @@
   "type": "module",
   "exports": {
     ".": "./dist/lexxy.esm.js",
-    "./helpers": "./dist/lexxy_helpers.esm.js"
+    "./helpers": "./dist/lexxy_helpers.esm.js",
+    "./lexxy.css": "./dist/stylesheets/lexxy.css",
+    "./lexxy-content.css": "./dist/stylesheets/lexxy-content.css",
+    "./lexxy-editor.css": "./dist/stylesheets/lexxy-editor.css",
+    "./lexxy-variables.css": "./dist/stylesheets/lexxy-variables.css",
+    "./dist/stylesheets/*": "./dist/stylesheets/*"
   },
   "files": [
     "dist"
