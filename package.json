@@ -10,8 +10,7 @@
     "./lexxy.css": "./dist/stylesheets/lexxy.css",
     "./lexxy-content.css": "./dist/stylesheets/lexxy-content.css",
     "./lexxy-editor.css": "./dist/stylesheets/lexxy-editor.css",
-    "./lexxy-variables.css": "./dist/stylesheets/lexxy-variables.css",
-    "./dist/stylesheets/*": "./dist/stylesheets/*"
+    "./lexxy-variables.css": "./dist/stylesheets/lexxy-variables.css"
   },
   "files": [
     "dist"
