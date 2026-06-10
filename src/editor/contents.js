@@ -278,24 +278,50 @@ export default class Contents {
     })
   }
 
+  $createPendingUploadNode(file) {
+    return $createActionTextAttachmentUploadNode({
+      file,
+      uploadUrl: null,
+      blobUrlTemplate: this.editorElement.blobUrlTemplate,
+      contentType: file.type,
+    })
+  }
+
   insertPendingAttachment(file) {
     if (!this.editorElement.supportsAttachments) return null
 
     let nodeKey = null
     this.editor.update(() => {
-      const uploadNode = new ActionTextAttachmentUploadNode({
-        file,
-        uploadUrl: null,
-        blobUrlTemplate: this.editorElement.blobUrlTemplate,
-        editor: this.editor
-      })
+      const uploadNode = this.$createPendingUploadNode(file)
       this.insertAtCursor(uploadNode)
       nodeKey = uploadNode.getKey()
     }, { tag: HISTORY_MERGE_TAG })
 
-    if (!nodeKey) return null
+    return nodeKey ? this.#pendingAttachmentHandle(nodeKey) : null
+  }
 
+  // Inserts a batch of bridge-managed pending attachments through the same
+  // Uploader/GalleryUploader path the web uses, so native multi-image uploads group into a
+  // gallery exactly like web drag/drop/paste. The nodes carry no uploadUrl: the host app
+  // owns the upload and drives each returned handle as it settles. Returns one handle per
+  // file, in input order.
+  insertPendingAttachments(files) {
+    if (!this.editorElement.supportsAttachments) return []
+
+    let nodeKeys = []
+    this.editor.update(() => {
+      const uploader = Uploader.for(this.editorElement, Array.from(files), { pending: true })
+      uploader.$uploadFiles()
+      nodeKeys = (uploader.nodes ?? []).map(node => node.getKey())
+    }, { tag: HISTORY_MERGE_TAG })
+
+    return nodeKeys.map(nodeKey => this.#pendingAttachmentHandle(nodeKey))
+  }
+
+  #pendingAttachmentHandle(initialNodeKey) {
     const editor = this.editor
+    let nodeKey = initialNodeKey
+
     return {
       setAttributes(blob) {
         editor.update(() => {

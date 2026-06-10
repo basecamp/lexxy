@@ -5,9 +5,9 @@ import { $createImageGalleryNode, $findOrCreateGalleryForImage, ImageGalleryNode
 export default class Uploader {
   #files
 
-  static for(editorElement, files) {
+  static for(editorElement, files, options = {}) {
     const UploaderKlass = GalleryUploader.handle(editorElement, files) ? GalleryUploader : Uploader
-    return new UploaderKlass(editorElement, files)
+    return new UploaderKlass(editorElement, files, options)
   }
 
   constructor(editorElement, files, options = {}) {
@@ -29,7 +29,15 @@ export default class Uploader {
   }
 
   $createUploadNodes() {
-    this.nodes = this.files.map(file => this.contents.$createUploadNode(file))
+    this.nodes = this.files.map(file => this.#createUploadNode(file))
+  }
+
+  // Bridge-managed (pending) uploads are driven by the host app, so they must not kick off
+  // a web DirectUpload — `$createPendingUploadNode` builds an uploadUrl-less node for that.
+  #createUploadNode(file) {
+    return this.options.pending
+      ? this.contents.$createPendingUploadNode(file)
+      : this.contents.$createUploadNode(file)
   }
 
   $insertUploadNodes() {
