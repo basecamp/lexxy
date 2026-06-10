@@ -1,4 +1,4 @@
-import { $createParagraphNode, $splitNode, ParagraphNode } from "lexical"
+import { $createParagraphNode, $hasUpdateTag, $splitNode, PASTE_TAG, ParagraphNode } from "lexical"
 import { $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
 import { $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType } from "@lexical/utils"
@@ -18,6 +18,10 @@ export class EarlyEscapeListItemNode extends ListItemNode {
   }
 
   #shouldEscape(selection) {
+    // Pasting is not an escape gesture. Lexical's insertNodes inserts the pasted blocks
+    // after this node, so escaping (which removes it) would leave Lexical referencing
+    // a detached node and throw "Expected node to have a parent" (error #66).
+    if ($hasUpdateTag(PASTE_TAG)) return false
     if (!$getNearestNodeOfType(this, QuoteNode)) return false
     if ($isBlankNode(this)) return true
 
