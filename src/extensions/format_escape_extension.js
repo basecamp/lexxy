@@ -15,7 +15,7 @@ export class FormatEscapeExtension extends LexxyExtension {
   }
 
   get allowedElements() {
-    return [ { tag: "li", attributes: [ "value" ] } ]
+    return [ { tag: "ol", attributes: [ "start" ] }, { tag: "li", attributes: [ "value" ] } ]
   }
 
   get lexicalExtension() {
