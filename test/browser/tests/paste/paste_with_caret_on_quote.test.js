@@ -43,6 +43,20 @@ test.describe("Paste with the caret on a quote element", () => {
       await expect(content.locator("blockquote")).toContainText("pasted two")
     })
   })
+
+  // A second consumer hit the same crash from a different entry point: a plain-text markdown
+  // paste (Clipboard#pasteMarkdown → Contents#insertDOM → insertAtCursor → insertNodes). Pasting
+  // text without an HTML payload routes through the markdown path, which produces block content
+  // and reproduced the #212 variant. See https://github.com/basecamp/lexxy/pull/1109.
+  test("pasting markdown does not crash and lands inside the quote", async ({ editor }) => {
+    await editor.paste("pasted markdown")
+    await editor.flush()
+
+    expect(pageErrors).toHaveLength(0)
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("blockquote")).toContainText("pasted markdown")
+    })
+  })
 })
 
 // Real mouse interaction can't reliably produce an element point on the quote node itself
