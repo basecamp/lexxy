@@ -59,7 +59,7 @@ class CodeNodeInserter extends NodeInserter {
 
 class ShadowRootNodeInserter extends NodeInserter {
   static handles(selection) {
-    return $isShadowRoot(selection?.anchor.getNode())
+    return $isShadowRoot(selection?.anchor?.getNode())
   }
 
   insertNodes(nodes) {
