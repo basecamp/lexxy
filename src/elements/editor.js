@@ -49,7 +49,7 @@ export class LexicalEditorElement extends HTMLElement {
   static debug = false
   static commands = [ "bold", "italic", "strikethrough" ]
 
-  static observedAttributes = [ "connected", "required" ]
+  static observedAttributes = [ "autocapitalize", "connected", "required" ]
 
   #initialValue = ""
   #previousInternalFormValue = null
@@ -116,8 +116,15 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === "connected") this.connectedChangedCallback(oldValue, newValue)
-    if (name === "required") this.requiredChangedCallback(oldValue, newValue)
+    if (typeof this[`${name}ChangedCallback`] === "function") {
+      this[`${name}ChangedCallback`](oldValue, newValue)
+    }
+  }
+
+  autocapitalizeChangedCallback() {
+    if (this.editorContentElement) {
+      this.#transferAttributeToContentEditable(this.editorContentElement, "autocapitalize")
+    }
   }
 
   connectedChangedCallback(oldValue, newValue) {
@@ -449,25 +456,33 @@ export class LexicalEditorElement extends HTMLElement {
 
   #createEditorContentElement() {
     const editorContentElement = createElement("div", {
+      id: `${this.id}-content`,
       classList: "lexxy-editor__content",
       contenteditable: true,
-      autocapitalize: "none",
       role: "textbox",
       "aria-multiline": true,
       "aria-label": this.#labelText,
       placeholder: this.getAttribute("placeholder")
     })
-    editorContentElement.id = `${this.id}-content`
+
     this.#ariaAttributes.forEach(attribute => editorContentElement.setAttribute(attribute.name, attribute.value))
 
-    if (this.getAttribute("tabindex")) {
-      editorContentElement.setAttribute("tabindex", this.getAttribute("tabindex"))
-      this.removeAttribute("tabindex")
-    } else {
-      editorContentElement.setAttribute("tabindex", 0)
-    }
+    this.#transferAttributeToContentEditable(editorContentElement, "autocapitalize")
+    this.#transferAttributeToContentEditable(editorContentElement, "tabindex", { defaultValue: 0, removeSource: true })
 
     return editorContentElement
+  }
+
+  #transferAttributeToContentEditable(element, qualifiedName, { defaultValue = null, removeSource = false } = {}) {
+    if (this.hasAttribute(qualifiedName)) {
+      element.setAttribute(qualifiedName, this.getAttribute(qualifiedName))
+    } else if (defaultValue !== null) {
+      element.setAttribute(qualifiedName, defaultValue)
+    } else {
+      element.removeAttribute(qualifiedName)
+    }
+
+    if (removeSource) this.removeAttribute(qualifiedName)
   }
 
   get #labelText() {
