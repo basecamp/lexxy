@@ -17,16 +17,23 @@ export class EarlyEscapeListItemNode extends ListItemNode {
     return super.insertNewAfter(selection, restoreSelection)
   }
 
-  #shouldEscape(selection) {
-    // Pasting is not an escape gesture. Lexical's insertNodes inserts the pasted blocks
-    // after this node, so escaping (which removes it) would leave Lexical referencing
-    // a detached node and throw "Expected node to have a parent" (error #66).
-    if ($hasUpdateTag(PASTE_TAG)) return false
-    if (!$getNearestNodeOfType(this, QuoteNode)) return false
-    if ($isBlankNode(this)) return true
+  get #isInBlockquote() {
+    return Boolean($getNearestNodeOfType(this, QuoteNode))
+  }
 
-    const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
-    return paragraph && $isBlankNode(paragraph) && $isListItemNode(paragraph.getParent())
+  #shouldEscape(selection) {
+    if (this.#isInPasteOperation() || !this.#isInBlockquote) {
+      return false
+    } else if ($isBlankNode(this)) {
+      return true
+    } else {
+      const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
+      return paragraph && $isBlankNode(paragraph) && $isListItemNode(paragraph.getParent())
+    }
+  }
+
+  #isInPasteOperation() {
+    return $hasUpdateTag(PASTE_TAG)
   }
 
   #escapeFromList() {
