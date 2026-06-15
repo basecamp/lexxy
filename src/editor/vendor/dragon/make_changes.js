@@ -1,5 +1,14 @@
 import { $getSelection, $isRangeSelection, $isTextNode } from "lexical"
 
+const TEXT_FORMAT_BY_EXEC_COMMAND = new Map([
+  [ "bold", "bold" ],
+  [ "italic", "italic" ],
+  [ "strikeThrough", "strikethrough" ],
+  [ "subscript", "subscript" ],
+  [ "superscript", "superscript" ],
+  [ "underline", "underline" ]
+])
+
 document.addEventListener("lexxy:dragon-make-changes", (event) => {
   const editor = document.activeElement?.closest("lexxy-editor")?.editor
   if (editor) applyMakeChanges(editor, event.detail)
@@ -27,12 +36,13 @@ function isWellFormed(args) {
 // Offsets are relative to the text node at the selection anchor. A text of -1
 // (a number, not a string) means "change the selection without touching the text".
 class MakeChangesMessage {
-  constructor([ elementStart, elementLength, text, selStart, selLength ]) {
+  constructor([ elementStart, elementLength, text, selStart, selLength, formatCommand ]) {
     this.elementStart = elementStart
     this.elementLength = elementLength
     this.text = text
     this.selStart = selStart
     this.selLength = selLength
+    this.formatCommand = formatCommand
   }
 
   applyTo(selection) {
@@ -40,6 +50,7 @@ class MakeChangesMessage {
     this.#setAddressedRange()
     this.#insertText()
     this.#setFinalSelection()
+    this.#applyFormatCommand()
   }
 
   #setAddressedRange() {
@@ -81,5 +92,17 @@ class MakeChangesMessage {
 
   get #hasFinalRange() {
     return this.selStart >= 0 && this.selLength >= 0
+  }
+
+  // Voice commands like "bold that" arrive as execCommand names. A collapsed
+  // selection would toggle the pending format instead of formatting a range.
+  #applyFormatCommand() {
+    if (this.#format && this.selLength > 0 && !this.selection.isCollapsed()) {
+      this.selection.formatText(this.#format)
+    }
+  }
+
+  get #format() {
+    return TEXT_FORMAT_BY_EXEC_COMMAND.get(this.formatCommand)
   }
 }
