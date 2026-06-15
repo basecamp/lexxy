@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+LEXXY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+usage() {
+  cat <<EOF
+Usage: bin/link-to-lexical <path-to-lexical-monorepo>
+       bin/link-to-lexical --unlink
+
+Links lexxy to a local lexical checkout via yalc. Runs pnpm install + build in the lexical repo,
+publishes each lexical package lexxy depends on, then yalc-adds them here.
+
+The "--unlink" flag removes the yalc-linked packages and restores the registry versions.
+
+After source changes in lexical, iterate with:
+    (cd <lexical-path> && pnpm prepare-release)
+    (cd <lexical-path>/packages/<name>/npm && npx yalc push)
+EOF
+}
+
+if [[ $# -ne 1 ]]; then
+  usage
+  exit 1
+fi
+
+lexxy_direct_lexical_deps() {
+  node -e "
+    const pkg = require('$LEXXY_DIR/package.json');
+    const deps = Object.keys(pkg.dependencies || {});
+    console.log(deps.filter(d => d === 'lexical' || d.startsWith('@lexical/')).join('\n'));
+  "
+}
+
+all_lexical_packages_in_monorepo() {
+  local lexical_dir="$1"
+  node -e "
+    const fs = require('fs'), path = require('path');
+    const dir = path.join('$lexical_dir', 'packages');
+    const names = fs.readdirSync(dir)
+      .map(d => path.join(dir, d, 'npm', 'package.json'))
+      .filter(p => fs.existsSync(p))
+      .map(p => JSON.parse(fs.readFileSync(p)).name)
+      .filter(n => n === 'lexical' || n.startsWith('@lexical/'));
+    console.log(names.join('\n'));
+  "
+}
+
+dep_to_package_dir() {
+  if [[ "$1" == "lexical" ]]; then
+    echo "lexical"
+  else
+    echo "lexical-${1#@lexical/}"
+  fi
+}
+
+write_resolutions() {
+  local mode="$1"   # "add" or "remove"
+  shift
+  node -e "
+    const fs = require('fs');
+    const path = '$LEXXY_DIR/package.json';
+    const pkg = JSON.parse(fs.readFileSync(path));
+    const deps = process.argv.slice(1);
+    if ('$mode' === 'add') {
+      pkg.resolutions = pkg.resolutions || {};
+      for (const d of deps) pkg.resolutions[d] = 'file:.yalc/' + d;
+    } else {
+      if (pkg.resolutions) {
+        for (const d of deps) delete pkg.resolutions[d];
+        if (Object.keys(pkg.resolutions).length === 0) delete pkg.resolutions;
+      }
+    }
+    fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
+  " -- "$@"
+}
+
+if [[ "$1" == "--unlink" ]]; then
+  cd "$LEXXY_DIR"
+  mapfile -t packages < <(lexxy_direct_lexical_deps)
+  if [[ -d .yalc ]]; then
+    for d in .yalc/@lexical/*; do
+      [[ -d "$d" ]] && packages+=("@lexical/${d##*/}")
+    done
+    [[ -d .yalc/lexical ]] && packages+=("lexical")
+  fi
+  if [[ ${#packages[@]} -gt 0 ]]; then
+    npx yalc remove "${packages[@]}" 2>/dev/null || true
+    write_resolutions remove "${packages[@]}"
+  fi
+  rm -rf .yalc yalc.lock
+  yarn install
+  echo "==> Unlinked. Lexxy is back on registry versions."
+  exit 0
+fi
+
+LEXICAL_DIR="$(cd "$1" && pwd)"
+
+if [[ ! -f "$LEXICAL_DIR/package.json" ]]; then
+  echo "Error: $LEXICAL_DIR has no package.json" >&2
+  exit 1
+fi
+
+if [[ "$(node -p "require('$LEXICAL_DIR/package.json').name")" != "@lexical/monorepo" ]]; then
+  echo "Error: $LEXICAL_DIR is not the lexical monorepo root (@lexical/monorepo)" >&2
+  exit 1
+fi
+
+echo "==> Building lexical at $LEXICAL_DIR"
+(cd "$LEXICAL_DIR" && pnpm install && pnpm prepare-release)
+
+mapfile -t packages < <(all_lexical_packages_in_monorepo "$LEXICAL_DIR")
+if [[ ${#packages[@]} -eq 0 ]]; then
+  echo "Error: no @lexical/* packages found under $LEXICAL_DIR/packages" >&2
+  exit 1
+fi
+
+echo "==> Publishing ${#packages[@]} lexical packages via yalc (incl. transitives)"
+for dep in "${packages[@]}"; do
+  pkg_dir="$LEXICAL_DIR/packages/$(dep_to_package_dir "$dep")/npm"
+  if [[ ! -d "$pkg_dir" ]]; then
+    echo "Error: expected publish directory not found: $pkg_dir" >&2
+    echo "       (did pnpm prepare-release succeed?)" >&2
+    exit 1
+  fi
+  echo "  -> $dep"
+  (cd "$pkg_dir" && npx yalc publish)
+done
+
+echo "==> Adding linked packages to lexxy"
+cd "$LEXXY_DIR"
+npx yalc add "${packages[@]}"
+write_resolutions add "${packages[@]}"
+yarn install
+
+echo "==> Done. Lexxy is now linked to $LEXICAL_DIR"
