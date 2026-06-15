@@ -69,7 +69,10 @@ class GalleryUploader extends Uploader {
 
   #findOrCreateGallery() {
     if (this.selection.isOnPreviewableImage) {
-      this.#gallery = $findOrCreateGalleryForImage(this.#selectedNode)
+      // Resolve from the previewable image itself (the selection's first node), not from
+      // #selectedNode (the anchor) — those differ when the selection runs from an image
+      // into following text, and the anchor text node can't join a gallery (returns null).
+      this.#gallery = $findOrCreateGalleryForImage(this.selection.previewableImageNode)
     } else if (this.#selectionIsAfterGalleryEdge) {
       this.#gallery = $findOrCreateGalleryForImage(this.selection.nodeBeforeCursor)
     } else {

@@ -1,4 +1,4 @@
-import { $createLineBreakNode, $createParagraphNode, $createTextNode, $getChildCaretAtIndex, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isNodeSelection, $isRangeSelection, $normalizeSelection__EXPERIMENTAL as $normalizeSelection } from "lexical"
+import { $createLineBreakNode, $createParagraphNode, $createTextNode, $getChildCaretAtIndex, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $normalizeSelection__EXPERIMENTAL as $normalizeSelection } from "lexical"
 import { CodeNode } from "@lexical/code"
 import { $ensureForwardRangeSelection } from "@lexical/selection"
 import { $getNearestNodeOfType } from "@lexical/utils"
@@ -36,14 +36,40 @@ class CodeNodeInserter extends NodeInserter {
 
     const caret = $getChildCaretAtIndex(codeNode, insertionIndex + 1, "previous")
 
-    for (const node of nodes) {
-      if (!node.isAttached()) continue
-      if (caret.getNodeAtCaret() && $isElementNode(node)) { caret.insert($createLineBreakNode()) }
+    // Nodes that are already in the document come from the format-toggle path (existing
+    // content converted into this code block). Brand-new nodes (dropped/pasted content)
+    // were never attached.
+    const existingNodes = new Set(nodes.filter(node => node.isAttached()))
+    const trailingNodes = []
 
+    for (const node of nodes) {
+      if (existingNodes.has(node)) {
+        if (!node.isAttached()) continue // already pulled in when a converted ancestor was removed
+      } else if (!this.#canJoinCodeBlock(node)) {
+        trailingNodes.push(node) // e.g. a dropped attachment, which a code block can't hold
+        continue
+      }
+
+      if (caret.getNodeAtCaret() && $isElementNode(node)) { caret.insert($createLineBreakNode()) }
       caret.insert(this.#convertNodeToCodeChild(node))
     }
 
-    caret.getNodeAtCaret().selectEnd()
+    const lastTrailingNode = this.#insertAfterCodeBlock(codeNode, trailingNodes)
+    const nodeToSelect = lastTrailingNode ?? caret.getNodeAtCaret()
+    nodeToSelect?.selectEnd()
+  }
+
+  #canJoinCodeBlock(node) {
+    return $isTextNode(node) || $isLineBreakNode(node)
+  }
+
+  #insertAfterCodeBlock(codeNode, nodes) {
+    let previousNode = codeNode
+    for (const node of nodes) {
+      previousNode.insertAfter(node)
+      previousNode = node
+    }
+    return nodes.at(-1)
   }
 
   #convertNodeToCodeChild(node) {
@@ -59,7 +85,7 @@ class CodeNodeInserter extends NodeInserter {
 
 class ShadowRootNodeInserter extends NodeInserter {
   static handles(selection) {
-    return $isShadowRoot(selection?.anchor.getNode())
+    return $isShadowRoot(selection?.anchor?.getNode())
   }
 
   insertNodes(nodes) {

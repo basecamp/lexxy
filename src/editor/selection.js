@@ -177,9 +177,12 @@ export default class Selection {
   }
 
   get isOnPreviewableImage() {
-    const selection = $getSelection()
-    const firstNode = selection?.getNodes().at(0)
-    return $isActionTextAttachmentNode(firstNode) && firstNode.isPreviewableImage
+    return this.previewableImageNode != null
+  }
+
+  get previewableImageNode() {
+    const firstNode = $getSelection()?.getNodes().at(0)
+    return $isActionTextAttachmentNode(firstNode) && firstNode.isPreviewableImage ? firstNode : null
   }
 
   get isAtNodeStart() {
