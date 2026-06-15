@@ -4,6 +4,12 @@ Lexxy is a rich text editor built on Lexical, distributed as both a Ruby gem and
 
 See [docs/development.md](docs/development.md) for local development setup, how to run tests, and release instructions.
 
+## Style
+
+Follow [STYLE.md](STYLE.md) for all code you write — general conventions, JavaScript/Lexical patterns, Ruby, and tests.
+
+@STYLE.md
+
 ## Worktrees
 
 When working from a git worktree:
