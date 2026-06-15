@@ -433,8 +433,13 @@ export default class Selection {
 
   #selectPreviousNode(event) {
     if (event.shiftKey) {
-      this.#withCurrentNodeSelectionNode((currentNode) => this.#rangeSelectDecorator(currentNode, "backward"))
-      return false
+      return this.#withCurrentNodeSelectionNode((currentNode) => {
+        const selection = this.#rangeSelectDecorator(currentNode, "forward")
+
+        // Can't rely on native pass-through with Playwright on firefox
+        selection.modify("extend", true, "character")
+        return true
+      })
     } else {
       return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.selectPrevious())
         || this.#selectInLexical(this.nodeBeforeCursor)
@@ -443,8 +448,13 @@ export default class Selection {
 
   #selectNextNode(event) {
     if (event.shiftKey) {
-      this.#withCurrentNodeSelectionNode((currentNode) => this.#rangeSelectDecorator(currentNode, "forward"))
-      return false
+      return this.#withCurrentNodeSelectionNode((currentNode) => {
+        const selection = this.#rangeSelectDecorator(currentNode, "forward")
+
+        // Can't rely on native pass-through with Playwright on firefox
+        selection.modify("extend", false, "character")
+        return true
+      })
     } else {
       return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.selectNext(0, 0))
         || this.#selectInLexical(this.nodeAfterCursor)
