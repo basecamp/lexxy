@@ -115,7 +115,7 @@ export default class Contents {
       blockElements.forEach(node => this.#unwrapCodeBlock(node))
     } else {
       $expandSelectionToLineBreaksAndSplitAtEdges(selection)
-      const elements = this.#blockLevelElementsInSelection(selection)
+      const elements = this.#outermostElements(this.#blockLevelElementsInSelection(selection))
       if (elements.length === 0) return
 
       const codeNode = $createCodeNode("plain")
@@ -439,6 +439,18 @@ export default class Contents {
       if (topLevel) elements.add(topLevel)
     }
     return Array.from(elements)
+  }
+
+  // Selections spanning nested structures (a quote and its inner paragraphs,
+  // nested list items) yield both an element and its ancestor. Converting the
+  // ancestor detaches its whole subtree — including a node freshly inserted
+  // inside it — which can leave the selection on removed nodes (Lexical
+  // invariant #19). The outermost elements already cover their descendants'
+  // text content, so keep only those.
+  #outermostElements(elements) {
+    return elements.filter((element) => {
+      return elements.every((other) => other === element || !element.getParents().includes(other))
+    })
   }
 
   #insertUploadNodes(nodes) {
