@@ -3,9 +3,11 @@ import { expect } from "@playwright/test"
 
 // Dragon NaturallySpeaking's web extension drives the editor through window
 // messages: protocol "nuanria_messaging", functionId "makeChanges", args
-// [elementStart, elementLength, text, selStart, selLength]. A text of -1 (a
-// number) means "change the selection without touching the text", which is how
-// Select-and-Say corrections and cursor moves by voice arrive.
+// [elementStart, elementLength, text, selStart, selLength, formatCommand]. A
+// text of -1 (a number) means "change the selection without touching the
+// text", which is how Select-and-Say corrections and cursor moves by voice
+// arrive. The optional sixth argument carries an execCommand name (bold,
+// italic, underline, ...) for voice commands such as "bold that".
 test.describe("Dragon NaturallySpeaking support", () => {
   let pageErrors
 
@@ -65,6 +67,34 @@ test.describe("Dragon NaturallySpeaking support", () => {
     await editor.flush()
 
     expect((await editor.plainTextValue()).replace("!", "")).toBe("I'm dictating in the main content section")
+    expect(pageErrors).toEqual([])
+  })
+
+  test("formats the selection when makeChanges carries a format command", async ({ editor }) => {
+    await postMakeChanges(editor, [ 4, 9, -1, 4, 9, "bold" ])
+    await editor.flush()
+
+    expect(await editor.value()).toContain("<strong>dictating</strong>")
+    expect(await editor.plainTextValue()).toBe("I'm dictating in the main content section")
+    expect(pageErrors).toEqual([])
+  })
+
+  test("does not toggle format when the final selection is collapsed", async ({ editor }) => {
+    await postMakeChanges(editor, [ 4, 9, -1, 100, 5, "bold" ])
+    await editor.send("!")
+    await editor.flush()
+
+    expect(await editor.value()).not.toContain("<strong>")
+    expect(pageErrors).toEqual([])
+  })
+
+  test("ignores unknown format commands", async ({ editor }) => {
+    await postMakeChanges(editor, [ 4, 9, -1, 4, 9, "fontName" ])
+    await postMakeChanges(editor, [ 4, 9, -1, 4, 9, "toString" ])
+    await editor.flush()
+
+    expect(await editor.value()).not.toContain("<strong>")
+    expect(await editor.plainTextValue()).toBe("I'm dictating in the main content section")
     expect(pageErrors).toEqual([])
   })
 })
