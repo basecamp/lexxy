@@ -8,6 +8,10 @@ const pdfAttachment =
   '<action-text-attachment sgid="test-sgid-123" content-type="application/pdf" filename="report.pdf" ' +
   'filesize="12345" previewable="false" url="http://example.com/report.pdf"></action-text-attachment>'
 
+const imageAttachment =
+  '<action-text-attachment sgid="img-sgid-1" content-type="image/png" filename="a.png" ' +
+  'filesize="100" width="10" height="10" previewable="true" url="http://example.com/a.png"></action-text-attachment>'
+
 test.describe("Uploading into an unsupported selection", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/attachments.html")
@@ -64,5 +68,39 @@ test.describe("Uploading into an unsupported selection", () => {
     // The file is uploaded (not silently dropped) and the code block keeps its contents.
     await expect(editor.content.locator("figure.attachment")).toHaveCount(1, { timeout: 10_000 })
     await expect(editor.content.locator("code")).toContainText("keep me")
+  })
+
+  // "Cannot read properties of null (reading 'splice')":
+  // isOnPreviewableImage looks at the selection's first node (the image), but the gallery
+  // was resolved from the anchor — the trailing text node, which can't join a gallery. The
+  // lookup returned null and GalleryUploader crashed on `gallery.splice(...)`. Resolving from
+  // the image node itself makes the existing image and the uploaded one form a gallery.
+  test("uploading an image with the selection spanning from an image into text forms a gallery", async ({ page, editor }) => {
+    await editor.setValue(`${imageAttachment}<p>hello world</p>`)
+    await editor.flush()
+
+    // Select from the image down into the trailing text: anchor at the end of the text,
+    // focus on the root just before the image. This is what dragging from the image into
+    // the text below produces — the image is the first selected node, the anchor is text.
+    await page.evaluate(() => {
+      const editorElement = document.querySelector("lexxy-editor")
+      editorElement.editor.update(() => {
+        const root = editorElement.editor.getEditorState()._nodeMap.get("root")
+        const image = root.getChildren().find((child) => child.getType() === "action_text_attachment")
+        const lastText = root.getLastDescendant()
+        const selection = lastText.select(lastText.getTextContentSize(), lastText.getTextContentSize())
+        selection.focus.set(root.getKey(), image.getIndexWithinParent(), "element")
+      })
+    })
+
+    const errors = []
+    page.on("pageerror", (error) => errors.push(error.message))
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+    await editor.flush()
+
+    // The dropped image lands (standalone image + new gallery = 2 figures) and nothing throws.
+    await expect(editor.content.locator("figure.attachment")).toHaveCount(2, { timeout: 10_000 })
+    expect(errors).toEqual([])
   })
 })
