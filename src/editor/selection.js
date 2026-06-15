@@ -439,14 +439,20 @@ export default class Selection {
   }
 
   #selectPreviousNode(event) {
-    if (!event.shiftKey) {
+    if (event.shiftKey) {
+      this.#withCurrentNodeSelectionNode((currentNode) => this.#rangeSelectDecorator(currentNode, "backward"))
+      return false
+    } else {
       return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.selectPrevious())
         || this.#selectInLexical(this.nodeBeforeCursor)
     }
   }
 
   #selectNextNode(event) {
-    if (!event.shiftKey) {
+    if (event.shiftKey) {
+      this.#withCurrentNodeSelectionNode((currentNode) => this.#rangeSelectDecorator(currentNode, "forward"))
+      return false
+    } else {
       return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.selectNext(0, 0))
         || this.#selectInLexical(this.nodeAfterCursor)
     }
@@ -465,6 +471,15 @@ export default class Selection {
   #withCurrentNodeSelectionNode(fn) {
     if (this.hasNodeSelection) {
       return fn($getSelection().getNodes()[0])
+    }
+  }
+
+  #rangeSelectDecorator(node, direction = "forward") {
+    if ($isDecoratorNode(node)) {
+        const [ anchorOffset, focusOffset ] = direction === "forward" ? [ 0, 1 ] : [ 1, 0 ]
+        const indexAtNode = node.getIndexWithinParent()
+
+        return node.getParent().select(indexAtNode + anchorOffset, indexAtNode + focusOffset)
     }
   }
 
