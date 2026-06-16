@@ -7,6 +7,7 @@ import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $o
 import { $insertDataTransferForRichText } from "@lexical/clipboard"
 import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
 import { ListenerBin } from "../helpers/listener_helper"
+import NodeInserter from "./contents/node_inserter"
 
 export default class Clipboard {
   #listeners = new ListenerBin()
@@ -144,7 +145,7 @@ export default class Clipboard {
     }
 
     const linkNode = $createLinkNode(url).append($createTextNode(url))
-    selection.insertNodes([ linkNode ])
+    NodeInserter.for(selection).insertNodes([ linkNode ])
 
     $onUpdate(() => this.#dispatchLinkInsertEvent(linkNode.getKey(), { url }))
   }
