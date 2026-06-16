@@ -58,6 +58,19 @@ test.describe("Native bridge gallery (batch)", () => {
     await expect(page.locator(".attachment-gallery figure.attachment")).toHaveCount(2)
   })
 
+  test("an empty batch inserts nothing even with the selection on an image", async ({ page, editor }) => {
+    await insertPendingBatch(editor, [ image("a.png") ])
+    await editor.flush()
+    await expect(page.locator("figure.attachment")).toHaveCount(1)
+
+    const count = await insertPendingBatch(editor, [])
+    await editor.flush()
+
+    expect(count).toBe(0)
+    await expect(page.locator(".attachment-gallery")).toHaveCount(0)
+    await expect(page.locator("figure.attachment")).toHaveCount(1)
+  })
+
   test("removing one image via its handle dissolves the gallery", async ({ page, editor }) => {
     await insertPendingBatch(editor, [ image("a.png"), image("b.png") ])
     await editor.flush()

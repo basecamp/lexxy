@@ -32,8 +32,6 @@ export default class Uploader {
     this.nodes = this.files.map(file => this.#createUploadNode(file))
   }
 
-  // Bridge-managed (pending) uploads are driven by the host app, so they must not kick off
-  // a web DirectUpload — `$createPendingUploadNode` builds an uploadUrl-less node for that.
   #createUploadNode(file) {
     return this.options.pending
       ? this.contents.$createPendingUploadNode(file)

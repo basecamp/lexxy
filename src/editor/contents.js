@@ -300,20 +300,16 @@ export default class Contents {
     return nodeKey ? this.#pendingAttachmentHandle(nodeKey) : null
   }
 
-  // Inserts a batch of bridge-managed pending attachments through the same
-  // Uploader/GalleryUploader path the web uses, so native multi-image uploads group into a
-  // gallery exactly like web drag/drop/paste. The nodes carry no uploadUrl: the host app
-  // owns the upload and drives each returned handle as it settles. Returns one handle per
-  // file, in input order.
   insertPendingAttachments(files) {
-    if (!this.editorElement.supportsAttachments) return []
+    const fileList = Array.from(files)
+    if (!this.editorElement.supportsAttachments || fileList.length === 0) return []
 
     let nodeKeys = []
     this.editor.update(() => {
-      const uploader = Uploader.for(this.editorElement, Array.from(files), { pending: true })
+      const uploader = Uploader.for(this.editorElement, fileList, { pending: true })
       uploader.$uploadFiles()
       nodeKeys = (uploader.nodes ?? []).map(node => node.getKey())
-    }, { tag: HISTORY_MERGE_TAG })
+    })
 
     return nodeKeys.map(nodeKey => this.#pendingAttachmentHandle(nodeKey))
   }
