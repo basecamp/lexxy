@@ -7,7 +7,7 @@ import {
 
 import { $createCodeNode, $isCodeNode } from "@lexical/code"
 import { $createHeadingNode, $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
-import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
+import { $createListItemNode, $createListNode, $isListNode, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { parseHtml } from "../helpers/html_helper"
@@ -77,13 +77,11 @@ export default class Contents {
   }
 
   applyUnorderedListFormat() {
-    this.#splitParagraphsAtLineBreaksUnlessInsideList()
-    this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
+    this.#applyListFormat("bullet", INSERT_UNORDERED_LIST_COMMAND)
   }
 
   applyOrderedListFormat() {
-    this.#splitParagraphsAtLineBreaksUnlessInsideList()
-    this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
+    this.#applyListFormat("number", INSERT_ORDERED_LIST_COMMAND)
   }
 
   clearFormatting() {
@@ -413,6 +411,67 @@ export default class Contents {
     }
 
     codeNode.remove()
+  }
+
+  #applyListFormat(listType, command) {
+    if (this.#insertListInsideQuote(listType)) return
+
+    this.#splitParagraphsAtLineBreaksUnlessInsideList()
+    this.editor.dispatchCommand(command, undefined)
+  }
+
+  // Lexical's $insertList only stops climbing at a root or shadow root, so a
+  // QuoteNode is transparent to it: listing a quoted paragraph swallows the
+  // whole blockquote into a single list item and destroys the quote. When the
+  // selection lives inside a quote we build the list at the paragraph level
+  // ourselves, leaving the surrounding quote intact.
+  #insertListInsideQuote(listType) {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return false
+
+    const blocks = this.#outermostElements(this.#blockLevelElementsInSelection(selection))
+    const quotedBlocks = blocks.filter((block) => $isQuoteNode(block.getParent()))
+    if (quotedBlocks.length === 0) return false
+
+    for (const group of this.#consecutiveSiblingGroups(quotedBlocks)) {
+      this.#wrapBlocksInList(group, listType)
+    }
+
+    return true
+  }
+
+  #wrapBlocksInList(blocks, listType) {
+    const list = $createListNode(listType)
+    blocks[0].insertBefore(list)
+
+    for (const block of blocks) {
+      const listItem = $createListItemNode()
+      if ($isListNode(block)) {
+        listItem.append(...block.getChildren().flatMap((item) => item.getChildren()))
+      } else {
+        listItem.append(...block.getChildren())
+      }
+      list.append(listItem)
+      block.remove()
+    }
+  }
+
+  #consecutiveSiblingGroups(blocks) {
+    const ordered = [ ...blocks ].sort((a, b) => a.getIndexWithinParent() - b.getIndexWithinParent())
+    const groups = []
+
+    for (const block of ordered) {
+      const lastGroup = groups.at(-1)
+      const previous = lastGroup?.at(-1)
+
+      if (previous && previous.getParent().is(block.getParent()) && previous.getNextSibling()?.is(block)) {
+        lastGroup.push(block)
+      } else {
+        groups.push([ block ])
+      }
+    }
+
+    return groups
   }
 
   #splitParagraphsAtLineBreaksUnlessInsideList() {

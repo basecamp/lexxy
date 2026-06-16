@@ -586,6 +586,9 @@ export default class Selection {
   // - First item (no previous sibling): convert to a paragraph above the
   //   list, matching the standard "unwrap list formatting" behavior that
   //   users expect from pressing backspace at the start of a list item.
+  //   Inside a blockquote we instead just remove the empty item and move
+  //   the cursor into the next one — stranding a paragraph there would
+  //   leave the blank line the user is trying to close.
   //
   // When the empty item is the last/only one in the list, we return false
   // and let Lexical's default (convert to paragraph) provide the standard
@@ -604,19 +607,22 @@ export default class Selection {
     if (!nextSibling) return false
 
     const previousSibling = listItem.getPreviousSibling()
-    if (previousSibling) {
-      previousSibling.selectEnd()
-      listItem.remove()
-      return true
-    }
-
     const listNode = $getNearestNodeOfType(listItem, ListNode)
     if (!listNode) return false
 
-    const paragraph = $createParagraphNode()
-    listNode.insertBefore(paragraph)
-    listItem.remove()
-    paragraph.selectStart()
+    if (previousSibling) {
+      previousSibling.selectEnd()
+      listItem.remove()
+    } else if ($isQuoteNode(listNode.getParent())) {
+      nextSibling.selectStart()
+      listItem.remove()
+    } else {
+      const paragraph = $createParagraphNode()
+      listNode.insertBefore(paragraph)
+      listItem.remove()
+      paragraph.selectStart()
+    }
+
     return true
   }
 
