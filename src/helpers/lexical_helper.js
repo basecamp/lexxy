@@ -1,6 +1,6 @@
 import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
-import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
+import { $getNearestBlockElementAncestorOrThrow, $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
 import { $ensureForwardRangeSelection, $isAtNodeEnd } from "@lexical/selection"
 
@@ -241,8 +241,8 @@ export function $expandSelectionToLineBreaksAndSplitAtEdges(selection) {
   const focusOuter = focusBrCaret && $splitAroundLineBreak(focusBrCaret)
   const anchorOuter = anchorBrCaret && $splitAroundLineBreak(anchorBrCaret)
 
-  const innerStart = anchorOuter?.getNextSibling() ?? selection.anchor.getNode().getTopLevelElement()
-  const innerEnd = focusOuter?.getPreviousSibling() ?? selection.focus.getNode().getTopLevelElement()
+  const innerStart = anchorOuter?.getNextSibling() ?? $getNearestBlockElementAncestorOrThrow(selection.anchor.getNode())
+  const innerEnd = focusOuter?.getPreviousSibling() ?? $getNearestBlockElementAncestorOrThrow(selection.focus.getNode())
   if (!innerStart || !innerEnd) return
 
   $setSelectionFromCaretRange($getCaretRange(
