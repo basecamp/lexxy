@@ -36,6 +36,25 @@ test.describe("Load HTML", () => {
     })
   })
 
+  test("preserves blank-line paragraphs between Trix div blocks", async ({ editor }) => {
+    await editor.setValue("<div>First paragraph.</div><div><br></div><div>Second paragraph.</div>")
+    await assertEditorHtml(editor, "<p>First paragraph.</p><p><br></p><p>Second paragraph.</p>")
+  })
+
+  test("preserves multiple consecutive blank-line paragraphs", async ({ editor }) => {
+    await editor.setValue("<div>First.</div><div><br></div><div><br></div><div>Last.</div>")
+    await assertEditorHtml(editor, "<p>First.</p><p><br></p><p><br></p><p>Last.</p>")
+  })
+
+  test("keeps blank-line paragraphs stable across a serialize round-trip", async ({ editor }) => {
+    // Mirrors the edit → save → re-edit cycle: the editor's own serialized output must reload
+    // without the blank line being stripped again.
+    await editor.setValue("<div>First paragraph.</div><div><br></div><div>Second paragraph.</div>")
+    const serialized = await editor.value()
+    await editor.setValue(serialized)
+    await assertEditorHtml(editor, "<p>First paragraph.</p><p><br></p><p>Second paragraph.</p>")
+  })
+
   test("preserves inline image data URIs untouched (no paste-time conversion)", async ({ editor }) => {
     const dataURI = `data:image/png;base64,${Buffer.from("\x89PNG\r\n\x1a\n", "binary").toString("base64")}`
     await editor.setValue(`<p>before</p><img src="${dataURI}"><p>after</p>`)

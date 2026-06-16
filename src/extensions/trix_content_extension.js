@@ -1,4 +1,4 @@
-import { defineExtension } from "lexical"
+import { $createParagraphNode, defineExtension } from "lexical"
 import { CodeNode, normalizeCodeLang } from "@lexical/code"
 import { extendConversion, extendTextNodeConversion } from "../helpers/lexical_helper"
 import { $applyHighlightStyle } from "./highlight_extension"
@@ -36,11 +36,26 @@ export class TrixContentExtension extends LexxyExtension {
           pre: (element) => onlyPreLanguageElements(element, {
             conversion: extendConversion(CodeNode, "pre", $applyLanguage),
             priority: 1
+          }),
+          div: (element) => onlyEmptyBlocks(element, {
+            conversion: () => ({ node: $createParagraphNode() }),
+            priority: 1
           })
         }
       }
     })
   }
+}
+
+// Trix represents blank lines as empty block elements like <div><br></div> or <div></div>.
+// Lexical drops a <br> that is the only child of a block and then discards the now-empty block,
+// collapsing the blank line. We convert those empty blocks into empty paragraphs so the spacing
+// survives the edit. Blocks with text or non-<br> elements fall through to Lexical's default
+// handling so content and attachments are imported normally.
+function onlyEmptyBlocks(element, conversion) {
+  const hasText = element.textContent.trim() !== ""
+  const hasNonLineBreakElement = Array.from(element.children).some((child) => child.nodeName !== "BR")
+  return hasText || hasNonLineBreakElement ? null : conversion
 }
 
 function onlyStyledElements(element, conversion) {

@@ -26,6 +26,27 @@ class Trix::FromTrixToLexxyTest < ApplicationSystemTestCase
     assert_text "Hello from Trix and Lexxy"
   end
 
+  test "preserves blank lines from a Trix-authored document on edit and save round-trip" do
+    # Trix stores blank lines as empty block elements like <div><br></div>. This mirrors a
+    # document authored in the old Trix editor that is now opened in Lexxy for editing.
+    post = Post.create!(
+      title: "Trix blank lines",
+      body: "<div>First paragraph.</div><div><br></div><div>Second paragraph.</div>"
+    )
+
+    visit edit_post_path(post)
+
+    assert_editor_html "<p>First paragraph.</p><p><br></p><p>Second paragraph.</p>"
+
+    # The blank line must survive the full save → render → re-edit round-trip, not just the
+    # initial load. Customers reported re-added spacing being stripped again on save.
+    click_on "Update Post"
+    assert_text "Post was successfully updated."
+
+    visit edit_post_path(post)
+    assert_editor_html "<p>First paragraph.</p><p><br></p><p>Second paragraph.</p>"
+  end
+
   test "attachment" do
     visit new_trix_post_path
 
