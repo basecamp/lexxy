@@ -171,7 +171,7 @@ export default class Contents {
 
       const selection = $getSelection()
       if ($isRangeSelection(selection)) {
-        selection.insertNodes([ linkNode ])
+        this.insertAtCursor(linkNode)
         linkNodeKey = linkNode.getKey()
       }
     })

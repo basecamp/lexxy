@@ -144,7 +144,7 @@ export default class Clipboard {
     }
 
     const linkNode = $createLinkNode(url).append($createTextNode(url))
-    selection.insertNodes([ linkNode ])
+    this.contents.insertAtCursor(linkNode)
 
     $onUpdate(() => this.#dispatchLinkInsertEvent(linkNode.getKey(), { url }))
   }
