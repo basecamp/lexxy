@@ -181,6 +181,41 @@ export function $textBeforeOffset(targetNode, offset) {
   return parts.join("")
 }
 
+// Lexical's LineBreakNode.importDOM drops a <br> that is the last child of a
+// block element, treating it as the phantom break browsers add to keep an
+// empty line visible in a contenteditable. That heuristic also discards a
+// genuine soft break the user typed at the end of a line (e.g. "foo<br>"),
+// so trailing breaks erode one per edit→save→re-edit cycle. We append an
+// empty <span> sentinel after a trailing <br> in blocks that have real
+// content; the break is no longer the last child, and the empty span imports
+// to nothing. Empty blocks (<p><br></p>) are left untouched so they stay
+// empty paragraphs rather than gaining a stray break.
+export function protectTrailingLineBreaks(doc) {
+  for (const block of doc.querySelectorAll("p, li, h1, h2, h3, h4, h5, h6, blockquote")) {
+    const lastChild = lastMeaningfulChild(block)
+    if (lastChild?.nodeName === "BR" && blockHasContentBeforeTrailingBreaks(block)) {
+      block.appendChild(doc.createElement("span"))
+    }
+  }
+}
+
+function lastMeaningfulChild(block) {
+  for (const child of Array.from(block.childNodes).reverse()) {
+    if (!isWhitespaceTextNode(child)) return child
+  }
+  return null
+}
+
+function blockHasContentBeforeTrailingBreaks(block) {
+  return Array.from(block.childNodes).some(child => {
+    return child.nodeName !== "BR" && !isWhitespaceTextNode(child)
+  })
+}
+
+function isWhitespaceTextNode(node) {
+  return node.nodeType === Node.TEXT_NODE && node.textContent.trim() === ""
+}
+
 export function isAttachmentSpacerTextNode(node, previousNode, index, childCount) {
   return $isTextNode(node)
     && node.getTextContent() === " "

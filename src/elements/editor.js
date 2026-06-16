@@ -18,7 +18,7 @@ import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
-import { isAttachmentSpacerTextNode, isEditorFocused } from "../helpers/lexical_helper"
+import { isAttachmentSpacerTextNode, isEditorFocused, protectTrailingLineBreaks } from "../helpers/lexical_helper"
 import { sanitize, setSanitizerConfig } from "../helpers/sanitization_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
@@ -230,6 +230,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   $generateNodesFromDOM(doc, { editor = this.editor } = {}) {
+    protectTrailingLineBreaks(doc)
     let nodes = $generateLexicalNodesFromDOM(editor, doc)
     if ($hasUpdateTag(PASTE_TAG)) nodes = $convertInlineImageDataURIs(nodes, this)
     return filterDisallowedAttachmentNodes(nodes, this)
