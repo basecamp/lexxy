@@ -108,9 +108,29 @@ class NodeSelectionNodeInserter extends NodeInserter {
     // Overrides Lexical's default behavior of _removing_ the currently selected nodes
     // https://github.com/facebook/lexical/blob/v0.38.2/packages/lexical/src/LexicalSelection.ts#L412
     let lastNode = selectedNodes.at(-1)
+    let inlineContainer = null
+
     for (const node of nodes) {
-      lastNode = lastNode.insertAfter(node)
+      if (this.#canFollowAtTopLevel(node, lastNode)) {
+        lastNode = lastNode.insertAfter(node)
+        inlineContainer = null
+      } else {
+        inlineContainer ??= this.#insertParagraphAfter(lastNode)
+        inlineContainer.append(node)
+        lastNode = inlineContainer
+      }
     }
+  }
+
+  #canFollowAtTopLevel(node, lastNode) {
+    const followsTopLevelNode = lastNode.is(lastNode.getTopLevelElement())
+    return !followsTopLevelNode || $isElementNode(node) || $isDecoratorNode(node)
+  }
+
+  #insertParagraphAfter(node) {
+    const paragraph = $createParagraphNode()
+    node.insertAfter(paragraph)
+    return paragraph
   }
 }
 
