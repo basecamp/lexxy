@@ -221,7 +221,7 @@ export function $splitSelectedParagraphsAtInnerLineBreaks(selection) {
   }
 }
 
-export function $expandSelectionToLineBreaksAndSplitAtEdges(selection, { fallbackAncestor = (node) => node.getTopLevelElement() } = {}) {
+export function $expandSelectionToLineBreaksAndSplitAtEdges(selection, fallbackAncestor = (node) => node.getTopLevelElement()) {
   $ensureForwardRangeSelection(selection)
 
   const focusCaret = $caretFromPoint(selection.focus, "next")

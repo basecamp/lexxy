@@ -67,7 +67,7 @@ export default class Contents {
     // Fall back to the nearest block (the list item) rather than the top-level
     // element (the whole list), so removing the bullet from one item leaves the
     // rest of the list intact.
-    $expandSelectionToLineBreaksAndSplitAtEdges(selection, { fallbackAncestor: (node) => $getNearestBlockElementAncestorOrThrow(node) })
+    $expandSelectionToLineBreaksAndSplitAtEdges(selection, (node) => $getNearestBlockElementAncestorOrThrow(node))
     $setBlocksType(selection, () => $createParagraphNode())
   }
 
