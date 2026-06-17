@@ -423,8 +423,26 @@ export default class Contents {
   }
 
   #insertListInsideQuote(listType) {
+    this.#wrapDirectInlineQuoteContentInParagraphs()
+
     for (const group of $consecutiveSiblingGroups(this.#quotedBlocksInSelection())) {
       this.#wrapBlocksInList(group, listType)
+    }
+  }
+
+  // A quote that holds inline content directly (e.g. legacy Trix content like
+  // <blockquote>text</blockquote>) has no inner block for the list to wrap.
+  // Move that content into a paragraph so it becomes a quoted block like any other.
+  #wrapDirectInlineQuoteContentInParagraphs() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return
+
+    for (const block of this.#outermostElements(this.#blockLevelElementsInSelection(selection))) {
+      if ($isQuoteNode(block)) {
+        const paragraph = $createParagraphNode()
+        paragraph.append(...block.getChildren())
+        block.append(paragraph)
+      }
     }
   }
 
