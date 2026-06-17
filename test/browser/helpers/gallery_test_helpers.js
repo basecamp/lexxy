@@ -30,6 +30,29 @@ export async function positionCursorAfterNode(editor, anchorType) {
   }, anchorType)
 }
 
+export async function selectGalleryImage(page, index, galleryIndex = 0) {
+  const gallery = page.locator(".attachment-gallery").nth(galleryIndex)
+  await gallery.locator("figure.attachment img").nth(index).click()
+}
+
+export async function selectGalleryAtOffset(page, editor, offset, galleryIndex = 0) {
+  await editor.locator.evaluate((el, args) => {
+    return new Promise((resolve) => {
+      el.editor.update(() => {
+        const root = el.editor.getEditorState()._nodeMap.get("root")
+        const galleries = root.getChildren().filter((c) => c.getType() === "image_gallery")
+        if (galleries[args.galleryIndex]) galleries[args.galleryIndex].select(args.offset, args.offset)
+      }, { onUpdate: resolve })
+    })
+  }, { offset, galleryIndex })
+}
+
+export async function assertGalleryWithImages(editor, count) {
+  const gallery = editor.content.locator(".attachment-gallery").first()
+  await expect(gallery).toBeVisible({ timeout: 10_000 })
+  await expect(gallery.locator("figure.attachment")).toHaveCount(count)
+}
+
 export async function removeBufferParagraphsBetweenImages(editor) {
   await editor.locator.evaluate((el) => {
     return new Promise((resolve) => {
