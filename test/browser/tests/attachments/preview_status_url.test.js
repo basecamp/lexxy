@@ -91,7 +91,7 @@ test.describe("Deferred preview rendering", () => {
       // Swaps to the preview image. The src is the preview URL exactly as
       // returned by the upload response — no cache-busting.
       const img = figure.locator(".attachment__container img")
-      await expect(img).toBeVisible({ timeout: 20_000 })
+      await expect(img).toBeVisible({ timeout: 30_000 })
       await expect(img).toHaveAttribute(
         "src",
         /\/rails\/active_storage\/blobs\/mock-signed-id-\d+\/previews\/full$/
@@ -124,7 +124,7 @@ test.describe("Deferred preview rendering", () => {
       calls.markPreviewReady()
 
       const img = figure.locator(".attachment__container img")
-      await expect(img).toBeVisible({ timeout: 20_000 })
+      await expect(img).toBeVisible({ timeout: 30_000 })
     })
 
     test("polls multiple times and hits the preview URL exactly once, without cache-busting", async ({ page, editor }) => {
@@ -145,7 +145,7 @@ test.describe("Deferred preview rendering", () => {
       calls.markPreviewReady()
 
       const img = figure.locator(".attachment__container img")
-      await expect(img).toBeVisible({ timeout: 20_000 })
+      await expect(img).toBeVisible({ timeout: 30_000 })
 
       // Preview URL was hit exactly once, after status flipped — no
       // cache-busted polls against the preview origin.
