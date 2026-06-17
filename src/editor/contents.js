@@ -64,7 +64,7 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    $expandSelectionToLineBreaksAndSplitAtEdges(selection)
+    $expandSelectionToLineBreaksAndSplitAtEdges(selection, (node) => $getNearestBlockElementAncestorOrThrow(node))
     $setBlocksType(selection, () => $createParagraphNode())
   }
 
