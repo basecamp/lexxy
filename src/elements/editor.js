@@ -98,6 +98,10 @@ export class LexicalEditorElement extends HTMLElement {
     this.clipboard = new Clipboard(this)
     this.#disposables.push(this.clipboard)
 
+    this.liveRegion = this.querySelector("lexxy-live-region") ?? createElement("lexxy-live-region")
+    this.append(this.liveRegion)
+    this.#disposables.push(this.liveRegion)
+
     this.adapter = new BrowserAdapter()
     this.#uploadRequests = new UploadRequests()
 
@@ -241,6 +245,10 @@ export class LexicalEditorElement extends HTMLElement {
 
   acceptsFile(file) {
     return dispatch(this, "lexxy:file-accept", { file }, true)
+  }
+
+  announce(message, options) {
+    this.liveRegion?.announce(message, options)
   }
 
   $generateNodesFromDOM(doc, { editor = this.editor } = {}) {
