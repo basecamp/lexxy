@@ -425,6 +425,30 @@
   outline: 2px dashed var(--lexxy-color-selected-dark);
 }
 
+/* Formatting marks ("show invisibles"): painted only in the editor, never in the
+   rendered .lexxy-content. The glyphs are pseudo-elements, so they stay out of the
+   serialized value and out of text selections. */
+:where(.lexxy-editor__content--show-invisibles) {
+  :is(p, h1, h2, h3, h4, h5, h6)::after,
+  .lexxy-line-break::before {
+    color: var(--lexxy-color-ink-light);
+    -webkit-user-select: none;
+
+    @supports (user-select: none) {
+      user-select: none;
+    }
+  }
+
+  :is(p, h1, h2, h3, h4, h5, h6)::after {
+    content: "¶";
+    font-weight: normal;
+  }
+
+  .lexxy-line-break::before {
+    content: "↵";
+  }
+}
+
 :where([data-lexical-cursor]) {
   animation: blink 1s infinite;
   block-size: 1lh;
