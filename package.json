@@ -52,7 +52,8 @@
     "test:browser:headed": "npx playwright test --config test/browser/playwright.config.js --headed",
     "test:browser:debug": "npx playwright test --config test/browser/playwright.config.js --debug",
     "prerelease": "yarn build:npm",
-    "release": "yarn build:npm && yarn publish"
+    "release": "yarn build:npm && yarn publish",
+    "release:alpha": "yarn build:npm && yarn publish --tag alpha"
   },
   "dependencies": {
     "@lexical/clipboard": "^0.44.0",
