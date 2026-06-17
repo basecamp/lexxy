@@ -414,30 +414,36 @@ export default class Contents {
   }
 
   #applyListFormat(listType, command) {
-    if (this.#insertListInsideQuote(listType)) return
-
-    this.#splitParagraphsAtLineBreaksUnlessInsideList()
-    this.editor.dispatchCommand(command, undefined)
+    if (this.#selectionInsideQuote()) {
+      this.#insertListInsideQuote(listType)
+    } else {
+      this.#splitParagraphsAtLineBreaksUnlessInsideList()
+      this.editor.dispatchCommand(command)
+    }
   }
 
   // Lexical's $insertList only stops climbing at a root or shadow root, so a
   // QuoteNode is transparent to it: listing a quoted paragraph swallows the
-  // whole blockquote into a single list item and destroys the quote. When the
-  // selection lives inside a quote we build the list at the paragraph level
-  // ourselves, leaving the surrounding quote intact.
+  // whole blockquote into a single list item and destroys the quote. We detect
+  // that case here and build the list ourselves (#insertListInsideQuote).
+  #selectionInsideQuote() {
+    return this.#quotedBlocksInSelection().length > 0
+  }
+
+  // Build the list at the paragraph level for the quoted blocks, leaving the
+  // surrounding quote intact.
   #insertListInsideQuote(listType) {
-    const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return false
-
-    const blocks = this.#outermostElements(this.#blockLevelElementsInSelection(selection))
-    const quotedBlocks = blocks.filter((block) => $isQuoteNode(block.getParent()))
-    if (quotedBlocks.length === 0) return false
-
-    for (const group of this.#consecutiveSiblingGroups(quotedBlocks)) {
+    for (const group of this.#consecutiveSiblingGroups(this.#quotedBlocksInSelection())) {
       this.#wrapBlocksInList(group, listType)
     }
+  }
 
-    return true
+  #quotedBlocksInSelection() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return []
+
+    const blocks = this.#outermostElements(this.#blockLevelElementsInSelection(selection))
+    return blocks.filter((block) => $isQuoteNode(block.getParent()))
   }
 
   #wrapBlocksInList(blocks, listType) {
