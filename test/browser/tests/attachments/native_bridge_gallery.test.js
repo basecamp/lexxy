@@ -5,6 +5,10 @@ import { expect } from "@playwright/test"
 // `contents.insertPendingAttachments`, which routes through the same Uploader/GalleryUploader
 // path the web uses. The nodes carry no uploadUrl — the host app owns the upload and drives
 // each returned handle (setUploadProgress / setAttributes / remove) as it settles.
+//
+// These cover what's specific to the batch entry point: grouping multiple images into one
+// gallery, a handle per file with materialize keeping the gallery, and short-circuiting an
+// empty batch. General gallery behavior lives in the gallery suite.
 test.describe("Native bridge gallery (batch)", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/attachments.html")
@@ -17,32 +21,6 @@ test.describe("Native bridge gallery (batch)", () => {
 
     await expect(page.locator(".attachment-gallery")).toHaveCount(1)
     await expect(page.locator(".attachment-gallery figure.attachment")).toHaveCount(2)
-  })
-
-  test("inserts three images as a single gallery", async ({ page, editor }) => {
-    await insertPendingBatch(editor, [ image("a.png"), image("b.png"), image("c.png") ])
-    await editor.flush()
-
-    await expect(page.locator(".attachment-gallery")).toHaveCount(1)
-    await expect(page.locator(".attachment-gallery figure.attachment")).toHaveCount(3)
-  })
-
-  test("a single image is not wrapped in a gallery", async ({ page, editor }) => {
-    await insertPendingBatch(editor, [ image("a.png") ])
-    await editor.flush()
-
-    await expect(page.locator(".attachment-gallery")).toHaveCount(0)
-    await expect(page.locator("figure.attachment")).toHaveCount(1)
-  })
-
-  test("images group while a non-image file is placed after the gallery", async ({ page, editor }) => {
-    await insertPendingBatch(editor, [ image("a.png"), image("b.png"), { name: "doc.pdf", type: "application/pdf" } ])
-    await editor.flush()
-
-    await expect(page.locator(".attachment-gallery")).toHaveCount(1)
-    await expect(page.locator(".attachment-gallery figure.attachment")).toHaveCount(2)
-    await expect(page.locator("figure.attachment[data-content-type='application/pdf']")).toHaveCount(1)
-    await expect(page.locator(".attachment-gallery figure.attachment[data-content-type='application/pdf']")).toHaveCount(0)
   })
 
   test("returns a handle per file and materializing keeps the gallery", async ({ page, editor }) => {
@@ -67,18 +45,6 @@ test.describe("Native bridge gallery (batch)", () => {
     await editor.flush()
 
     expect(count).toBe(0)
-    await expect(page.locator(".attachment-gallery")).toHaveCount(0)
-    await expect(page.locator("figure.attachment")).toHaveCount(1)
-  })
-
-  test("removing one image via its handle dissolves the gallery", async ({ page, editor }) => {
-    await insertPendingBatch(editor, [ image("a.png"), image("b.png") ])
-    await editor.flush()
-    await expect(page.locator(".attachment-gallery")).toHaveCount(1)
-
-    await removePending(editor, 0)
-    await editor.flush()
-
     await expect(page.locator(".attachment-gallery")).toHaveCount(0)
     await expect(page.locator("figure.attachment")).toHaveCount(1)
   })
