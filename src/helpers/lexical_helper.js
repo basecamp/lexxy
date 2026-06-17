@@ -348,3 +348,21 @@ function $splitAroundLineBreak(lineBreakCaret) {
   return outer
 }
 
+export function $consecutiveSiblingGroups(blocks) {
+  const ordered = [ ...blocks ].sort((a, b) => a.getIndexWithinParent() - b.getIndexWithinParent())
+  const groups = []
+
+  for (const block of ordered) {
+    const lastGroup = groups.at(-1)
+    const previous = lastGroup?.at(-1)
+
+    if (previous && previous.getParent().is(block.getParent()) && previous.getNextSibling()?.is(block)) {
+      lastGroup.push(block)
+    } else {
+      groups.push([ block ])
+    }
+  }
+
+  return groups
+}
+

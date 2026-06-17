@@ -7,7 +7,7 @@ import {
 
 import { $createCodeNode, $isCodeNode } from "@lexical/code"
 import { $createHeadingNode, $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
-import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
+import { $createListItemNode, $createListNode, $isListNode, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
 import { parseHtml } from "../helpers/html_helper"
@@ -17,7 +17,7 @@ import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_nod
 import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
-import { $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
+import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -77,13 +77,11 @@ export default class Contents {
   }
 
   applyUnorderedListFormat() {
-    this.#splitParagraphsAtLineBreaksUnlessInsideList()
-    this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
+    this.#applyListFormat("bullet", INSERT_UNORDERED_LIST_COMMAND)
   }
 
   applyOrderedListFormat() {
-    this.#splitParagraphsAtLineBreaksUnlessInsideList()
-    this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
+    this.#applyListFormat("number", INSERT_ORDERED_LIST_COMMAND)
   }
 
   clearFormatting() {
@@ -413,6 +411,45 @@ export default class Contents {
     }
 
     codeNode.remove()
+  }
+
+  #applyListFormat(listType, command) {
+    if (this.selection.isInsideBlockQuote) {
+      this.#insertListInsideQuote(listType)
+    } else {
+      this.#splitParagraphsAtLineBreaksUnlessInsideList()
+      this.editor.dispatchCommand(command)
+    }
+  }
+
+  #insertListInsideQuote(listType) {
+    for (const group of $consecutiveSiblingGroups(this.#quotedBlocksInSelection())) {
+      this.#wrapBlocksInList(group, listType)
+    }
+  }
+
+  #quotedBlocksInSelection() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return []
+
+    const blocks = this.#outermostElements(this.#blockLevelElementsInSelection(selection))
+    return blocks.filter((block) => $isQuoteNode(block.getParent()))
+  }
+
+  #wrapBlocksInList(blocks, listType) {
+    const list = $createListNode(listType)
+    blocks[0].insertBefore(list)
+
+    for (const block of blocks) {
+      const listItem = $createListItemNode()
+      if ($isListNode(block)) {
+        listItem.append(...block.getChildren().flatMap((item) => item.getChildren()))
+      } else {
+        listItem.append(...block.getChildren())
+      }
+      list.append(listItem)
+      block.remove()
+    }
   }
 
   #splitParagraphsAtLineBreaksUnlessInsideList() {
