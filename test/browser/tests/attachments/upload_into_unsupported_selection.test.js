@@ -40,6 +40,47 @@ test.describe("Uploading into an unsupported selection", () => {
     await expect(editor.content.locator("figure.attachment")).toHaveCount(2, { timeout: 10_000 })
   })
 
+  test("inserting inline content while an attachment is node-selected keeps the root valid", async ({ page, editor }) => {
+    await editor.setValue(`${pdfAttachment}<p>pasted text</p>`)
+    await editor.flush()
+
+    const figure = editor.content.locator("figure.attachment")
+    await expect(figure).toBeVisible()
+
+    await figure.click()
+    await expect(figure).toHaveClass(/node--selected/)
+
+    const errors = []
+    page.on("pageerror", (error) => errors.push(error.message))
+
+    // Detach the existing text node and re-insert it through the node-selection path,
+    // mimicking inline clipboard nodes being inserted while the attachment is selected.
+    const error = await page.evaluate(() => {
+      const editorElement = document.querySelector("lexxy-editor")
+      let message = null
+      editorElement.editor.update(() => {
+        const root = editorElement.editor.getEditorState()._nodeMap.get("root")
+        const paragraph = root.getChildren().find((child) => child.getType() === "paragraph")
+        const textNode = paragraph.getFirstChild()
+        textNode.remove()
+        try {
+          editorElement.contents.insertAtCursor(textNode)
+        } catch (err) {
+          message = err.message
+        }
+      })
+      return message
+    })
+
+    await editor.flush()
+
+    expect(error).toBeNull()
+    expect(errors).toEqual([])
+    await expect(figure).toHaveCount(1)
+    await expect(editor.content).toContainText("pasted text")
+    expect(await editor.plainTextValue()).toContain("pasted text")
+  })
+
   // "Cannot read properties of null (reading 'selectEnd')":
   // uploading a file while the caret sits in an empty code block leaves no node
   // at the caret, and CodeNodeInserter crashed trying to select it. Driven through

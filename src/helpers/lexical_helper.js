@@ -32,8 +32,12 @@ export function $isSafeForRoot(node) {
 export function $makeSafeForRoot(node) {
   if ($isSafeForRoot(node)) {
     return node
-  } else {
+  } else if (node.getParent()) {
     return $wrapNodeInElement(node, () => node.createParentElementNode())
+  } else {
+    // Detached nodes (e.g. clipboard nodes being inserted) can't be `replace`d in place,
+    // so append them into a fresh required parent instead.
+    return node.createParentElementNode().append(node)
   }
 }
 
