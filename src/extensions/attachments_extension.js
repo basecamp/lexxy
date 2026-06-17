@@ -6,6 +6,7 @@ import { $isActionTextAttachmentNode, ActionTextAttachmentNode } from "../nodes/
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node.js"
 import { AttachmentDragAndDrop } from "../editor/attachments/drag_and_drop"
 import { AttachmentFakeSelection } from "../editor/attachments/fake_selection"
+import { AttachmentKeyboardMove } from "../editor/attachments/keyboard_move"
 import { DecoratorAnnouncement } from "../editor/attachments/decorator_announcement"
 import { $isAtNodeEdge, $singleSelectedNode } from "../helpers/lexical_helper"
 
@@ -37,6 +38,7 @@ export class AttachmentsExtension extends LexxyExtension {
       ],
       register: (editor) => {
         const dragAndDrop = new AttachmentDragAndDrop(editor)
+        const keyboardMove = new AttachmentKeyboardMove(editor)
         const fakeSelection = new AttachmentFakeSelection(editor)
         const decoratorAnnouncement = new DecoratorAnnouncement(editor)
 
@@ -46,6 +48,7 @@ export class AttachmentsExtension extends LexxyExtension {
           editor.registerCommand(KEY_TAB_COMMAND, $focusCaptionFromSelectedAttachment(), COMMAND_PRIORITY_HIGH),
           editor.registerMutationListener(ActionTextAttachmentUploadNode, this.#handleUploadMutations.bind(this)),
           () => dragAndDrop.destroy(),
+          () => keyboardMove.destroy(),
           () => fakeSelection.destroy(),
           () => decoratorAnnouncement.destroy()
         )
