@@ -6,6 +6,7 @@ import Editor from "./editor"
 import Prompt from "./prompt"
 import CodeLanguagePicker from "./code_language_picker"
 import NodeDeleteButton from "./node_delete_button"
+import AltTextButton from "./alt_text_button"
 import TableTools from "./table/table_tools"
 
 export function defineElements() {
@@ -22,6 +23,7 @@ export function defineElements() {
     "lexxy-prompt": Prompt,
     "lexxy-code-language-picker": CodeLanguagePicker,
     "lexxy-node-delete-button": NodeDeleteButton,
+    "lexxy-alt-text-button": AltTextButton,
     "lexxy-table-tools": TableTools
   }
 

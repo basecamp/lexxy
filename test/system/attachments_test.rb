@@ -41,6 +41,30 @@ class AttachmentsTest < ApplicationSystemTestCase
     end
   end
 
+  test "image alt text is preserved through save, render, and re-edit" do
+    attach_file file_fixture("example.png") do
+      click_on "Upload files"
+    end
+
+    find("figure.attachment img").click
+    find("lexxy-alt-text-button .lexxy-alt-text").click
+    alt_text = find(".lexxy-alt-text__panel textarea")
+    alt_text.set("A red racecar at the track")
+    alt_text.send_keys(:enter)
+
+    click_on "Update Post"
+
+    # Rendered show page: the alt text lands on the image element.
+    assert_selector "figure.attachment img[alt='A red racecar at the track']"
+
+    # Re-editing the post loads the alt text back into the editor.
+    click_on "Edit this post"
+    wait_for_editor
+    find("figure.attachment img").click
+    find("lexxy-alt-text-button .lexxy-alt-text").click
+    assert_equal "A red racecar at the track", find(".lexxy-alt-text__panel textarea").value
+  end
+
   test "disable attachments" do
     visit edit_post_path(posts(:empty))
     assert_button "Upload files"

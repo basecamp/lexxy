@@ -115,6 +115,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     if (this.isPreviewableAttachment) {
       figure.appendChild(this.#createDOMForImage())
       figure.appendChild(this.#createEditableCaption())
+      if (this.isPreviewableImage) {
+        figure.appendChild(createElement("lexxy-alt-text-button"))
+      }
     } else if (this.isVideo) {
       figure.appendChild(this.#createDOMForFile())
       figure.appendChild(this.#createEditableCaption())
@@ -132,6 +135,11 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     const caption = dom.querySelector("figcaption textarea")
     if (caption && this.caption) {
       caption.value = this.caption
+    }
+
+    const image = dom.querySelector(".attachment__container img")
+    if (image) {
+      image.alt = this.altText
     }
 
     return false

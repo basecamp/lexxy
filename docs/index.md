@@ -20,6 +20,7 @@ A modern rich text editor for Rails.
 - Create links by pasting URLs on selected text.
 - Configurable prompts. Support for mentions and other interactive prompts with multiple loading and filtering strategies.
 - Preview attachments like PDFs and Videos in the editor.
+- Editable captions and accessible alt text for image attachments.
 - Works seamlessly with Action Text, generating the same canonical HTML format it expects for attachments.
 
 ![Lexxy editor screenshot](images/home.screenshot.png)

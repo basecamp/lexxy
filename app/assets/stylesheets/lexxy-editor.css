@@ -390,6 +390,54 @@
       }
     }
   }
+
+}
+
+/* Alt text editor — a card anchored below the badge, inside the figure */
+:where(.lexxy-alt-text__panel) {
+  background: var(--lexxy-color-canvas);
+  border: 1px solid var(--lexxy-color-ink-lighter);
+  border-radius: var(--lexxy-radius);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-sizing: border-box;
+  color: var(--lexxy-color-text);
+  inline-size: 32ch;
+  line-height: normal;
+  max-inline-size: 70vw;
+  padding: 1.25ch;
+  text-align: start;
+
+  .lexxy-alt-text__label {
+    display: block;
+    font-size: var(--lexxy-text-small);
+    font-weight: bold;
+    margin-block-end: 0.5lh;
+  }
+
+  textarea {
+    background: var(--lexxy-color-canvas);
+    border: 1px solid var(--lexxy-color-ink-lighter);
+    border-radius: var(--lexxy-radius);
+    box-sizing: border-box;
+    color: inherit;
+    font-family: inherit;
+    font-size: var(--lexxy-text-small);
+    inline-size: 100%;
+    padding: 0.75ch;
+
+    @supports (resize: none) {
+      resize: none;
+    }
+
+    @supports (field-sizing: content) {
+      field-sizing: content;
+    }
+
+    &:focus {
+      border-color: var(--lexxy-focus-ring-color);
+      outline: 0;
+    }
+  }
 }
 
 /* Placeholder */
@@ -985,6 +1033,40 @@
 
     .lexxy-node-delete:hover {
       background-color: var(--lexxy-color-red);
+    }
+  }
+
+
+  /* --------------------------------------------------------------------------
+  /* Attachment alt text badge */
+
+  &:is(lexxy-alt-text-button) {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5lh;
+    inset-block-start: 1.5ch;
+    inset-inline-start: 1.5ch;
+    opacity: 0;
+    pointer-events: none;
+
+    .node--selected &,
+    &.lexxy-alt-text--editing {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .lexxy-alt-text {
+      aspect-ratio: unset;
+      font-size: var(--lexxy-text-small);
+      font-weight: bold;
+      letter-spacing: 0.04em;
+      padding-inline: 1ch;
+      text-transform: uppercase;
+    }
+
+    .lexxy-alt-text--missing {
+      color: var(--lexxy-color-ink-light);
     }
   }
 
