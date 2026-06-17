@@ -17,6 +17,7 @@ import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_nod
 import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
+import PastedContentFormatter from "./contents/pasted_content_formatter"
 import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
 
 export default class Contents {
@@ -364,8 +365,7 @@ export default class Contents {
   }
 
   #formatPastedDOM(doc) {
-    this.#unwrapPlaceholderAnchors(doc)
-    this.#stripTableCellColorStyles(doc)
+    new PastedContentFormatter(doc).format()
   }
 
   #dispatchPastedNodesCommand(nodes) {
@@ -530,30 +530,6 @@ export default class Contents {
     }
 
     node.remove()
-  }
-
-  // Anchors with non-meaningful hrefs (e.g. "#", "") appear in content copied
-  // from rendered views where mentions and interactive elements are wrapped in
-  // <a href="#"> tags. Unwrap them so their text content pastes as plain text
-  // and real links are preserved.
-  #unwrapPlaceholderAnchors(doc) {
-    for (const anchor of doc.querySelectorAll("a")) {
-      const href = anchor.getAttribute("href") || ""
-      if (href === "" || href === "#") {
-        anchor.replaceWith(...anchor.childNodes)
-      }
-    }
-  }
-
-  // Table cells copied from a page inherit the source theme's inline color
-  // styles (e.g. dark-mode backgrounds). Strip them so pasted tables adopt
-  // the current theme instead of carrying stale colors.
-  #stripTableCellColorStyles(doc) {
-    for (const cell of doc.querySelectorAll("td, th")) {
-      cell.style.removeProperty("background-color")
-      cell.style.removeProperty("background")
-      cell.style.removeProperty("color")
-    }
   }
 
   #getTextAnchorData() {
