@@ -1,6 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $hasUpdateTag,
-  $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
+  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
   HISTORY_MERGE_TAG, PASTE_TAG,
   SELECTION_INSERT_CLIPBOARD_NODES_COMMAND
 } from "lexical"
@@ -50,7 +50,7 @@ export default class Contents {
   }
 
   insertAtCursor(...nodes) {
-    const selection = $getSelection() ?? $getRoot().selectEnd()
+    const selection = this.#insertableSelection()
     const inserter = NodeInserter.for(selection)
 
     inserter.insertNodes(nodes)
@@ -388,6 +388,18 @@ export default class Contents {
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
       previousNode.insertAfter(newNode)
     })
+  }
+
+  // A node selection whose selected node is gone (e.g. removed before a late,
+  // document-level drop lands here) resolves to no nodes, so there is nothing to
+  // insert after. Fall back to the document end, like a missing selection.
+  #insertableSelection() {
+    const selection = $getSelection()
+    if ($isNodeSelection(selection) && selection.getNodes().length === 0) {
+      return $getRoot().selectEnd()
+    }
+
+    return selection ?? $getRoot().selectEnd()
   }
 
   #formatPastedDOM(doc) {
