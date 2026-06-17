@@ -81,9 +81,6 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     this.#tagLabelImage(figure)
     this.#tagLabelMirrors(figure)
 
-    const deleteButton = createElement("lexxy-node-delete-button")
-    figure.appendChild(deleteButton)
-
     return figure
   }
 

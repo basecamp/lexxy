@@ -615,6 +615,9 @@ export class LexicalEditorElement extends HTMLElement {
       )
       this.#registerTableComponents()
       this.#registerCodeLanguagePicker()
+      if (this.supportsAttachments) {
+        this.#registerAttachmentToolbar()
+      }
       if (this.supportsMarkdown) {
         const transformers = [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ]
         registered.push(
@@ -634,6 +637,13 @@ export class LexicalEditorElement extends HTMLElement {
     tableTools ??= createElement("lexxy-table-tools")
     this.append(tableTools)
     this.#disposables.push(tableTools)
+  }
+
+  #registerAttachmentToolbar() {
+    let attachmentToolbar = this.querySelector("lexxy-attachment-toolbar")
+    attachmentToolbar ??= createElement("lexxy-attachment-toolbar")
+    this.append(attachmentToolbar)
+    this.#disposables.push(attachmentToolbar)
   }
 
   #registerCodeLanguagePicker() {
