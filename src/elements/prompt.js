@@ -171,9 +171,11 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   // The popover should stay open only while the cursor sits at the end of the
-  // trigger and its search term, with no whitespace in between. When the cursor
-  // moves away — before the trigger, or past the token into later text — the
-  // text between the trigger and the cursor breaks that run and we dismiss.
+  // trigger and its search term. When the cursor moves away — before the
+  // trigger, or past the token into later text — the text between the trigger
+  // and the cursor breaks that run and we dismiss. A newline always breaks the
+  // run; a space breaks it only for triggers that don't support spaces in
+  // searches, since those that do (e.g. `person:`) expect multi-word terms.
   #cursorIsTypingSearchTerm(node, offset) {
     if (!$isTextNode(node) || offset === 0) return false
 
@@ -182,7 +184,8 @@ export class LexicalPromptElement extends HTMLElement {
     if (lastTriggerIndex === -1) return false
 
     const searchTerm = textBeforeCursor.slice(lastTriggerIndex + this.trigger.length)
-    return !/[ \n]/.test(searchTerm)
+    const breakPattern = this.supportsSpaceInSearches ? /\n/ : /[ \n]/
+    return !breakPattern.test(searchTerm)
   }
 
   get #editor() {
