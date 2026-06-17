@@ -41,7 +41,7 @@ export class ShowInvisiblesExtension extends LexxyExtension {
       name: "show-invisibles",
       class: "lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end",
       title: "Show formatting marks",
-      "aria-pressed": this.#marksVisible.toString()
+      "aria-pressed": "false"
     }, ToolbarIcons.showInvisibles)
   }
 
@@ -55,15 +55,8 @@ export class ShowInvisiblesExtension extends LexxyExtension {
   }
 
   #toggle = () => {
-    const visible = this.#contentElement.classList.toggle(SHOW_INVISIBLES_CLASS)
+    const content = this.editorElement.editorContentElement
+    const visible = content.classList.toggle(SHOW_INVISIBLES_CLASS)
     this.#button.setAttribute("aria-pressed", visible.toString())
-  }
-
-  get #marksVisible() {
-    return this.#contentElement.classList.contains(SHOW_INVISIBLES_CLASS)
-  }
-
-  get #contentElement() {
-    return this.editorElement.editorContentElement
   }
 }

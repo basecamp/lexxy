@@ -1,10 +1,9 @@
 import { LineBreakNode } from "lexical"
 
-// Renders a soft return as a markable element in the editor DOM so a formatting
-// mark can be painted on it via CSS. Browsers don't draw ::before/::after on a
-// bare <br>, and a run of <br><br> offers no element to hang a marker on, so the
-// <br> is wrapped in a span the stylesheet can target. exportDOM still emits a
-// plain <br>, leaving serialized content untouched.
+// Wraps a soft return's <br> in a markable span so CSS can paint a formatting
+// mark on it: browsers don't draw ::before/::after on a bare <br>, and a run of
+// <br><br> offers no element to hang a marker on. exportDOM still emits a plain
+// <br>, so serialized content is unchanged.
 export class MarkableLineBreakNode extends LineBreakNode {
   $config() {
     return this.config("markable_line_break", { extends: LineBreakNode })
