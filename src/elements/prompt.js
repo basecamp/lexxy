@@ -32,6 +32,7 @@ export class LexicalPromptElement extends HTMLElement {
     this.source = this.#createSource()
 
     this.#addTriggerListener()
+    this.#removePopoverBeforeTurboCaches()
     this.toggleAttribute("connected", true)
   }
 
@@ -39,7 +40,7 @@ export class LexicalPromptElement extends HTMLElement {
     this.#popoverListeners.dispose()
     this.#globalListeners.dispose()
     this.source = null
-    this.popoverElement = null
+    this.#removePopover()
   }
 
 
@@ -333,6 +334,21 @@ export class LexicalPromptElement extends HTMLElement {
 
     await nextFrame()
     this.#addTriggerListener()
+  }
+
+  // The popover is appended to the <lexxy-editor> subtree, so Turbo serializes it
+  // into the page cache. Removing it before caching prevents an orphaned, unmanaged
+  // popover from being restored on history back/forward.
+  #removePopoverBeforeTurboCaches() {
+    this.#globalListeners.track(
+      registerEventListener(document, "turbo:before-cache", () => this.#removePopover())
+    )
+  }
+
+  #removePopover() {
+    this.#popoverListeners.dispose()
+    this.popoverElement?.remove()
+    this.popoverElement = null
   }
 
   #filterOptions = async () => {
