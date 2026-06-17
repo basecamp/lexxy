@@ -19,6 +19,17 @@ test.describe("Paste — Plain text paths and spacing", () => {
     expect(await editor.plainTextValue()).toBe(path)
   })
 
+  test("preserves a UNC path with leading backslashes, single spaces, and parentheses", async ({ editor }) => {
+    const path = "\\\\Rlgokc-asfs01\\tmfl_Active\\Vonallmen Capital Partners\\10177.000-Vonallmen Capital Partners - General\\DRAF\\Consulting Agreement - Michael Shanks 05.22.2026(282407).docx"
+
+    await editor.paste(path)
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("a")).toHaveCount(0)
+    })
+    expect(await editor.plainTextValue()).toBe(path)
+  })
+
   test("preserves runs of consecutive spaces in plain text", async ({ editor }) => {
     const text = "path  with    multiple   spaces"
 
