@@ -1,6 +1,7 @@
 import Lexxy from "../config/lexxy"
-import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
+import { $getEditor, $getNearestRootOrShadowRoot, $setSelection, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
+import { $createNodeSelectionWith } from "../helpers/lexical_helper"
 import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
 import { parseBoolean } from "../helpers/string_helper"
 import { REWRITE_HISTORY_COMMAND } from "../extensions/rewritable_history_extension"
@@ -156,8 +157,13 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     if (this.uploadError !== prevNode.uploadError) return true
 
     const caption = dom.querySelector("figcaption textarea")
-    if (caption && this.caption) {
+    if (caption && prevNode.caption !== this.caption) {
       caption.value = this.caption
+    }
+
+    const captionText = dom.querySelector("figcaption .attachment__caption-text")
+    if (captionText) {
+      captionText.textContent = this.label
     }
 
     return false
@@ -444,19 +450,31 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   #createEditableCaption() {
     const caption = createElement("figcaption", { className: "attachment__caption" })
+
+    const text = createElement("span", { className: "attachment__caption-text", textContent: this.label })
     const input = createElement("textarea", {
       value: this.caption,
       placeholder: this.fileName,
+      ariaLabel: this.isVideo ? "Video caption" : "Image caption",
+      ariaHidden: "true",
+      tabIndex: -1,
       rows: "1"
     })
 
-    input.addEventListener("focusin", () => input.placeholder = "Add caption...")
-    input.addEventListener("blur", (event) => this.#handleCaptionInputBlurred(event))
+    input.addEventListener("focusin", () => {
+      input.placeholder = "Add caption..."
+      input.ariaHidden = false
+    })
+    input.addEventListener("blur", (event) => {
+      input.ariaHidden = true
+      this.#handleCaptionInputBlurred(event)
+    })
     input.addEventListener("keydown", (event) => this.#handleCaptionInputKeydown(event))
     input.addEventListener("copy", (event) => event.stopPropagation())
     input.addEventListener("cut", (event) => event.stopPropagation())
     input.addEventListener("paste", (event) => event.stopPropagation())
 
+    caption.appendChild(text)
     caption.appendChild(input)
 
     return caption
@@ -481,6 +499,17 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       this.editor.update(() => {
         // Place the cursor after the current image
         this.selectNext(0, 0)
+      }, {
+        tag: HISTORY_MERGE_TAG
+      })
+    } else if (event.key === "Escape") {
+      event.preventDefault()
+      event.target.blur()
+
+      this.editor.getRootElement()?.focus({ preventScroll: true })
+
+      this.editor.update(() => {
+        $setSelection($createNodeSelectionWith(this))
       }, {
         tag: HISTORY_MERGE_TAG
       })

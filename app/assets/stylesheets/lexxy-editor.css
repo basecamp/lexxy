@@ -1114,9 +1114,10 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
 
 /* --------------------------------------------------------------------------
 /* Visually-hidden content kept reachable by assistive tech: announcements
- * from <lexxy-live-region> and the fake selection that gives screen readers
- * a label to read when a decorator is selected. */
-:where(lexxy-live-region, .lexxy-fake-selection) {
+ * from <lexxy-live-region>, the fake selection that gives screen readers a
+ * label to read when a decorator is selected, and the caption text that
+ * mirrors the editable textarea in browse mode. */
+:where(lexxy-live-region, .lexxy-fake-selection, .attachment__caption-text) {
   block-size: 1px;
   border: 0;
   clip-path: inset(50%);
