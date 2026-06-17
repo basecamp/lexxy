@@ -55,6 +55,10 @@ export class HorizontalDividerNode extends DecoratorNode {
     return false
   }
 
+  get label() {
+    return "Horizontal divider"
+  }
+
   exportDOM() {
     const hr = createElement("hr")
     return { element: hr }
