@@ -64,7 +64,10 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    $expandSelectionToLineBreaksAndSplitAtEdges(selection)
+    // Scope the fallback expansion to the nearest block (the list item) rather
+    // than the top-level element (the whole list), so removing the bullet from
+    // one item leaves the rest of the list intact.
+    $expandSelectionToLineBreaksAndSplitAtEdges(selection, { scope: "nearestBlock" })
     $setBlocksType(selection, () => $createParagraphNode())
   }
 

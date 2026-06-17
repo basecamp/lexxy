@@ -221,8 +221,12 @@ export function $splitSelectedParagraphsAtInnerLineBreaks(selection) {
   }
 }
 
-export function $expandSelectionToLineBreaksAndSplitAtEdges(selection) {
+export function $expandSelectionToLineBreaksAndSplitAtEdges(selection, { scope = "topLevel" } = {}) {
   $ensureForwardRangeSelection(selection)
+
+  const fallbackAncestor = scope === "nearestBlock"
+    ? (node) => $getNearestBlockElementAncestorOrThrow(node)
+    : (node) => node.getTopLevelElement()
 
   const focusCaret = $caretFromPoint(selection.focus, "next")
   const anchorCaret = $caretFromPoint(selection.anchor, "previous")
@@ -241,8 +245,8 @@ export function $expandSelectionToLineBreaksAndSplitAtEdges(selection) {
   const focusOuter = focusBrCaret && $splitAroundLineBreak(focusBrCaret)
   const anchorOuter = anchorBrCaret && $splitAroundLineBreak(anchorBrCaret)
 
-  const innerStart = anchorOuter?.getNextSibling() ?? $getNearestBlockElementAncestorOrThrow(selection.anchor.getNode())
-  const innerEnd = focusOuter?.getPreviousSibling() ?? $getNearestBlockElementAncestorOrThrow(selection.focus.getNode())
+  const innerStart = anchorOuter?.getNextSibling() ?? fallbackAncestor(selection.anchor.getNode())
+  const innerEnd = focusOuter?.getPreviousSibling() ?? fallbackAncestor(selection.focus.getNode())
   if (!innerStart || !innerEnd) return
 
   $setSelectionFromCaretRange($getCaretRange(
