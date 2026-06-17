@@ -1146,8 +1146,10 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
 }
 
 /* --------------------------------------------------------------------------
-/* Visually-hidden announcements from <lexxy-live-region>. */
-:where(lexxy-live-region) {
+/* Visually-hidden content kept reachable by assistive tech: announcements
+ * from <lexxy-live-region> and the fake selection that gives screen readers
+ * a label to read when a decorator is selected. */
+:where(lexxy-live-region, .lexxy-fake-selection) {
   block-size: 1px;
   border: 0;
   clip-path: inset(50%);
@@ -1157,4 +1159,11 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
   padding: 0;
   position: absolute;
   white-space: nowrap;
+}
+
+/* The DOM Selection API needs user-select:text to park a range on the fake
+ * selection span while it stays invisible to sighted users. */
+.lexxy-fake-selection {
+  user-select: text;
+  -webkit-user-select: text;
 }
