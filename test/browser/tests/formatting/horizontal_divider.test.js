@@ -48,7 +48,7 @@ test.describe("Horizontal divider", () => {
     await assertEditorHtml(editor, "<p>Text before</p><p>Text after</p>")
   })
 
-  test("delete horizontal divider with the delete button", async ({
+  test("delete horizontal divider with the toolbar button", async ({
     page,
     editor,
   }) => {
@@ -60,11 +60,10 @@ test.describe("Horizontal divider", () => {
       .locator("figure.horizontal-divider")
       .click()
 
-    await expect(
-      editor.locator.locator("lexxy-node-delete-button"),
-    ).toBeVisible()
-    await editor.locator
-      .locator("lexxy-node-delete-button button[aria-label='Remove']")
+    const toolbar = editor.locator.locator("lexxy-attachment-toolbar")
+    await expect(toolbar).toBeVisible()
+    await toolbar
+      .locator("button[aria-label='Remove']")
       .click()
 
     await assertEditorContent(editor, async (content) => {

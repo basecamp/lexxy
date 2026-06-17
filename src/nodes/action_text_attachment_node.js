@@ -223,9 +223,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     figure.draggable = true
     figure.dataset.lexicalNodeKey = this.__key
 
-    const deleteButton = createElement("lexxy-node-delete-button")
-    figure.appendChild(deleteButton)
-
     return figure
   }
 
@@ -243,6 +240,15 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   get isVideo() {
     return this.contentType.startsWith("video/")
+  }
+
+  focusCaption() {
+    const textarea = this.editor.getElementByKey(this.getKey())?.querySelector("figcaption textarea")
+    if (textarea) {
+      textarea.ariaHidden = false
+      textarea.focus()
+    }
+    return textarea != null
   }
 
   #createDOMForPendingPreview() {
