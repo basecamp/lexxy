@@ -17,7 +17,7 @@ import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_nod
 import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
-import { $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
+import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -423,7 +423,7 @@ export default class Contents {
   }
 
   #insertListInsideQuote(listType) {
-    for (const group of this.#consecutiveSiblingGroups(this.#quotedBlocksInSelection())) {
+    for (const group of $consecutiveSiblingGroups(this.#quotedBlocksInSelection())) {
       this.#wrapBlocksInList(group, listType)
     }
   }
@@ -450,24 +450,6 @@ export default class Contents {
       list.append(listItem)
       block.remove()
     }
-  }
-
-  #consecutiveSiblingGroups(blocks) {
-    const ordered = [ ...blocks ].sort((a, b) => a.getIndexWithinParent() - b.getIndexWithinParent())
-    const groups = []
-
-    for (const block of ordered) {
-      const lastGroup = groups.at(-1)
-      const previous = lastGroup?.at(-1)
-
-      if (previous && previous.getParent().is(block.getParent()) && previous.getNextSibling()?.is(block)) {
-        lastGroup.push(block)
-      } else {
-        groups.push([ block ])
-      }
-    }
-
-    return groups
   }
 
   #splitParagraphsAtLineBreaksUnlessInsideList() {
