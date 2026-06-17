@@ -1,4 +1,4 @@
-import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
+import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
@@ -350,6 +350,31 @@ function $splitAroundLineBreak(lineBreakCaret) {
   }
 
   return outer
+}
+
+// Lexical's RangeSelection.insertNodes/insertLineBreak require every selection point to have a
+// block ancestor with inline children. An element point on a container of block nodes — e.g. a
+// quote holding paragraphs — has none, so Lexical throws invariant #211 or #212. This detects
+// such a point so callers can descend it to a leaf before inserting.
+export function $isPointOnBlockContainer(point) {
+  if (point.type !== "element") return false
+
+  const firstChild = point.getNode().getFirstChild()
+  return ($isElementNode(firstChild) || $isDecoratorNode(firstChild)) && !firstChild.isInline()
+}
+
+export function $hasPointOnBlockContainer(selection) {
+  return $isRangeSelection(selection) &&
+    [ selection.anchor, selection.focus ].some($isPointOnBlockContainer)
+}
+
+// Descend any block-container element point in the selection to a leaf position, so a subsequent
+// Lexical insert (insertNodes, insertLineBreak, INSERT_PARAGRAPH) doesn't throw invariant #211/#212.
+export function $normalizeBlockContainerSelection(selection = $getSelection()) {
+  if (!$hasPointOnBlockContainer(selection)) return false
+
+  $normalizeSelection(selection)
+  return true
 }
 
 export function $consecutiveSiblingGroups(blocks) {

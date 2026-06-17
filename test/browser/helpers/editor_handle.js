@@ -88,6 +88,20 @@ export class EditorHandle {
     await this.flush()
   }
 
+  // Selects the first block container (a quote) at an element point — a selection
+  // state mouse/keyboard can't produce, since Lexical normalizes DOM selections to leaves.
+  async placeCaretOnQuoteElement() {
+    await this.locator.evaluate((el) => {
+      return new Promise((resolve) => {
+        el.editor.update(() => {
+          const editorState = el.editor._pendingEditorState
+          const quote = editorState._nodeMap.get(editorState._nodeMap.get("root").__first)
+          quote.select(1, 1)
+        }, { onUpdate: resolve })
+      })
+    })
+  }
+
   async paste(text, { html, files = [], uriList } = {}) {
     await this.#ensureFirstInteraction()
     await this.content.evaluate(

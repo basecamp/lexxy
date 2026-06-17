@@ -4,9 +4,12 @@ import {
   $isRangeSelection,
   $isTextNode,
   $setSelection,
+  COMMAND_PRIORITY_HIGH,
   COMMAND_PRIORITY_NORMAL,
   FORMAT_TEXT_COMMAND,
   INDENT_CONTENT_COMMAND,
+  INSERT_LINE_BREAK_COMMAND,
+  INSERT_PARAGRAPH_COMMAND,
   KEY_ARROW_RIGHT_COMMAND,
   KEY_TAB_COMMAND,
   OUTDENT_CONTENT_COMMAND,
@@ -20,7 +23,7 @@ import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
-import { getListType } from "../helpers/lexical_helper"
+import { $normalizeBlockContainerSelection, getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { REMOVE_HIGHLIGHT_COMMAND, TOGGLE_HIGHLIGHT_COMMAND } from "../extensions/highlight_extension"
 
@@ -306,6 +309,16 @@ export class CommandDispatcher {
   #registerKeyboardCommands() {
     this.#registerCommandHandler(KEY_ARROW_RIGHT_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleArrowRightKey.bind(this))
     this.#registerCommandHandler(KEY_TAB_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleTabKey.bind(this))
+
+    // Run before Lexical's built-in insert handlers to descend an element point on a
+    // block container to a leaf, avoiding error #211 on Enter / Shift+Enter in a quote.
+    this.#registerCommandHandler(INSERT_LINE_BREAK_COMMAND, COMMAND_PRIORITY_HIGH, this.#normalizeBlockContainerSelection.bind(this))
+    this.#registerCommandHandler(INSERT_PARAGRAPH_COMMAND, COMMAND_PRIORITY_HIGH, this.#normalizeBlockContainerSelection.bind(this))
+  }
+
+  #normalizeBlockContainerSelection() {
+    $normalizeBlockContainerSelection()
+    return false
   }
 
   #handleArrowRightKey(event) {

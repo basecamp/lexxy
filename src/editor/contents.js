@@ -170,7 +170,7 @@ export default class Contents {
 
       const selection = $getSelection()
       if ($isRangeSelection(selection)) {
-        selection.insertNodes([ linkNode ])
+        NodeInserter.for(selection).insertNodes([ linkNode ])
         linkNodeKey = linkNode.getKey()
       }
     })
