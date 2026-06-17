@@ -207,12 +207,6 @@
         inset-inline-end: 0;
         position: absolute;
       }
-
-      lexxy-node-delete-button {
-        inset-block-start: 1.5ch;
-        inset-inline-end: 1.5ch;
-        inset-inline-start: unset;
-      }
     }
 
     &.attachment--error {
@@ -322,15 +316,6 @@
   .attachment:hover:not(.node--selected) {
     outline: var(--lexxy-focus-ring-size) solid color-mix(in oklch, var(--lexxy-focus-ring-color) 30%, transparent);
     outline-offset: var(--lexxy-focus-ring-offset);
-  }
-
-  .attachment--file {
-    lexxy-node-delete-button {
-      inset-block-start: 50%;
-      inset-inline-end: 1ch;
-      inset-inline-start: unset;
-      transform: translate(0, -50%);
-    }
   }
 
   /* Image galleries */
@@ -986,20 +971,18 @@
 
 
   /* --------------------------------------------------------------------------
-  /* Attachment delete button */
+  /* Attachment toolbar */
 
-  &:is(lexxy-node-delete-button) {
-    inset-block-start: 0;
-    inset-inline-start: 100%;
-    opacity: 0;
-    pointer-events: none;
+  &:is(lexxy-attachment-toolbar) {
+    display: flex;
+    transform: translate(-100%, 0);
 
-    .node--selected & {
-      opacity: 1;
-      pointer-events: auto;
+    &[hidden] {
+      display: none;
     }
 
-    .lexxy-node-delete:hover {
+    .lexxy-attachment-toolbar__remove:hover,
+    .lexxy-attachment-toolbar__remove:focus-visible {
       background-color: var(--lexxy-color-red);
     }
   }
@@ -1126,22 +1109,6 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
     --lexxy-attachment-text-color: var(--lexxy-color-ink-inverted);
 
     outline: none;
-  }
-
-  lexxy-node-delete-button {
-    inset-inline-start: 0;
-    line-height: 1lh;
-
-    .lexxy-floating-controls__group {
-      --button-size: 1lh;
-
-      background-color: var(--lexxy-color-accent-dark);
-      padding: 0;
-
-      button {
-        border-radius: 50%;
-      }
-    }
   }
 }
 
