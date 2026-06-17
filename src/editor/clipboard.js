@@ -165,6 +165,12 @@ export default class Clipboard {
   #pasteMarkdown(text) {
     const html = marked(text, { breaks: true })
     const doc = parseHtml(html)
+
+    if (this.#isPlainTextWithoutMarkdown(doc)) {
+      this.contents.insertText(text, { tag: PASTE_TAG })
+      return
+    }
+
     const detail = Object.freeze({
       markdown: text,
       document: doc,
@@ -173,6 +179,18 @@ export default class Clipboard {
 
     dispatch(this.editorElement, "lexxy:insert-markdown", detail)
     this.contents.insertDOM(doc, { tag: PASTE_TAG })
+  }
+
+  // Markdown conversion collapses runs of whitespace and unescapes backslashes,
+  // silently corrupting plain text such as Windows/UNC file paths. When the text
+  // carries no Markdown structure, paste it verbatim instead.
+  #isPlainTextWithoutMarkdown(doc) {
+    const elements = Array.from(doc.body.children)
+    if (elements.length !== 1) return false
+
+    const paragraph = elements[0]
+    return paragraph.nodeName === "P"
+      && Array.from(paragraph.childNodes).every((node) => node.nodeType === Node.TEXT_NODE)
   }
 
   #pasteRichText(clipboardData) {

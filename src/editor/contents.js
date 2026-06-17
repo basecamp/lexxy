@@ -49,6 +49,13 @@ export default class Contents {
     }, { tag })
   }
 
+  insertText(text, { tag } = {}) {
+    this.editor.update(() => {
+      const paragraph = $createParagraphNode().append($createTextNode(text))
+      this.insertAtCursor(paragraph)
+    }, { tag })
+  }
+
   insertAtCursor(...nodes) {
     const selection = $getSelection() ?? $getRoot().selectEnd()
     const inserter = NodeInserter.for(selection)
