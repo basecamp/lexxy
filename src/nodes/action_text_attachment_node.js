@@ -126,6 +126,32 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return figure
   }
 
+  get isAnnounceable() {
+    return true
+  }
+
+  get shouldAnnounceLabel() {
+    return true
+  }
+
+  setupAnnouncement(figure) {
+    const figcaption = figure.querySelector("figcaption")
+    if (figcaption) {
+      for (const child of figcaption.children) {
+        if (child.tagName !== "TEXTAREA") child.setAttribute("aria-hidden", "true")
+      }
+    }
+  }
+
+  teardownAnnouncement(figure) {
+    const figcaption = figure.querySelector("figcaption")
+    if (figcaption) {
+      for (const child of figcaption.children) {
+        if (child.tagName !== "TEXTAREA") child.removeAttribute("aria-hidden")
+      }
+    }
+  }
+
   updateDOM(prevNode, dom) {
     if (this.uploadError !== prevNode.uploadError) return true
 
@@ -211,6 +237,10 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   get isPreviewableImage() {
     return isPreviewableImage(this.contentType)
+  }
+
+  get label() {
+    return this.caption || this.altText || this.fileName || ""
   }
 
   get isVideo() {
