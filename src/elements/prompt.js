@@ -161,22 +161,28 @@ export class LexicalPromptElement extends HTMLElement {
         const { node, offset } = this.#selection.selectedNodeWithOffset()
         if (!node) return
 
-        if ($isTextNode(node) && offset > 0) {
-          const fullText = node.getTextContent()
-          const textBeforeCursor = fullText.slice(0, offset)
-          const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger)
-          const triggerEndIndex = lastTriggerIndex + this.trigger.length - 1
-
-          // If trigger is not found, or cursor is at or before the trigger end position, hide popover
-          if (lastTriggerIndex === -1 || offset <= triggerEndIndex) {
-            this.#hidePopover()
-          }
+        if (this.#cursorIsTypingSearchTerm(node, offset)) {
+          return
         } else {
-          // Cursor is not in a text node or at offset 0, hide popover
           this.#hidePopover()
         }
       })
     }))
+  }
+
+  // The popover should stay open only while the cursor sits at the end of the
+  // trigger and its search term, with no whitespace in between. When the cursor
+  // moves away — before the trigger, or past the token into later text — the
+  // text between the trigger and the cursor breaks that run and we dismiss.
+  #cursorIsTypingSearchTerm(node, offset) {
+    if (!$isTextNode(node) || offset === 0) return false
+
+    const textBeforeCursor = node.getTextContent().slice(0, offset)
+    const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger)
+    if (lastTriggerIndex === -1) return false
+
+    const searchTerm = textBeforeCursor.slice(lastTriggerIndex + this.trigger.length)
+    return !/[ \n]/.test(searchTerm)
   }
 
   get #editor() {
