@@ -12,7 +12,7 @@ import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
 import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } from "../helpers/lexical_helper"
 import { LinkNode } from "@lexical/link"
-import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
+import { $isHeadingNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
@@ -157,6 +157,10 @@ export default class Selection {
 
   get isInsideList() {
     return this.nearestNodeOfType(ListItemNode)
+  }
+
+  get isInsideBlockQuote() {
+    return this.nearestNodeOfType(QuoteNode)
   }
 
   get isIndentedList() {

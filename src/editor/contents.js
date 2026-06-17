@@ -414,7 +414,7 @@ export default class Contents {
   }
 
   #applyListFormat(listType, command) {
-    if (this.#selectionInsideQuote()) {
+    if (this.selection.isInsideBlockQuote) {
       this.#insertListInsideQuote(listType)
     } else {
       this.#splitParagraphsAtLineBreaksUnlessInsideList()
@@ -422,16 +422,6 @@ export default class Contents {
     }
   }
 
-  // Lexical's $insertList only stops climbing at a root or shadow root, so a
-  // QuoteNode is transparent to it: listing a quoted paragraph swallows the
-  // whole blockquote into a single list item and destroys the quote. We detect
-  // that case here and build the list ourselves (#insertListInsideQuote).
-  #selectionInsideQuote() {
-    return this.#quotedBlocksInSelection().length > 0
-  }
-
-  // Build the list at the paragraph level for the quoted blocks, leaving the
-  // surrounding quote intact.
   #insertListInsideQuote(listType) {
     for (const group of this.#consecutiveSiblingGroups(this.#quotedBlocksInSelection())) {
       this.#wrapBlocksInList(group, listType)
