@@ -46,6 +46,10 @@ export function getListType(node) {
   return list?.getListType() ?? null
 }
 
+export function announceFromEditor(editor, message, options) {
+  editor.getRootElement()?.closest("lexxy-editor")?.announce(message, options)
+}
+
 export function isEditorFocused(editor) {
   const rootElement = editor.getRootElement()
   return rootElement !== null && rootElement.contains(document.activeElement)
@@ -456,4 +460,3 @@ export function $consecutiveSiblingGroups(blocks) {
 
   return groups
 }
-
