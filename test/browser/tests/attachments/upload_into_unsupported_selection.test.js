@@ -144,4 +144,39 @@ test.describe("Uploading into an unsupported selection", () => {
     await expect(editor.content.locator("figure.attachment")).toHaveCount(2, { timeout: 10_000 })
     expect(errors).toEqual([])
   })
+
+  // "Cannot read properties of undefined (reading 'is')" / "(reading 'insertAfter')":
+  // a node selection whose selected node is gone resolves to an empty getNodes(), so
+  // NodeSelectionNodeInserter started from an undefined lastNode. A document-level drop
+  // relayed through Contents#uploadFiles then crashed before inserting anything.
+  test("uploading a file with an empty node selection lands the file", async ({ page, editor }) => {
+    await editor.setValue("<p>hello world</p>")
+    await editor.flush()
+
+    const errors = []
+    page.on("pageerror", (error) => errors.push(error.message))
+
+    const errorMessage = await page.evaluate(async () => {
+      const { $createNodeSelection, $setSelection } = await import("/@id/lexical")
+      const editorElement = document.querySelector("lexxy-editor")
+
+      editorElement.editor.update(() => {
+        const selection = $createNodeSelection()
+        selection.add("a-node-key-that-does-not-exist")
+        $setSelection(selection)
+      })
+
+      const file = new File([ "%PDF-1.4 dummy" ], "dropped.pdf", { type: "application/pdf" })
+      try {
+        editorElement.contents.uploadFiles([ file ])
+        return null
+      } catch (error) {
+        return error.message
+      }
+    })
+
+    expect(errorMessage).toBeNull()
+    expect(errors).toEqual([])
+    await expect(editor.content.locator("figure.attachment")).toHaveCount(1, { timeout: 10_000 })
+  })
 })

@@ -4,7 +4,7 @@ import BaseNodeInserter from "./base_node_inserter"
 
 export default class NodeSelectionNodeInserter extends BaseNodeInserter {
   static handles(selection) {
-    return $isNodeSelection(selection)
+    return $isNodeSelection(selection) && selection.getNodes().length > 0
   }
 
   insertNodes(nodes) {
