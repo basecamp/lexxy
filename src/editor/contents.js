@@ -18,7 +18,7 @@ import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode }
 import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
 import PastedContentFormatter from "./contents/pasted_content_formatter"
-import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
+import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $normalizeListSpacing, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -41,7 +41,8 @@ export default class Contents {
     this.editor.update(() => {
       if ($hasUpdateTag(PASTE_TAG)) this.#formatPastedDOM(doc)
 
-      const nodes = this.editorElement.$generateNodesFromDOM(doc)
+      let nodes = this.editorElement.$generateNodesFromDOM(doc)
+      if ($hasUpdateTag(PASTE_TAG)) nodes = $normalizeListSpacing(nodes)
 
       if (!$hasUpdateTag(PASTE_TAG) || !this.#dispatchPastedNodesCommand(nodes)) {
         this.#insertUploadNodes(nodes) || this.insertAtCursor(...nodes)

@@ -1,5 +1,5 @@
-import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
-import { ListNode } from "@lexical/list"
+import { $caretFromPoint, $createLineBreakNode, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
+import { $isListNode, ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
 import { $ensureForwardRangeSelection, $isAtNodeEnd } from "@lexical/selection"
@@ -375,6 +375,82 @@ export function $normalizeBlockContainerSelection(selection = $getSelection()) {
 
   $normalizeSelection(selection)
   return true
+}
+
+// Pasted lists often arrive flanked by stray line breaks (e.g. HelpScout wraps
+// a numbered list in `text<br><br><ol>…</ol><br><br>text`). Different sources
+// leave a different number of breaks, and Lexical's clipboard insertion drops
+// some while keeping others, producing lopsided spacing. Normalize the top-level
+// pasted nodes so every list is separated from its neighbors by exactly one
+// blank line on each side.
+export function $normalizeListSpacing(nodes) {
+  const result = []
+
+  for (let index = 0; index < nodes.length; index++) {
+    const node = nodes[index]
+
+    if ($isListNode(node)) {
+      $trimTrailingLineBreaks(result.at(-1))
+      result.push(node)
+      index = $appendNormalizedTrailingSpacing(nodes, index, result)
+    } else {
+      result.push(node)
+    }
+  }
+
+  return result
+}
+
+function $trimTrailingLineBreaks(node) {
+  if (!$isParagraphNode(node)) return
+
+  let trailing = node.getLastChild()
+  while ($isLineBreakNode(trailing) && $isLineBreakNode(trailing.getPreviousSibling())) {
+    const previous = trailing.getPreviousSibling()
+    trailing.remove()
+    trailing = previous
+  }
+}
+
+function $appendNormalizedTrailingSpacing(nodes, listIndex, result) {
+  const following = nodes[listIndex + 1]
+
+  if ($isParagraphNode(following)) {
+    $trimLeadingLineBreaks(following)
+    result.push(following)
+    return listIndex + 1
+  }
+
+  let nextIndex = listIndex + 1
+  while ($isLineBreakNode(nodes[nextIndex])) {
+    nextIndex++
+  }
+
+  const inlineNodes = []
+  while (nextIndex < nodes.length && !$isBlockNode(nodes[nextIndex])) {
+    inlineNodes.push(nodes[nextIndex])
+    nextIndex++
+  }
+
+  if (inlineNodes.length > 0) {
+    const paragraph = $createParagraphNode()
+    paragraph.append($createLineBreakNode(), ...inlineNodes)
+    result.push(paragraph)
+  }
+
+  return nextIndex - 1
+}
+
+function $trimLeadingLineBreaks(node) {
+  let leading = node.getFirstChild()
+  while ($isLineBreakNode(leading) && $isLineBreakNode(leading.getNextSibling())) {
+    leading.remove()
+    leading = node.getFirstChild()
+  }
+}
+
+function $isBlockNode(node) {
+  return node && $isElementNode(node) && !node.isInline()
 }
 
 export function $consecutiveSiblingGroups(blocks) {
