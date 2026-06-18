@@ -83,9 +83,3 @@ async function materializePending(editor, index, blob) {
     window.__pendingAttachments[index].setAttributes(blob)
   }, { index, blob })
 }
-
-async function removePending(editor, index) {
-  await editor.locator.evaluate((el, index) => {
-    window.__pendingAttachments[index].remove()
-  }, index)
-}
