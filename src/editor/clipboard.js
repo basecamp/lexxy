@@ -168,17 +168,16 @@ export default class Clipboard {
 
     if (this.#isPlainTextWithoutMarkdown(doc)) {
       this.contents.insertText(text, { tag: PASTE_TAG })
-      return
+    } else {
+      const detail = Object.freeze({
+        markdown: text,
+        document: doc,
+        addBlockSpacing: () => addBlockSpacing(doc)
+      })
+
+      dispatch(this.editorElement, "lexxy:insert-markdown", detail)
+      this.contents.insertDOM(doc, { tag: PASTE_TAG })
     }
-
-    const detail = Object.freeze({
-      markdown: text,
-      document: doc,
-      addBlockSpacing: () => addBlockSpacing(doc)
-    })
-
-    dispatch(this.editorElement, "lexxy:insert-markdown", detail)
-    this.contents.insertDOM(doc, { tag: PASTE_TAG })
   }
 
   // Markdown conversion collapses runs of whitespace and unescapes backslashes,
