@@ -197,15 +197,25 @@ export default class Contents {
       const fullText = anchorNode.getTextContent()
       const offset = anchor.offset
 
-      const textBeforeCursor = fullText.slice(0, offset)
-
-      const lastIndex = textBeforeCursor.lastIndexOf(string)
+      const lastIndex = fullText.slice(0, offset).lastIndexOf(string)
       if (lastIndex !== -1) {
-        result = textBeforeCursor.slice(lastIndex + string.length)
+        result = fullText.slice(lastIndex + string.length, this.#endOffsetAt(fullText, offset))
       }
     })
 
     return result
+  }
+
+  // The query runs from the trigger up to the next whitespace, even when the
+  // cursor sits inside an existing word — inserting "@" before "Jack" must
+  // filter by "Jack" rather than treating the prompt as empty.
+  #endOffsetAt(fullText, cursorOffset) {
+    const whitespaceOffset = fullText.slice(cursorOffset).search(/\s/)
+    if (whitespaceOffset === -1) {
+      return fullText.length
+    } else {
+      return cursorOffset + whitespaceOffset
+    }
   }
 
   containsTextBackUntil(string) {
@@ -238,10 +248,10 @@ export default class Contents {
     const { anchorNode, offset } = this.#getTextAnchorData()
     if (!anchorNode) return
 
-    const lastIndex = this.#findLastIndexBeforeCursor(anchorNode, offset, stringToReplace)
+    const lastIndex = this.#findReplacementStart(anchorNode, offset, stringToReplace)
     if (lastIndex === -1) return
 
-    this.#performTextReplacement(anchorNode, selection, offset, lastIndex, replacementNodes)
+    this.#performTextReplacement(anchorNode, selection, lastIndex, stringToReplace, replacementNodes)
   }
 
   uploadFiles(files, { selectLast } = {}) {
@@ -528,19 +538,27 @@ export default class Contents {
     return { anchorNode, offset: anchor.offset }
   }
 
-  #findLastIndexBeforeCursor(anchorNode, offset, stringToReplace) {
+  // The replaced span can straddle the cursor (e.g. "@Jack" when "@" was just
+  // inserted before "Jack"), so we anchor on the trigger before the cursor and
+  // verify the whole string matches there rather than searching text up to it.
+  #findReplacementStart(anchorNode, offset, stringToReplace) {
     const fullText = anchorNode.getTextContent()
-    const textBeforeCursor = fullText.slice(0, offset)
-    return textBeforeCursor.lastIndexOf(stringToReplace)
+    const triggerIndex = fullText.slice(0, offset).lastIndexOf(stringToReplace[0])
+
+    if (triggerIndex !== -1 && fullText.startsWith(stringToReplace, triggerIndex)) {
+      return triggerIndex
+    } else {
+      return -1
+    }
   }
 
-  #performTextReplacement(anchorNode, selection, offset, lastIndex, replacementNodes) {
+  #performTextReplacement(anchorNode, selection, startIndex, stringToReplace, replacementNodes) {
     const fullText = anchorNode.getTextContent()
-    const textBeforeString = fullText.slice(0, lastIndex)
-    const textAfterCursor = fullText.slice(offset)
+    const textBeforeString = fullText.slice(0, startIndex)
+    const textAfterString = fullText.slice(startIndex + stringToReplace.length)
 
     const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, selection, textBeforeString)
-    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, selection, textAfterCursor || " ")
+    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, selection, textAfterString || " ")
 
     anchorNode.replace(textNodeBefore)
 
@@ -548,7 +566,7 @@ export default class Contents {
     lastInsertedNode.insertAfter(textNodeAfter)
 
     this.#appendLineBreakIfNeeded(textNodeAfter.getParentOrThrow())
-    const cursorOffset = textAfterCursor ? 0 : 1
+    const cursorOffset = textAfterString ? 0 : 1
     textNodeAfter.select(cursorOffset, cursorOffset)
   }
 
