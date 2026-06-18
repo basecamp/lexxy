@@ -295,7 +295,7 @@ export default class Contents {
       const uploadNode = this.$createPendingUploadNode(file)
       this.insertAtCursor(uploadNode)
       nodeKey = uploadNode.getKey()
-    }, { tag: HISTORY_MERGE_TAG })
+    })
 
     return nodeKey ? this.#pendingAttachmentHandle(nodeKey) : null
   }
