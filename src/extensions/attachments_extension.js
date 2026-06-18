@@ -48,11 +48,12 @@ export class AttachmentsExtension extends LexxyExtension {
 
   #handleUploadMutations(mutations) {
     const previousUploadsCount = this.#uploadsCount
-    for (const [ , mutation ] of mutations) {
+    for (const [ key, mutation ] of mutations) {
       if (mutation === "created") {
         this.#uploadsCount++
       } else if (mutation === "destroyed") {
         this.#uploadsCount--
+        this.editorElement.uploadRequests.abort(key)
       }
     }
 
