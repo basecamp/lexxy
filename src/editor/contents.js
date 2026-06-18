@@ -284,24 +284,46 @@ export default class Contents {
     })
   }
 
+  $createPendingUploadNode(file) {
+    return $createActionTextAttachmentUploadNode({
+      file,
+      uploadUrl: null,
+      blobUrlTemplate: this.editorElement.blobUrlTemplate,
+      contentType: file.type,
+    })
+  }
+
   insertPendingAttachment(file) {
     if (!this.editorElement.supportsAttachments) return null
 
     let nodeKey = null
     this.editor.update(() => {
-      const uploadNode = new ActionTextAttachmentUploadNode({
-        file,
-        uploadUrl: null,
-        blobUrlTemplate: this.editorElement.blobUrlTemplate,
-        editor: this.editor
-      })
+      const uploadNode = this.$createPendingUploadNode(file)
       this.insertAtCursor(uploadNode)
       nodeKey = uploadNode.getKey()
-    }, { tag: HISTORY_MERGE_TAG })
+    })
 
-    if (!nodeKey) return null
+    return nodeKey ? this.#pendingAttachmentHandle(nodeKey) : null
+  }
 
+  insertPendingAttachments(files) {
+    const fileList = Array.from(files)
+    if (!this.editorElement.supportsAttachments || fileList.length === 0) return []
+
+    let nodeKeys = []
+    this.editor.update(() => {
+      const uploader = Uploader.for(this.editorElement, fileList, { pending: true })
+      uploader.$uploadFiles()
+      nodeKeys = (uploader.nodes ?? []).map(node => node.getKey())
+    })
+
+    return nodeKeys.map(nodeKey => this.#pendingAttachmentHandle(nodeKey))
+  }
+
+  #pendingAttachmentHandle(initialNodeKey) {
     const editor = this.editor
+    let nodeKey = initialNodeKey
+
     return {
       setAttributes(blob) {
         editor.update(() => {
