@@ -15,6 +15,7 @@ import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_ta
 
 import theme from "../config/theme"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import { UploadRequests } from "../editor/attachments/upload_requests"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
@@ -62,11 +63,16 @@ export class LexicalEditorElement extends HTMLElement {
 
   #validity = new Map()
   #validationTextArea = document.createElement("textarea")
+  #uploadRequests
 
   constructor() {
     super()
     this.internals = this.attachInternals()
     this.internals.role = "presentation"
+  }
+
+  get uploadRequests() {
+    return this.#uploadRequests
   }
 
   connectedCallback() {
@@ -89,6 +95,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(this.clipboard)
 
     this.adapter = new BrowserAdapter()
+    this.#uploadRequests = new UploadRequests()
 
     const commandDispatcher = CommandDispatcher.configureFor(this)
     this.#disposables.push(commandDispatcher)
@@ -869,6 +876,7 @@ export class LexicalEditorElement extends HTMLElement {
   #reset() {
     this.#dispose()
     this.#resetValidity()
+    this.#uploadRequests?.clear()
     this.editorContentElement?.remove()
     this.editorContentElement = null
 
