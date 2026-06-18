@@ -162,7 +162,9 @@ export class LexicalPromptElement extends HTMLElement {
         if (!node) return
 
         if (this.#cursorIsTypingSearchTerm(node, offset)) {
-          return
+          if (!this.popoverElement.hasAttribute("data-anchored")) {
+            this.#positionPopover()
+          }
         } else {
           this.#hidePopover()
         }
@@ -293,8 +295,16 @@ export class LexicalPromptElement extends HTMLElement {
     }
   }
 
+  // Right after a Turbo history restore the editor reconnects before the DOM selection
+  // is re-established, so the cursor geometry is momentarily unavailable. Anchoring then
+  // would pin the menu to the editor's left edge for the rest of the open cycle, so we
+  // skip it and let a later reposition anchor it once the selection is ready. The menu
+  // stays hidden until anchored (see the `[data-anchored]` rule in the stylesheet).
   #positionPopover() {
-    const { x, y, fontSize } = this.#selection.cursorPosition
+    const cursorPosition = this.#selection.cursorPosition
+    if (!cursorPosition) return
+
+    const { x, y, fontSize } = cursorPosition
     const editorRect = this.#editorElement.getBoundingClientRect()
     const contentRect = this.#editorContentElement.getBoundingClientRect()
     const verticalOffset = contentRect.top - editorRect.top
