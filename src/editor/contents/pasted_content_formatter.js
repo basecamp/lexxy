@@ -7,6 +7,7 @@ export default class PastedContentFormatter {
     this.#unwrapPlaceholderAnchors()
     this.#stripTableCellColorStyles()
     this.#stripStrayListChildren()
+    this.#stripLeadingEmptyListItems()
     return this.doc
   }
 
@@ -43,5 +44,22 @@ export default class PastedContentFormatter {
         list.removeChild(child)
       }
     }
+  }
+
+  // Editors such as HelpScout prefix a copied list with an empty first <li>,
+  // which renders as a spurious leading number (and line break) once imported.
+  // Drop empty items at the front while keeping intentional empty items further down.
+  #stripLeadingEmptyListItems() {
+    for (const list of this.doc.querySelectorAll("ol, ul")) {
+      let firstItem = list.querySelector(":scope > li")
+      while (firstItem && this.#isEmptyListItem(firstItem)) {
+        firstItem.remove()
+        firstItem = list.querySelector(":scope > li")
+      }
+    }
+  }
+
+  #isEmptyListItem(item) {
+    return item.querySelector("ol, ul") === null && item.textContent.trim() === ""
   }
 }

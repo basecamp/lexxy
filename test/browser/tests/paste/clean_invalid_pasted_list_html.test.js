@@ -66,6 +66,26 @@ test.describe("Paste list with stray non-<li> children before the first item", (
     expect(page).toHaveNoErrors()
   })
 
+  test("strips a leading empty <li> before the first item (HelpScout numbered list)", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+    startMonitoringConsole(page)
+
+    await editor.setValue("<p></p>")
+    await editor.focus()
+
+    await editor.paste("ignored", {
+      html: "<ol><li><br></li><li>New For You</li><li>Bubbled Up</li><li>Previous Notifications</li></ol>",
+    })
+    await editor.flush()
+
+    await assertEditorHtml(
+      editor,
+      '<ol><li value="1">New For You</li><li value="2">Bubbled Up</li><li value="3">Previous Notifications</li></ol>',
+    )
+    expect(page).toHaveNoErrors()
+  })
+
   test("keeps an empty <li> that is not leading", async ({ page, editor }) => {
     await page.goto("/")
     await editor.waitForConnected()
