@@ -73,7 +73,8 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   createDOM() {
-    const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true })
+    const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true, draggable: true })
+    figure.dataset.lexicalNodeKey = this.__key
 
     figure.insertAdjacentHTML("beforeend", sanitize(this.innerHtml))
 
@@ -124,4 +125,8 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   decorate() {
     return null
   }
+}
+
+export function $isCustomActionTextAttachmentNode(node) {
+  return node instanceof CustomActionTextAttachmentNode
 }
