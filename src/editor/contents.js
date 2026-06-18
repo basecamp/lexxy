@@ -390,9 +390,6 @@ export default class Contents {
     })
   }
 
-  // A node selection whose selected node is gone (e.g. removed before a late,
-  // document-level drop lands here) resolves to no nodes, so there is nothing to
-  // insert after. Fall back to the document end, like a missing selection.
   #insertableSelection() {
     const selection = $getSelection()
     if ($isNodeSelection(selection) && selection.getNodes().length === 0) {
