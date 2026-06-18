@@ -244,14 +244,13 @@ export default class Contents {
   replaceTextBackUntil(stringToReplace, replacementNodes) {
     replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ]
 
-    const selection = $getSelection()
     const { anchorNode, offset } = this.#getTextAnchorData()
     if (!anchorNode) return
 
     const lastIndex = this.#findReplacementStart(anchorNode, offset, stringToReplace)
     if (lastIndex === -1) return
 
-    this.#performTextReplacement(anchorNode, selection, lastIndex, stringToReplace, replacementNodes)
+    this.#performTextReplacement(anchorNode, lastIndex, stringToReplace, replacementNodes)
   }
 
   uploadFiles(files, { selectLast } = {}) {
@@ -574,13 +573,13 @@ export default class Contents {
     }
   }
 
-  #performTextReplacement(anchorNode, selection, startIndex, stringToReplace, replacementNodes) {
+  #performTextReplacement(anchorNode, startIndex, stringToReplace, replacementNodes) {
     const fullText = anchorNode.getTextContent()
     const textBeforeString = fullText.slice(0, startIndex)
     const textAfterString = fullText.slice(startIndex + stringToReplace.length)
 
-    const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, selection, textBeforeString)
-    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, selection, textAfterString || " ")
+    const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, textBeforeString)
+    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, textAfterString || " ")
 
     anchorNode.replace(textNodeBefore)
 
@@ -592,18 +591,12 @@ export default class Contents {
     textNodeAfter.select(cursorOffset, cursorOffset)
   }
 
-  #cloneTextNodeFormatting(anchorNode, selection, text) {
-    const parent = anchorNode.getParent()
-    const fallbackFormat = parent?.getTextFormat?.() || 0
-    const fallbackStyle = parent?.getTextStyle?.() || ""
-    const format = $isRangeSelection(selection) && selection.format ? selection.format : (anchorNode.getFormat() || fallbackFormat)
-    const style = $isRangeSelection(selection) && selection.style ? selection.style : (anchorNode.getStyle() || fallbackStyle)
-
+  #cloneTextNodeFormatting(anchorNode, text) {
     return $createTextNode(text)
-      .setFormat(format)
+      .setFormat(anchorNode.getFormat())
       .setDetail(anchorNode.getDetail())
       .setMode(anchorNode.getMode())
-      .setStyle(style)
+      .setStyle(anchorNode.getStyle())
   }
 
   #insertReplacementNodes(startNode, replacementNodes) {
