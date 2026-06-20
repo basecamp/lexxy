@@ -97,14 +97,53 @@ test.describe("Dragon NaturallySpeaking support", () => {
     expect(await editor.plainTextValue()).toBe("I'm dictating in the main content section")
     expect(pageErrors).toEqual([])
   })
+
+  // Dragon counts offsets over the whole field, with a newline between blocks,
+  // not relative to the node at the caret. In "First paragraph\nI'm dictating
+  // here", "dictating" sits at global offset 20, four characters into its own
+  // paragraph.
+  test("selects a word addressed by a global offset across paragraphs", async ({ editor }) => {
+    await editor.setValue("<p>First paragraph</p><p>I'm dictating here</p>")
+    await editor.select("here")
+    await postMakeChanges(editor, [ 20, 9, -1, 20, 9 ])
+    await editor.flush()
+
+    expect(await editor.content.evaluate(() => window.getSelection().toString())).toBe("dictating")
+    expect(pageErrors).toEqual([])
+  })
+
+  test("replaces a word addressed by a global offset across paragraphs", async ({ editor }) => {
+    await editor.setValue("<p>First paragraph</p><p>I'm dictating here</p>")
+    await editor.select("here")
+    await postMakeChanges(editor, [ 20, 9, "speaking", 28, 0 ])
+    await editor.flush()
+
+    expect(await editor.value()).toContain("I'm speaking here")
+    expect(await editor.value()).toContain("First paragraph")
+    expect(pageErrors).toEqual([])
+  })
+
+  test("addresses text after a decorator block without breaking", async ({ editor }) => {
+    await editor.setValue("<p>Before</p><hr><p>Dictating here</p>")
+    await editor.select("here")
+    await postMakeChanges(editor, [ 8, 9, -1, 8, 9 ])
+    await editor.flush()
+
+    expect(await editor.content.evaluate(() => window.getSelection().toString())).toBe("Dictating")
+    expect(pageErrors).toEqual([])
+  })
 })
 
 async function postMakeChanges(editor, args) {
   await editor.content.evaluate((_element, args) => {
-    window.postMessage(JSON.stringify({
-      protocol: "nuanria_messaging",
-      type: "request",
-      payload: { functionId: "makeChanges", args },
-    }), "*")
+    return new Promise((resolve) => {
+      window.postMessage(JSON.stringify({
+        protocol: "nuanria_messaging",
+        type: "request",
+        payload: { functionId: "makeChanges", args },
+      }), "*")
+      // Let the posted message reach the capture listener before the test reads back state.
+      setTimeout(resolve, 0)
+    })
   }, args)
 }
