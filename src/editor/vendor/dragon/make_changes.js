@@ -1,4 +1,4 @@
-import { $getSelection, $isRangeSelection, $isTextNode } from "lexical"
+import { $getRoot, $getSelection, $isElementNode, $isRangeSelection } from "lexical"
 
 const TEXT_FORMAT_BY_EXEC_COMMAND = new Map([
   [ "bold", "bold" ],
@@ -33,7 +33,8 @@ function isWellFormed(args) {
     (typeof text === "string" || text === -1)
 }
 
-// Offsets are relative to the text node at the selection anchor. A text of -1
+// Dragon addresses positions by their offset in the whole field, counting a
+// newline between blocks, not relative to the node at the caret. A text of -1
 // (a number, not a string) means "change the selection without touching the text".
 class MakeChangesMessage {
   constructor([ elementStart, elementLength, text, selStart, selLength, formatCommand ]) {
@@ -47,51 +48,40 @@ class MakeChangesMessage {
 
   applyTo(selection) {
     this.selection = selection
-    this.#setAddressedRange()
+    this.#selectAddressedRange()
     this.#insertText()
-    this.#setFinalSelection()
+    this.#selectFinalRange()
     this.#applyFormatCommand()
   }
 
-  #setAddressedRange() {
-    if ($isTextNode(this.#anchorNode) && this.elementStart >= 0 && this.elementLength >= 0) {
-      const end = this.elementStart + this.elementLength
-      this.selection.setTextNodeRange(this.#anchorNode, this.elementStart, this.#anchorNode, end)
+  #selectAddressedRange() {
+    if (this.elementStart >= 0 && this.elementLength >= 0) {
+      this.#select(this.elementStart, this.elementStart + this.elementLength)
     }
   }
 
-  get #anchorNode() {
-    return this.selection.anchor.getNode()
-  }
-
   #insertText() {
-    if (typeof this.text === "string" && (this.text !== "" || this.#hasTextToReplace)) {
+    if (typeof this.text === "string" && (this.text !== "" || this.elementLength > 0)) {
       this.selection.insertRawText(this.text)
     }
   }
 
-  get #hasTextToReplace() {
-    return $isTextNode(this.#anchorNode) && this.elementStart >= 0 && this.elementLength > 0
-  }
-
-  #setFinalSelection() {
-    if ($isTextNode(this.#anchorNode)) {
-      this.selection.setTextNodeRange(this.#anchorNode, this.#finalStart, this.#anchorNode, this.#finalEnd)
+  // Negative offsets collapse the selection instead of leaving a backward range
+  // that the next input would replace
+  #selectFinalRange() {
+    if (this.selStart >= 0 && this.selLength >= 0) {
+      this.#select(this.selStart, this.selStart + this.selLength)
+    } else {
+      this.#select(this.selStart, this.selStart)
     }
   }
 
-  get #finalStart() {
-    return Math.min(Math.max(this.selStart, 0), this.#anchorNode.getTextContentSize())
-  }
-
-  // Negative offsets collapse the selection instead of leaving a backward range
-  // that the next input would replace
-  get #finalEnd() {
-    return this.#hasFinalRange ? Math.min(this.selStart + this.selLength, this.#anchorNode.getTextContentSize()) : this.#finalStart
-  }
-
-  get #hasFinalRange() {
-    return this.selStart >= 0 && this.selLength >= 0
+  #select(from, to) {
+    const start = $pointAtGlobalOffset(from)
+    const end = $pointAtGlobalOffset(to)
+    if (start && end) {
+      this.selection.setTextNodeRange(start.node, start.offset, end.node, end.offset)
+    }
   }
 
   // Voice commands like "bold that" arrive as execCommand names. A collapsed
@@ -105,4 +95,32 @@ class MakeChangesMessage {
   get #format() {
     return TEXT_FORMAT_BY_EXEC_COMMAND.get(this.formatCommand)
   }
+}
+
+// Walk the text nodes in document order, counting a newline between top-level
+// blocks the way Dragon does, and return the text node and local offset that the
+// global offset lands in. Offsets past the end clamp to the last text node.
+function $pointAtGlobalOffset(offset) {
+  let consumed = 0
+  let lastNode = null
+
+  for (const [ index, block ] of $getRoot().getChildren().entries()) {
+    if (index > 0) consumed += 1
+
+    if ($isElementNode(block)) {
+      for (const node of block.getAllTextNodes()) {
+        const size = node.getTextContentSize()
+        if (offset <= consumed + size) {
+          return { node, offset: Math.max(offset - consumed, 0) }
+        }
+        consumed += size
+        lastNode = node
+      }
+    }
+  }
+
+  if (lastNode) {
+    return { node: lastNode, offset: lastNode.getTextContentSize() }
+  }
+  return null
 }
