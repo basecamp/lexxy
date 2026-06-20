@@ -29,6 +29,17 @@ test.describe("Dragon NaturallySpeaking support", () => {
     expect(pageErrors).toEqual([])
   })
 
+  test("a selection-only makeChanges keeps the serialized value cache instead of recomputing it", async ({ editor }) => {
+    // A selection-only change dirties no node, so the value cache should survive
+    // untouched. A sentinel tells "kept" apart from "recomputed to the same string".
+    await editor.locator.evaluate((element) => { element.cachedValue = "sentinel" })
+
+    await postMakeChanges(editor, [ 4, 9, -1, 4, 9 ])
+    await editor.flush()
+
+    expect(await editor.locator.evaluate((element) => element.cachedValue)).toBe("sentinel")
+  })
+
   test("selection-only makeChanges selects the range without touching the text", async ({ editor }) => {
     await postMakeChanges(editor, [ 4, 9, -1, 4, 9 ])
     await editor.flush()
