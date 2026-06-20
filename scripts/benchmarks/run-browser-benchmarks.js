@@ -61,6 +61,17 @@ const SCENARIOS = [
     },
     title: "Load many attachments",
   },
+  {
+    description: "Move the caret across a large document to measure selection-only update cost",
+    kind: "caret",
+    name: "move-caret-large-document",
+    payload: {
+      kind: "paragraphs",
+      paragraphs: 200,
+      wordsPerParagraph: 40,
+    },
+    title: "Move caret on large document",
+  },
 ]
 
 main().catch((error) => {
