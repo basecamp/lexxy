@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if page.title %}{{ page.title }} · {% endif %}{{ site.title }}</title>
+  {% seo %}
+  <link rel="stylesheet" href="{{ "/assets/landing.css" | relative_url }}">
+</head>
+<body class="landing">
+  <header class="landing__nav">
+    <a class="landing__brand" href="{{ "/" | relative_url }}">{{ site.title }}</a>
+    <nav>
+      <a href="{{ "/docs/" | relative_url }}">Docs</a>
+      <a href="{{ "/sandbox/" | relative_url }}">Sandbox</a>
+      <a href="https://github.com/basecamp/lexxy">GitHub</a>
+    </nav>
+  </header>
+
+  <main class="landing__content">
+    {{ content }}
+  </main>
+</body>
+</html>

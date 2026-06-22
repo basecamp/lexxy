@@ -1,0 +1,58 @@
+:root {
+  --landing-max-width: 60rem;
+  --landing-fg: #1b1b1f;
+  --landing-muted: #6b6b73;
+  --landing-accent: #3b5bdb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body.landing {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--landing-fg);
+  line-height: 1.5;
+}
+
+.landing__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: var(--landing-max-width);
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
+}
+
+.landing__brand {
+  font-weight: 700;
+  font-size: 1.25rem;
+  text-decoration: none;
+  color: var(--landing-fg);
+}
+
+.landing__nav nav {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.landing__nav nav a {
+  text-decoration: none;
+  color: var(--landing-muted);
+}
+
+.landing__nav nav a:hover {
+  color: var(--landing-accent);
+}
+
+.landing__content {
+  max-width: var(--landing-max-width);
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.landing__content a {
+  color: var(--landing-accent);
+}

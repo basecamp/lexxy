@@ -1,18 +1,19 @@
 ---
-title: Try it
-layout: default
-nav_order: 2
+layout: landing
+title: Sandbox
+permalink: /sandbox/
+nav_exclude: true
 ---
 
-# Try the Editor
-
-{::nomarkdown}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@37signals/lexxy@latest/dist/stylesheets/lexxy.css">
 <script type="module">
   import * as Lexxy from "https://cdn.jsdelivr.net/npm/@37signals/lexxy@latest/+esm";
 
   navigator.serviceWorker.register("{{ site.baseurl }}/attachments-sw.js");
 </script>
+
+<h1>Sandbox</h1>
+<p>Try the editor right here. Type, format, paste, and use <code>:</code> to insert an emoji.</p>
 
 <lexxy-editor
   class="lexxy-content"
@@ -42,4 +43,3 @@ nav_order: 2
     <lexxy-prompt-item search="crown king queen"><template type="menu">👑 Crown</template><template type="editor">👑</template></lexxy-prompt-item>
   </lexxy-prompt>
 </lexxy-editor>
-{:/nomarkdown}

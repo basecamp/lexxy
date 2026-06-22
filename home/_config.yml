@@ -25,7 +25,7 @@ gh_edit_link_text: "Edit this page on GitHub"
 gh_edit_repository: "https://github.com/basecamp/lexxy"
 gh_edit_branch: "main"
 gh_edit_view_mode: "edit"
-gh_edit_source: "docs"
+gh_edit_source: "home"
 
 # Color scheme
 color_scheme: light

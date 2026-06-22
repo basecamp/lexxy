@@ -76,15 +76,17 @@ Tests the full Rails stack: Action Text rendering and persistence, Trix ↔ Lexx
 
 ## Documentation
 
-To run the documentation site locally:
+The site lives in `home/` (a Jekyll site): the landing page and sandbox at the
+root, and the documentation under `home/docs/`. To run it locally:
 
 ```bash
-cd docs
+cd home
 bundle install
 bundle exec jekyll serve
 ```
 
-The docs will be available at http://localhost:4000/lexxy/.
+The site will be available at http://localhost:4000/lexxy/, with the docs at
+http://localhost:4000/lexxy/docs/ and the sandbox at http://localhost:4000/lexxy/sandbox/.
 
 ## Release
 
