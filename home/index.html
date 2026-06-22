@@ -1,19 +1,92 @@
 ---
 layout: landing
 title: Home
+editor: true
 nav_exclude: true
 ---
 
-<h1>Lexxy</h1>
-<p>A modern rich text editor for Rails.</p>
+<section class="hero">
+  <div class="container">
+    <span class="hero__badge">Early beta</span>
+    <h1>A modern rich text editor for Rails</h1>
+    <p class="hero__lead">
+      Lexxy is built on Lexical and wires straight into Action Text — clean HTML,
+      Markdown shortcuts, code highlighting, and attachments out of the box.
+    </p>
+    <div class="hero__actions">
+      <a class="btn btn--primary" href="#try">Try the sandbox</a>
+      <a class="btn btn--secondary" href="{{ "/docs/" | relative_url }}">Read the docs</a>
+    </div>
+  </div>
+</section>
 
-<p>
-  This is a placeholder home page. The marketing content and design will live here.
-  For now it just links the pieces together:
-</p>
+<section class="section section--tint">
+  <div class="container">
+    <div class="section__head">
+      <h2>Everything you'd expect, done right</h2>
+      <p>A focused set of features that respect your markup and your users.</p>
+    </div>
+    <div class="features">
+      <div class="feature">
+        <h3>Built on Lexical</h3>
+        <p>Powered by <a href="https://lexical.dev">Lexical</a>, Meta's extensible text-editor framework.</p>
+      </div>
+      <div class="feature">
+        <h3>Clean HTML semantics</h3>
+        <p>Paragraphs are real <code>&lt;p&gt;</code> tags, as they should be.</p>
+      </div>
+      <div class="feature">
+        <h3>Markdown support</h3>
+        <p>Inline shortcuts and auto-formatting on paste, without leaving the editor.</p>
+      </div>
+      <div class="feature">
+        <h3>Code highlighting</h3>
+        <p>Real-time syntax highlighting for fenced code blocks as you type.</p>
+      </div>
+      <div class="feature">
+        <h3>Smart links</h3>
+        <p>Paste a URL over selected text to turn it into a link instantly.</p>
+      </div>
+      <div class="feature">
+        <h3>Configurable prompts</h3>
+        <p>Mentions and interactive prompts with flexible loading and filtering strategies.</p>
+      </div>
+      <div class="feature">
+        <h3>Attachment previews</h3>
+        <p>Preview attachments like PDFs and videos right inside the editor.</p>
+      </div>
+      <div class="feature">
+        <h3>Action Text native</h3>
+        <p>Generates the canonical HTML Action Text expects — drop-in for Trix.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
-<ul>
-  <li><a href="{{ "/docs/" | relative_url }}">Documentation</a></li>
-  <li><a href="{{ "/sandbox/" | relative_url }}">Sandbox</a> — try the editor in your browser</li>
-  <li><a href="https://github.com/basecamp/lexxy">Source on GitHub</a></li>
-</ul>
+<section class="section" id="try">
+  <div class="container">
+    <div class="section__head">
+      <h2>Try it right here</h2>
+      <p>Type, format, paste a link, or hit <code>:</code> to drop in an emoji.</p>
+    </div>
+    <div class="try__editor">
+      <lexxy-editor
+        class="lexxy-content"
+        placeholder="Write something…"
+        data-direct-upload-url="/rails/active_storage/direct_uploads"
+        data-blob-url-template="/rails/active_storage/blobs/:signed_id/:filename">
+        <lexxy-prompt trigger=":" insert-editable-text>
+          <lexxy-prompt-item search="joy laughing face"><template type="menu">😂 Joy</template><template type="editor">😂</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="heart red heart"><template type="menu">❤️ Heart</template><template type="editor">❤️</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="thumbs up like"><template type="menu">👍 Thumbs Up</template><template type="editor">👍</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="fire hot lit"><template type="menu">🔥 Fire</template><template type="editor">🔥</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="party popper celebration"><template type="menu">🎉 Party</template><template type="editor">🎉</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="rocket launch"><template type="menu">🚀 Rocket</template><template type="editor">🚀</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="100 hundred perfect"><template type="menu">💯 100</template><template type="editor">💯</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="checkmark check mark"><template type="menu">✅ Check</template><template type="editor">✅</template></lexxy-prompt-item>
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+    <p class="try__note">Want a focused, full-page version? Open the <a href="{{ "/sandbox/" | relative_url }}">standalone sandbox</a>.</p>
+  </div>
+</section>

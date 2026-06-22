@@ -3,22 +3,44 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% if page.title %}{{ page.title }} · {% endif %}{{ site.title }}</title>
+  <title>{% if page.title and page.title != "Home" %}{{ page.title }} · {% endif %}{{ site.title }} — {{ site.description }}</title>
   {% seo %}
   <link rel="stylesheet" href="{{ "/assets/landing.css" | relative_url }}">
+  {% if page.editor %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@37signals/lexxy@latest/dist/stylesheets/lexxy.css">
+  <script type="module">
+    import * as Lexxy from "https://cdn.jsdelivr.net/npm/@37signals/lexxy@latest/+esm";
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("{{ site.baseurl }}/attachments-sw.js");
+    }
+  </script>
+  {% endif %}
 </head>
 <body class="landing">
-  <header class="landing__nav">
-    <a class="landing__brand" href="{{ "/" | relative_url }}">{{ site.title }}</a>
-    <nav>
-      <a href="{{ "/docs/" | relative_url }}">Docs</a>
-      <a href="{{ "/sandbox/" | relative_url }}">Sandbox</a>
-      <a href="https://github.com/basecamp/lexxy">GitHub</a>
-    </nav>
+  <header class="site-header">
+    <div class="container site-header__inner">
+      <a class="site-header__brand" href="{{ "/" | relative_url }}">Lexxy</a>
+      <nav class="site-header__nav">
+        <a href="{{ "/docs/" | relative_url }}">Docs</a>
+        <a href="{{ "/sandbox/" | relative_url }}">Sandbox</a>
+        <a href="https://github.com/basecamp/lexxy">GitHub</a>
+      </nav>
+    </div>
   </header>
 
-  <main class="landing__content">
+  <main>
     {{ content }}
   </main>
+
+  <footer class="site-footer">
+    <div class="container site-footer__inner">
+      <span>Lexxy — a modern rich text editor for Rails.</span>
+      <nav>
+        <a href="{{ "/docs/" | relative_url }}">Docs</a>
+        <a href="https://github.com/basecamp/lexxy">GitHub</a>
+        <a href="https://lexical.dev">Built on Lexical</a>
+      </nav>
+    </div>
+  </footer>
 </body>
 </html>
