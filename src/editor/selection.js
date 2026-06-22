@@ -38,14 +38,14 @@ export default class Selection {
   }
 
   get cursorPosition() {
-    let position = { x: 0, y: 0 }
+    let position = null
 
     this.editor.getEditorState().read(() => {
       const range = this.#getValidSelectionRange()
       if (!range) return
 
       const rect = this.#getReliableRectFromRange(range)
-      if (!rect) return
+      if (this.#isRectUnreliable(rect)) return
 
       position = this.#calculateCursorPosition(rect, range)
     })

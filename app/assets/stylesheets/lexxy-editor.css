@@ -1079,7 +1079,7 @@
   }
 }
 
-:where(.lexxy-prompt-menu--visible) {
+:where(.lexxy-prompt-menu--visible[data-anchored]) {
   visibility: initial;
 }
 
