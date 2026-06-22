@@ -86,18 +86,6 @@ a { color: var(--accent); }
   padding-block: 5rem 3.5rem;
 }
 
-.hero__badge {
-  display: inline-block;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--accent);
-  background: var(--accent-lightest);
-  border-radius: 999px;
-  padding: 0.3rem 0.85rem;
-  margin-bottom: 1.5rem;
-}
-
 .hero h1 {
   font-size: clamp(2.75rem, 7vw, 4.5rem);
   line-height: 1.05;
