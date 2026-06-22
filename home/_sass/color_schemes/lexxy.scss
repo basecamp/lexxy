@@ -1,0 +1,13 @@
+// Docs color scheme — mirrors Lexxy's own editor design tokens
+// (app/assets/stylesheets/lexxy-variables.css), with OKLCH converted to hex.
+// Imported after just-the-docs' light scheme, so these win.
+
+$lexxy-accent: #2a71e5; // --lexxy-color-accent-dark: oklch(57% 0.19 260)
+$lexxy-ink: #161616; // --lexxy-color-ink: oklch(20% 0 0)
+$lexxy-ink-lightest: #f2f2f2; // --lexxy-color-ink-lightest: oklch(96% 0 0)
+
+$body-heading-color: $lexxy-ink;
+$body-text-color: #2b2b2b;
+$link-color: $lexxy-accent;
+$btn-primary-color: $lexxy-accent;
+$code-background-color: $lexxy-ink-lightest;

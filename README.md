@@ -19,7 +19,7 @@ A modern rich text editor for Rails.
 
 ## Documentation
 
-Visit the **[documentation site](https://basecamp.github.io/lexxy/docs/)**.
+Visit the **[documentation site](https://lexxy.dev/docs/)**.
 
 ## Roadmap
 

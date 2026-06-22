@@ -85,8 +85,8 @@ bundle install
 bundle exec jekyll serve
 ```
 
-The site will be available at http://localhost:4000/lexxy/, with the docs at
-http://localhost:4000/lexxy/docs/ and the sandbox at http://localhost:4000/lexxy/sandbox/.
+The site will be available at http://localhost:4000/, with the docs at
+http://localhost:4000/docs/ and the sandbox at http://localhost:4000/sandbox/.
 
 ## Release
 

@@ -1,7 +1,7 @@
 title: Lexxy
 description: A modern rich text editor for Rails
-url: "https://basecamp.github.io"
-baseurl: "/lexxy"
+url: "https://lexxy.dev"
+baseurl: ""
 
 theme: just-the-docs
 
@@ -27,8 +27,8 @@ gh_edit_branch: "main"
 gh_edit_view_mode: "edit"
 gh_edit_source: "home"
 
-# Color scheme
-color_scheme: light
+# Color scheme — mirrors Lexxy's own editor palette (see _sass/color_schemes/lexxy.scss)
+color_scheme: lexxy
 
 # Back to top link
 back_to_top: true
