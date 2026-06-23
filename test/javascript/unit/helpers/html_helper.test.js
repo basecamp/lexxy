@@ -65,6 +65,12 @@ test("only operates on top-level children, not nested elements", () => {
   expect(bodyHtml(doc)).toBe("<ul><li>one</li><li>two</li></ul><p><br></p><p>after</p>")
 })
 
+test("inserts spacing between paragraphs inside a blockquote", () => {
+  const doc = parseHtml("<blockquote><p>a</p><p>b</p></blockquote>")
+  addBlockSpacing(doc)
+  expect(bodyHtml(doc)).toBe("<blockquote><p>a</p><p><br></p><p>b</p></blockquote>")
+})
+
 test("does not add leading spacer", () => {
   const doc = parseHtml("<p>a</p><p>b</p>")
   addBlockSpacing(doc)
