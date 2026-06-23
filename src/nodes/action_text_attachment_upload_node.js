@@ -151,6 +151,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     this.#dispatchEvent("lexxy:upload-start", { file: this.file })
 
     upload.create((error, blob) => {
+      this.#forgetUploadRequest()
+
       if (error) {
         this.#dispatchEvent("lexxy:upload-end", { file: this.file, error })
         this.#handleUploadError(error)
@@ -173,10 +175,24 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       directUploadWillStoreFileWithXHR: (request) => {
         if (shouldAuthenticateUploads) request.withCredentials = true
 
+        this.#rememberUploadRequest(request)
+
         const uploadProgressHandler = (event) => this.#handleUploadProgress(event, request)
         request.upload.addEventListener("progress", uploadProgressHandler)
       }
     }
+  }
+
+  #forgetUploadRequest() {
+    this.#editorElement.uploadRequests.forget(this.getKey())
+  }
+
+  #rememberUploadRequest(request) {
+    this.#editorElement.uploadRequests.track(this.getKey(), request)
+  }
+
+  get #editorElement() {
+    return this.editor.getRootElement()?.closest("lexxy-editor")
   }
 
   #setUploadStarted() {

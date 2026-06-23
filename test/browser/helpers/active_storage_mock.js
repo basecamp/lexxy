@@ -11,7 +11,7 @@ const FALLBACK_PNG = Buffer.from(
   "base64"
 )
 
-export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0, includePreviewStatusUrl = false, previewStatusInitiallyProcessing = true, previewReadyStatus = 410, failBlobResponses = false } = {}) {
+export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0, holdFileUploads = false, includePreviewStatusUrl = false, previewStatusInitiallyProcessing = true, previewReadyStatus = 410, failBlobResponses = false } = {}) {
   let blobCounter = 0
   const calls = { blobCreations: [], fileUploads: [], previewStatusRequests: [], previewUrlRequests: [] }
   const pendingBlobRoutes = []
@@ -161,6 +161,11 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
       url: request.url(),
       contentType: request.headers()["content-type"],
     })
+
+    // When holdFileUploads is true, the PUT is never fulfilled, keeping the
+    // upload in flight. This lets tests assert that trashing an attachment
+    // aborts the connection (Playwright reports an aborted request as failed).
+    if (holdFileUploads) return
 
     if (uploadDelayMs > 0) {
       await page.waitForTimeout(uploadDelayMs)

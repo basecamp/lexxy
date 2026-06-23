@@ -15,6 +15,7 @@ import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_ta
 
 import theme from "../config/theme"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import { UploadRequests } from "../editor/attachments/upload_requests"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
@@ -42,6 +43,7 @@ import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 import { LinkOpenerExtension } from "../extensions/link_opener_extension.js"
 import { PreventLexicalTripleClickExtension } from "../extensions/prevent_lexical_triple_click_extension.js"
 import { ShowInvisiblesExtension } from "../extensions/show_invisibles_extension.js"
+import { CustomAttachmentDragAndDropExtension } from "../extensions/custom_attachment_drag_and_drop_extension.js"
 import { nextFrame } from "../helpers/timing_helper.js"
 
 
@@ -63,11 +65,16 @@ export class LexicalEditorElement extends HTMLElement {
 
   #validity = new Map()
   #validationTextArea = document.createElement("textarea")
+  #uploadRequests
 
   constructor() {
     super()
     this.internals = this.attachInternals()
     this.internals.role = "presentation"
+  }
+
+  get uploadRequests() {
+    return this.#uploadRequests
   }
 
   connectedCallback() {
@@ -90,6 +97,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(this.clipboard)
 
     this.adapter = new BrowserAdapter()
+    this.#uploadRequests = new UploadRequests()
 
     const commandDispatcher = CommandDispatcher.configureFor(this)
     this.#disposables.push(commandDispatcher)
@@ -196,6 +204,7 @@ export class LexicalEditorElement extends HTMLElement {
       FormatEscapeExtension,
       LinkOpenerExtension,
       PreventLexicalTripleClickExtension,
+      CustomAttachmentDragAndDropExtension,
       ShowInvisiblesExtension
     ]
   }
@@ -871,6 +880,7 @@ export class LexicalEditorElement extends HTMLElement {
   #reset() {
     this.#dispose()
     this.#resetValidity()
+    this.#uploadRequests?.clear()
     this.editorContentElement?.remove()
     this.editorContentElement = null
 

@@ -1,6 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $hasUpdateTag,
-  $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
+  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
   HISTORY_MERGE_TAG, PASTE_TAG,
   SELECTION_INSERT_CLIPBOARD_NODES_COMMAND
 } from "lexical"
@@ -49,16 +49,22 @@ export default class Contents {
     }, { tag })
   }
 
+  insertText(text, { tag } = {}) {
+    this.editor.update(() => {
+      const paragraph = $createParagraphNode()
+      text.split("\n").forEach((line, index) => {
+        if (index > 0) paragraph.append($createLineBreakNode())
+        paragraph.append($createTextNode(line))
+      })
+      this.insertAtCursor(paragraph)
+    }, { tag })
+  }
+
   insertAtCursor(...nodes) {
-    const selection = $getSelection() ?? $getRoot().selectEnd()
+    const selection = this.#insertableSelection()
     const inserter = NodeInserter.for(selection)
 
     inserter.insertNodes(nodes)
-  }
-
-  insertAtCursorEnsuringLineBelow(node) {
-    this.insertAtCursor(node)
-    this.#insertLineBelowIfLastNode(node)
   }
 
   applyParagraphFormat() {
@@ -202,15 +208,25 @@ export default class Contents {
       const fullText = anchorNode.getTextContent()
       const offset = anchor.offset
 
-      const textBeforeCursor = fullText.slice(0, offset)
-
-      const lastIndex = textBeforeCursor.lastIndexOf(string)
+      const lastIndex = fullText.slice(0, offset).lastIndexOf(string)
       if (lastIndex !== -1) {
-        result = textBeforeCursor.slice(lastIndex + string.length)
+        result = fullText.slice(lastIndex + string.length, this.#endOffsetAt(fullText, offset))
       }
     })
 
     return result
+  }
+
+  // The query runs from the trigger up to the next whitespace, even when the
+  // cursor sits inside an existing word — inserting "@" before "Jack" must
+  // filter by "Jack" rather than treating the prompt as empty.
+  #endOffsetAt(fullText, cursorOffset) {
+    const whitespaceOffset = fullText.slice(cursorOffset).search(/\s/)
+    if (whitespaceOffset === -1) {
+      return fullText.length
+    } else {
+      return cursorOffset + whitespaceOffset
+    }
   }
 
   containsTextBackUntil(string) {
@@ -239,14 +255,13 @@ export default class Contents {
   replaceTextBackUntil(stringToReplace, replacementNodes) {
     replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ]
 
-    const selection = $getSelection()
     const { anchorNode, offset } = this.#getTextAnchorData()
     if (!anchorNode) return
 
-    const lastIndex = this.#findLastIndexBeforeCursor(anchorNode, offset, stringToReplace)
+    const lastIndex = this.#findReplacementStart(anchorNode, offset, stringToReplace)
     if (lastIndex === -1) return
 
-    this.#performTextReplacement(anchorNode, selection, offset, lastIndex, replacementNodes)
+    this.#performTextReplacement(anchorNode, lastIndex, stringToReplace, replacementNodes)
   }
 
   uploadFiles(files, { selectLast } = {}) {
@@ -279,24 +294,46 @@ export default class Contents {
     })
   }
 
+  $createPendingUploadNode(file) {
+    return $createActionTextAttachmentUploadNode({
+      file,
+      uploadUrl: null,
+      blobUrlTemplate: this.editorElement.blobUrlTemplate,
+      contentType: file.type,
+    })
+  }
+
   insertPendingAttachment(file) {
     if (!this.editorElement.supportsAttachments) return null
 
     let nodeKey = null
     this.editor.update(() => {
-      const uploadNode = new ActionTextAttachmentUploadNode({
-        file,
-        uploadUrl: null,
-        blobUrlTemplate: this.editorElement.blobUrlTemplate,
-        editor: this.editor
-      })
+      const uploadNode = this.$createPendingUploadNode(file)
       this.insertAtCursor(uploadNode)
       nodeKey = uploadNode.getKey()
-    }, { tag: HISTORY_MERGE_TAG })
+    })
 
-    if (!nodeKey) return null
+    return nodeKey ? this.#pendingAttachmentHandle(nodeKey) : null
+  }
 
+  insertPendingAttachments(files) {
+    const fileList = Array.from(files)
+    if (!this.editorElement.supportsAttachments || fileList.length === 0) return []
+
+    let nodeKeys = []
+    this.editor.update(() => {
+      const uploader = Uploader.for(this.editorElement, fileList, { pending: true })
+      uploader.$uploadFiles()
+      nodeKeys = (uploader.nodes ?? []).map(node => node.getKey())
+    })
+
+    return nodeKeys.map(nodeKey => this.#pendingAttachmentHandle(nodeKey))
+  }
+
+  #pendingAttachmentHandle(initialNodeKey) {
     const editor = this.editor
+    let nodeKey = initialNodeKey
+
     return {
       setAttributes(blob) {
         editor.update(() => {
@@ -362,6 +399,15 @@ export default class Contents {
       const newNode = options.attachment ? this.#createCustomAttachmentNodeWithHtml(html, options.attachment) : this.#createHtmlNodeWith(html)
       previousNode.insertAfter(newNode)
     })
+  }
+
+  #insertableSelection() {
+    const selection = $getSelection()
+    if ($isNodeSelection(selection) && selection.getNodes().length === 0) {
+      return $getRoot().selectEnd()
+    }
+
+    return selection ?? $getRoot().selectEnd()
   }
 
   #formatPastedDOM(doc) {
@@ -501,17 +547,6 @@ export default class Contents {
     }
   }
 
-  #insertLineBelowIfLastNode(node) {
-    this.editor.update(() => {
-      const nextSibling = node.getNextSibling()
-      if (!nextSibling) {
-        const newParagraph = $createParagraphNode()
-        node.insertAfter(newParagraph)
-        newParagraph.selectStart()
-      }
-    })
-  }
-
   #unwrap(node) {
     const children = node.getChildren()
 
@@ -544,19 +579,27 @@ export default class Contents {
     return { anchorNode, offset: anchor.offset }
   }
 
-  #findLastIndexBeforeCursor(anchorNode, offset, stringToReplace) {
+  // The replaced span can straddle the cursor (e.g. "@Jack" when "@" was just
+  // inserted before "Jack"), so we anchor on the trigger before the cursor and
+  // verify the whole string matches there rather than searching text up to it.
+  #findReplacementStart(anchorNode, offset, stringToReplace) {
     const fullText = anchorNode.getTextContent()
-    const textBeforeCursor = fullText.slice(0, offset)
-    return textBeforeCursor.lastIndexOf(stringToReplace)
+    const triggerIndex = fullText.slice(0, offset).lastIndexOf(stringToReplace[0])
+
+    if (triggerIndex !== -1 && fullText.startsWith(stringToReplace, triggerIndex)) {
+      return triggerIndex
+    } else {
+      return -1
+    }
   }
 
-  #performTextReplacement(anchorNode, selection, offset, lastIndex, replacementNodes) {
+  #performTextReplacement(anchorNode, startIndex, stringToReplace, replacementNodes) {
     const fullText = anchorNode.getTextContent()
-    const textBeforeString = fullText.slice(0, lastIndex)
-    const textAfterCursor = fullText.slice(offset)
+    const textBeforeString = fullText.slice(0, startIndex)
+    const textAfterString = fullText.slice(startIndex + stringToReplace.length)
 
-    const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, selection, textBeforeString)
-    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, selection, textAfterCursor || " ")
+    const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, textBeforeString)
+    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, textAfterString || " ")
 
     anchorNode.replace(textNodeBefore)
 
@@ -564,22 +607,16 @@ export default class Contents {
     lastInsertedNode.insertAfter(textNodeAfter)
 
     this.#appendLineBreakIfNeeded(textNodeAfter.getParentOrThrow())
-    const cursorOffset = textAfterCursor ? 0 : 1
+    const cursorOffset = textAfterString ? 0 : 1
     textNodeAfter.select(cursorOffset, cursorOffset)
   }
 
-  #cloneTextNodeFormatting(anchorNode, selection, text) {
-    const parent = anchorNode.getParent()
-    const fallbackFormat = parent?.getTextFormat?.() || 0
-    const fallbackStyle = parent?.getTextStyle?.() || ""
-    const format = $isRangeSelection(selection) && selection.format ? selection.format : (anchorNode.getFormat() || fallbackFormat)
-    const style = $isRangeSelection(selection) && selection.style ? selection.style : (anchorNode.getStyle() || fallbackStyle)
-
+  #cloneTextNodeFormatting(anchorNode, text) {
     return $createTextNode(text)
-      .setFormat(format)
+      .setFormat(anchorNode.getFormat())
       .setDetail(anchorNode.getDetail())
       .setMode(anchorNode.getMode())
-      .setStyle(style)
+      .setStyle(anchorNode.getStyle())
   }
 
   #insertReplacementNodes(startNode, replacementNodes) {

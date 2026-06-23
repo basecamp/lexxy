@@ -417,7 +417,7 @@ export class CommandDispatcher {
   }
 
   #isInternalDrag(event) {
-    return event.dataTransfer?.types.includes("application/x-lexxy-node-key")
+    return event.dataTransfer?.types.some((type) => type.startsWith("application/x-lexxy-"))
   }
 
   #handleTabKey(event) {

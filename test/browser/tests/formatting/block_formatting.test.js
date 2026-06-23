@@ -351,6 +351,33 @@ test.describe("Block formatting", () => {
     )
   })
 
+  test("quote does not absorb the paragraph above when the selection anchors at its end", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>ABCD:</p><p>pasted one<br>pasted two</p>")
+
+    await editor.content.evaluate((el) => {
+      const paragraphs = el.querySelectorAll("p")
+      const range = document.createRange()
+      range.setStart(paragraphs[0], paragraphs[0].childNodes.length)
+      const walker = document.createTreeWalker(paragraphs[1], NodeFilter.SHOW_TEXT)
+      let lastTextNode, node
+      while ((node = walker.nextNode())) lastTextNode = node
+      range.setEnd(lastTextNode, lastTextNode.nodeValue.length)
+      const selection = window.getSelection()
+      selection.removeAllRanges()
+      selection.addRange(range)
+    })
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>ABCD:</p><blockquote><p>pasted one<br>pasted two</p></blockquote>",
+    )
+  })
+
   test("bullet list only the selected line from soft line breaks", async ({
     page,
     editor,
