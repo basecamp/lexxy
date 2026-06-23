@@ -1,10 +1,35 @@
 import Prism from "../config/prism"
 
-export function highlightCode(root = document) {
+// Highlighting a whole document of code blocks in one synchronous pass blocks
+// the main thread for the entire run, freezing input on heavy threads. We
+// process blocks in time-budgeted chunks and yield to the event loop between
+// them so the browser can paint and handle input while highlighting continues.
+const CHUNK_TIME_BUDGET_MS = 8
+
+export async function highlightCode(root = document) {
   const elements = root.querySelectorAll("pre[data-language]:not([data-highlighted])")
 
-  elements.forEach(preElement => {
+  let chunkStart = performance.now()
+  for (const preElement of elements) {
     highlightElement(preElement)
+
+    if (performance.now() - chunkStart >= CHUNK_TIME_BUDGET_MS) {
+      await yieldToEventLoop()
+      chunkStart = performance.now()
+    }
+  }
+}
+
+// MessageChannel posts a clean macrotask without setTimeout's 4ms clamp,
+// letting the browser process input and paint a frame between chunks. We avoid
+// scheduler.yield() here: it resumes the continuation ahead of rendering, so it
+// keeps highlighting fast but barely lets frames through. A plain macrotask
+// keeps input and scrolling responsive on heavy threads, which is the point.
+function yieldToEventLoop() {
+  return new Promise((resolve) => {
+    const channel = new MessageChannel()
+    channel.port1.onmessage = () => resolve()
+    channel.port2.postMessage(undefined)
   })
 }
 

@@ -42,18 +42,18 @@ test.each(expectedGrammars)("Prism includes the %s grammar", (grammar) => {
   expect(Prism.languages[grammar]).toBeDefined()
 })
 
-test("highlightCode preserves the pre wrapper around the highlighted code element", () => {
+test("highlightCode preserves the pre wrapper around the highlighted code element", async () => {
   const pre = document.createElement("pre")
   pre.setAttribute("data-language", "javascript")
   pre.innerHTML = "const a = 1<br>const b = 2"
   document.body.appendChild(pre)
 
-  highlightCode()
+  await highlightCode()
 
   expect(pre.textContent).toContain("const a = 1\nconst b = 2")
 })
 
-test("highlightCode only walks pre elements within the given root", () => {
+test("highlightCode only walks pre elements within the given root", async () => {
   const inside = appendPre("inside", "javascript", "const a = 1")
   const outside = appendPre("outside", "javascript", "const b = 2")
 
@@ -62,23 +62,49 @@ test("highlightCode only walks pre elements within the given root", () => {
   document.body.appendChild(scope)
   document.body.appendChild(outside)
 
-  highlightCode(scope)
+  await highlightCode(scope)
 
   expect(inside.dataset.highlighted).toBe("true")
   expect(outside.dataset.highlighted).toBeUndefined()
 })
 
-test("highlightCode is idempotent — already-highlighted blocks are skipped", () => {
+test("highlightCode is idempotent — already-highlighted blocks are skipped", async () => {
   const pre = appendPre("once", "javascript", "const a = 1")
   document.body.appendChild(pre)
 
-  highlightCode()
+  await highlightCode()
   const firstPassHtml = pre.innerHTML
 
-  highlightCode()
+  await highlightCode()
 
   expect(pre.innerHTML).toBe(firstPassHtml)
   expect(pre.dataset.highlighted).toBe("true")
+})
+
+test("highlightCode yields to the event loop while highlighting every block", async () => {
+  const code = Array.from({ length: 30 }, (_line, index) =>
+    `const value_${index} = compute(${index}, "token string", [ 1, 2, 3 ]) // comment ${index}`
+  ).join("<br>")
+
+  for (let index = 0; index < 8; index += 1) {
+    document.body.appendChild(appendPre(`block-${index}`, "javascript", code))
+  }
+
+  // A macrotask queued just before highlighting starts must get a chance to run
+  // before highlightCode resolves. A single synchronous pass would block the
+  // main thread and only let it run after completion.
+  let macrotaskRan = false
+  const result = highlightCode()
+  setTimeout(() => { macrotaskRan = true }, 0)
+
+  expect(typeof result.then).toBe("function")
+  await result
+
+  expect(macrotaskRan).toBe(true)
+
+  for (const pre of document.querySelectorAll("pre[data-language]")) {
+    expect(pre.dataset.highlighted).toBe("true")
+  }
 })
 
 test("highlightElement highlights a single pre element", () => {
