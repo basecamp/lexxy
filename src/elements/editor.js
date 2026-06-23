@@ -540,8 +540,11 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #synchronizeWithChanges() {
-    this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
-      this.#clearCachedValues()
+    this.#listeners.track(this.editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
+      // Reading the value serializes and sanitizes the whole document. Only
+      // invalidate the cache when a node actually changed, so an update that
+      // just moved the selection reuses it instead of re-serializing.
+      if (dirtyElements.size > 0 || dirtyLeaves.size > 0) this.#clearCachedValues()
       this.#setInternalFormValue(this.value)
       this.#toggleEmptyStatus()
       this.#requestValidityRefresh()
