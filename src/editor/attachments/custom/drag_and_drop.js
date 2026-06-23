@@ -115,6 +115,15 @@ export class CustomAttachmentDragAndDrop {
     // they only drop onto an existing line, so snap to the nearest one.
     if (caret.node === rootElement) {
       return this.#nearestLineCaret(rootElement, event.clientY)
+    }
+
+    // When mentions sit next to each other with no text between them, the caret
+    // lands inside the neighbouring decorator's DOM. Lexical can't resolve a point
+    // inside a decorator to an editable position, and the cursor has no business
+    // showing there anyway, so snap to just before or after that mention.
+    const decorator = this.#decoratorElementContaining(caret.node)
+    if (decorator) {
+      return this.#dropPointBesideDecorator(decorator, event.clientX)
     } else {
       return caret
     }
@@ -143,24 +152,55 @@ export class CustomAttachmentDragAndDrop {
     }
   }
 
+  #decoratorElementContaining(node) {
+    const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement
+    return element?.closest("[data-lexxy-decorator][data-lexical-node-key]")
+  }
+
+  #dropPointBesideDecorator(decorator, clientX) {
+    const rect = decorator.getBoundingClientRect()
+    const placement = clientX > rect.left + rect.width / 2 ? "after" : "before"
+    return { decoratorKey: decorator.dataset.lexicalNodeKey, placement }
+  }
+
   #moveAttachment(draggedKey, dropPoint) {
     this.#editor.update(() => {
       const draggedNode = $getNodeByKey(draggedKey)
       if (!$isCustomActionTextAttachmentNode(draggedNode)) return
 
-      const selection = $createRangeSelectionFromDom({
-        anchorNode: dropPoint.node,
-        anchorOffset: dropPoint.offset,
-        focusNode: dropPoint.node,
-        focusOffset: dropPoint.offset
-      }, this.#editor)
-      if (!selection) return
-
-      $setSelection(selection)
-
-      draggedNode.remove()
-      selection.insertNodes([ draggedNode ])
+      if (dropPoint.decoratorKey) {
+        this.#moveBesideNode(draggedNode, dropPoint)
+      } else {
+        this.#moveToCaret(draggedNode, dropPoint)
+      }
     })
+  }
+
+  #moveBesideNode(draggedNode, { decoratorKey, placement }) {
+    const targetNode = $getNodeByKey(decoratorKey)
+    if (!targetNode || targetNode === draggedNode) return
+
+    draggedNode.remove()
+    if (placement === "after") {
+      targetNode.insertAfter(draggedNode)
+    } else {
+      targetNode.insertBefore(draggedNode)
+    }
+  }
+
+  #moveToCaret(draggedNode, dropPoint) {
+    const selection = $createRangeSelectionFromDom({
+      anchorNode: dropPoint.node,
+      anchorOffset: dropPoint.offset,
+      focusNode: dropPoint.node,
+      focusOffset: dropPoint.offset
+    }, this.#editor)
+    if (!selection) return
+
+    $setSelection(selection)
+
+    draggedNode.remove()
+    selection.insertNodes([ draggedNode ])
   }
 
   #updateDropIndicator(event) {
@@ -170,7 +210,12 @@ export class CustomAttachmentDragAndDrop {
     if (dropPoint) this.#showCaret(this.#caretRectFor(dropPoint))
   }
 
-  #caretRectFor({ node, offset }) {
+  #caretRectFor(dropPoint) {
+    if (dropPoint.decoratorKey) {
+      return this.#decoratorEdgeRect(dropPoint)
+    }
+
+    const { node, offset } = dropPoint
     const rect = caretRect(node, offset)
     if (rect) return rect
 
@@ -180,6 +225,15 @@ export class CustomAttachmentDragAndDrop {
 
     const lineRect = line.getBoundingClientRect()
     return { left: lineRect.left, top: lineRect.top, height: lineRect.height }
+  }
+
+  #decoratorEdgeRect({ decoratorKey, placement }) {
+    const decorator = this.#editor.getRootElement()?.querySelector(`[data-lexical-node-key="${decoratorKey}"]`)
+    if (!decorator) return null
+
+    const rect = decorator.getBoundingClientRect()
+    const left = placement === "after" ? rect.right : rect.left
+    return { left, top: rect.top, height: rect.height }
   }
 
   #showCaret(rect) {
