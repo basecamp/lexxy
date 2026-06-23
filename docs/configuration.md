@@ -50,6 +50,7 @@ Editors support the following options, configurable using presets and element at
 - `multiLine`: Pass `false` to force single line editing.
 - `permittedAttachmentTypes`: Restrict the editor to a specific allowlist of attachment content types. Unset (the default) permits any content type. Example: `<lexxy-editor permitted-attachment-types="application/vnd.basecamp.mention application/vnd.basecamp.opengraph-embed"></lexxy-editor>`.
 - `richText`: Pass `false` to disable rich text editing.
+- `showInvisibles`: Pass `true` to add a Word/Google-Docs-style toolbar toggle that reveals formatting marks while composing — `¶` at paragraph and heading ends, and `↵` at each soft return (`Shift`+`Enter`). Disabled by default; the marks are editor-only and never change the saved HTML. Example: `<lexxy-editor show-invisibles="true"></lexxy-editor>`.
 
 The toolbar is considered part of the editor for `lexxy:focus` and `lexxy:blur` events. If the toolbar registers event or lexical handlers, it should expose a `dispose()` function which will be called on editor disconnect.
 
