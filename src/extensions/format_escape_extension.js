@@ -55,13 +55,15 @@ function $escapeBeforeBlockquoteStart() {
   if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.offset !== 0) return false
 
   const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
-  if (!paragraph || $isBlankNode(paragraph) || paragraph.getPreviousSibling()) return false
+  if (paragraph && !$isBlankNode(paragraph) && !paragraph.getPreviousSibling()) {
+    const blockquote = paragraph.getParent()
+    if ($isQuoteNode(blockquote)) {
+      blockquote.insertBefore($createParagraphNode())
+      return true
+    }
+  }
 
-  const blockquote = paragraph.getParent()
-  if (!blockquote || !$isQuoteNode(blockquote)) return false
-
-  blockquote.insertBefore($createParagraphNode())
-  return true
+  return false
 }
 
 function $escapeFromBlankBlockquoteParagraph() {
@@ -71,18 +73,20 @@ function $escapeFromBlankBlockquoteParagraph() {
   if (!paragraph || !$isBlankNode(paragraph)) return false
 
   const blockquote = paragraph.getParent()
-  if (!blockquote || !$isQuoteNode(blockquote)) return false
+  if ($isQuoteNode(blockquote)) {
+    const nonEmptySiblings = paragraph.getNextSiblings().filter(sibling => !$isBlankNode(sibling))
 
-  const nonEmptySiblings = paragraph.getNextSiblings().filter(sibling => !$isBlankNode(sibling))
+    if (nonEmptySiblings.length > 0) {
+      $splitQuoteNode(blockquote, paragraph)
+    } else {
+      blockquote.insertAfter(paragraph)
+      paragraph.selectStart()
+    }
 
-  if (nonEmptySiblings.length > 0) {
-    $splitQuoteNode(blockquote, paragraph)
-  } else {
-    blockquote.insertAfter(paragraph)
-    paragraph.selectStart()
+    return true
   }
 
-  return true
+  return false
 }
 
 function $splitQuoteNode(node, paragraph) {
