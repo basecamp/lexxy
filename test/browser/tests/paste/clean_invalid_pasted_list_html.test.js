@@ -86,3 +86,51 @@ test.describe("Paste list with stray non-<li> children before the first item", (
     expect(page).toHaveNoErrors()
   })
 })
+
+test.describe("Paste list with a nested list as a direct child", () => {
+  test("keeps a nested <ul> placed directly inside its parent <ul>", async ({
+    page,
+    editor,
+  }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+    startMonitoringConsole(page)
+
+    await editor.setValue("<p></p>")
+    await editor.focus()
+
+    await editor.paste("ignored", {
+      html: "<ul><li>First item</li><ul><li>Nested item</li></ul><li>Second item</li></ul>",
+    })
+    await editor.flush()
+
+    await assertEditorHtml(
+      editor,
+      '<ul><li value="1">First item<ul><li value="1">Nested item</li></ul></li><li value="2">Second item</li></ul>',
+    )
+    expect(page).toHaveNoErrors()
+  })
+
+  test("keeps a nested <ol> placed directly inside its parent <ol>", async ({
+    page,
+    editor,
+  }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+    startMonitoringConsole(page)
+
+    await editor.setValue("<p></p>")
+    await editor.focus()
+
+    await editor.paste("ignored", {
+      html: "<ol><li>First item</li><ol><li>Nested item</li></ol><li>Second item</li></ol>",
+    })
+    await editor.flush()
+
+    await assertEditorHtml(
+      editor,
+      '<ol><li value="1">First item<ol><li value="1">Nested item</li></ol></li><li value="2">Second item</li></ol>',
+    )
+    expect(page).toHaveNoErrors()
+  })
+})
