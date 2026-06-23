@@ -12,7 +12,6 @@ export function highlightElement(preElement) {
   if (preElement.dataset.highlighted === "true") return
 
   const language = preElement.getAttribute("data-language")
-  let code = preElement.innerHTML.replace(/<br\s*\/?>/gi, "\n")
 
   const grammar = Prism.languages?.[language]
   if (!grammar) return
@@ -20,8 +19,11 @@ export function highlightElement(preElement) {
   // Extract highlight ranges before Prism destroys <mark> elements
   const highlights = extractHighlightRanges(preElement)
 
-  // unescape HTML entities in the code block
-  code = new DOMParser().parseFromString(code, "text/html").body.textContent || ""
+  // Build the code string by walking the same nodes extractHighlightRanges
+  // counts, so character offsets line up and leading whitespace survives.
+  // Reading textContent through DOMParser would collapse leading whitespace
+  // and shift every highlight range, re-indenting the rendered block.
+  const code = extractCode(preElement)
 
   const highlightedHtml = Prism.highlight(code, grammar, language)
   preElement.innerHTML = highlightedHtml
@@ -31,6 +33,36 @@ export function highlightElement(preElement) {
   }
 
   preElement.dataset.highlighted = "true"
+}
+
+// Build the plain-text source for Prism by walking the same nodes
+// extractHighlightRanges counts: text node contents verbatim and a newline
+// per <br>. This keeps the offsets in both walks identical and avoids the
+// whitespace normalization that HTML parsing applies to a document body.
+function extractCode(preElement) {
+  const root = preElement.querySelector("code") || preElement
+
+  let code = ""
+
+  function walk(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      code += node.textContent
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.tagName === "BR") {
+        code += "\n"
+      } else {
+        for (const child of node.childNodes) {
+          walk(child)
+        }
+      }
+    }
+  }
+
+  for (const child of root.childNodes) {
+    walk(child)
+  }
+
+  return code
 }
 
 // Walk the DOM tree inside a <pre> element and build a list of
