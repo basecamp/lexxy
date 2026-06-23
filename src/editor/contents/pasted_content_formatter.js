@@ -6,6 +6,7 @@ export default class PastedContentFormatter {
   format() {
     this.#unwrapPlaceholderAnchors()
     this.#stripTableCellColorStyles()
+    this.#nestStrayListChildren()
     this.#stripStrayListChildren()
     return this.doc
   }
@@ -31,6 +32,22 @@ export default class PastedContentFormatter {
       cell.style.removeProperty("background-color")
       cell.style.removeProperty("background")
       cell.style.removeProperty("color")
+    }
+  }
+
+  // Some sources (e.g. Gmail) nest a sublist as a direct child of the parent
+  // <ol>/<ul> instead of inside a <li>. Move each nested list into its
+  // preceding <li> so the import preserves the nesting instead of dropping it.
+  #nestStrayListChildren() {
+    for (const list of this.doc.querySelectorAll("ol, ul")) {
+      for (const child of Array.from(list.children)) {
+        if (child.tagName !== "OL" && child.tagName !== "UL") continue
+
+        const previousItem = child.previousElementSibling
+        if (previousItem && previousItem.tagName === "LI") {
+          previousItem.appendChild(child)
+        }
+      }
     }
   }
 
