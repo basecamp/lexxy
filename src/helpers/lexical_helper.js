@@ -227,6 +227,7 @@ export function $splitSelectedParagraphsAtInnerLineBreaks(selection) {
 
 export function $expandSelectionToLineBreaksAndSplitAtEdges(selection, fallbackAncestor = (node) => node.getTopLevelElement()) {
   $ensureForwardRangeSelection(selection)
+  $shrinkSelectionPastBlockEdges(selection)
 
   const focusCaret = $caretFromPoint(selection.focus, "next")
   const anchorCaret = $caretFromPoint(selection.anchor, "previous")
@@ -256,6 +257,52 @@ export function $expandSelectionToLineBreaksAndSplitAtEdges(selection, fallbackA
       "next",
     ),
   ))
+}
+
+// A selection whose anchor sits at the very end of one block while its focus
+// lives in a later block (e.g. selecting a pasted paragraph when the browser
+// anchors at the end of the line above) contributes nothing from the anchor's
+// block. Pull each endpoint that is flush against a block edge into the block
+// that actually holds the selected content, so we don't wrap the empty edge
+// block too.
+function $shrinkSelectionPastBlockEdges(selection) {
+  if (selection.isCollapsed()) return
+
+  const anchorBlock = selection.anchor.getNode().getTopLevelElement()
+  const focusBlock = selection.focus.getNode().getTopLevelElement()
+  if (!anchorBlock || !focusBlock || anchorBlock.is(focusBlock)) return
+
+  if ($isAtBlockEnd(selection.anchor, anchorBlock)) {
+    const nextBlock = anchorBlock.getNextSibling()
+    if (nextBlock) selection.anchor.set(nextBlock.getKey(), 0, "element")
+  }
+
+  if ($isAtBlockStart(selection.focus, focusBlock)) {
+    const previousBlock = focusBlock.getPreviousSibling()
+    if (previousBlock) selection.focus.set(previousBlock.getKey(), previousBlock.getChildrenSize(), "element")
+  }
+}
+
+function $isAtBlockEnd(point, block) {
+  return $isAtBlockBoundary($caretFromPoint(point, "next"), block)
+}
+
+function $isAtBlockStart(point, block) {
+  return $isAtBlockBoundary($caretFromPoint(point, "previous"), block)
+}
+
+// A text point sitting mid-node still has content ahead of it in the caret's
+// direction, even though that content is not a sibling node. $getNodeAtCaret
+// only sees siblings, so check the text edge before walking the block.
+function $isAtBlockBoundary(caret, block) {
+  if ($isTextPointCaret(caret) && $isExtendableTextPointCaret(caret)) return false
+
+  let cursor = $normalizeCaret(caret)
+  while (cursor && block.isParentOf(cursor.origin)) {
+    if (cursor.getNodeAtCaret()) return false
+    cursor = cursor.getParentCaret()
+  }
+  return true
 }
 
 function $getCaretAtLineBreakBoundary(caret, skipInwardEdge = false) {
