@@ -119,5 +119,25 @@ export default {
   "overflow":
   `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
     <path d="M3 6.75C4.24264 6.75 5.25 7.75736 5.25 9C5.25 10.2426 4.24264 11.25 3 11.25C1.75736 11.25 0.75 10.2426 0.75 9C0.75 7.75736 1.75736 6.75 3 6.75ZM9 6.75C10.2426 6.75 11.25 7.75736 11.25 9C11.25 10.2426 10.2426 11.25 9 11.25C7.75736 11.25 6.75 10.2426 6.75 9C6.75 7.75736 7.75736 6.75 9 6.75ZM15 6.75C16.2426 6.75 17.25 7.75736 17.25 9C17.25 10.2426 16.2426 11.25 15 11.25C13.7574 11.25 12.75 10.2426 12.75 9C12.75 7.75736 13.7574 6.75 15 6.75Z"/>
+  </svg>`,
+
+  "alignLeft":
+  `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 3.5h14v2H2zM2 7.5h10v2H2zM2 11.5h14v2H2zM2 15.5h10v2H2z" transform="translate(0,-2)"/>
+  </svg>`,
+
+  "alignCenter":
+  `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 3.5h14v2H2zM4 7.5h10v2H4zM2 11.5h14v2H2zM4 15.5h10v2H4z" transform="translate(0,-2)"/>
+  </svg>`,
+
+  "alignRight":
+  `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 3.5h14v2H2zM6 7.5h10v2H6zM2 11.5h14v2H2zM6 15.5h10v2H6z" transform="translate(0,-2)"/>
+  </svg>`,
+
+  "alignJustify":
+  `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2 3.5h14v2H2zM2 7.5h14v2H2zM2 11.5h14v2H2zM2 15.5h14v2H2z" transform="translate(0,-2)"/>
   </svg>`
 }

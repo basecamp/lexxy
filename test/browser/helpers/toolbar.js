@@ -13,9 +13,19 @@ const FORMAT_DROPDOWN_COMMANDS = new Set([
   "setFormatHeadingSmall", "clearFormatting"
 ])
 
+const ALIGNMENT_DROPDOWN_COMMANDS = new Set([
+  "alignLeft", "alignCenter", "alignRight", "alignJustify"
+])
+
+export async function openAlignmentDropdown(page) {
+  await openToolbarDropdown(page, "alignment")
+}
+
 export async function clickToolbarButton(page, command) {
   if (FORMAT_DROPDOWN_COMMANDS.has(command)) {
     await openFormatDropdown(page)
+  } else if (ALIGNMENT_DROPDOWN_COMMANDS.has(command)) {
+    await openAlignmentDropdown(page)
   }
   await page.locator(`[data-command='${command}']`).click()
 }

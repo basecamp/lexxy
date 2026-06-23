@@ -6,6 +6,7 @@ import {
   $setSelection,
   COMMAND_PRIORITY_HIGH,
   COMMAND_PRIORITY_NORMAL,
+  FORMAT_ELEMENT_COMMAND,
   FORMAT_TEXT_COMMAND,
   INDENT_CONTENT_COMMAND,
   INSERT_LINE_BREAK_COMMAND,
@@ -40,6 +41,10 @@ const COMMANDS = [
   "setFormatHeadingMedium",
   "setFormatHeadingSmall",
   "setFormatParagraph",
+  "alignLeft",
+  "alignCenter",
+  "alignRight",
+  "alignJustify",
   "clearFormatting",
   "insertUnorderedList",
   "insertOrderedList",
@@ -245,6 +250,22 @@ export class CommandDispatcher {
 
   dispatchSetFormatParagraph() {
     this.contents.applyParagraphFormat()
+  }
+
+  dispatchAlignLeft() {
+    this.editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "left")
+  }
+
+  dispatchAlignCenter() {
+    this.editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "center")
+  }
+
+  dispatchAlignRight() {
+    this.editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "right")
+  }
+
+  dispatchAlignJustify() {
+    this.editor.dispatchCommand(FORMAT_ELEMENT_COMMAND, "justify")
   }
 
   dispatchClearFormatting() {
