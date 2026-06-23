@@ -47,6 +47,25 @@ export class FormatEscapeExtension extends LexxyExtension {
 }
 
 function $escapeFromBlockquote() {
+  return $escapeFromBlockquoteStart() || $escapeFromBlockquoteEnd()
+}
+
+function $escapeFromBlockquoteStart() {
+  const selection = $getSelection()
+  if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.offset !== 0) return false
+
+  const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
+  if (!paragraph || paragraph.getPreviousSibling() || $isBlankNode(paragraph)) return false
+
+  const blockquote = paragraph.getParent()
+  if (!blockquote || !$isQuoteNode(blockquote)) return false
+
+  blockquote.insertBefore($createParagraphNode())
+
+  return true
+}
+
+function $escapeFromBlockquoteEnd() {
   const anchorNode = $getSelection().anchor.getNode()
 
   const paragraph = $getNearestNodeOfType(anchorNode, ParagraphNode)
