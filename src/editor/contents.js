@@ -51,7 +51,11 @@ export default class Contents {
 
   insertText(text, { tag } = {}) {
     this.editor.update(() => {
-      const paragraph = $createParagraphNode().append($createTextNode(text))
+      const paragraph = $createParagraphNode()
+      text.split("\n").forEach((line, index) => {
+        if (index > 0) paragraph.append($createLineBreakNode())
+        paragraph.append($createTextNode(line))
+      })
       this.insertAtCursor(paragraph)
     }, { tag })
   }

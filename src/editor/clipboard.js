@@ -182,14 +182,16 @@ export default class Clipboard {
 
   // Markdown conversion collapses runs of whitespace and unescapes backslashes,
   // silently corrupting plain text such as Windows/UNC file paths. When the text
-  // carries no Markdown structure, paste it verbatim instead.
+  // carries no Markdown structure, paste it verbatim instead. A path that wrapped
+  // across lines renders as a single paragraph with <br> line breaks (marked runs
+  // with breaks: true), which is still plain text we should preserve untouched.
   #isPlainTextWithoutMarkdown(doc) {
     const elements = Array.from(doc.body.children)
     if (elements.length !== 1) return false
 
     const paragraph = elements[0]
     return paragraph.nodeName === "P"
-      && Array.from(paragraph.childNodes).every((node) => node.nodeType === Node.TEXT_NODE)
+      && Array.from(paragraph.childNodes).every((node) => node.nodeType === Node.TEXT_NODE || node.nodeName === "BR")
   }
 
   #pasteRichText(clipboardData) {
