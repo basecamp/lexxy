@@ -12,16 +12,16 @@ export function highlightElement(preElement) {
   if (preElement.dataset.highlighted === "true") return
 
   const language = preElement.getAttribute("data-language")
-  let code = preElement.innerHTML.replace(/<br\s*\/?>/gi, "\n")
 
   const grammar = Prism.languages?.[language]
   if (!grammar) return
 
-  // Extract highlight ranges before Prism destroys <mark> elements
-  const highlights = extractHighlightRanges(preElement)
-
-  // unescape HTML entities in the code block
-  code = new DOMParser().parseFromString(code, "text/html").body.textContent || ""
+  // Read the source text and <mark> ranges in a single walk, before Prism
+  // rewrites the element. Sharing one traversal keeps the highlight offsets
+  // aligned with the code string and preserves leading whitespace — deriving
+  // either of them separately (e.g. textContent through DOMParser) collapses
+  // leading whitespace and shifts every range, re-indenting the rendered block.
+  const { code, highlights } = extractCodeAndHighlights(preElement)
 
   const highlightedHtml = Prism.highlight(code, grammar, language)
   preElement.innerHTML = highlightedHtml
@@ -33,34 +33,35 @@ export function highlightElement(preElement) {
   preElement.dataset.highlighted = "true"
 }
 
-// Walk the DOM tree inside a <pre> element and build a list of
-// { start, end, style } ranges for every <mark> element found.
-function extractHighlightRanges(preElement) {
-  const ranges = []
+// Walk the <pre> once, building Prism's source text and the <mark> ranges
+// together: a text node contributes its text verbatim, a <br> contributes a
+// newline, and a <mark> records the slice of code it covers. Because both
+// outputs come from the same walk, every range offset is just a position in
+// `code` — so the highlights can't drift out of sync with the source, and the
+// block's leading whitespace survives (HTML parsing would collapse it).
+function extractCodeAndHighlights(preElement) {
   const root = preElement.querySelector("code") || preElement
-
-  let offset = 0
+  const highlights = []
+  let code = ""
 
   function walk(node) {
     if (node.nodeType === Node.TEXT_NODE) {
-      offset += node.textContent.length
+      code += node.textContent
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       if (node.tagName === "BR") {
-        offset += 1
-        return
-      }
-
-      const isMark = node.tagName === "MARK"
-      const start = offset
-
-      for (const child of node.childNodes) {
-        walk(child)
-      }
-
-      if (isMark) {
+        code += "\n"
+      } else if (node.tagName === "MARK") {
+        const start = code.length
+        for (const child of node.childNodes) {
+          walk(child)
+        }
         const style = extractStyle(node)
         if (style) {
-          ranges.push({ start, end: offset, style })
+          highlights.push({ start, end: code.length, style })
+        }
+      } else {
+        for (const child of node.childNodes) {
+          walk(child)
         }
       }
     }
@@ -70,7 +71,7 @@ function extractHighlightRanges(preElement) {
     walk(child)
   }
 
-  return ranges
+  return { code, highlights }
 }
 
 function extractStyle(element) {
