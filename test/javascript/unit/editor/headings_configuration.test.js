@@ -12,6 +12,8 @@ configure({
   },
   noHeadings: {
     headings: []
+  },
+  fallbackToDefault: {
   }
 })
 
@@ -40,7 +42,7 @@ test("disables headings with empty array", () => {
 })
 
 test("preset falls back to default headings", () => {
-  const element = createElement("<lexxy-editor preset='blogPost'></lexxy-editor>")
+  const element = createElement("<lexxy-editor preset='fallbackToDefault'></lexxy-editor>")
   const config = new EditorConfiguration(element)
-  expect(config.get("headings")).toEqual([ "h1", "h2", "h3" ])
+  expect(config.get("headings")).toEqual([ "h2", "h3", "h4" ])
 })

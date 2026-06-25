@@ -23,7 +23,10 @@ export class HeadingDropdown extends HTMLElement {
   #listeners = new ListenerBin()
 
   connectedCallback() {
+    this.style.display = "contents"
+
     this.#onToolbarEditor(() => {
+      this.#buttonContainer.style.display = "contents"
       this.#setUpButtons()
       this.#registerButtonHandlers()
     })
@@ -63,6 +66,8 @@ export class HeadingDropdown extends HTMLElement {
   }
 
   #setUpButtons() {
+    this.#buttonContainer.innerHTML = ""
+
     this.#configuredHeadings.forEach((tag) => {
       this.#buttonContainer.appendChild(this.#createButton(tag))
     })
@@ -93,9 +98,10 @@ export class HeadingDropdown extends HTMLElement {
     event.preventDefault()
 
     const button = event.target.closest(HEADING_BUTTON_SELECTOR)
-    if (!button) return
+    if (!button || !this.#editor) return
 
     this.#editor.dispatchCommand("applyHeadingFormat", button.dataset.heading)
+    this.#editor.focus()
   }
 
   get #configuredHeadings() {

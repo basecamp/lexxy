@@ -249,6 +249,13 @@ export class CommandDispatcher {
   }
 
   dispatchApplyHeadingFormat(tag) {
+    if (tag == null) {
+      this.contents.applyParagraphFormat()
+      return
+    }
+
+    if (typeof tag !== "string" || !/^h[1-6]$/.test(tag)) return
+
     this.contents.applyHeadingFormat(tag)
   }
 
