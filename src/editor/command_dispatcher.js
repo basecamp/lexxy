@@ -40,6 +40,7 @@ const COMMANDS = [
   "setFormatHeadingMedium",
   "setFormatHeadingSmall",
   "setFormatParagraph",
+  "applyHeadingFormat",
   "clearFormatting",
   "insertUnorderedList",
   "insertOrderedList",
@@ -245,6 +246,10 @@ export class CommandDispatcher {
 
   dispatchSetFormatParagraph() {
     this.contents.applyParagraphFormat()
+  }
+
+  dispatchApplyHeadingFormat(tag) {
+    this.contents.applyHeadingFormat(tag)
   }
 
   dispatchClearFormatting() {
