@@ -8,7 +8,7 @@ import {
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
-import { handleRollingTabIndex } from "../helpers/accessibility_helper"
+import { handleRollingTabIndex, isKeyboardActivation } from "../helpers/accessibility_helper"
 import ToolbarIcons from "./toolbar_icons"
 import { generateDomId, isActiveAndVisible } from "../helpers/html_helper"
 
@@ -134,14 +134,21 @@ export class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  #dispatchButtonCommand(event, { dataset: { command, payload } }) {
-    const isKeyboard = event instanceof PointerEvent && event.pointerId === -1
+  #dispatchButtonCommand(event, button) {
+    if (button.ariaDisabled === "true") return
+
+    const { command, payload } = button.dataset
+    const shouldKeepToolbarFocus = isKeyboardActivation(event) && !this.#belongsToDropdown(button)
 
     this.editor.update(() => {
       this.editor.dispatchCommand(command, payload)
-    }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined })
+    }, { tag: shouldKeepToolbarFocus ? SKIP_DOM_SELECTION_TAG : undefined })
 
-    if (!isKeyboard) this.editor.focus()
+    if (!shouldKeepToolbarFocus) this.editor.focus()
+  }
+
+  #belongsToDropdown(button) {
+    return button.closest("[data-dropdown-panel]") != null
   }
 
   #bindHotkeys() {
@@ -260,15 +267,7 @@ export class LexicalToolbarElement extends HTMLElement {
 
   #setButtonDisabled(name, isDisabled) {
     const button = this.querySelector(`[name="${name}"]`)
-    if (button) {
-      if (button.disabled !== isDisabled) {
-        button.disabled = isDisabled
-      }
-      const next = isDisabled.toString()
-      if (button.getAttribute("aria-disabled") !== next) {
-        button.setAttribute("aria-disabled", next)
-      }
-    }
+    if (button) button.ariaDisabled = isDisabled
   }
 
   #refreshOverflow() {
@@ -477,11 +476,11 @@ export class LexicalToolbarElement extends HTMLElement {
         ${ToolbarIcons.hr}
       </button>
 
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--push-right" type="button" name="undo" data-command="undo" title="Undo" disabled aria-disabled="true">
+      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--push-right" type="button" name="undo" data-command="undo" title="Undo" aria-disabled="true">
         ${ToolbarIcons.undo}
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo" disabled aria-disabled="true">
+      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo" aria-disabled="true">
         ${ToolbarIcons.redo}
       </button>
 

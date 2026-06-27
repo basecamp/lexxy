@@ -68,7 +68,7 @@ test.describe("Toolbar", () => {
 
     // Undo until the undo button is disabled (editor is back to initial state)
     const undoButton = page.getByRole("button", { name: "Undo" })
-    while (await undoButton.evaluate((el) => !el.disabled)) {
+    while (await undoButton.evaluate((element) => element.ariaDisabled !== "true")) {
       await undoButton.click()
       await editor.flush()
     }
@@ -76,7 +76,7 @@ test.describe("Toolbar", () => {
 
     // Redo until the redo button is disabled
     const redoButton = page.getByRole("button", { name: "Redo" })
-    while (await redoButton.evaluate((el) => !el.disabled)) {
+    while (await redoButton.evaluate((element) => element.ariaDisabled !== "true")) {
       await redoButton.click()
       await editor.flush()
     }
