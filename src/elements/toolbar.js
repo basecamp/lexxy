@@ -257,12 +257,7 @@ export class LexicalToolbarElement extends HTMLElement {
 
   #setButtonPressed(name, isPressed) {
     const button = this.querySelector(`[name="${name}"]`)
-    if (button) {
-      const next = isPressed.toString()
-      if (button.getAttribute("aria-pressed") !== next) {
-        button.setAttribute("aria-pressed", next)
-      }
-    }
+    if (button) button.ariaPressed = isPressed
   }
 
   #setButtonDisabled(name, isDisabled) {
