@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
-import { HELLO_EVERYONE } from "../../helpers/toolbar.js"
+import { HELLO_EVERYONE, focusedName } from "../../helpers/toolbar.js"
 
 test.describe("Toolbar", () => {
   test.beforeEach(async ({ page }) => {
@@ -53,16 +53,13 @@ test.describe("Toolbar", () => {
     const boldButton = page.locator("lexxy-toolbar button[name='bold']")
     await boldButton.focus()
 
-    const focusedName = () =>
-      page.evaluate(() => document.activeElement?.getAttribute("name"))
-
-    await expect.poll(focusedName).toBe("bold")
+    await expect.poll(() => focusedName(page)).toBe("bold")
 
     await page.keyboard.press("ArrowRight")
-    await expect.poll(focusedName).toBe("italic")
+    await expect.poll(() => focusedName(page)).toBe("italic")
 
     await page.keyboard.press("ArrowLeft")
-    await expect.poll(focusedName).toBe("bold")
+    await expect.poll(() => focusedName(page)).toBe("bold")
   })
 
   test("undo and redo commands", async ({ page, editor }) => {
