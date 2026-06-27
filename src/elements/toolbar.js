@@ -181,8 +181,8 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #handleEditorFocus = () => {
-    const firstVisible = this.#buttons.find(isActiveAndVisible)
-    if (firstVisible) firstVisible.tabIndex = 0
+    const firstVisibleButton = this.#toolbarButtons.find(isActiveAndVisible)
+    if (firstVisibleButton) firstVisibleButton.tabIndex = 0
   }
 
   #handleEditorBlur = () => {
@@ -190,11 +190,11 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #handleKeydown = (event) => {
-    handleRollingTabIndex(this.#buttons, event)
+    handleRollingTabIndex(this.#toolbarButtons, event)
   }
 
   #resetTabIndexValues() {
-    this.#buttons.forEach((button) => {
+    this.#toolbarButtons.forEach((button) => {
       button.tabIndex = -1
     })
   }
@@ -369,8 +369,10 @@ export class LexicalToolbarElement extends HTMLElement {
     return Array.from(this.querySelectorAll(":scope > button:not([data-prevent-overflow])"))
   }
 
-  get #buttons() {
-    return Array.from(this.querySelectorAll(":scope button"))
+  get #toolbarButtons() {
+    return Array.from(this.querySelectorAll(":scope button")).filter((button) => {
+      return !button.closest("[data-dropdown-panel]")
+    })
   }
 
   get #toolbarItems() {

@@ -1,8 +1,10 @@
 import { nextFrame } from "../helpers/timing_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
+import { handleRollingTabIndex, isKeyboardActivation } from "../helpers/accessibility_helper"
 
 export class ToolbarDropdown extends HTMLElement {
   #listeners = new ListenerBin()
+  #shouldReturnFocusToTrigger = false
 
   connectedCallback() {
     this.#onToolbarEditor(() => {
@@ -75,13 +77,18 @@ export class ToolbarDropdown extends HTMLElement {
     )
   }
 
-  #handleTriggerClick = () => {
+  #handleTriggerClick = (event) => {
     if (this.isOpen) {
       this.close({ focusEditor: false })
     } else {
+      this.#shouldReturnFocusToTrigger = this.#isOpenedFromToolbar(event)
       this.toolbar?.closeDropdowns({ except: this })
       this.open()
     }
+  }
+
+  #isOpenedFromToolbar(event) {
+    return isKeyboardActivation(event) && this.toolbar?.contains(document.activeElement)
   }
 
   async #onToolbarEditor(callback) {
@@ -94,8 +101,16 @@ export class ToolbarDropdown extends HTMLElement {
   #handleKeyDown = (event) => {
     if (event.key === "Escape") {
       event.stopPropagation()
-      this.close()
+      this.close({ focusEditor: !this.#shouldReturnFocusToTrigger })
+      if (this.#shouldReturnFocusToTrigger) this.trigger?.focus()
+    } else if (this.#isNavigatingMenu(event)) {
+      event.stopPropagation()
+      handleRollingTabIndex(this.#buttons, event, { orientation: "both", wrap: true })
     }
+  }
+
+  #isNavigatingMenu(event) {
+    return this.panel.role === "menu" && this.panel.contains(event.target)
   }
 
   async #focusFirstInteractive() {
