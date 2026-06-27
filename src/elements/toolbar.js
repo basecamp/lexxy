@@ -238,10 +238,10 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("underline", isUnderline)
 
     this.#setButtonPressed("format", isInHeading)
-    this.#setButtonPressed("paragraph", !isInHeading)
-    this.#setButtonPressed("heading-large", headingTag === "h2")
-    this.#setButtonPressed("heading-medium", headingTag === "h3")
-    this.#setButtonPressed("heading-small", headingTag === "h4")
+    this.#setButtonChecked("paragraph", !isInHeading)
+    this.#setButtonChecked("heading-large", headingTag === "h2")
+    this.#setButtonChecked("heading-medium", headingTag === "h3")
+    this.#setButtonChecked("heading-small", headingTag === "h4")
 
     this.#setButtonPressed("lists", isInList)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
@@ -258,6 +258,11 @@ export class LexicalToolbarElement extends HTMLElement {
   #setButtonPressed(name, isPressed) {
     const button = this.querySelector(`[name="${name}"]`)
     if (button) button.ariaPressed = isPressed
+  }
+
+  #setButtonChecked(name, isChecked) {
+    const button = this.querySelector(`[name="${name}"]`)
+    if (button) button.ariaChecked = isChecked
   }
 
   #setButtonDisabled(name, isDisabled) {
@@ -406,16 +411,16 @@ export class LexicalToolbarElement extends HTMLElement {
           ${ToolbarIcons.heading}
         </button>
         <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-dropdown-list" hidden>
-          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph" role="menuitem">
+          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph" role="menuitemradio">
             ${ToolbarIcons.paragraph} <span>Normal</span>
           </button>
-          <button type="button" name="heading-large" data-command="setFormatHeadingLarge" title="Large heading" role="menuitem">
+          <button type="button" name="heading-large" data-command="setFormatHeadingLarge" title="Large heading" role="menuitemradio">
             ${ToolbarIcons.h2} <span>Large Heading</span>
           </button>
-          <button type="button" name="heading-medium" data-command="setFormatHeadingMedium" title="Medium heading" role="menuitem">
+          <button type="button" name="heading-medium" data-command="setFormatHeadingMedium" title="Medium heading" role="menuitemradio">
             ${ToolbarIcons.h3} <span>Medium Heading</span>
           </button>
-          <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading" role="menuitem">
+          <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading" role="menuitemradio">
             ${ToolbarIcons.h4} <span>Small Heading</span>
           </button>
           <div class="lexxy-editor__toolbar-separator" role="separator"></div>
