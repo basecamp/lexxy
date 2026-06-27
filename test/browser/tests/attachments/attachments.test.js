@@ -282,7 +282,7 @@ test.describe("Attachments", () => {
 
     // Undo until the undo button is disabled — no stale upload node should remain
     const undoButton = page.getByRole("button", { name: "Undo" })
-    while (await undoButton.evaluate((el) => !el.disabled)) {
+    while (await undoButton.evaluate((element) => element.ariaDisabled !== "true")) {
       await undoButton.click()
       await editor.flush()
     }
