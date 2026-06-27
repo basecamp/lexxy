@@ -79,11 +79,7 @@ export class HighlightDropdown extends ToolbarDropdown {
     const backgroundColor = $getSelectionStyleValueForProperty(selection, "background-color", NO_STYLE)
 
     this.#colorButtons.forEach(button => {
-      const matchesSelection = button.dataset.value === textColor || button.dataset.value === backgroundColor
-      const next = matchesSelection.toString()
-      if (button.getAttribute("aria-pressed") !== next) {
-        button.setAttribute("aria-pressed", next)
-      }
+      button.ariaPressed = button.dataset.value === textColor || button.dataset.value === backgroundColor
     })
 
     const hasHighlight = textColor !== NO_STYLE || backgroundColor !== NO_STYLE
