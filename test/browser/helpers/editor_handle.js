@@ -36,6 +36,10 @@ export class EditorHandle {
     await this.content.focus()
   }
 
+  async isFocused() {
+    return this.content.evaluate((element) => document.activeElement === element)
+  }
+
   async click() {
     await this.content.click()
   }
