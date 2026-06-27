@@ -1,10 +1,15 @@
 import { isActiveAndVisible } from "./html_helper"
 
-export function handleRollingTabIndex(elements, event) {
+// Keyboard and programmatic clicks carry a synthetic pointer.
+export function isKeyboardActivation(event) {
+  return event instanceof PointerEvent && event.pointerId === -1
+}
+
+export function handleRollingTabIndex(elements, event, { orientation = "horizontal", wrap = false } = {}) {
   const previousActiveElement = document.activeElement
 
   if (elements.includes(previousActiveElement)) {
-    const finder = new NextElementFinder(elements, event.key)
+    const finder = new NextElementFinder(elements, event.key, { orientation, wrap })
 
     if (finder.selectNext(previousActiveElement)) {
       event.preventDefault()
@@ -13,9 +18,11 @@ export function handleRollingTabIndex(elements, event) {
 }
 
 class NextElementFinder {
-  constructor(elements, key) {
+  constructor(elements, key, { orientation, wrap }) {
     this.elements = elements
     this.key = key
+    this.orientation = orientation
+    this.wrap = wrap
   }
 
   selectNext(fromElement) {
@@ -32,21 +39,34 @@ class NextElementFinder {
   }
 
   #findNextElement(fromElement) {
-    switch (this.key) {
-      case "ArrowRight":
-      case "ArrowDown":
+    switch (this.#directionFor(this.key)) {
+      case "next":
         return this.#findNextSibling(fromElement)
 
-      case "ArrowLeft":
-      case "ArrowUp":
+      case "previous":
         return this.#findPreviousSibling(fromElement)
 
-      case "Home":
+      case "first":
         return this.#findFirst()
 
-      case "End":
+      case "last":
         return this.#findLast()
     }
+  }
+
+  #directionFor(key) {
+    if (key === "Home") return "first"
+    if (key === "End") return "last"
+    if (this.#nextKeys.includes(key)) return "next"
+    if (this.#previousKeys.includes(key)) return "previous"
+  }
+
+  get #nextKeys() {
+    return this.orientation === "both" ? [ "ArrowRight", "ArrowDown" ] : [ "ArrowRight" ]
+  }
+
+  get #previousKeys() {
+    return this.orientation === "both" ? [ "ArrowLeft", "ArrowUp" ] : [ "ArrowLeft" ]
   }
 
   #findFirst(elements = this.elements) {
@@ -59,12 +79,20 @@ class NextElementFinder {
 
   #findNextSibling(element) {
     const afterElements = this.elements.slice(this.#indexOf(element) + 1)
-    return this.#findFirst(afterElements)
+    return this.#findFirst(afterElements) ?? this.#wrapToFirst()
   }
 
   #findPreviousSibling(element) {
     const beforeElements = this.elements.slice(0, this.#indexOf(element))
-    return this.#findLast(beforeElements)
+    return this.#findLast(beforeElements) ?? this.#wrapToLast()
+  }
+
+  #wrapToFirst() {
+    return this.wrap ? this.#findFirst() : undefined
+  }
+
+  #wrapToLast() {
+    return this.wrap ? this.#findLast() : undefined
   }
 
   #indexOf(element) {
