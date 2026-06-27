@@ -55,7 +55,7 @@ export class ToolbarDropdown extends HTMLElement {
 
   open() {
     if (this.isOpen) return
-    this.trigger.setAttribute("aria-expanded", "true")
+    this.trigger.ariaExpanded = true
     this.panel.hidden = false
     this.onOpen()
     this.#focusFirstInteractive()
@@ -65,7 +65,7 @@ export class ToolbarDropdown extends HTMLElement {
     if (focusEditor) this.editor?.focus()
 
     if (this.isClosed) return
-    this.trigger.setAttribute("aria-expanded", "false")
+    this.trigger.ariaExpanded = false
     this.panel.hidden = true
     this.onClose()
   }
