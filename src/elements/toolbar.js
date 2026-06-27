@@ -238,7 +238,7 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("underline", isUnderline)
 
     this.#setButtonPressed("format", isInHeading)
-    this.#setButtonPressed("paragraph", !isInHeading)
+    this.#setButtonChecked("paragraph", !isInHeading)
 
     this.querySelector("lexxy-heading-dropdown")
       ?.updateActiveHeading(headingTag)
@@ -258,6 +258,11 @@ export class LexicalToolbarElement extends HTMLElement {
   #setButtonPressed(name, isPressed) {
     const button = this.querySelector(`[name="${name}"]`)
     if (button) button.ariaPressed = isPressed
+  }
+
+  #setButtonChecked(name, isChecked) {
+    const button = this.querySelector(`[name="${name}"]`)
+    if (button) button.ariaChecked = isChecked
   }
 
   #setButtonDisabled(name, isDisabled) {
@@ -406,7 +411,7 @@ export class LexicalToolbarElement extends HTMLElement {
           ${ToolbarIcons.heading}
         </button>
         <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-dropdown-list" hidden>
-          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph" role="menuitem">
+          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph" role="menuitemradio">
             ${ToolbarIcons.paragraph} <span>Normal</span>
           </button>
           <lexxy-heading-dropdown>

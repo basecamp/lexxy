@@ -55,7 +55,7 @@ export class HighlightDropdown extends ToolbarDropdown {
       style: `${attribute}: ${value}`,
       class: "lexxy-editor__toolbar-button lexxy-highlight-button",
       name: `${attribute}-${index}`,
-      role: "menuitem"
+      role: "menuitemcheckbox"
     })
   }
 
@@ -79,7 +79,7 @@ export class HighlightDropdown extends ToolbarDropdown {
     const backgroundColor = $getSelectionStyleValueForProperty(selection, "background-color", NO_STYLE)
 
     this.#colorButtons.forEach(button => {
-      button.ariaPressed = button.dataset.value === textColor || button.dataset.value === backgroundColor
+      button.ariaChecked = button.dataset.value === textColor || button.dataset.value === backgroundColor
     })
 
     const hasHighlight = textColor !== NO_STYLE || backgroundColor !== NO_STYLE
