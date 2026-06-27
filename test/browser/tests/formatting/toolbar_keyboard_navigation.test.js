@@ -106,4 +106,61 @@ test.describe("Toolbar keyboard navigation", () => {
     await page.keyboard.press("Escape")
     await expect.poll(() => editor.isFocused()).toBe(true)
   })
+
+  test("applying a menu command with the keyboard returns focus to the editor", async ({ page, editor }) => {
+    await editor.send("Hello World")
+
+    const formatTrigger = page.locator("lexxy-toolbar button[name='format']")
+    await formatTrigger.focus()
+    await formatTrigger.press("Enter")
+    await expect.poll(() => focusedName(page)).toBe("paragraph")
+
+    await page.keyboard.press("Enter")
+    await expect.poll(() => editor.isFocused()).toBe(true)
+  })
+
+  test("applying a command from the overflow menu returns focus to the editor", async ({ page, editor }) => {
+    await page.setViewportSize({ width: 300, height: 600 })
+    await page.waitForSelector("lexxy-toolbar[overflowing]")
+    await editor.send("Hello World")
+
+    await page.locator("lexxy-toolbar .lexxy-editor__toolbar-overflow button[data-dropdown-trigger]").click()
+    const undo = page.locator(".lexxy-editor__toolbar-overflow-menu button[name='undo']")
+    await undo.focus()
+    await expect.poll(() => focusedName(page)).toBe("undo")
+
+    await page.keyboard.press("Enter")
+    await expect.poll(() => editor.isFocused()).toBe(true)
+  })
+
+  test("arrow navigation stops on disabled buttons so they can be announced", async ({ page, editor }) => {
+    await editor.send("Hello World")
+
+    const redo = page.locator("lexxy-toolbar button[name='redo']")
+    await expect(redo).toHaveAttribute("aria-disabled", "true")
+
+    await page.locator("lexxy-toolbar button[name='undo']").focus()
+    await expect.poll(() => focusedName(page)).toBe("undo")
+
+    await page.keyboard.press("ArrowRight")
+    await expect.poll(() => focusedName(page)).toBe("redo")
+  })
+
+  test("focus stays on the button when its own action disables it", async ({ page, editor }) => {
+    await editor.send("Hello World")
+
+    const undo = page.locator("lexxy-toolbar button[name='undo']")
+    await undo.focus()
+    await expect.poll(() => focusedName(page)).toBe("undo")
+
+    // Focus must stay on the button as it disables itself, not fall to the body
+    let guard = 0
+    while ((await undo.evaluate((element) => element.ariaDisabled)) !== "true" && guard++ < 20) {
+      await page.keyboard.press("Enter")
+      await editor.flush()
+    }
+
+    await expect(undo).toHaveAttribute("aria-disabled", "true")
+    await expect.poll(() => focusedName(page)).toBe("undo")
+  })
 })
