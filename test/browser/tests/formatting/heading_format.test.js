@@ -73,8 +73,8 @@ test.describe("Heading format", () => {
       parent.appendChild(fresh)
     })
 
-    await expect(page.locator("[name='heading-large']")).toHaveAttribute("aria-pressed", "true")
-    await expect(page.locator("[name='heading-medium']")).toHaveAttribute("aria-pressed", "false")
+    await expect(page.locator("[name='heading-large']")).toHaveAttribute("aria-checked", "true")
+    await expect(page.locator("[name='heading-medium']")).toHaveAttribute("aria-checked", "false")
   })
 
   test("heading inside blockquote shows heading button as active, not paragraph", async ({ page, editor }) => {
@@ -95,7 +95,8 @@ test.describe("Heading format", () => {
     const headingLarge = page.locator("[name='heading-large']")
     const paragraph = page.locator("[name='paragraph']")
 
-    await expect(headingLarge).toHaveAttribute("aria-pressed", "true")
-    await expect(paragraph).toHaveAttribute("aria-pressed", "false")
+    await expect(headingLarge).toHaveAttribute("role", "menuitemradio")
+    await expect(headingLarge).toHaveAttribute("aria-checked", "true")
+    await expect(paragraph).toHaveAttribute("aria-checked", "false")
   })
 })

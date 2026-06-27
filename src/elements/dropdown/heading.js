@@ -56,8 +56,8 @@ export class HeadingDropdown extends HTMLElement {
   updateActiveHeading(tag) {
     this.#headingButtons.forEach(button => {
       const next = (button.dataset.heading === tag).toString()
-      if (button.getAttribute("aria-pressed") !== next) {
-        button.setAttribute("aria-pressed", next)
+      if (button.getAttribute("aria-checked") !== next) {
+        button.setAttribute("aria-checked", next)
       }
     })
   }
@@ -101,7 +101,7 @@ export class HeadingDropdown extends HTMLElement {
     button.classList.add("lexxy-heading-button")
     button.name = name
     button.title = label
-    button.setAttribute("role", "menuitem")
+    button.setAttribute("role", "menuitemradio")
     button.innerHTML = `${icon} <span>${label}</span>`
     return button
   }
