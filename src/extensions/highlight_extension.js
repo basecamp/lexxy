@@ -3,7 +3,7 @@ import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty, $patchStyleText, getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 import { $createCodeHighlightNode, $createCodeNode, $isCodeHighlightNode, $isCodeNode, CodeHighlightNode, CodeNode } from "@lexical/code"
 import { extendTextNodeConversion } from "../helpers/lexical_helper"
-import { StyleCanonicalizer, applyCanonicalizers, hasHighlightStyles } from "../helpers/format_helper"
+import { StyleCanonicalizer, applyCanonicalizers, hasHighlightStyles, normalizeColorButtons } from "../helpers/format_helper"
 import { RichTextExtension } from "@lexical/rich-text"
 import LexxyExtension from "./lexxy_extension"
 import { mergeRegister } from "@lexical/utils"
@@ -312,9 +312,13 @@ function $extractHighlightRangesFromCodeNode(codeNode) {
 
 function buildCanonicalizers(config) {
   return [
-    new StyleCanonicalizer("color", [ ...config.buttons.color, ...config.permit.color ]),
-    new StyleCanonicalizer("background-color", [ ...config.buttons["background-color"], ...config.permit["background-color"] ])
+    new StyleCanonicalizer("color", [ ...colorValues(config.buttons.color), ...config.permit.color ]),
+    new StyleCanonicalizer("background-color", [ ...colorValues(config.buttons["background-color"]), ...config.permit["background-color"] ])
   ]
+}
+
+function colorValues(buttons) {
+  return normalizeColorButtons(buttons).map((button) => button.value)
 }
 
 function $toggleSelectionStyles(editor, styles) {

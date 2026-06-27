@@ -33,9 +33,11 @@ test.describe("Color highlighter", () => {
     await editor.select("everyone")
     await page.locator("[name='highlight']").click()
 
-    const colorButton = page.locator("lexxy-highlight-dropdown .lexxy-highlight-button[data-style='color']").first()
+    const textColors = page.locator("lexxy-highlight-dropdown [role='group'][aria-label='Text color']")
+    const colorButton = textColors.locator(".lexxy-highlight-button[data-style='color']").first()
     await expect(colorButton).toHaveAttribute("role", "menuitemcheckbox")
     await expect(colorButton).toHaveAttribute("aria-checked", "true")
+    await expect(colorButton).toHaveAttribute("aria-label", "Yellow")
   })
 
   test("color highlighting text in a plain-text code block", async ({ page, editor }) => {

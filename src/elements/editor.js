@@ -28,7 +28,7 @@ import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
 import Extensions from "../editor/extensions"
 import { BrowserAdapter } from "../editor/adapters/browser_adapter"
-import { getHighlightStyles } from "../helpers/format_helper"
+import { getHighlightStyles, normalizeColorButtons } from "../helpers/format_helper"
 import { styleResolverRoot } from "../helpers/style_resolver_root"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
@@ -853,21 +853,22 @@ export class LexicalEditorElement extends HTMLElement {
   // — triggering at most one forced reflow. The previous implementation interleaved
   // setProperty/getComputedStyle/removeProperty on the same element, forcing a style
   // recalc on every iteration during editor initialization.
-  #resolveColors(property, cssValues) {
+  #resolveColors(property, buttons) {
     const container = document.createElement("span")
     container.style.display = "none"
 
-    const resolvers = cssValues.map(cssValue => {
+    const resolvers = normalizeColorButtons(buttons).map(({ value, label }) => {
       const element = document.createElement("span")
-      element.style.setProperty(property, cssValue)
+      element.style.setProperty(property, value)
       container.appendChild(element)
-      return { element, name: cssValue }
+      return { element, name: value, label }
     })
 
     styleResolverRoot().appendChild(container)
 
-    const resolved = resolvers.map(({ element, name }) => ({
+    const resolved = resolvers.map(({ element, name, label }) => ({
       name,
+      label,
       value: window.getComputedStyle(element).getPropertyValue(property)
     }))
 

@@ -1,5 +1,4 @@
 import Configuration from "./configuration"
-import { range } from "../helpers/array_helper.js"
 
 const global = new Configuration({
   attachmentTagName: "action-text-attachment",
@@ -20,8 +19,28 @@ const presets = new Configuration({
     },
     highlight: {
       buttons: {
-        color: range(1, 9).map(n => `var(--highlight-${n})`),
-        "background-color": range(1, 9).map(n => `var(--highlight-bg-${n})`),
+        color: [
+          { value: "var(--highlight-1)", label: "Yellow" },
+          { value: "var(--highlight-2)", label: "Orange" },
+          { value: "var(--highlight-3)", label: "Red" },
+          { value: "var(--highlight-4)", label: "Magenta" },
+          { value: "var(--highlight-5)", label: "Purple" },
+          { value: "var(--highlight-6)", label: "Blue" },
+          { value: "var(--highlight-7)", label: "Green" },
+          { value: "var(--highlight-8)", label: "Sand" },
+          { value: "var(--highlight-9)", label: "Gray" },
+        ],
+        "background-color": [
+          { value: "var(--highlight-bg-1)", label: "Yellow" },
+          { value: "var(--highlight-bg-2)", label: "Orange" },
+          { value: "var(--highlight-bg-3)", label: "Red" },
+          { value: "var(--highlight-bg-4)", label: "Magenta" },
+          { value: "var(--highlight-bg-5)", label: "Purple" },
+          { value: "var(--highlight-bg-6)", label: "Blue" },
+          { value: "var(--highlight-bg-7)", label: "Green" },
+          { value: "var(--highlight-bg-8)", label: "Sand" },
+          { value: "var(--highlight-bg-9)", label: "Gray" },
+        ],
       },
       permit: {
         color: [],
