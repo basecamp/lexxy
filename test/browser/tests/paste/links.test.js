@@ -54,6 +54,42 @@ test.describe("Paste — Links", () => {
     )
   })
 
+  test("creates a link when pasting text/plain + text/html of the same bare URL (Chromium on macOS address bar)", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello everyone</p>")
+
+    await editor.paste("https://37signals.com", { html: "https://37signals.com" })
+
+    await assertEditorHtml(
+      editor,
+      '<p>Hello everyone<a href="https://37signals.com">https://37signals.com</a></p>',
+    )
+  })
+
+  test("does not autolink when text/html carries more than the bare URL", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello everyone</p>")
+
+    await editor.paste("https://37signals.com", {
+      html: '<p>Read <a href="https://37signals.com">our blog</a></p>',
+    })
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator('a[href="https://37signals.com"]')).toHaveText("our blog")
+    })
+  })
+
+  test("keeps the real target when text/html is an anchor whose href differs from its text", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello everyone</p>")
+
+    await editor.paste("https://37signals.com", {
+      html: '<a href="https://evil.example.com">https://37signals.com</a>',
+    })
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator('a[href="https://evil.example.com"]')).toHaveCount(1)
+      await expect(content.locator('a[href="https://37signals.com"]')).toHaveCount(0)
+    })
+  })
+
   test("create links when pasting URLs keeps formatting", async ({
     page,
     editor,

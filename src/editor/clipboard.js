@@ -40,7 +40,7 @@ export default class Clipboard {
     }
 
     if (this.#isPlainTextOrURLPasted(clipboardData)) {
-      this.#pastePlainText(clipboardData)
+      this.#pastePlainTextOrURL(clipboardData)
       event.preventDefault()
       return true
     }
@@ -78,14 +78,34 @@ export default class Clipboard {
     return types.length === 1 && types[0] === "text/plain"
   }
 
+  // Browsers expose a copied URL in several shapes:
+  //   Safari          [ text/plain, text/uri-list ]
+  //   App ShareSheet  [ text/uri-list ]
+  //   Chromium macOS  [ text/plain, text/html, (?:text/link-preview) ]
   #isOnlyURLPasted(clipboardData) {
-    // Safari URLs are copied as a text/plain + text/uri-list object
-    // App ShareSheet URLs are copied as solo text/uri-list object
+    if (this.#isLexicalClipboardData(clipboardData)) return false
+
     const types = Array.from(clipboardData.types)
-    return types.length
-      && types.length <= 2
-      && types.includes("text/uri-list")
-      && (types.length < 2 || types.includes("text/plain"))
+    if (types.includes("text/uri-list")) {
+      return types.every(type => type === "text/plain" || type === "text/uri-list")
+    }
+
+    if (clipboardData.files.length) return false
+
+    const text = clipboardData.getData("text/plain").trim()
+    if (!isAutolinkableURL(text)) return false
+
+    const html = clipboardData.getData("text/html")
+    return !html || this.#htmlIsBareLinkToURL(html, text)
+  }
+
+  #htmlIsBareLinkToURL(html, url) {
+    const doc = parseHtml(html)
+    if (doc.body.textContent.trim() !== url) return false
+
+    const links = doc.body.querySelectorAll("a")
+    if (links.length === 0) return true
+    return links.length === 1 && links[0].getAttribute("href") === url
   }
 
   #isPastingIntoCodeBlock() {
@@ -119,20 +139,32 @@ export default class Clipboard {
     }, { tag: PASTE_TAG })
   }
 
-  #pastePlainText(clipboardData) {
-    const item = clipboardData.items[0]
+  #pastePlainTextOrURL(clipboardData) {
+    const item = this.#plainTextOrURLItem(clipboardData)
     item.getAsString((text) => {
-      if (isAutolinkableURL(text) && this.contents.hasSelectedText()) {
-        this.contents.createLinkWithSelectedText(text)
-      } else if (isAutolinkableURL(text)) {
-        const nodeKey = this.contents.createLink(text)
-        this.#dispatchLinkInsertEvent(nodeKey, { url: text })
+      const url = text.trim()
+      if (isAutolinkableURL(url)) {
+        this.#pasteURL(url)
       } else if (this.editorElement.supportsMarkdown) {
         this.#pasteMarkdown(text)
       } else {
         this.#pasteRichText(clipboardData)
       }
     })
+  }
+
+  #plainTextOrURLItem(clipboardData) {
+    const items = Array.from(clipboardData.items)
+    return items.find((item) => item.type === "text/plain") || items.find((item) => item.type === "text/uri-list")
+  }
+
+  #pasteURL(url) {
+    if (this.contents.hasSelectedText()) {
+      this.contents.createLinkWithSelectedText(url)
+    } else {
+      const nodeKey = this.contents.createLink(url)
+      this.#dispatchLinkInsertEvent(nodeKey, { url })
+    }
   }
 
   #insertSingleLinkAt(selection, url) {
