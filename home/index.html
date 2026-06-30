@@ -7,16 +7,18 @@ nav_exclude: true
 
 <section class="hero">
   <div class="container">
-    <h1>A modern rich text editor for Rails</h1>
-    <p class="hero__lead">
-      Lexxy is built on Lexical and wires straight into Action Text — clean HTML,
-      Markdown shortcuts, code highlighting, and attachments out of the box.
-    </p>
+    <h1 class="hero__tagline">A modern rich text editor for&nbsp;<strong>Rails</strong><i class="hero__caret"></i></h1>
+    <p class="hero__lead">Lexxy is powering <a href="https://basecamp.com" class="hero__basecamp">Basecamp</a> and hundreds of other products.</p>
+    <p class="hero__lead">Clean HTML, Markdown shortcuts, code highlighting, attachments, and more, all wired straight into Action Text.</p>
     <div class="hero__actions">
-      <a class="btn btn--primary" href="#try">Try the sandbox</a>
+      <a class="btn btn--primary" href="#try">Try out Lexxy</a>
       <a class="btn btn--secondary" href="{{ "/docs/" | relative_url }}">Read the docs</a>
     </div>
   </div>
+</section>
+
+<section class="section used-by">
+  <div class="used-by__logos"></div>
 </section>
 
 <section class="section section--tint">
@@ -28,44 +30,48 @@ nav_exclude: true
     <div class="features">
       <div class="feature">
         <h3>Built on Lexical</h3>
-        <p>Powered by <a href="https://lexical.dev">Lexical</a>, Meta's extensible text-editor framework.</p>
+        <p>Powered by <a href="https://lexical.dev">Lexical</a>, Meta's extensible text-editor framework</p>
       </div>
       <div class="feature">
         <h3>Clean HTML semantics</h3>
-        <p>Paragraphs are real <code>&lt;p&gt;</code> tags, as they should be.</p>
+        <p>Paragraphs are real <code>&lt;p&gt;</code> tags, as they should be</p>
       </div>
       <div class="feature">
-        <h3>Markdown support</h3>
-        <p>Inline shortcuts and auto-formatting on paste, without leaving the editor.</p>
+        <h3>### Markdown support</h3>
+        <p><strong>**Inline**</strong> shortcuts and auto-formatting on paste, without leaving the editor</p>
       </div>
       <div class="feature">
-        <h3>Code highlighting</h3>
-        <p>Real-time syntax highlighting for fenced code blocks as you type.</p>
+        <h3 class="code"><span class="code__punctuation">&lt;%</span> <span class="code__function">Code</span> <span class="code__attr">highlighting</span> <span class="code__punctuation">%&gt;</span></h3>
+        <p>Real-time syntax highlighting for fenced code blocks as you type</p>
       </div>
       <div class="feature">
         <h3>Smart links</h3>
-        <p>Paste a URL over selected text to turn it into a link instantly.</p>
+        <p>Paste <a href="https://www.youtube.com/watch?v=_ZlnlD2ckNE" rel="nofollow">a URL</a> over selected text to turn it into a link instantly</p>
       </div>
       <div class="feature">
         <h3>Configurable prompts</h3>
-        <p>Mentions and interactive prompts with flexible loading and filtering strategies.</p>
+        <p><span class="feature__mention">@mentions</span> and interactive prompts with flexible loading and filtering</p>
       </div>
       <div class="feature">
         <h3>Attachment previews</h3>
-        <p>Preview attachments like PDFs and videos right inside the editor.</p>
+        <p>Preview attachments like PDFs and videos right inside the editor</p>
       </div>
       <div class="feature">
         <h3>Action Text native</h3>
-        <p>Generates the canonical HTML Action Text expects — drop-in for Trix.</p>
+        <p>Generates the canonical HTML Action Text expects — drop-in for <a href="https://trix-editor.org">Trix</a></p>
+      </div>
+      <div class="feature">
+        <h3>Customize with extensions</h3>
+        <p>Written in JavaScript and CSS that is easy to customize and extend</p>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="try">
+<section class="section " id="try">
   <div class="container">
     <div class="section__head">
-      <h2>Try it right here</h2>
+      <h2>Try out Lexxy</h2>
       <p>Type, format, paste a link, or hit <code>:</code> to drop in an emoji.</p>
     </div>
     <div class="try__editor">
