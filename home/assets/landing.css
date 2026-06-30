@@ -93,7 +93,10 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html {
+  font-size: clamp(14px, 1.2vw, 20px);
+  scroll-behavior: smooth;
+}
 
 body.landing {
   background: var(--bg);
@@ -107,7 +110,6 @@ body.landing {
 a:not(.btn) {
   color: var(--accent);
   text-decoration: underline;
-  transition: all 0.15s ease-out;
 
   &:hover {
     text-decoration: none;
@@ -124,13 +126,13 @@ a:not(.btn) {
   border: 1px solid transparent;
   border-radius: var(--radius);
   display: inline-flex;
-  font-size: 0.75em;
+  font-size: 0.85em;
   font-weight: 600;
   gap: 0.5rem;
   padding: 0.75em 1.2em;
   text-decoration: none;
   text-transform: uppercase;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, border 0.15s ease, color 0.15s ease;
 }
 
 .btn--primary {
@@ -262,14 +264,14 @@ a:not(.btn) {
 /* Hero */
 
 .hero {
-  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
-  padding-block: 5%;
+  font-size: 1.2em;
+  padding-block: max(5%, 4rem);
   position: relative;
   text-align: center;
   text-wrap: pretty;
 
   .logo {
-    margin-block-end: 5%;
+    margin-block-end: max(5%, 4rem);
   }
 
   .hero--bg {
@@ -285,7 +287,7 @@ a:not(.btn) {
   }
 
   .hero__tagline {
-    font-size: clamp(2.75rem, 7vw, 4.5rem);
+    font-size: clamp(3.6rem, 4vw, 4.5rem);
     font-weight: 550;
     line-height: 1.05;
     letter-spacing: -0.05em;
@@ -351,7 +353,7 @@ a:not(.btn) {
 }
 
 .section__head h2 {
-  font-size: clamp(1.6rem, 4.5vw, 2.75rem);
+  font-size: clamp(1.3em, 4.25vw, 2.25rem);
   letter-spacing: -0.02em;
   margin: 0;
 }
@@ -450,7 +452,7 @@ a:not(.btn) {
   }
 
   h3 {
-    font-size: 1.1rem;
+    font-size: 1em;
     margin: 0;
     letter-spacing: -0.01em;
     text-transform: uppercase;
@@ -504,7 +506,7 @@ a:not(.btn) {
   lexxy-editor {
     --lexxy-color-canvas: var(--bg);
     border: 0;
-    font-size: clamp(1rem, 1.2vw, 1.4rem);
+    font-size: 1.1em;
   }
 
   lexxy-toolbar {
