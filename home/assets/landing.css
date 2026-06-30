@@ -15,11 +15,11 @@
   --accent-light: #A6CAFF;
   --accent-lightest: #d9e6f6;
 
-  --font-base: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-base: "Lexend", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "Menlo", "Monaco", Consolas, monospace;
 
   --max-width: 80rem;
-  --radius: 0.75rem;
+  --radius: 0.25rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -124,11 +124,12 @@ a:not(.btn) {
   border: 1px solid transparent;
   border-radius: var(--radius);
   display: inline-flex;
-  font-size: 0.85em;
+  font-size: 0.75em;
   font-weight: 600;
   gap: 0.5rem;
-  padding: 0.6em 1.2em;
+  padding: 0.75em 1.2em;
   text-decoration: none;
+  text-transform: uppercase;
   transition: all 0.15s ease;
 }
 
@@ -236,8 +237,7 @@ a:not(.btn) {
 }
 
 .logo {
-  block-size: 40px;
-  inline-size: 100px;
+  block-size: 50px;
 
   .logo__select-bg {
     fill: var(--accent-light);
@@ -263,16 +263,38 @@ a:not(.btn) {
 
 .hero {
   font-size: clamp(1.1rem, 2.5vw, 1.4rem);
-  padding-block: 5rem 3.5rem;
+  padding-block: 5%;
+  position: relative;
   text-align: center;
   text-wrap: pretty;
 
+  .logo {
+    margin-block-end: 5%;
+  }
+
+  .hero--bg {
+    inset-block-end: -1rem;
+    inset-inline: 0;
+    position: absolute;
+    z-index: -1;
+
+    svg {
+      fill: transparent;
+      stroke: var(--ink-lightest);
+    }
+  }
+
   .hero__tagline {
     font-size: clamp(2.75rem, 7vw, 4.5rem);
+    font-weight: 550;
     line-height: 1.05;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.05em;
     margin: 0 0 2rem;
     position: relative;
+
+    strong {
+      font-weight: 800;
+    }
 
     .hero__caret {
       animation: caret-blink 1s linear infinite ;
@@ -282,7 +304,7 @@ a:not(.btn) {
       block-size: 0.8em;
       display: inline-block;
       inline-size: 0.125em;
-      margin-inline-start: 0.05em;
+      margin-inline-start: 0.075em;
     }
   }
 
@@ -299,8 +321,9 @@ a:not(.btn) {
   }
 
   .hero__lead {
-    max-width: 48rem;
+    color: var(--ink-medium);
     margin: 0 auto;
+    max-width: 48rem;
   }
 
   .hero__actions {
@@ -317,10 +340,9 @@ a:not(.btn) {
 /* ------------------------------------------------------------------------------------ */
 /* Section scaffolding */
 
-.section { padding-block: 4rem; }
+.section { padding-block: 5%; }
 
-.section--light { background: var(--ink-lightest); }
-.section--tint { background: var(--ink-lighter); }
+.section--tint { background: var(--ink-lightest); }
 
 .section__head {
   text-align: center;
@@ -329,7 +351,7 @@ a:not(.btn) {
 }
 
 .section__head h2 {
-  font-size: clamp(1.6rem, 4vw, 2.25rem);
+  font-size: clamp(1.6rem, 4.5vw, 2.75rem);
   letter-spacing: -0.02em;
   margin: 0;
 }
@@ -345,13 +367,14 @@ a:not(.btn) {
 /* Used by */
 
 .used-by {
+  background: var(--ink-lighter);
   padding-block: 1rem;
 
   .used-by__logos {
     animation: logo-scroll 90s linear infinite;
     background: url("images/logos.png") repeat-x 0 center;
     background-size: auto 100%;
-    block-size: 3rem;
+    block-size: 2.2rem;
     filter: grayscale(1);
     inline-size: 100%;
     opacity: 0.6;
@@ -372,28 +395,71 @@ a:not(.btn) {
 /* ------------------------------------------------------------------------------------ */
 /* Features */
 
+.section--features {
+  .section__head {
+    padding-inline: 1.5rem;
+    max-inline-size: unset;
+  }
+}
+
 .features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 0.8rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+
+@media screen and (max-width: 1200px) {
+  .features {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media screen and (max-width: 800px) {
+  .features {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media screen and (max-width: 400px) {
+  .features {
+    grid-template-columns: repeat(1, 1fr);
+  }
 }
 
 .feature {
   background: var(--bg);
-  border: 1px solid var(--bg-max);
-  border-radius: var(--radius);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05), 0 3px 10px rgba(0, 0, 0, 0.03);
-  padding: 1.5rem;
+  box-shadow: 0 0 0 1px var(--ink-lighter);
+  cursor: default;
+  padding: 3em 1.5em;
+  transition: background 0.15s linear;
+
+  &:hover {
+    background: var(--ink-lightest);
+  }
+
+  svg {
+    block-size: 1lh;
+    inline-size: 1lh;
+    fill: var(--ink-medium);
+    margin-block-end: 2em;
+    transition: all ease-out 0.125s;
+  }
+
+  a {
+    cursor: pointer;
+  }
 
   h3 {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     margin: 0;
     letter-spacing: -0.01em;
+    text-transform: uppercase;
   }
 
   p {
-    margin: 0;
+    color: var(--ink-medium);
     font-size: 0.95rem;
+    margin: 0;
   }
 
   code {
@@ -420,10 +486,6 @@ a:not(.btn) {
       color: #9680BC;
     }
   }
-
-  .feature__mention {
-
-  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -440,10 +502,14 @@ a:not(.btn) {
 
 .try__editor {
   lexxy-editor {
-    font-size: 1.1em;
+    --lexxy-color-canvas: var(--bg);
+    border: 0;
+    font-size: clamp(1rem, 1.2vw, 1.4rem);
   }
+
   lexxy-toolbar {
-    font-size: 0.9em;
+    border-color: var(--ink-lighter);
+    font-size: 1em;
     line-height: 1.2em;
   }
 }
