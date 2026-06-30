@@ -1,14 +1,14 @@
 /* Lexxy landing — palette and fonts mirror the editor's own design tokens
    (app/assets/stylesheets/lexxy-variables.css), converted from OKLCH to hex. */
 :root {
-  --bg: #FFFBF9;
+  --bg: #FCF9F6;
   --bg-max: #FFF;
 
-  --ink: #2E2B2A;
-  --ink-medium: #423F3E;
-  --ink-light: #BAB1AC;
-  --ink-lighter: #F3E9E4;
-  --ink-lightest: #F9F4F2;
+  --ink: #201F1E;
+  --ink-medium: #534B44;
+  --ink-light: #C2BCB8;
+  --ink-lighter: #EEE7E1;
+  --ink-lightest: #F6F1ED;
 
   --accent: #2a71e5;
   --accent-medium: #57acff;
@@ -18,7 +18,7 @@
   --font-base: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "Menlo", "Monaco", Consolas, monospace;
 
-  --max-width: 64rem;
+  --max-width: 80rem;
   --radius: 0.75rem;
 }
 
@@ -319,7 +319,8 @@ a:not(.btn) {
 
 .section { padding-block: 4rem; }
 
-.section--tint { background: var(--ink-lightest); }
+.section--light { background: var(--ink-lightest); }
+.section--tint { background: var(--ink-lighter); }
 
 .section__head {
   text-align: center;
