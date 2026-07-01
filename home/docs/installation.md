@@ -72,17 +72,15 @@ Like the [sandbox]({{ "/sandbox/" | relative_url }}), Lexxy's JavaScript can be 
 
 ## Integration with Action Text
 
-Once the gem is installed, Lexxy takes over Action Text automatically — `form.rich_text_area` renders a Lexxy editor instead of Trix. No extra configuration is required. How it hooks in depends on your Rails version:
+Once the gem is installed, Lexxy takes over Action Text automatically — `form.rich_text_area` renders a Lexxy editor instead of Trix. No extra configuration is required. How it hooks in depends on your Rails version.
 
-- **Rails 8.2 and newer** register Lexxy as an [Action Text editor adapter](https://github.com/rails/rails/pull/51238) and set it as the default. The gem does this for you (`config.action_text.editor = :lexxy`), so you'd only touch that option to point Action Text at a different editor.
-- **Rails 8.0 and 8.1** predate the editor adapter, so Lexxy overrides Action Text's form helpers instead. See below.
+### Rails 8.2+
 
-### Override Action Text defaults (Rails 8.0 and 8.1 only)
+Lexxy is registered as an [Action Text editor adapter](https://github.com/rails/rails/pull/51238) and set as the default. The gem does this for you (`config.action_text.editor = :lexxy`), so you'd only touch that option to point Action Text at a different editor.
 
-{: .note }
-> This option applies only to Rails 8.0 and 8.1. On Rails 8.2+, Lexxy is wired in through the Action Text editor adapter and this setting has no effect — use `config.action_text.editor` instead.
+### Rails 8.0 and 8.1
 
-On Rails 8.0 and 8.1, the gem overrides Action Text form helpers so that `form.rich_text_area` renders a Lexxy editor instead of the default Trix editor.
+These versions predate the editor adapter, so the gem overrides Action Text's form helpers so that `form.rich_text_area` renders a Lexxy editor instead of Trix.
 
 You can opt out of this behavior by disabling this option in `application.rb`:
 
