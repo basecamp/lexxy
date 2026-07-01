@@ -44,6 +44,8 @@ export default class extends Controller {
 }
 ```
 
+`highlightCode` processes code blocks in small chunks, yielding to the browser between them so the page stays responsive on content with many or large code blocks. It returns a `Promise` that resolves when every block has been highlighted — calling it fire-and-forget, as above, is fine, or you can `await` it if you need to run code after highlighting completes.
+
 Then update the Action Text Content template to include the `data-controller` attribute:
 
 ```erb
