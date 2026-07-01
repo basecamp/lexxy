@@ -443,6 +443,22 @@ a:not(.btn) {
   .section__head {
     padding-inline: 1.5rem;
     max-inline-size: unset;
+
+    .highlight {
+      position: relative;
+
+      &:before {
+        background: var(--accent);
+        content: "";
+        display: block;
+        inset-inline: 0.3em;
+        inset-block: 1.2em -0.1em;
+        position: absolute;
+        rotate: 1deg;
+        transform: skew(25deg, 0);
+        z-index: -1;
+      }
+    }
   }
 }
 
@@ -478,13 +494,13 @@ a:not(.btn) {
   transition: background 0.15s linear;
 
   &:hover {
-    background: var(--ink-lightest);
+    background: var(--accent-lightest);
   }
 
   svg {
     block-size: 1lh;
     inline-size: 1lh;
-    fill: var(--ink-medium);
+    fill: var(--accent);
     margin-block-end: 2em;
     transition: all ease-out 0.125s;
   }
