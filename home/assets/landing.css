@@ -1,7 +1,6 @@
-/* Lexxy landing — palette and fonts mirror the editor's own design tokens
-   (app/assets/stylesheets/lexxy-variables.css), converted from OKLCH to hex. */
 :root {
   --bg: #FFFDFB;
+  --bg-secondary: #252628;
 
   --accent: #1268D1;
   --accent-medium: #71B0FD;
@@ -14,6 +13,9 @@
   --ink-lighter: #E6E5E3;
   --ink-lightest: #F7F5F4;
 
+  --button-bg: #FFFDFB;
+  --button-text: #1268D1;
+
   --font-base: "Lexend", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "Menlo", "Monaco", Consolas, monospace;
 
@@ -23,18 +25,22 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #201F1E;
+    --bg: #131212;
+    --bg-secondary: #3B4146;
 
-    --accent: #57acff;
-    --accent-medium: #8bc6ff;
-    --accent-light: #3D689E;
-    --accent-lightest: #1d314b;
+    --accent: #1268D1;
+    --accent-medium: #0B4995;
+    --accent-light: #143863;
+    --accent-lightest: #1F282F;
 
-    --ink: #F9F4F2;
-    --ink-medium: #F3E9E4;
-    --ink-light: #9e9e9e;
-    --ink-lighter: #423F3E;
-    --ink-lightest: #2E2B2A;
+    --ink: #F7F5F4;
+    --ink-medium: #E6E5E3;
+    --ink-light: #636568;
+    --ink-lighter: #3C414D;
+    --ink-lightest: #252628;
+
+    --button-bg: #3B4856;
+    --button-text: #F7F5F4;
   }
 
   /* Editor dark mode colors */
@@ -122,7 +128,9 @@ a:not(.btn) {
 
 .btn {
   align-items: center;
+  background: var(--button-bg);
   border-radius: var(--radius);
+  color: var(--button-text);
   display: inline-flex;
   font-size: 0.9em;
   gap: 0.5rem;
@@ -131,34 +139,14 @@ a:not(.btn) {
   transition: all 0.125s ease;
 
   &:hover {
+    box-shadow: 0 3px 0 0 color-mix(var(--button-bg), transparent 50%);
+    opacity: 0.8;
     translate: 0 -3px;
   }
 
   &:active {
+    box-shadow: 0 1px 0 0 color-mix(var(--button-bg), transparent 50%);
     translate: 0 -1px;
-  }
-}
-
-.btn--primary {
-  background: var(--accent);
-  color: var(--bg);
-
-  &:hover {
-    background: var(--accent-medium);
-  }
-}
-
-.btn--secondary {
-  background: var(--bg);
-  color: var(--accent);
-
-  &:hover {
-    box-shadow: 0 3px 0 0 var(--accent);
-    opacity: 0.8;
-  }
-
-  &:active {
-    box-shadow: 0 1px 0 0 var(--accent);
   }
 }
 
@@ -279,6 +267,12 @@ a:not(.btn) {
   .logo__xy-2 { fill: var(--ink); }
 }
 
+@media (prefers-color-scheme: dark) {
+  .logo {
+    .logo__xy { fill: var(--ink); }
+  }
+}
+
 
 /* ------------------------------------------------------------------------------------ */
 /* Hero */
@@ -298,14 +292,14 @@ a:not(.btn) {
   .hero--bg {
     inset-block-end: -3rem;
     inset-inline: 0;
-    opacity: 0.5;
+    opacity: 0.05;
     pointer-events: none;
     position: absolute;
     z-index: 0;
 
     svg {
       fill: transparent;
-      stroke: var(--bg);
+      stroke: var(--button-text);
     }
   }
 
@@ -328,9 +322,9 @@ a:not(.btn) {
 
     .hero__caret {
       animation: caret-blink 1s linear infinite ;
-      background: var(--accent-medium);
+      background: var(--accent);
       border-radius: 4px;
-      box-shadow: 0 8px 0 0 var(--accent-medium), 0 -8px 0 0 var(--accent-medium);
+      box-shadow: 0 8px 0 0 var(--accent), 0 -8px 0 0 var(--accent);
       block-size: 0.8em;
       display: inline-block;
       inline-size: 0.125em;
@@ -417,7 +411,7 @@ a:not(.btn) {
 /* Used by */
 
 .used-by {
-  background: var(--ink);
+  background: var(--bg-secondary);
   border-radius: 0.6rem;
   padding-block: 1rem;
   margin-inline: 1.5rem;
@@ -535,13 +529,6 @@ a:not(.btn) {
     .code__punctuation {
       color: #9680BC;
     }
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .feature {
-    border-color: var(--ink-lighter);
-    box-shadow: none;
   }
 }
 
