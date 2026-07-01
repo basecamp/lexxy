@@ -147,7 +147,7 @@ test.describe("Paste — Table cell color styles", () => {
     const tableHtml = `
       <table>
         <tr>
-          <td style="background: #ffff00; color: black;"><span style="color: black;">Shaded</span></td>
+          <td style="background-color: #ffff00; color: black;"><span style="color: black;">Shaded</span></td>
         </tr>
       </table>
     `
