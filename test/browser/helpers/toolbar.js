@@ -9,24 +9,18 @@ export async function openToolbarDropdown(page, name) {
 }
 
 const FORMAT_DROPDOWN_COMMANDS = new Set([
-  "setFormatParagraph", "setFormatHeadingLarge", "setFormatHeadingMedium",
-  "setFormatHeadingSmall", "clearFormatting"
+  "setFormatParagraph", "clearFormatting"
 ])
 
-const HEADING_BUTTON_NAMES = {
-  setFormatHeadingLarge: "heading-large",
-  setFormatHeadingMedium: "heading-medium",
-  setFormatHeadingSmall: "heading-small"
-}
+const HEADING_BUTTON_PREFIX = "heading-"
 
 export async function clickToolbarButton(page, command) {
-  if (FORMAT_DROPDOWN_COMMANDS.has(command)) {
+  if (FORMAT_DROPDOWN_COMMANDS.has(command) || command.startsWith(HEADING_BUTTON_PREFIX)) {
     await openFormatDropdown(page)
   }
 
-  const buttonName = HEADING_BUTTON_NAMES[command]
-  if (buttonName) {
-    await page.locator(`[name='${buttonName}']`).click()
+  if (command.startsWith(HEADING_BUTTON_PREFIX)) {
+    await page.locator(`[name='${command}']`).click()
   } else {
     await page.locator(`[data-command='${command}']`).click()
   }

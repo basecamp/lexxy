@@ -14,7 +14,7 @@ test.describe("Heading format", () => {
     await editor.setValue("<p>Lexxy</p>")
     await editor.select("Lexxy")
 
-    await clickToolbarButton(page, "setFormatHeadingLarge")
+    await clickToolbarButton(page, "heading-large")
     await assertEditorHtml(editor, "<h2>Lexxy</h2>")
   })
 
@@ -22,7 +22,7 @@ test.describe("Heading format", () => {
     await editor.setValue("<p>Lexxy</p>")
     await editor.select("Lexxy")
 
-    await clickToolbarButton(page, "setFormatHeadingMedium")
+    await clickToolbarButton(page, "heading-medium")
     await assertEditorHtml(editor, "<h3>Lexxy</h3>")
   })
 
@@ -30,7 +30,7 @@ test.describe("Heading format", () => {
     await editor.setValue("<p>Lexxy</p>")
     await editor.select("Lexxy")
 
-    await clickToolbarButton(page, "setFormatHeadingSmall")
+    await clickToolbarButton(page, "heading-small")
     await assertEditorHtml(editor, "<h4>Lexxy</h4>")
   })
 
@@ -46,7 +46,7 @@ test.describe("Heading format", () => {
     await editor.setValue("<p>Lexxy</p>")
     await editor.select("Lexxy")
 
-    await clickToolbarButton(page, "setFormatHeadingLarge")
+    await clickToolbarButton(page, "heading-large")
     await editor.select("Lexxy")
     await clickToolbarButton(page, "insertQuoteBlock")
     await assertEditorHtml(editor, "<blockquote><h2>Lexxy</h2></blockquote>")
@@ -61,7 +61,7 @@ test.describe("Heading format", () => {
     await editor.select("Lexxy")
 
     // Apply large heading, then wrap in blockquote
-    await clickToolbarButton(page, "setFormatHeadingLarge")
+    await clickToolbarButton(page, "heading-large")
     await assertEditorHtml(editor, "<h2>Lexxy</h2>")
 
     await editor.select("Lexxy")

@@ -4,19 +4,31 @@ import { ListenerBin } from "../../helpers/listener_helper"
 
 const HEADING_BUTTON_SELECTOR = "button.lexxy-heading-button"
 
-const HEADING_LABELS = {
-  h1: "Heading 1",
-  h2: "Large Heading",
-  h3: "Medium Heading",
-  h4: "Small Heading",
-  h5: "Heading 5",
-  h6: "Heading 6"
+export const DEFAULT_HEADINGS = [ "h2", "h3", "h4" ]
+
+const HEADING_PRESETS = [
+  { label: "Large Heading", name: "heading-large" },
+  { label: "Medium Heading", name: "heading-medium" },
+  { label: "Small Heading", name: "heading-small" }
+]
+
+export function resolveHeadings(config) {
+  const configured = config.get("headings")
+  return Array.isArray(configured) ? configured : DEFAULT_HEADINGS
 }
 
-const HEADING_NAMES = {
-  h2: "heading-large",
-  h3: "heading-medium",
-  h4: "heading-small"
+export function labelForHeading(tag, index) {
+  if (index < HEADING_PRESETS.length) return HEADING_PRESETS[index].label
+
+  const level = tag.match(/^h(\d+)$/)?.[1]
+  return level ? `Heading ${level}` : tag.toUpperCase()
+}
+
+function nameForHeading(tag, index) {
+  if (index < HEADING_PRESETS.length) return HEADING_PRESETS[index].name
+
+  const level = tag.match(/^h(\d+)$/)?.[1]
+  return level ? `heading-${level}` : `heading-${tag}`
 }
 
 export class HeadingDropdown extends HTMLElement {
@@ -68,14 +80,14 @@ export class HeadingDropdown extends HTMLElement {
   #setUpButtons() {
     this.#buttonContainer.innerHTML = ""
 
-    this.#configuredHeadings.forEach((tag) => {
-      this.#buttonContainer.appendChild(this.#createButton(tag))
+    this.#configuredHeadings.forEach((tag, index) => {
+      this.#buttonContainer.appendChild(this.#createButton(tag, index))
     })
   }
 
-  #createButton(tag) {
-    const label = HEADING_LABELS[tag] || tag.toUpperCase()
-    const name = HEADING_NAMES[tag] || `heading-${tag}`
+  #createButton(tag, index) {
+    const label = labelForHeading(tag, index)
+    const name = nameForHeading(tag, index)
     const icon = ToolbarIcons[tag] || ""
 
     const button = document.createElement("button")
@@ -90,24 +102,18 @@ export class HeadingDropdown extends HTMLElement {
 
   #registerButtonHandlers() {
     this.#headingButtons.forEach(button => {
-      this.#listeners.track(registerEventListener(button, "click", this.#handleHeadingClick))
+      this.#listeners.track(registerEventListener(button, "click", (event) => {
+        if (!this.#editor) return
+
+        event.preventDefault()
+        this.#editor.dispatchCommand("applyHeadingFormat", button.dataset.heading)
+        this.#editor.focus()
+      }))
     })
   }
 
-  #handleHeadingClick = (event) => {
-    event.preventDefault()
-
-    const button = event.target.closest(HEADING_BUTTON_SELECTOR)
-    if (!button || !this.#editor) return
-
-    this.#editor.dispatchCommand("applyHeadingFormat", button.dataset.heading)
-    this.#editor.focus()
-  }
-
   get #configuredHeadings() {
-    const configured = this.#editorElement.config.get("headings")
-    const headings = Array.isArray(configured) ? configured : [ "h2", "h3", "h4" ]
-    return headings.filter((heading) => /^h[1-6]$/.test(heading))
+    return resolveHeadings(this.#editorElement.config)
   }
 
   get #buttonContainer() {

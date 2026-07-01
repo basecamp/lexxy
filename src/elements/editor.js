@@ -23,6 +23,7 @@ import { isAttachmentSpacerTextNode, isEditorFocused } from "../helpers/lexical_
 import { sanitize, setSanitizerConfig } from "../helpers/sanitization_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
+import { labelForHeading, resolveHeadings } from "./dropdown/heading"
 import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
@@ -840,11 +841,14 @@ export class LexicalEditorElement extends HTMLElement {
   get #supportedHeadingFormats() {
     if (!this.supportsRichText) return []
 
+    const headings = resolveHeadings(this.config)
     return [
       { label: "Normal", command: "setFormatParagraph", tag: null },
-      { label: "Large heading", command: "setFormatHeadingLarge", tag: "h2" },
-      { label: "Medium heading", command: "setFormatHeadingMedium", tag: "h3" },
-      { label: "Small heading", command: "setFormatHeadingSmall", tag: "h4" },
+      ...headings.map((tag, index) => ({
+        label: labelForHeading(tag, index),
+        command: "applyHeadingFormat",
+        tag
+      }))
     ]
   }
 
