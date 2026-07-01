@@ -113,4 +113,91 @@ test.describe("Paste — Table cell color styles", () => {
       }
     })
   })
+
+  // Excel puts hardcoded text colors on the inner spans/fonts of each cell, not
+  // just on the <td>. A Lexxy table adopts the current theme, so pasted foreign
+  // colors inside cells must be stripped along with the cell's own styles.
+  test("strips color from elements nested inside pasted table cells", async ({
+    editor,
+  }) => {
+    const tableHtml = `
+      <table>
+        <tr>
+          <td style="color: windowtext;"><span style="color: black;">First</span></td>
+          <td><font color="#000000"><span style="color: #000000;">Second</span></font></td>
+        </tr>
+      </table>
+    `
+
+    await editor.paste("First\tSecond", { html: tableHtml })
+
+    await assertEditorContent(editor, async (content) => {
+      const styledDescendants = content.locator(
+        'table td [style*="color"], table th [style*="color"]',
+      )
+      await expect(styledDescendants).toHaveCount(0)
+    })
+  })
+
+  // A cell shaded in Excel keeps a hardcoded background-color that survives the
+  // sanitizer. Cell shading can't be set in Lexxy, so strip it on paste.
+  test("strips shading and text color from an Excel-style shaded cell", async ({
+    editor,
+  }) => {
+    const tableHtml = `
+      <table>
+        <tr>
+          <td style="background: #ffff00; color: black;"><span style="color: black;">Shaded</span></td>
+        </tr>
+      </table>
+    `
+
+    await editor.paste("Shaded", { html: tableHtml })
+
+    await assertEditorContent(editor, async (content) => {
+      const cell = content.locator("table td")
+      await expect(cell).toHaveCount(1)
+
+      const styles = await cell.evaluate((el) => ({
+        background: el.style.background,
+        backgroundColor: el.style.backgroundColor,
+        color: el.style.color,
+      }))
+      expect(styles.background).toBe("")
+      expect(styles.backgroundColor).toBe("")
+      expect(styles.color).toBe("")
+
+      const styledDescendants = cell.locator('[style*="color"]')
+      await expect(styledDescendants).toHaveCount(0)
+    })
+  })
+
+  // Shading survives as TableCellNode state, so it reappears when previously
+  // stored content is loaded back into the editor — a path the paste-time
+  // formatter never sees. Normalize it away on load too.
+  test("strips shading from cells when loading stored content", async ({
+    editor,
+  }) => {
+    await editor.setValue(`
+      <table><tbody>
+        <tr>
+          <td style="background-color: rgb(255, 255, 0);">Shaded</td>
+          <td>Plain</td>
+        </tr>
+      </tbody></table>
+    `)
+
+    const value = await editor.value()
+    expect(value).not.toContain("background-color")
+
+    await assertEditorContent(editor, async (content) => {
+      const cells = content.locator("table td")
+      await expect(cells).toHaveCount(2)
+
+      for (const cell of await cells.all()) {
+        const bgColor = await cell.evaluate((el) => el.style.backgroundColor)
+        expect(bgColor).toBe("")
+      }
+    })
+  })
 })
