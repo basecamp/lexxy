@@ -1,6 +1,5 @@
 import ToolbarIcons from "../toolbar_icons"
-import { registerEventListener } from "../../helpers/listener_helper"
-import { ListenerBin } from "../../helpers/listener_helper"
+import { ListenerBin, registerEventListener } from "../../helpers/listener_helper"
 
 const HEADING_BUTTON_SELECTOR = "button.lexxy-heading-button"
 
