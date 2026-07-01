@@ -65,9 +65,9 @@ describe("editor initialized event", () => {
 
     expect(event.detail.headingFormats).toEqual([
       { label: "Normal", command: "setFormatParagraph", tag: null },
-      { label: "Large heading", command: "setFormatHeadingLarge", tag: "h2" },
-      { label: "Medium heading", command: "setFormatHeadingMedium", tag: "h3" },
-      { label: "Small heading", command: "setFormatHeadingSmall", tag: "h4" },
+      { label: "Large Heading", command: "applyHeadingFormat", tag: "h2" },
+      { label: "Medium Heading", command: "applyHeadingFormat", tag: "h3" },
+      { label: "Small Heading", command: "applyHeadingFormat", tag: "h4" },
     ])
   })
 })

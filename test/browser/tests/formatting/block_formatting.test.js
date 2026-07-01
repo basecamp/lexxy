@@ -14,15 +14,15 @@ test.describe("Block formatting", () => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
 
-    await clickToolbarButton(page, "setFormatHeadingLarge")
+    await clickToolbarButton(page, "heading-large")
     await assertEditorHtml(editor, "<h2>Hello everyone</h2>")
 
     await editor.select("everyone")
-    await clickToolbarButton(page, "setFormatHeadingMedium")
+    await clickToolbarButton(page, "heading-medium")
     await assertEditorHtml(editor, "<h3>Hello everyone</h3>")
 
     await editor.select("everyone")
-    await clickToolbarButton(page, "setFormatHeadingSmall")
+    await clickToolbarButton(page, "heading-small")
     await assertEditorHtml(editor, "<h4>Hello everyone</h4>")
 
     await editor.select("everyone")
