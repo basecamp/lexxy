@@ -7,6 +7,8 @@ has_children: true
 
 # Installation
 
+## How to install
+
 Add this line to your application's Gemfile:
 
 ```ruby
@@ -19,7 +21,7 @@ And then execute:
 bundle install
 ```
 
-## With import maps
+### With import maps
 
 If you are using [propshaft](https://github.com/rails/propshaft) and [import maps](https://github.com/rails/importmap-rails):
 
@@ -36,7 +38,7 @@ Then import it in your JavaScript entry point:
 import "lexxy"
 ```
 
-## With javascript bundlers
+### With javascript bundlers
 
 If you're using [jsbundling-rails](https://github.com/rails/jsbundling-rails), esbuild, webpack, or any other JavaScript bundler, you can install the NPM package:
 
@@ -52,7 +54,7 @@ Then import it in your JavaScript entry point:
 import "@37signals/lexxy"
 ```
 
-## With CDNs such as esm.sh
+### With CDNs such as esm.sh
 
 Like the [sandbox]({{ "/sandbox/" | relative_url }}), Lexxy's JavaScript can be included directly from [esm.sh](https://esm.sh). This will load all of Lexxy's dependencies.
 
@@ -68,12 +70,14 @@ Like the [sandbox]({{ "/sandbox/" | relative_url }}), Lexxy's JavaScript can be 
 </lexxy-editor>
 ```
 
+## Integration with Action Text
+
 Once the gem is installed, Lexxy takes over Action Text automatically — `form.rich_text_area` renders a Lexxy editor instead of Trix. No extra configuration is required. How it hooks in depends on your Rails version:
 
 - **Rails 8.2 and newer** register Lexxy as an [Action Text editor adapter](https://github.com/rails/rails/pull/51238) and set it as the default. The gem does this for you (`config.action_text.editor = :lexxy`), so you'd only touch that option to point Action Text at a different editor.
 - **Rails 8.0 and 8.1** predate the editor adapter, so Lexxy overrides Action Text's form helpers instead. See below.
 
-## Override Action Text defaults (Rails 8.0 and 8.1 only)
+### Override Action Text defaults (Rails 8.0 and 8.1 only)
 
 {: .note }
 > This option applies only to Rails 8.0 and 8.1. On Rails 8.2+, Lexxy is wired in through the Action Text editor adapter and this setting has no effect — use `config.action_text.editor` instead.
