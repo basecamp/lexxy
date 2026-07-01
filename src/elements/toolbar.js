@@ -8,7 +8,7 @@ import {
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
-import { handleRollingTabIndex } from "../helpers/accessibility_helper"
+import { handleRollingTabIndex, isKeyboardActivation } from "../helpers/accessibility_helper"
 import ToolbarIcons from "./toolbar_icons"
 import { generateDomId, isActiveAndVisible } from "../helpers/html_helper"
 
@@ -134,14 +134,21 @@ export class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  #dispatchButtonCommand(event, { dataset: { command, payload } }) {
-    const isKeyboard = event instanceof PointerEvent && event.pointerId === -1
+  #dispatchButtonCommand(event, button) {
+    if (button.ariaDisabled === "true") return
+
+    const { command, payload } = button.dataset
+    const shouldKeepToolbarFocus = isKeyboardActivation(event) && !this.#belongsToDropdown(button)
 
     this.editor.update(() => {
       this.editor.dispatchCommand(command, payload)
-    }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined })
+    }, { tag: shouldKeepToolbarFocus ? SKIP_DOM_SELECTION_TAG : undefined })
 
-    if (!isKeyboard) this.editor.focus()
+    if (!shouldKeepToolbarFocus) this.editor.focus()
+  }
+
+  #belongsToDropdown(button) {
+    return button.closest("[data-dropdown-panel]") != null
   }
 
   #bindHotkeys() {
@@ -181,8 +188,8 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #handleEditorFocus = () => {
-    const firstVisible = this.#buttons.find(isActiveAndVisible)
-    if (firstVisible) firstVisible.tabIndex = 0
+    const firstVisibleButton = this.#toolbarButtons.find(isActiveAndVisible)
+    if (firstVisibleButton) firstVisibleButton.tabIndex = 0
   }
 
   #handleEditorBlur = () => {
@@ -190,11 +197,11 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #handleKeydown = (event) => {
-    handleRollingTabIndex(this.#buttons, event)
+    handleRollingTabIndex(this.#toolbarButtons, event)
   }
 
   #resetTabIndexValues() {
-    this.#buttons.forEach((button) => {
+    this.#toolbarButtons.forEach((button) => {
       button.tabIndex = -1
     })
   }
@@ -231,10 +238,10 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("underline", isUnderline)
 
     this.#setButtonPressed("format", isInHeading)
-    this.#setButtonPressed("paragraph", !isInHeading)
-    this.#setButtonPressed("heading-large", headingTag === "h2")
-    this.#setButtonPressed("heading-medium", headingTag === "h3")
-    this.#setButtonPressed("heading-small", headingTag === "h4")
+    this.#setButtonChecked("paragraph", !isInHeading)
+    this.#setButtonChecked("heading-large", headingTag === "h2")
+    this.#setButtonChecked("heading-medium", headingTag === "h3")
+    this.#setButtonChecked("heading-small", headingTag === "h4")
 
     this.#setButtonPressed("lists", isInList)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
@@ -250,25 +257,17 @@ export class LexicalToolbarElement extends HTMLElement {
 
   #setButtonPressed(name, isPressed) {
     const button = this.querySelector(`[name="${name}"]`)
-    if (button) {
-      const next = isPressed.toString()
-      if (button.getAttribute("aria-pressed") !== next) {
-        button.setAttribute("aria-pressed", next)
-      }
-    }
+    if (button) button.ariaPressed = isPressed
+  }
+
+  #setButtonChecked(name, isChecked) {
+    const button = this.querySelector(`[name="${name}"]`)
+    if (button) button.ariaChecked = isChecked
   }
 
   #setButtonDisabled(name, isDisabled) {
     const button = this.querySelector(`[name="${name}"]`)
-    if (button) {
-      if (button.disabled !== isDisabled) {
-        button.disabled = isDisabled
-      }
-      const next = isDisabled.toString()
-      if (button.getAttribute("aria-disabled") !== next) {
-        button.setAttribute("aria-disabled", next)
-      }
-    }
+    if (button) button.ariaDisabled = isDisabled
   }
 
   #refreshOverflow() {
@@ -369,8 +368,10 @@ export class LexicalToolbarElement extends HTMLElement {
     return Array.from(this.querySelectorAll(":scope > button:not([data-prevent-overflow])"))
   }
 
-  get #buttons() {
-    return Array.from(this.querySelectorAll(":scope button"))
+  get #toolbarButtons() {
+    return Array.from(this.querySelectorAll(":scope button")).filter((button) => {
+      return !button.closest("[data-dropdown-panel]")
+    })
   }
 
   get #toolbarItems() {
@@ -409,17 +410,17 @@ export class LexicalToolbarElement extends HTMLElement {
         <button data-dropdown-trigger class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="format" title="Text formatting" aria-haspopup="menu" aria-expanded="false">
           ${ToolbarIcons.heading}
         </button>
-        <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-dropdown-list" hidden>
-          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph" role="menuitem">
+        <div data-dropdown-panel role="menu" aria-label="Text formatting" class="lexxy-editor__toolbar-dropdown-list" hidden>
+          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph" role="menuitemradio">
             ${ToolbarIcons.paragraph} <span>Normal</span>
           </button>
-          <button type="button" name="heading-large" data-command="setFormatHeadingLarge" title="Large heading" role="menuitem">
+          <button type="button" name="heading-large" data-command="setFormatHeadingLarge" title="Large heading" role="menuitemradio">
             ${ToolbarIcons.h2} <span>Large Heading</span>
           </button>
-          <button type="button" name="heading-medium" data-command="setFormatHeadingMedium" title="Medium heading" role="menuitem">
+          <button type="button" name="heading-medium" data-command="setFormatHeadingMedium" title="Medium heading" role="menuitemradio">
             ${ToolbarIcons.h3} <span>Medium Heading</span>
           </button>
-          <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading" role="menuitem">
+          <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading" role="menuitemradio">
             ${ToolbarIcons.h4} <span>Small Heading</span>
           </button>
           <div class="lexxy-editor__toolbar-separator" role="separator"></div>
@@ -433,7 +434,7 @@ export class LexicalToolbarElement extends HTMLElement {
         <button data-dropdown-trigger class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="highlight" title="Color highlight" aria-haspopup="menu" aria-expanded="false">
           ${ToolbarIcons.highlight}
         </button>
-        <div data-dropdown-panel role="menu" hidden>
+        <div data-dropdown-panel role="menu" aria-label="Color highlight" hidden>
           <div class="lexxy-highlight-colors"></div>
           <button data-command="removeHighlight" type="button" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset" role="menuitem">Remove all coloring</button>
         </div>
@@ -475,19 +476,19 @@ export class LexicalToolbarElement extends HTMLElement {
         ${ToolbarIcons.hr}
       </button>
 
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--push-right" type="button" name="undo" data-command="undo" title="Undo" disabled aria-disabled="true">
+      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--push-right" type="button" name="undo" data-command="undo" title="Undo" aria-disabled="true">
         ${ToolbarIcons.undo}
       </button>
 
-      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo" disabled aria-disabled="true">
+      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo" aria-disabled="true">
         ${ToolbarIcons.redo}
       </button>
 
       <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-button--push-right lexxy-editor__toolbar-overflow">
-        <button data-dropdown-trigger class="lexxy-editor__toolbar-button" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Show more toolbar buttons">
+        <button data-dropdown-trigger class="lexxy-editor__toolbar-button" type="button" title="More options" aria-haspopup="menu" aria-expanded="false">
           ${ToolbarIcons.overflow}
         </button>
-        <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons" hidden></div>
+        <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-overflow-menu" aria-label="More options" hidden></div>
       </lexxy-toolbar-dropdown>
     `
   }

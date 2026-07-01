@@ -628,7 +628,7 @@
       padding: 1ch;
       position: relative;
 
-      &[aria-pressed="true"] {
+      &[aria-checked="true"] {
         background-color: var(--lexxy-color-selected);
 
         &:hover {
@@ -774,6 +774,10 @@
         grid-template-columns: repeat(auto-fill, minmax(var(--lexxy-toolbar-button-size), 1fr));
         max-inline-size: var(--max-inline-size);
 
+        .lexxy-highlight-colors__group {
+          display: contents;
+        }
+
         button {
           block-size: unset;
           inline-size: 100%;
@@ -788,7 +792,7 @@
             position: absolute;
           }
 
-          &[aria-pressed="true"] {
+          &[aria-checked="true"] {
             background-color: transparent;
             box-shadow: 0 0 0 2px currentColor inset;
 

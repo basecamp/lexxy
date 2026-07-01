@@ -20,22 +20,22 @@ describe("editor initialized event", () => {
     expect(event.detail.headingFormats).toBeInstanceOf(Array)
   })
 
-  test("each color entry has name and value properties", async () => {
+  test("each color entry has name, value, and label properties", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
 
     const event = await captureEvent(editorElement, "lexxy:editor-initialized", () => {
       editorElement.dispatchEditorInitialized()
     })
 
-    for (const color of event.detail.highlightColors.colors) {
+    const { colors, backgroundColors } = event.detail.highlightColors
+    for (const color of [ ...colors, ...backgroundColors ]) {
       expect(color).toHaveProperty("name")
       expect(color).toHaveProperty("value")
+      expect(color).toHaveProperty("label")
     }
 
-    for (const color of event.detail.highlightColors.backgroundColors) {
-      expect(color).toHaveProperty("name")
-      expect(color).toHaveProperty("value")
-    }
+    expect(colors[0].label).toBe("Yellow")
+    expect(backgroundColors[0].label).toBe("Yellow")
   })
 
   test("color names correspond to CSS custom properties", async () => {

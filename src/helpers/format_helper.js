@@ -36,6 +36,10 @@ export function hasHighlightStyles(cssOrStyles) {
   return !!(styles.color || styles["background-color"])
 }
 
+export function normalizeColorButtons(buttons) {
+  return buttons.map((button) => (typeof button === "string" ? { value: button, label: null } : button))
+}
+
 export function applyCanonicalizers(styles, canonicalizers = []) {
   return canonicalizers.reduce((css, canonicalizer) => {
     return canonicalizer.applyCanonicalization(css)
