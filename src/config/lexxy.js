@@ -15,6 +15,7 @@ const presets = new Configuration({
     multiLine: true,
     permittedAttachmentTypes: null,
     richText: true,
+    tables: true,
     toolbar: {
       upload: "both"
     },

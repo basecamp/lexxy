@@ -479,6 +479,10 @@
     display: none;
   }
 
+  &[data-tables="false"] button[name="table"] {
+    display: none;
+  }
+
   &[data-upload="file"] button[name="image"] {
     display: none;
   }

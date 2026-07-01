@@ -50,6 +50,7 @@ Editors support the following options, configurable using presets and element at
 - `multiLine`: Pass `false` to force single line editing.
 - `permittedAttachmentTypes`: Restrict the editor to a specific allowlist of attachment content types. Unset (the default) permits any content type. Example: `<lexxy-editor permitted-attachment-types="application/vnd.basecamp.mention application/vnd.basecamp.opengraph-embed"></lexxy-editor>`.
 - `richText`: Pass `false` to disable rich text editing.
+- `tables`: Pass `false` to disable tables entirely. Table insertion is removed, and any existing `<table>` markup is reduced to plain text (cell text preserved) when loaded. By default, tables are enabled.
 
 The toolbar is considered part of the editor for `lexxy:focus` and `lexxy:blur` events. If the toolbar registers event or lexical handlers, it should expose a `dispose()` function which will be called on editor disconnect.
 
