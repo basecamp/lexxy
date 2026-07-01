@@ -68,9 +68,17 @@ Like the [sandbox]({{ "/sandbox/" | relative_url }}), Lexxy's JavaScript can be 
 </lexxy-editor>
 ```
 
-## Override Action Text defaults
+Once the gem is installed, Lexxy takes over Action Text automatically — `form.rich_text_area` renders a Lexxy editor instead of Trix. No extra configuration is required. How it hooks in depends on your Rails version:
 
-By default, the gem overrides Action Text form helpers, so that if you use `form.rich_text_area`, it will render a Lexxy editor instead of the default Trix editor.
+- **Rails 8.2 and newer** register Lexxy as an [Action Text editor adapter](https://github.com/rails/rails/pull/51238) and set it as the default. The gem does this for you (`config.action_text.editor = :lexxy`), so you'd only touch that option to point Action Text at a different editor.
+- **Rails 8.0 and 8.1** predate the editor adapter, so Lexxy overrides Action Text's form helpers instead. See below.
+
+## Override Action Text defaults (Rails 8.0 and 8.1 only)
+
+{: .note }
+> This option applies only to Rails 8.0 and 8.1. On Rails 8.2+, Lexxy is wired in through the Action Text editor adapter and this setting has no effect — use `config.action_text.editor` instead.
+
+On Rails 8.0 and 8.1, the gem overrides Action Text form helpers so that `form.rich_text_area` renders a Lexxy editor instead of the default Trix editor.
 
 You can opt out of this behavior by disabling this option in `application.rb`:
 
@@ -79,6 +87,6 @@ You can opt out of this behavior by disabling this option in `application.rb`:
 config.lexxy.override_action_text_defaults = false
 ```
 
-If you do this, you can invoke Lexxy explicitly using the same helpers with a `lexxy` preffix: `lexxy_rich_textarea_tag` and `form.lexxy_rich_text_area`.
+If you do this, you can invoke Lexxy explicitly using the same helpers with a `lexxy` prefix: `lexxy_rich_textarea_tag` and `form.lexxy_rich_text_area`.
 
 This path is meant to let you incrementally move to Lexxy, or to use it in specific places while keeping Trix in others.
