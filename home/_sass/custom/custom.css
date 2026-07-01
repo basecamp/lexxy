@@ -1,6 +1,36 @@
-.main-content {
-  lexxy-editor {
+.site-header {
+  border: 0;
+}
 
+.side-bar {
+  background: #F7F5F4;
+  border: 0;
+
+  .nav-list .nav-list-item {
+
+    .nav-list-link {
+      font-size: 1.1em;
+      padding-block: 0.4em;
+
+      &:hover,
+      &.active {
+        background: #FFFDFB;
+      }
+    }
+
+    .nav-list-expander {
+      align-items: center;
+      display: grid;
+      height: 36px;
+    }
+  }
+}
+
+.main-content {
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+
+  lexxy-editor {
     lexxy-toolbar {
       font-size: 0.9em;
     }
@@ -64,5 +94,10 @@
         }
       }
     }
+  }
+
+  div.highlighter-rouge div.highlight {
+    border: 1px solid #E6E5E3;
+    font-size: 1.1em;
   }
 }
