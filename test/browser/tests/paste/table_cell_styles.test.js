@@ -132,6 +132,12 @@ test.describe("Paste — Table cell color styles", () => {
     await editor.paste("First\tSecond", { html: tableHtml })
 
     await assertEditorContent(editor, async (content) => {
+      const cells = content.locator("table td, table th")
+      for (const cell of await cells.all()) {
+        const color = await cell.evaluate((el) => el.style.color)
+        expect(color).toBe("")
+      }
+
       const styledDescendants = content.locator(
         'table td [style*="color"], table th [style*="color"]',
       )
