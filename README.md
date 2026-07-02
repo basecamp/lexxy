@@ -2,7 +2,7 @@
 
 A modern rich text editor for Rails.
 
-**[Try it out!](https://basecamp.github.io/lexxy/sandbox/)**
+**[Try it out!](https://basecamp.github.io/lexxy/sandbox/)** | **[Documentation](https://basecamp.github.io/lexxy/docs/)**
 
 ## Features
 
@@ -16,10 +16,6 @@ A modern rich text editor for Rails.
 - Works seamlessly with Action Text, generating the same canonical HTML format it expects for attachments.
 
 ![Lexxy editor screenshot](home/docs/images/home.screenshot.png)
-
-## Documentation
-
-Visit the **[documentation site](https://basecamp.github.io/lexxy/docs/)**.
 
 ## Roadmap
 
