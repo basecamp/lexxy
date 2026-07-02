@@ -6,12 +6,13 @@
 
   <title>{% if page.title and page.title != "Home" %}{{ page.title }} · {% endif %}{{ site.title }} — {{ site.description }}</title>
 
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ "/assets/images/favicon.png" | absolute_url }}">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&display=swap" rel="stylesheet">
 
-  {% seo %}
+  {% seo title=false %}
   <link rel="stylesheet" href="{{ "/assets/landing.css" | relative_url }}">
   {% if page.editor %}
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@37signals/lexxy@latest/dist/stylesheets/lexxy.css">

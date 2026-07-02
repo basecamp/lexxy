@@ -1,7 +1,7 @@
 ---
 title: Development
 layout: default
-nav_order: 8
+nav_order: 6
 ---
 
 # Development
@@ -105,7 +105,7 @@ yarn release
 
 ### Create release in GitHub
 
-Create [a new release in GitHub](https://github.com/basecamp/lexxy/releases). 
+Create [a new release in GitHub](https://github.com/basecamp/lexxy/releases).
 
 While in beta we are flagging the releases as pre-release.
 
