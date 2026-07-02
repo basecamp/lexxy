@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'home/**'
-      - '.github/workflows/docs.yml'
+      - '.github/workflows/home.yml'
   workflow_dispatch:
 
 # Allow only one concurrent deployment
