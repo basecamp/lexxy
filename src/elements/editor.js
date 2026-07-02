@@ -317,7 +317,7 @@ export class LexicalEditorElement extends HTMLElement {
     // Skip if the contenteditable already owns focus — the update would be a
     // no-op but still triggers a full style/layout pass on pages with large
     // DOMs.
-    if (this.#isContentFocused) return
+    if (!this.editor || this.#isContentFocused) return
 
     this.editor.focus(() => this.#onFocus())
   }
