@@ -12,7 +12,7 @@ has_children: true
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'lexxy', '~> 0.1.26.beta' # Need to specify the version since it's a pre-release
+gem 'lexxy', '~> 0.9.21' # Need to specify the version since it's a pre-release
 ```
 
 And then execute:
@@ -38,7 +38,7 @@ Then import it in your JavaScript entry point:
 import "lexxy"
 ```
 
-### With javascript bundlers
+### With JavaScript bundlers
 
 If you're using [jsbundling-rails](https://github.com/rails/jsbundling-rails), esbuild, webpack, or any other JavaScript bundler, you can install the NPM package:
 
