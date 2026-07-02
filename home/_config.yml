@@ -3,6 +3,12 @@ description: A modern rich text editor for Rails
 url: "https://lexxy.dev"
 baseurl: ""
 
+defaults:
+  - scope:
+      path: ""
+    values:
+      image: /assets/images/ogimage.png
+
 theme: just-the-docs
 
 # Navigation
