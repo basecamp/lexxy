@@ -12,7 +12,7 @@ has_children: true
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'lexxy', '~> 0.9.21' # Need to specify the version since it's a pre-release
+gem 'lexxy', '~> 0.9.21'
 ```
 
 And then execute:
