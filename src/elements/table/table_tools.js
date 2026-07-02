@@ -15,6 +15,7 @@ export class TableTools extends HTMLElement {
   connectedCallback() {
     this.tableController = new TableController(this.#editorElement)
     this.classList.add("lexxy-floating-controls")
+    this.role = "toolbar"
 
     this.#setUpButtons()
     this.#hide()
@@ -145,14 +146,26 @@ export class TableTools extends HTMLElement {
   }
 
   #registerKeyboardShortcuts() {
-    this.#listeners.track(this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#handleAccessibilityShortcutKey, COMMAND_PRIORITY_HIGH))
+    this.#listeners.track(this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#focusToolbarOnShortcut, COMMAND_PRIORITY_HIGH))
   }
 
-  #handleAccessibilityShortcutKey = (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
-      const firstButton = this.querySelector("button, [tabindex]:not([tabindex='-1'])")
-      firstButton?.focus()
+  #focusToolbarOnShortcut = (event) => {
+    if (this.#hasSelectedTable && this.#isFocusToolbarShortcut(event)) {
+      event.preventDefault()
+      this.#tableToolsButtons[0]?.focus()
+      return true
+    } else {
+      return false
     }
+  }
+
+  get #hasSelectedTable() {
+    return this.tableController?.currentTableNodeKey != null
+  }
+
+  #isFocusToolbarShortcut(event) {
+    if (event.key !== "F10") return false
+    return event.altKey || ((event.ctrlKey || event.metaKey) && event.shiftKey)
   }
 
   #handleToolsKeydown = (event) => {
