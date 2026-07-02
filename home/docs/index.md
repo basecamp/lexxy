@@ -8,9 +8,6 @@ nav_order: 1
 
 A modern rich text editor for Rails.
 
-{: .important }
-> This is an early beta. It hasn't been battle-tested yet. Please try it out and report any issues you find.
-
 ## Features
 
 - Built on top of [Lexical](https://lexical.dev), the powerful text editor framework from Meta.

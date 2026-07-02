@@ -1,0 +1,23 @@
+// Docs color scheme — mirrors the palette and type used on the Lexxy
+// landing page (home/assets/landing.css). Imported after just-the-docs'
+// light scheme, so these win.
+
+$lexxy-bg: #FFFDFB; // --bg
+$lexxy-accent: #1268D1; // --accent
+$lexxy-ink: #252628; // --ink
+$lexxy-ink-lighter: #E6E5E3; // --ink-lighter
+$lexxy-ink-lightest: #F7F5F4; // --ink-lightest
+
+$body-background-color: $lexxy-bg;
+$body-heading-color: $lexxy-ink;
+$body-text-color: $lexxy-ink;
+$link-color: $lexxy-accent;
+$btn-primary-color: $lexxy-accent;
+$code-background-color: $lexxy-ink-lightest;
+$sidebar-color: $lexxy-ink-lightest;
+$table-background-color: $lexxy-ink-lightest;
+$search-background-color: $lexxy-bg;
+$border-color: $lexxy-ink-lighter;
+
+$body-font-family: "Lexend", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+$mono-font-family: ui-monospace, "Menlo", "Monaco", Consolas, monospace;

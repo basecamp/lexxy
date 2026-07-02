@@ -15,11 +15,11 @@ A modern rich text editor for Rails.
 - Preview attachments like PDFs and Videos in the editor.
 - Works seamlessly with Action Text, generating the same canonical HTML format it expects for attachments.
 
-![Lexxy editor screenshot](docs/images/home.screenshot.png)
+![Lexxy editor screenshot](home/docs/images/home.screenshot.png)
 
 ## Documentation
 
-Visit the **[documentation site](https://basecamp.github.io/lexxy)**.
+Visit the **[documentation site](https://lexxy.dev/docs/)**.
 
 ## Roadmap
 
