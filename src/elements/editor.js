@@ -8,7 +8,7 @@ import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
 import { $convertInlineImageDataURIs } from "../helpers/inline_image_uri_helper"
-import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/code"
+import { CodeHighlightNode, CodeNode } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transformer"
 import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_tag_handler"
@@ -34,6 +34,7 @@ import { styleResolverRoot } from "../helpers/style_resolver_root"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { exportTextNodeDOM } from "../helpers/text_node_export_helper"
 import { ProvisionalParagraphExtension } from "../extensions/provisional_paragraph_extension"
+import { CodeHighlightingExtension } from "../extensions/code_highlighting_extension"
 import { HighlightExtension } from "../extensions/highlight_extension"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 import { TablesExtension } from "../extensions/tables_extension"
@@ -195,6 +196,7 @@ export class LexicalEditorElement extends HTMLElement {
   get baseExtensions() {
     return [
       ProvisionalParagraphExtension,
+      CodeHighlightingExtension,
       HighlightExtension,
       TrixContentExtension,
       TablesExtension,
@@ -602,7 +604,7 @@ export class LexicalEditorElement extends HTMLElement {
         registerList(this.editor)
       )
       this.#registerTableComponents()
-      this.#registerCodeHiglightingComponents()
+      this.#registerCodeLanguagePicker()
       if (this.supportsMarkdown) {
         const transformers = [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ]
         registered.push(
@@ -624,8 +626,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(tableTools)
   }
 
-  #registerCodeHiglightingComponents() {
-    registerCodeHighlighting(this.editor)
+  #registerCodeLanguagePicker() {
     let codeLanguagePicker = this.querySelector("lexxy-code-language-picker")
     codeLanguagePicker ??= createElement("lexxy-code-language-picker")
     this.append(codeLanguagePicker)
