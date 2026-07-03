@@ -68,7 +68,7 @@ Playwright runs against a Vite dev server serving static HTML fixtures from `tes
 
 Playwright tests run across **Chromium, Firefox, and WebKit**, giving cross-browser coverage locally without external services. Start with one browser for fast iteration, then confirm across available browsers once the reproduction is solid.
 
-**Note:** WebKit may not launch on Arch Linux due to ABI-incompatible system libraries (see `docs/development.md`). Use Chromium and Firefox locally; WebKit coverage is guaranteed by CI.
+**Note:** WebKit may not launch on Arch Linux due to ABI-incompatible system libraries (see `home/docs/development.md`). Use Chromium and Firefox locally; WebKit coverage is guaranteed by CI.
 
 **Fallback:** if Playwright can't trigger the bug after 3 attempts (e.g., needs real OS-level events), fall back to Selenium WebDriver scripts.
 
