@@ -21,9 +21,13 @@ test.describe("Prerendered content element", () => {
     await expect(content).toHaveAttribute("data-prerendered", "server")
     // Lexical reconciled its state into that adopted node.
     await expect(content).toHaveAttribute("data-lexical-editor", "true")
-    // Content is intact and the field stays editable.
+    // Content is intact...
     await expect(content.locator("p")).toHaveText([ "Alpha", "Bravo" ])
+    // ...and adoption dressed the static server markup with the interactive
+    // attributes the server deliberately omits (it isn't editable until now).
     await expect(content).toHaveAttribute("contenteditable", "true")
+    await expect(content).toHaveAttribute("role", "textbox")
+    await expect(content).toHaveAttribute("aria-multiline", "true")
   })
 
   test("exposes the value once, without duplicating the body", async ({ editor }) => {
