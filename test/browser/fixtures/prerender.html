@@ -11,10 +11,12 @@
     <div class="body">
       <!-- Simulates rich_text_area(..., prerender: true): the content element is
            rendered server-side inside the editor so the field has its height at
-           first paint. The editor should adopt this node on connect, not build a
-           second one. `data-prerendered` lets the spec prove the same node. -->
+           first paint — static markup only; the editor adds the interactive
+           attributes (contenteditable, role, aria) when it adopts the node on
+           connect, rather than building a second one. `data-prerendered` lets
+           the spec prove the same node. -->
       <lexxy-editor class="lexxy-content" value="&lt;p&gt;Alpha&lt;/p&gt;&lt;p&gt;Bravo&lt;/p&gt;">
-        <div class="lexxy-editor__content" contenteditable="true" role="textbox" aria-multiline="true" data-prerendered="server"><p>Alpha</p><p>Bravo</p></div>
+        <div class="lexxy-editor__content" data-prerendered="server"><p>Alpha</p><p>Bravo</p></div>
       </lexxy-editor>
     </div>
   </form>

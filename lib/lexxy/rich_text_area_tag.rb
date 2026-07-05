@@ -27,16 +27,10 @@ module Lexxy
     alias_method :lexxy_rich_text_area_tag, :lexxy_rich_textarea_tag
 
     private
-      # A static copy of the value the editor adopts as its content element on
-      # connect (see LexicalEditorElement#prerenderedContentElement). It is the
-      # same HTML the editor parses from `value`, so it renders at the same
-      # height the live editor lands on.
+      # A static, sanitized copy of the value the editor adopts as its content
+      # element on connect (see Lexxy::Prerender).
       def prerendered_content_tag(value)
-        content_tag "div", (value.presence || "<p><br></p>").html_safe,
-          class: "lexxy-editor__content",
-          contenteditable: "true",
-          role: "textbox",
-          "aria-multiline": "true"
+        Lexxy::Prerender.content_tag_for(self, value)
       end
 
       # Temporary: we need to *adaptarize* action text
