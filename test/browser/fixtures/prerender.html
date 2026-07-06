@@ -33,7 +33,7 @@
       background: #ffffff;
       border: 1px solid #d8d5ce;
       border-radius: 8px;
-      padding: 24px;
+      padding: 56px 24px 24px;
     }
 
     .example h2 {
@@ -53,6 +53,15 @@
     .inline-editor .lexxy-editor__content {
       min-block-size: 0;
       padding: 0;
+    }
+
+    .inline-editor lexxy-toolbar {
+      background: #ffffff;
+      border-block-end: 1px solid #d8d5ce;
+      inset-block-end: 100%;
+      inset-inline: 0;
+      position: absolute;
+      z-index: 1;
     }
 
     .following-content {
@@ -83,7 +92,6 @@
 
         <lexxy-editor
           class="lexxy-content inline-editor"
-          toolbar="false"
           value="&lt;p&gt;Alpha&lt;/p&gt;&lt;p&gt;Bravo&lt;/p&gt;&lt;p&gt;Charlie&lt;/p&gt;&lt;p&gt;Delta&lt;/p&gt;">
         </lexxy-editor>
 
@@ -103,7 +111,6 @@
              `data-prerendered` lets the spec prove the same node. -->
         <lexxy-editor
           class="lexxy-content inline-editor"
-          toolbar="false"
           value="&lt;p&gt;Alpha&lt;/p&gt;&lt;p&gt;Bravo&lt;/p&gt;&lt;p&gt;Charlie&lt;/p&gt;&lt;p&gt;Delta&lt;/p&gt;">
           <div class="lexxy-editor__content" data-prerendered="server">
             <p>Alpha</p>
