@@ -3,24 +3,127 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Lexxy Prerender Test</title>
+  <title>Lexxy Prerender Reproduction</title>
   <link rel="stylesheet" href="/styles.css">
+  <style>
+    body {
+      background: #f7f7f4;
+      color: #24231f;
+      margin: 0;
+    }
+
+    .demo {
+      margin: 0 auto;
+      max-inline-size: 1120px;
+      padding: 32px;
+    }
+
+    .demo > p {
+      max-inline-size: 68ch;
+    }
+
+    .examples {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-block-start: 24px;
+    }
+
+    .example {
+      background: #ffffff;
+      border: 1px solid #d8d5ce;
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    .example h2 {
+      font-size: 1rem;
+      margin-block: 0 16px;
+    }
+
+    .inline-editor {
+      --lexxy-editor-padding: 0;
+      --lexxy-editor-rows: 0;
+
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+    }
+
+    .inline-editor .lexxy-editor__content {
+      min-block-size: 0;
+      padding: 0;
+    }
+
+    .following-content {
+      border-block-start: 1px solid #d8d5ce;
+      margin-block-start: 16px;
+      padding-block-start: 16px;
+    }
+
+    @media (max-width: 720px) {
+      .examples {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-  <form>
-    <div class="body">
-      <!-- Simulates rich_text_area(..., prerender: true): the content element is
-           rendered server-side inside the editor so the field has its height at
-           first paint — static markup only; the editor adds the interactive
-           attributes (contenteditable, role, aria) when it adopts the node on
-           connect, rather than building a second one. `data-prerendered` lets
-           the spec prove the same node. -->
-      <lexxy-editor class="lexxy-content" value="&lt;p&gt;Alpha&lt;/p&gt;&lt;p&gt;Bravo&lt;/p&gt;">
-        <div class="lexxy-editor__content" data-prerendered="server"><p>Alpha</p><p>Bravo</p></div>
-      </lexxy-editor>
-    </div>
-  </form>
+  <main class="demo">
+    <h1>Inline editor layout reproduction</h1>
+    <p>
+      Open this page with <code>?delay=1500</code> to slow Lexxy initialization.
+      The page content below each editor should start in its final position when
+      the editor is styled to hug and grow with its contents.
+    </p>
 
-  <script type="module" src="/editor.js"></script>
+    <form class="examples">
+      <section class="example" data-example="without-prerender">
+        <h2>Without prerendered content</h2>
+
+        <lexxy-editor
+          class="lexxy-content inline-editor"
+          toolbar="false"
+          value="&lt;p&gt;Alpha&lt;/p&gt;&lt;p&gt;Bravo&lt;/p&gt;&lt;p&gt;Charlie&lt;/p&gt;&lt;p&gt;Delta&lt;/p&gt;">
+        </lexxy-editor>
+
+        <div class="following-content" data-following="without-prerender">
+          <p>This content shifts down after Lexxy builds the editor.</p>
+        </div>
+      </section>
+
+      <section class="example" data-example="with-prerender">
+        <h2>With prerendered content</h2>
+
+        <!-- Simulates rich_text_area(..., prerender: true): the content element
+             is rendered server-side inside the editor, so the field has its
+             final content height at first paint. The editor adds the
+             interactive attributes (contenteditable, role, aria) when it
+             adopts the node on connect, rather than building another one.
+             `data-prerendered` lets the spec prove the same node. -->
+        <lexxy-editor
+          class="lexxy-content inline-editor"
+          toolbar="false"
+          value="&lt;p&gt;Alpha&lt;/p&gt;&lt;p&gt;Bravo&lt;/p&gt;&lt;p&gt;Charlie&lt;/p&gt;&lt;p&gt;Delta&lt;/p&gt;">
+          <div class="lexxy-editor__content" data-prerendered="server">
+            <p>Alpha</p>
+            <p>Bravo</p>
+            <p>Charlie</p>
+            <p>Delta</p>
+          </div>
+        </lexxy-editor>
+
+        <div class="following-content" data-following="with-prerender">
+          <p>This content is already in the right spot before Lexxy connects.</p>
+        </div>
+      </section>
+    </form>
+  </main>
+
+  <script type="module">
+    const delay = Number(new URLSearchParams(window.location.search).get("delay") || 0)
+
+    window.setTimeout(() => import("/editor.js"), delay)
+  </script>
 </body>
 </html>
