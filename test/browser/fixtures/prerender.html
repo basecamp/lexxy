@@ -33,12 +33,12 @@
       background: #ffffff;
       border: 1px solid #d8d5ce;
       border-radius: 8px;
-      padding: 56px 24px 24px;
+      padding: 24px;
     }
 
     .example h2 {
       font-size: 1rem;
-      margin-block: 0 16px;
+      margin-block: 0 56px;
     }
 
     .inline-editor {
@@ -58,10 +58,20 @@
     .inline-editor lexxy-toolbar {
       background: #ffffff;
       border-block-end: 1px solid #d8d5ce;
-      inset-block-end: 100%;
+      inset-block-end: calc(100% + 8px);
       inset-inline: 0;
+      opacity: 0;
+      pointer-events: none;
       position: absolute;
+      visibility: hidden;
       z-index: 1;
+    }
+
+    .inline-editor:has(.lexxy-editor__content:focus-visible) lexxy-toolbar,
+    .inline-editor:has(lexxy-toolbar:focus-within) lexxy-toolbar {
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
     }
 
     .following-content {
