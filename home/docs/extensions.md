@@ -62,9 +62,9 @@ class MyLexxyExtension extends Lexxy.Extension {
   }
 
   get lexicalExtension() {
-    return Lexxy.Lexical.defineExtension({
+    return this.defineExtension({
       name: "lexxy/my_lexical_extension",
-      config: this.#config
+      config: this.#config,
       ///...
       register(editor, config) {
         // ... custom Lexical behavior
@@ -82,6 +82,4 @@ class MyLexxyExtension extends Lexxy.Extension {
     return this.editorConfig.get("my_extension")
   }
 }
-```
-```
 ```
