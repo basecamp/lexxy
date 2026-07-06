@@ -37,7 +37,7 @@ jobs:
       - name: Lint Ruby code for consistent style
         run: bin/rubocop -f github
 
-      - name: Lint JavaScript code for consistent style
+      - name: Lint JavaScript code for consistent style and browser support
         run: yarn lint
 
   lint-actions:

@@ -135,10 +135,10 @@ test.describe("Mention deletion cursor position", () => {
     await page.keyboard.press("X")
     await editor.flush()
 
-    // The marker should appear where the mention was, between "Before" and "after"
+    // The marker should appear where the mention was, between "Before" and "after", consuming the adjacent space
     const text = await editor.content.evaluate((el) => el.textContent)
     expect(text).not.toContain("Alice")
-    expect(text).toMatch(/Before[\s]*X[\s]*after/)
+    expect(text).toMatch(/Before[\s]*Xafter/)
   })
 
   test("with multiple mentions, deleting first via click+backspace does not jump to second", async ({ page, editor }) => {

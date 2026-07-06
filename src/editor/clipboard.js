@@ -3,10 +3,11 @@ import { isAutolinkableURL } from "../helpers/string_helper"
 import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
-import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
+import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $onUpdate, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
 import { $insertDataTransferForRichText } from "@lexical/clipboard"
 import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
 import { ListenerBin } from "../helpers/listener_helper"
+import NodeInserter from "./contents/node_inserter"
 
 export default class Clipboard {
   #listeners = new ListenerBin()
@@ -39,7 +40,7 @@ export default class Clipboard {
     }
 
     if (this.#isPlainTextOrURLPasted(clipboardData)) {
-      this.#pastePlainText(clipboardData)
+      this.#pastePlainTextOrURL(clipboardData)
       event.preventDefault()
       return true
     }
@@ -62,10 +63,10 @@ export default class Clipboard {
 
   #handleParsedClipboardNodes({ nodes, selection }) {
     const url = $bareUrlFromSingleLink(nodes)
-    if (!url) return false
-
-    this.#insertSingleLinkAt(selection, url)
-    return true
+    if (url && $isRangeSelection(selection)) {
+      this.#insertSingleLinkAt(selection, url)
+      return true
+    }
   }
 
   #isPlainTextOrURLPasted(clipboardData) {
@@ -77,10 +78,34 @@ export default class Clipboard {
     return types.length === 1 && types[0] === "text/plain"
   }
 
+  // Browsers expose a copied URL in several shapes:
+  //   Safari          [ text/plain, text/uri-list ]
+  //   App ShareSheet  [ text/uri-list ]
+  //   Chromium macOS  [ text/plain, text/html, (?:text/link-preview) ]
   #isOnlyURLPasted(clipboardData) {
-    // Safari URLs are copied as a text/plain + text/uri-list object
+    if (this.#isLexicalClipboardData(clipboardData)) return false
+
     const types = Array.from(clipboardData.types)
-    return types.length === 2 && types.includes("text/uri-list") && types.includes("text/plain")
+    if (types.includes("text/uri-list")) {
+      return types.every(type => type === "text/plain" || type === "text/uri-list")
+    }
+
+    if (clipboardData.files.length) return false
+
+    const text = clipboardData.getData("text/plain").trim()
+    if (!isAutolinkableURL(text)) return false
+
+    const html = clipboardData.getData("text/html")
+    return !html || this.#htmlIsBareLinkToURL(html, text)
+  }
+
+  #htmlIsBareLinkToURL(html, url) {
+    const doc = parseHtml(html)
+    if (doc.body.textContent.trim() !== url) return false
+
+    const links = doc.body.querySelectorAll("a")
+    if (links.length === 0) return true
+    return links.length === 1 && links[0].getAttribute("href") === url
   }
 
   #isPastingIntoCodeBlock() {
@@ -114,20 +139,32 @@ export default class Clipboard {
     }, { tag: PASTE_TAG })
   }
 
-  #pastePlainText(clipboardData) {
-    const item = clipboardData.items[0]
+  #pastePlainTextOrURL(clipboardData) {
+    const item = this.#plainTextOrURLItem(clipboardData)
     item.getAsString((text) => {
-      if (isAutolinkableURL(text) && this.contents.hasSelectedText()) {
-        this.contents.createLinkWithSelectedText(text)
-      } else if (isAutolinkableURL(text)) {
-        const nodeKey = this.contents.createLink(text)
-        this.#dispatchLinkInsertEvent(nodeKey, { url: text })
+      const url = text.trim()
+      if (isAutolinkableURL(url)) {
+        this.#pasteURL(url)
       } else if (this.editorElement.supportsMarkdown) {
         this.#pasteMarkdown(text)
       } else {
         this.#pasteRichText(clipboardData)
       }
     })
+  }
+
+  #plainTextOrURLItem(clipboardData) {
+    const items = Array.from(clipboardData.items)
+    return items.find((item) => item.type === "text/plain") || items.find((item) => item.type === "text/uri-list")
+  }
+
+  #pasteURL(url) {
+    if (this.contents.hasSelectedText()) {
+      this.contents.createLinkWithSelectedText(url)
+    } else {
+      const nodeKey = this.contents.createLink(url)
+      this.#dispatchLinkInsertEvent(nodeKey, { url })
+    }
   }
 
   #insertSingleLinkAt(selection, url) {
@@ -140,12 +177,9 @@ export default class Clipboard {
     }
 
     const linkNode = $createLinkNode(url).append($createTextNode(url))
-    selection.insertNodes([ linkNode ])
+    NodeInserter.for(selection).insertNodes([ linkNode ])
 
-    // Defer the lexxy:insert-link event until after the active update commits;
-    // listeners may run editor mutations of their own.
-    const nodeKey = linkNode.getKey()
-    Promise.resolve().then(() => this.#dispatchLinkInsertEvent(nodeKey, { url }))
+    $onUpdate(() => this.#dispatchLinkInsertEvent(linkNode.getKey(), { url }))
   }
 
   #dispatchLinkInsertEvent(nodeKey, payload) {
@@ -163,14 +197,33 @@ export default class Clipboard {
   #pasteMarkdown(text) {
     const html = marked(text, { breaks: true })
     const doc = parseHtml(html)
-    const detail = Object.freeze({
-      markdown: text,
-      document: doc,
-      addBlockSpacing: () => addBlockSpacing(doc)
-    })
 
-    dispatch(this.editorElement, "lexxy:insert-markdown", detail)
-    this.contents.insertDOM(doc, { tag: PASTE_TAG })
+    if (this.#isPlainTextWithoutMarkdown(doc)) {
+      this.contents.insertText(text, { tag: PASTE_TAG })
+    } else {
+      const detail = Object.freeze({
+        markdown: text,
+        document: doc,
+        addBlockSpacing: () => addBlockSpacing(doc)
+      })
+
+      dispatch(this.editorElement, "lexxy:insert-markdown", detail)
+      this.contents.insertDOM(doc, { tag: PASTE_TAG })
+    }
+  }
+
+  // Markdown conversion collapses runs of whitespace and unescapes backslashes,
+  // silently corrupting plain text such as Windows/UNC file paths. When the text
+  // carries no Markdown structure, paste it verbatim instead. A path that wrapped
+  // across lines renders as a single paragraph with <br> line breaks (marked runs
+  // with breaks: true), which is still plain text we should preserve untouched.
+  #isPlainTextWithoutMarkdown(doc) {
+    const elements = Array.from(doc.body.children)
+    if (elements.length !== 1) return false
+
+    const paragraph = elements[0]
+    return paragraph.nodeName === "P"
+      && Array.from(paragraph.childNodes).every((node) => node.nodeType === Node.TEXT_NODE || node.nodeName === "BR")
   }
 
   #pasteRichText(clipboardData) {

@@ -88,10 +88,24 @@ export class EditorHandle {
     await this.flush()
   }
 
-  async paste(text, { html, files = [] } = {}) {
+  // Selects the first block container (a quote) at an element point — a selection
+  // state mouse/keyboard can't produce, since Lexical normalizes DOM selections to leaves.
+  async placeCaretOnQuoteElement() {
+    await this.locator.evaluate((el) => {
+      return new Promise((resolve) => {
+        el.editor.update(() => {
+          const editorState = el.editor._pendingEditorState
+          const quote = editorState._nodeMap.get(editorState._nodeMap.get("root").__first)
+          quote.select(1, 1)
+        }, { onUpdate: resolve })
+      })
+    })
+  }
+
+  async paste(text, { html, files = [], uriList } = {}) {
     await this.#ensureFirstInteraction()
     await this.content.evaluate(
-      (el, { text, html, files }) => {
+      (el, { text, html, files, uriList }) => {
         const buildFiles = () => {
           return files.map(({ base64, name, type }) => {
             const binary = atob(base64)
@@ -127,13 +141,14 @@ export class EditorHandle {
             cancelable: true,
             clipboardData: new DataTransfer(),
           })
-          event.clipboardData.setData("text/plain", text)
+          if (typeof text === "string") event.clipboardData.setData("text/plain", text)
           if (html) event.clipboardData.setData("text/html", html)
+          if (uriList) event.clipboardData.setData("text/uri-list", uriList)
         }
 
         el.dispatchEvent(event)
       },
-      { text, html, files },
+      { text, html, files, uriList },
     )
   }
 

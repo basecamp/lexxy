@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, HISTORY_MERGE_TAG, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -8,13 +8,14 @@ import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
 import { $convertInlineImageDataURIs } from "../helpers/inline_image_uri_helper"
-import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/code"
+import { CodeHighlightNode, CodeNode } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transformer"
 import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_tag_handler"
 
 import theme from "../config/theme"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import { UploadRequests } from "../editor/attachments/upload_requests"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
@@ -33,6 +34,7 @@ import { styleResolverRoot } from "../helpers/style_resolver_root"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { exportTextNodeDOM } from "../helpers/text_node_export_helper"
 import { ProvisionalParagraphExtension } from "../extensions/provisional_paragraph_extension"
+import { CodeHighlightingExtension } from "../extensions/code_highlighting_extension"
 import { HighlightExtension } from "../extensions/highlight_extension"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 import { TablesExtension } from "../extensions/tables_extension"
@@ -40,6 +42,9 @@ import { RewritableHistoryExtension } from "../extensions/rewritable_history_ext
 import { AttachmentsExtension } from "../extensions/attachments_extension.js"
 import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 import { LinkOpenerExtension } from "../extensions/link_opener_extension.js"
+import { PreventLexicalTripleClickExtension } from "../extensions/prevent_lexical_triple_click_extension.js"
+import { CustomAttachmentDragAndDropExtension } from "../extensions/custom_attachment_drag_and_drop_extension.js"
+import { nextFrame } from "../helpers/timing_helper.js"
 
 
 export class LexicalEditorElement extends HTMLElement {
@@ -47,19 +52,29 @@ export class LexicalEditorElement extends HTMLElement {
   static debug = false
   static commands = [ "bold", "italic", "strikethrough" ]
 
-  static observedAttributes = [ "connected", "required" ]
+  static observedAttributes = [ "autocapitalize", "connected", "required" ]
 
   #initialValue = ""
-  #validationTextArea = document.createElement("textarea")
-  #editorInitializedRafId = null
+  #previousInternalFormValue = null
+
+  #initializeEventDispatched = false
+  #editorInitializedDispatched = false
   #listeners = new ListenerBin()
   #disposables = []
   #historyState = { undo: false, redo: false }
+
+  #validity = new Map()
+  #validationTextArea = document.createElement("textarea")
+  #uploadRequests
 
   constructor() {
     super()
     this.internals = this.attachInternals()
     this.internals.role = "presentation"
+  }
+
+  get uploadRequests() {
+    return this.#uploadRequests
   }
 
   connectedCallback() {
@@ -82,35 +97,53 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(this.clipboard)
 
     this.adapter = new BrowserAdapter()
+    this.#uploadRequests = new UploadRequests()
 
     const commandDispatcher = CommandDispatcher.configureFor(this)
     this.#disposables.push(commandDispatcher)
 
     this.#initialize()
 
-    this.#scheduleEditorInitializedDispatch()
     this.toggleAttribute("connected", true)
 
-    this.#handleAutofocus()
-
-    this.valueBeforeDisconnect = null
+    requestAnimationFrame(() => {
+      this.#mountRoot()
+      this.#handleAutofocus()
+      this.#dispatchInitialize()
+    })
   }
 
   disconnectedCallback() {
-    this.#cancelEditorInitializedDispatch()
+    this.#initializeEventDispatched = false
+    this.#editorInitializedDispatched = false
+
+    this.#previousInternalFormValue = null
     this.valueBeforeDisconnect = this.value
+
+    this.#clearCachedValues()
     this.#reset() // Prevent hangs with Safari when morphing
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === "connected" && this.isConnected && oldValue != null && oldValue !== newValue) {
+    if (typeof this[`${name}ChangedCallback`] === "function") {
+      this[`${name}ChangedCallback`](oldValue, newValue)
+    }
+  }
+
+  autocapitalizeChangedCallback() {
+    if (this.editorContentElement) {
+      this.#transferAttributeToContentEditable(this.editorContentElement, "autocapitalize")
+    }
+  }
+
+  connectedChangedCallback(oldValue, newValue) {
+    if (this.isConnected && oldValue != null && oldValue !== newValue) {
       requestAnimationFrame(() => this.#reconnect())
     }
+  }
 
-    if (name === "required" && this.isConnected) {
-      this.#validationTextArea.required = this.hasAttribute("required")
-      this.#setValidity()
-    }
+  requiredChangedCallback() {
+    if (this.isConnected) this.#requestValidityRefresh()
   }
 
   formResetCallback() {
@@ -119,13 +152,9 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   toString() {
-    if (this.cachedStringValue == null) {
-      this.editor?.getEditorState().read(() => {
-        this.cachedStringValue = $getReadableTextContent($getRoot())
-      })
-    }
-
-    return this.cachedStringValue
+    return this.cachedStringValue ??= this.editor?.read(() => {
+      return $getReadableTextContent($getRoot())
+    })
   }
 
   get form() {
@@ -134,6 +163,27 @@ export class LexicalEditorElement extends HTMLElement {
 
   get name() {
     return this.getAttribute("name")
+  }
+
+  get required() {
+    return this.hasAttribute("required")
+  }
+
+  get validity() {
+    return this.internals.validity
+  }
+
+  checkValidity() {
+    return this.internals.checkValidity()
+  }
+
+  reportValidity() {
+    return this.internals.reportValidity()
+  }
+
+  setElementValidity(key, flags, message) {
+    this.#validity.set(key, { flags, message })
+    this.#requestValidityRefresh()
   }
 
   get toolbarElement() {
@@ -146,13 +196,16 @@ export class LexicalEditorElement extends HTMLElement {
   get baseExtensions() {
     return [
       ProvisionalParagraphExtension,
+      CodeHighlightingExtension,
       HighlightExtension,
       TrixContentExtension,
       TablesExtension,
       RewritableHistoryExtension,
       AttachmentsExtension,
       FormatEscapeExtension,
-      LinkOpenerExtension
+      LinkOpenerExtension,
+      PreventLexicalTripleClickExtension,
+      CustomAttachmentDragAndDropExtension
     ]
   }
 
@@ -187,8 +240,8 @@ export class LexicalEditorElement extends HTMLElement {
     return dispatch(this, "lexxy:file-accept", { file }, true)
   }
 
-  $generateNodesFromDOM(doc) {
-    let nodes = $generateLexicalNodesFromDOM(this.editor, doc)
+  $generateNodesFromDOM(doc, { editor = this.editor } = {}) {
+    let nodes = $generateLexicalNodesFromDOM(editor, doc)
     if ($hasUpdateTag(PASTE_TAG)) nodes = $convertInlineImageDataURIs(nodes, this)
     return filterDisallowedAttachmentNodes(nodes, this)
   }
@@ -230,7 +283,6 @@ export class LexicalEditorElement extends HTMLElement {
 
     if (!this.editor) return
 
-    this.#cancelEditorInitializedDispatch()
     this.#dispatchEditorInitialized()
     this.#dispatchAttributesChange()
   }
@@ -275,13 +327,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   get value() {
-    if (!this.cachedValue) {
-      this.editor?.getEditorState().read(() => {
-        this.cachedValue = sanitize($generateHtmlFromNodes(this.editor, null))
-      })
-    }
-
-    return this.cachedValue
+    return this.cachedValue ??= this.#readSanitizedEditorValue()
   }
 
   set value(html) {
@@ -296,11 +342,8 @@ export class LexicalEditorElement extends HTMLElement {
         $addUpdateTag(SKIP_DOM_SELECTION_TAG)
       }
 
-      $getRoot()
-        .clear()
-        .selectEnd()
-        .insertNodes(this.#parseHtmlIntoLexicalNodes(html))
 
+      this.#setEditorHtml(html)
       this.#toggleEmptyStatus()
     }, { discrete: true })
   }
@@ -313,9 +356,15 @@ export class LexicalEditorElement extends HTMLElement {
     return this.#historyState.redo
   }
 
-  #parseHtmlIntoLexicalNodes(html) {
+  #readSanitizedEditorValue() {
+    return this.editor?.read(() => {
+      return sanitize($generateHtmlFromNodes(this.editor, null))
+    }) ?? null
+  }
+
+  #parseHtmlIntoLexicalNodes(html, { editor = this.editor } = {}) {
     if (!html) html = "<p></p>"
-    const nodes = this.$generateNodesFromDOM(parseHtml(`${html}`))
+    const nodes = this.$generateNodesFromDOM(parseHtml(`${html}`), { editor })
 
     return nodes
       .filter(this.#isNotWhitespaceOnlyNode)
@@ -342,7 +391,6 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #initialize() {
-    this.#synchronizeWithChanges()
     this.#registerComponents()
     this.#handleEnter()
     this.#registerFocusEvents()
@@ -350,9 +398,10 @@ export class LexicalEditorElement extends HTMLElement {
     this.#registerFileAcceptFilter()
     this.#attachDebugHooks()
     this.#attachToolbar()
-    this.#configureSanitizer()
-    this.#loadInitialValue()
     this.#resetBeforeTurboCaches()
+
+    this.#setInternalFormValue(this.value, { suppressEvent: true })
+    this.#synchronizeWithChanges()
   }
 
   #registerFileAcceptFilter() {
@@ -376,14 +425,24 @@ export class LexicalEditorElement extends HTMLElement {
       nodes: this.#lexicalNodes,
       html: {
         export: new Map([ [ TextNode, exportTextNodeDOM ], [ CodeHighlightNode, exportTextNodeDOM ] ])
-      }
+      },
+      $initialEditorState: (editor) => {
+        this.#configureSanitizer(editor)
+        this.#loadInitialValue(editor)
+      },
     },
       ...this.extensions.lexicalExtensions
     )
 
-    editor.setRootElement(this.editorContentElement)
-
     return editor
+  }
+
+  // Toggling editable around setRootElement skips Lexical's DOM-selection sync,
+  // which would otherwise steal focus from elsewhere on the page.
+  #mountRoot() {
+    this.editor.setEditable(false)
+    this.editor.setRootElement(this.editorContentElement)
+    this.editor.setEditable(true)
   }
 
   get #lexicalNodes() {
@@ -408,25 +467,33 @@ export class LexicalEditorElement extends HTMLElement {
 
   #createEditorContentElement() {
     const editorContentElement = createElement("div", {
+      id: `${this.id}-content`,
       classList: "lexxy-editor__content",
       contenteditable: true,
-      autocapitalize: "none",
       role: "textbox",
       "aria-multiline": true,
       "aria-label": this.#labelText,
       placeholder: this.getAttribute("placeholder")
     })
-    editorContentElement.id = `${this.id}-content`
+
     this.#ariaAttributes.forEach(attribute => editorContentElement.setAttribute(attribute.name, attribute.value))
 
-    if (this.getAttribute("tabindex")) {
-      editorContentElement.setAttribute("tabindex", this.getAttribute("tabindex"))
-      this.removeAttribute("tabindex")
-    } else {
-      editorContentElement.setAttribute("tabindex", 0)
-    }
+    this.#transferAttributeToContentEditable(editorContentElement, "autocapitalize")
+    this.#transferAttributeToContentEditable(editorContentElement, "tabindex", { defaultValue: 0, removeSource: true })
 
     return editorContentElement
+  }
+
+  #transferAttributeToContentEditable(element, qualifiedName, { defaultValue = null, removeSource = false } = {}) {
+    if (this.hasAttribute(qualifiedName)) {
+      element.setAttribute(qualifiedName, this.getAttribute(qualifiedName))
+    } else if (defaultValue !== null) {
+      element.setAttribute(qualifiedName, defaultValue)
+    } else {
+      element.removeAttribute(qualifiedName)
+    }
+
+    if (removeSource) this.removeAttribute(qualifiedName)
   }
 
   get #labelText() {
@@ -437,27 +504,29 @@ export class LexicalEditorElement extends HTMLElement {
     return Array.from(this.attributes).filter(attribute => attribute.name.startsWith("aria-"))
   }
 
-  set #internalFormValue(html) {
-    const changed = this.#internalFormValue !== undefined && this.#internalFormValue !== this.value
+  #setInternalFormValue(html, { suppressEvent = false } = {}) {
+    const changed = html !== this.#previousInternalFormValue
 
     this.internals.setFormValue(html)
-    this._internalFormValue = html
-    this.#validationTextArea.value = this.isEmpty ? "" : html
+    this.#previousInternalFormValue = html
 
-    if (changed) {
+    if (changed && !suppressEvent) {
       dispatch(this, "lexxy:change")
     }
   }
 
-  get #internalFormValue() {
-    return this._internalFormValue
+  #loadInitialValue(editor) {
+    const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p><br></p>"
+
+    this.#initialValue = initialHtml
+    this.#setEditorHtml(initialHtml, { editor })
   }
 
-  #loadInitialValue() {
-    const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p><br></p>"
-    this.editor.update(() => {
-      this.value = this.#initialValue = initialHtml
-    }, { tag: HISTORY_MERGE_TAG })
+  #setEditorHtml(html, { editor = this.editor } = { }) {
+    $getRoot()
+      .clear()
+      .selectEnd()
+      .insertNodes(this.#parseHtmlIntoLexicalNodes(html, { editor }))
   }
 
   #resetBeforeTurboCaches() {
@@ -475,11 +544,50 @@ export class LexicalEditorElement extends HTMLElement {
   #synchronizeWithChanges() {
     this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
       this.#clearCachedValues()
-      this.#internalFormValue = this.value
+      this.#setInternalFormValue(this.value)
       this.#toggleEmptyStatus()
-      this.#setValidity()
+      this.#requestValidityRefresh()
       this.#dispatchAttributesChange()
     }))
+  }
+
+  async #requestValidityRefresh() {
+    await nextFrame()
+
+    if (this.isConnected) this.#refreshValidity()
+  }
+
+  #refreshValidity() {
+    this.#refreshInternalValidity()
+    const { validity, message } = this.#calculateValidity()
+    this.internals.setValidity(validity, message, this.editorContentElement)
+  }
+
+  #refreshInternalValidity() {
+    this.#validationTextArea.required = this.required && this.isBlank
+    const flags = this.#validationTextArea.validity
+    const message = this.#validationTextArea.validationMessage
+
+    this.#validity.set(this, { flags, message })
+  }
+
+  #calculateValidity() {
+    const validity = {}
+    const messages = []
+
+    for (const { flags, message } of this.#validity.values()) {
+      // internal TextArea's ValidityState can contain `valid: true`
+      if (flags.valid === true) continue
+
+      for (const flag in flags) {
+        if (flags[flag]) {
+          validity[flag] = true
+          messages.push(message)
+        }
+      }
+    }
+
+    return { validity, message: messages.join("\n") }
   }
 
   #clearCachedValues() {
@@ -496,7 +604,7 @@ export class LexicalEditorElement extends HTMLElement {
         registerList(this.editor)
       )
       this.#registerTableComponents()
-      this.#registerCodeHiglightingComponents()
+      this.#registerCodeLanguagePicker()
       if (this.supportsMarkdown) {
         const transformers = [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ]
         registered.push(
@@ -518,8 +626,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(tableTools)
   }
 
-  #registerCodeHiglightingComponents() {
-    registerCodeHighlighting(this.editor)
+  #registerCodeLanguagePicker() {
     let codeLanguagePicker = this.querySelector("lexxy-code-language-picker")
     codeLanguagePicker ??= createElement("lexxy-code-language-picker")
     this.append(codeLanguagePicker)
@@ -644,24 +751,16 @@ export class LexicalEditorElement extends HTMLElement {
     this.classList.toggle("lexxy-editor--empty", this.isEmpty)
   }
 
-  #setValidity() {
-    if (this.#validationTextArea.validity.valid) {
-      this.internals.setValidity({})
-    } else {
-      this.internals.setValidity(this.#validationTextArea.validity, this.#validationTextArea.validationMessage, this.editorContentElement)
-    }
+  #configureSanitizer(editor) {
+    setSanitizerConfig(this.#getAllowedElements(editor))
   }
 
-  #configureSanitizer() {
-    setSanitizerConfig(this.#allowedElements)
+  #getAllowedElements(editor) {
+    return this.#getImportableTags(editor).concat(this.extensions.allowedElements)
   }
 
-  get #allowedElements() {
-    return this.#importableTags.concat(this.extensions.allowedElements)
-  }
-
-  get #importableTags() {
-    const tags = Array.from(this.editor._htmlConversions.keys())
+  #getImportableTags(editor) {
+    const tags = Array.from(editor._htmlConversions.keys())
     return tags.filter(tag => !tag.startsWith("#"))
   }
 
@@ -709,28 +808,25 @@ export class LexicalEditorElement extends HTMLElement {
   #dispatchEditorInitialized() {
     if (!this.adapter) return
 
+    this.#editorInitializedDispatched = true
+
     this.adapter.dispatchEditorInitialized({
       highlightColors: this.#resolvedHighlightColors,
       headingFormats: this.#supportedHeadingFormats
     })
   }
 
-  #scheduleEditorInitializedDispatch() {
-    this.#cancelEditorInitializedDispatch()
-    this.#editorInitializedRafId = requestAnimationFrame(() => {
-      this.#editorInitializedRafId = null
-      if (!this.isConnected || !this.adapter) return
+  #dispatchInitialize() {
+    if (this.isConnected && this.adapter) {
+      if (!this.#initializeEventDispatched) {
+        this.#initializeEventDispatched = true
+        dispatch(this, "lexxy:initialize")
+      }
 
-      dispatch(this, "lexxy:initialize")
-      this.#dispatchEditorInitialized()
-    })
-  }
-
-  #cancelEditorInitializedDispatch() {
-    if (this.#editorInitializedRafId == null) return
-
-    cancelAnimationFrame(this.#editorInitializedRafId)
-    this.#editorInitializedRafId = null
+      if (!this.#editorInitializedDispatched) {
+        this.#dispatchEditorInitialized()
+      }
+    }
   }
 
   get #resolvedHighlightColors() {
@@ -781,8 +877,9 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #reset() {
-    this.#cancelEditorInitializedDispatch()
     this.#dispose()
+    this.#resetValidity()
+    this.#uploadRequests?.clear()
     this.editorContentElement?.remove()
     this.editorContentElement = null
 
@@ -801,6 +898,10 @@ export class LexicalEditorElement extends HTMLElement {
     this.disconnectedCallback()
     this.valueBeforeDisconnect = null
     this.connectedCallback()
+  }
+
+  #resetValidity() {
+    this.#validity = new Map()
   }
 }
 

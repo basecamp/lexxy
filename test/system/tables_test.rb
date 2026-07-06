@@ -8,6 +8,7 @@ class TableTest < ApplicationSystemTestCase
 
   test "tables render with action text" do
     find_editor.toggle_command("insertTable")
+    find_editor.send "Hello"
     click_on "Update Post"
 
     assert_no_selector "lexxy-editor"

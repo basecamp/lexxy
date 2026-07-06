@@ -1,7 +1,8 @@
 import Lexxy from "../config/lexxy"
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $createTextNode, $getSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_CRITICAL, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $createTextNode, $getSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_CRITICAL, INPUT_COMMAND, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $textBeforeOffset } from "../helpers/lexical_helper"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
@@ -11,6 +12,9 @@ import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
 const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found"
 const FILTER_DEBOUNCE_INTERVAL = 50
+
+// Start of line, or after a space or newline.
+const DEFAULT_ONLY_AT_PATTERN = "^|[ \\n]"
 
 export class LexicalPromptElement extends HTMLElement {
   #globalListeners = new ListenerBin()
@@ -28,6 +32,7 @@ export class LexicalPromptElement extends HTMLElement {
     this.source = this.#createSource()
 
     this.#addTriggerListener()
+    this.#removePopoverBeforeTurboCaches()
     this.toggleAttribute("connected", true)
   }
 
@@ -35,7 +40,7 @@ export class LexicalPromptElement extends HTMLElement {
     this.#popoverListeners.dispose()
     this.#globalListeners.dispose()
     this.source = null
-    this.popoverElement = null
+    this.#removePopover()
   }
 
 
@@ -55,6 +60,14 @@ export class LexicalPromptElement extends HTMLElement {
 
   get supportsSpaceInSearches() {
     return this.hasAttribute("supports-space-in-searches")
+  }
+
+  get onlyAt() {
+    return this.getAttribute("only-at")
+  }
+
+  get verticalDirection() {
+    return this.getAttribute("vertical-direction")
   }
 
   get open() {
@@ -100,14 +113,10 @@ export class LexicalPromptElement extends HTMLElement {
           if (offset >= triggerLength) {
             const textBeforeCursor = fullText.slice(offset - triggerLength, offset)
 
-            // Check if trigger is at the start of the text node (new line case) or preceded by space or newline
             if (textBeforeCursor === this.trigger) {
-              const isAtStart = offset === triggerLength
+              const textBeforeTrigger = $textBeforeOffset(node, offset - triggerLength)
 
-              const charBeforeTrigger = offset > triggerLength ? fullText[offset - triggerLength - 1] : null
-              const isPrecededBySpaceOrNewline = charBeforeTrigger === " " || charBeforeTrigger === "\n"
-
-              if (isAtStart || isPrecededBySpaceOrNewline) {
+              if (this.#onlyAtRegExp.test(textBeforeTrigger)) {
                 this.#popoverListeners.dispose()
                 this.#showPopover()
               }
@@ -118,7 +127,15 @@ export class LexicalPromptElement extends HTMLElement {
     }))
   }
 
+  get #onlyAtRegExp() {
+    return new RegExp(`(?:${this.onlyAt ?? DEFAULT_ONLY_AT_PATTERN})$`)
+  }
+
   get #promptContentTypePermitted() {
+    // `insert-editable-text` prompts never create attachments, so the
+    // editor's attachment support and content-type allowlist don't apply.
+    if (this.hasAttribute("insert-editable-text")) return true
+
     const el = this.#editorElement
     if (!el.supportsAttachments) {
       return false
@@ -144,22 +161,33 @@ export class LexicalPromptElement extends HTMLElement {
         const { node, offset } = this.#selection.selectedNodeWithOffset()
         if (!node) return
 
-        if ($isTextNode(node) && offset > 0) {
-          const fullText = node.getTextContent()
-          const textBeforeCursor = fullText.slice(0, offset)
-          const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger)
-          const triggerEndIndex = lastTriggerIndex + this.trigger.length - 1
-
-          // If trigger is not found, or cursor is at or before the trigger end position, hide popover
-          if (lastTriggerIndex === -1 || offset <= triggerEndIndex) {
-            this.#hidePopover()
+        if (this.#cursorIsTypingSearchTerm(node, offset)) {
+          if (!this.popoverElement.hasAttribute("data-anchored")) {
+            this.#positionPopover()
           }
         } else {
-          // Cursor is not in a text node or at offset 0, hide popover
           this.#hidePopover()
         }
       })
     }))
+  }
+
+  // The popover should stay open only while the cursor sits at the end of the
+  // trigger and its search term. When the cursor moves away — before the
+  // trigger, or past the token into later text — the text between the trigger
+  // and the cursor breaks that run and we dismiss. A newline always breaks the
+  // run; a space breaks it only for triggers that don't support spaces in
+  // searches, since those that do (e.g. `person:`) expect multi-word terms.
+  #cursorIsTypingSearchTerm(node, offset) {
+    if (!$isTextNode(node) || offset === 0) return false
+
+    const textBeforeCursor = node.getTextContent().slice(0, offset)
+    const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger)
+    if (lastTriggerIndex === -1) return false
+
+    const searchTerm = textBeforeCursor.slice(lastTriggerIndex + this.trigger.length)
+    const breakPattern = this.supportsSpaceInSearches ? /\n/ : /[ \n]/
+    return !breakPattern.test(searchTerm)
   }
 
   get #editor() {
@@ -204,6 +232,7 @@ export class LexicalPromptElement extends HTMLElement {
 
     if (this.#doesSpaceSelect) {
       this.#popoverListeners.track(this.#editor.registerCommand(KEY_SPACE_COMMAND, this.#handleSelectedOption.bind(this), COMMAND_PRIORITY_CRITICAL))
+      this.#popoverListeners.track(this.#editor.registerCommand(INPUT_COMMAND, this.#handleInputCommand.bind(this), COMMAND_PRIORITY_CRITICAL))
     }
 
     // Register arrow keys with CRITICAL priority to prevent Lexical's selection handlers from running
@@ -237,16 +266,12 @@ export class LexicalPromptElement extends HTMLElement {
     return Array.from(this.popoverElement.querySelectorAll(".lexxy-prompt-menu__item"))
   }
 
-  #selectOption(listItem) {
+  #selectOption(listItem, { scrollIntoView = false } = {}) {
     this.#clearListItemSelection()
     listItem.toggleAttribute("aria-selected", true)
-    listItem.scrollIntoView({ block: "nearest", behavior: "smooth" })
-    listItem.focus()
-
-    // Preserve selection to prevent cursor jump
-    this.#selection.preservingSelection(() => {
-      this.#editorElement.focus()
-    })
+    if (scrollIntoView) {
+      listItem.scrollIntoView({ block: "nearest", container: "nearest", behavior: "smooth" })
+    }
 
     this.#setEditorAssociationAttribute("aria-controls", this.popoverElement.id)
     this.#setEditorAssociationAttribute("aria-activedescendant", listItem.id)
@@ -270,8 +295,16 @@ export class LexicalPromptElement extends HTMLElement {
     }
   }
 
+  // Right after a Turbo history restore the editor reconnects before the DOM selection
+  // is re-established, so the cursor geometry is momentarily unavailable. Anchoring then
+  // would pin the menu to the editor's left edge for the rest of the open cycle, so we
+  // skip it and let a later reposition anchor it once the selection is ready. The menu
+  // stays hidden until anchored (see the `[data-anchored]` rule in the stylesheet).
   #positionPopover() {
-    const { x, y, fontSize } = this.#selection.cursorPosition
+    const cursorPosition = this.#selection.cursorPosition
+    if (!cursorPosition) return
+
+    const { x, y, fontSize } = cursorPosition
     const editorRect = this.#editorElement.getBoundingClientRect()
     const contentRect = this.#editorContentElement.getBoundingClientRect()
     const verticalOffset = contentRect.top - editorRect.top
@@ -284,11 +317,15 @@ export class LexicalPromptElement extends HTMLElement {
 
     const popoverRect = this.popoverElement.getBoundingClientRect()
 
-    if (popoverRect.right > window.innerWidth) {
+    if (popoverRect.right > editorRect.right) {
       this.popoverElement.toggleAttribute("data-clipped-at-right", true)
     }
 
-    if (popoverRect.bottom > window.innerHeight) {
+    const forceTop = this.verticalDirection === "top"
+    const forceBottom = this.verticalDirection === "bottom"
+    const overflowsWindow = popoverRect.bottom > window.innerHeight
+
+    if (!forceBottom && (forceTop || overflowsWindow)) {
       this.#setPopoverOffsetY(contentRect.height - y + fontSize)
       this.popoverElement.toggleAttribute("data-clipped-at-bottom", true)
     }
@@ -316,6 +353,21 @@ export class LexicalPromptElement extends HTMLElement {
 
     await nextFrame()
     this.#addTriggerListener()
+  }
+
+  // The popover is appended to the <lexxy-editor> subtree, so Turbo serializes it
+  // into the page cache. Removing it before caching prevents an orphaned, unmanaged
+  // popover from being restored on history back/forward.
+  #removePopoverBeforeTurboCaches() {
+    this.#globalListeners.track(
+      registerEventListener(document, "turbo:before-cache", () => this.#removePopover())
+    )
+  }
+
+  #removePopover() {
+    this.#popoverListeners.dispose()
+    this.popoverElement?.remove()
+    this.popoverElement = null
   }
 
   #filterOptions = async () => {
@@ -390,17 +442,22 @@ export class LexicalPromptElement extends HTMLElement {
         }
       })
     }
-    // Arrow keys are now handled via Lexical commands with HIGH priority
+    // Arrow keys are handled via Lexical commands
+  }
+
+  // Android Mobile keyboard doesn't trigger KEY_SPACE_COMMAND
+  #handleInputCommand(event) {
+    if (event.inputType === "insertText" && event.data === " ") return this.#handleSelectedOption(event)
   }
 
   #moveSelectionDown() {
     const nextIndex = this.#selectedIndex + 1
-    if (nextIndex < this.#listItemElements.length) this.#selectOption(this.#listItemElements[nextIndex])
+    if (nextIndex < this.#listItemElements.length) this.#selectOption(this.#listItemElements[nextIndex], { scrollIntoView: true })
   }
 
   #moveSelectionUp() {
     const previousIndex = this.#selectedIndex - 1
-    if (previousIndex >= 0) this.#selectOption(this.#listItemElements[previousIndex])
+    if (previousIndex >= 0) this.#selectOption(this.#listItemElements[previousIndex], { scrollIntoView: true })
   }
 
   get #selectedIndex() {

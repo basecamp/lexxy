@@ -156,7 +156,11 @@ class EditorHandler
   end
 
   def toggle_command(command, toolbar_selector = "lexxy-toolbar")
-    find("#{toolbar_selector} [data-command=\"#{command}\"]").click
+    button = find("#{toolbar_selector} [data-command=\"#{command}\"]", visible: :all)
+    if button.matches_css?(".lexxy-editor__toolbar-overflow-menu *")
+      find("#{toolbar_selector} .lexxy-editor__toolbar-overflow [data-dropdown-trigger]").click
+    end
+    button.click
   end
 
   def inner_html

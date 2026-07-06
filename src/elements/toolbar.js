@@ -92,6 +92,14 @@ export class LexicalToolbarElement extends HTMLElement {
     })
   }
 
+  closeDropdowns({ except } = {}) {
+    this.#dropdowns.forEach((dropdown) => {
+      if (dropdown !== except) {
+        dropdown.close({ focusEditor: false })
+      }
+    })
+  }
+
   #reconnect() {
     this.disconnectedCallback()
     this.connectedCallback()
@@ -219,14 +227,14 @@ export class LexicalToolbarElement extends HTMLElement {
 
     this.#setButtonPressed("bold", isBold)
     this.#setButtonPressed("italic", isItalic)
+    this.#setButtonPressed("strikethrough", isStrikethrough)
+    this.#setButtonPressed("underline", isUnderline)
 
-    this.#setButtonPressed("format", isInHeading || isStrikethrough || isUnderline)
+    this.#setButtonPressed("format", isInHeading)
     this.#setButtonPressed("paragraph", !isInHeading)
     this.#setButtonPressed("heading-large", headingTag === "h2")
     this.#setButtonPressed("heading-medium", headingTag === "h3")
     this.#setButtonPressed("heading-small", headingTag === "h4")
-    this.#setButtonPressed("strikethrough", isStrikethrough)
-    this.#setButtonPressed("underline", isUnderline)
 
     this.#setButtonPressed("lists", isInList)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
@@ -264,62 +272,36 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #refreshOverflow() {
+    this.#hideOverflowMenuButton()
     this.#resetToolbarOverflow()
     this.#reindexToolbarItems()
     this.#compactMenu()
 
-    const isOverflowing = this.#overflowMenu.children.length > 0
+    const isOverflowing = this.#overflowMenuDropdown.children.length > 0
 
     this.toggleAttribute("overflowing", isOverflowing)
-
-    this.#overflow.style.display = isOverflowing ? "block" : "none"
-    this.#overflow.setAttribute("nonce", getNonce())
-
-    this.#overflowMenu.toggleAttribute("disabled", !isOverflowing)
-  }
-
-  // Separates layout reads from DOM writes to avoid forced reflows during init.
-  // Measures every button's right edge in a single read pass, figures out which
-  // buttons overflow using math, and then moves them in a single write pass.
-  #compactMenu() {
-    const buttons = this.#overflowButtons
-    if (buttons.length === 0) return
-
-    const availableWidth = this.clientWidth
-    const buttonRightEdges = buttons.map(button => {
-      const style = window.getComputedStyle(button)
-      return button.offsetLeft + button.offsetWidth + parseFloat(style.marginRight)
-    })
-
-    let firstOverflowing = -1
-    for (let i = 0; i < buttons.length; i++) {
-      if (buttonRightEdges[i] > availableWidth) {
-        firstOverflowing = i
-        break
-      }
-    }
-
-    if (firstOverflowing === -1) return
-
-    // Move one extra button to reserve space for the overflow control, which is
-    // `display: none` until we show it
-    const overflowIndex = Math.max(0, firstOverflowing - 1)
-    const overflowButtons = buttons.slice(overflowIndex).reverse()
-    for (const button of overflowButtons) {
-      this.#overflowMenu.prepend(button)
-      button.role = "menuitem"
-    }
+    this.#setOverflowMenuNonce()
+    this.#showOverflowMenuButton(isOverflowing)
   }
 
   #resetToolbarOverflow() {
-    const items = Array.from(this.#overflowMenu.children)
+    const items = Array.from(this.#overflowMenuDropdown.children)
     items.sort((a, b) => this.#itemPosition(b) - this.#itemPosition(a))
 
     for (const item of items) {
-      const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.#overflow
+      const nextItem = this.querySelector(`[data-position="${this.#itemPosition(item) + 1}"]`) ?? this.#overflowMenuButton
       item.removeAttribute("role")
       this.insertBefore(item, nextItem)
     }
+  }
+
+  #showOverflowMenuButton(show = true) {
+    this.#overflowMenuDropdown.toggleAttribute("disabled", !show)
+    this.#overflowMenuButton.style.display = show ? "block" : "none"
+  }
+
+  #hideOverflowMenuButton() {
+    this.#showOverflowMenuButton(false)
   }
 
   #itemPosition(item) {
@@ -332,28 +314,59 @@ export class LexicalToolbarElement extends HTMLElement {
     })
   }
 
-  closeDropdowns({ except } = {}) {
-    this.#dropdowns.forEach((dropdown) => {
-      if (dropdown !== except) {
-        dropdown.close({ focusEditor: false })
-      }
-    })
+  #compactMenu() {
+    const overflowWidth = this.#getOverflowWidth()
+
+    if (overflowWidth > 0) {
+      this.#showOverflowMenuButton()
+      const gap = this.#getToolbarGap()
+      const spaceForOverflow = gap + this.#overflowMenuButton.offsetWidth
+      this.#reclaimWidth(overflowWidth + spaceForOverflow, { gap })
+    }
+  }
+
+  #getOverflowWidth() {
+    return this.scrollWidth - this.clientWidth
+  }
+
+  #reclaimWidth(overflowWidth, { gap }) {
+    const buttons = this.#overflowableButtons
+    const overflowButtons = []
+    let recoveredWidth = 0
+
+    while (recoveredWidth < overflowWidth && buttons.length) {
+      const button = buttons.pop()
+
+      overflowButtons.push(button)
+      button.role = "menuitem"
+      recoveredWidth += button.offsetWidth + gap
+    }
+
+    this.#overflowMenuDropdown.append(...overflowButtons.reverse())
+  }
+
+  #setOverflowMenuNonce() {
+    this.#overflowMenuButton.setAttribute("nonce", getNonce())
+  }
+
+  #getToolbarGap() {
+    return parseFloat(window.getComputedStyle(this).columnGap) || 0
   }
 
   get #dropdowns() {
     return this.querySelectorAll(":scope .lexxy-editor__toolbar-dropdown")
   }
 
-  get #overflow() {
+  get #overflowMenuButton() {
     return this.querySelector(".lexxy-editor__toolbar-overflow")
   }
 
-  get #overflowMenu() {
-    return this.#overflow?.querySelector(":scope > [data-dropdown-panel]")
+  get #overflowMenuDropdown() {
+    return this.#overflowMenuButton?.querySelector(":scope > [data-dropdown-panel]")
   }
 
-  get #overflowButtons() {
-    return Array.from(this.querySelectorAll(":scope > button:not([data-prevent-overflow='true'])"))
+  get #overflowableButtons() {
+    return Array.from(this.querySelectorAll(":scope > button:not([data-prevent-overflow])"))
   }
 
   get #buttons() {
@@ -384,6 +397,14 @@ export class LexicalToolbarElement extends HTMLElement {
       ${ToolbarIcons.italic}
       </button>
 
+      <button class="lexxy-editor__toolbar-button" type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
+        ${ToolbarIcons.strikethrough}
+      </button>
+
+      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="underline" data-command="underline" title="Underline">
+        ${ToolbarIcons.underline}
+      </button>
+
       <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-dropdown">
         <button data-dropdown-trigger class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="format" title="Text formatting" aria-haspopup="menu" aria-expanded="false">
           ${ToolbarIcons.heading}
@@ -400,13 +421,6 @@ export class LexicalToolbarElement extends HTMLElement {
           </button>
           <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading" role="menuitem">
             ${ToolbarIcons.h4} <span>Small Heading</span>
-          </button>
-          <div class="lexxy-editor__toolbar-separator" role="separator"></div>
-          <button type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough" role="menuitem">
-            ${ToolbarIcons.strikethrough} <span>Strikethrough</span>
-          </button>
-          <button type="button" name="underline" data-command="underline" title="Underline" role="menuitem">
-            ${ToolbarIcons.underline} <span>Underline</span>
           </button>
           <div class="lexxy-editor__toolbar-separator" role="separator"></div>
           <button type="button" name="clear-formatting" data-command="clearFormatting" title="Clear formatting" role="menuitem">

@@ -4,9 +4,12 @@ import {
   $isRangeSelection,
   $isTextNode,
   $setSelection,
+  COMMAND_PRIORITY_HIGH,
   COMMAND_PRIORITY_NORMAL,
   FORMAT_TEXT_COMMAND,
   INDENT_CONTENT_COMMAND,
+  INSERT_LINE_BREAK_COMMAND,
+  INSERT_PARAGRAPH_COMMAND,
   KEY_ARROW_RIGHT_COMMAND,
   KEY_TAB_COMMAND,
   OUTDENT_CONTENT_COMMAND,
@@ -15,12 +18,12 @@ import {
 } from "lexical"
 import { CodeNode } from "@lexical/code"
 import { $createAutoLinkNode, $toggleLink, LinkNode } from "@lexical/link"
-import { $getNearestNodeOfType } from "@lexical/utils"
+import { $getNearestNodeOfType, $insertNodeToNearestRoot } from "@lexical/utils"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
-import { getListType } from "../helpers/lexical_helper"
+import { $normalizeBlockContainerSelection, getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { REMOVE_HIGHLIGHT_COMMAND, TOGGLE_HIGHLIGHT_COMMAND } from "../extensions/highlight_extension"
 
@@ -225,8 +228,7 @@ export class CommandDispatcher {
   }
 
   dispatchInsertHorizontalDivider() {
-    this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
-    this.editor.focus()
+    $insertNodeToNearestRoot(new HorizontalDividerNode)
   }
 
   dispatchSetFormatHeadingLarge() {
@@ -307,6 +309,16 @@ export class CommandDispatcher {
   #registerKeyboardCommands() {
     this.#registerCommandHandler(KEY_ARROW_RIGHT_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleArrowRightKey.bind(this))
     this.#registerCommandHandler(KEY_TAB_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleTabKey.bind(this))
+
+    // Run before Lexical's built-in insert handlers to descend an element point on a
+    // block container to a leaf, avoiding error #211 on Enter / Shift+Enter in a quote.
+    this.#registerCommandHandler(INSERT_LINE_BREAK_COMMAND, COMMAND_PRIORITY_HIGH, this.#normalizeBlockContainerSelection.bind(this))
+    this.#registerCommandHandler(INSERT_PARAGRAPH_COMMAND, COMMAND_PRIORITY_HIGH, this.#normalizeBlockContainerSelection.bind(this))
+  }
+
+  #normalizeBlockContainerSelection() {
+    $normalizeBlockContainerSelection()
+    return false
   }
 
   #handleArrowRightKey(event) {
@@ -326,12 +338,18 @@ export class CommandDispatcher {
   #registerDragAndDropHandlers() {
     if (this.editorElement.supportsAttachments) {
       this.dragCounter = 0
-      const root = this.editor.getRootElement()
       this.#listeners.track(
-        registerEventListener(root, "dragover", this.#handleDragOver.bind(this)),
-        registerEventListener(root, "drop", this.#handleDrop.bind(this)),
-        registerEventListener(root, "dragenter", this.#handleDragEnter.bind(this)),
-        registerEventListener(root, "dragleave", this.#handleDragLeave.bind(this))
+        this.editor.registerRootListener((rootElement) => {
+          if (rootElement) {
+            const teardowns = [
+              registerEventListener(rootElement, "dragover", this.#handleDragOver.bind(this)),
+              registerEventListener(rootElement, "drop", this.#handleDrop.bind(this)),
+              registerEventListener(rootElement, "dragenter", this.#handleDragEnter.bind(this)),
+              registerEventListener(rootElement, "dragleave", this.#handleDragLeave.bind(this))
+            ]
+            return () => teardowns.forEach((teardown) => teardown())
+          }
+        })
       )
     }
   }
@@ -399,7 +417,7 @@ export class CommandDispatcher {
   }
 
   #isInternalDrag(event) {
-    return event.dataTransfer?.types.includes("application/x-lexxy-node-key")
+    return event.dataTransfer?.types.some((type) => type.startsWith("application/x-lexxy-"))
   }
 
   #handleTabKey(event) {

@@ -10,7 +10,7 @@ export async function openToolbarDropdown(page, name) {
 
 const FORMAT_DROPDOWN_COMMANDS = new Set([
   "setFormatParagraph", "setFormatHeadingLarge", "setFormatHeadingMedium",
-  "setFormatHeadingSmall", "strikethrough", "underline", "clearFormatting"
+  "setFormatHeadingSmall", "clearFormatting"
 ])
 
 export async function clickToolbarButton(page, command) {

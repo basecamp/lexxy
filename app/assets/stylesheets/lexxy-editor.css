@@ -3,6 +3,7 @@
 :where(lexxy-editor) {
   --lexxy-editor-padding: 1ch;
   --lexxy-editor-rows: 8lh;
+  /* eslint-disable-next-line css/no-invalid-properties */
   @supports (min-block-size: attr(rows lh)) {
     --lexxy-editor-rows: attr(rows lh, 8lh);
   }
@@ -165,6 +166,7 @@
     }
 
     &.lexxy-content__table--selection {
+      /* eslint-disable-next-line css/use-baseline */
       ::selection {
         background: transparent;
       }
@@ -245,6 +247,22 @@
 
   .attachment.lexxy-dragging {
     opacity: 0.4;
+  }
+
+  [data-lexxy-decorator][draggable] {
+    cursor: grab;
+  }
+
+  [data-lexxy-decorator].lexxy-dragging {
+    opacity: 0.4;
+  }
+
+  .lexxy-drop-caret {
+    background-color: var(--lexxy-focus-ring-color);
+    border-radius: 1px;
+    inline-size: 2px;
+    pointer-events: none;
+    position: fixed;
   }
 
   [class*="lexxy-drop-target--"] {
@@ -365,8 +383,11 @@
       inline-size: 100%;
       max-inline-size: 100%;
       padding: 0;
-      resize: none;
       text-align: center;
+
+      @supports (resize: none) {
+        resize: none;
+      }
 
       &:focus {
         background: var(--lexxy-color-canvas);
@@ -401,6 +422,7 @@
 }
 
 :where(.lexxy-editor__content) {
+  /* eslint-disable-next-line css/no-invalid-properties */
   min-block-size: var(--lexxy-editor-rows);
   outline: 0;
   padding: var(--lexxy-editor-padding);
@@ -495,7 +517,11 @@
       fill: currentColor;
       grid-area: 1/1;
       inline-size: var(--lexxy-toolbar-icon-size);
-      user-select: none;
+      -webkit-user-select: none;
+
+      @supports (user-select: none) {
+        user-select: none;
+      }
     }
 
     &.lexxy-editor__toolbar-group-end {
@@ -526,8 +552,11 @@
 /* Dropdowns */
 
 :where(.lexxy-editor__toolbar-dropdown) {
-  user-select: none;
   -webkit-user-select: none;
+
+  @supports (user-select: none) {
+    user-select: none;
+  }
 
   .lexxy-editor__toolbar-button {
     color: currentColor;
@@ -684,7 +713,7 @@
         font-size: var(--lexxy-text-small);
         flex: 2;
         inline-size: 100%;
-        line-height: normal;
+        line-height: inherit;
         padding-block: 0;
         padding-inline: 1ch;
 
@@ -750,15 +779,13 @@
           inline-size: 100%;
 
           &:after {
-            align-self: center;
+            align-items: center;
             content: "Aa";
-            display: inline-block;
+            display: flex;
             font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            inset: 0;
+            justify-content: center;
             position: absolute;
-            inset-block-start: 0;
-            inset-block-end: 0;
-            inset-inline-end: 0;
-            inset-inline-start: 0;
           }
 
           &[aria-pressed="true"] {
@@ -806,8 +833,11 @@
     line-height: inherit;
     min-block-size: var(--button-size);
     min-inline-size: var(--button-size);
-    user-select: none;
     -webkit-user-select: none;
+
+    @supports (user-select: none) {
+      user-select: none;
+    }
 
     @media(any-hover: hover) {
       &:hover:not([aria-disabled="true"]),
@@ -1049,7 +1079,7 @@
   }
 }
 
-:where(.lexxy-prompt-menu--visible) {
+:where(.lexxy-prompt-menu--visible[data-anchored]) {
   visibility: initial;
 }
 

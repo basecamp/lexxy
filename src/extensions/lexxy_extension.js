@@ -30,6 +30,10 @@ export default class LexxyExtension {
 
   }
 
+  setEditorValidity(flags, message) {
+    this.editorElement.setElementValidity(this, flags, message)
+  }
+
   dispose() {
   }
 }

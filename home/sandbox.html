@@ -1,0 +1,46 @@
+---
+layout: landing
+title: Sandbox
+permalink: /sandbox/
+editor: true
+nav_exclude: true
+---
+
+<section class="section sandbox">
+  <div class="container">
+    <div class="section__head">
+      <h1>Try Lexxy in a Sandbox</h1>
+      <p>Type, format, paste a link, or hit <code>:</code> to drop in an emoji.</p>
+    </div>
+
+    <div class="try__editor">
+      <lexxy-editor
+        class="lexxy-content"
+        placeholder="Write something…"
+        value='<h2>Hey there,</h2><p>This is a document written in Lexxy. Feel free to type, play around with formatting, paste links, or hit <code>:</code> to drop in an emoji!</p><p><br></p><h3>Features</h3><ul><li value="1">Lexxy is built on top of Lexical, the powerful text editor framework from Meta.</li><li value="2">Good HTML semantics. Paragraphs are real <code>&lt;p&gt;</code> tags, as they should be.</li><li value="3">Markdown support: shortcuts, auto-formatting on paste.</li><li value="4">The <strong>rich</strong> <em>text</em> <i><strong>styles</strong></i> you <s>want</s> expect.</li><li value="5">Text highlights <mark style="color: var(--highlight-1);">color</mark>, <mark style="background-color: var(--highlight-bg-6);">background</mark>, or <mark style="color: var(--highlight-3);background-color: var(--highlight-bg-3);">both</mark>; with <mark style="color: var(--highlight-7);"><strong>other</strong></mark> <s><mark style="background-color: var(--highlight-bg-3);">styles</mark></s> <i><mark style="color: var(--highlight-5);"><strong>too</strong></mark></i>.</li><li value="6">Real-time code syntax highlighting.</li><li value="7">Create links by pasting URLs on selected text.</li><li value="8">Configurable prompts. Support for mentions and other interactive prompts with multiple loading and filtering strategies.</li><li value="9">Preview attachments like PDFs and Videos in the editor.</li><li value="10">Works seamlessly with Action Text, generating the same canonical HTML format it expects for attachments.</li></ul><p><br></p><pre data-language="css" data-highlight-language="css">body {<br>  font-size: 20px;<br>}</pre><p><br></p><figure class="lexxy-content__table-wrapper"><table><tbody><tr><th class="lexxy-content__table-cell--header"><p>Name</p></th><th class="lexxy-content__table-cell--header"><p>Age</p></th></tr><tr><td><p>John</p></td><td><p>25</p></td></tr><tr><td><p>Jane</p></td><td><p>26</p></td></tr></tbody></table></figure><p><br></p>'
+        data-direct-upload-url="/rails/active_storage/direct_uploads"
+        data-blob-url-template="/rails/active_storage/blobs/:signed_id/:filename">
+        <lexxy-prompt trigger=":" insert-editable-text>
+          <lexxy-prompt-item search="joy laughing face"><template type="menu">😂 Joy</template><template type="editor">😂</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="heart red heart"><template type="menu">❤️ Heart</template><template type="editor">❤️</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="thumbs up like"><template type="menu">👍 Thumbs Up</template><template type="editor">👍</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="fire hot lit"><template type="menu">🔥 Fire</template><template type="editor">🔥</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="party popper celebration"><template type="menu">🎉 Party</template><template type="editor">🎉</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="star favorite"><template type="menu">⭐ Star</template><template type="editor">⭐</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="clap applause"><template type="menu">👏 Clap</template><template type="editor">👏</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="rocket launch"><template type="menu">🚀 Rocket</template><template type="editor">🚀</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="100 hundred perfect"><template type="menu">💯 100</template><template type="editor">💯</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="checkmark check mark"><template type="menu">✅ Check</template><template type="editor">✅</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="heart eyes love"><template type="menu">😍 Heart Eyes</template><template type="editor">😍</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="thinking thought"><template type="menu">🤔 Thinking</template><template type="editor">🤔</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="wink wink"><template type="menu">😉 Wink</template><template type="editor">😉</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="celebrate party"><template type="menu">🎊 Celebrate</template><template type="editor">🎊</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="muscle flex strong"><template type="menu">💪 Muscle</template><template type="editor">💪</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="lightbulb idea"><template type="menu">💡 Lightbulb</template><template type="editor">💡</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="pray hands thank"><template type="menu">🙏 Pray</template><template type="editor">🙏</template></lexxy-prompt-item>
+          <lexxy-prompt-item search="crown king queen"><template type="menu">👑 Crown</template><template type="editor">👑</template></lexxy-prompt-item>
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+  </div>
+</section>

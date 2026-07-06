@@ -6,7 +6,8 @@ import { defineElements } from "./elements/index"
 import Lexxy from "./config/lexxy"
 
 export * from "./nodes"
-export { highlightCode } from "./helpers/code_highlighting_helper"
+export * from "./commands"
+export { highlightCode, highlightElement } from "./helpers/code_highlighting_helper"
 export { NativeAdapter } from "./editor/adapters/native_adapter"
 
 export const configure = Lexxy.configure

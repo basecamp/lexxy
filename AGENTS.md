@@ -2,13 +2,20 @@
 
 Lexxy is a rich text editor built on Lexical, distributed as both a Ruby gem and an npm package.
 
-See [docs/development.md](docs/development.md) for local development setup, how to run tests, and release instructions.
+See [home/docs/development.md](home/docs/development.md) for local development setup, how to run tests, and release instructions.
+
+## Style
+
+Follow [STYLE.md](STYLE.md) for all code you write — general conventions, JavaScript/Lexical patterns, Ruby, and tests.
+
+@STYLE.md
 
 ## Worktrees
 
 When working from a git worktree:
 
 - Run all commands from that worktree, not from the main checkout.
+- A fresh worktree starts with no installed dependencies and an empty dummy database. Before `bin/dev` will serve the dummy app, run `bin/setup` (installs Ruby/JS dependencies and builds the assets), then prepare and seed its database with `cd test/dummy && bin/rails db:prepare db:seed` (without the seed, the `@` prompt has no people to show). Skipping these leaves `bin/dev` returning a 500 (`ActiveRecord::PendingMigrationError`).
 - For system-level work, start `bin/dev` in the worktree before investigating or running `test/system/` after `src/` changes. Rails system tests use `app/assets/javascript/lexxy.js`, so the watcher must keep built assets in sync.
 - Use a unique port per worktree, for example `PORT=3100 bin/dev` or `PORT=3200 bin/dev`, to avoid Rails server collisions.
 - If you skip `bin/dev`, rebuild assets in the worktree before trusting system test results after any `src/` change.

@@ -1,54 +1,35 @@
+import { defineConfig } from "eslint/config"
+import globals from "globals"
 import js from "@eslint/js"
+import css from "@eslint/css"
+import compat from "eslint-plugin-compat"
 
-export default [
+export default defineConfig([
   {
-    ignores: ["dist/**", "app/**", "node_modules/**", "pkg/**", "test/**", "lib/**", "bin/**", "config/**", "docs/**", "vendor/**", ".claude/worktrees/**"]
+    ignores: ["dist/**", "app/assets/javascript/**", "node_modules/**", "pkg/**", "test/**", "lib/**", "bin/**", "config/**", "docs/**", "vendor/**", ".claude/worktrees/**"]
   },
-  js.configs.recommended,
   {
-    files: ["src/**/*.js", "app/*.*js"],
+    files: ["app/**/*.css"],
+    language: "css/css",
+    plugins: { css },
+    extends: ["css/recommended"],
+    rules: {
+      "css/use-baseline": ["warn", { available: 2023 }],
+      "css/no-invalid-properties": [ "error", { allowUnknownVariables: true } ]
+    }
+  },
+  {
+    files: ["src/**/*.js"],
+    plugins: { js, compat },
+    extends: ["js/recommended"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
-      globals: {
-        AbortController: "readonly",
-        atob: "readonly",
-        console: "readonly",
-        document: "readonly",
-        window: "readonly",
-        navigator: "readonly",
-        HTMLElement: "readonly",
-        CustomEvent: "readonly",
-        Element: "readonly",
-        Node: "readonly",
-        NodeList: "readonly",
-        Event: "readonly",
-        MutationObserver: "readonly",
-        DOMParser: "readonly",
-        Blob: "readonly",
-        File: "readonly",
-        FileReader: "readonly",
-        URL: "readonly",
-        URLSearchParams: "readonly",
-        Request: "readonly",
-        Response: "readonly",
-        FormData: "readonly",
-        fetch: "readonly",
-        setTimeout: "readonly",
-        clearTimeout: "readonly",
-        setInterval: "readonly",
-        clearInterval: "readonly",
-        XMLHttpRequest: "readonly",
-        requestAnimationFrame: "readonly",
-        cancelAnimationFrame: "readonly",
-        customElements: "readonly",
-        Prism: "readonly",
-        ResizeObserver: "readonly",
-        PointerEvent: "readonly",
-        Image: "readonly"
-      }
+      globals: globals.browser
     },
     rules: {
+      "compat/compat": ["error"],
+
       "array-bracket-spacing": ["error", "always"],
       "block-spacing": ["error", "always"],
       "camelcase": ["error"],
@@ -75,20 +56,14 @@ export default [
   },
   {
     files: ["scripts/**/*.js"],
+    plugins: { js },
+    extends: ["js/recommended"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
       globals: {
-        AbortController: "readonly",
-        URL: "readonly",
-        URLSearchParams: "readonly",
-        clearTimeout: "readonly",
-        console: "readonly",
-        fetch: "readonly",
-        performance: "readonly",
-        process: "readonly",
-        setTimeout: "readonly",
-        window: "readonly"
+        window: "readonly",
+        ...globals.node
       }
     },
     rules: {
@@ -116,4 +91,4 @@ export default [
       "sort-imports": ["error", { "ignoreDeclarationSort": true }]
     }
   }
-]
+])

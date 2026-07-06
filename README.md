@@ -2,10 +2,7 @@
 
 A modern rich text editor for Rails.
 
-> [!IMPORTANT]
-> This is a beta. It hasn't been battle-tested yet. Please try it out and report any issues you find.
-
-**[Try it out!](https://basecamp.github.io/lexxy/try-it)**
+[Documentation](https://basecamp.github.io/lexxy/docs/) | <mark>[Try it out!](https://basecamp.github.io/lexxy/sandbox/)</mark>
 
 ## Features
 
@@ -18,24 +15,7 @@ A modern rich text editor for Rails.
 - Preview attachments like PDFs and Videos in the editor.
 - Works seamlessly with Action Text, generating the same canonical HTML format it expects for attachments.
 
-![Lexxy editor screenshot](docs/images/home.screenshot.png)
-
-## Documentation
-
-Visit the **[documentation site](https://basecamp.github.io/lexxy)**.
-
-## Roadmap
-
-This is a beta. Here's what's coming next:
-
-- [x] Configurable editors in Action Text: Choose your editor like you choose your database.
-- [x] More editing features:
-    - [x] Tables
-    - [x] Text highlighting
-- [x] Configuration hooks.
-- [x] Standalone JS package: to use in non-Rails environments.
-- [x] Image galleries: The only remaining feature for full Action Text compatibility
-- [ ] Install task that generates the necessary JS and adds stylesheets.
+![Lexxy editor screenshot](home/docs/images/home.screenshot.png)
 
 ## Contributing
 

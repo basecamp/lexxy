@@ -15,7 +15,7 @@ export class FormatEscapeExtension extends LexxyExtension {
   }
 
   get allowedElements() {
-    return [ { tag: "li", attributes: [ "value" ] } ]
+    return [ { tag: "ol", attributes: [ "start" ] }, { tag: "li", attributes: [ "value" ] } ]
   }
 
   get lexicalExtension() {
@@ -47,24 +47,46 @@ export class FormatEscapeExtension extends LexxyExtension {
 }
 
 function $escapeFromBlockquote() {
+  return $escapeBeforeBlockquoteStart() || $escapeFromBlankBlockquoteParagraph()
+}
+
+function $escapeBeforeBlockquoteStart() {
+  const selection = $getSelection()
+  if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.offset !== 0) return false
+
+  const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
+  if (paragraph && !$isBlankNode(paragraph) && !paragraph.getPreviousSibling()) {
+    const blockquote = paragraph.getParent()
+    if ($isQuoteNode(blockquote)) {
+      blockquote.insertBefore($createParagraphNode())
+      return true
+    }
+  }
+
+  return false
+}
+
+function $escapeFromBlankBlockquoteParagraph() {
   const anchorNode = $getSelection().anchor.getNode()
 
   const paragraph = $getNearestNodeOfType(anchorNode, ParagraphNode)
   if (!paragraph || !$isBlankNode(paragraph)) return false
 
   const blockquote = paragraph.getParent()
-  if (!blockquote || !$isQuoteNode(blockquote)) return false
+  if ($isQuoteNode(blockquote)) {
+    const nonEmptySiblings = paragraph.getNextSiblings().filter(sibling => !$isBlankNode(sibling))
 
-  const nonEmptySiblings = paragraph.getNextSiblings().filter(sibling => !$isBlankNode(sibling))
+    if (nonEmptySiblings.length > 0) {
+      $splitQuoteNode(blockquote, paragraph)
+    } else {
+      blockquote.insertAfter(paragraph)
+      paragraph.selectStart()
+    }
 
-  if (nonEmptySiblings.length > 0) {
-    $splitQuoteNode(blockquote, paragraph)
-  } else {
-    blockquote.insertAfter(paragraph)
-    paragraph.selectStart()
+    return true
   }
 
-  return true
+  return false
 }
 
 function $splitQuoteNode(node, paragraph) {

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — insert-editable-text bypasses the content-type gate</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module">
+    import * as Lexxy from "lexxy"
+    Lexxy.configure({ global: { attachmentTagName: "bc-attachment" }})
+  </script>
+</head>
+<body>
+  <form>
+    <div class="body" data-editor="restricted-allowlist">
+      <lexxy-editor
+        class="lexxy-content"
+        placeholder="Bots prompt"
+        attachments="true"
+        permitted-attachment-types="application/vnd.basecamp.mention">
+        <lexxy-prompt trigger="!" name="bot" only-at=".*" insert-editable-text>
+          <lexxy-prompt-item search="opus">
+            <template type="menu">
+              <span class="bot bot--prompt-item">opus</span>
+            </template>
+            <template type="editor">!opus </template>
+          </lexxy-prompt-item>
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+
+    <div class="body" data-editor="attachments-false">
+      <lexxy-editor
+        class="lexxy-content"
+        placeholder="Bots prompt"
+        attachments="false">
+        <lexxy-prompt trigger="!" name="bot" only-at=".*" insert-editable-text>
+          <lexxy-prompt-item search="opus">
+            <template type="menu">
+              <span class="bot bot--prompt-item">opus</span>
+            </template>
+            <template type="editor">!opus </template>
+          </lexxy-prompt-item>
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+  </form>
+  <script type="module" src="/editor.js"></script>
+</body>
+</html>
