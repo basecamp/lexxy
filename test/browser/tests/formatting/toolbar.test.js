@@ -160,7 +160,7 @@ test.describe("Toolbar", () => {
     const overflowMenu = toolbar.locator(".lexxy-editor__toolbar-overflow-menu")
 
     const originalSize = page.viewportSize()
-    await page.setViewportSize({ width: 360, height: originalSize.height })
+    await page.setViewportSize({ width: 400, height: originalSize.height })
 
     await page.evaluate(async () => {
       const tb = document.querySelector("lexxy-toolbar")

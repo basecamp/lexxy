@@ -3,7 +3,7 @@ import {
   $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND,
   HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
 } from "lexical"
-import { $getNearestNodeOfType } from "@lexical/utils"
+import { $getNearestBlockElementAncestorOrThrow, $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
 import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
@@ -110,7 +110,16 @@ export default class Selection {
       headingTag: headingNode?.getTag() ?? null,
       isInList: listType !== null,
       listType,
-      isInTable: $getTableCellNodeFromLexicalNode(anchorNode) !== null
+      isInTable: $getTableCellNodeFromLexicalNode(anchorNode) !== null,
+      blockAlignment: this.#getBlockAlignment(anchorNode)
+    }
+  }
+
+  #getBlockAlignment(anchorNode) {
+    try {
+      return $getNearestBlockElementAncestorOrThrow(anchorNode).getFormatType() ?? ""
+    } catch {
+      return ""
     }
   }
 
