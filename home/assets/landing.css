@@ -175,7 +175,7 @@ a:not(.btn) {
 
 @keyframes logo-scroll {
   0% { background-position: 0 center; }
-  100% { background-position: -1750px center; }
+  100% { background-position: -1945px center; }
 }
 
 
