@@ -217,15 +217,18 @@ export default class Contents {
     return result
   }
 
-  // The query runs from the trigger up to the next whitespace, even when the
-  // cursor sits inside an existing word — inserting "@" before "Jack" must
-  // filter by "Jack" rather than treating the prompt as empty.
+  // The query runs from the trigger up to the next whitespace or punctuation,
+  // even when the cursor sits inside an existing word — inserting "@" before
+  // "Jack" must filter by "Jack" rather than treating the prompt as empty.
+  // Punctuation stops the query too: with "@" typed right before a period,
+  // extending across it would glue "." onto everything typed ("B" would
+  // query "B."), matching the wrong names or nothing at all.
   #endOffsetAt(fullText, cursorOffset) {
-    const whitespaceOffset = fullText.slice(cursorOffset).search(/\s/)
-    if (whitespaceOffset === -1) {
+    const boundaryOffset = fullText.slice(cursorOffset).search(/[\s\p{P}]/u)
+    if (boundaryOffset === -1) {
       return fullText.length
     } else {
-      return cursorOffset + whitespaceOffset
+      return cursorOffset + boundaryOffset
     }
   }
 
