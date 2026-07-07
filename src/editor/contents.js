@@ -217,16 +217,34 @@ export default class Contents {
     return result
   }
 
-  // The query runs from the trigger up to the next whitespace, even when the
+  // The query runs from the trigger up to the next boundary, even when the
   // cursor sits inside an existing word — inserting "@" before "Jack" must
   // filter by "Jack" rather than treating the prompt as empty.
   #endOffsetAt(fullText, cursorOffset) {
-    const whitespaceOffset = fullText.slice(cursorOffset).search(/\s/)
-    if (whitespaceOffset === -1) {
-      return fullText.length
-    } else {
-      return cursorOffset + whitespaceOffset
+    for (let offset = cursorOffset; offset < fullText.length; offset++) {
+      if (this.#isQueryBoundary(fullText, offset)) {
+        return offset
+      }
     }
+
+    return fullText.length
+  }
+
+  // Whitespace always ends the query. Punctuation ends it too: with "@" typed
+  // right before a period, extending across it would glue "." onto everything
+  // typed ("B" would query "B."), matching the wrong names or nothing at all.
+  // But punctuation joining two word characters is part of a name — "@" before
+  // "Anne-Marie" or "O'Connor" must keep the whole name as the query.
+  #isQueryBoundary(fullText, offset) {
+    const character = fullText[offset]
+    if (/\s/.test(character)) return true
+    if (!/\p{P}/u.test(character)) return false
+
+    return !(this.#isWordCharacter(fullText[offset - 1]) && this.#isWordCharacter(fullText[offset + 1]))
+  }
+
+  #isWordCharacter(character) {
+    return character != null && /[\p{L}\p{N}]/u.test(character)
   }
 
   containsTextBackUntil(string) {
