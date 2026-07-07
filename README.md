@@ -2,7 +2,7 @@
 
 A modern rich text editor for Rails.
 
-[Documentation](https://basecamp.github.io/lexxy/docs/) | <mark>[Try it out!](https://basecamp.github.io/lexxy/sandbox/)</mark>
+[Documentation](https://lexxy.dev/docs/) | <mark>[Try it out!](https://lexxy.dev/sandbox/)</mark>
 
 ## Features
 
