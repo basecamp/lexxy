@@ -78,11 +78,11 @@ nav_exclude: true
     }
   }
 
-  editor.addEventListener("lexxy:change", () => {
+  editor.addEventListener("lexxy:change", debounce(() => {
     if (!output.hidden) {
       refresh()
     }
-  })
+  }, 150))
 
   async function refresh() {
     await loadFormattingDependencies()
@@ -116,5 +116,14 @@ nav_exclude: true
     })
 
     return formattedCode.replace(/<br\s*\/>/g, "<br/>") // Remove space before self-closing slash for br tags
+  }
+
+  function debounce(fn, wait) {
+    let timeout
+
+    return (...args) => {
+      clearTimeout(timeout)
+      timeout = setTimeout(() => fn(...args), wait)
+    }
   }
 </script>
