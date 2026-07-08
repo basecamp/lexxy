@@ -584,14 +584,24 @@ a:not(.btn) {
 
   .sandbox__toggle {
     align-items: center;
+    border-radius: var(--radius);
     cursor: pointer;
     display: inline-flex;
     gap: 0.5ch;
     margin-block-start: 1rem;
+    padding: 0.2em 0.6em;
     user-select: none;
 
     input {
-      display: none;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      opacity: 0;
+      position: absolute;
+    }
+
+    &:has(input:focus-visible) {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
 
     .sandbox__switch {
@@ -624,7 +634,6 @@ a:not(.btn) {
         }
       }
     }
-
 
     &:hover {
       .sandbox__switch {
