@@ -114,7 +114,9 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   async #focusFirstInteractive() {
-    this.#interactiveElements[0]?.focus()
+    // Ask for the ring explicitly: opening the menu with the mouse otherwise leaves the
+    // first item focused without a focus ring, since focus() inherits the mouse modality.
+    this.#interactiveElements[0]?.focus({ focusVisible: true })
     await this.#resetTabIndexValues()
   }
 
