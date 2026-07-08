@@ -63,11 +63,18 @@ nav_exclude: true
 
   let prettier, htmlParser, Prism
 
-  toggle.checked = localStorage.getItem(STORAGE_KEY) === "true"
+  try {
+    toggle.checked = localStorage.getItem(STORAGE_KEY) === "true"
+  } catch {
+    toggle.checked = false
+  }
+
   updateOutputVisibility()
 
   toggle.addEventListener("change", () => {
-    localStorage.setItem(STORAGE_KEY, toggle.checked)
+    try {
+      localStorage.setItem(STORAGE_KEY, String(toggle.checked))
+    } catch {}
     updateOutputVisibility()
   })
 
