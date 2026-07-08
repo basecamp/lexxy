@@ -16,9 +16,9 @@
   {% seo title=false %}
   <link rel="stylesheet" href="{{ "/assets/landing.css" | relative_url }}">
   {% if page.editor %}
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@37signals/lexxy@latest/dist/stylesheets/lexxy.css">
+  <link rel="stylesheet" href="https://esm.sh/@37signals/lexxy@latest/dist/stylesheets/lexxy.css">
   <script type="module">
-    import * as Lexxy from "https://cdn.jsdelivr.net/npm/@37signals/lexxy@latest/+esm";
+    import * as Lexxy from "https://esm.sh/@37signals/lexxy@latest";
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("{{ site.baseurl }}/attachments-sw.js");
     }
