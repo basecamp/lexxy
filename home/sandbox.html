@@ -11,9 +11,16 @@ nav_exclude: true
     <div class="section__head">
       <h1>Try Lexxy in a Sandbox</h1>
       <p>Type, format, paste a link, or hit <code>:</code> to drop in an emoji.</p>
+
+      <label class="sandbox__toggle" for="html_output">
+        <input type="checkbox" id="html_output">
+        <div class="sandbox__switch"></div>
+        <span>Show HTML output</span>
+      </label>
     </div>
 
-    <div class="try__editor">
+    <div class="sandbox__editor">
+
       <lexxy-editor
         class="lexxy-content"
         placeholder="Write something…"
@@ -41,6 +48,49 @@ nav_exclude: true
           <lexxy-prompt-item search="crown king queen"><template type="menu">👑 Crown</template><template type="editor">👑</template></lexxy-prompt-item>
         </lexxy-prompt>
       </lexxy-editor>
+
+      <pre class="try__output lexxy-content" hidden></pre>
     </div>
   </div>
 </section>
+
+<script type="module">
+  import prettier from "https://esm.sh/prettier@3.6.2/standalone"
+  import htmlParser from "https://esm.sh/prettier@3.6.2/plugins/html"
+  import Prism from "https://esm.sh/prismjs@1.30.0"
+
+  const editor = document.querySelector("lexxy-editor")
+  const toggle = document.querySelector(".sandbox__toggle input")
+  const output = document.querySelector(".try__output")
+
+  toggle.addEventListener("change", () => {
+    output.hidden = !toggle.checked
+    if (toggle.checked) {
+      refresh()
+    }
+  })
+
+  editor.addEventListener("lexxy:change", () => {
+    if (!output.hidden) {
+      refresh()
+    }
+  })
+
+  async function refresh() {
+    const formattedCode = await formatHtml(editor.value.trim())
+    const highlightedCode = Prism.highlight(formattedCode, Prism.languages.html, "html")
+    output.innerHTML = `<code class="language-html">${highlightedCode}</code>`
+  }
+
+  async function formatHtml(code) {
+    const formattedCode = await prettier.format(code, {
+      parser: "html",
+      plugins: [ htmlParser ],
+      printWidth: 80,
+      tabWidth: 2,
+      useTabs: false
+    })
+
+    return formattedCode.replace(/<br\s*\/>/g, "<br/>") // Remove space before self-closing slash for br tags
+  }
+</script>
