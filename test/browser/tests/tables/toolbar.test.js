@@ -18,12 +18,12 @@ test.describe("Tables — Toolbar accessibility", () => {
     ).toBeFocused()
   })
 
-  test("Control+Shift+F10 also moves focus to the first table tool", async ({ page, editor }) => {
-    await page.keyboard.press("Control+Shift+F10")
+  test("Alt+F10 shows a visible focus ring on the first table tool", async ({ page, editor }) => {
+    await page.keyboard.press("Alt+F10")
 
-    await expect(
-      editor.locator.locator("lexxy-table-tools button[aria-label='Remove row']").first()
-    ).toBeFocused()
+    const firstTool = editor.locator.locator("lexxy-table-tools button[aria-label='Remove row']").first()
+    await expect(firstTool).toBeFocused()
+    await expect.poll(() => firstTool.evaluate(element => element.matches(":focus-visible"))).toBe(true)
   })
 
   test("arrow keys move focus between table tools", async ({ page, editor }) => {

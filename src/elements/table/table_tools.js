@@ -146,13 +146,15 @@ export class TableTools extends HTMLElement {
   }
 
   #registerKeyboardShortcuts() {
-    this.#listeners.track(this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#focusToolbarOnShortcut, COMMAND_PRIORITY_HIGH))
+    this.#listeners.track(this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#focusToolbarOnAltF10, COMMAND_PRIORITY_HIGH))
   }
 
-  #focusToolbarOnShortcut = (event) => {
-    if (this.#hasSelectedTable && this.#isFocusToolbarShortcut(event)) {
+  #focusToolbarOnAltF10 = (event) => {
+    if (this.#hasSelectedTable && event.altKey && event.key === "F10") {
       event.preventDefault()
-      this.#tableToolsButtons[0]?.focus()
+      // Ask for the ring explicitly: a programmatic focus coming from a mouse-focused
+      // editor otherwise inherits the mouse modality and paints no focus ring.
+      this.#tableToolsButtons[0]?.focus({ focusVisible: true })
       return true
     } else {
       return false
@@ -161,11 +163,6 @@ export class TableTools extends HTMLElement {
 
   get #hasSelectedTable() {
     return this.tableController?.currentTableNodeKey != null
-  }
-
-  #isFocusToolbarShortcut(event) {
-    if (event.key !== "F10") return false
-    return event.altKey || ((event.ctrlKey || event.metaKey) && event.shiftKey)
   }
 
   #handleToolsKeydown = (event) => {
