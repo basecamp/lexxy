@@ -55,15 +55,13 @@ nav_exclude: true
 </section>
 
 <script type="module">
-  import prettier from "https://esm.sh/prettier@3.6.2/standalone"
-  import htmlParser from "https://esm.sh/prettier@3.6.2/plugins/html"
-  import Prism from "https://esm.sh/prismjs@1.30.0"
-
   const STORAGE_KEY = "lexxy-sandbox-show-html-output"
 
   const editor = document.querySelector("lexxy-editor")
   const toggle = document.querySelector(".sandbox__toggle input")
   const output = document.querySelector(".try__output")
+
+  let prettier, htmlParser, Prism
 
   toggle.checked = localStorage.getItem(STORAGE_KEY) === "true"
   updateOutputVisibility()
@@ -87,9 +85,25 @@ nav_exclude: true
   })
 
   async function refresh() {
+    await loadFormattingDependencies()
+
     const formattedCode = await formatHtml(editor.value.trim())
     const highlightedCode = Prism.highlight(formattedCode, Prism.languages.html, "html")
     output.innerHTML = `<code class="language-html">${highlightedCode}</code>`
+  }
+
+  async function loadFormattingDependencies() {
+    if (!prettier) {
+      const modules = await Promise.all([
+        import("https://esm.sh/prettier@3.6.2/standalone"),
+        import("https://esm.sh/prettier@3.6.2/plugins/html"),
+        import("https://esm.sh/prismjs@1.30.0")
+      ])
+
+      prettier = modules[0].default
+      htmlParser = modules[1].default
+      Prism = modules[2].default
+    }
   }
 
   async function formatHtml(code) {
