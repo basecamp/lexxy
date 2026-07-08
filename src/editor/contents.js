@@ -597,17 +597,15 @@ export default class Contents {
     return { anchorNode, offset: anchor.offset }
   }
 
-  // The replaced span can straddle the cursor (e.g. "@Jack" when "@" was just
-  // inserted before "Jack"), so we anchor on the trigger before the cursor and
-  // verify the whole string matches there rather than searching text up to it.
+  // The replaced span must start before the cursor but can extend past it
+  // (e.g. "@Jack" when "@" was just inserted before "Jack"), so we bound the
+  // match's start with lastIndexOf's fromIndex rather than slicing the text.
   #findReplacementStart(anchorNode, offset, stringToReplace) {
-    const fullText = anchorNode.getTextContent()
-    const triggerIndex = fullText.slice(0, offset).lastIndexOf(stringToReplace[0])
-
-    if (triggerIndex !== -1 && fullText.startsWith(stringToReplace, triggerIndex)) {
-      return triggerIndex
-    } else {
+    if (offset === 0) {
+      // A negative fromIndex clamps to 0 and could match at the cursor
       return -1
+    } else {
+      return anchorNode.getTextContent().lastIndexOf(stringToReplace, offset - 1)
     }
   }
 
