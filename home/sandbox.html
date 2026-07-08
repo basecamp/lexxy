@@ -59,16 +59,26 @@ nav_exclude: true
   import htmlParser from "https://esm.sh/prettier@3.6.2/plugins/html"
   import Prism from "https://esm.sh/prismjs@1.30.0"
 
+  const STORAGE_KEY = "lexxy-sandbox-show-html-output"
+
   const editor = document.querySelector("lexxy-editor")
   const toggle = document.querySelector(".sandbox__toggle input")
   const output = document.querySelector(".try__output")
 
+  toggle.checked = localStorage.getItem(STORAGE_KEY) === "true"
+  updateOutputVisibility()
+
   toggle.addEventListener("change", () => {
+    localStorage.setItem(STORAGE_KEY, toggle.checked)
+    updateOutputVisibility()
+  })
+
+  function updateOutputVisibility() {
     output.hidden = !toggle.checked
     if (toggle.checked) {
       refresh()
     }
-  })
+  }
 
   editor.addEventListener("lexxy:change", () => {
     if (!output.hidden) {
