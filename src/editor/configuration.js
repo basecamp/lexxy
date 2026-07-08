@@ -10,13 +10,25 @@ export default class EditorConfiguration {
     this.#editorElement = editorElement
     this.#config = new Configuration(
       Lexxy.presets.get("default"),
-      Lexxy.presets.get(editorElement.preset),
+      this.#presetConfig,
       this.#overrides
     )
   }
 
   get(path) {
     return this.#config.get(path)
+  }
+
+  get #presetConfig() {
+    const preset = this.#editorElement.preset
+    const config = Lexxy.presets.get(preset)
+
+    if (config) {
+      return config
+    } else {
+      console.warn(`Unknown Lexxy preset "${preset}". Falling back to the default preset.`)
+      return {}
+    }
   }
 
   get #overrides() {
