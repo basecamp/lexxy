@@ -80,6 +80,14 @@ test.describe("Toolbar keyboard navigation", () => {
     await expect.poll(focusedColorIndex).toBe(0)
   })
 
+  test("opening a menu with the mouse still shows a focus ring on the first item", async ({ page }) => {
+    await page.locator("lexxy-toolbar button[name='highlight']").click()
+
+    const firstColor = page.locator("lexxy-highlight-dropdown [data-dropdown-panel] button").first()
+    await expect(firstColor).toBeFocused()
+    await expect.poll(() => firstColor.evaluate(element => element.matches(":focus-visible"))).toBe(true)
+  })
+
   test("Escape returns focus to the trigger when the menu was opened from the toolbar", async ({ page }) => {
     const formatTrigger = page.locator("lexxy-toolbar button[name='format']")
     await formatTrigger.focus()
