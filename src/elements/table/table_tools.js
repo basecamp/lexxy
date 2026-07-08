@@ -152,7 +152,9 @@ export class TableTools extends HTMLElement {
   #focusToolbarOnAltF10 = (event) => {
     if (this.#hasSelectedTable && event.altKey && event.key === "F10") {
       event.preventDefault()
-      this.#tableToolsButtons[0]?.focus()
+      // Ask for the ring explicitly: a programmatic focus coming from a mouse-focused
+      // editor otherwise inherits the mouse modality and paints no focus ring.
+      this.#tableToolsButtons[0]?.focus({ focusVisible: true })
       return true
     } else {
       return false
