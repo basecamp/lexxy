@@ -583,9 +583,12 @@ export default class Contents {
   // (e.g. "@Jack" when "@" was just inserted before "Jack"), so we bound the
   // match's start with lastIndexOf's fromIndex rather than slicing the text.
   #findReplacementStart(anchorNode, offset, stringToReplace) {
-    if (offset === 0) return -1 // a negative fromIndex clamps to 0 and could match at the cursor
-
-    return anchorNode.getTextContent().lastIndexOf(stringToReplace, offset - 1)
+    if (offset === 0) {
+      // A negative fromIndex clamps to 0 and could match at the cursor
+      return -1
+    } else {
+      return anchorNode.getTextContent().lastIndexOf(stringToReplace, offset - 1)
+    }
   }
 
   #performTextReplacement(anchorNode, startIndex, stringToReplace, replacementNodes) {
