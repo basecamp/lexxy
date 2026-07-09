@@ -13,7 +13,7 @@ export class TableTools extends HTMLElement {
   #listeners = new ListenerBin()
 
   connectedCallback() {
-    this.tableController = new TableController(this.#editorElement)
+    this.tableController = new TableController(this.editorElement)
     this.classList.add("lexxy-floating-controls")
     this.role = "toolbar"
 
@@ -34,16 +34,34 @@ export class TableTools extends HTMLElement {
     this.tableController = null
   }
 
-  get #editor() {
-    return this.#editorElement.editor
-  }
-
-  get #editorElement() {
+  get editorElement() {
     return this.closest("lexxy-editor")
   }
 
+  get editor() {
+    return this.editorElement.editor
+  }
+
+  getEditorElement() {
+    return this.editorElement
+  }
+
+  closeDropdowns({ except } = {}) {
+    this.#moreMenus.forEach(menu => {
+      if (menu !== except) menu.close({ focusEditor: false })
+    })
+  }
+
+  get #moreMenus() {
+    return this.querySelectorAll("lexxy-toolbar-dropdown")
+  }
+
+  get #hasOpenMoreMenu() {
+    return Array.from(this.#moreMenus).some(menu => menu.isOpen)
+  }
+
   get #tableToolsButtons() {
-    return Array.from(this.querySelectorAll("button, details > summary"))
+    return Array.from(this.querySelectorAll("button")).filter(button => !button.closest("[data-dropdown-panel]"))
   }
 
   #setUpButtons() {
@@ -62,21 +80,35 @@ export class TableTools extends HTMLElement {
     const plusButton = this.#createButton(`Add ${childType}`, { action: "insert", childType, direction: "after" }, "+")
     const minusButton = this.#createButton(`Remove ${childType}`, { action: "delete", childType }, "−")
 
-    const dropdown = createElement("details", { className: "lexxy-table-control__more-menu" })
-    dropdown.setAttribute("name", "lexxy-dropdown")
-    dropdown.tabIndex = -1
-
-    const count = createElement("summary", {}, `_ ${childType}s`)
-    setCountProperty(count)
-    dropdown.appendChild(count)
-
-    dropdown.appendChild(moreMenu)
-
     container.appendChild(minusButton)
-    container.appendChild(dropdown)
+    container.appendChild(this.#createMoreMenu(childType, setCountProperty, moreMenu))
     container.appendChild(plusButton)
 
     return container
+  }
+
+  #createMoreMenu(childType, setCountProperty, menu) {
+    const dropdown = createElement("lexxy-toolbar-dropdown", { className: "lexxy-table-control__more-menu" })
+
+    const trigger = createElement("button", {
+      type: "button",
+      className: "lexxy-table-control__more-menu-trigger",
+      dataset: { dropdownTrigger: "" },
+      "aria-haspopup": "menu",
+      "aria-expanded": "false"
+    }, `_ ${childType}s`)
+    trigger.tabIndex = -1
+    setCountProperty(trigger)
+
+    menu.dataset.dropdownPanel = ""
+    menu.role = "menu"
+    menu.setAttribute("aria-label", `${childType} options`)
+    menu.hidden = true
+
+    dropdown.appendChild(trigger)
+    dropdown.appendChild(menu)
+
+    return dropdown
   }
 
   #createRowButtonsContainer() {
@@ -97,15 +129,18 @@ export class TableTools extends HTMLElement {
 
   #createMoreMenuSection(childType) {
     const section = createElement("div", { className: "lexxy-floating-controls__group lexxy-table-control__more-menu-details" })
-    const addBeforeButton = this.#createButton(`Add ${childType} before`, { action: "insert", childType, direction: "before" })
-    const addAfterButton = this.#createButton(`Add ${childType} after`, { action: "insert", childType, direction: "after" })
-    const toggleStyleButton = this.#createButton(`Toggle ${childType} style`, { action: "toggle", childType })
-    const deleteButton = this.#createButton(`Remove ${childType}`, { action: "delete", childType })
 
-    section.appendChild(addBeforeButton)
-    section.appendChild(addAfterButton)
-    section.appendChild(toggleStyleButton)
-    section.appendChild(deleteButton)
+    const items = [
+      this.#createButton(`Add ${childType} before`, { action: "insert", childType, direction: "before" }),
+      this.#createButton(`Add ${childType} after`, { action: "insert", childType, direction: "after" }),
+      this.#createButton(`Toggle ${childType} style`, { action: "toggle", childType }),
+      this.#createButton(`Remove ${childType}`, { action: "delete", childType })
+    ]
+
+    items.forEach(item => {
+      item.role = "menuitem"
+      section.appendChild(item)
+    })
 
     return section
   }
@@ -146,7 +181,7 @@ export class TableTools extends HTMLElement {
   }
 
   #registerKeyboardShortcuts() {
-    this.#listeners.track(this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#focusToolbarOnAltF10, COMMAND_PRIORITY_HIGH))
+    this.#listeners.track(this.editor.registerCommand(KEY_DOWN_COMMAND, this.#focusToolbarOnAltF10, COMMAND_PRIORITY_HIGH))
   }
 
   #focusToolbarOnAltF10 = (event) => {
@@ -177,9 +212,9 @@ export class TableTools extends HTMLElement {
     const cell = this.tableController.currentCell
     if (!cell) return
 
-    this.#editor.update(() => {
+    this.editor.update(() => {
       cell.select()
-      this.#editor.focus()
+      this.editor.focus()
     })
 
     this.#update()
@@ -216,7 +251,7 @@ export class TableTools extends HTMLElement {
     if (!cellsToHighlight) return
 
     cellsToHighlight.forEach(cell => {
-      const cellElement = this.#editor.getElementByKey(cell.getKey())
+      const cellElement = this.editor.getElementByKey(cell.getKey())
       if (!cellElement) return
 
       cellElement.classList.toggle(theme.tableCellHighlight, true)
@@ -225,8 +260,8 @@ export class TableTools extends HTMLElement {
   }
 
   #monitorForTableSelection() {
-    this.#listeners.track(this.#editor.registerUpdateListener(() => {
-      const tableNode = this.#editor.getRootElement() && this.tableController.updateSelectedTable()
+    this.#listeners.track(this.editor.registerUpdateListener(() => {
+      const tableNode = this.editor.getRootElement() && this.tableController.updateSelectedTable()
 
       if (tableNode) {
         this.#show()
@@ -237,8 +272,12 @@ export class TableTools extends HTMLElement {
   }
 
   #executeTableCommand(command) {
+    const fromMoreMenu = this.#hasOpenMoreMenu
+
     this.tableController.executeTableCommand(command)
     this.#update()
+
+    if (fromMoreMenu) this.editor.focus()
   }
 
   #show() {
@@ -262,18 +301,18 @@ export class TableTools extends HTMLElement {
   }
 
   #closeMoreMenu() {
-    this.querySelector("details[open]")?.removeAttribute("open")
+    this.closeDropdowns()
   }
 
   #updateButtonsPosition() {
     const tableNode = this.tableController.currentTableNode
     if (!tableNode) return
 
-    const tableElement = this.#editor.getElementByKey(tableNode.getKey())
+    const tableElement = this.editor.getElementByKey(tableNode.getKey())
     if (!tableElement) return
 
     const tableRect = tableElement.getBoundingClientRect()
-    const editorRect = this.#editorElement.getBoundingClientRect()
+    const editorRect = this.editorElement.getBoundingClientRect()
 
     const relativeTop = tableRect.top - editorRect.top
     const relativeCenter = (tableRect.left + tableRect.right) / 2 - editorRect.left
@@ -285,7 +324,7 @@ export class TableTools extends HTMLElement {
     const tableNode = this.tableController.currentTableNode
     if (!tableNode) return
 
-    const tableElement = $getElementForTableNode(this.#editor, tableNode)
+    const tableElement = $getElementForTableNode(this.editor, tableNode)
     if (!tableElement) return
 
     const rowCount = tableElement.rows
@@ -299,18 +338,18 @@ export class TableTools extends HTMLElement {
     const cell = this.tableController.currentCell
     if (!cell) return
 
-    const cellElement = this.#editor.getElementByKey(cell.getKey())
+    const cellElement = this.editor.getElementByKey(cell.getKey())
     if (!cellElement) return
 
     cellElement.classList.add(theme.tableCellFocus)
   }
 
   #clearCellStyles() {
-    this.#editorElement.querySelectorAll(`.${theme.tableCellFocus}`)?.forEach(cell => {
+    this.editorElement.querySelectorAll(`.${theme.tableCellFocus}`)?.forEach(cell => {
       cell.classList.remove(theme.tableCellFocus)
     })
 
-    this.#editorElement.querySelectorAll(`.${theme.tableCellHighlight}`)?.forEach(cell => {
+    this.editorElement.querySelectorAll(`.${theme.tableCellHighlight}`)?.forEach(cell => {
       cell.classList.remove(theme.tableCellHighlight)
       cell.removeAttribute("data-action")
       cell.removeAttribute("data-child-type")

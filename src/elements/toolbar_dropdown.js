@@ -7,7 +7,7 @@ export class ToolbarDropdown extends HTMLElement {
   #shouldReturnFocusToTrigger = false
 
   connectedCallback() {
-    this.#onToolbarEditor(() => {
+    this.#onHostEditor(() => {
       this.#registerListeners()
       this.editorReady()
     })
@@ -29,16 +29,16 @@ export class ToolbarDropdown extends HTMLElement {
     return this.querySelector(":scope > [data-dropdown-panel]")
   }
 
-  get toolbar() {
-    return this.closest("lexxy-toolbar")
+  get host() {
+    return this.closest("lexxy-toolbar, lexxy-table-tools")
   }
 
   get editorElement() {
-    return this.toolbar?.editorElement
+    return this.host?.editorElement
   }
 
   get editor() {
-    return this.toolbar?.editor
+    return this.host?.editor
   }
 
   get isOpen() {
@@ -81,21 +81,21 @@ export class ToolbarDropdown extends HTMLElement {
     if (this.isOpen) {
       this.close({ focusEditor: false })
     } else {
-      this.#shouldReturnFocusToTrigger = this.#isOpenedFromToolbar(event)
-      this.toolbar?.closeDropdowns({ except: this })
+      this.#shouldReturnFocusToTrigger = this.#isOpenedFromHost(event)
+      this.host?.closeDropdowns({ except: this })
       this.open()
     }
   }
 
-  #isOpenedFromToolbar(event) {
-    return isKeyboardActivation(event) && this.toolbar?.contains(document.activeElement)
+  #isOpenedFromHost(event) {
+    return isKeyboardActivation(event) && this.host?.contains(document.activeElement)
   }
 
-  async #onToolbarEditor(callback) {
-    if (!this.toolbar) return
+  async #onHostEditor(callback) {
+    if (!this.host) return
 
-    await this.toolbar.getEditorElement()
-    if (this.isConnected && this.toolbar) callback()
+    await this.host.getEditorElement()
+    if (this.isConnected && this.host) callback()
   }
 
   #handleKeyDown = (event) => {
