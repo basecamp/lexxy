@@ -18,29 +18,17 @@ export function resolveHeadings(config) {
 
 export class HeadingDropdown extends HTMLElement {
   static labelFor(tag, index) {
-    if (index < HEADING_PRESETS.length) {
-      return HEADING_PRESETS[index].label
-    } else {
-      const level = tag.match(/^h(\d+)$/)?.[1]
-      if (level) {
-        return `Heading ${level}`
-      } else {
-        return tag.toUpperCase()
-      }
-    }
+    if (index < HEADING_PRESETS.length) return HEADING_PRESETS[index].label
+
+    const level = tag.match(/^h(\d+)$/)?.[1]
+    return level ? `Heading ${level}` : tag.toUpperCase()
   }
 
   static nameFor(tag, index) {
-    if (index < HEADING_PRESETS.length) {
-      return HEADING_PRESETS[index].name
-    } else {
-      const level = tag.match(/^h(\d+)$/)?.[1]
-      if (level) {
-        return `heading-${level}`
-      } else {
-        return `heading-${tag}`
-      }
-    }
+    if (index < HEADING_PRESETS.length) return HEADING_PRESETS[index].name
+
+    const level = tag.match(/^h(\d+)$/)?.[1]
+    return level ? `heading-${level}` : `heading-${tag}`
   }
 
   #listeners = new ListenerBin()
