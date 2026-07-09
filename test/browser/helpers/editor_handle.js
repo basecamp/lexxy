@@ -209,13 +209,13 @@ export class EditorHandle {
 
   async openTableRowMenu() {
     await this.locator
-      .locator("lexxy-table-tools .lexxy-table-control--row details")
+      .locator("lexxy-table-tools .lexxy-table-control--row [data-dropdown-trigger]")
       .click()
   }
 
   async openTableColumnMenu() {
     await this.locator
-      .locator("lexxy-table-tools .lexxy-table-control--column details")
+      .locator("lexxy-table-tools .lexxy-table-control--column [data-dropdown-trigger]")
       .click()
   }
 

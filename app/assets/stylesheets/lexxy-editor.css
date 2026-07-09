@@ -826,8 +826,7 @@
   position: absolute;
   z-index: 2;
 
-  button,
-  summary {
+  button {
     align-items: center;
     background: transparent;
     block-size: var(--button-size);
@@ -845,7 +844,7 @@
 
     @media(any-hover: hover) {
       &:hover:not([aria-disabled="true"]),
-      [open] &:is(summary) {
+      &.lexxy-table-control__more-menu-trigger[aria-expanded="true"] {
         background: var(--lexxy-color-ink-medium);
 
         svg {
@@ -876,8 +875,10 @@
     }
   }
 
-  summary {
+  .lexxy-table-control__more-menu-trigger {
+    aspect-ratio: auto;
     box-shadow: 0 0 0 1px inset rgba(128, 128, 128, 0.3);
+    font-weight: normal;
     padding: 0 1.25ch;
   }
 
@@ -905,6 +906,7 @@
       white-space: nowrap;
 
       .lexxy-table-control__more-menu {
+        display: flex;
         gap: 0;
         position: relative;
 
@@ -919,6 +921,10 @@
           padding: 0.25ch;
           position: absolute;
           transform: translateX(-50%);
+
+          &[hidden] {
+            display: none;
+          }
 
           button {
             aspect-ratio: unset;
