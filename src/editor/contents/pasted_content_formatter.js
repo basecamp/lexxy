@@ -4,11 +4,24 @@ export default class PastedContentFormatter {
   }
 
   format() {
+    this.#stripStyleElements()
     this.#unwrapPlaceholderAnchors()
     this.#stripTableCellColorStyles()
     this.#nestStrayListChildren()
     this.#stripStrayListChildren()
     return this.doc
+  }
+
+  // Spreadsheets (e.g. Excel) copy a <style> block whose rules (td { color:
+  // black }, .xlNN { ... }) cascade onto the imported text. That color rides
+  // in through the cascade rather than an inline style, so it slips past both
+  // the cell-level stripping below and the paste style canonicalizer, leaving
+  // pasted tables with foreign text colors that don't adapt to the theme. Drop
+  // foreign style sheets so nothing cascades into imported content.
+  #stripStyleElements() {
+    for (const style of this.doc.querySelectorAll("style")) {
+      style.remove()
+    }
   }
 
   // Anchors with non-meaningful hrefs (e.g. "#", "") appear in content copied
