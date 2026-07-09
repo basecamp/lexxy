@@ -17,7 +17,10 @@ test.describe("Prerendered content element", () => {
     const withBefore = await topOf(withFollowing)
 
     await page.evaluate(() => window.loadLexxy())
-    await expect(page.locator("lexxy-editor[connected]")).toHaveCount(2)
+    // `connected` is set before Lexical mounts (mount happens in a following
+    // animation frame), so wait for the mounted roots or the height change we
+    // assert on could be measured before it happens.
+    await expect(page.locator("lexxy-editor .lexxy-editor__content[data-lexical-editor='true']")).toHaveCount(2)
 
     const withoutAfter = await topOf(withoutFollowing)
     const withAfter = await topOf(withFollowing)
