@@ -7,7 +7,7 @@ async function topOf(locator) {
 
 test.describe("Prerendered content element", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/prerender.html?delay=250")
+    await page.goto("/prerender.html?manual")
   })
 
   test("keeps following content stable when the editor hugs its contents", async ({ page }) => {
@@ -16,6 +16,7 @@ test.describe("Prerendered content element", () => {
     const withoutBefore = await topOf(withoutFollowing)
     const withBefore = await topOf(withFollowing)
 
+    await page.evaluate(() => window.loadLexxy())
     await expect(page.locator("lexxy-editor[connected]")).toHaveCount(2)
 
     const withoutAfter = await topOf(withoutFollowing)
@@ -26,6 +27,7 @@ test.describe("Prerendered content element", () => {
   })
 
   test("adopts the server-rendered content element rather than creating a second", async ({ page }) => {
+    await page.evaluate(() => window.loadLexxy())
     await expect(page.locator("lexxy-editor[connected]")).toHaveCount(2)
 
     const content = page.locator("[data-example='with-prerender'] lexxy-editor > .lexxy-editor__content")
@@ -46,6 +48,7 @@ test.describe("Prerendered content element", () => {
   })
 
   test("exposes the value once, without duplicating the body", async ({ page }) => {
+    await page.evaluate(() => window.loadLexxy())
     await expect(page.locator("lexxy-editor[connected]")).toHaveCount(2)
 
     const value = await page.locator("[data-example='with-prerender'] lexxy-editor").evaluate(editor => editor.value)

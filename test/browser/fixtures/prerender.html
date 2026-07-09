@@ -138,9 +138,16 @@
   </main>
 
   <script type="module">
-    const delay = Number(new URLSearchParams(window.location.search).get("delay") || 0)
+    const params = new URLSearchParams(window.location.search)
 
-    window.setTimeout(() => import("/editor.js"), delay)
+    window.loadLexxy = () => import("/editor.js")
+
+    // Tests pass ?manual and drive loadLexxy() themselves so they can measure
+    // the pre-connection layout without racing this timer. Humans open the page
+    // with ?delay=1500 to watch the editor build in slow motion.
+    if (!params.has("manual")) {
+      window.setTimeout(window.loadLexxy, Number(params.get("delay") || 0))
+    }
   </script>
 </body>
 </html>
