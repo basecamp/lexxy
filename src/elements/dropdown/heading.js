@@ -45,6 +45,7 @@ export class HeadingDropdown extends HTMLElement {
       this.#buttonContainer.style.display = "contents"
       this.#setUpButtons()
       this.#registerButtonHandlers()
+      this.#syncActiveHeading()
     })
   }
 
@@ -115,6 +116,11 @@ export class HeadingDropdown extends HTMLElement {
         this.#editor.focus()
       }))
     })
+  }
+
+  #syncActiveHeading() {
+    const { headingTag } = this.#editor.read(() => this.#editorElement.selection.getFormat())
+    this.updateActiveHeading(headingTag ?? null)
   }
 
   get #configuredHeadings() {

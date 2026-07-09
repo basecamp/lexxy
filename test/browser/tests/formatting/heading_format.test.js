@@ -56,6 +56,27 @@ test.describe("Heading format", () => {
     await assertEditorHtml(editor, "<blockquote><p>Lexxy</p></blockquote>")
   })
 
+  test("dropdown reflects the active heading when its buttons are first built", async ({ page, editor }) => {
+    await editor.setValue("<h2>Lexxy</h2>")
+    await editor.select("Lexxy")
+
+    // Rebuild the dropdown so its buttons are created while the selection is
+    // already in a heading, mimicking the initial-render ordering where the
+    // toolbar's selection listener may run before the buttons exist.
+    await page.evaluate(() => {
+      const dropdown = document.querySelector("lexxy-heading-dropdown")
+      const parent = dropdown.parentElement
+      dropdown.remove()
+
+      const fresh = document.createElement("lexxy-heading-dropdown")
+      fresh.innerHTML = `<div class="lexxy-heading-options"></div>`
+      parent.appendChild(fresh)
+    })
+
+    await expect(page.locator("[name='heading-large']")).toHaveAttribute("aria-pressed", "true")
+    await expect(page.locator("[name='heading-medium']")).toHaveAttribute("aria-pressed", "false")
+  })
+
   test("heading inside blockquote shows heading button as active, not paragraph", async ({ page, editor }) => {
     await editor.setValue("<p>Lexxy</p>")
     await editor.select("Lexxy")
