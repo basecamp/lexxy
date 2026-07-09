@@ -97,8 +97,9 @@ export class HeadingDropdown extends HTMLElement {
     const button = document.createElement("button")
     button.type = "button"
     button.dataset.heading = tag
-    button.classList.add("lexxy-editor__toolbar-button", "lexxy-heading-button")
+    button.classList.add("lexxy-heading-button")
     button.name = name
+    button.title = label
     button.setAttribute("role", "menuitem")
     button.innerHTML = `${icon} <span>${label}</span>`
     return button
