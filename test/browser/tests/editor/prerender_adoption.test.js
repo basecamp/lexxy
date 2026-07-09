@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test"
+import { test } from "../../test_helper.js"
+import { expect } from "@playwright/test"
 
 async function topOf(locator) {
   return (await locator.boundingBox()).y

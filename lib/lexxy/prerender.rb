@@ -16,8 +16,8 @@ module Lexxy
     #   isn't there yet — keystrokes would be discarded on adoption. The editor
     #   adds them when it adopts the element.
     def self.content_tag_for(view, value)
-      html = view.sanitize (value.presence || "<p><br></p>"),
-        tags: view.sanitizer_allowed_tags, attributes: view.sanitizer_allowed_attributes
+      html = view.sanitize(value.presence || "<p><br></p>",
+        tags: view.sanitizer_allowed_tags, attributes: view.sanitizer_allowed_attributes)
 
       view.content_tag "div", html, class: "lexxy-editor__content"
     end
