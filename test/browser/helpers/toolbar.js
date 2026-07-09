@@ -9,15 +9,21 @@ export async function openToolbarDropdown(page, name) {
 }
 
 const FORMAT_DROPDOWN_COMMANDS = new Set([
-  "setFormatParagraph", "setFormatHeadingLarge", "setFormatHeadingMedium",
-  "setFormatHeadingSmall", "clearFormatting"
+  "setFormatParagraph", "clearFormatting"
 ])
 
+const HEADING_BUTTON_PREFIX = "heading-"
+
 export async function clickToolbarButton(page, command) {
-  if (FORMAT_DROPDOWN_COMMANDS.has(command)) {
+  if (FORMAT_DROPDOWN_COMMANDS.has(command) || command.startsWith(HEADING_BUTTON_PREFIX)) {
     await openFormatDropdown(page)
   }
-  await page.locator(`[data-command='${command}']`).click()
+
+  if (command.startsWith(HEADING_BUTTON_PREFIX)) {
+    await page.locator(`[name='${command}']`).click()
+  } else {
+    await page.locator(`[data-command='${command}']`).click()
+  }
 }
 
 export async function applyHighlightOption(page, attribute, buttonIndex) {

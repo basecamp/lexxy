@@ -232,9 +232,9 @@ export class LexicalToolbarElement extends HTMLElement {
 
     this.#setButtonPressed("format", isInHeading)
     this.#setButtonPressed("paragraph", !isInHeading)
-    this.#setButtonPressed("heading-large", headingTag === "h2")
-    this.#setButtonPressed("heading-medium", headingTag === "h3")
-    this.#setButtonPressed("heading-small", headingTag === "h4")
+
+    this.querySelector("lexxy-heading-dropdown")
+      ?.updateActiveHeading(headingTag)
 
     this.#setButtonPressed("lists", isInList)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
@@ -413,15 +413,9 @@ export class LexicalToolbarElement extends HTMLElement {
           <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph" role="menuitem">
             ${ToolbarIcons.paragraph} <span>Normal</span>
           </button>
-          <button type="button" name="heading-large" data-command="setFormatHeadingLarge" title="Large heading" role="menuitem">
-            ${ToolbarIcons.h2} <span>Large Heading</span>
-          </button>
-          <button type="button" name="heading-medium" data-command="setFormatHeadingMedium" title="Medium heading" role="menuitem">
-            ${ToolbarIcons.h3} <span>Medium Heading</span>
-          </button>
-          <button class="lexxy-editor__toolbar-group-end" type="button" name="heading-small" data-command="setFormatHeadingSmall" title="Small heading" role="menuitem">
-            ${ToolbarIcons.h4} <span>Small Heading</span>
-          </button>
+          <lexxy-heading-dropdown>
+            <div class="lexxy-heading-options"></div>
+          </lexxy-heading-dropdown>
           <div class="lexxy-editor__toolbar-separator" role="separator"></div>
           <button type="button" name="clear-formatting" data-command="clearFormatting" title="Clear formatting" role="menuitem">
             ${ToolbarIcons.clearFormatting} <span>Clear formatting</span>
