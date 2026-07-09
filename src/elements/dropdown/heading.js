@@ -17,17 +17,29 @@ export function resolveHeadings(config) {
 }
 
 export function labelForHeading(tag, index) {
-  if (index < HEADING_PRESETS.length) return HEADING_PRESETS[index].label
-
-  const level = tag.match(/^h(\d+)$/)?.[1]
-  return level ? `Heading ${level}` : tag.toUpperCase()
+  if (index < HEADING_PRESETS.length) {
+    return HEADING_PRESETS[index].label
+  } else {
+    const level = tag.match(/^h(\d+)$/)?.[1]
+    if (level) {
+      return `Heading ${level}`
+    } else {
+      return tag.toUpperCase()
+    }
+  }
 }
 
 function nameForHeading(tag, index) {
-  if (index < HEADING_PRESETS.length) return HEADING_PRESETS[index].name
-
-  const level = tag.match(/^h(\d+)$/)?.[1]
-  return level ? `heading-${level}` : `heading-${tag}`
+  if (index < HEADING_PRESETS.length) {
+    return HEADING_PRESETS[index].name
+  } else {
+    const level = tag.match(/^h(\d+)$/)?.[1]
+    if (level) {
+      return `heading-${level}`
+    } else {
+      return `heading-${tag}`
+    }
+  }
 }
 
 export class HeadingDropdown extends HTMLElement {
