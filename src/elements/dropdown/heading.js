@@ -16,33 +16,33 @@ export function resolveHeadings(config) {
   return Array.isArray(configured) ? configured : DEFAULT_HEADINGS
 }
 
-export function labelForHeading(tag, index) {
-  if (index < HEADING_PRESETS.length) {
-    return HEADING_PRESETS[index].label
-  } else {
-    const level = tag.match(/^h(\d+)$/)?.[1]
-    if (level) {
-      return `Heading ${level}`
-    } else {
-      return tag.toUpperCase()
-    }
-  }
-}
-
-function nameForHeading(tag, index) {
-  if (index < HEADING_PRESETS.length) {
-    return HEADING_PRESETS[index].name
-  } else {
-    const level = tag.match(/^h(\d+)$/)?.[1]
-    if (level) {
-      return `heading-${level}`
-    } else {
-      return `heading-${tag}`
-    }
-  }
-}
-
 export class HeadingDropdown extends HTMLElement {
+  static labelFor(tag, index) {
+    if (index < HEADING_PRESETS.length) {
+      return HEADING_PRESETS[index].label
+    } else {
+      const level = tag.match(/^h(\d+)$/)?.[1]
+      if (level) {
+        return `Heading ${level}`
+      } else {
+        return tag.toUpperCase()
+      }
+    }
+  }
+
+  static nameFor(tag, index) {
+    if (index < HEADING_PRESETS.length) {
+      return HEADING_PRESETS[index].name
+    } else {
+      const level = tag.match(/^h(\d+)$/)?.[1]
+      if (level) {
+        return `heading-${level}`
+      } else {
+        return `heading-${tag}`
+      }
+    }
+  }
+
   #listeners = new ListenerBin()
 
   connectedCallback() {
@@ -97,8 +97,8 @@ export class HeadingDropdown extends HTMLElement {
   }
 
   #createButton(tag, index) {
-    const label = labelForHeading(tag, index)
-    const name = nameForHeading(tag, index)
+    const label = HeadingDropdown.labelFor(tag, index)
+    const name = HeadingDropdown.nameFor(tag, index)
     const icon = ToolbarIcons[tag] || ""
 
     const button = document.createElement("button")

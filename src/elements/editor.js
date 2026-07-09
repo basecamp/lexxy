@@ -23,7 +23,7 @@ import { isAttachmentSpacerTextNode, isEditorFocused } from "../helpers/lexical_
 import { sanitize, setSanitizerConfig } from "../helpers/sanitization_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
-import { labelForHeading, resolveHeadings } from "./dropdown/heading"
+import HeadingDropdown, { resolveHeadings } from "./dropdown/heading"
 import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
@@ -846,7 +846,7 @@ export class LexicalEditorElement extends HTMLElement {
     return [
       { label: "Normal", command: "setFormatParagraph", tag: null },
       ...headings.map((tag, index) => ({
-        label: labelForHeading(tag, index),
+        label: HeadingDropdown.labelFor(tag, index),
         command: "applyHeadingFormat",
         tag
       }))
