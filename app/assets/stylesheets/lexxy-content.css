@@ -95,9 +95,11 @@
   video,
   embed,
   object {
+    block-size: auto;
     inline-size: auto;
     margin-inline: auto;
     max-block-size: 32rem;
+    max-inline-size: 100%;
     object-fit: contain;
 
     a:has(&) {
