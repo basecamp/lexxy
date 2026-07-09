@@ -50,7 +50,7 @@ class PrerenderTest < ActionView::TestCase
     # The value attribute is escaped and DOMPurify cleans it client-side, but
     # the prerendered element enters the DOM straight from storage — it must go
     # through Action Text's sanitizer.
-    assert_dom "lexxy-editor > div.lexxy-editor__content" do |content, *|
+    assert_dom "lexxy-editor > div.lexxy-editor__content" do
       assert_dom "p", text: "Safe"
       assert_dom "script", count: 0
       assert_dom "[onerror]", count: 0
