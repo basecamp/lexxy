@@ -3,32 +3,37 @@ import { ListenerBin, registerEventListener } from "../../helpers/listener_helpe
 
 const HEADING_BUTTON_SELECTOR = "button.lexxy-heading-button"
 
-export const DEFAULT_HEADINGS = [ "h2", "h3", "h4" ]
-
 const HEADING_PRESETS = [
   { label: "Large Heading", name: "heading-large" },
   { label: "Medium Heading", name: "heading-medium" },
   { label: "Small Heading", name: "heading-small" }
 ]
 
-export function resolveHeadings(config) {
-  const configured = config.get("headings")
-  return Array.isArray(configured) ? configured : DEFAULT_HEADINGS
-}
-
 export class HeadingDropdown extends HTMLElement {
   static labelFor(tag, index) {
-    if (index < HEADING_PRESETS.length) return HEADING_PRESETS[index].label
-
-    const level = tag.match(/^h(\d+)$/)?.[1]
-    return level ? `Heading ${level}` : tag.toUpperCase()
+    if (index < HEADING_PRESETS.length) {
+      return HEADING_PRESETS[index].label
+    } else {
+      const level = tag.match(/^h(\d+)$/)?.[1]
+      if (level) {
+        return `Heading ${level}`
+      } else {
+        return tag.toUpperCase()
+      }
+    }
   }
 
   static nameFor(tag, index) {
-    if (index < HEADING_PRESETS.length) return HEADING_PRESETS[index].name
-
-    const level = tag.match(/^h(\d+)$/)?.[1]
-    return level ? `heading-${level}` : `heading-${tag}`
+    if (index < HEADING_PRESETS.length) {
+      return HEADING_PRESETS[index].name
+    } else {
+      const level = tag.match(/^h(\d+)$/)?.[1]
+      if (level) {
+        return `heading-${level}`
+      } else {
+        return `heading-${tag}`
+      }
+    }
   }
 
   #listeners = new ListenerBin()
@@ -112,7 +117,7 @@ export class HeadingDropdown extends HTMLElement {
   }
 
   get #configuredHeadings() {
-    return resolveHeadings(this.#editorElement.config)
+    return this.#editorElement.config.get("headings")
   }
 
   get #buttonContainer() {
