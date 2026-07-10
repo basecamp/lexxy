@@ -55,6 +55,7 @@ export class HighlightExtension extends LexxyExtension {
           editor.registerNodeTransform(TextNode, $syncHighlightWithStyle),
           editor.registerNodeTransform(CodeHighlightNode, $syncHighlightWithCodeHighlightNode),
           editor.registerNodeTransform(TextNode, (textNode) => $canonicalizePastedStyles(textNode, canonicalizers)),
+          editor.registerUpdateListener(({ prevEditorState }) => $preserveCodeHighlightsAcrossEdits(editor, prevEditorState)),
           editor.registerMutationListener(CodeNode, (mutations) => {
             $applyPendingCodeHighlights(editor, mutations)
           }, { skipInitialization: true })
@@ -471,6 +472,105 @@ function $syncHighlightWithStyle(textNode) {
   if (hasHighlightStyles(textNode.getStyle()) !== textNode.hasFormat("highlight")) {
     textNode.toggleFormat("highlight")
   }
+}
+
+// The code retokenizer runs on every edit inside a code block and replaces
+// styled CodeHighlightNodes with fresh unstyled tokens, dropping color marks.
+// Its transform runs before ours, so by the time any of our transforms fire the
+// style is already gone. Instead, after each update, recover the highlight
+// ranges from the previous editor state, translate their offsets across the
+// edit, and stage them for reapplication by the CodeNode mutation listener.
+function $preserveCodeHighlightsAcrossEdits(editor, prevEditorState) {
+  const previousRangesByKey = $readPreviousCodeHighlightRanges(prevEditorState)
+  if (previousRangesByKey.size === 0) return
+
+  const previousTextByKey = $readPreviousCodeText(prevEditorState, previousRangesByKey.keys())
+  let staged = false
+
+  editor.getEditorState().read(() => {
+    for (const [ key, previousRanges ] of previousRangesByKey) {
+      const codeNode = $getNodeByKey(key)
+      if (!codeNode || !$isCodeNode(codeNode)) continue
+
+      const currentText = codeNode.getTextContent()
+      const previousText = previousTextByKey.get(key)
+      if (currentText === previousText) continue
+      if ($extractHighlightRangesFromCodeNode(codeNode).length > 0) continue
+
+      const translatedRanges = translateHighlightRanges(previousRanges, previousText, currentText)
+      if (translatedRanges.length > 0) {
+        $getPendingHighlights(editor).set(key, translatedRanges)
+        staged = true
+      }
+    }
+  })
+
+  // The update that dropped the styles doesn't emit a CodeNode mutation for the
+  // retokenizer's node splice, so nudge the mutation listener with a no-op mark.
+  if (staged) {
+    editor.update(() => {
+      for (const key of $getPendingHighlights(editor).keys()) {
+        const codeNode = $getNodeByKey(key)
+        if (codeNode && $isCodeNode(codeNode)) codeNode.markDirty()
+      }
+    }, { discrete: true })
+  }
+}
+
+function $readPreviousCodeHighlightRanges(prevEditorState) {
+  const rangesByKey = new Map()
+  prevEditorState.read(() => {
+    for (const node of prevEditorState._nodeMap.values()) {
+      if (!$isCodeNode(node)) continue
+      const ranges = $extractHighlightRangesFromCodeNode(node)
+      if (ranges.length > 0) rangesByKey.set(node.getKey(), ranges)
+    }
+  })
+  return rangesByKey
+}
+
+function $readPreviousCodeText(prevEditorState, keys) {
+  const textByKey = new Map()
+  prevEditorState.read(() => {
+    for (const key of keys) {
+      const node = $getNodeByKey(key)
+      if (node && $isCodeNode(node)) textByKey.set(key, node.getTextContent())
+    }
+  })
+  return textByKey
+}
+
+// Shift highlight ranges from the previous text's coordinate space into the
+// current text's, treating the edit as a single replaced span bounded by the
+// shared prefix and suffix. Ranges are clipped to the unchanged region so an
+// edit inside a highlight keeps the surviving part styled.
+function translateHighlightRanges(ranges, previousText, currentText) {
+  const prefix = commonPrefixLength(previousText, currentText)
+  const suffix = commonSuffixLength(previousText, currentText, prefix)
+  const previousEditEnd = previousText.length - suffix
+  const delta = currentText.length - previousText.length
+
+  const translated = []
+  for (const { start, end, style } of ranges) {
+    const newStart = start >= previousEditEnd ? start + delta : Math.min(start, prefix)
+    const newEnd = end > previousEditEnd ? end + delta : Math.min(end, prefix)
+    if (newEnd > newStart) translated.push({ start: newStart, end: newEnd, style })
+  }
+  return translated
+}
+
+function commonPrefixLength(a, b) {
+  const max = Math.min(a.length, b.length)
+  let index = 0
+  while (index < max && a[index] === b[index]) index++
+  return index
+}
+
+function commonSuffixLength(a, b, prefix) {
+  const max = Math.min(a.length, b.length) - prefix
+  let index = 0
+  while (index < max && a[a.length - 1 - index] === b[b.length - 1 - index]) index++
+  return index
 }
 
 function $syncHighlightWithCodeHighlightNode(node) {
