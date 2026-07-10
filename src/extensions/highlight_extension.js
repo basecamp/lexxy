@@ -206,8 +206,13 @@ function $takeHighlightRanges(editor, codeNode) {
     const highlights = pending.get(key)
     pending.delete(key)
     return highlights
-  } else {
+  } else if (codeNode.getChildren().some($isCodeHighlightNode)) {
     return $extractHighlightRangesFromCodeNode(codeNode)
+  } else {
+    // A block that was never tokenized has only plain text children. Styles
+    // on those come from import paths that didn't stage ranges (e.g. colored
+    // spans in Trix HTML), and the first tokenization discards them.
+    return []
   }
 }
 
