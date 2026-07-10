@@ -1,5 +1,6 @@
 import { defineExtension } from "lexical"
 import { registerCodeHighlighting } from "@lexical/code"
+import { buildHighlightPreservingTokenizer } from "./highlight_extension"
 import LexxyExtension from "./lexxy_extension"
 
 // Registers code highlighting through the extension system so its node
@@ -16,7 +17,7 @@ export class CodeHighlightingExtension extends LexxyExtension {
     return defineExtension({
       name: "lexxy/code-highlighting",
       register(editor) {
-        return registerCodeHighlighting(editor)
+        return registerCodeHighlighting(editor, buildHighlightPreservingTokenizer(editor))
       }
     })
   }
