@@ -123,6 +123,23 @@ test.describe("Code block color highlights survive editing", () => {
     })
   })
 
+  test("a highlight loaded from persisted HTML survives an edit", async ({ editor }) => {
+    await editor.setValue('<pre data-language="plain"><code>due <mark style="background-color: var(--highlight-bg-1);">Jul 31</mark>.</code></pre>')
+
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toContainText("Jul 31")
+    }).toPass({ timeout: 5_000 })
+
+    await editor.select(".")
+    await editor.send("Backspace")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code mark")).toHaveCount(1)
+      await expect(content.locator("code mark")).toContainText("Jul 31")
+    })
+  })
+
   test("a highlight survives switching the code language", async ({ page, editor }) => {
     await editor.setValue('<pre data-language="plain"><code>def hello_world</code></pre>')
     await editor.select("hello")
