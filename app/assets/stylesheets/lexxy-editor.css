@@ -479,6 +479,10 @@
     display: none;
   }
 
+  &[data-code-blocks="false"][data-inline-code="false"] button[name="code"] {
+    display: none;
+  }
+
   &[data-upload="file"] button[name="image"] {
     display: none;
   }

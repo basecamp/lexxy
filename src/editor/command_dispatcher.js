@@ -157,10 +157,20 @@ export class CommandDispatcher {
   }
 
   dispatchInsertCodeBlock() {
-    if (this.selection.hasSelectedWordsInSingleLine) {
+    if (this.#shouldToggleInlineCode()) {
       this.#toggleInlineCode()
-    } else {
+    } else if (this.editorElement.supportsCodeBlocks) {
       this.contents.toggleCodeBlock()
+    }
+  }
+
+  #shouldToggleInlineCode() {
+    if (!this.editorElement.supportsInlineCode) {
+      return false
+    } else if (!this.editorElement.supportsCodeBlocks) {
+      return true
+    } else {
+      return this.selection.hasSelectedWordsInSingleLine
     }
   }
 
