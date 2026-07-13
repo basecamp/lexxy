@@ -37,4 +37,26 @@ class CodeHighlightingTest < ApplicationSystemTestCase
     assert_selector "pre[data-language='ruby']"
     assert_selector "pre mark[style*='background-color']", text: "hello"
   end
+
+  test "color highlights survive editing the code block and saving" do
+    find_editor.send "def hello_world"
+    find_editor.select("dev")
+    click_on "Code"
+    select "Ruby", from: "lexxy-code-language"
+
+    find_editor.select "hello"
+    apply_highlight_option "background-color", 1
+    assert_selector "code mark[style*='background-color']", text: "hello"
+
+    # Appending to the code block retokenizes it. Before the fix the fresh
+    # tokens dropped the highlight; it must now survive the edit and save.
+    find_editor.place_cursor_at_end
+    find_editor.send "s"
+    assert_selector "code", text: "def hello_worlds"
+
+    click_on "Update Post"
+
+    assert_selector "pre[data-language='ruby']"
+    assert_selector "pre mark[style*='background-color']", text: "hello"
+  end
 end
