@@ -7,36 +7,55 @@ has_children: true
 
 # Configuration
 
-You can configure editors in two ways: using `Lexxy.configure` and element attributes.
+You configure editors with `Lexxy.configure` and with attributes on the editor element. Options resolve from least to most specific: the **default** options apply to every editor, a named **preset** extends the default, and **HTML attributes** override both on an individual editor.
 
 ```js
 import * as Lexxy from "lexxy"
+```
 
-// overriding default options will affect all editors
+{: .important }
+Call `Lexxy.configure` immediately after your import statement. Editor elements are registered after the import's call stack completes, so configuration must happen synchronously to take effect.
+
+## Ways to configure
+
+### Default options
+
+Override the `default` preset to change the behavior of every editor in your app:
+
+```js
 Lexxy.configure({
   default: {
     toolbar: false
   }
 })
-<lexxy-editor></lexxy-editor>
+```
 
-// you can also create new presets, which will extend the default preset
+```html
+<lexxy-editor></lexxy-editor>
+```
+
+### Presets
+
+Define named presets, which extend the `default` preset, and opt in to them per editor with the `preset` attribute:
+
+```js
 Lexxy.configure({
   simple: {
     richText: false
   }
 })
+```
+
+```html
 <lexxy-editor preset="simple"></lexxy-editor>
+```
 
-// you can override specific options with attributes on editor elements
+### HTML attributes
+
+Override individual options on a single editor with element attributes. These take precedence over both the preset and the default:
+
+```html
 <lexxy-editor preset="simple" rich-text="true"></lexxy-editor>
-
-// finally, some options can only be configured globally
-Lexxy.configure({
-  global: {
-    attachmentTagName: "bc-attachment"
-  }
-})
 ```
 
 ## Editor options
@@ -78,5 +97,12 @@ Global options apply to all editors in your app and are configured using `Lexxy.
 - `attachmentContentTypeNamespace`: The default content_type namespace for prompts. The default is `actiontext` which will result in `application/vnd.actiontext.[type]`.
 - `authenticatedUploads`: will set `withCredentials: true` for ActiveStorage upload requests if you are using authenticated upload contollers. Be sure to set cookie domain and server CORS/CSRF options accordingly.
 
-{: .important }
-When overriding configuration, call `Lexxy.configure` immediately after your import statement. Editor elements are registered after the import's call stack completes, so configuration must happen synchronously to take effect.
+Some options, like `attachmentTagName`, can only be set globally:
+
+```js
+Lexxy.configure({
+  global: {
+    attachmentTagName: "bc-attachment"
+  }
+})
+```
