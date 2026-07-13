@@ -43,9 +43,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     // node is reloaded from saved state such as from history.
     this.#startUploadIfNeeded()
 
-    // Bridge-managed uploads (uploadUrl is null) don't have file data to show
-    // an image preview, so always show the file icon during upload.
-    const canPreviewFile = this.isPreviewableAttachment && this.uploadUrl != null
+    // Bridge-managed uploads (uploadUrl is null) and restored or remote
+    // instances (no local File) don't have file data to show an image
+    // preview, so always show the file icon during upload.
+    const canPreviewFile = this.isPreviewableAttachment && this.uploadUrl != null && this.file != null
     const figure = this.createAttachmentFigure(canPreviewFile)
 
     if (canPreviewFile) {
@@ -143,6 +144,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   async #startUploadIfNeeded() {
     if (this.#uploadStarted) return
     if (!this.uploadUrl) return // Bridge-managed upload — skip DirectUpload
+    if (!this.file) return // Restored or remote instance — no local File to upload
 
     this.#setUploadStarted()
 
