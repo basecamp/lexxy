@@ -36,7 +36,7 @@ Lexxy.configure({
 
 ### Presets
 
-Presets let you keep different editor setups organized. For example, you may want a simpler setup without rich text for a command line, alongside the full editor elsewhere.
+Presets let you keep alternative editor setups organized. For example, you may want a simpler setup without rich text for a command line, alongside the full editor elsewhere.
 
 Define named presets, which extend the `default` preset, and opt in to them per editor with the `preset` attribute:
 
