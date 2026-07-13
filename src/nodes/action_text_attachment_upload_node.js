@@ -22,7 +22,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return null
   }
 
-  constructor(node, key) {
+  constructor(node = {}, key) {
     const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError, fileName, contentType } = node
     super({ ...node, contentType: file?.type ?? contentType }, key)
     this.file = file ?? null
@@ -116,9 +116,12 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const figcaption = createElement("figcaption", { className: "attachment__caption" })
 
     const nameSpan = createElement("span", { className: "attachment__name", textContent: this.caption || this.fileName || "" })
-    const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.file?.size) })
     figcaption.appendChild(nameSpan)
-    figcaption.appendChild(sizeSpan)
+
+    if (this.file) {
+      const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.file.size) })
+      figcaption.appendChild(sizeSpan)
+    }
 
     return figcaption
   }
