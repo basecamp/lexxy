@@ -1,0 +1,19 @@
+test/browser/tests/formatting/block_format_beside_decorator.test.js
+  s_6a87adbf790ba8::t_ead064668f44ad 63-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "5d4179911a3a0ccef73097191f1e1bfc05373f5e",
+  "prompts": {},
+  "sessions": {
+    "s_6a87adbf790ba8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aed1f278-3363-4448-af6c-743e6d5a221c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
