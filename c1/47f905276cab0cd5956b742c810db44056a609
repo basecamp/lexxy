@@ -1,0 +1,21 @@
+src/helpers/lexical_helper.js
+  s_6a87adbf790ba8::t_a801453dc279b8 277,282
+test/javascript/unit/editor/block_format_beside_decorator.test.js
+  s_6a87adbf790ba8::t_f6e89a97d49482 1-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "c147f905276cab0cd5956b742c810db44056a609",
+  "prompts": {},
+  "sessions": {
+    "s_6a87adbf790ba8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aed1f278-3363-4448-af6c-743e6d5a221c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
