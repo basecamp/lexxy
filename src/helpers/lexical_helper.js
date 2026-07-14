@@ -274,12 +274,12 @@ function $shrinkSelectionPastBlockEdges(selection) {
 
   if ($isAtBlockEnd(selection.anchor, anchorBlock)) {
     const nextBlock = anchorBlock.getNextSibling()
-    if (nextBlock) selection.anchor.set(nextBlock.getKey(), 0, "element")
+    if ($isElementNode(nextBlock)) selection.anchor.set(nextBlock.getKey(), 0, "element")
   }
 
   if ($isAtBlockStart(selection.focus, focusBlock)) {
     const previousBlock = focusBlock.getPreviousSibling()
-    if (previousBlock) selection.focus.set(previousBlock.getKey(), previousBlock.getChildrenSize(), "element")
+    if ($isElementNode(previousBlock)) selection.focus.set(previousBlock.getKey(), previousBlock.getChildrenSize(), "element")
   }
 }
 
