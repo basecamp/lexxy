@@ -1,0 +1,21 @@
+test/javascript/unit/editor/block_format_beside_decorator.test.js
+  s_6a87adbf790ba8::t_11091b3bb797ab 76
+src/helpers/lexical_helper.js
+  s_6a87adbf790ba8::t_506221399eb763 284-287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "1fca13a44d849d94e03381384400c5631e2b0f1a",
+  "prompts": {},
+  "sessions": {
+    "s_6a87adbf790ba8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aed1f278-3363-4448-af6c-743e6d5a221c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
