@@ -15,7 +15,7 @@ function selectFromFirstTextToLastText(editorElement, { anchorAtEnd = false, foc
 }
 
 describe("block formats next to decorator nodes", () => {
-  test("heading format with the focus flush after a horizontal divider does not throw", async () => {
+  test("focus flush after a horizontal divider walks back past it, leaving the trailing block unformatted", async () => {
     const editorElement = await createTestEditor()
     await setContent(editorElement, "<p>alpha</p><hr><p>beta</p>")
     selectFromFirstTextToLastText(editorElement)
@@ -24,12 +24,13 @@ describe("block formats next to decorator nodes", () => {
     await tick()
 
     expect(editorElement.value).toContain("<h2>alpha</h2>")
+    expect(editorElement.value).toContain("<p>beta</p>")
     expect(editorElement.value).toContain("<hr>")
 
     await destroyTestEditor(editorElement)
   })
 
-  test("heading format with the anchor flush before a horizontal divider does not throw", async () => {
+  test("anchor flush before a horizontal divider walks forward past it, leaving the leading block unformatted", async () => {
     const editorElement = await createTestEditor()
     await setContent(editorElement, "<p>alpha</p><hr><p>beta</p>")
     selectFromFirstTextToLastText(editorElement, { anchorAtEnd: true, focusAtEnd: true })
@@ -37,12 +38,31 @@ describe("block formats next to decorator nodes", () => {
     expect(() => dispatchToolbarCommand(editorElement, "applyHeadingFormat", "h2")).not.toThrow()
     await tick()
 
+    expect(editorElement.value).toContain("<p>alpha</p>")
     expect(editorElement.value).toContain("<h2>beta</h2>")
     expect(editorElement.value).toContain("<hr>")
 
     await destroyTestEditor(editorElement)
   })
 
+  test("selecting content in both blocks around a horizontal divider formats both and keeps the divider", async () => {
+    const editorElement = await createTestEditor()
+    await setContent(editorElement, "<p>alpha</p><hr><p>beta</p>")
+    selectFromFirstTextToLastText(editorElement, { focusAtEnd: true })
+
+    expect(() => dispatchToolbarCommand(editorElement, "applyHeadingFormat", "h2")).not.toThrow()
+    await tick()
+
+    expect(editorElement.value).toContain("<h2>alpha</h2>")
+    expect(editorElement.value).toContain("<h2>beta</h2>")
+    expect(editorElement.value).toContain("<hr>")
+
+    await destroyTestEditor(editorElement)
+  })
+
+  // Both endpoints flush against the divider selects only the divider itself.
+  // This behaves the same as the equivalent selection across two adjacent
+  // paragraphs with no divider between them: everything gets wrapped.
   test("quote format with both edges flush against a horizontal divider does not throw", async () => {
     const editorElement = await createTestEditor()
     await setContent(editorElement, "<p>alpha</p><hr><p>beta</p>")
@@ -52,6 +72,7 @@ describe("block formats next to decorator nodes", () => {
     await tick()
 
     expect(editorElement.value).toContain("<blockquote>")
+    expect(editorElement.value).toContain("<hr>")
 
     await destroyTestEditor(editorElement)
   })
