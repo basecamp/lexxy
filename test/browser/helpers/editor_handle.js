@@ -176,9 +176,17 @@ export class EditorHandle {
   }
 
   async clickToolbarButton(command, toolbarSelector = "lexxy-toolbar") {
-    await this.page
-      .locator(`${toolbarSelector} [data-command="${command}"]`)
-      .click()
+    const toolbar = this.page.locator(toolbarSelector)
+
+    if (this.#isFormatDropdownCommand(command)) {
+      await toolbar.locator("button[name='format']").click()
+    }
+
+    if (command.startsWith(EditorHandle.#HEADING_BUTTON_PREFIX)) {
+      await toolbar.locator(`[name='${command}']`).click()
+    } else {
+      await toolbar.locator(`[data-command="${command}"]`).click()
+    }
   }
 
   async flush() {
@@ -216,6 +224,16 @@ export class EditorHandle {
   }
 
   // Private
+
+  // Heading buttons and Paragraph/Clear formatting live inside the "format"
+  // dropdown panel, which is hidden until its trigger is clicked.
+  static #HEADING_BUTTON_PREFIX = "heading-"
+  static #FORMAT_DROPDOWN_COMMANDS = new Set([ "setFormatParagraph", "clearFormatting" ])
+
+  #isFormatDropdownCommand(command) {
+    return EditorHandle.#FORMAT_DROPDOWN_COMMANDS.has(command) ||
+      command.startsWith(EditorHandle.#HEADING_BUTTON_PREFIX)
+  }
 
   #firstInteraction = false
 
