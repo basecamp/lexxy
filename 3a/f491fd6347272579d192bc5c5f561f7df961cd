@@ -1,0 +1,31 @@
+src/helpers/lexical_helper.js
+  s_6a87adbf790ba8::t_a72f81ba64874c 276-277,281-282,286-289,294
+  s_6a87adbf790ba8::t_5ffb96123e9844 290-293
+  s_2b59bf57d53599::t_a95ba8916a2657 295-296
+test/javascript/unit/editor/block_format_beside_decorator.test.js
+  s_6a87adbf790ba8::t_e9ebb06a157e02 18,27,33,41,48-65,75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "3af491fd6347272579d192bc5c5f561f7df961cd",
+  "prompts": {},
+  "sessions": {
+    "s_2b59bf57d53599": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d2f92eda-6602-4e39-9a8d-591fe24faf1d",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    },
+    "s_6a87adbf790ba8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aed1f278-3363-4448-af6c-743e6d5a221c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
