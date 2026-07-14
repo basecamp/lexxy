@@ -59,6 +59,9 @@ async function selectAcrossDivider(editor, { anchorAtEnd = false, focusAtEnd = f
     const textNodes = []
     let node
     while ((node = walker.nextNode())) textNodes.push(node)
+    if (textNodes.length === 0) {
+      throw new Error("selectAcrossDivider needs an editor fixture with at least one text node")
+    }
     const firstText = textNodes[0]
     const lastText = textNodes[textNodes.length - 1]
 
