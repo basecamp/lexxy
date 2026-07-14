@@ -5,12 +5,14 @@ import { createTestEditor, destroyTestEditor, dispatchToolbarCommand, setContent
 function selectFromFirstTextToLastText(editorElement, { anchorAtEnd = false, focusAtEnd = false } = {}) {
   editorElement.editor.update(() => {
     const root = $getRoot()
-    const firstText = root.getFirstChild().getFirstDescendant()
-    const lastText = root.getLastChild().getFirstDescendant()
-    const anchorOffset = anchorAtEnd ? firstText.getTextContentSize() : 0
-    const focusOffset = focusAtEnd ? lastText.getTextContentSize() : 0
-    const selection = firstText.select(anchorOffset, anchorOffset)
-    selection.focus.set(lastText.getKey(), focusOffset, "text")
+    const firstText = root.getFirstDescendant()
+    const lastText = root.getLastDescendant()
+    if (firstText && lastText) {
+      const anchorOffset = anchorAtEnd ? firstText.getTextContentSize() : 0
+      const focusOffset = focusAtEnd ? lastText.getTextContentSize() : 0
+      const selection = firstText.select(anchorOffset, anchorOffset)
+      selection.focus.set(lastText.getKey(), focusOffset, "text")
+    }
   }, { discrete: true })
 }
 
