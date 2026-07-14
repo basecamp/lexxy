@@ -88,6 +88,29 @@ export class EditorHandle {
     await this.flush()
   }
 
+  // Collapses the caret inside the first text node containing `text`, `offset`
+  // characters past its start.
+  async placeCaretInside(text, offset) {
+    await this.#ensureFirstInteraction()
+    await this.content.evaluate((el, { text, offset }) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      let node
+      while ((node = walker.nextNode())) {
+        const index = node.nodeValue.indexOf(text)
+        if (index !== -1) {
+          const range = document.createRange()
+          range.setStart(node, index + offset)
+          range.collapse(true)
+          const sel = window.getSelection()
+          sel.removeAllRanges()
+          sel.addRange(range)
+          break
+        }
+      }
+    }, { text, offset })
+    await this.flush()
+  }
+
   // Selects the first block container (a quote) at an element point — a selection
   // state mouse/keyboard can't produce, since Lexical normalizes DOM selections to leaves.
   async placeCaretOnQuoteElement() {
