@@ -51,9 +51,9 @@ import { nextFrame } from "../helpers/timing_helper.js"
 export class LexicalEditorElement extends HTMLElement {
   static formAssociated = true
   static debug = false
-  static commands = ["bold", "italic", "strikethrough"]
+  static commands = [ "bold", "italic", "strikethrough" ]
 
-  static observedAttributes = ["autocapitalize", "connected", "required"]
+  static observedAttributes = [ "autocapitalize", "connected", "required" ]
 
   #initialValue = ""
   #previousInternalFormValue = null
@@ -248,7 +248,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   get isEmpty() {
-    return ["<p><br></p>", "<p></p>", ""].includes(this.value.trim())
+    return [ "<p><br></p>", "<p></p>", "" ].includes(this.value.trim())
   }
 
   get isBlank() {
@@ -433,7 +433,7 @@ export class LexicalEditorElement extends HTMLElement {
       theme: theme,
       nodes: this.#lexicalNodes,
       html: {
-        export: new Map([[TextNode, exportTextNodeDOM], [CodeHighlightNode, exportTextNodeDOM]])
+        export: new Map([ [ TextNode, exportTextNodeDOM ], [ CodeHighlightNode, exportTextNodeDOM ] ])
       },
       $initialEditorState: (editor) => {
         this.#configureSanitizer(editor)
@@ -455,7 +455,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   get #lexicalNodes() {
-    const nodes = [CustomActionTextAttachmentNode]
+    const nodes = [ CustomActionTextAttachmentNode ]
 
     if (this.supportsRichText) {
       nodes.push(
@@ -635,7 +635,7 @@ export class LexicalEditorElement extends HTMLElement {
     if (!this.supportsCodeBlocks) excluded.add(CODE)
     if (!this.supportsInlineCode) excluded.add(INLINE_CODE)
 
-    return [...TRANSFORMERS, HORIZONTAL_DIVIDER].filter(transformer => !excluded.has(transformer))
+    return [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ].filter(transformer => !excluded.has(transformer))
   }
 
   // Code nodes stay registered even when code blocks are disabled
