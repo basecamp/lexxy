@@ -73,8 +73,7 @@ describe("block formats next to decorator nodes", () => {
     expect(() => dispatchToolbarCommand(editorElement, "insertQuoteBlock")).not.toThrow()
     await tick()
 
-    expect(editorElement.value).toContain("<blockquote>")
-    expect(editorElement.value).toContain("<hr>")
+    expect(editorElement.value).toBe("<blockquote><p>alpha</p><hr><p>beta</p></blockquote>")
 
     await destroyTestEditor(editorElement)
   })

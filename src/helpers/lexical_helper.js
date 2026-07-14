@@ -281,6 +281,10 @@ function $shrinkSelectionPastBlockEdges(selection) {
     const previousBlock = $nearestElementSibling(focusBlock, "previous")
     if (previousBlock) selection.focus.set(previousBlock.getKey(), previousBlock.getChildrenSize(), "element")
   }
+
+  // Shrinking moves the endpoints toward each other, so they can cross when
+  // both were flush against block edges; callers assume a forward selection.
+  $ensureForwardRangeSelection(selection)
 }
 
 // Top-level decorator blocks (attachments, horizontal dividers) can't hold a
