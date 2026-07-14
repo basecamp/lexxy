@@ -93,14 +93,6 @@ export function selectFirstText(editorElement, offset = 0) {
   }, { discrete: true })
 }
 
-// Mirrors LexicalToolbarElement#dispatchButtonCommand: toolbar buttons dispatch
-// their command from inside an editor.update() block.
-export function dispatchToolbarCommand(editorElement, command, payload) {
-  editorElement.editor.update(() => {
-    editorElement.editor.dispatchCommand(command, payload)
-  })
-}
-
 export function captureEvent(element, eventName, fn) {
   return new Promise((resolve) => {
     element.addEventListener(eventName, (event) => resolve(event), { once: true })
