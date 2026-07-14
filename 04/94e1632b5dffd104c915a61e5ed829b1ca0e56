@@ -1,0 +1,23 @@
+test/browser/tests/formatting/block_format_beside_decorator.test.js
+  s_6a87adbf790ba8::t_ce37e275a3d226 52-61,65-66,69-77
+  s_6a87adbf790ba8::t_ce061ba27bfc85 62-64,67-68
+  s_6a87adbf790ba8::t_a5f5e086fc4e07 2
+test/browser/helpers/editor_handle.js
+  s_6a87adbf790ba8::t_9e16ca58f48276 91-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.13",
+  "base_commit_sha": "0494e1632b5dffd104c915a61e5ed829b1ca0e56",
+  "prompts": {},
+  "sessions": {
+    "s_6a87adbf790ba8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aed1f278-3363-4448-af6c-743e6d5a221c",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
