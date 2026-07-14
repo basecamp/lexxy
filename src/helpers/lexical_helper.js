@@ -273,14 +273,29 @@ function $shrinkSelectionPastBlockEdges(selection) {
   if (!anchorBlock || !focusBlock || anchorBlock.is(focusBlock)) return
 
   if ($isAtBlockEnd(selection.anchor, anchorBlock)) {
-    const nextBlock = anchorBlock.getNextSibling()
+    const nextBlock = $nearestElementSibling(anchorBlock, "next")
     if (nextBlock) selection.anchor.set(nextBlock.getKey(), 0, "element")
   }
 
   if ($isAtBlockStart(selection.focus, focusBlock)) {
-    const previousBlock = focusBlock.getPreviousSibling()
+    const previousBlock = $nearestElementSibling(focusBlock, "previous")
     if (previousBlock) selection.focus.set(previousBlock.getKey(), previousBlock.getChildrenSize(), "element")
   }
+
+  // Shrinking moves the endpoints toward each other, so they can cross when
+  // both were flush against block edges; callers assume a forward selection.
+  $ensureForwardRangeSelection(selection)
+}
+
+// Top-level decorator blocks (attachments, horizontal dividers) can't hold a
+// selection point, so walk past them to the nearest element sibling. Returns
+// null when no element sibling exists in that direction.
+function $nearestElementSibling(block, direction) {
+  let sibling = block
+  do {
+    sibling = direction === "next" ? sibling.getNextSibling() : sibling.getPreviousSibling()
+  } while (sibling && !$isElementNode(sibling))
+  return sibling
 }
 
 function $isAtBlockEnd(point, block) {
