@@ -60,9 +60,9 @@ test.describe("Block formats next to decorator nodes", () => {
     await assertEditorHtml(editor, "<h2>alpha</h2><hr><h2>beta</h2>")
   })
 
-  // Both endpoints flush against the divider selects only the divider itself.
-  // This behaves the same as the equivalent selection across two adjacent
-  // paragraphs with no divider between them: everything gets wrapped.
+  // A selection with both endpoints flush against the divider covers only the
+  // divider itself. This behaves the same as the equivalent selection across
+  // two adjacent paragraphs with no divider between them: everything gets wrapped.
   test("quote format with both edges flush against a horizontal divider wraps everything", async ({ editor }) => {
     await editor.setValue("<p>alpha</p><hr><p>beta</p>")
     await selectAcrossDivider(editor, { anchorAtEnd: true })
