@@ -10,6 +10,9 @@
   --lexxy-toolbar-gap: 2px;
   --lexxy-toolbar-spacing: 0.5ch;
 
+  /* Button row + 2px vertical padding + 1px bottom border. */
+  --lexxy-toolbar-height: calc(var(--lexxy-toolbar-button-size) + 4px + 1px);
+
   border: 1px solid var(--lexxy-color-ink-lighter);
   border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
   background-color: var(--lexxy-color-canvas);
@@ -406,6 +409,14 @@
       }
     }
   }
+}
+
+/* Reserve the mounted height before JS upgrades the element, so mounting the
+   toolbar and content doesn't shift surrounding layout. Scoped to :not(:defined)
+   so it only applies during the pre-upgrade window and never competes with the
+   mounted editor's own sizing (or a consumer's content-level override). */
+:where(lexxy-editor:not(:defined)) {
+  min-block-size: calc(var(--lexxy-toolbar-height) + var(--lexxy-editor-rows) + 2 * var(--lexxy-editor-padding));
 }
 
 /* Placeholder */
