@@ -184,11 +184,11 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   #forgetUploadRequest() {
-    this.#editorElement.uploadRequests.forget(this.getKey())
+    this.#editorElement?.uploadRequests.forget(this.getKey())
   }
 
   #rememberUploadRequest(request) {
-    this.#editorElement.uploadRequests.track(this.getKey(), request)
+    this.#editorElement?.uploadRequests.track(this.getKey(), request)
   }
 
   get #editorElement() {
