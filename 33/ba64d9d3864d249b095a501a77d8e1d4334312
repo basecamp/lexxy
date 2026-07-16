@@ -1,0 +1,22 @@
+test/browser/tests/attachments/upload_survives_teardown.test.js
+  s_f78d458a21dd1b::t_0d51babf4b3d94 5-10
+  s_f78d458a21dd1b::t_a1f7e4da14843f 1-4,11-52
+src/nodes/action_text_attachment_upload_node.js
+  s_f78d458a21dd1b::t_68e02a393ba051 187,191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "33ba64d9d3864d249b095a501a77d8e1d4334312",
+  "prompts": {},
+  "sessions": {
+    "s_f78d458a21dd1b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dd3d7b77-ed39-49a6-99f2-a76497df7aca",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
