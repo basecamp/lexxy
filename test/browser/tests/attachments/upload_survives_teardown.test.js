@@ -15,22 +15,29 @@ test.describe("Upload outliving editor teardown", () => {
     await page.waitForSelector("lexxy-toolbar[connected]")
   })
 
+  const isDiskUpload = (request) =>
+    request.url().includes("/rails/active_storage/disk/") && request.method() === "PUT"
+
+  // The upload callbacks run in XHR event handlers after the network event, so
+  // give the page one macrotask turn before asserting no errors surfaced.
+  const settle = (page) => page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 0)))
+
   test("file upload completing after teardown does not throw (forget path)", async ({ page, editor }) => {
-    await mockActiveStorageUploads(page, { uploadDelayMs: 1500 })
+    await mockActiveStorageUploads(page, { uploadDelayMs: 1000 })
 
     const pageErrors = []
     page.on("pageerror", (error) => pageErrors.push(error))
 
-    const diskUploadStarted = page.waitForRequest((request) =>
-      request.url().includes("/rails/active_storage/disk/") && request.method() === "PUT",
-    )
+    const diskUploadStarted = page.waitForRequest(isDiskUpload)
 
     await editor.uploadFile("test/fixtures/files/example.png")
     await diskUploadStarted
 
+    const diskUploadFinished = page.waitForEvent("requestfinished", isDiskUpload)
     await page.evaluate(() => document.querySelector("lexxy-editor").remove())
+    await diskUploadFinished
 
-    await page.waitForTimeout(2500)
+    await settle(page)
     expect(pageErrors.map(String)).toEqual([])
   })
 
@@ -44,9 +51,12 @@ test.describe("Upload outliving editor teardown", () => {
     await expect.poll(() => calls.blobCreations.length).toBeGreaterThan(0)
 
     await page.evaluate(() => document.querySelector("lexxy-editor").remove())
-    await calls.releaseDirectUploadResponses()
 
-    await page.waitForTimeout(2000)
+    const diskUploadFinished = page.waitForEvent("requestfinished", isDiskUpload)
+    await calls.releaseDirectUploadResponses()
+    await diskUploadFinished
+
+    await settle(page)
     expect(pageErrors.map(String)).toEqual([])
   })
 })
