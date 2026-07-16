@@ -1,0 +1,20 @@
+rollup.config.mjs
+  s_5c2b6deeb1487a::t_57b91c6416ae81 17-21
+  s_5c2b6deeb1487a::t_2b6f6fc88f4261 26,28,33-35,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "a979e368e52996ad8eb41b8718c72ca1cb333c04",
+  "prompts": {},
+  "sessions": {
+    "s_5c2b6deeb1487a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9de8c484-08a6-4463-81d9-903e40b2a78d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
