@@ -36,8 +36,6 @@ export class HeadingDropdown extends HTMLElement {
     }
   }
 
-  // The first heading options keep their original, dedicated commands, which the
-  // native apps invoke by name. Extra options use the generic tag-based command.
   static commandFor(index) {
     if (index < HEADING_PRESETS.length) {
       return HEADING_PRESETS[index].command

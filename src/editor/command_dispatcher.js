@@ -244,11 +244,6 @@ export class CommandDispatcher {
     this.#applyConfiguredHeadingFormat(2)
   }
 
-  #applyConfiguredHeadingFormat(index) {
-    const tag = this.editorElement.config.get("headings")[index]
-    if (tag) this.contents.applyHeadingFormat(tag)
-  }
-
   dispatchSetFormatParagraph() {
     this.contents.applyParagraphFormat()
   }
@@ -303,6 +298,11 @@ export class CommandDispatcher {
 
   dispose() {
     this.#listeners.dispose()
+  }
+
+  #applyConfiguredHeadingFormat(index) {
+    const tag = this.editorElement.config.get("headings")[index]
+    if (tag) this.contents.applyHeadingFormat(tag)
   }
 
   #registerCommands() {

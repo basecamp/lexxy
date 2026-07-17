@@ -3,6 +3,24 @@ import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
 import { clickToolbarButton } from "../../helpers/toolbar.js"
 
+function dispatchCommand(page, command, payload) {
+  return page.evaluate(([ command, payload ]) => {
+    document.querySelector("lexxy-editor").editor.dispatchCommand(command, payload)
+  }, [ command, payload ])
+}
+
+function recreateEditorWithHeadings(page, headings) {
+  return page.evaluate((headings) => {
+    const editor = document.querySelector("lexxy-editor")
+    const parent = editor.parentElement
+    editor.remove()
+
+    const fresh = document.createElement("lexxy-editor")
+    fresh.setAttribute("headings", JSON.stringify(headings))
+    parent.appendChild(fresh)
+  }, headings)
+}
+
 test.describe("Heading format", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/")
@@ -75,6 +93,44 @@ test.describe("Heading format", () => {
 
     await expect(page.locator("[name='heading-large']")).toHaveAttribute("aria-pressed", "true")
     await expect(page.locator("[name='heading-medium']")).toHaveAttribute("aria-pressed", "false")
+  })
+
+  test("dedicated commands apply the default headings when invoked by name", async ({ page, editor }) => {
+    for (const [ command, tag ] of [ [ "setFormatHeadingLarge", "h2" ], [ "setFormatHeadingMedium", "h3" ], [ "setFormatHeadingSmall", "h4" ] ]) {
+      await editor.setValue("<p>Lexxy</p>")
+      await editor.select("Lexxy")
+
+      await dispatchCommand(page, command)
+      await assertEditorHtml(editor, `<${tag}>Lexxy</${tag}>`)
+    }
+  })
+
+  test("dedicated commands map to the first configured headings", async ({ page, editor }) => {
+    await recreateEditorWithHeadings(page, [ "h1", "h5" ])
+    await editor.waitForConnected()
+
+    await editor.setValue("<p>Lexxy</p>")
+    await editor.select("Lexxy")
+    await dispatchCommand(page, "setFormatHeadingLarge")
+    await assertEditorHtml(editor, "<h1>Lexxy</h1>")
+
+    await editor.setValue("<p>Lexxy</p>")
+    await editor.select("Lexxy")
+    await dispatchCommand(page, "setFormatHeadingMedium")
+    await assertEditorHtml(editor, "<h5>Lexxy</h5>")
+
+    await editor.setValue("<p>Lexxy</p>")
+    await editor.select("Lexxy")
+    await dispatchCommand(page, "setFormatHeadingSmall")
+    await assertEditorHtml(editor, "<p>Lexxy</p>")
+  })
+
+  test("applyHeadingFormat applies the given tag", async ({ page, editor }) => {
+    await editor.setValue("<p>Lexxy</p>")
+    await editor.select("Lexxy")
+
+    await dispatchCommand(page, "applyHeadingFormat", "h3")
+    await assertEditorHtml(editor, "<h3>Lexxy</h3>")
   })
 
   test("heading inside blockquote shows heading button as active, not paragraph", async ({ page, editor }) => {
