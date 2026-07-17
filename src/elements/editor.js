@@ -847,7 +847,7 @@ export class LexicalEditorElement extends HTMLElement {
       { label: "Normal", command: "setFormatParagraph", tag: null },
       ...headings.map((tag, index) => ({
         label: HeadingDropdown.labelFor(tag, index),
-        command: "applyHeadingFormat",
+        command: HeadingDropdown.commandFor(index),
         tag
       }))
     ]

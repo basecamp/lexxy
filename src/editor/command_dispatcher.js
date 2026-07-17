@@ -36,6 +36,9 @@ const COMMANDS = [
   "unlink",
   "toggleHighlight",
   "removeHighlight",
+  "setFormatHeadingLarge",
+  "setFormatHeadingMedium",
+  "setFormatHeadingSmall",
   "setFormatParagraph",
   "applyHeadingFormat",
   "clearFormatting",
@@ -227,6 +230,23 @@ export class CommandDispatcher {
 
   dispatchInsertHorizontalDivider() {
     $insertNodeToNearestRoot(new HorizontalDividerNode)
+  }
+
+  dispatchSetFormatHeadingLarge() {
+    this.#applyConfiguredHeadingFormat(0)
+  }
+
+  dispatchSetFormatHeadingMedium() {
+    this.#applyConfiguredHeadingFormat(1)
+  }
+
+  dispatchSetFormatHeadingSmall() {
+    this.#applyConfiguredHeadingFormat(2)
+  }
+
+  #applyConfiguredHeadingFormat(index) {
+    const tag = this.editorElement.config.get("headings")[index]
+    if (tag) this.contents.applyHeadingFormat(tag)
   }
 
   dispatchSetFormatParagraph() {
