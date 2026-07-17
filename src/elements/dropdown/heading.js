@@ -4,9 +4,9 @@ import { ListenerBin, registerEventListener } from "../../helpers/listener_helpe
 const HEADING_BUTTON_SELECTOR = "button.lexxy-heading-button"
 
 const HEADING_PRESETS = [
-  { label: "Large Heading", name: "heading-large" },
-  { label: "Medium Heading", name: "heading-medium" },
-  { label: "Small Heading", name: "heading-small" }
+  { label: "Large Heading", name: "heading-large", command: "setFormatHeadingLarge" },
+  { label: "Medium Heading", name: "heading-medium", command: "setFormatHeadingMedium" },
+  { label: "Small Heading", name: "heading-small", command: "setFormatHeadingSmall" }
 ]
 
 export class HeadingDropdown extends HTMLElement {
@@ -33,6 +33,14 @@ export class HeadingDropdown extends HTMLElement {
       } else {
         return `heading-${tag}`
       }
+    }
+  }
+
+  static commandFor(index) {
+    if (index < HEADING_PRESETS.length) {
+      return HEADING_PRESETS[index].command
+    } else {
+      return "applyHeadingFormat"
     }
   }
 
@@ -98,6 +106,7 @@ export class HeadingDropdown extends HTMLElement {
     const button = document.createElement("button")
     button.type = "button"
     button.dataset.heading = tag
+    button.dataset.command = HeadingDropdown.commandFor(index)
     button.classList.add("lexxy-heading-button")
     button.name = name
     button.title = label
@@ -112,7 +121,7 @@ export class HeadingDropdown extends HTMLElement {
         if (!this.#editor) return
 
         event.preventDefault()
-        this.#editor.dispatchCommand("applyHeadingFormat", button.dataset.heading)
+        this.#editor.dispatchCommand(button.dataset.command, button.dataset.heading)
         this.#editor.focus()
       }))
     })
