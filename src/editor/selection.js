@@ -8,6 +8,7 @@ import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
 import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
 import { isSelectionHighlighted } from "../helpers/format_helper"
+import { caretFromPoint } from "../helpers/caret_helpers"
 import { getNonce } from "../helpers/csp_helper"
 import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } from "../helpers/lexical_helper"
 import { LinkNode } from "@lexical/link"
@@ -350,11 +351,16 @@ export default class Selection {
   }
 
   #listenForNodeSelections() {
-    this.#listeners.track(this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
+    this.#listeners.track(this.editor.registerCommand(CLICK_COMMAND, (event) => {
+      const { target } = event
       if (!isDOMNode(target)) return false
 
       const targetNode = $getNearestNodeFromDOMNode(target)
-      return $isDecoratorNode(targetNode) && this.#selectInLexical(targetNode)
+      if ($isDecoratorNode(targetNode)) {
+        return this.#selectInLexical(targetNode)
+      } else {
+        return this.#placeCaretBeforeInlineDecorator(event)
+      }
     }, COMMAND_PRIORITY_LOW))
 
     this.#listeners.track(
@@ -364,6 +370,26 @@ export default class Selection {
         }
       })
     )
+  }
+
+  // Gecko resolves a click just before an inline decorator to a text node inside
+  // its contenteditable="false" subtree, which maps to no selection at all, so
+  // typing is silently dropped. Place the caret before the decorator ourselves.
+  #placeCaretBeforeInlineDecorator(event) {
+    if ($getSelection() !== null) return false
+
+    const position = caretFromPoint(event.clientX, event.clientY)
+    if (!position) return false
+
+    const node = $getNearestNodeFromDOMNode(position.node)
+    if (!$isDecoratorNode(node) || !node.isInline()) return false
+
+    const parent = node.getParent()
+    if (!$isElementNode(parent)) return false
+
+    const index = node.getIndexWithinParent()
+    parent.select(index, index)
+    return true
   }
 
   #containEditorFocus() {
