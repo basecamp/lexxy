@@ -216,33 +216,64 @@ export default class Clipboard {
   // fenced/indented code blocks marked() already treats "<...>" as literal text
   // and HTML-encodes it, so a code span reading `<v Name>` imports correctly on
   // its own; escaping "<" there would corrupt it into "&lt;v Name>". We therefore
-  // let marked tokenize the text first and walk its own tokens, escaping every
-  // region except code. Delimiters (**, _, ~) and link/URL wrappers ([…](…),
-  // <https://…>) live in the gaps between a token's child raws, so we escape
-  // those gaps too — unknown tags in prose still round-trip, while marked's own
-  // syntax (which never carries a bare "<tag>") passes through unharmed.
+  // let marked tokenize the text first, collect every code region, and escape all
+  // the prose *around* those regions. Delimiters (**, _, ~) and link/URL wrappers
+  // ([…](…), <https://…>) live in that prose, so they get escaped too — unknown
+  // tags in prose still round-trip, while marked's own syntax (which never
+  // carries a bare "<tag>") passes through unharmed.
+  //
+  // The lexer must run with the *same* options as the render below
+  // (marked(..., { breaks: true })). marked() merges its defaults, but a bare
+  // options object passed to marked.lexer() replaces them — dropping gfm and
+  // therefore table parsing — so the protective pass would tokenize a table as a
+  // paragraph and diverge from what actually gets rendered. Spread the defaults
+  // to keep the two token trees in lockstep.
   #escapeUnknownHtmlTags(text) {
-    return this.#escapeTokensPreservingCode(marked.lexer(text))
+    const tokens = marked.lexer(text, { ...marked.defaults, breaks: true })
+    const codeRegions = []
+    this.#collectCodeRegions(tokens, codeRegions)
+    return this.#escapeProseAroundCode(text, codeRegions)
   }
 
-  #escapeTokensPreservingCode(tokens) {
-    return tokens.map((token) => this.#escapeTokenPreservingCode(token)).join("")
+  // Walk the token tree depth-first, collecting the raw text of every code region
+  // (`code` blocks and inline `codespan`s) in document order. marked nests child
+  // tokens under different fields depending on the container — inline content,
+  // headings and blockquotes under `.tokens`; list items under `.items[]`; table
+  // cells under `.header[]` / `.rows[][]` — so #childTokens flattens them all and
+  // the walk reaches code wherever it nests, however deeply.
+  #collectCodeRegions(tokens, regions) {
+    for (const token of tokens) {
+      if (token.type === "code" || token.type === "codespan") {
+        regions.push(token.raw)
+      } else {
+        this.#collectCodeRegions(this.#childTokens(token), regions)
+      }
+    }
   }
 
-  #escapeTokenPreservingCode(token) {
-    if (token.type === "code" || token.type === "codespan") return token.raw
-    if (!token.tokens || token.tokens.length === 0) return this.#escapeUnknownHtmlTagsInProse(token.raw)
+  #childTokens(token) {
+    const cells = [ ...(token.header || []), ...(token.rows || []).flat() ]
+    return [
+      ...(token.tokens || []),
+      ...(token.items || []),
+      ...cells.flatMap((cell) => cell.tokens || [])
+    ]
+  }
 
+  // Escape unknown tags in the prose *between* the code regions. Each region's raw
+  // is found in order (indexOf from a moving cursor) and emitted untouched; the
+  // gap before it — and the trailing remainder — is prose we escape.
+  #escapeProseAroundCode(text, codeRegions) {
     let result = ""
     let cursor = 0
-    for (const child of token.tokens) {
-      const index = token.raw.indexOf(child.raw, cursor)
-      if (index === -1) return this.#escapeUnknownHtmlTagsInProse(token.raw)
+    for (const codeRaw of codeRegions) {
+      const index = text.indexOf(codeRaw, cursor)
+      if (index === -1) continue
 
-      result += this.#escapeUnknownHtmlTagsInProse(token.raw.slice(cursor, index)) + this.#escapeTokenPreservingCode(child)
-      cursor = index + child.raw.length
+      result += this.#escapeUnknownHtmlTagsInProse(text.slice(cursor, index)) + codeRaw
+      cursor = index + codeRaw.length
     }
-    return result + this.#escapeUnknownHtmlTagsInProse(token.raw.slice(cursor))
+    return result + this.#escapeUnknownHtmlTagsInProse(text.slice(cursor))
   }
 
   // Following CommonMark, marked() treats a bare "<" as the start of raw inline

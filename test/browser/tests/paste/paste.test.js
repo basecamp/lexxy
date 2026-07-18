@@ -182,6 +182,56 @@ test.describe("Paste — Plain text with angle brackets", () => {
       await expect(code).not.toContainText("&lt;")
     })
   })
+
+  // Regression: the code-preserving pass must reach code spans nested inside a
+  // list item, not just top-level code. A naive walk that only recurses a
+  // token's `.tokens` misses list `.items[]` and escapes the item's raw wholesale,
+  // importing the code span as "&lt;v Name>" instead of the literal "<v Name>".
+  test("pasting a list item with an unknown tag inside an inline code span keeps it literal", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("- `<v Name>`")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("li code")).toHaveText("<v Name>")
+      await expect(content.locator("code")).not.toContainText("&lt;")
+    })
+  })
+
+  // Negative control for the same list: an unknown tag in the item's *prose*
+  // (not code) must still be escaped so it round-trips as literal text rather
+  // than being unwrapped and dropped by the importer.
+  test("pasting a list item with an unknown tag in prose keeps it as literal text", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("- plain <v Speaker> here")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("li")).toContainText("plain <v Speaker> here")
+      await expect(content.locator("code")).toHaveCount(0)
+    })
+  })
+
+  // Regression: code spans also nest inside table cells (`.header[]`/`.rows[][]`),
+  // which carry no `.raw` and never live under `.tokens`. The walk must reach
+  // them too. This also exercises the lexer-options fix: the protective pass
+  // lexes with marked's defaults (gfm on) so it sees a real table token — the
+  // same tree marked() renders — instead of a divergent paragraph fallback.
+  test("pasting a table with an unknown tag inside a cell's code span keeps it literal", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("| Head | Two |\n| --- | --- |\n| `<v Cell>` | plain <v Prose> |")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("table")).toHaveCount(1)
+      await expect(content.locator("td code")).toHaveText("<v Cell>")
+      await expect(content.locator("code")).not.toContainText("&lt;")
+      await expect(content.locator("td").filter({ hasText: "plain" })).toContainText("plain <v Prose>")
+    })
+  })
 })
 
 test.describe("Paste — Blockquote", () => {
