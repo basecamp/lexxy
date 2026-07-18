@@ -135,6 +135,21 @@ test.describe("Paste — Plain text with angle brackets", () => {
     })
     await assertEditorPlainText(editor, "bold and a < b comparison")
   })
+
+  // Negative control: CommonMark autolinks wrap the URL in angle brackets, but
+  // the character after the "tag name" is ":" (or "@" for emails), never a tag
+  // boundary — so the unknown-tag escape must leave them alone and let marked()
+  // turn them into links.
+  test("pasting Markdown with an angle-bracket autolink still creates a link", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("see <https://example.com> please")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator('a[href="https://example.com"]')).toHaveCount(1)
+    })
+  })
 })
 
 test.describe("Paste — Blockquote", () => {

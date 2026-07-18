@@ -222,8 +222,13 @@ export default class Clipboard {
   // so those sequences round-trip as literal text; leave known tags untouched so
   // existing HTML-in-plain-text handling is preserved. ">" needs no escaping:
   // once its "<" is escaped it is ordinary text that marked re-encodes.
+  //
+  // The name must be followed by an HTML tag boundary — whitespace, "/", ">",
+  // or end of input — so CommonMark autolinks keep working: "<https://…>" and
+  // "<me@example.com>" are followed by ":" and "@", never a boundary, so they
+  // fall through untouched and marked() still turns them into links.
   #escapeUnknownHtmlTags(text) {
-    return text.replace(/<(\/?)([a-zA-Z][a-zA-Z0-9-]*)/g, (match, slash, name) => {
+    return text.replace(/<(\/?)([a-zA-Z][a-zA-Z0-9-]*)(?=[\s/>]|$)/g, (match, slash, name) => {
       return this.#isKnownHtmlElement(name) ? match : `&lt;${slash}${name}`
     })
   }
