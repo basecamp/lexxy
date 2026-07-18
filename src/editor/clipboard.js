@@ -212,6 +212,39 @@ export default class Clipboard {
     }
   }
 
+  // Escape unknown inline HTML tags in *prose* only. Inside inline code spans and
+  // fenced/indented code blocks marked() already treats "<...>" as literal text
+  // and HTML-encodes it, so a code span reading `<v Name>` imports correctly on
+  // its own; escaping "<" there would corrupt it into "&lt;v Name>". We therefore
+  // let marked tokenize the text first and walk its own tokens, escaping every
+  // region except code. Delimiters (**, _, ~) and link/URL wrappers ([…](…),
+  // <https://…>) live in the gaps between a token's child raws, so we escape
+  // those gaps too — unknown tags in prose still round-trip, while marked's own
+  // syntax (which never carries a bare "<tag>") passes through unharmed.
+  #escapeUnknownHtmlTags(text) {
+    return this.#escapeTokensPreservingCode(marked.lexer(text))
+  }
+
+  #escapeTokensPreservingCode(tokens) {
+    return tokens.map((token) => this.#escapeTokenPreservingCode(token)).join("")
+  }
+
+  #escapeTokenPreservingCode(token) {
+    if (token.type === "code" || token.type === "codespan") return token.raw
+    if (!token.tokens || token.tokens.length === 0) return this.#escapeUnknownHtmlTagsInProse(token.raw)
+
+    let result = ""
+    let cursor = 0
+    for (const child of token.tokens) {
+      const index = token.raw.indexOf(child.raw, cursor)
+      if (index === -1) return this.#escapeUnknownHtmlTagsInProse(token.raw)
+
+      result += this.#escapeUnknownHtmlTagsInProse(token.raw.slice(cursor, index)) + this.#escapeTokenPreservingCode(child)
+      cursor = index + child.raw.length
+    }
+    return result + this.#escapeUnknownHtmlTagsInProse(token.raw.slice(cursor))
+  }
+
   // Following CommonMark, marked() treats a bare "<" as the start of raw inline
   // HTML. That is intentional for recognized tags (pasted plain text carrying
   // <span style>, <mark>, <b>… is styled on import), but for an *unrecognized*
@@ -227,7 +260,7 @@ export default class Clipboard {
   // or end of input — so CommonMark autolinks keep working: "<https://…>" and
   // "<me@example.com>" are followed by ":" and "@", never a boundary, so they
   // fall through untouched and marked() still turns them into links.
-  #escapeUnknownHtmlTags(text) {
+  #escapeUnknownHtmlTagsInProse(text) {
     return text.replace(/<(\/?)([a-zA-Z][a-zA-Z0-9-]*)(?=[\s/>]|$)/g, (match, slash, name) => {
       return this.#isKnownHtmlElement(name) ? match : `&lt;${slash}${name}`
     })

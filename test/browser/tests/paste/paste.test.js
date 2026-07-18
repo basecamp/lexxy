@@ -150,6 +150,38 @@ test.describe("Paste — Plain text with angle brackets", () => {
       await expect(content.locator('a[href="https://example.com"]')).toHaveCount(1)
     })
   })
+
+  // Regression: the unknown-tag escape must not run inside Markdown code, where
+  // marked() already preserves "<...>" literally. Escaping it there would import
+  // the code span as "&lt;v Name>" instead of the "<v Name>" the user pasted.
+  test("pasting Markdown with an unknown tag inside an inline code span keeps it literal", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("run `<v Name>` here")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code")).toHaveText("<v Name>")
+    })
+    await assertEditorPlainText(editor, "run <v Name> here")
+  })
+
+  // Regression: same guarantee for fenced code blocks — literal tokens inside a
+  // code fence must survive verbatim, not get rewritten to "&lt;...".
+  test("pasting a fenced code block with HTML-like tokens keeps them literal", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("```\n<foo>\n<v Speaker>\n```")
+
+    await assertEditorContent(editor, async (content) => {
+      const code = content.locator("code")
+      await expect(code).toHaveCount(1)
+      await expect(code).toContainText("<foo>")
+      await expect(code).toContainText("<v Speaker>")
+      await expect(code).not.toContainText("&lt;")
+    })
+  })
 })
 
 test.describe("Paste — Blockquote", () => {
