@@ -478,6 +478,17 @@
     position: relative;
     white-space: normal;
 
+    /* Gecko drops the whole selection when a drag crosses a contenteditable="false"
+       island unless it is selectable as a single unit. Editor-only: the rendered
+       view has no contenteditable and must keep normal text selection. */
+    lexxy-editor & {
+      -webkit-user-select: all;
+
+      @supports (user-select: all) {
+        user-select: all;
+      }
+    }
+
     img {
       block-size: var(--lexxy-attachment-image-size);
       border-radius: 50%;
