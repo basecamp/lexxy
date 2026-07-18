@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
-import { assertEditorContent, assertEditorHtml } from "../../helpers/assertions.js"
+import { assertEditorContent, assertEditorHtml, assertEditorPlainText } from "../../helpers/assertions.js"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
 
 const EXAMPLE_PNG = readFileSync("test/fixtures/files/example.png").toString(
@@ -106,6 +106,34 @@ test.describe("Paste — Files & Attachments", () => {
     await assertEditorContent(editor, async (content) => {
       await expect(content.locator("action-text-attachment")).toHaveCount(1)
     })
+  })
+})
+
+test.describe("Paste — Plain text with angle brackets", () => {
+  // Regression for BC-10106313690: pasting plain text containing a bare
+  // "<...>" sequence (e.g. a WEBVTT speaker tag) dropped the tag because
+  // marked() parsed it as raw inline HTML that the Lexical importer unwrapped.
+  test("pasting plain text with a WEBVTT speaker tag preserves the tag", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("<v Nabila Abdel Nabi> Hello everyone, welcome.")
+
+    await assertEditorPlainText(editor, "<v Nabila Abdel Nabi> Hello everyone, welcome.")
+  })
+
+  // Negative control: normal Markdown must still be interpreted, and a "<" used
+  // as a comparison operator must survive — the fix stays surgical.
+  test("pasting Markdown with a bare < comparison still formats and keeps the <", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("**bold** and a < b comparison")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("strong")).toHaveText("bold")
+    })
+    await assertEditorPlainText(editor, "bold and a < b comparison")
   })
 })
 

@@ -195,7 +195,7 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
-    const html = marked(text, { breaks: true })
+    const html = marked(this.#escapeUnknownHtmlTags(text), { breaks: true })
     const doc = parseHtml(html)
 
     if (this.#isPlainTextWithoutMarkdown(doc)) {
@@ -210,6 +210,26 @@ export default class Clipboard {
       dispatch(this.editorElement, "lexxy:insert-markdown", detail)
       this.contents.insertDOM(doc, { tag: PASTE_TAG })
     }
+  }
+
+  // Following CommonMark, marked() treats a bare "<" as the start of raw inline
+  // HTML. That is intentional for recognized tags (pasted plain text carrying
+  // <span style>, <mark>, <b>… is styled on import), but for an *unrecognized*
+  // element the Lexical importer has no converter and silently unwraps it,
+  // dropping the tag. WEBVTT speaker cues such as "<v Nabila Abdel Nabi>" — where
+  // the name lives in what the HTML parser reads as attributes — thus vanish
+  // entirely. Escape only the "<" of tags whose name is not a known HTML element
+  // so those sequences round-trip as literal text; leave known tags untouched so
+  // existing HTML-in-plain-text handling is preserved. ">" needs no escaping:
+  // once its "<" is escaped it is ordinary text that marked re-encodes.
+  #escapeUnknownHtmlTags(text) {
+    return text.replace(/<(\/?)([a-zA-Z][a-zA-Z0-9-]*)/g, (match, slash, name) => {
+      return this.#isKnownHtmlElement(name) ? match : `&lt;${slash}${name}`
+    })
+  }
+
+  #isKnownHtmlElement(name) {
+    return !(document.createElement(name) instanceof HTMLUnknownElement)
   }
 
   // Markdown conversion collapses runs of whitespace and unescapes backslashes,
