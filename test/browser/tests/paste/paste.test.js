@@ -298,6 +298,27 @@ test.describe("Paste — Plain text with angle brackets", () => {
     await assertEditorPlainText(editor, '<action-text-attachment sgid="evil"></action-text-attachment> after')
   })
 
+  // Regression for the follow-up Codex thread on clipboard.js: pasting a raw HTML
+  // table as plain text must round-trip to a single clean table. <thead>/<tbody>
+  // have no Lexical converter — the importer traverses them — so they must pass
+  // through, not be escaped to literal text (which foster-parents a stray
+  // "<thead></thead><tbody></tbody>" paragraph above the table).
+  test("pasting plain text with a raw HTML table round-trips to one clean table", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("<table><thead><tr><th>A</th></tr></thead><tbody><tr><td>1</td></tr></tbody></table>")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("table")).toHaveCount(1)
+      await expect(content.locator("table th")).toHaveText("A")
+      await expect(content.locator("table td")).toHaveText("1")
+      // No stray literal wrapper tags leaked out as text.
+      await expect(content).not.toContainText("<thead>")
+      await expect(content).not.toContainText("<tbody>")
+    })
+  })
+
   // Negative control: a genuinely-supported inline formatting tag the importer
   // converts (<strong> → bold) must still pass through and style, not get escaped.
   test("pasting plain text with a supported inline tag still styles it", async ({ page, editor }) => {

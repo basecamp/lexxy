@@ -11,7 +11,6 @@ import NodeInserter from "./contents/node_inserter"
 
 export default class Clipboard {
   #listeners = new ListenerBin()
-  #pasteMarkedInstance = null
 
   constructor(editorElement) {
     this.editorElement = editorElement
@@ -196,7 +195,7 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
-    const html = this.#pasteMarked.parse(text)
+    const html = pasteMarked.parse(text)
     const doc = parseHtml(html)
 
     if (this.#isPlainTextWithoutMarkdown(doc)) {
@@ -211,23 +210,6 @@ export default class Clipboard {
       dispatch(this.editorElement, "lexxy:insert-markdown", detail)
       this.contents.insertDOM(doc, { tag: PASTE_TAG })
     }
-  }
-
-  // A marked instance scoped to this editor's paste flow, built lazily because it
-  // closes over the editor's set of importer-supported tags (see the module note
-  // on pasteMarked's `html` renderer).
-  get #pasteMarked() {
-    return (this.#pasteMarkedInstance ||= buildPasteMarked(this.#supportedPastedHtmlTags()))
-  }
-
-  // The tags Lexxy's DOM→Lexical importer actually converts — the real capability
-  // the paste-scoped `html` renderer classifies against. This is the same registry
-  // the editor's sanitizer allow-list derives from (editor._htmlConversions via
-  // #getImportableTags), not a DOM-element proxy: any tag the importer has no
-  // converter for is unhandled and must be escaped to literal text rather than
-  // silently unwrapped.
-  #supportedPastedHtmlTags() {
-    return new Set(this.editor._htmlConversions.keys())
   }
 
   // Markdown conversion collapses runs of whitespace and unescapes backslashes,
@@ -332,7 +314,7 @@ function $bareUrlFromLink(linkNode) {
   return linkNode.getTextContent() === url ? url : null
 }
 
-// Builds a marked instance scoped to the paste flow (never mutate marked's global
+// A marked instance scoped to the paste flow (never mutate marked's global
 // defaults). Its options mirror the render pass #pasteMarkdown used before —
 // marked's defaults plus breaks: true — so gfm stays on and tables still parse.
 //
@@ -351,13 +333,11 @@ function $bareUrlFromLink(linkNode) {
 // code-region collection, or lexer-option syncing required. This renderer fires
 // only for genuine raw-HTML tokens, and marked inserts its return value verbatim
 // (it does not re-encode), so we escape unsupported tags to literal text here.
-function buildPasteMarked(supportedTags) {
-  return new Marked({
-    ...marked.defaults,
-    breaks: true,
-    renderer: { html: (token) => renderPastedHtmlToken(token, supportedTags) }
-  })
-}
+const pasteMarked = new Marked({
+  ...marked.defaults,
+  breaks: true,
+  renderer: { html: renderPastedHtmlToken }
+})
 
 // Matches a single HTML tag lexeme: an optional "/", a tag name, then any run of
 // attribute characters up to the closing ">".
@@ -369,9 +349,9 @@ const HTML_TAG_LEXEME = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)([^>]*)>/g
 // unknown one — e.g. "<div><v Name> Hello</div>" arrives as one token. We keep
 // the <div> so it still renders, and escape the nested <v Name> so it survives
 // as literal text rather than being unwrapped and dropped by the importer.
-function renderPastedHtmlToken(token, supportedTags) {
+function renderPastedHtmlToken(token) {
   return token.text.replace(HTML_TAG_LEXEME, (lexeme, _slash, name) => {
-    return isSupportedHtmlElement(name, supportedTags) ? lexeme : escapeHtml(lexeme)
+    return isSupportedHtmlElement(name) ? lexeme : escapeHtml(lexeme)
   })
 }
 
@@ -381,22 +361,27 @@ function escapeHtml(text) {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
-// "Supported" means the Lexical importer has a converter that meaningfully
-// handles this tag — read from the editor's actual import registry, not inferred
-// from a DOM-element proxy. An earlier proxy (`!(createElement(name) instanceof
-// HTMLUnknownElement)`) misjudged two ways: hyphenated custom elements
-// (turbo-frame, bc-attachment, action-text-attachment) are plain HTMLElement, not
-// HTMLUnknownElement, and any standard element the importer has no converter for
-// (e.g. <details>) reads as HTMLElement too — both slipped through as "supported"
-// yet get unwrapped-and-dropped on import (data loss), and a plain-text paste of
-// <action-text-attachment> even materialized a live attachment node.
+// "Supported" — safe to pass through for the importer to handle — is decided from
+// the element taxonomy, not the importer's converter registry. The importer both
+// converts tags it has a converter for (span→mark, b→bold, tr/td→table cells) and
+// transparently traverses standard structural wrappers it has *no* converter for
+// (thead, tbody, tfoot, colgroup, caption), keeping their children. A converter
+// registry (editor._htmlConversions) lists only the former, so classifying by it
+// escaped those wrappers to literal text and corrupted pasted tables — foster
+// parenting hoisted "&lt;thead&gt;…" out as a stray paragraph. The taxonomy covers
+// both: a standard HTML element is either converted or losslessly unwrapped.
 //
-// Custom elements are excluded even when the importer *does* register a converter
-// for them (e.g. <action-text-attachment>): a plain-text paste must never
-// materialize an attachment/widget. Legitimate attachments arrive through the
-// rich-HTML paste path, not here. Custom-element names always contain a hyphen
-// (HTML spec); no standard HTML element does.
-function isSupportedHtmlElement(name, supportedTags) {
+// Two exclusions escape the tag to literal text instead:
+//   - Invented tags (WEBVTT's "<v Nabila Abdel Nabi>", "<foo>"): document
+//     .createElement returns HTMLUnknownElement. The importer would unwrap them,
+//     dropping the tag — and for <v Name> the name lives in what parses as
+//     attributes, so it vanishes entirely.
+//   - Custom elements (turbo-frame, bc-attachment, action-text-attachment): a
+//     hyphenated name is a custom element (HTML spec; no standard element has a
+//     hyphen). They're excluded even when the importer registers a converter, so
+//     a plain-text paste can never materialize an attachment/widget. Legitimate
+//     attachments arrive through the rich-HTML paste path, not here.
+function isSupportedHtmlElement(name) {
   const tag = name.toLowerCase()
-  return supportedTags.has(tag) && !tag.includes("-")
+  return !(document.createElement(tag) instanceof HTMLUnknownElement) && !tag.includes("-")
 }
