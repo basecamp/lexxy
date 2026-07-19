@@ -1,0 +1,24 @@
+test/browser/tests/paste/paste.test.js
+  s_3814332fedca4c::t_89ae05e26fe05c 301-321
+src/editor/clipboard.js
+  s_3814332fedca4c::t_4d897407b2fe6c 317,336-340
+  s_3814332fedca4c::t_fe425932248564 198
+  s_3814332fedca4c::t_75cd46da506ee1 352,354
+  s_3814332fedca4c::t_34fa2cc0e5c5aa 364-372,374-384,386
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "89e135e51d79f32bf1c1f338fe9dbdfa1b3d1fd0",
+  "prompts": {},
+  "sessions": {
+    "s_3814332fedca4c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f402d0a2-d851-4126-95b2-55e0ae7d7b91",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
