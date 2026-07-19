@@ -265,6 +265,52 @@ test.describe("Paste — Plain text with angle brackets", () => {
       await expect(content.locator("td").filter({ hasText: "plain" })).toContainText("plain <v Prose>")
     })
   })
+
+  // Regression for Codex PRRT_kwDOOrdUNM6SGmuq: a hyphenated custom element in
+  // pasted plain text (e.g. <turbo-frame>) is not a tag the Lexical importer
+  // supports, so it must survive as literal text — never become a live DOM node
+  // (data loss when unwrapped) nor render as a real custom element.
+  test("pasting plain text with a custom element keeps it literal and never live", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste('<turbo-frame id="modal">x</turbo-frame> after')
+
+    await assertEditorPlainText(editor, '<turbo-frame id="modal">x</turbo-frame> after')
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("turbo-frame")).toHaveCount(0)
+    })
+  })
+
+  // Regression: even a custom element the importer *does* register a converter
+  // for (<action-text-attachment>) must not materialize from a plain-text paste —
+  // that would inject a live attachment from typed text. It escapes to literal
+  // text instead. Legitimate attachments arrive via the rich-HTML paste path.
+  test("pasting plain text with an action-text-attachment does not materialize an attachment", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste('<action-text-attachment sgid="evil"></action-text-attachment> after')
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("action-text-attachment")).toHaveCount(0)
+    })
+    await assertEditorPlainText(editor, '<action-text-attachment sgid="evil"></action-text-attachment> after')
+  })
+
+  // Negative control: a genuinely-supported inline formatting tag the importer
+  // converts (<strong> → bold) must still pass through and style, not get escaped.
+  test("pasting plain text with a supported inline tag still styles it", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("Hello <strong>there</strong>")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("strong")).toHaveText("there")
+    })
+    await assertEditorPlainText(editor, "Hello there")
+  })
 })
 
 test.describe("Paste — Blockquote", () => {
