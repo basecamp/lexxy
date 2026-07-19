@@ -214,6 +214,39 @@ test.describe("Paste — Plain text with angle brackets", () => {
     })
   })
 
+  // Regression: an angle-bracket link destination — CommonMark's [text](<dest>)
+  // form, used when the path contains spaces — must produce a working link, not
+  // corrupt. marked tokenizes the whole thing as a `link` token, so it never
+  // reaches the html renderer and its "<...>" is preserved as the href.
+  test("pasting a Markdown link with an angle-bracket destination creates a working link", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("[docs](<docs/setup guide.md>)")
+
+    await assertEditorContent(editor, async (content) => {
+      const link = content.locator("a")
+      await expect(link).toHaveCount(1)
+      await expect(link).toHaveText("docs")
+      await expect(link).toHaveAttribute("href", /docs\/setup(%20|\s)guide\.md/)
+    })
+  })
+
+  // Regression: marked can emit a single coarse *block* HTML token whose first
+  // tag is known (<div>) but which nests an unknown tag (<v Name>). The renderer
+  // must escape lexeme-by-lexeme within the token so the <div> still renders and
+  // the nested <v Name> survives as literal text instead of being dropped.
+  test("pasting a block of HTML with a nested unknown tag keeps the unknown tag literal", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste("<div><v Name> Hello</div>")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content).toContainText("<v Name> Hello")
+    })
+  })
+
   // Regression: code spans also nest inside table cells (`.header[]`/`.rows[][]`),
   // which carry no `.raw` and never live under `.tokens`. The walk must reach
   // them too. This also exercises the lexer-options fix: the protective pass

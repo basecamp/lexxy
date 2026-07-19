@@ -1,4 +1,4 @@
-import { marked } from "marked"
+import { Marked, marked } from "marked"
 import { isAutolinkableURL } from "../helpers/string_helper"
 import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
@@ -195,7 +195,7 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
-    const html = marked(this.#escapeUnknownHtmlTags(text), { breaks: true })
+    const html = pasteMarked.parse(text)
     const doc = parseHtml(html)
 
     if (this.#isPlainTextWithoutMarkdown(doc)) {
@@ -210,95 +210,6 @@ export default class Clipboard {
       dispatch(this.editorElement, "lexxy:insert-markdown", detail)
       this.contents.insertDOM(doc, { tag: PASTE_TAG })
     }
-  }
-
-  // Escape unknown inline HTML tags in *prose* only. Inside inline code spans and
-  // fenced/indented code blocks marked() already treats "<...>" as literal text
-  // and HTML-encodes it, so a code span reading `<v Name>` imports correctly on
-  // its own; escaping "<" there would corrupt it into "&lt;v Name>". We therefore
-  // let marked tokenize the text first, collect every code region, and escape all
-  // the prose *around* those regions. Delimiters (**, _, ~) and link/URL wrappers
-  // ([…](…), <https://…>) live in that prose, so they get escaped too — unknown
-  // tags in prose still round-trip, while marked's own syntax (which never
-  // carries a bare "<tag>") passes through unharmed.
-  //
-  // The lexer must run with the *same* options as the render below
-  // (marked(..., { breaks: true })). marked() merges its defaults, but a bare
-  // options object passed to marked.lexer() replaces them — dropping gfm and
-  // therefore table parsing — so the protective pass would tokenize a table as a
-  // paragraph and diverge from what actually gets rendered. Spread the defaults
-  // to keep the two token trees in lockstep.
-  #escapeUnknownHtmlTags(text) {
-    const tokens = marked.lexer(text, { ...marked.defaults, breaks: true })
-    const codeRegions = []
-    this.#collectCodeRegions(tokens, codeRegions)
-    return this.#escapeProseAroundCode(text, codeRegions)
-  }
-
-  // Walk the token tree depth-first, collecting the raw text of every code region
-  // (`code` blocks and inline `codespan`s) in document order. marked nests child
-  // tokens under different fields depending on the container — inline content,
-  // headings and blockquotes under `.tokens`; list items under `.items[]`; table
-  // cells under `.header[]` / `.rows[][]` — so #childTokens flattens them all and
-  // the walk reaches code wherever it nests, however deeply.
-  #collectCodeRegions(tokens, regions) {
-    for (const token of tokens) {
-      if (token.type === "code" || token.type === "codespan") {
-        regions.push(token.raw)
-      } else {
-        this.#collectCodeRegions(this.#childTokens(token), regions)
-      }
-    }
-  }
-
-  #childTokens(token) {
-    const cells = [ ...(token.header || []), ...(token.rows || []).flat() ]
-    return [
-      ...(token.tokens || []),
-      ...(token.items || []),
-      ...cells.flatMap((cell) => cell.tokens || [])
-    ]
-  }
-
-  // Escape unknown tags in the prose *between* the code regions. Each region's raw
-  // is found in order (indexOf from a moving cursor) and emitted untouched; the
-  // gap before it — and the trailing remainder — is prose we escape.
-  #escapeProseAroundCode(text, codeRegions) {
-    let result = ""
-    let cursor = 0
-    for (const codeRaw of codeRegions) {
-      const index = text.indexOf(codeRaw, cursor)
-      if (index === -1) continue
-
-      result += this.#escapeUnknownHtmlTagsInProse(text.slice(cursor, index)) + codeRaw
-      cursor = index + codeRaw.length
-    }
-    return result + this.#escapeUnknownHtmlTagsInProse(text.slice(cursor))
-  }
-
-  // Following CommonMark, marked() treats a bare "<" as the start of raw inline
-  // HTML. That is intentional for recognized tags (pasted plain text carrying
-  // <span style>, <mark>, <b>… is styled on import), but for an *unrecognized*
-  // element the Lexical importer has no converter and silently unwraps it,
-  // dropping the tag. WEBVTT speaker cues such as "<v Nabila Abdel Nabi>" — where
-  // the name lives in what the HTML parser reads as attributes — thus vanish
-  // entirely. Escape only the "<" of tags whose name is not a known HTML element
-  // so those sequences round-trip as literal text; leave known tags untouched so
-  // existing HTML-in-plain-text handling is preserved. ">" needs no escaping:
-  // once its "<" is escaped it is ordinary text that marked re-encodes.
-  //
-  // The name must be followed by an HTML tag boundary — whitespace, "/", ">",
-  // or end of input — so CommonMark autolinks keep working: "<https://…>" and
-  // "<me@example.com>" are followed by ":" and "@", never a boundary, so they
-  // fall through untouched and marked() still turns them into links.
-  #escapeUnknownHtmlTagsInProse(text) {
-    return text.replace(/<(\/?)([a-zA-Z][a-zA-Z0-9-]*)(?=[\s/>]|$)/g, (match, slash, name) => {
-      return this.#isKnownHtmlElement(name) ? match : `&lt;${slash}${name}`
-    })
-  }
-
-  #isKnownHtmlElement(name) {
-    return !(document.createElement(name) instanceof HTMLUnknownElement)
   }
 
   // Markdown conversion collapses runs of whitespace and unescapes backslashes,
@@ -401,4 +312,61 @@ function $bareUrlFromLink(linkNode) {
   const url = linkNode.getURL()
   if (!url) return null
   return linkNode.getTextContent() === url ? url : null
+}
+
+// A marked instance scoped to the paste flow (never mutate marked's global
+// defaults). Its options mirror the render pass #pasteMarkdown used before —
+// marked's defaults plus breaks: true — so gfm stays on and tables still parse.
+//
+// The only customization is the `html` renderer. Following CommonMark, marked
+// tokenizes a bare "<tag>" in prose as raw inline (or block) HTML. That is
+// intentional for recognized tags — pasted plain text carrying <span style>,
+// <mark>, <b>… is styled on import — but for an *unrecognized* element the
+// Lexical importer has no converter and silently unwraps it, dropping the tag.
+// WEBVTT speaker cues such as "<v Nabila Abdel Nabi>", where the name lives in
+// what the HTML parser reads as attributes, thus vanish entirely.
+//
+// Classifying at marked's html renderer rides its public token grammar instead
+// of shadowing it: marked routes code (`code`/`codespan`), autolinks and
+// [text](<dest>) links to *other* token types that never reach this renderer,
+// so their literal "<...>" content is preserved for free — no pre-escaping,
+// code-region collection, or lexer-option syncing required. This renderer fires
+// only for genuine raw-HTML tokens, and marked inserts its return value verbatim
+// (it does not re-encode), so we escape unknown tags to literal text here.
+const pasteMarked = new Marked({
+  ...marked.defaults,
+  breaks: true,
+  renderer: { html: renderPastedHtmlToken }
+})
+
+// Matches a single HTML tag lexeme: an optional "/", a tag name, then any run of
+// attribute characters up to the closing ">".
+const HTML_TAG_LEXEME = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)([^>]*)>/g
+
+// Escape unknown tags *within* the raw-HTML token, keeping known tags intact.
+// Lexeme-level (not whole-token) escaping matters because marked can emit a
+// single coarse block-HTML token whose first tag is known but which nests an
+// unknown one — e.g. "<div><v Name> Hello</div>" arrives as one token. We keep
+// the <div> so it still renders, and escape the nested <v Name> so it survives
+// as literal text rather than being unwrapped and dropped by the importer.
+function renderPastedHtmlToken(token) {
+  return token.text.replace(HTML_TAG_LEXEME, (lexeme, _slash, name) => {
+    return isSupportedHtmlElement(name) ? lexeme : escapeHtml(lexeme)
+  })
+}
+
+// The renderer's output is final, so escape the full lexeme — "&", "<" and ">" —
+// for an exact round-trip (e.g. "<v A&nbsp;B>" → "&lt;v A&amp;nbsp;B&gt;").
+function escapeHtml(text) {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+}
+
+// Proxy for "the Lexical importer has a converter for this tag." HTMLUnknownElement
+// covers the reported WEBVTT case and all invented tag names. Its limitation:
+// hyphenated custom elements (bc-attachment, action-text-attachment) are plain
+// HTMLElement, not HTMLUnknownElement, so they read as "supported" here — but they
+// don't reach this plain-text markdown paste path in practice (rich HTML with real
+// attachments is handled upstream), so the proxy is sufficient without an allowlist.
+function isSupportedHtmlElement(name) {
+  return !(document.createElement(name) instanceof HTMLUnknownElement)
 }
