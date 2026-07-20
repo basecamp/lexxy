@@ -1,5 +1,5 @@
-import { marked } from "marked"
 import { isAutolinkableURL } from "../helpers/string_helper"
+import { parsePastedMarkdown } from "../helpers/markdown_helper"
 import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
@@ -195,7 +195,7 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
-    const html = marked(text, { breaks: true })
+    const html = parsePastedMarkdown(text)
     const doc = parseHtml(html)
 
     if (this.#isPlainTextWithoutMarkdown(doc)) {
