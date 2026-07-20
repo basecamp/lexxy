@@ -637,7 +637,7 @@
       }
 
       span {
-        font-size: var(--lexxy-text-small);
+        font-size: 0.875em;
       }
 
       svg {
@@ -688,7 +688,7 @@
 
   &.lexxy-editor__toolbar-dropdown--link {
     [data-dropdown-panel] {
-      font-size: var(--lexxy-text-small);
+      font-size: 0.875em;
       gap: var(--lexxy-toolbar-spacing);
       inset-inline-start: var(--lexxy-toolbar-spacing);
       inset-inline-end: var(--lexxy-toolbar-spacing);
@@ -710,7 +710,7 @@
         color: var(--lexxy-color-text);
         block-size: var(--lexxy-toolbar-button-size);
         box-sizing: border-box;
-        font-size: var(--lexxy-text-small);
+        font-size: 0.875em;
         flex: 2;
         inline-size: 100%;
         line-height: inherit;
@@ -754,7 +754,7 @@
       border-start-start-radius: 0;
       gap: var(--lexxy-toolbar-spacing);
       flex-direction: column;
-      font-size: var(--lexxy-text-small);
+      font-size: 0.875em;
       inset-inline-start: 0;
       max-inline-size: var(--max-inline-size);
 
@@ -817,7 +817,7 @@
   --floating-tools-radius: calc(var(--lexxy-radius) * 1.5);
 
   color: var(--lexxy-color-ink-inverted);
-  font-size: var(--lexxy-text-small);
+  font-size: 0.875em;
   line-height: 1;
   position: absolute;
   z-index: 2;
@@ -1024,7 +1024,7 @@
       border-radius: var(--lexxy-radius);
       color: var(--lexxy-color-ink);
       font-family: var(--lexxy-font-base);
-      font-size: var(--lexxy-text-small);
+      font-size: 0.875em;
       font-weight: normal;
       margin: 0.5ch 0.5ch 0 -0.5ch;
       padding: 0 2ch 0 1ch;
@@ -1053,7 +1053,7 @@
   box-shadow: var(--lexxy-shadow);
   color: var(--lexxy-color-ink);
   font-family: var(--lexxy-font-base);
-  font-size: var(--lexxy-text-small);
+  font-size: 0.875em;
   list-style: none;
   inset-block-start: var(--lexxy-prompt-offset-y);
   inset-inline-start: var(--lexxy-prompt-offset-x);
