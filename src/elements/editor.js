@@ -416,7 +416,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #createEditor() {
-    this.editorContentElement ||= this.#createEditorContentElement()
+    this.editorContentElement ||= this.#prerenderedContentElement() || this.#createEditorContentElement()
     this.appendChild(this.editorContentElement)
 
     const editor = buildEditorFromExtensions({
@@ -464,6 +464,30 @@ export class LexicalEditorElement extends HTMLElement {
     }
 
     return nodes
+  }
+
+  // Adopt a content element the server prerendered inside us, if present.
+  // Rendering the body server-side and reusing it here gives the field its final
+  // height at first paint, avoiding the reflow from building the editor a frame
+  // after load. Lexical reconciles its parsed state into this element on mount,
+  // replacing the static markup with the live editor at the same height. Returns
+  // null when absent (the default), so the empty-editor path is unchanged.
+  #prerenderedContentElement() {
+    const element = this.querySelector(":scope > .lexxy-editor__content")
+    if (!element) return null
+
+    element.id ||= `${this.id}-content`
+    element.setAttribute("contenteditable", "true")
+    element.setAttribute("role", "textbox")
+    element.setAttribute("aria-multiline", "true")
+    if (!element.hasAttribute("aria-label")) element.setAttribute("aria-label", this.#labelText)
+    if (this.hasAttribute("placeholder")) element.setAttribute("placeholder", this.getAttribute("placeholder"))
+
+    this.#ariaAttributes.forEach(attribute => element.setAttribute(attribute.name, attribute.value))
+    this.#transferAttributeToContentEditable(element, "autocapitalize")
+    this.#transferAttributeToContentEditable(element, "tabindex", { defaultValue: 0, removeSource: true })
+
+    return element
   }
 
   #createEditorContentElement() {
