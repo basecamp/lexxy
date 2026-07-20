@@ -45,8 +45,8 @@ export function dispatch(element, eventName, detail = null, cancelable = false) 
 }
 
 export function addBlockSpacing(doc) {
-  const blocks = doc.querySelectorAll("body > :not(h1, h2, h3, h4, h5, h6) + *")
-  for (const block of blocks) {
+  const selector = "body > :not(h1, h2, h3, h4, h5, h6) + *, blockquote > :not(h1, h2, h3, h4, h5, h6) + *"
+  for (const block of doc.querySelectorAll(selector)) {
     const spacer = doc.createElement("p")
     spacer.appendChild(doc.createElement("br"))
     block.before(spacer)

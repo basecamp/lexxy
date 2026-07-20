@@ -91,6 +91,36 @@ test("highlightElement highlights a single pre element", () => {
   expect(pre.dataset.highlighted).toBe("true")
 })
 
+test("highlightElement preserves leading whitespace", () => {
+  const pre = appendPre("indented", "ruby", "    def hello")
+  document.body.appendChild(pre)
+
+  highlightElement(pre)
+
+  expect(pre.textContent).toBe("    def hello")
+})
+
+test("highlightElement preserves the alignment of an ASCII table with indented rows", () => {
+  const table = "+----+----+\n  | ab | cd |\n  |  e |  f |"
+  const pre = appendPre("ascii", "plain", table.replace(/\n/g, "<br>"))
+  document.body.appendChild(pre)
+
+  highlightElement(pre)
+
+  expect(pre.textContent).toBe(table)
+})
+
+test("highlightElement keeps color highlights on the right text when code is indented", () => {
+  const pre = appendPre("highlight", "ruby", "  def <mark style=\"background-color: yellow;\">hello</mark>")
+  document.body.appendChild(pre)
+
+  highlightElement(pre)
+
+  const mark = pre.querySelector("mark")
+  expect(mark.textContent).toBe("hello")
+  expect(mark.getAttribute("style")).toContain("background-color: yellow")
+})
+
 function appendPre(id, language, code) {
   const pre = document.createElement("pre")
   pre.id = id

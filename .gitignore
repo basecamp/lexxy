@@ -22,8 +22,8 @@
 
 Gemfile.lock
 
-# Jekyll docs
-/docs/_site/
-/docs/.jekyll-cache/
-/docs/.jekyll-metadata
-/docs/Gemfile.lock
+# Jekyll site
+/home/_site/
+/home/.jekyll-cache/
+/home/.jekyll-metadata
+/home/Gemfile.lock

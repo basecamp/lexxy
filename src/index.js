@@ -6,11 +6,13 @@ import { defineElements } from "./elements/index"
 import Lexxy from "./config/lexxy"
 
 export * from "./nodes"
+export * from "./commands"
 export { highlightCode, highlightElement } from "./helpers/code_highlighting_helper"
 export { NativeAdapter } from "./editor/adapters/native_adapter"
 
 export const configure = Lexxy.configure
 export { default as Extension } from "./extensions/lexxy_extension"
+export * as Lexical from "lexical"
 
 // Pushing elements definition to after the current call stack to allow global configuration to take place first
 setTimeout(defineElements, 0)

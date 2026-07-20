@@ -68,7 +68,7 @@ Playwright runs against a Vite dev server serving static HTML fixtures from `tes
 
 Playwright tests run across **Chromium, Firefox, and WebKit**, giving cross-browser coverage locally without external services. Start with one browser for fast iteration, then confirm across available browsers once the reproduction is solid.
 
-**Note:** WebKit may not launch on Arch Linux due to ABI-incompatible system libraries (see `docs/development.md`). Use Chromium and Firefox locally; WebKit coverage is guaranteed by CI.
+**Note:** WebKit may not launch on Arch Linux due to ABI-incompatible system libraries (see `home/docs/development.md`). Use Chromium and Firefox locally; WebKit coverage is guaranteed by CI.
 
 **Fallback:** if Playwright can't trigger the bug after 3 attempts (e.g., needs real OS-level events), fall back to Selenium WebDriver scripts.
 
@@ -452,6 +452,10 @@ These are areas where bugs tend to cluster, based on the architecture:
 **Provisional paragraph lifecycle** — The invisible paragraphs inserted around decorator nodes by `ProvisionalParagraphExtension`. They should appear when needed, disappear when not, and convert to real paragraphs when typed into. Bugs: they don't appear, they duplicate, they don't convert, or they persist when they shouldn't.
 
 **Gallery transforms** — `ImageGalleryNode` auto-collapses adjacent images, splits around non-image children, and unwraps when left with a single child. The transform runs per-pass, so multiple non-images embedded may need multiple passes.
+
+**Mid-update editor reads** — `editor.read()` (and anything that calls it: `el.value`, `#readSanitizedEditorValue`, `isEmpty`) commits the in-flight update when called inside an `editor.update()` callback, which silently skips all node transforms for that update. Bugs manifest as transform-derived state missing after load or setValue — list item numbering, list merging, gallery collapse, provisional paragraphs — while the same content behaves correctly when produced by editing. Some call sites are protected only by the `cachedValue` being warm, so reproductions may need a cold cache (fresh connect, initial `value` attribute).
+
+**Sanitizer allowlist round-trip drift** — Editor HTML passes through two attribute allowlists: DOMPurify when computing the form value (global `ALLOWED_HTML_ATTRIBUTES` plus per-tag `allowedElements` in `src/config/dom_purify.js` and extensions) and Loofah on save (`lib/lexxy/engine.rb`). Lexical sometimes splits state across attributes asymmetrically — e.g. ordered lists import only `ol[start]` but export both `ol[start]` and `li[value]` — so an allowlist that keeps the cosmetic attribute while stripping the semantic one breaks silently on the *next* edit, not the current one. Reproduce with a full round trip (load → read value, or edit → save → re-edit), and check both allowlists whenever a new node type or attribute is added.
 
 **Paste handling edge cases** — The clipboard handler has separate code paths for: only plain text, HTML with attachments, URLs (including Safari's `text/uri-list`), markdown, files, and content inside code blocks (bypasses Lexxy entirely). Bugs often appear at the boundary between these paths. Cross-app paste (Trix → Lexxy) is a key variant: Trix stores raw HTML in the `content` attribute of `<action-text-attachment>`, while Lexxy stores JSON-stringified HTML. Any code that parses `content` must handle both formats.
 

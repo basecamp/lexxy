@@ -8,13 +8,14 @@ import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
 import { $convertInlineImageDataURIs } from "../helpers/inline_image_uri_helper"
-import { CodeHighlightNode, CodeNode, registerCodeHighlighting } from "@lexical/code"
+import { CodeHighlightNode, CodeNode } from "@lexical/code"
 import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transformer"
 import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_tag_handler"
 
 import theme from "../config/theme"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import { UploadRequests } from "../editor/attachments/upload_requests"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
@@ -22,6 +23,7 @@ import { isAttachmentSpacerTextNode, isEditorFocused } from "../helpers/lexical_
 import { sanitize, setSanitizerConfig } from "../helpers/sanitization_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
+import HeadingDropdown from "./dropdown/heading"
 import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
@@ -33,6 +35,7 @@ import { styleResolverRoot } from "../helpers/style_resolver_root"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { exportTextNodeDOM } from "../helpers/text_node_export_helper"
 import { ProvisionalParagraphExtension } from "../extensions/provisional_paragraph_extension"
+import { CodeHighlightingExtension } from "../extensions/code_highlighting_extension"
 import { HighlightExtension } from "../extensions/highlight_extension"
 import { TrixContentExtension } from "../extensions/trix_content_extension"
 import { TablesExtension } from "../extensions/tables_extension"
@@ -41,6 +44,7 @@ import { AttachmentsExtension } from "../extensions/attachments_extension.js"
 import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 import { LinkOpenerExtension } from "../extensions/link_opener_extension.js"
 import { PreventLexicalTripleClickExtension } from "../extensions/prevent_lexical_triple_click_extension.js"
+import { CustomAttachmentDragAndDropExtension } from "../extensions/custom_attachment_drag_and_drop_extension.js"
 import { nextFrame } from "../helpers/timing_helper.js"
 
 
@@ -49,7 +53,7 @@ export class LexicalEditorElement extends HTMLElement {
   static debug = false
   static commands = [ "bold", "italic", "strikethrough" ]
 
-  static observedAttributes = [ "connected", "required" ]
+  static observedAttributes = [ "autocapitalize", "connected", "required" ]
 
   #initialValue = ""
   #previousInternalFormValue = null
@@ -62,11 +66,16 @@ export class LexicalEditorElement extends HTMLElement {
 
   #validity = new Map()
   #validationTextArea = document.createElement("textarea")
+  #uploadRequests
 
   constructor() {
     super()
     this.internals = this.attachInternals()
     this.internals.role = "presentation"
+  }
+
+  get uploadRequests() {
+    return this.#uploadRequests
   }
 
   connectedCallback() {
@@ -89,6 +98,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(this.clipboard)
 
     this.adapter = new BrowserAdapter()
+    this.#uploadRequests = new UploadRequests()
 
     const commandDispatcher = CommandDispatcher.configureFor(this)
     this.#disposables.push(commandDispatcher)
@@ -116,8 +126,15 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === "connected") this.connectedChangedCallback(oldValue, newValue)
-    if (name === "required") this.requiredChangedCallback(oldValue, newValue)
+    if (typeof this[`${name}ChangedCallback`] === "function") {
+      this[`${name}ChangedCallback`](oldValue, newValue)
+    }
+  }
+
+  autocapitalizeChangedCallback() {
+    if (this.editorContentElement) {
+      this.#transferAttributeToContentEditable(this.editorContentElement, "autocapitalize")
+    }
   }
 
   connectedChangedCallback(oldValue, newValue) {
@@ -180,6 +197,7 @@ export class LexicalEditorElement extends HTMLElement {
   get baseExtensions() {
     return [
       ProvisionalParagraphExtension,
+      CodeHighlightingExtension,
       HighlightExtension,
       TrixContentExtension,
       TablesExtension,
@@ -187,7 +205,8 @@ export class LexicalEditorElement extends HTMLElement {
       AttachmentsExtension,
       FormatEscapeExtension,
       LinkOpenerExtension,
-      PreventLexicalTripleClickExtension
+      PreventLexicalTripleClickExtension,
+      CustomAttachmentDragAndDropExtension
     ]
   }
 
@@ -342,8 +361,8 @@ export class LexicalEditorElement extends HTMLElement {
     return this.#historyState.redo
   }
 
-  #readSanitizedEditorValue(editor = this.editor) {
-    return editor?.read(() => {
+  #readSanitizedEditorValue() {
+    return this.editor?.read(() => {
       return sanitize($generateHtmlFromNodes(this.editor, null))
     }) ?? null
   }
@@ -377,7 +396,6 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #initialize() {
-    this.#synchronizeWithChanges()
     this.#registerComponents()
     this.#handleEnter()
     this.#registerFocusEvents()
@@ -386,6 +404,9 @@ export class LexicalEditorElement extends HTMLElement {
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#resetBeforeTurboCaches()
+
+    this.#setInternalFormValue(this.value, { suppressEvent: true })
+    this.#synchronizeWithChanges()
   }
 
   #registerFileAcceptFilter() {
@@ -413,7 +434,6 @@ export class LexicalEditorElement extends HTMLElement {
       $initialEditorState: (editor) => {
         this.#configureSanitizer(editor)
         this.#loadInitialValue(editor)
-        this.#setInternalFormValue(this.#readSanitizedEditorValue(editor))
       },
     },
       ...this.extensions.lexicalExtensions
@@ -452,25 +472,33 @@ export class LexicalEditorElement extends HTMLElement {
 
   #createEditorContentElement() {
     const editorContentElement = createElement("div", {
+      id: `${this.id}-content`,
       classList: "lexxy-editor__content",
       contenteditable: true,
-      autocapitalize: "none",
       role: "textbox",
       "aria-multiline": true,
       "aria-label": this.#labelText,
       placeholder: this.getAttribute("placeholder")
     })
-    editorContentElement.id = `${this.id}-content`
+
     this.#ariaAttributes.forEach(attribute => editorContentElement.setAttribute(attribute.name, attribute.value))
 
-    if (this.getAttribute("tabindex")) {
-      editorContentElement.setAttribute("tabindex", this.getAttribute("tabindex"))
-      this.removeAttribute("tabindex")
-    } else {
-      editorContentElement.setAttribute("tabindex", 0)
-    }
+    this.#transferAttributeToContentEditable(editorContentElement, "autocapitalize")
+    this.#transferAttributeToContentEditable(editorContentElement, "tabindex", { defaultValue: 0, removeSource: true })
 
     return editorContentElement
+  }
+
+  #transferAttributeToContentEditable(element, qualifiedName, { defaultValue = null, removeSource = false } = {}) {
+    if (this.hasAttribute(qualifiedName)) {
+      element.setAttribute(qualifiedName, this.getAttribute(qualifiedName))
+    } else if (defaultValue !== null) {
+      element.setAttribute(qualifiedName, defaultValue)
+    } else {
+      element.removeAttribute(qualifiedName)
+    }
+
+    if (removeSource) this.removeAttribute(qualifiedName)
   }
 
   get #labelText() {
@@ -481,13 +509,13 @@ export class LexicalEditorElement extends HTMLElement {
     return Array.from(this.attributes).filter(attribute => attribute.name.startsWith("aria-"))
   }
 
-  #setInternalFormValue(html) {
-    const changed = this.#previousInternalFormValue !== null && html !== this.#previousInternalFormValue
+  #setInternalFormValue(html, { suppressEvent = false } = {}) {
+    const changed = html !== this.#previousInternalFormValue
 
     this.internals.setFormValue(html)
     this.#previousInternalFormValue = html
 
-    if (changed) {
+    if (changed && !suppressEvent) {
       dispatch(this, "lexxy:change")
     }
   }
@@ -581,7 +609,7 @@ export class LexicalEditorElement extends HTMLElement {
         registerList(this.editor)
       )
       if (this.supportsTables) this.#registerTableComponents()
-      this.#registerCodeHiglightingComponents()
+      this.#registerCodeLanguagePicker()
       if (this.supportsMarkdown) {
         const transformers = [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ]
         registered.push(
@@ -603,8 +631,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(tableTools)
   }
 
-  #registerCodeHiglightingComponents() {
-    registerCodeHighlighting(this.editor)
+  #registerCodeLanguagePicker() {
     let codeLanguagePicker = this.querySelector("lexxy-code-language-picker")
     codeLanguagePicker ??= createElement("lexxy-code-language-picker")
     this.append(codeLanguagePicker)
@@ -820,11 +847,14 @@ export class LexicalEditorElement extends HTMLElement {
   get #supportedHeadingFormats() {
     if (!this.supportsRichText) return []
 
+    const headings = this.config.get("headings")
     return [
       { label: "Normal", command: "setFormatParagraph", tag: null },
-      { label: "Large heading", command: "setFormatHeadingLarge", tag: "h2" },
-      { label: "Medium heading", command: "setFormatHeadingMedium", tag: "h3" },
-      { label: "Small heading", command: "setFormatHeadingSmall", tag: "h4" },
+      ...headings.map((tag, index) => ({
+        label: HeadingDropdown.labelFor(tag, index),
+        command: HeadingDropdown.commandFor(index),
+        tag
+      }))
     ]
   }
 
@@ -858,6 +888,7 @@ export class LexicalEditorElement extends HTMLElement {
   #reset() {
     this.#dispose()
     this.#resetValidity()
+    this.#uploadRequests?.clear()
     this.editorContentElement?.remove()
     this.editorContentElement = null
 

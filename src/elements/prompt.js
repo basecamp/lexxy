@@ -32,6 +32,7 @@ export class LexicalPromptElement extends HTMLElement {
     this.source = this.#createSource()
 
     this.#addTriggerListener()
+    this.#removePopoverBeforeTurboCaches()
     this.toggleAttribute("connected", true)
   }
 
@@ -39,7 +40,7 @@ export class LexicalPromptElement extends HTMLElement {
     this.#popoverListeners.dispose()
     this.#globalListeners.dispose()
     this.source = null
-    this.popoverElement = null
+    this.#removePopover()
   }
 
 
@@ -160,22 +161,33 @@ export class LexicalPromptElement extends HTMLElement {
         const { node, offset } = this.#selection.selectedNodeWithOffset()
         if (!node) return
 
-        if ($isTextNode(node) && offset > 0) {
-          const fullText = node.getTextContent()
-          const textBeforeCursor = fullText.slice(0, offset)
-          const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger)
-          const triggerEndIndex = lastTriggerIndex + this.trigger.length - 1
-
-          // If trigger is not found, or cursor is at or before the trigger end position, hide popover
-          if (lastTriggerIndex === -1 || offset <= triggerEndIndex) {
-            this.#hidePopover()
+        if (this.#cursorIsTypingSearchTerm(node, offset)) {
+          if (!this.popoverElement.hasAttribute("data-anchored")) {
+            this.#positionPopover()
           }
         } else {
-          // Cursor is not in a text node or at offset 0, hide popover
           this.#hidePopover()
         }
       })
     }))
+  }
+
+  // The popover should stay open only while the cursor sits at the end of the
+  // trigger and its search term. When the cursor moves away — before the
+  // trigger, or past the token into later text — the text between the trigger
+  // and the cursor breaks that run and we dismiss. A newline always breaks the
+  // run; a space breaks it only for triggers that don't support spaces in
+  // searches, since those that do (e.g. `person:`) expect multi-word terms.
+  #cursorIsTypingSearchTerm(node, offset) {
+    if (!$isTextNode(node) || offset === 0) return false
+
+    const textBeforeCursor = node.getTextContent().slice(0, offset)
+    const lastTriggerIndex = textBeforeCursor.lastIndexOf(this.trigger)
+    if (lastTriggerIndex === -1) return false
+
+    const searchTerm = textBeforeCursor.slice(lastTriggerIndex + this.trigger.length)
+    const breakPattern = this.supportsSpaceInSearches ? /\n/ : /[ \n]/
+    return !breakPattern.test(searchTerm)
   }
 
   get #editor() {
@@ -283,8 +295,16 @@ export class LexicalPromptElement extends HTMLElement {
     }
   }
 
+  // Right after a Turbo history restore the editor reconnects before the DOM selection
+  // is re-established, so the cursor geometry is momentarily unavailable. Anchoring then
+  // would pin the menu to the editor's left edge for the rest of the open cycle, so we
+  // skip it and let a later reposition anchor it once the selection is ready. The menu
+  // stays hidden until anchored (see the `[data-anchored]` rule in the stylesheet).
   #positionPopover() {
-    const { x, y, fontSize } = this.#selection.cursorPosition
+    const cursorPosition = this.#selection.cursorPosition
+    if (!cursorPosition) return
+
+    const { x, y, fontSize } = cursorPosition
     const editorRect = this.#editorElement.getBoundingClientRect()
     const contentRect = this.#editorContentElement.getBoundingClientRect()
     const verticalOffset = contentRect.top - editorRect.top
@@ -333,6 +353,21 @@ export class LexicalPromptElement extends HTMLElement {
 
     await nextFrame()
     this.#addTriggerListener()
+  }
+
+  // The popover is appended to the <lexxy-editor> subtree, so Turbo serializes it
+  // into the page cache. Removing it before caching prevents an orphaned, unmanaged
+  // popover from being restored on history back/forward.
+  #removePopoverBeforeTurboCaches() {
+    this.#globalListeners.track(
+      registerEventListener(document, "turbo:before-cache", () => this.#removePopover())
+    )
+  }
+
+  #removePopover() {
+    this.#popoverListeners.dispose()
+    this.popoverElement?.remove()
+    this.popoverElement = null
   }
 
   #filterOptions = async () => {

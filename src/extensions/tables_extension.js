@@ -55,9 +55,13 @@ export class TablesExtension extends LexxyExtension {
             }
           }),
 
-          // Bug fix: Prevent hardcoded background color (Lexical #8089)
+          // A table in Lexxy is a Lexxy table: cell shading can't be set in the
+          // editor, so any cell background only ever comes from foreign content
+          // (pasted spreadsheets, loaded documents). Normalize every cell to no
+          // background so it adopts the current theme. This also clears
+          // Lexical's hardcoded default header background (Lexical #8089).
           editor.registerNodeTransform(TableCellNode, (node) => {
-            if (node.getBackgroundColor() === null) {
+            if (node.getBackgroundColor() !== "") {
               node.setBackgroundColor("")
             }
           }),

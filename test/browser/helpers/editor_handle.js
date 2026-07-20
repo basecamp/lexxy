@@ -88,6 +88,43 @@ export class EditorHandle {
     await this.flush()
   }
 
+  // Collapses the caret inside the first text node containing `text`, `offset`
+  // characters past its start.
+  async placeCaretInside(text, offset) {
+    await this.#ensureFirstInteraction()
+    await this.content.evaluate((el, { text, offset }) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      let node
+      while ((node = walker.nextNode())) {
+        const index = node.nodeValue.indexOf(text)
+        if (index !== -1) {
+          const range = document.createRange()
+          range.setStart(node, index + offset)
+          range.collapse(true)
+          const sel = window.getSelection()
+          sel.removeAllRanges()
+          sel.addRange(range)
+          break
+        }
+      }
+    }, { text, offset })
+    await this.flush()
+  }
+
+  // Selects the first block container (a quote) at an element point — a selection
+  // state mouse/keyboard can't produce, since Lexical normalizes DOM selections to leaves.
+  async placeCaretOnQuoteElement() {
+    await this.locator.evaluate((el) => {
+      return new Promise((resolve) => {
+        el.editor.update(() => {
+          const editorState = el.editor._pendingEditorState
+          const quote = editorState._nodeMap.get(editorState._nodeMap.get("root").__first)
+          quote.select(1, 1)
+        }, { onUpdate: resolve })
+      })
+    })
+  }
+
   async paste(text, { html, files = [], uriList } = {}) {
     await this.#ensureFirstInteraction()
     await this.content.evaluate(
@@ -162,9 +199,17 @@ export class EditorHandle {
   }
 
   async clickToolbarButton(command, toolbarSelector = "lexxy-toolbar") {
-    await this.page
-      .locator(`${toolbarSelector} [data-command="${command}"]`)
-      .click()
+    const toolbar = this.page.locator(toolbarSelector)
+
+    if (this.#isFormatDropdownCommand(command)) {
+      await toolbar.locator("button[name='format']").click()
+    }
+
+    if (command.startsWith(EditorHandle.#HEADING_BUTTON_PREFIX)) {
+      await toolbar.locator(`[name='${command}']`).click()
+    } else {
+      await toolbar.locator(`[data-command="${command}"]`).click()
+    }
   }
 
   async flush() {
@@ -202,6 +247,16 @@ export class EditorHandle {
   }
 
   // Private
+
+  // Heading buttons and Paragraph/Clear formatting live inside the "format"
+  // dropdown panel, which is hidden until its trigger is clicked.
+  static #HEADING_BUTTON_PREFIX = "heading-"
+  static #FORMAT_DROPDOWN_COMMANDS = new Set([ "setFormatParagraph", "clearFormatting" ])
+
+  #isFormatDropdownCommand(command) {
+    return EditorHandle.#FORMAT_DROPDOWN_COMMANDS.has(command) ||
+      command.startsWith(EditorHandle.#HEADING_BUTTON_PREFIX)
+  }
 
   #firstInteraction = false
 

@@ -1,0 +1,112 @@
+---
+layout: landing
+title: Home
+editor: true
+nav_exclude: true
+---
+
+<section class="hero">
+  <div class="hero--bg" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1504 689" aria-hidden="true" focusable="false"><path stroke-width="2" d="m.68 668.38 626.1 17.4s60.54 1.65 124.9 1.65c64.35 0 123.25-1.65 123.25-1.65l627.75-17.4"/><path stroke-width="2" d="m.68 626.65 626.1 52.2s60.54 4.97 124.9 4.97c64.35 0 123.25-4.97 123.25-4.97l627.75-52.2"/><path stroke-width="2" d="m.68 584.92 626.1 87s60.54 8.28 124.9 8.28c64.35 0 123.25-8.28 123.25-8.28l627.75-87"/><path stroke-width="2" d="M.68 543.2 626.78 665s60.54 11.6 124.9 11.6c64.35 0 123.25-11.6 123.25-11.6l627.75-121.8"/><path stroke-width="2" d="m.68 501.47 626.1 156.6s60.54 14.9 124.9 14.9c64.35 0 123.25-14.9 123.25-14.9l627.75-156.6"/><path stroke-width="2" d="m.68 459.74 626.1 191.4s60.54 18.22 124.9 18.22c64.35 0 123.25-18.21 123.25-18.21l627.75-191.4"/><path stroke-width="2" d="m.68 418.01 626.1 226.2s60.54 21.53 124.9 21.53c64.35 0 123.25-21.52 123.25-21.52l627.75-226.2"/><path stroke-width="2" d="m.68 376.29 626.1 261s60.54 24.84 124.9 24.84c64.35 0 123.25-24.84 123.25-24.84l627.75-261"/><path stroke-width="2" d="m.68 334.56 626.1 295.8s60.54 28.15 124.9 28.15c64.35 0 123.25-28.15 123.25-28.15l627.75-295.8"/><path stroke-width="2" d="m.68 292.83 626.1 330.61s60.54 31.46 124.9 31.46c64.35 0 123.25-31.46 123.25-31.46l627.75-330.6"/><path stroke-width="2" d="m.68 251.1 626.1 365.41s60.54 34.77 124.9 34.77c64.35 0 123.25-34.77 123.25-34.77l627.75-365.4"/><path stroke-width="2" d="m.68 209.38 626.1 400.2s60.54 38.09 124.9 38.09c64.35 0 123.25-38.08 123.25-38.08l627.75-400.21"/><path stroke-width="2" d="m.68 167.65 626.1 435s60.54 41.4 124.9 41.4c64.35 0 123.25-41.4 123.25-41.4l627.75-435"/><path stroke-width="2" d="m.68 125.92 626.1 469.8s60.54 44.71 124.9 44.71c64.35 0 123.25-44.7 123.25-44.7l627.75-469.81"/><path stroke-width="2" d="m.68 84.2 626.1 504.6s60.54 48.02 124.9 48.02c64.35 0 123.25-48.02 123.25-48.02l627.75-504.6"/><path stroke-width="2" d="m.68 42.46 626.1 539.41s60.54 51.33 124.9 51.33c64.35 0 123.25-51.33 123.25-51.33l627.75-539.4"/><path stroke-width="2" d="m.68.74 626.1 574.21s60.54 54.64 124.9 54.64c64.35 0 123.25-54.64 123.25-54.64L1502.68.74"/></svg>
+  </div>
+  <div class="container">
+    <h1 class="hero__tagline">A modern rich text editor for&nbsp;<strong>Rails</strong><i class="hero__caret"></i></h1>
+    <p class="hero__lead">Lexxy powers <a href="https://basecamp.com" class="hero__basecamp">Basecamp</a> and hundreds of other products.</p>
+    <p class="hero__lead">Clean HTML, Markdown shortcuts, code highlighting, attachments, and more, all wired straight into Action Text.</p>
+
+    <div class="hero__actions">
+      <a class="btn" href="{{ "/docs/" | relative_url }}">Read the docs</a>
+      <a class="btn" href="https://github.com/basecamp/lexxy" rel="nofollow">View on GitHub</a>
+    </div>
+
+    <lexxy-editor
+      class="lexxy-content"
+      placeholder="Try out Lexxy! Type, format, paste a link, or hit : to drop in an emoji..."
+      data-direct-upload-url="/rails/active_storage/direct_uploads"
+      data-blob-url-template="/rails/active_storage/blobs/:signed_id/:filename">
+      <lexxy-prompt trigger=":" insert-editable-text>
+        <lexxy-prompt-item search="joy laughing face"><template type="menu">😂 Joy</template><template type="editor">😂</template></lexxy-prompt-item>
+        <lexxy-prompt-item search="heart red heart"><template type="menu">❤️ Heart</template><template type="editor">❤️</template></lexxy-prompt-item>
+        <lexxy-prompt-item search="thumbs up like"><template type="menu">👍 Thumbs Up</template><template type="editor">👍</template></lexxy-prompt-item>
+        <lexxy-prompt-item search="fire hot lit"><template type="menu">🔥 Fire</template><template type="editor">🔥</template></lexxy-prompt-item>
+        <lexxy-prompt-item search="party popper celebration"><template type="menu">🎉 Party</template><template type="editor">🎉</template></lexxy-prompt-item>
+        <lexxy-prompt-item search="rocket launch"><template type="menu">🚀 Rocket</template><template type="editor">🚀</template></lexxy-prompt-item>
+        <lexxy-prompt-item search="100 hundred perfect"><template type="menu">💯 100</template><template type="editor">💯</template></lexxy-prompt-item>
+        <lexxy-prompt-item search="checkmark check mark"><template type="menu">✅ Check</template><template type="editor">✅</template></lexxy-prompt-item>
+      </lexxy-prompt>
+    </lexxy-editor>
+  </div>
+</section>
+
+<section class="section used-by">
+  <div class="used-by__logos"></div>
+</section>
+
+<section class="section section--features">
+  <div class="section__head">
+    <h2>Everything you&#8217;d expect, <span class="highlight">done right</span></h2>
+    <p>A focused set of features that respect your markup and your users.</p>
+  </div>
+  <div class="features">
+    <div class="feature">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M3.71 5.75H6.7V7.1H3.71zM7.37 5.75h2.99V7.1H7.37zM11.03 5.75h1.22V7.1h-1.22zM3.71 7.92H8.6v1.35H3.71zm5.56 0h2.98v1.35H9.27zM3.71 10.08H6.7v1.36H3.71zM7.37 10.08h2.99v1.36H7.37zM11.03 10.08h1.22v1.36h-1.22z"/><path d="M1 3.03h11.25V4.4h-9.9v8.4h9.9v1.36H1zm16 0h-2.03V4.4h.67v8.4h-.67v1.36H17z"/><path d="M11.58 2.36V1h4.2v1.36h-1.5v12.47h1.5v1.36h-4.2v-1.36h1.35V2.36z"/></svg>
+      <h3>Built on Lexical</h3>
+      <p>Powered by <a href="https://lexical.dev">Lexical</a>, Meta's extensible text-editor framework</p>
+    </div>
+    <div class="feature">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M6.3 3.8a1 1 0 1 1 1.4 1.4L3.92 9l3.8 3.8a1 1 0 1 1-1.42 1.4L1.8 9.7a1 1 0 0 1 0-1.4zM11.7 3.8a1 1 0 1 0-1.4 1.4L14.08 9l-3.8 3.8a1 1 0 1 0 1.42 1.4l4.5-4.5a1 1 0 0 0 0-1.4z"/></svg>
+      <h3>Clean HTML semantics</h3>
+      <p>Paragraphs are real <code>&lt;p&gt;</code> tags, as they should be</p>
+    </div>
+    <div class="feature">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M1.27 12.43V5.41h2.06L5.4 8l2.06-2.58h2.07v7.02H7.46V8.41L5.4 10.99 3.33 8.4v4.02zm12.9 0-3.1-3.4h2.07V5.4h2.06v3.62h2.07z"/></svg>
+      <h3>### Markdown support</h3>
+      <p><strong>**Inline**</strong> shortcuts and auto-formatting on paste, without leaving the editor</p>
+    </div>
+    <div class="feature">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M16.46 14.43a1.7 1.7 0 1 1-2.92 0L15 12z"/><path fill-rule="evenodd" d="M5.12 1.7a1 1 0 0 1 1.42 0l6.71 6.72a2.5 2.5 0 0 1 0 3.54L9.72 15.5a2.5 2.5 0 0 1-3.54 0l-3.53-3.54a2.5 2.5 0 0 1 0-3.54L6.18 4.9q.18-.18.4-.32L5.11 3.12a1 1 0 0 1 0-1.41M8.3 6.3a.5.5 0 0 0-.7 0L4.06 9.84 4 9.92a.5.5 0 0 0 0 .55l.02.03h7.86a.5.5 0 0 0-.04-.66z" clip-rule="evenodd"/></svg>
+      <h3 class="code"><span class="code__punctuation">&lt;%</span> <span class="code__function">Code</span> <span class="code__attr">highlighting</span> <span class="code__punctuation">%&gt;</span></h3>
+      <p>Real-time syntax highlighting for fenced code blocks as you type</p>
+    </div>
+    <div class="feature">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="m12.89 7.23 1.06-1.06a1.5 1.5 0 1 0-2.12-2.12L8.29 7.58a1 1 0 0 0-.07 1.34l.14.15a1 1 0 0 1-1.48 1.34 3 3 0 0 1 0-4.24l3.53-3.53a3.5 3.5 0 0 1 4.95 4.95L14.3 8.65a1 1 0 1 1-1.41-1.42"/><path d="m5.11 10.77-1.06 1.06a1.5 1.5 0 1 0 2.12 2.12l3.54-3.54a1 1 0 0 0 .07-1.34l-.14-.15a1 1 0 0 1 1.48-1.34 3 3 0 0 1 0 4.25l-3.54 3.53a3.5 3.5 0 0 1-4.95-4.95L3.7 9.35a1 1 0 0 1 1.41 1.42"/></svg>
+      <h3>Smart links</h3>
+      <p>Paste a URL over selected text to turn it into a link instantly</p>
+    </div>
+    <div class="feature">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M13 13.5V6a3.5 3.5 0 1 0-7 0v7.5c0 1.1.9 2 2 2h.23c.98 0 1.77-.8 1.77-1.77V7a.5.5 0 0 0-1 0v5.5a1 1 0 1 1-2 0V7a2.5 2.5 0 0 1 5 0v6.73a3.77 3.77 0 0 1-3.77 3.77H8a4 4 0 0 1-4-4V6a5.5 5.5 0 1 1 11 0v7.5a1 1 0 1 1-2 0"/></svg>
+      <h3>Attachment previews</h3>
+      <p>Preview <a href="{{ "/docs/attachments.html" | relative_url }}">attachments</a> like PDFs and videos right inside the editor</p>
+    </div>
+    <div class="feature">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M14 2a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3zM3.06 13.35A1 1 0 0 0 4 14h9.59L11 11.41l-1.3 1.3a1 1 0 1 1-1.4-1.42l.29-.29L7 9.41zM4 4a1 1 0 0 0-1 1v5.59l3.3-3.3.07-.07a1 1 0 0 1 1.34.07L10 9.6l.3-.3.07-.07a1 1 0 0 1 1.34.07L15 12.6V5a1 1 0 0 0-1-1zm8.5 1a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3"/></svg>
+      <h3>Image galleries</h3>
+      <p>Display images in a grid, with full drag-n-drop support</p>
+    </div>
+    <div class="feature">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M15 1a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V3c0-1.1.9-2 2-2zM3 15h5v-5H3zm7-5v5h5v-5zm0-2h5V3h-5zM3 8h5V3H3z"/></svg>
+      <h3>Tables</h3>
+      <p>Best-in-class UX for creating and editing tables</p>
+    </div>
+    <div class="feature">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M9 17.05a8 8 0 0 1-3.1-.62 8 8 0 0 1-2.56-1.72A7.86 7.86 0 0 1 1 9.03q0-1.65.63-3.11a8.06 8.06 0 0 1 10.44-4.34 7.7 7.7 0 0 1 4.8 7.08 5.5 5.5 0 0 1-1.12 3.38 3.3 3.3 0 0 1-4.06.8 2.3 2.3 0 0 1-.97-1.15q-.54.75-1.25 1.12-.72.37-1.46.37-.82 0-1.56-.42-.72-.45-1.18-1.27a4.4 4.4 0 0 1-.44-2.07q0-1.76.62-2.78.66-1.02 1.67-1.44a6 6 0 0 1 2.2-.44q.7 0 1.4.14.72.1 1.37.32v4.39q0 .78.37 1.2.4.4.88.4.75 0 1.2-.68.48-.69.54-2.01 0-1.7-.83-3.02A6.12 6.12 0 0 0 9 2.62q-1.35 0-2.51.51a6.6 6.6 0 0 0-3.41 3.44q-.5 1.16-.49 2.48a6.3 6.3 0 0 0 1.88 4.52 6.6 6.6 0 0 0 4.6 1.86q1.62 0 3.08-.84v1.81q-1.49.66-3.16.65m-.65-6.08q.55 0 1.05-.5.5-.54.5-1.56V6.96L9.5 6.9l-.44-.02q-.49 0-.95.2t-.74.73q-.28.53-.28 1.57 0 .8.37 1.21.39.4.9.4"/></svg>
+      <h3>Configurable prompts</h3>
+      <p>Mentions and interactive <a href="{{ "/docs/prompts.html" | relative_url }}">prompts</a> with flexible loading and filtering</p>
+    </div>
+    <div class="feature">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M11.5 2a1 1 0 0 1 1 1v.5a1 1 0 0 1-1 1H8V15a1 1 0 0 1-1 1h-.5a1 1 0 0 1-1-1V4.5H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M16 7a1 1 0 0 1 1 1v.5a1 1 0 0 1-1 1h-1V15a1 1 0 0 1-1 1h-.5a1 1 0 0 1-1-1V9.5h-1a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/></svg>
+      <h3>Action Text native</h3>
+      <p>Generates the canonical HTML Action Text expects — drop-in for <a href="https://trix-editor.org">Trix</a></p>
+    </div>
+    <div class="feature">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M9 1a8 8 0 1 1 0 16A8 8 0 0 1 9 1m0 2a6 6 0 1 0 0 12A6 6 0 0 0 9 3m0 2a1 1 0 0 1 1 1v2h2a1 1 0 1 1 0 2h-2v2a1 1 0 1 1-2 0v-2H6a1 1 0 0 1 0-2h2V6a1 1 0 0 1 1-1"/></svg>
+      <h3>Extendable</h3>
+      <p><a href="{{ "/docs/extensions.html" | relative_url }}">Extensions</a> allow you to write your own editor behavior</p>
+    </div>
+    <div class="feature">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" aria-hidden="true" focusable="false"><path d="M12 11a3 3 0 0 1 2.83 2H16a1 1 0 1 1 0 2h-1.17a3 3 0 0 1-5.66 0H2a1 1 0 1 1 0-2h7.17A3 3 0 0 1 12 11m0 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2M5 6a3 3 0 0 1 2.83 2H16a1 1 0 1 1 0 2H7.83a3 3 0 0 1-5.66 0H2a1 1 0 0 1 0-2h.17A3 3 0 0 1 5 6m0 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2m6-7a3 3 0 0 1 2.83 2H16a1 1 0 1 1 0 2h-2.17a3 3 0 0 1-5.66 0H2a1 1 0 0 1 0-2h6.17A3 3 0 0 1 11 1m0 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/></svg>
+      <h3>Customizable</h3>
+      <p>Written in vanilla JavaScript and CSS for easy customization</p>
+    </div>
+  </div>
+</section>

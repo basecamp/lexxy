@@ -15,6 +15,7 @@ export class TableTools extends HTMLElement {
   connectedCallback() {
     this.tableController = new TableController(this.#editorElement)
     this.classList.add("lexxy-floating-controls")
+    this.role = "toolbar"
 
     this.#setUpButtons()
     this.#hide()
@@ -145,14 +146,23 @@ export class TableTools extends HTMLElement {
   }
 
   #registerKeyboardShortcuts() {
-    this.#listeners.track(this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#handleAccessibilityShortcutKey, COMMAND_PRIORITY_HIGH))
+    this.#listeners.track(this.#editor.registerCommand(KEY_DOWN_COMMAND, this.#focusToolbarOnAltF10, COMMAND_PRIORITY_HIGH))
   }
 
-  #handleAccessibilityShortcutKey = (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === "F10") {
-      const firstButton = this.querySelector("button, [tabindex]:not([tabindex='-1'])")
-      firstButton?.focus()
+  #focusToolbarOnAltF10 = (event) => {
+    if (this.#hasSelectedTable && event.altKey && event.key === "F10") {
+      event.preventDefault()
+      // Ask for the ring explicitly: a programmatic focus coming from a mouse-focused
+      // editor otherwise inherits the mouse modality and paints no focus ring.
+      this.#tableToolsButtons[0]?.focus({ focusVisible: true })
+      return true
+    } else {
+      return false
     }
+  }
+
+  get #hasSelectedTable() {
+    return this.tableController?.currentTableNodeKey != null
   }
 
   #handleToolsKeydown = (event) => {
