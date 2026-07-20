@@ -247,6 +247,23 @@ test.describe("Paste — Plain text with angle brackets", () => {
     })
   })
 
+  // Regression: a quoted attribute value may contain ">" — the HTML tokenizer
+  // consumes it as part of the value, so the escape must match the full tag
+  // lexeme rather than stopping at the inner ">". Otherwise only the prefix is
+  // escaped and the tail (here an entity) reaches DOMParser, which decodes it
+  // instead of round-tripping it as literal text.
+  test("pasting an unknown tag with a quoted > in an attribute escapes the whole tag", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste('**b** <v title="a > b &nbsp;">hi</v>')
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("strong")).toHaveText("b")
+      await expect(content).toContainText('<v title="a > b &nbsp;">hi</v>')
+    })
+  })
+
   // Regression: code spans also nest inside table cells (`.header[]`/`.rows[][]`),
   // which carry no `.raw` and never live under `.tokens`. The walk must reach
   // them too. This also exercises the lexer-options fix: the protective pass

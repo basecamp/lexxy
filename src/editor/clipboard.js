@@ -339,9 +339,14 @@ const pasteMarked = new Marked({
   renderer: { html: renderPastedHtmlToken }
 })
 
-// Matches a single HTML tag lexeme: an optional "/", a tag name, then any run of
-// attribute characters up to the closing ">".
-const HTML_TAG_LEXEME = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)([^>]*)>/g
+// Matches a single HTML tag lexeme: an optional "/", a tag name, then attribute
+// characters up to the closing ">". Quoted attribute values may contain ">" —
+// the HTML tokenizer consumes them as part of the value, and marked's tag
+// grammar matches them into the same raw token — so the attribute run matches
+// quoted strings whole. Otherwise a lexeme like <v title="a > b"> would end at
+// the inner ">", escaping only the prefix and leaving the tail for DOMParser
+// to decode.
+const HTML_TAG_LEXEME = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:"[^"]*"|'[^']*'|[^'">])*)>/g
 
 // Escape unknown tags *within* the raw-HTML token, keeping known tags intact.
 // Lexeme-level (not whole-token) escaping matters because marked can emit a
