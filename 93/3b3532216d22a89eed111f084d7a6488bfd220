@@ -1,0 +1,21 @@
+src/editor/clipboard.js
+  s_fedea64458082c::t_16dbc97877486d 342-349
+test/browser/tests/paste/paste.test.js
+  s_fedea64458082c::t_1e91921bf0950f 250-266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "933b3532216d22a89eed111f084d7a6488bfd220",
+  "prompts": {},
+  "sessions": {
+    "s_fedea64458082c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fb771d89-9f87-4663-8699-ad204694ae83",
+        "model": "claude-fable-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
