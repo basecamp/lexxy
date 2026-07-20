@@ -17,7 +17,7 @@ gem "propshaft", "~> 1.0"
 
 gem "rubocop-rails-omakase", "~> 1.0", require: false
 gem "importmap-rails", "~> 2.0"
-gem "image_processing", "~> 1.0"
+gem "image_processing", "~> 2.0"
 
 gem "turbo-rails", "~> 2.0"
 gem "stimulus-rails", "~> 1.0"
