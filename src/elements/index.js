@@ -1,5 +1,6 @@
 import Toolbar from "./toolbar"
 import ToolbarDropdown from "./toolbar_dropdown"
+import HeadingDropdown from "./dropdown/heading"
 import HighlightDropdown from "./dropdown/highlight"
 import LinkDropdown from "./dropdown/link"
 import Editor from "./editor"
@@ -13,6 +14,7 @@ export function defineElements() {
     // Toolbar must be registered BEFORE Editor
     "lexxy-toolbar": Toolbar,
     "lexxy-toolbar-dropdown": ToolbarDropdown,
+    "lexxy-heading-dropdown": HeadingDropdown,
     "lexxy-highlight-dropdown": HighlightDropdown,
     "lexxy-link-dropdown": LinkDropdown,
 

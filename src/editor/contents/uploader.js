@@ -5,9 +5,9 @@ import { $createImageGalleryNode, $findOrCreateGalleryForImage, ImageGalleryNode
 export default class Uploader {
   #files
 
-  static for(editorElement, files) {
+  static for(editorElement, files, options = {}) {
     const UploaderKlass = GalleryUploader.handle(editorElement, files) ? GalleryUploader : Uploader
-    return new UploaderKlass(editorElement, files)
+    return new UploaderKlass(editorElement, files, options)
   }
 
   constructor(editorElement, files, options = {}) {
@@ -29,7 +29,13 @@ export default class Uploader {
   }
 
   $createUploadNodes() {
-    this.nodes = this.files.map(file => this.contents.$createUploadNode(file))
+    this.nodes = this.files.map(file => this.#createUploadNode(file))
+  }
+
+  #createUploadNode(file) {
+    return this.options.pending
+      ? this.contents.$createPendingUploadNode(file)
+      : this.contents.$createUploadNode(file)
   }
 
   $insertUploadNodes() {
@@ -69,7 +75,10 @@ class GalleryUploader extends Uploader {
 
   #findOrCreateGallery() {
     if (this.selection.isOnPreviewableImage) {
-      this.#gallery = $findOrCreateGalleryForImage(this.#selectedNode)
+      // Resolve from the previewable image itself (the selection's first node), not from
+      // #selectedNode (the anchor) — those differ when the selection runs from an image
+      // into following text, and the anchor text node can't join a gallery (returns null).
+      this.#gallery = $findOrCreateGalleryForImage(this.selection.previewableImageNode)
     } else if (this.#selectionIsAfterGalleryEdge) {
       this.#gallery = $findOrCreateGalleryForImage(this.selection.nodeBeforeCursor)
     } else {

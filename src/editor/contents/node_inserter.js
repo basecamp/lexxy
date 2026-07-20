@@ -1,88 +1,23 @@
-import { $createLineBreakNode, $createParagraphNode, $createTextNode, $getChildCaretAtIndex, $isElementNode, $isLineBreakNode, $isNodeSelection } from "lexical"
-import { CodeNode } from "@lexical/code"
-import { $ensureForwardRangeSelection } from "@lexical/selection"
-import { $getNearestNodeOfType } from "@lexical/utils"
-import { $isShadowRoot } from "../../helpers/lexical_helper"
+import BaseNodeInserter from "./node_inserter/base_node_inserter"
+import CodeNodeInserter from "./node_inserter/code_node_inserter"
+import ShadowRootNodeInserter from "./node_inserter/shadow_root_node_inserter"
+import NodeSelectionNodeInserter from "./node_inserter/node_selection_node_inserter"
+import ListItemNodeInserter from "./node_inserter/list_item_node_inserter"
+import BlockContainerNodeInserter from "./node_inserter/block_container_node_inserter"
 
-export default class NodeInserter {
-  static for(selection) {
-    const INSERTERS = [
-      CodeNodeInserter,
-      ShadowRootNodeInserter,
-      NodeSelectionNodeInserter
-    ]
-    const Inserter = INSERTERS.find(inserter => inserter.handles(selection))
-    return Inserter ? new Inserter(selection) : selection
-  }
+const INSERTERS = [
+  CodeNodeInserter,
+  ShadowRootNodeInserter,
+  NodeSelectionNodeInserter,
+  ListItemNodeInserter,
+  BlockContainerNodeInserter
+]
 
-  constructor(selection) {
-    this.selection = selection
-  }
+// Defined here rather than on the base class so the base can stay free of any
+// dependency on its subclasses (they import the base), avoiding an import cycle.
+BaseNodeInserter.for = (selection) => {
+  const inserterClass = INSERTERS.find(inserter => inserter.handles(selection))
+  return inserterClass ? new inserterClass(selection) : selection
 }
 
-class CodeNodeInserter extends NodeInserter {
-  static handles(selection) {
-    return $getNearestNodeOfType(selection.anchor?.getNode(), CodeNode)
-  }
-
-  insertNodes(nodes) {
-    if (!this.selection.isCollapsed()) { this.selection.removeText() }
-
-    $ensureForwardRangeSelection(this.selection)
-    const focusNode = this.selection.focus.getNode()
-    const codeNode = $getNearestNodeOfType(focusNode, CodeNode)
-    const insertionIndex = focusNode.is(codeNode) ? 0 : focusNode.getIndexWithinParent()
-
-    const caret = $getChildCaretAtIndex(codeNode, insertionIndex + 1, "previous")
-
-    for (const node of nodes) {
-      if (!node.isAttached()) continue
-      if (caret.getNodeAtCaret() && $isElementNode(node)) { caret.insert($createLineBreakNode()) }
-
-      caret.insert(this.#convertNodeToCodeChild(node))
-    }
-
-    caret.getNodeAtCaret().selectEnd()
-  }
-
-  #convertNodeToCodeChild(node) {
-    if ($isLineBreakNode(node)) {
-      return node
-    } else {
-      node.remove()
-      return $createTextNode(node.getTextContent())
-    }
-  }
-
-}
-
-class ShadowRootNodeInserter extends NodeInserter {
-  static handles(selection) {
-    return $isShadowRoot(selection?.anchor.getNode())
-  }
-
-  insertNodes(nodes) {
-    const anchorNode = this.selection.anchor.getNode()
-    const paragraph = $createParagraphNode()
-    anchorNode.append(paragraph)
-
-    paragraph.selectStart().insertNodes(nodes)
-  }
-}
-
-class NodeSelectionNodeInserter extends NodeInserter {
-  static handles(selection) {
-    return $isNodeSelection(selection)
-  }
-
-  insertNodes(nodes) {
-    const selectedNodes = this.selection.getNodes()
-
-    // Overrides Lexical's default behavior of _removing_ the currently selected nodes
-    // https://github.com/facebook/lexical/blob/v0.38.2/packages/lexical/src/LexicalSelection.ts#L412
-    let lastNode = selectedNodes.at(-1)
-    for (const node of nodes) {
-      lastNode = lastNode.insertAfter(node)
-    }
-  }
-}
+export default BaseNodeInserter

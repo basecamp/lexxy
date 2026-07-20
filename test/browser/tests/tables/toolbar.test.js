@@ -1,0 +1,44 @@
+import { test } from "../../test_helper.js"
+import { expect } from "@playwright/test"
+
+test.describe("Tables — Toolbar accessibility", () => {
+  test.beforeEach(async ({ page, editor }) => {
+    await page.goto("/")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await page.waitForSelector("lexxy-toolbar[connected]")
+    await editor.clickToolbarButton("insertTable")
+    await editor.content.locator("table th").first().click()
+  })
+
+  test("Alt+F10 moves focus to the first table tool", async ({ page, editor }) => {
+    await page.keyboard.press("Alt+F10")
+
+    await expect(
+      editor.locator.locator("lexxy-table-tools button[aria-label='Remove row']").first()
+    ).toBeFocused()
+  })
+
+  test("Alt+F10 shows a visible focus ring on the first table tool", async ({ page, editor }) => {
+    await page.keyboard.press("Alt+F10")
+
+    const firstTool = editor.locator.locator("lexxy-table-tools button[aria-label='Remove row']").first()
+    await expect(firstTool).toBeFocused()
+    await expect.poll(() => firstTool.evaluate(element => element.matches(":focus-visible"))).toBe(true)
+  })
+
+  test("arrow keys move focus between table tools", async ({ page, editor }) => {
+    await page.keyboard.press("Alt+F10")
+    await page.keyboard.press("ArrowRight")
+
+    await expect(
+      editor.locator.locator("lexxy-table-tools .lexxy-table-control--row summary")
+    ).toBeFocused()
+  })
+
+  test("Escape returns focus to the table", async ({ page, editor }) => {
+    await page.keyboard.press("Alt+F10")
+    await page.keyboard.press("Escape")
+
+    await expect(editor.content).toBeFocused()
+  })
+})

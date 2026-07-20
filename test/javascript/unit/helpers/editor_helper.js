@@ -1,4 +1,4 @@
-import { $getRoot } from "lexical"
+import { $getRoot, $isTextNode } from "lexical"
 import { defineElements } from "../../../../src/elements/index"
 import { NativeAdapter } from "../../../../src/editor/adapters/native_adapter"
 
@@ -84,6 +84,13 @@ export function selectEnd(editorElement) {
   editorElement.editor.update(() => {
     $getRoot().selectEnd()
   })
+}
+
+export function selectFirstText(editorElement, offset = 0) {
+  editorElement.editor.update(() => {
+    const text = $getRoot().getFirstDescendant()
+    if ($isTextNode(text)) text.select(offset, offset)
+  }, { discrete: true })
 }
 
 export function captureEvent(element, eventName, fn) {

@@ -14,15 +14,15 @@ test.describe("Block formatting", () => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
 
-    await clickToolbarButton(page, "setFormatHeadingLarge")
+    await clickToolbarButton(page, "heading-large")
     await assertEditorHtml(editor, "<h2>Hello everyone</h2>")
 
     await editor.select("everyone")
-    await clickToolbarButton(page, "setFormatHeadingMedium")
+    await clickToolbarButton(page, "heading-medium")
     await assertEditorHtml(editor, "<h3>Hello everyone</h3>")
 
     await editor.select("everyone")
-    await clickToolbarButton(page, "setFormatHeadingSmall")
+    await clickToolbarButton(page, "heading-small")
     await assertEditorHtml(editor, "<h4>Hello everyone</h4>")
 
     await editor.select("everyone")
@@ -348,6 +348,33 @@ test.describe("Block formatting", () => {
     await assertEditorHtml(
       editor,
       "<blockquote><p>Line one<br>Line two<br>Line three</p></blockquote>",
+    )
+  })
+
+  test("quote does not absorb the paragraph above when the selection anchors at its end", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>ABCD:</p><p>pasted one<br>pasted two</p>")
+
+    await editor.content.evaluate((el) => {
+      const paragraphs = el.querySelectorAll("p")
+      const range = document.createRange()
+      range.setStart(paragraphs[0], paragraphs[0].childNodes.length)
+      const walker = document.createTreeWalker(paragraphs[1], NodeFilter.SHOW_TEXT)
+      let lastTextNode, node
+      while ((node = walker.nextNode())) lastTextNode = node
+      range.setEnd(lastTextNode, lastTextNode.nodeValue.length)
+      const selection = window.getSelection()
+      selection.removeAllRanges()
+      selection.addRange(range)
+    })
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>ABCD:</p><blockquote><p>pasted one<br>pasted two</p></blockquote>",
     )
   })
 

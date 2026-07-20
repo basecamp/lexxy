@@ -7,14 +7,13 @@ import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
 import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
-import { nextFrame } from "../helpers/timing_helper"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
 import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } from "../helpers/lexical_helper"
 import { LinkNode } from "@lexical/link"
-import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
+import { $isHeadingNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
-import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
+import { ListenerBin, handlingDefault, registerEventListener } from "../helpers/listener_helper"
 
 export default class Selection {
   #listeners = new ListenerBin()
@@ -39,14 +38,14 @@ export default class Selection {
   }
 
   get cursorPosition() {
-    let position = { x: 0, y: 0 }
+    let position = null
 
     this.editor.getEditorState().read(() => {
       const range = this.#getValidSelectionRange()
       if (!range) return
 
       const rect = this.#getReliableRectFromRange(range)
-      if (!rect) return
+      if (this.#isRectUnreliable(rect)) return
 
       position = this.#calculateCursorPosition(rect, range)
     })
@@ -159,6 +158,10 @@ export default class Selection {
     return this.nearestNodeOfType(ListItemNode)
   }
 
+  get isInsideBlockQuote() {
+    return this.nearestNodeOfType(QuoteNode)
+  }
+
   get isIndentedList() {
     const closestListNode = this.nearestNodeOfType(ListNode)
     return closestListNode && ($getListDepth(closestListNode) > 1)
@@ -177,9 +180,12 @@ export default class Selection {
   }
 
   get isOnPreviewableImage() {
-    const selection = $getSelection()
-    const firstNode = selection?.getNodes().at(0)
-    return $isActionTextAttachmentNode(firstNode) && firstNode.isPreviewableImage
+    return this.previewableImageNode != null
+  }
+
+  get previewableImageNode() {
+    const firstNode = $getSelection()?.getNodes().at(0)
+    return $isActionTextAttachmentNode(firstNode) && firstNode.isPreviewableImage ? firstNode : null
   }
 
   get isAtNodeStart() {
@@ -330,10 +336,10 @@ export default class Selection {
 
   #processSelectionChangeCommands() {
     this.#listeners.track(
-      this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, this.#selectPreviousNode.bind(this), COMMAND_PRIORITY_LOW),
-      this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#selectNextNode.bind(this), COMMAND_PRIORITY_LOW),
-      this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousTopLevelNode.bind(this), COMMAND_PRIORITY_LOW),
-      this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextTopLevelNode.bind(this), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, handlingDefault(this.#selectPreviousNode.bind(this)), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, handlingDefault(this.#selectNextNode.bind(this)), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_UP_COMMAND, handlingDefault(this.#selectPreviousTopLevelNode.bind(this)), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, handlingDefault(this.#selectNextTopLevelNode.bind(this)), COMMAND_PRIORITY_LOW),
 
       this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW),
 
@@ -432,49 +438,58 @@ export default class Selection {
     }
   }
 
-  async #selectPreviousNode(event) {
-    if (event?.shiftKey) return false
+  #selectPreviousNode(event) {
+    if (event.shiftKey) {
+      return this.#withCurrentNodeSelectionNode((currentNode) => {
+        const selection = this.#rangeSelectDecorator(currentNode, "forward")
 
-    if (this.hasNodeSelection) {
-      return await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
-    } else {
-      return this.#selectInLexical(this.nodeBeforeCursor)
-    }
-  }
-
-  async #selectNextNode(event) {
-    if (event?.shiftKey) return false
-
-    if (this.hasNodeSelection) {
-      return await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
-    } else {
-      return this.#selectInLexical(this.nodeAfterCursor)
-    }
-  }
-
-  async #selectPreviousTopLevelNode() {
-    if (this.hasNodeSelection) {
-      return await this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectPrevious())
-    } else {
-      return this.#selectInLexical(this.topLevelNodeBeforeCursor)
-    }
-  }
-
-  async #selectNextTopLevelNode() {
-    if (this.hasNodeSelection) {
-      return await this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectNext(0, 0))
-    } else {
-      return this.#selectInLexical(this.topLevelNodeAfterCursor)
-    }
-  }
-
-  async #withCurrentNode(fn) {
-    await nextFrame()
-    if (this.hasNodeSelection) {
-      this.editor.update(() => {
-        fn($getSelection().getNodes()[0])
-        this.editor.focus()
+        // Can't rely on native pass-through with Playwright on firefox
+        selection.modify("extend", true, "character")
+        return true
       })
+    } else {
+      return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.selectPrevious())
+        || this.#selectInLexical(this.nodeBeforeCursor)
+    }
+  }
+
+  #selectNextNode(event) {
+    if (event.shiftKey) {
+      return this.#withCurrentNodeSelectionNode((currentNode) => {
+        const selection = this.#rangeSelectDecorator(currentNode, "forward")
+
+        // Can't rely on native pass-through with Playwright on firefox
+        selection.modify("extend", false, "character")
+        return true
+      })
+    } else {
+      return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.selectNext(0, 0))
+        || this.#selectInLexical(this.nodeAfterCursor)
+    }
+  }
+
+  #selectPreviousTopLevelNode() {
+    return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.getTopLevelElement().selectPrevious())
+      || this.#selectInLexical(this.topLevelNodeBeforeCursor)
+  }
+
+  #selectNextTopLevelNode() {
+    return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.getTopLevelElement().selectNext(0, 0))
+      || this.#selectInLexical(this.topLevelNodeAfterCursor)
+  }
+
+  #withCurrentNodeSelectionNode(fn) {
+    if (this.hasNodeSelection) {
+      return fn($getSelection().getNodes()[0])
+    }
+  }
+
+  #rangeSelectDecorator(node, direction = "forward") {
+    if ($isDecoratorNode(node)) {
+        const [ anchorOffset, focusOffset ] = direction === "forward" ? [ 0, 1 ] : [ 1, 0 ]
+        const indexAtNode = node.getIndexWithinParent()
+
+        return node.getParent().select(indexAtNode + anchorOffset, indexAtNode + focusOffset)
     }
   }
 
@@ -583,6 +598,9 @@ export default class Selection {
   // - First item (no previous sibling): convert to a paragraph above the
   //   list, matching the standard "unwrap list formatting" behavior that
   //   users expect from pressing backspace at the start of a list item.
+  //   Inside a blockquote we instead just remove the empty item and move
+  //   the cursor into the next one — stranding a paragraph there would
+  //   leave the blank line the user is trying to close.
   //
   // When the empty item is the last/only one in the list, we return false
   // and let Lexical's default (convert to paragraph) provide the standard
@@ -601,19 +619,22 @@ export default class Selection {
     if (!nextSibling) return false
 
     const previousSibling = listItem.getPreviousSibling()
-    if (previousSibling) {
-      previousSibling.selectEnd()
-      listItem.remove()
-      return true
-    }
-
     const listNode = $getNearestNodeOfType(listItem, ListNode)
     if (!listNode) return false
 
-    const paragraph = $createParagraphNode()
-    listNode.insertBefore(paragraph)
-    listItem.remove()
-    paragraph.selectStart()
+    if (previousSibling) {
+      previousSibling.selectEnd()
+      listItem.remove()
+    } else if ($isQuoteNode(listNode.getParent())) {
+      nextSibling.selectStart()
+      listItem.remove()
+    } else {
+      const paragraph = $createParagraphNode()
+      listNode.insertBefore(paragraph)
+      listItem.remove()
+      paragraph.selectStart()
+    }
+
     return true
   }
 
