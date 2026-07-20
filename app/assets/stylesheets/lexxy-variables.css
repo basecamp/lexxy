@@ -71,7 +71,7 @@
   /* Typography */
   --lexxy-font-base: system-ui, sans-serif;
   --lexxy-font-mono: ui-monospace, "Menlo", "Monaco", Consolas, monospace;
-  --lexxy-text-small: 0.875rem;
+  --lexxy-text-size: 1rem;
   --lexxy-content-margin: 1rem;
 
   /* Focus ring */
