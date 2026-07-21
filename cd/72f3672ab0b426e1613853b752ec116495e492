@@ -1,0 +1,26 @@
+test/browser/tests/editor/focus_preservation.test.js
+  s_dfdd186b5e41fe::t_f9fbe21ddeb6c6 12-17,23,25-48,51
+  s_dfdd186b5e41fe::t_509c7f48cad174 1-11,18-22,24,49-50,52-71
+src/editor/selection.js
+  s_dfdd186b5e41fe::t_cdc268b25d8164 3-4
+  s_dfdd186b5e41fe::t_38ea3004816051 349-354,358-359,363-364,366-375
+  s_dfdd186b5e41fe::t_589dbc290a6e59 360-362,365
+  s_dfdd186b5e41fe::t_01d87137e47bc4 5
+  s_dfdd186b5e41fe::t_764dbd6c546d9f 376
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "cd72f3672ab0b426e1613853b752ec116495e492",
+  "prompts": {},
+  "sessions": {
+    "s_dfdd186b5e41fe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c6005b0-156f-46e1-9ba0-e00ba3e2f93e",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
