@@ -1,6 +1,7 @@
-import { $addUpdateTag, $getRoot, $getSelection, $isRootOrShadowRoot, COMMAND_PRIORITY_HIGH, HISTORY_MERGE_TAG, RootNode, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
+import { $addUpdateTag, $getEditor, $getRoot, $getSelection, $isRootOrShadowRoot, COMMAND_PRIORITY_HIGH, HISTORY_MERGE_TAG, RootNode, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
 import { $descendantsMatching, $firstToLastIterator, $insertFirst, mergeRegister } from "@lexical/utils"
 import { $isProvisionalParagraphNode, ProvisionalParagraphNode } from "../nodes/provisional_paragraph_node"
+import { isEditorFocused } from "../helpers/lexical_helper"
 import LexxyExtension from "./lexxy_extension"
 
 
@@ -55,6 +56,13 @@ function $removeUnneededProvisionalParagraphs(rootNode) {
 }
 
 function $markAllProvisionalParagraphsDirty() {
+  // A provisional paragraph's visibility follows the editor's caret, so there is
+  // nothing to update while the editor is unfocused. Bailing also avoids a
+  // reconcile that would write our selection back to the DOM and steal focus when
+  // the selectionchange came from elsewhere on the page — Gecko (Firefox 152)
+  // fires selectionchange for outside inputs, Blink and older Gecko do not.
+  if (!isEditorFocused($getEditor())) return false
+
   // Selection-driven visibility updates must not become standalone undo steps.
   $addUpdateTag(HISTORY_MERGE_TAG)
 
