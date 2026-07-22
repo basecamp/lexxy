@@ -15,14 +15,15 @@ test.describe("Focus stays put with a caret between stacked images (#1147)", () 
     await placeCaretBetweenStackedImages(page)
   })
 
-  test("a selection change elsewhere on the page does not pull focus back into the editor", async ({ page, editor }) => {
+  test("a selection change elsewhere on the page does not pull focus back into the editor", async ({ page }) => {
     const input = page.locator("input[name='post[title]']")
     await input.click()
     await expect(input).toBeFocused()
 
     // Firefox 152 fires selectionchange for an outside input's caret; Blink and
-    // older Gecko do not. Replay that signal directly so the regression is covered
-    // on every browser — without the guard it drives a focus-stealing reconcile.
+    // older Gecko do not, so replaying the native event can't cover this on the
+    // bundled browser. Dispatch the command Lexical would raise instead — without
+    // the guard it drives a focus-stealing reconcile on every engine.
     await dispatchSelectionChange(page)
 
     await expect(input).toBeFocused()
@@ -44,6 +45,8 @@ async function placeCaretBetweenStackedImages(page) {
   await editor.locator(".lexxy-editor__content").evaluate((content) => {
     const between = [ ...content.children ].find((child, index) =>
       child.classList.contains("provisional-paragraph") && content.children[index - 1]?.tagName === "FIGURE")
+    if (!between) throw new Error("expected a provisional paragraph between the two stacked images")
+
     const range = document.createRange()
     range.selectNodeContents(between)
     range.collapse(true)
@@ -55,11 +58,9 @@ async function placeCaretBetweenStackedImages(page) {
 }
 
 async function dispatchSelectionChange(page) {
-  const dispatched = await page.locator("lexxy-editor").evaluate((el) => {
-    const command = [ ...el.editor._commands.keys() ].find((candidate) => candidate?.type === "SELECTION_CHANGE_COMMAND")
-    if (!command) return false
-    el.editor.dispatchCommand(command, undefined)
-    return true
+  await page.addScriptTag({ type: "module", url: "/selection_change_command.js" })
+  await page.waitForFunction(() => !!window.SELECTION_CHANGE_COMMAND)
+  await page.locator("lexxy-editor").evaluate((el) => {
+    el.editor.dispatchCommand(window.SELECTION_CHANGE_COMMAND, undefined)
   })
-  expect(dispatched, "SELECTION_CHANGE_COMMAND must be resolvable for this regression to have teeth").toBe(true)
 }
