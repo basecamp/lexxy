@@ -384,6 +384,16 @@ a:not(.btn) {
       font-size: 0.9em;
       line-height: 1.3em;
     }
+
+    /* Reserve the exact mounted height before the editor upgrades. Lexxy's own
+       pre-upgrade reservation resolves lh/ch against the host, which overshoots
+       here: the toolbar renders at 0.9em/1.3 (above), and the border-box reset
+       makes the content's 8lh minimum absorb its padding. Mounted height:
+       toolbar (2 lines × 0.9em × 1.3 + 4px padding + 1px border)
+       + content (8 rows × 1.6 line-height) + host borders (2px). */
+    &:not(:defined) {
+      min-block-size: calc(2.34em + 12.8em + 7px);
+    }
   }
 }
 
@@ -653,7 +663,7 @@ a:not(.btn) {
 
   lexxy-editor {
     --lexxy-color-canvas: var(--bg);
-    --lexxy-editor-rows: 30lh;
+    --lexxy-editor-rows: 35lh;
     font-size: 1em;
     inline-size: 100%;
     margin: 0 auto;
@@ -670,6 +680,15 @@ a:not(.btn) {
       inset-block-start: 0;
       position: sticky;
       z-index: 10;
+    }
+
+    /* Same pre-upgrade reservation as the hero editor, with this section's
+       metrics: toolbar (2 lines × 0.8em × 1.25 + 5px chrome) + content
+       (35 rows × 1.6 line-height) + host borders (2px). 35 rows covers the
+       sandbox's preloaded value at desktop widths, so the minimum — and with
+       it the reservation — matches the mounted height. */
+    &:not(:defined) {
+      min-block-size: calc(2em + 56em + 7px);
     }
   }
 
@@ -703,6 +722,10 @@ a:not(.btn) {
 
       lexxy-editor {
         --lexxy-editor-rows: 20lh;
+
+        &:not(:defined) {
+          min-block-size: calc(2em + 32em + 7px);
+        }
       }
     }
 
