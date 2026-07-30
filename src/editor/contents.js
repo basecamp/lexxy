@@ -69,9 +69,9 @@ export default class Contents {
     if (normalizedText?.includes("\n") && $isRangeSelection(selection)) {
       selection.insertRawText(normalizedText)
       return true
+    } else {
+      return false
     }
-
-    return false
   }
 
   insertAtCursor(...nodes) {
