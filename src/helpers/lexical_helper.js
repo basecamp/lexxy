@@ -1,4 +1,4 @@
-import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
+import { $caretFromPoint, $createLineBreakNode, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
@@ -92,6 +92,24 @@ export function extendConversion(nodeKlass, conversionName, callback = (output =
 
     return callback(conversionOutput, element) ?? conversionOutput
   }
+}
+
+// Lexical drops a <br> that ends a block element on import, treating it as
+// contenteditable filler. A line break at the end of a list item is real content
+// the user added with Shift+Enter, so keep it. A <br> that is a list item's only
+// child stays subject to the default filler rules.
+export function importListItemTrailingLineBreak(domNode) {
+  if (isTrailingLineBreakAfterListItemContent(domNode)) {
+    return { conversion: () => ({ node: $createLineBreakNode() }), priority: 1 }
+  }
+
+  return null
+}
+
+function isTrailingLineBreakAfterListItemContent(domNode) {
+  const parent = domNode.parentElement
+  return parent !== null && parent.tagName === "LI" &&
+    domNode.nextSibling === null && domNode.previousSibling !== null
 }
 
 export function $isCursorOnLastLine(selection) {
