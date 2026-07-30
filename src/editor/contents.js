@@ -64,13 +64,14 @@ export default class Contents {
   // but collapses to a space once serialized to HTML, so it has to become line break nodes.
   insertTextWithLineBreaks(text) {
     const normalizedText = text?.replace(/\r\n?/g, "\n")
-    if (!normalizedText?.includes("\n")) return false
-
     const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return false
 
-    selection.insertRawText(normalizedText)
-    return true
+    if (normalizedText?.includes("\n") && $isRangeSelection(selection)) {
+      selection.insertRawText(normalizedText)
+      return true
+    }
+
+    return false
   }
 
   insertAtCursor(...nodes) {
