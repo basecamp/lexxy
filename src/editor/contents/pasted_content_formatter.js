@@ -13,6 +13,7 @@ export default class PastedContentFormatter {
     this.#unwrapWrappedListChildren()
     this.#nestStrayListChildren()
     this.#stripStrayListChildren()
+    this.#stripFillerListItemLineBreaks()
     return this.doc
   }
 
@@ -107,6 +108,16 @@ export default class PastedContentFormatter {
 
         stray = this.#firstStrayListChild(list)
       }
+    }
+  }
+
+  // Browsers pad copied list items with a filler <br> at the end of each <li>.
+  // The editor preserves trailing list item line breaks on import — in saved
+  // documents they are real Shift+Enter content — so pasted filler has to be
+  // dropped here before it reaches the importer.
+  #stripFillerListItemLineBreaks() {
+    for (const lineBreak of this.doc.querySelectorAll("li > br:last-child")) {
+      lineBreak.remove()
     }
   }
 

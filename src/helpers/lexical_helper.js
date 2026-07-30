@@ -1,4 +1,4 @@
-import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
+import { $caretFromPoint, $createLineBreakNode, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
@@ -92,6 +92,45 @@ export function extendConversion(nodeKlass, conversionName, callback = (output =
 
     return callback(conversionOutput, element) ?? conversionOutput
   }
+}
+
+// Lexical drops a <br> that ends a block element on import, treating it as
+// contenteditable filler. A line break at the end of a list item is real content
+// the user added with Shift+Enter, so keep it. A <br> that is a list item's only
+// child stays subject to the default filler rules.
+export function importListItemTrailingLineBreak(domNode) {
+  if (isTrailingLineBreakAfterListItemContent(domNode)) {
+    return { conversion: () => ({ node: $createLineBreakNode() }), priority: 1 }
+  }
+
+  return null
+}
+
+function isTrailingLineBreakAfterListItemContent(domNode) {
+  const parent = domNode.parentElement
+  if (parent === null || parent.tagName !== "LI" || domNode.nextSibling !== null) {
+    return false
+  }
+
+  return hasListItemContentBefore(domNode)
+}
+
+function hasListItemContentBefore(domNode) {
+  let sibling = domNode.previousSibling
+  while (sibling !== null) {
+    if (isListItemContent(sibling)) {
+      return true
+    }
+    sibling = sibling.previousSibling
+  }
+  return false
+}
+
+function isListItemContent(node) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent.trim() !== ""
+  }
+  return node.nodeType === Node.ELEMENT_NODE && node.tagName !== "BR"
 }
 
 export function $isCursorOnLastLine(selection) {

@@ -19,7 +19,7 @@ import { UploadRequests } from "../editor/attachments/upload_requests"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
-import { isAttachmentSpacerTextNode, isEditorFocused } from "../helpers/lexical_helper"
+import { importListItemTrailingLineBreak, isAttachmentSpacerTextNode, isEditorFocused } from "../helpers/lexical_helper"
 import { sanitize, setSanitizerConfig } from "../helpers/sanitization_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
@@ -426,7 +426,8 @@ export class LexicalEditorElement extends HTMLElement {
       theme: theme,
       nodes: this.#lexicalNodes,
       html: {
-        export: new Map([ [ TextNode, exportTextNodeDOM ], [ CodeHighlightNode, exportTextNodeDOM ] ])
+        export: new Map([ [ TextNode, exportTextNodeDOM ], [ CodeHighlightNode, exportTextNodeDOM ] ]),
+        import: { br: importListItemTrailingLineBreak }
       },
       $initialEditorState: (editor) => {
         this.#configureSanitizer(editor)
