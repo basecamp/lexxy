@@ -1,3 +1,5 @@
+import OfficeFormatter from "./pasted_content_formatter/office_formatter"
+
 export default class PastedContentFormatter {
   constructor(doc) {
     this.doc = doc
@@ -7,6 +9,7 @@ export default class PastedContentFormatter {
     this.#stripStyleElements()
     this.#unwrapPlaceholderAnchors()
     this.#stripTableCellColorStyles()
+    new OfficeFormatter(this.doc).format()
     this.#unwrapWrappedListChildren()
     this.#nestStrayListChildren()
     this.#stripStrayListChildren()
