@@ -108,8 +108,29 @@ export function importListItemTrailingLineBreak(domNode) {
 
 function isTrailingLineBreakAfterListItemContent(domNode) {
   const parent = domNode.parentElement
-  return parent !== null && parent.tagName === "LI" &&
-    domNode.nextSibling === null && domNode.previousSibling !== null
+  if (parent === null || parent.tagName !== "LI" || domNode.nextSibling !== null) {
+    return false
+  }
+
+  return hasListItemContentBefore(domNode)
+}
+
+function hasListItemContentBefore(domNode) {
+  let sibling = domNode.previousSibling
+  while (sibling !== null) {
+    if (isListItemContent(sibling)) {
+      return true
+    }
+    sibling = sibling.previousSibling
+  }
+  return false
+}
+
+function isListItemContent(node) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent.trim() !== ""
+  }
+  return node.nodeType === Node.ELEMENT_NODE && node.tagName !== "BR"
 }
 
 export function $isCursorOnLastLine(selection) {

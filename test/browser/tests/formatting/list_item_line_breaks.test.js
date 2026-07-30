@@ -38,6 +38,13 @@ test.describe("Line breaks inside list items", () => {
     await assertEditorHtml(editor, "<ul><li value=\"1\">First<br><br></li><li value=\"2\">Second</li></ul>")
   })
 
+  test("a filler line break preceded only by whitespace is still dropped", async ({ editor }) => {
+    await editor.setValue("<ul><li value=\"1\">\n    <br></li><li value=\"2\">Second</li></ul>")
+    await editor.flush()
+
+    await assertEditorHtml(editor, "<ul><li value=\"1\"></li><li value=\"2\">Second</li></ul>")
+  })
+
   test("a filler line break in an empty list item is still dropped", async ({ editor }) => {
     await editor.setValue("<ul><li value=\"1\"><br></li><li value=\"2\">Second</li></ul>")
     await editor.flush()
