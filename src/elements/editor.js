@@ -661,7 +661,7 @@ export class LexicalEditorElement extends HTMLElement {
   #handleReplacementText() {
     this.#listeners.track(this.editor.registerCommand(
       CONTROLLED_TEXT_INSERTION_COMMAND,
-      (eventOrText) => $insertReplacementTextWithLineBreaks(eventOrText),
+      (event) => event instanceof InputEvent && this.contents.insertTextWithLineBreaks(event.data),
       COMMAND_PRIORITY_NORMAL
     ))
   }
@@ -919,28 +919,6 @@ export class LexicalEditorElement extends HTMLElement {
 }
 
 export default LexicalEditorElement
-
-// macOS text replacements and autocorrect arrive as CONTROLLED_TEXT_INSERTION_COMMAND, which
-// inserts their text verbatim. A newline would stay a literal "\n" inside a single text node:
-// visible in the editor, which Lexical renders with "white-space: pre-wrap", but collapsed to a
-// space once serialized to HTML. Turning it into line break nodes keeps the break on submit.
-function $insertReplacementTextWithLineBreaks(eventOrText) {
-  const text = replacementTextFrom(eventOrText)?.replace(/\r\n?/g, "\n")
-  if (!text?.includes("\n")) return false
-
-  const selection = $getSelection()
-  if (!$isRangeSelection(selection)) return false
-
-  selection.insertRawText(text)
-  return true
-}
-
-function replacementTextFrom(eventOrText) {
-  if (typeof eventOrText === "string") return eventOrText
-  if (eventOrText.dataTransfer) return null
-
-  return eventOrText.data
-}
 
 // Like $getRoot().getTextContent() but uses readable text for custom attachment nodes
 // (e.g., mentions) instead of their single-character cursor placeholder.

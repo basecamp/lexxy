@@ -7,7 +7,8 @@ import { createTestEditor, destroyTestEditor, selectFirstText, setContent, tick 
 // carrying the event itself. jsdom's InputEvent has no getTargetRanges, so Lexical's beforeinput
 // handling is inert here and we dispatch the command directly instead.
 async function insertReplacementText(editorElement, text) {
-  editorElement.editor.dispatchCommand(CONTROLLED_TEXT_INSERTION_COMMAND, { data: text, dataTransfer: null })
+  const event = new InputEvent("beforeinput", { inputType: "insertReplacementText", data: text })
+  editorElement.editor.dispatchCommand(CONTROLLED_TEXT_INSERTION_COMMAND, event)
   await tick()
 }
 
@@ -51,6 +52,21 @@ describe("insertReplacementText", () => {
 
     expect(editorElement.value).toBe("<p>Hello Thanks,<br>Kyle</p>")
     expect(editorElement.value).not.toContain("\r")
+
+    await destroyTestEditor(editorElement)
+  })
+
+  // Plain typing and composition start dispatch the same command with a bare string, which is
+  // never a replacement, so it must fall through to Lexical's own handler.
+  test("leaves string payloads to Lexical", async () => {
+    const editorElement = await createTestEditor()
+    await setContent(editorElement, "<p>Hello</p>")
+    selectFirstText(editorElement, "Hello".length)
+
+    editorElement.editor.dispatchCommand(CONTROLLED_TEXT_INSERTION_COMMAND, " there")
+    await tick()
+
+    expect(editorElement.value).toBe("<p>Hello there</p>")
 
     await destroyTestEditor(editorElement)
   })

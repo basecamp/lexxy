@@ -60,6 +60,19 @@ export default class Contents {
     }, { tag })
   }
 
+  // A literal "\n" stays visible in the editor, which Lexical renders with white-space: pre-wrap,
+  // but collapses to a space once serialized to HTML, so it has to become line break nodes.
+  insertTextWithLineBreaks(text) {
+    const normalizedText = text?.replace(/\r\n?/g, "\n")
+    if (!normalizedText?.includes("\n")) return false
+
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return false
+
+    selection.insertRawText(normalizedText)
+    return true
+  }
+
   insertAtCursor(...nodes) {
     const selection = this.#insertableSelection()
     const inserter = NodeInserter.for(selection)
