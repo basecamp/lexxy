@@ -22,8 +22,10 @@ test.describe("Emphasis inside blockquotes", () => {
     await editor.setValue("<blockquote><p>Quoted <strong><em>emphasized</em></strong> text</p></blockquote>")
     await editor.flush()
 
+    const paragraph = editor.content.locator("blockquote p")
     const emphasis = editor.content.locator("blockquote .lexxy-content__italic")
 
+    await expect(paragraph).toHaveCSS("font-style", "italic")
     await expect(emphasis).toHaveCSS("font-style", "normal")
   })
 })
