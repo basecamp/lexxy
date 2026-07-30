@@ -66,7 +66,7 @@ export function stripTrailingCodeBlockNewlines(doc) {
 }
 
 function lastTextNodeIn(element) {
-  const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+  const walker = element.ownerDocument.createTreeWalker(element, 4 /* NodeFilter.SHOW_TEXT */)
   let lastTextNode = null
   while (walker.nextNode()) {
     lastTextNode = walker.currentNode
