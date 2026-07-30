@@ -53,6 +53,27 @@ export function addBlockSpacing(doc) {
   }
 }
 
+// A trailing newline before </pre> is presentational — markdown renderers routinely
+// emit one, and the HTML spec similarly disregards a leading newline right after <pre>.
+// Left in place, it imports as a spurious blank last line in the code block.
+export function stripTrailingCodeBlockNewlines(doc) {
+  for (const pre of doc.querySelectorAll("pre")) {
+    const lastText = lastTextNodeIn(pre)
+    if (lastText && lastText.nodeValue.endsWith("\n")) {
+      lastText.nodeValue = lastText.nodeValue.slice(0, -1)
+    }
+  }
+}
+
+function lastTextNodeIn(element) {
+  const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+  let lastTextNode = null
+  while (walker.nextNode()) {
+    lastTextNode = walker.currentNode
+  }
+  return lastTextNode
+}
+
 export function generateDomId(prefix) {
   const randomPart = Math.random().toString(36).slice(2, 10)
   return `${prefix}-${randomPart}`
