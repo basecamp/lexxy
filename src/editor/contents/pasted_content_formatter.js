@@ -13,6 +13,7 @@ export default class PastedContentFormatter {
     this.#unwrapWrappedListChildren()
     this.#nestStrayListChildren()
     this.#stripStrayListChildren()
+    this.#replaceGmailEmojiImgTags()
     return this.doc
   }
 
@@ -125,5 +126,15 @@ export default class PastedContentFormatter {
 
   #containsListItems(node) {
     return node.nodeType === Node.ELEMENT_NODE && node.querySelector("li") !== null
+  }
+
+  // Emoji in gmail: <img data-emoji="😂" class="an1" alt="😂" aria-label="😂" draggable="false" src="https://fonts.gstatic.com/s/e/notoemoji/17.0/1f602/32.png" loading="lazy" style="height: 1.2em; width: 1.2em; vertical-align: middle;">
+  #replaceGmailEmojiImgTags() {
+    for (const emojiImg of this.doc.querySelectorAll("img[data-emoji]")) {
+      const emoji = emojiImg.dataset.emoji
+      if (emoji === emojiImg.alt) {
+        emojiImg.replaceWith(emoji)
+      }
+    }
   }
 }
