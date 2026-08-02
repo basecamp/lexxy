@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, CONTROLLED_TEXT_INSERTION_COMMAND, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -45,6 +45,7 @@ import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 import { LinkOpenerExtension } from "../extensions/link_opener_extension.js"
 import { PreventLexicalTripleClickExtension } from "../extensions/prevent_lexical_triple_click_extension.js"
 import { CustomAttachmentDragAndDropExtension } from "../extensions/custom_attachment_drag_and_drop_extension.js"
+import { LineSeparatorsExtension } from "../extensions/line_separators_extension.js"
 import { nextFrame } from "../helpers/timing_helper.js"
 
 
@@ -206,7 +207,8 @@ export class LexicalEditorElement extends HTMLElement {
       FormatEscapeExtension,
       LinkOpenerExtension,
       PreventLexicalTripleClickExtension,
-      CustomAttachmentDragAndDropExtension
+      CustomAttachmentDragAndDropExtension,
+      LineSeparatorsExtension
     ]
   }
 
@@ -394,7 +396,6 @@ export class LexicalEditorElement extends HTMLElement {
   #initialize() {
     this.#registerComponents()
     this.#handleEnter()
-    this.#handleReplacementText()
     this.#registerFocusEvents()
     this.#registerHistoryEvents()
     this.#registerFileAcceptFilter()
@@ -654,14 +655,6 @@ export class LexicalEditorElement extends HTMLElement {
 
         return false
       },
-      COMMAND_PRIORITY_NORMAL
-    ))
-  }
-
-  #handleReplacementText() {
-    this.#listeners.track(this.editor.registerCommand(
-      CONTROLLED_TEXT_INSERTION_COMMAND,
-      (event) => event instanceof InputEvent && this.contents.insertTextWithLineBreaks(event.data),
       COMMAND_PRIORITY_NORMAL
     ))
   }
