@@ -19,7 +19,7 @@ module Lexxy
       options[:data][:direct_upload_url] ||= main_app.rails_direct_uploads_url
       options[:data][:blob_url_template] ||= main_app.rails_service_blob_url(":signed_id", ":filename")
 
-      inner = (block || !prerender) ? "" : prerendered_content_tag(options[:value])
+      inner = (block || !prerender) ? "" : Lexxy::Prerender.inner_html_for(self, options)
       editor_tag = content_tag("lexxy-editor", inner, options, &block)
       editor_tag
     end
@@ -27,12 +27,6 @@ module Lexxy
     alias_method :lexxy_rich_text_area_tag, :lexxy_rich_textarea_tag
 
     private
-      # A static, sanitized copy of the value the editor adopts as its content
-      # element on connect (see Lexxy::Prerender).
-      def prerendered_content_tag(value)
-        Lexxy::Prerender.content_tag_for(self, value)
-      end
-
       # Temporary: we need to *adaptarize* action text
       def render_custom_attachments_in(value)
         if value.respond_to?(:body)

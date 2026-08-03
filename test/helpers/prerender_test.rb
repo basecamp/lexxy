@@ -30,6 +30,34 @@ class PrerenderTest < ActionView::TestCase
     assert_dom "lexxy-editor[prerender]", count: 0
   end
 
+  test "prerender: true also ships the toolbar the editor will fill" do
+    render inline: <<~ERB
+      <%= rich_textarea_tag :body, "<p>Hello</p>", prerender: true %>
+    ERB
+
+    # Empty, and before the content: the editor prepends its toolbar there, so
+    # this has to occupy the same place to reserve the same space. A real
+    # <lexxy-toolbar> rather than a spacer, so the host's own toolbar CSS decides
+    # whether it takes any room at all.
+    assert_dom "lexxy-editor > lexxy-toolbar[data-prerendered='server']:empty", count: 1
+    assert_dom "lexxy-editor > *:first-child", count: 1 do |first, *|
+      assert_equal "lexxy-toolbar", first.name
+    end
+  end
+
+  test "no toolbar is prerendered when the editor will not prepend one" do
+    render inline: <<~ERB
+      <%= rich_textarea_tag :body, "<p>Hello</p>", prerender: true, toolbar: false %>
+      <%= rich_textarea_tag :other, "<p>Hello</p>", prerender: true, toolbar: "shared-toolbar" %>
+      <%= rich_textarea_tag :third, "<p>Hello</p>", prerender: true, rich_text: false %>
+    ERB
+
+    # Reserving space for a toolbar that never arrives is the same defect
+    # upwards: the field would give the height back on connect.
+    assert_dom "lexxy-toolbar", count: 0
+    assert_dom "lexxy-editor > div.lexxy-editor__content", count: 3
+  end
+
   test "prerendered content is static until the editor adopts it" do
     render inline: <<~ERB
       <%= rich_textarea_tag :body, "<p>Hello</p>", prerender: true %>

@@ -400,6 +400,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#registerFileAcceptFilter()
     this.#attachDebugHooks()
     this.#attachToolbar()
+    this.#discardUnusedPrerenderedToolbar()
     this.#resetBeforeTurboCaches()
 
     this.#setInternalFormValue(this.value, { suppressEvent: true })
@@ -764,7 +765,12 @@ export class LexicalEditorElement extends HTMLElement {
     if (typeof toolbarConfig === "string") {
       return document.getElementById(toolbarConfig)
     } else {
-      return this.querySelector("lexxy-toolbar") ?? this.#createDefaultToolbar()
+      const existing = this.querySelector("lexxy-toolbar")
+      // A prerendered toolbar is ours and arrives empty — fill it rather than
+      // treat it as one the caller supplied and wants left alone.
+      if (existing?.dataset.prerendered) return this.#fillDefaultToolbar(existing)
+
+      return existing ?? this.#createDefaultToolbar()
     }
   }
 
@@ -772,12 +778,25 @@ export class LexicalEditorElement extends HTMLElement {
     return this.supportsRichText && !!this.config.get("toolbar")
   }
 
+  // A prerendered toolbar this editor turns out not to want — the toolbar is
+  // configured off, or points at an element elsewhere. Leaving it would reserve
+  // space nothing fills. Same task as connect, so nothing paints in between.
+  #discardUnusedPrerenderedToolbar() {
+    const prerendered = this.querySelector(":scope > lexxy-toolbar[data-prerendered]")
+    if (prerendered && prerendered !== this.toolbar) prerendered.remove()
+  }
+
   #createDefaultToolbar() {
     const toolbar = createElement("lexxy-toolbar")
+    this.prepend(toolbar)
+    return this.#fillDefaultToolbar(toolbar)
+  }
+
+  #fillDefaultToolbar(toolbar) {
     toolbar.innerHTML = LexicalToolbar.defaultTemplate
     toolbar.setAttribute("data-attachments", this.supportsAttachments) // Drives toolbar CSS styles
+    toolbar.removeAttribute("aria-hidden")
     toolbar.configure(this.config.get("toolbar"))
-    this.prepend(toolbar)
     return toolbar
   }
 

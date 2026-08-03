@@ -31,14 +31,11 @@ test.describe("Prerendered content element", () => {
     expect(withoutAfter - withoutBefore).toBeGreaterThan(60)
   })
 
-  // Prerendering reserves the height of the editor's *content*, which is the part
-  // whose height depends on the record. The default toolbar is a separate element
-  // that connectedCallback prepends in normal flow, so an editor using it still
-  // gains that much height on mount. Editors this option is for float the toolbar
-  // out of flow — the fixture does, and an inline field that must match published
-  // copy could hardly do otherwise — but the boundary should be visible rather
-  // than implied, so pin it.
-  test("reserves the content height, not an in-flow default toolbar's", async ({ page }) => {
+  // The content element reserves the body; the toolbar placeholder reserves the
+  // element connectedCallback prepends above it. The fixture floats its toolbar,
+  // which would hide a failure here, so put it back in normal flow — the stock
+  // arrangement — and require the same stability.
+  test("reserves the default toolbar's height too, when it takes space in flow", async ({ page }) => {
     await page.addStyleTag({ content: `.inline-editor lexxy-toolbar {
       position: static !important; opacity: 1 !important; visibility: visible !important; inset: auto !important; }` })
 
@@ -48,12 +45,26 @@ test.describe("Prerendered content element", () => {
     await page.evaluate(() => window.loadLexxy())
     await expect(page.locator("lexxy-editor .lexxy-editor__content[data-lexical-editor='true']")).toHaveCount(2)
 
-    const after = await topOf(following)
+    // The real toolbar is in flow and has height, so this asserts the reservation
+    // matched it rather than that there was nothing to reserve.
     const toolbar = await page.locator("[data-example='with-prerender'] lexxy-toolbar").boundingBox()
+    expect(toolbar.height).toBeGreaterThan(0)
+    expect(Math.abs(await topOf(following) - before)).toBeLessThan(1)
+  })
 
-    // The residual shift is the toolbar's height and nothing more — the body, which
-    // is the part that varies per record, is still fully reserved.
-    expect(after - before).toBeCloseTo(toolbar.height, 0)
+  // The prerendered toolbar is ours, not the caller's: the editor fills it in
+  // rather than leaving it empty or building a second one beside it.
+  test("fills the prerendered toolbar instead of adding another", async ({ page }) => {
+    const toolbars = page.locator("[data-example='with-prerender'] lexxy-toolbar")
+    await expect(toolbars).toHaveCount(1)
+    await expect(toolbars.first()).toBeEmpty()
+
+    await page.evaluate(() => window.loadLexxy())
+    await expect(page.locator("lexxy-editor[connected]")).toHaveCount(2)
+
+    await expect(toolbars).toHaveCount(1)
+    await expect(toolbars.first()).not.toBeEmpty()
+    await expect(toolbars.first()).not.toHaveAttribute("aria-hidden")
   })
 
   test("adopts the server-rendered content element rather than creating a second", async ({ page }) => {

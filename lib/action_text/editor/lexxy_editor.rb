@@ -18,8 +18,8 @@ module ActionText
       # editor builds a frame after load. Mirrors the same option on the
       # Rails 8.0/8.1 TagHelper fallback.
       if options.delete(:prerender) && @block.nil?
-        value = options[:value]
-        @block = proc { Lexxy::Prerender.content_tag_for(view_context, value) }
+        prerendered = options.dup
+        @block = proc { Lexxy::Prerender.inner_html_for(view_context, prerendered) }
       end
 
       super
