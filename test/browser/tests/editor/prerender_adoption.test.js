@@ -25,8 +25,35 @@ test.describe("Prerendered content element", () => {
     const withoutAfter = await topOf(withoutFollowing)
     const withAfter = await topOf(withFollowing)
 
-    expect(withAfter - withBefore).toBeLessThan(1)
+    // Absolute displacement: a signed comparison would let a large *upward* shift
+    // through as a comfortably negative number.
+    expect(Math.abs(withAfter - withBefore)).toBeLessThan(1)
     expect(withoutAfter - withoutBefore).toBeGreaterThan(60)
+  })
+
+  // Prerendering reserves the height of the editor's *content*, which is the part
+  // whose height depends on the record. The default toolbar is a separate element
+  // that connectedCallback prepends in normal flow, so an editor using it still
+  // gains that much height on mount. Editors this option is for float the toolbar
+  // out of flow — the fixture does, and an inline field that must match published
+  // copy could hardly do otherwise — but the boundary should be visible rather
+  // than implied, so pin it.
+  test("reserves the content height, not an in-flow default toolbar's", async ({ page }) => {
+    await page.addStyleTag({ content: `.inline-editor lexxy-toolbar {
+      position: static !important; opacity: 1 !important; visibility: visible !important; inset: auto !important; }` })
+
+    const following = page.locator("[data-following='with-prerender']")
+    const before = await topOf(following)
+
+    await page.evaluate(() => window.loadLexxy())
+    await expect(page.locator("lexxy-editor .lexxy-editor__content[data-lexical-editor='true']")).toHaveCount(2)
+
+    const after = await topOf(following)
+    const toolbar = await page.locator("[data-example='with-prerender'] lexxy-toolbar").boundingBox()
+
+    // The residual shift is the toolbar's height and nothing more — the body, which
+    // is the part that varies per record, is still fully reserved.
+    expect(after - before).toBeCloseTo(toolbar.height, 0)
   })
 
   test("adopts the server-rendered content element rather than creating a second", async ({ page }) => {

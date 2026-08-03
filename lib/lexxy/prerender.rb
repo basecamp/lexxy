@@ -2,6 +2,15 @@ module Lexxy
   # Builds the static content element a prerendering editor emits inside
   # <lexxy-editor> (see LexicalEditorElement#prerenderedContentElement). Shared
   # by the Rails 8.2 editor-adapter Tag and the 8.0/8.1 TagHelper fallback.
+  #
+  # Scope: this reserves the height of the editor's *content* — the part that
+  # varies per record, and so cannot be reserved by a CSS rule the way a fixed
+  # row count can. It does not reserve the default toolbar, which
+  # connectedCallback prepends in normal flow: an editor using it still gains
+  # that element's height on mount. The editors this option exists for float the
+  # toolbar out of flow, since an inline field standing in for published copy has
+  # nowhere to put one, but the boundary is real and is pinned by
+  # test/browser/tests/editor/prerender_adoption.test.js.
   module Prerender
     # The value is the same editable HTML the editor parses from the `value`
     # attribute, so the element renders at the height the live editor lands on.
