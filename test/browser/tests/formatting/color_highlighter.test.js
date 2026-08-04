@@ -40,6 +40,18 @@ test.describe("Color highlighter", () => {
     await expect(colorButton).toHaveAttribute("aria-label", "Yellow")
   })
 
+  test("string color options have accessible names", async ({ page }) => {
+    await page.goto("/highlight-string-buttons.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await page.locator("[name='highlight']").click()
+
+    const textColor = page.locator("lexxy-highlight-dropdown [role='group'][aria-label='Text color'] button")
+    const backgroundColor = page.locator("lexxy-highlight-dropdown [role='group'][aria-label='Background color'] button")
+
+    await expect(textColor).toHaveAttribute("aria-label", "red")
+    await expect(backgroundColor).toHaveAttribute("aria-label", "yellow")
+  })
+
   test("color highlighting text in a plain-text code block", async ({ page, editor }) => {
     await editor.setValue('<pre data-language="plain"><code>some log output</code></pre>')
     await expect(page.locator("select[name=lexxy-code-language]")).toHaveValue("plain")
