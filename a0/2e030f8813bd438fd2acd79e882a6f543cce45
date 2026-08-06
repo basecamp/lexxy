@@ -1,0 +1,23 @@
+test/browser/tests/attachments/attachment_caption_focus.test.js
+  s_f629b96a26f0d3::t_17b3a4af744f56 1-64
+src/extensions/attachments_extension.js
+  s_f629b96a26f0d3::t_681e2a355a8970 1,5,42,142-162
+src/nodes/action_text_attachment_node.js
+  s_f629b96a26f0d3::t_1510ce426b5fb2 2,4,221-229,424-425,463-476
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "a02e030f8813bd438fd2acd79e882a6f543cce45",
+  "prompts": {},
+  "sessions": {
+    "s_f629b96a26f0d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6fcff513-f983-453f-9489-579a9d09c06b",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
