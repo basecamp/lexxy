@@ -1,6 +1,7 @@
 import Lexxy from "../config/lexxy"
-import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
+import { $getEditor, $getNearestRootOrShadowRoot, $setSelection, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
+import { $createNodeSelectionWith } from "../helpers/lexical_helper"
 import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
 import { parseBoolean } from "../helpers/string_helper"
 import { REWRITE_HISTORY_COMMAND } from "../extensions/rewritable_history_extension"
@@ -217,6 +218,15 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return this.contentType.startsWith("video/")
   }
 
+  // The caption textarea is deliberately out of the tab order, so this is the
+  // only way in from the keyboard. Returns false when there is no caption to
+  // focus, which lets the Tab handler fall through to default behaviour.
+  focusCaption() {
+    const textarea = this.editor.getElementByKey(this.getKey())?.querySelector("figcaption textarea")
+    textarea?.focus()
+    return textarea != null
+  }
+
   #createDOMForPendingPreview() {
     const figure = this.createAttachmentFigure(false)
     figure.appendChild(this.#createDOMForFile())
@@ -411,6 +421,8 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     const input = createElement("textarea", {
       value: this.caption,
       placeholder: this.fileName,
+      ariaLabel: this.isVideo ? "Video caption" : "Image caption",
+      tabIndex: -1,
       rows: "1"
     })
 
@@ -445,6 +457,20 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       this.editor.update(() => {
         // Place the cursor after the current image
         this.selectNext(0, 0)
+      }, {
+        tag: HISTORY_MERGE_TAG
+      })
+    } else if (event.key === "Escape") {
+      // Leave the caption without moving the caret past the attachment: hand
+      // focus back to the editor and reselect the attachment the caption
+      // belongs to, so Tab can step back in.
+      event.preventDefault()
+      event.target.blur()
+
+      this.editor.getRootElement()?.focus({ preventScroll: true })
+
+      this.editor.update(() => {
+        $setSelection($createNodeSelectionWith(this))
       }, {
         tag: HISTORY_MERGE_TAG
       })
