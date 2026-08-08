@@ -1,0 +1,19 @@
+test/system/stimulus_sanitization_test.rb
+  s_743c5336c418b8::t_b5166f1c39f65c 1-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "f9a8c5a52262feb7954b86b4dd90db4fef7385af",
+  "prompts": {},
+  "sessions": {
+    "s_743c5336c418b8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "68fcc94f-23e6-43d0-b238-34aac9fd048d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
