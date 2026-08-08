@@ -51,6 +51,11 @@ export function buildConfig(allowedElements ) {
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute),
     ADD_URI_SAFE_ATTR: [ "caption", "filename" ],
-    SAFE_FOR_XML: false // So that it does not strip attributes that contains serialized HTML (like content)
+    SAFE_FOR_XML: false, // So that it does not strip attributes that contains serialized HTML (like content)
+    // Stimulus behavior attributes must never survive sanitization: they let stored content
+    // wire up arbitrary controllers/actions in the viewer's session. FORBID_ATTR wins over
+    // ALLOWED_ATTR/ADD_ATTR/ALLOW_DATA_ATTR in DOMPurify, so this holds even though other
+    // data-* attributes (data-language, data-trix-*, etc.) are otherwise allowed through.
+    FORBID_ATTR: [ "data-controller", "data-action" ]
   }
 }
