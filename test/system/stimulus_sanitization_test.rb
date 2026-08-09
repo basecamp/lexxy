@@ -24,9 +24,8 @@ class StimulusSanitizationTest < ApplicationSystemTestCase
   # editor stays clean across the round-trip.
   test "smuggled Stimulus behavior attributes never hydrate into the editor across the Action Text round trip" do
     person = people(:michael)
-    post = Post.create!(title: "Stimulus sanitization round trip", body: "<p>start</p>")
 
-    visit edit_post_path(post)
+    visit edit_post_path(posts(:empty))
     wait_for_editor
 
     smuggled_content = CGI.escapeHTML(
