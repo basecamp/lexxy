@@ -17,17 +17,23 @@ import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection
 // instance. This one carries the hooks and config below; nothing we do here can
 // reach the app's instance, and nothing it does can reach ours.
 //
-// Known limitation, under Trusted Types only: every DOMPurify instance lazily
-// creates a policy named `dompurify` on its first sanitize, and TT rejects a
-// duplicate name. Whichever instance sanitizes second gets no policy — DOMPurify
-// catches this, warns, and carries on unsigned. That is harmless today because
-// no app here sends a `trusted-types` CSP directive, and DOMPurify's normal path
-// is DOMParser, which isn't a TT sink. If you are adding
-// `require-trusted-types-for 'script'`, this is the line to revisit: allow
-// duplicate policies, or hand us an explicit one via TRUSTED_TYPES_POLICY.
-// Note the second sink below (insertAdjacentHTML in
-// nodes/custom_action_text_attachment_node.js) already receives a plain string,
-// so it needs the same attention at that point.
+// Known limitation, and read this before enabling Trusted Types. Every DOMPurify
+// instance lazily creates a policy named `dompurify` on its first sanitize, and
+// TT rejects a duplicate name, so whichever instance sanitizes second gets none —
+// DOMPurify catches that, warns, and carries on unsigned.
+//
+// Under `require-trusted-types-for 'script'` that is not cosmetic. DOMPurify
+// hands its input to DOMParser.parseFromString, which *is* a TT sink — that's
+// why it wraps the payload in `trustedTypesPolicy.createHTML` when it has a
+// policy. Without one, sanitizing throws. Whichever instance loses the race
+// breaks, so this can take out the host app's sanitizing rather than ours.
+//
+// It's latent today only because no app here sends a `trusted-types` directive,
+// and it can't be fixed from inside this file: the distinct-policy route needs a
+// name the host's CSP allowlists, and TRUSTED_TYPES_POLICY needs the host to
+// supply one. If you're turning TT on, that's the decision to make here — and
+// the `insertAdjacentHTML` sink in nodes/custom_action_text_attachment_node.js
+// receives a plain string and needs the same attention, independently of this.
 const DOMPurify = createDOMPurify(window)
 
 // alt/height/width are inert and carry no URL or script surface, and dropping
