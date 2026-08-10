@@ -10,13 +10,16 @@ import { sanitize, setSanitizerConfig } from "src/helpers/sanitization_helper"
 // it would silently disarm the app's own sanitizing — options the app is still
 // passing, and still relying on, would stop applying with no error anywhere.
 //
-// These assert isolation in both directions against the real singleton.
+// These assert isolation in both directions against the real singleton. The
+// config is keyed by editor, but nothing here depends on it being a real
+// Lexical editor — any identity will do.
 
 const DIRTY = '<span data-controller="evil" class="keep">hi</span>'
+const editor = { name: "stand-in for a Lexical editor" }
 
 beforeEach(() => {
   DOMPurify.clearConfig()
-  setSanitizerConfig([ "span", "p", "strong" ])
+  setSanitizerConfig(editor, [ "span", "p", "strong" ])
 })
 
 test("configuring Lexxy's sanitizer leaves the app's per-call config working", () => {
@@ -32,7 +35,7 @@ test("configuring Lexxy's sanitizer leaves the app's per-call config working", (
 test("the app's persistent config does not reach into Lexxy's sanitizing", () => {
   DOMPurify.setConfig({ ALLOWED_TAGS: [ "b" ], ALLOWED_ATTR: [] })
 
-  expect(sanitize('<span class="keep">hi</span>')).toBe('<span class="keep">hi</span>')
+  expect(sanitize('<span class="keep">hi</span>', editor)).toBe('<span class="keep">hi</span>')
 })
 
 test("Lexxy's hooks are not installed on the shared instance", () => {
@@ -43,11 +46,13 @@ test("Lexxy's hooks are not installed on the shared instance", () => {
 })
 
 test("sanitize applies the configured allowlist", () => {
-  expect(sanitize("<span>keep</span><script>evil()</script>")).toBe("<span>keep</span>")
+  expect(sanitize("<span>keep</span><script>evil()</script>", editor)).toBe("<span>keep</span>")
 })
 
-test("a later setSanitizerConfig replaces the previous allowlist", () => {
-  setSanitizerConfig([ "strong" ])
+test("each editor keeps its own allowlist", () => {
+  const other = { name: "a second editor" }
+  setSanitizerConfig(other, [ "strong" ])
 
-  expect(sanitize("<span>a</span><strong>b</strong>")).toBe("a<strong>b</strong>")
+  expect(sanitize("<span>a</span><strong>b</strong>", editor)).toBe("<span>a</span><strong>b</strong>")
+  expect(sanitize("<span>a</span><strong>b</strong>", other)).toBe("a<strong>b</strong>")
 })
