@@ -16,6 +16,18 @@ import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection
 // Calling the default export with a window returns a fresh, independent
 // instance. This one carries the hooks and config below; nothing we do here can
 // reach the app's instance, and nothing it does can reach ours.
+//
+// Known limitation, under Trusted Types only: every DOMPurify instance lazily
+// creates a policy named `dompurify` on its first sanitize, and TT rejects a
+// duplicate name. Whichever instance sanitizes second gets no policy — DOMPurify
+// catches this, warns, and carries on unsigned. That is harmless today because
+// no app here sends a `trusted-types` CSP directive, and DOMPurify's normal path
+// is DOMParser, which isn't a TT sink. If you are adding
+// `require-trusted-types-for 'script'`, this is the line to revisit: allow
+// duplicate policies, or hand us an explicit one via TRUSTED_TYPES_POLICY.
+// Note the second sink below (insertAdjacentHTML in
+// nodes/custom_action_text_attachment_node.js) already receives a plain string,
+// so it needs the same attention at that point.
 const DOMPurify = createDOMPurify(window)
 
 // alt/height/width are inert and carry no URL or script surface, and dropping
