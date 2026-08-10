@@ -36,12 +36,17 @@ import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection
 // receives a plain string and needs the same attention, independently of this.
 const DOMPurify = createDOMPurify(window)
 
-// alt/height/width are inert and carry no URL or script surface, and dropping
-// them costs real things: an image inside attachment content loses its alternative
-// text entirely, and loses the intrinsic size that keeps it from reflowing the
-// line as it loads. srcset is deliberately not here — it carries URLs, so it
-// belongs to a consumer that declares it, not to the blanket allowlist.
-const ALLOWED_HTML_ATTRIBUTES = [ "alt", "class", "contenteditable", "height", "href", "src", "style", "title", "width" ]
+// alt is inert on every element it can appear on, so it sits in the blanket
+// list. srcset is deliberately absent — it carries URLs, so it belongs to a
+// consumer that declares it.
+const ALLOWED_HTML_ATTRIBUTES = [ "alt", "class", "contenteditable", "href", "src", "style", "title" ]
+
+// width/height are scoped to img rather than allowlisted globally, because
+// ALLOWED_ATTR is not per-tag: putting them there would also permit
+// `<table width="100000">` and `<td height="500">` in attachment content, which
+// is layout the editor previously stripped. An image needs them to hold its
+// place while it loads; nothing else here does.
+const DEFAULT_TAG_ATTRIBUTES = { img: [ "width", "height" ] }
 
 const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
 
@@ -100,6 +105,12 @@ export function buildConfig(allowedElements ) {
       tagAttributes[element.tag] ||= []
       tagAttributes[element.tag].push(...element.attributes)
     }
+  }
+
+  // Only for tags the caller already permits — this widens what an allowed
+  // element may carry, never which elements are allowed.
+  for (const [ tag, attributes ] of Object.entries(DEFAULT_TAG_ATTRIBUTES)) {
+    if (tagAttributes[tag]) tagAttributes[tag].push(...attributes)
   }
 
   return {

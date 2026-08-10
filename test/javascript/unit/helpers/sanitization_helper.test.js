@@ -80,3 +80,23 @@ test("still drops URL-bearing image attributes nobody declared", () => {
   expect(sanitize('<img src="/av.png" srcset="/av2.png 2x">', editor))
     .toBe('<img src="/av.png">')
 })
+
+test("scopes an image's size attributes to images", () => {
+  const sized = { name: "sized" }
+  setSanitizerConfig(sized, [ "img", "table", "td" ])
+
+  expect(sanitize('<img src="/a.png" alt="Joe" width="20" height="20">', sized))
+    .toBe('<img src="/a.png" alt="Joe" width="20" height="20">')
+
+  // ALLOWED_ATTR is not per-tag, so a blanket allowlist would have let these
+  // through and handed attachment content the editor's layout.
+  expect(sanitize('<table width="100000"><td height="500">x</td></table>', sized))
+    .not.toMatch(/width|height/)
+})
+
+test("does not permit an element the caller left out", () => {
+  const noImages = { name: "no-images" }
+  setSanitizerConfig(noImages, [ "p" ])
+
+  expect(sanitize('<p>text</p><img src="/a.png" width="20">', noImages)).toBe("<p>text</p>")
+})
