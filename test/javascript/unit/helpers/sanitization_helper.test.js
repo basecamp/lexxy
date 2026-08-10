@@ -19,7 +19,7 @@ const editor = { name: "stand-in for a Lexical editor" }
 
 beforeEach(() => {
   DOMPurify.clearConfig()
-  setSanitizerConfig(editor, [ "span", "p", "strong" ])
+  setSanitizerConfig(editor, [ "span", "p", "strong", "img" ])
 })
 
 test("configuring Lexxy's sanitizer leaves the app's per-call config working", () => {
@@ -55,4 +55,28 @@ test("each editor keeps its own allowlist", () => {
 
   expect(sanitize("<span>a</span><strong>b</strong>", editor)).toBe("<span>a</span><strong>b</strong>")
   expect(sanitize("<span>a</span><strong>b</strong>", other)).toBe("a<strong>b</strong>")
+})
+
+test("declared attributes survive only in the object form of allowedElements", () => {
+  // A bare tag name declares the element with no attributes of its own, so an
+  // identifying attribute is stripped. Consumers that need one — a mention's
+  // person id, say — have to declare it.
+  const bare = { name: "bare" }
+  const declared = { name: "declared" }
+  setSanitizerConfig(bare, [ "span" ])
+  setSanitizerConfig(declared, [ { tag: "span", attributes: [ "gid" ] } ])
+
+  expect(sanitize('<span gid="1">@joe</span>', bare)).toBe("<span>@joe</span>")
+  expect(sanitize('<span gid="1">@joe</span>', declared)).toBe('<span gid="1">@joe</span>')
+})
+
+test("keeps an image's alternative text and intrinsic size", () => {
+  const image = '<img src="/av.png" alt="Joe" width="20" height="20" class="avatar">'
+
+  expect(sanitize(image, editor)).toBe(image)
+})
+
+test("still drops URL-bearing image attributes nobody declared", () => {
+  expect(sanitize('<img src="/av.png" srcset="/av2.png 2x">', editor))
+    .toBe('<img src="/av.png">')
 })

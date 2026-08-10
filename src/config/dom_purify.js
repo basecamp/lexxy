@@ -18,7 +18,12 @@ import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection
 // reach the app's instance, and nothing it does can reach ours.
 const DOMPurify = createDOMPurify(window)
 
-const ALLOWED_HTML_ATTRIBUTES = [ "class", "contenteditable", "href", "src", "style", "title" ]
+// alt/height/width are inert and carry no URL or script surface, and dropping
+// them costs real things: an image inside attachment content loses its alternative
+// text entirely, and loses the intrinsic size that keeps it from reflowing the
+// line as it loads. srcset is deliberately not here — it carries URLs, so it
+// belongs to a consumer that declares it, not to the blanket allowlist.
+const ALLOWED_HTML_ATTRIBUTES = [ "alt", "class", "contenteditable", "height", "href", "src", "style", "title", "width" ]
 
 const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
 
