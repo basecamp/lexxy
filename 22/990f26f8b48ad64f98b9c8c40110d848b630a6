@@ -1,0 +1,29 @@
+test/javascript/unit/editor/sanitizer_isolation.test.js
+  s_8a881e0b15478b::t_6b150e118a92c9 67,71-77
+  s_8a881e0b15478b::t_df58b25f22a034 1-66,68-70,78-79
+src/elements/editor.js
+  s_8a881e0b15478b::t_2b4d09a89213c4 758
+  s_8a881e0b15478b::t_ecf8a8e7f24373 364
+src/nodes/custom_action_text_attachment_node.js
+  s_8a881e0b15478b::t_d28c1d2be2c3d1 75,79-81
+src/helpers/sanitization_helper.js
+  s_8a881e0b15478b::t_e0e2c42d406325 3,5-28,30-32,35-36
+test/javascript/unit/helpers/sanitization_helper.test.js
+  s_8a881e0b15478b::t_14751e42b0d836 13-15,18,22,38,49,52-54,56-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "22990f26f8b48ad64f98b9c8c40110d848b630a6",
+  "prompts": {},
+  "sessions": {
+    "s_8a881e0b15478b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5a5009c2-58bf-4654-8c0c-c3163395286d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
