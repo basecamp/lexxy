@@ -42,4 +42,36 @@ describe("dom_purify — attachment url validation", () => {
   test("url is still refused on a tag that never declared it", () => {
     expect(sanitizeWith([ "p" ], '<p url="data:image/png;base64,x">hi</p>')).toBe("<p>hi</p>")
   })
+
+  // ADD_URI_SAFE_ATTR is attribute-name-wide, so without scoping by tag the data:
+  // exception granted to an attachment url reaches every extension that declares
+  // `url` on an element of its own — whose sink may be an iframe or a navigation
+  // rather than an img src, where data:text/html is script execution.
+  describe("the data: exception is the attachment element's, not the attribute name's", () => {
+    const extension = [ { tag: "x-widget", attributes: [ "url" ] } ]
+
+    test("an extension's url does not inherit it", () => {
+      const sanitized = sanitizeWith(extension, '<x-widget url="data:text/html,<script>alert(1)</script>"></x-widget>')
+
+      expect(sanitized).not.toContain("data:")
+      // Only the attribute is refused; the element an extension declared survives.
+      expect(sanitized).toContain("x-widget")
+    })
+
+    test("an extension's url keeps the schemes DOMPurify would have allowed anyway", () => {
+      for (const url of [ "https://example.com/a", "/rails/active_storage/blobs/a.png", "mailto:joe@example.com" ]) {
+        expect(sanitizeWith(extension, `<x-widget url="${url}"></x-widget>`)).toContain(url)
+      }
+    })
+
+    test("an extension's url still refuses an executable scheme", () => {
+      expect(sanitizeWith(extension, '<x-widget url="javascript:alert(1)"></x-widget>')).not.toContain("javascript:")
+    })
+
+    // Control: the attachment element is the one that keeps it.
+    test("the attachment element still keeps its data: urls", () => {
+      expect(sanitizeWith(withUrl, attachment("data:image/png;base64,iVBORw0KGgo=")))
+        .toContain("data:image/png;base64,iVBORw0KGgo=")
+    })
+  })
 })
