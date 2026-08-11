@@ -127,4 +127,83 @@ test.describe("Paste — XSS sanitization via action-text-attachment content", (
     expect(serialized).not.toContain("onclick")
     expect(serialized).toContain(`sgid="test-sgid-alice"`)
   })
+
+  test("strips data-controller/data-action from bc-attachment content on every hydration", async ({ page, editor }) => {
+    await page.goto("/mentions-custom-element.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+
+    const stimulusPayload = `<div><bc-attachment sgid="test-sgid-alice" content-type="application/vnd.basecamp.mention" content="&lt;span data-controller=&quot;content-loader&quot; data-action=&quot;click-&gt;content-loader#load&quot; class=&quot;person--inline&quot;&gt;Alice&lt;/span&gt;"></bc-attachment></div>`
+
+    await editor.setValue(stimulusPayload)
+    await editor.flush()
+
+    // The attachment hydrates (createDOM -> insertAdjacentHTML(sanitize(...))) with the
+    // Stimulus behavior attributes stripped from the live DOM.
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("[data-controller]")).toHaveCount(0)
+      await expect(content.locator("[data-action]")).toHaveCount(0)
+    })
+
+    const attachment = editor.content.locator("bc-attachment[content-type='application/vnd.basecamp.mention']")
+    await expect(attachment).toHaveCount(1)
+
+    // The attachment's stored `content=` attribute is preserved verbatim on export — by
+    // design (SAFE_FOR_XML: false), it round-trips as an opaque, HTML-entity-encoded string
+    // rather than being torn apart. That string still contains the words "data-controller",
+    // but it is inert: it is attribute-value text, not a live attribute, and it can only
+    // become a DOM attribute again by flowing back through createDOM's sanitize() call.
+    const serialized = await editor.value()
+    expect(serialized).toContain("sgid=\"test-sgid-alice\"")
+
+    // Prove that hydration strips the attribute every time, not just once: feed the
+    // serialized round-trip payload back in and confirm the second hydration is equally clean.
+    await editor.setValue(serialized)
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("[data-controller]")).toHaveCount(0)
+      await expect(content.locator("[data-action]")).toHaveCount(0)
+    })
+  })
+
+  test("preserves data-language on code blocks through sanitization (no over-strip)", async ({ page, editor }) => {
+    await page.goto("/mentions-custom-element.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+
+    await editor.setValue('<pre data-language="ruby"><code>puts "hi"</code></pre>')
+    await editor.flush()
+
+    // The highlight extension re-renders the block as <code data-language="ruby"> in the
+    // live DOM; the exported/stored form keeps data-language on the <pre>. Either way,
+    // FORBID_ATTR must not have touched a legitimate, non-Stimulus data-* attribute.
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code[data-language='ruby']")).toHaveCount(1)
+    })
+
+    const serialized = await editor.value()
+    expect(serialized).toContain(`data-language="ruby"`)
+  })
+
+  test("preserves a legitimate mention alongside a stripped Stimulus attribute in the same document", async ({ page, editor }) => {
+    await page.goto("/mentions-custom-element.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+
+    const mixedPayload = [
+      '<div>',
+      '<bc-attachment sgid="test-sgid-alice" content-type="application/vnd.basecamp.mention" content="&lt;bc-mention class=&quot;mentionable-person&quot; gid=&quot;gid://test/Person/1&quot;&gt;&lt;span class=&quot;person--inline&quot;&gt;Alice&lt;/span&gt;&lt;/bc-mention&gt;"></bc-attachment>',
+      ' and ',
+      '<bc-attachment sgid="test-sgid-jane" content-type="application/vnd.basecamp.mention" content="&lt;span data-controller=&quot;content-loader&quot; data-action=&quot;click-&gt;content-loader#load&quot;&gt;Jane&lt;/span&gt;"></bc-attachment>',
+      '</div>',
+    ].join("")
+
+    await editor.setValue(mixedPayload)
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("bc-attachment")).toHaveCount(2)
+      await expect(content.locator("[data-controller]")).toHaveCount(0)
+      await expect(content.locator("[data-action]")).toHaveCount(0)
+      await expect(content.locator(".person--inline").first()).toHaveText("Alice")
+    })
+  })
 })
