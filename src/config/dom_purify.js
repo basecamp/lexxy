@@ -201,12 +201,11 @@ export function buildConfig(allowedElements ) {
     if (tagAttributes[tag]) tagAttributes[tag].push(...attributes)
   }
 
-  return {
+  const config = {
     ALLOWED_TAGS: Object.keys(tagAttributes),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute),
     ADD_URI_SAFE_ATTR: [ "caption", "filename", ...URI_BEARING_ATTACHMENT_ATTRIBUTES ],
-    ...(TRUSTED_TYPES_POLICY ? { TRUSTED_TYPES_POLICY } : {}),
     SAFE_FOR_XML: false, // So that it does not strip attributes that contains serialized HTML (like content)
     // Stimulus behavior attributes must never survive sanitization: they let stored content
     // wire up arbitrary controllers/actions in the viewer's session. FORBID_ATTR wins over
@@ -214,4 +213,14 @@ export function buildConfig(allowedElements ) {
     // data-* attributes (data-language, data-trix-*, etc.) are otherwise allowed through.
     FORBID_ATTR: [ "data-controller", "data-action" ]
   }
+
+  // Assigned rather than spread in, because the key has to be absent — not
+  // present and undefined — when we have no policy: DOMPurify reads
+  // `cfg.TRUSTED_TYPES_POLICY` and validates its shape, so handing it undefined
+  // is not the same as leaving it out.
+  if (TRUSTED_TYPES_POLICY) {
+    config.TRUSTED_TYPES_POLICY = TRUSTED_TYPES_POLICY
+  }
+
+  return config
 }
