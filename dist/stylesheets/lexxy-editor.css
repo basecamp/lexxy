@@ -1,0 +1,1154 @@
+@import url("lexxy-variables.css");
+
+:where(lexxy-editor) {
+  --lexxy-editor-padding: 1ch;
+  --lexxy-editor-rows: 8lh;
+  /* eslint-disable-next-line css/no-invalid-properties */
+  @supports (min-block-size: attr(rows lh)) {
+    --lexxy-editor-rows: attr(rows lh, 8lh);
+  }
+  --lexxy-toolbar-gap: 2px;
+  --lexxy-toolbar-spacing: 0.5ch;
+  --lexxy-toolbar-padding: 2px;
+  --lexxy-toolbar-border-size: 1px;
+  --lexxy-toolbar-height: calc(var(--lexxy-toolbar-button-size) + 2 * var(--lexxy-toolbar-padding) + var(--lexxy-toolbar-border-size));
+
+  border: 1px solid var(--lexxy-color-ink-lighter);
+  border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
+  background-color: var(--lexxy-color-canvas);
+  container-type: inline-size;
+  display: block;
+  overflow: visible;
+  position: relative;
+  transition: opacity 150ms;
+
+  p.provisional-paragraph {
+    display: block;
+
+    &.hidden {
+      block-size: 0.5ch;
+      margin: 0;
+    }
+  }
+
+  input,
+  button,
+  summary {
+    &:focus-visible {
+      outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
+      outline-offset: var(--lexxy-focus-ring-offset);
+    }
+  }
+
+  summary {
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  button,
+  summary {
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--lexxy-color-canvas);
+    border: none;
+    border-radius: var(--lexxy-radius);
+    cursor: pointer;
+    line-height: normal;
+    font-size: inherit;
+    inline-size: auto;
+    padding: 0;
+
+    @media(any-hover: hover) {
+      &:hover:not([aria-disabled="true"]) {
+        background: var(--lexxy-color-ink-lightest);
+      }
+    }
+  }
+
+  .node--selected {
+    outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
+    outline-offset: var(--lexxy-focus-ring-offset);
+  }
+
+  &[data-links-openable] a {
+    cursor: pointer;
+  }
+
+  /* Tables */
+  /* ------------------------------------------------------------------------ */
+
+  table {
+    th, td {
+      position: relative;
+      transition: all 0.1s ease-in-out;
+
+      /* Used for column and row adding visualizations */
+      &:after {
+        box-shadow: 0 0 0 0 transparent, 0 0 0 0 transparent inset;
+        content: "";
+        display: block;
+        inset-block-start: -1px;
+        inset-block-end: -1px;
+        inset-inline-start: -1px;
+        inset-inline-end: -1px;
+        pointer-events: none;
+        position: absolute;
+        transition: box-shadow 0.1s ease-in-out;
+        z-index: 2;
+      }
+
+      &.lexxy-content__table-cell--selected {
+        background-color: var(--lexxy-color-table-cell-selected-bg);
+      }
+
+      &.lexxy-content__table-cell--focus {
+        &:after {
+          box-shadow: 0 0 0 0 transparent, 0 0 0 2px var(--lexxy-color-table-cell-selected-border) inset;
+        }
+      }
+
+      &.lexxy-content__table-cell--highlight {
+        &[data-action="insert"] {
+          &[data-child-type="row"] {
+            &[data-direction="after"] {
+              &:after {
+                box-shadow:
+                  0 var(--lexxy-table-cell-add-size) 0 0 var(--lexxy-color-table-cell-add),
+                  0 calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 var(--lexxy-color-table-cell-add) inset;
+              }
+            }
+            &[data-direction="before"] {
+              &:after {
+                box-shadow:
+                  0 calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 var(--lexxy-color-table-cell-add),
+                  0 var(--lexxy-table-cell-add-size) 0 0 var(--lexxy-color-table-cell-add) inset;
+              }
+            }
+          }
+          &[data-child-type="column"] {
+            &[data-direction="after"] {
+              &:after {
+                box-shadow:
+                  var(--lexxy-table-cell-add-size) 0 0 0 var(--lexxy-color-table-cell-add),
+                  calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 0 var(--lexxy-color-table-cell-add) inset;
+              }
+            }
+            &[data-direction="before"] {
+              &:after {
+                box-shadow:
+                  calc(-1 * var(--lexxy-table-cell-add-size) - 1px) 0 0 0 var(--lexxy-color-table-cell-add),
+                  var(--lexxy-table-cell-add-size) 0 0 0 var(--lexxy-color-table-cell-add) inset;
+              }
+            }
+          }
+        }
+        &[data-action="delete"] {
+          background-color: var(--lexxy-color-table-cell-remove);
+          color: var(--lexxy-color-red);
+
+          &:after { box-shadow: 0 0 0 0 transparent; }
+        }
+        &[data-action="toggle"] {
+          background-color: var(--lexxy-color-table-cell-toggle);
+
+          &:after { box-shadow: 0 0 0 0 transparent; }
+        }
+      }
+    }
+
+    tr.lexxy-content__table-cell--highlight[data-action="delete"] {
+      th, td {
+        background-color: var(--lexxy-color-table-cell-remove);
+        color: var(--lexxy-color-red);
+
+        &:after { box-shadow: 0 0 0 0 transparent; }
+      }
+    }
+
+    &.lexxy-content__table--selection {
+      /* eslint-disable-next-line css/use-baseline */
+      ::selection {
+        background: transparent;
+      }
+    }
+  }
+
+  &:has(.lexxy-content__table-cell--selected) {
+    lexxy-table-tools {
+      visibility: hidden;
+    }
+  }
+
+  [data-lexical-linebreak] {
+    block-size: 0;
+    display: contents;
+    inline-size: 0;
+  }
+
+  /* Attachments */
+  /* ------------------------------------------------------------------------ */
+
+  action-text-attachment {
+    cursor: pointer;
+  }
+
+  .attachment {
+    background-color: var(--lexxy-color-canvas);
+
+    progress {
+      max-inline-size: 10ch;
+      margin: auto;
+    }
+
+    &.attachment--preview {
+      progress {
+        inset-block-start: 2ch;
+        inset-inline-start: 0;
+        inset-inline-end: 0;
+        position: absolute;
+      }
+
+      lexxy-node-delete-button {
+        inset-block-start: 1.5ch;
+        inset-inline-end: 1.5ch;
+        inset-inline-start: unset;
+      }
+    }
+
+    &.attachment--error {
+      background: color-mix(var(--lexxy-color-red) 10%, transparent);
+      padding: 2ch;
+
+      &:before {
+        align-items: center;
+        aspect-ratio: 1;
+        background: var(--lexxy-color-red);
+        block-size: 1.5lh;
+        border-radius: 50%;
+        color: white;
+        content: "!";
+        display: flex;
+        justify-content: center;
+        margin: auto;
+      }
+
+      > div {
+        flex: 1;
+        font-size: 0.85em;
+        padding: 1ch;
+        text-align: start;
+      }
+    }
+  }
+
+  .attachment[draggable] {
+    cursor: grab;
+  }
+
+  .attachment.lexxy-dragging {
+    opacity: 0.4;
+  }
+
+  [data-lexxy-decorator][draggable] {
+    cursor: grab;
+  }
+
+  [data-lexxy-decorator].lexxy-dragging {
+    opacity: 0.4;
+  }
+
+  .lexxy-drop-caret {
+    background-color: var(--lexxy-focus-ring-color);
+    border-radius: 1px;
+    inline-size: 2px;
+    pointer-events: none;
+    position: fixed;
+  }
+
+  [class*="lexxy-drop-target--"] {
+    position: relative;
+  }
+
+  /* Horizontal line indicator for block and list drops */
+  .lexxy-drop-target--block-before::before,
+  .lexxy-drop-target--block-after::after,
+  .lexxy-drop-target--list-before::before,
+  .lexxy-drop-target--list-after::after {
+    background-color: var(--lexxy-focus-ring-color);
+    block-size: 3px;
+    border-radius: 1px;
+    content: "";
+    inset-inline: 0;
+    pointer-events: none;
+    position: absolute;
+    transform: translate(0, 0.5ch);
+  }
+
+  .lexxy-drop-target--block-before::before,
+  .lexxy-drop-target--list-before::before {
+    transform: translate(0, -0.5ch);
+  }
+
+  .lexxy-drop-target--block-before::before,
+  .lexxy-drop-target--list-before::before {
+    inset-block-start: -2px;
+  }
+
+  .lexxy-drop-target--block-after::after,
+  .lexxy-drop-target--list-after::after {
+    inset-block-end: -2px;
+  }
+
+  /* Vertical line indicator for gallery merge and reorder */
+  .lexxy-drop-target--gallery-before::before,
+  .lexxy-drop-target--gallery-after::after {
+    background-color: var(--lexxy-focus-ring-color);
+    border-radius: 1px;
+    content: "";
+    inset-block: 0;
+    inline-size: 3px;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  .lexxy-drop-target--gallery-before::before {
+    inset-inline-start: -4px;
+  }
+
+  .lexxy-drop-target--gallery-after::after {
+    inset-inline-end: -4px;
+  }
+
+  .attachment:hover:not(.node--selected) {
+    outline: var(--lexxy-focus-ring-size) solid color-mix(in oklch, var(--lexxy-focus-ring-color) 30%, transparent);
+    outline-offset: var(--lexxy-focus-ring-offset);
+  }
+
+  .attachment--file {
+    lexxy-node-delete-button {
+      inset-block-start: 50%;
+      inset-inline-end: 1ch;
+      inset-inline-start: unset;
+      transform: translate(0, -50%);
+    }
+  }
+
+  /* Image galleries */
+  /* ------------------------------------------------------------------------ */
+
+  .attachment-gallery {
+    --lexxy-attachment-gallery-columns: 3;
+    --lexxy-attachment-gallery-gap: 0.4ch;
+    --lexxy-focus-ring-offset: -6px;
+
+    padding: 0;
+
+    .attachment {
+      background: transparent;
+      box-sizing: border-box;
+      margin: var(--lexxy-attachment-gallery-gap);
+      padding: 0;
+      padding-block-end: var(--lexxy-attachment-gap);
+      vertical-align: top;
+
+      img {
+        box-sizing: border-box;
+        padding: 1ch;
+        padding-block-end: 0;
+      }
+
+
+      &.attachment--error {
+        background: color-mix(var(--lexxy-color-red) 10%, transparent);
+        padding: 2ch;
+
+        > div {
+          text-align: center;
+        }
+      }
+    }
+  }
+
+  .attachment__caption {
+    textarea {
+      background: transparent;
+      block-size: fit-content;
+      border: 0;
+      border-radius: var(--lexxy-radius);
+      box-sizing: border-box;
+      color: inherit;
+      display: block;
+      font-size: inherit;
+      font-family: inherit;
+      inline-size: 100%;
+      max-inline-size: 100%;
+      padding: 0;
+      text-align: center;
+
+      @supports (resize: none) {
+        resize: none;
+      }
+
+      &:focus {
+        background: var(--lexxy-color-canvas);
+        outline: 0;
+      }
+
+      &:placeholder-shown {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      @supports (field-sizing: content) {
+        field-sizing: content;
+        inline-size: 100%;
+      }
+    }
+  }
+}
+
+/* Reserve the mounted height before upgrade so it doesn't shift layout on mount. */
+:where(lexxy-editor:not(:defined)) {
+  min-block-size: calc(var(--lexxy-toolbar-height) + var(--lexxy-editor-rows) + 2 * var(--lexxy-editor-padding));
+}
+
+/* Placeholder */
+:where(.lexxy-editor--empty) {
+  .lexxy-editor__content:not(:has(h1, h2, h3, h4, h5, h6, table, ul, ol, figure, .attachment-gallery))::before {
+    content: attr(placeholder);
+    color: currentColor;
+    cursor: text;
+    opacity: 0.66;
+    pointer-events: none;
+    position: absolute;
+    white-space: pre-line;
+  }
+}
+
+:where(.lexxy-editor__content) {
+  /* eslint-disable-next-line css/no-invalid-properties */
+  min-block-size: var(--lexxy-editor-rows);
+  outline: 0;
+  padding: var(--lexxy-editor-padding);
+
+  /* Isolate the contenteditable root's layout and style. Lexical's reconciler
+     commits mutations inside this element (nodes appended, text inserted,
+     class flipped) on every update; containment keeps those mutations from
+     invalidating ancestor-dependent selectors and sibling layout elsewhere
+     in the editor. */
+  contain: layout style;
+}
+
+:where(.lexxy-editor--drag-over) {
+  background-color: var(--lexxy-color-selected);
+  border-radius: var(--lexxy-radius);
+  outline: 2px dashed var(--lexxy-color-selected-dark);
+}
+
+:where([data-lexical-cursor]) {
+  animation: blink 1s infinite;
+  block-size: 1lh;
+  border-inline-start: 1.5px solid currentColor;
+  line-height: inherit;
+  margin-block: 0 var(--lexxy-content-margin);
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  60% { opacity: 1; }
+  100% { opacity: 0;}
+}
+
+/* --------------------------------------------------------------------------
+/* Toolbar */
+
+:where(lexxy-toolbar) {
+  --lexxy-toolbar-icon-size: 1.125em;
+
+  border-block-end: var(--lexxy-toolbar-border-size) solid var(--lexxy-color-ink-lighter);
+  color: currentColor;
+  display: flex;
+  font-size: inherit;
+  gap: var(--lexxy-toolbar-gap);
+  max-inline-size: 100%;
+  padding: var(--lexxy-toolbar-padding);
+  position: relative;
+
+  @container (width < 300px) {
+    font-size: 0.8em;
+  }
+
+  &[data-attachments="false"] button[name="image"],
+  &[data-attachments="false"] button[name="file"] {
+    display: none;
+  }
+
+  &[data-upload="file"] button[name="image"] {
+    display: none;
+  }
+
+  &[data-upload="image"] button[name="file"] {
+    display: none;
+  }
+
+  .lexxy-editor__toolbar-button {
+    aspect-ratio: 1;
+    block-size: var(--lexxy-toolbar-button-size);
+    border: 0;
+    border-radius: var(--lexxy-radius);
+    color: currentColor;
+    display: grid;
+    line-height: inherit;
+    place-items: center;
+
+    &:is(:active):not([aria-disabled="true"]),
+    &[aria-pressed="true"] {
+      background-color: var(--lexxy-color-selected);
+
+      &:hover {
+        background-color: var(--lexxy-color-selected-hover);
+      }
+    }
+
+    &[aria-disabled="true"] {
+      cursor: default;
+      opacity: 0.3;
+    }
+
+    svg {
+      -webkit-touch-callout: none;
+      block-size: var(--lexxy-toolbar-icon-size);
+      fill: currentColor;
+      grid-area: 1/1;
+      inline-size: var(--lexxy-toolbar-icon-size);
+      -webkit-user-select: none;
+
+      @supports (user-select: none) {
+        user-select: none;
+      }
+    }
+
+    &.lexxy-editor__toolbar-group-end {
+      position: relative;
+      margin-inline-end: calc(var(--lexxy-toolbar-spacing) + 1px);
+
+      &:after {
+        background-color: var(--lexxy-color-ink-lighter);
+        block-size: var(--lexxy-toolbar-icon-size);
+        content: "";
+        display: block;
+        inline-size: 1px;
+        inset-inline-end: calc(-1 * var(--lexxy-toolbar-spacing));
+        inset-block: 0;
+        margin: auto;
+        pointer-events: none;
+        position: absolute;
+      }
+    }
+  }
+
+  .lexxy-editor__toolbar-button--push-right {
+    margin-inline-start: auto;
+  }
+}
+
+/* --------------------------------------------------------------------------
+/* Dropdowns */
+
+:where(.lexxy-editor__toolbar-dropdown) {
+  -webkit-user-select: none;
+
+  @supports (user-select: none) {
+    user-select: none;
+  }
+
+  .lexxy-editor__toolbar-button {
+    color: currentColor;
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    &.lexxy-editor__toolbar-button--chevron {
+      aspect-ratio: unset;
+      gap: 0.5ch;
+      grid-template-columns: 2fr 1fr;
+      min-inline-size: calc(var(--lexxy-toolbar-button-size) + 1.2ch);
+      padding-inline: 0.75ch;
+
+      &:after {
+        block-size: 0.3ch;
+        border-block-end: 2px solid currentColor;
+        border-inline-end: 2px solid currentColor;
+        content: "";
+        display: inline-block;
+        inline-size: 0.3ch;
+        transform: rotate(45deg);
+      }
+    }
+  }
+
+  > .lexxy-editor__toolbar-button[aria-expanded="true"] {
+    background-color: var(--lexxy-color-selected-hover);
+    border-end-end-radius: 0;
+    border-end-start-radius: 0;
+
+    &:hover {
+      background-color: var(--lexxy-color-selected-hover);
+    }
+  }
+
+  [data-dropdown-panel] {
+    background-color: var(--lexxy-color-canvas);
+    border: 2px solid var(--lexxy-color-selected-hover);
+    border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
+    box-sizing: border-box;
+    box-shadow: var(--lexxy-shadow);
+    color: var(--lexxy-color-text);
+    display: flex;
+    gap: var(--lexxy-toolbar-gap);
+    margin: 0;
+    padding: var(--lexxy-toolbar-spacing);
+    position: absolute;
+    z-index: 3;
+
+    &[hidden],
+    [overflowing] &[hidden] {
+      display: none;
+    }
+  }
+
+  .lexxy-editor__toolbar-dropdown-list {
+    border-start-start-radius: 0;
+    flex-direction: column;
+    padding: 0.1ch;
+
+    button {
+      align-items: center;
+      color: var(--lexxy-color-text);
+      display: flex;
+      flex-direction: row;
+      gap: 1ch;
+      padding: 1ch;
+      position: relative;
+
+      &[aria-pressed="true"] {
+        background-color: var(--lexxy-color-selected);
+
+        &:hover {
+          background-color: var(--lexxy-color-selected-hover);
+        }
+      }
+
+      span {
+        font-size: var(--lexxy-text-small);
+      }
+
+      svg {
+        block-size: 1lh;
+        fill: currentColor;
+        inline-size: 1lh;
+      }
+    }
+
+    .lexxy-editor__toolbar-separator {
+      background: var(--lexxy-color-ink-lighter);
+      block-size: 1px;
+      inline-size: 100%;
+    }
+
+    [overflowing] & {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+
+      button span { display: none; }
+
+      .lexxy-editor__toolbar-separator {
+        grid-column: 1 / -1;
+      }
+    }
+  }
+
+
+  /* --------------------------------------------------------------------------
+  /* Overflow menu */
+
+  &.lexxy-editor__toolbar-overflow {
+    display: none;
+    justify-self: flex-end;
+    z-index: 1;
+
+    [data-dropdown-panel] {
+      border-start-end-radius: 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      inset-inline-end: var(--lexxy-toolbar-gap);
+    }
+  }
+
+
+  /* --------------------------------------------------------------------------
+  /* Link dropdown */
+
+  &.lexxy-editor__toolbar-dropdown--link {
+    [data-dropdown-panel] {
+      font-size: var(--lexxy-text-small);
+      gap: var(--lexxy-toolbar-spacing);
+      inset-inline-start: var(--lexxy-toolbar-spacing);
+      inset-inline-end: var(--lexxy-toolbar-spacing);
+
+      [overflowing] & {
+        flex-wrap: wrap;
+      }
+
+      .lexxy-editor__toolbar-dropdown-actions {
+        display: flex;
+        flex: 1;
+        gap: var(--lexxy-toolbar-spacing);
+      }
+
+      input[type="url"] {
+        background-color: var(--lexxy-color-canvas);
+        border: 1px solid var(--lexxy-color-ink-lighter);
+        border-radius: var(--lexxy-radius);
+        color: var(--lexxy-color-text);
+        block-size: var(--lexxy-toolbar-button-size);
+        box-sizing: border-box;
+        font-size: var(--lexxy-text-small);
+        flex: 2;
+        inline-size: 100%;
+        line-height: inherit;
+        padding-block: 0;
+        padding-inline: 1ch;
+
+        [overflowing] & {
+          min-inline-size: 100%;
+        }
+      }
+
+      button {
+        background-color: var(--lexxy-color-ink-lightest);
+        inline-size: 100%;
+        padding-inline: 2ch;
+      }
+
+      button[value="link"] {
+        background-color: var(--lexxy-color-accent-dark);
+        color: var(--lexxy-color-ink-inverted);
+
+        &:hover {
+          background-color: var(--lexxy-color-accent-medium);
+        }
+      }
+    }
+  }
+
+  /* --------------------------------------------------------------------------
+  /* Color dropdown */
+
+  &.lexxy-editor__toolbar-dropdown--highlight {
+    position: relative;
+
+    [overflowing] & {
+      position: static;
+    }
+
+    [data-dropdown-panel] {
+      --max-inline-size: calc(var(--max-colors) * (var(--lexxy-toolbar-button-size) + var(--lexxy-toolbar-spacing)));
+      border-start-start-radius: 0;
+      gap: var(--lexxy-toolbar-spacing);
+      flex-direction: column;
+      font-size: var(--lexxy-text-small);
+      inset-inline-start: 0;
+      max-inline-size: var(--max-inline-size);
+
+      [overflowing] & {
+        border-start-start-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
+        inset-inline-end: var(--lexxy-toolbar-spacing);
+        inset-inline-start: var(--lexxy-toolbar-spacing);
+      }
+
+      button {
+        position: relative;
+      }
+
+      .lexxy-highlight-colors {
+        display: grid;
+        gap: var(--lexxy-toolbar-gap);
+        grid-template-columns: repeat(auto-fill, minmax(var(--lexxy-toolbar-button-size), 1fr));
+        max-inline-size: var(--max-inline-size);
+
+        button {
+          block-size: unset;
+          inline-size: 100%;
+
+          &:after {
+            align-items: center;
+            content: "Aa";
+            display: flex;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            inset: 0;
+            justify-content: center;
+            position: absolute;
+          }
+
+          &[aria-pressed="true"] {
+            background-color: transparent;
+            box-shadow: 0 0 0 2px currentColor inset;
+
+            &:after {
+              content: "✓";
+            }
+          }
+        }
+      }
+
+      .lexxy-editor__toolbar-dropdown-reset {
+        background-color: var(--lexxy-color-ink-lightest);
+
+        &:is([disabled]) {
+          display: none;
+        }
+      }
+    }
+  }
+}
+
+/* --------------------------------------------------------------------------
+/* Floating controls */
+:where(.lexxy-floating-controls) {
+  --button-size: 2.3lh;
+  --floating-tools-radius: calc(var(--lexxy-radius) * 1.5);
+
+  color: var(--lexxy-color-ink-inverted);
+  font-size: var(--lexxy-text-small);
+  line-height: 1;
+  position: absolute;
+  z-index: 2;
+
+  button,
+  summary {
+    align-items: center;
+    background: transparent;
+    block-size: var(--button-size);
+    color: var(--lexxy-color-ink-inverted);
+    display: flex;
+    justify-content: center;
+    line-height: inherit;
+    min-block-size: var(--button-size);
+    min-inline-size: var(--button-size);
+    -webkit-user-select: none;
+
+    @supports (user-select: none) {
+      user-select: none;
+    }
+
+    @media(any-hover: hover) {
+      &:hover:not([aria-disabled="true"]),
+      [open] &:is(summary) {
+        background: var(--lexxy-color-ink-medium);
+
+        svg {
+          opacity: 1;
+        }
+      }
+
+      &:focus-visible {
+        outline-color: var(--lexxy-focus-ring-color);
+      }
+    }
+  }
+
+  button {
+    aspect-ratio: 1 / 1;
+    font-weight: bold;
+
+    svg {
+      block-size: 1.125em;
+      inline-size: 1.125em;
+      fill: currentColor;
+      opacity: 0.8;
+      padding: 1px; /* Fixes weird Safari SVG clipping issue */
+    }
+
+    span {
+      display: none;
+    }
+  }
+
+  summary {
+    box-shadow: 0 0 0 1px inset rgba(128, 128, 128, 0.3);
+    padding: 0 1.25ch;
+  }
+
+  .lexxy-floating-controls__group {
+    background-color: var(--lexxy-color-ink);
+    border-radius: var(--floating-tools-radius);
+    padding: 0.25ch;
+  }
+
+
+  /* --------------------------------------------------------------------------
+  /* Table Tools */
+
+  &:is(lexxy-table-tools) {
+    flex-direction: row;
+    gap: 0.25ch;
+    inset-inline-start: var(--lexxy-editor-padding);
+    transform: translate(-50%, -120%);
+
+    .lexxy-table-control {
+      align-items: stretch;
+      display: flex;
+      flex-direction: row;
+      gap: 0.25ch;
+      white-space: nowrap;
+
+      .lexxy-table-control__more-menu {
+        gap: 0;
+        position: relative;
+
+        .lexxy-table-control__more-menu-details {
+          background: var(--lexxy-color-ink);
+          border-radius: var(--floating-tools-radius);
+          display: flex;
+          flex-direction: column;
+          gap: 0.25ch;
+          inset-block-start: 110%;
+          inset-inline-start: 50%;
+          padding: 0.25ch;
+          position: absolute;
+          transform: translateX(-50%);
+
+          button {
+            aspect-ratio: unset;
+            flex-direction: row;
+            font-weight: normal;
+            gap: 1ch;
+            justify-content: flex-start;
+            padding: 0.75ch;
+            padding-inline-end: 1.5ch;
+            white-space: nowrap;
+
+            span {
+              display: inline-block;
+            }
+
+            svg {
+              block-size: 1.3lh;
+              inline-size: 1.3lh;
+              fill: currentColor;
+            }
+          }
+        }
+      }
+
+      .lexxy-table-control__button--delete-table {
+        align-items: center;
+        block-size: auto;
+        font-weight: normal;
+        justify-content: center;
+
+        svg {
+          block-size: 1.125em;
+          inline-size: 1.125em;
+          min-block-size: 1.125em;
+          min-inline-size: 1.125em;
+        }
+
+        span {
+          align-items: center;
+          background: var(--lexxy-color-ink);
+          border-radius: var(--floating-tools-radius);
+          color: color-mix(in srgb, var(--lexxy-color-ink-inverted) 80%, transparent);
+          display: flex;
+          inset-inline-end: calc(var(--button-size) + 1ch);
+          inset-block-start: 0;
+          inset-block-end: 0;
+          inset-inline-start: 0;
+          justify-content: center;
+          padding: 0.5ch 1ch;
+          position: absolute;
+          transition: all 0.2s ease-out;
+          opacity: 0;
+          pointer-events: none;
+          white-space: nowrap;
+        }
+
+        &:hover {
+          background-color: var(--lexxy-color-red);
+
+          svg { color: var(--lexxy-color-ink-inverted); }
+
+          span {
+            opacity: 1;
+          }
+        }
+      }
+    }
+  }
+
+
+  /* --------------------------------------------------------------------------
+  /* Attachment delete button */
+
+  &:is(lexxy-node-delete-button) {
+    inset-block-start: 0;
+    inset-inline-start: 100%;
+    opacity: 0;
+    pointer-events: none;
+
+    .node--selected & {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .lexxy-node-delete:hover {
+      background-color: var(--lexxy-color-red);
+    }
+  }
+
+
+  /* --------------------------------------------------------------------------
+  /* Language picker */
+
+  &:is(lexxy-code-language-picker) {
+    inset-inline-end: var(--lexxy-editor-padding);
+
+    select {
+      -webkit-appearance: none;
+      appearance: none;
+      background-color: var(--lexxy-color-canvas);
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m12 19.5c-.7 0-1.3-.3-1.7-.8l-9.8-11.1c-.7-.8-.6-1.9.2-2.6.8-.6 1.9-.6 2.5.2l8.6 9.8c0 .1.2.1.4 0l8.6-9.8c.7-.8 1.8-.9 2.6-.2s.9 1.8.2 2.6l-9.8 11.1c-.4.5-1.1.8-1.7.8z' fill='%23000'/%3E%3C/svg%3E");
+      background-position: center right 1ch;
+      background-repeat: no-repeat;
+      background-size: 1ch;
+      block-size: 1.5lh;
+      border: 1px solid var(--lexxy-color-ink-lighter);
+      border-radius: var(--lexxy-radius);
+      color: var(--lexxy-color-ink);
+      font-family: var(--lexxy-font-base);
+      font-size: var(--lexxy-text-small);
+      font-weight: normal;
+      margin: 0.5ch 0.5ch 0 -0.5ch;
+      padding: 0 2ch 0 1ch;
+      text-align: start;
+
+      @media (prefers-color-scheme: dark) {
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m12 19.5c-.7 0-1.3-.3-1.7-.8l-9.8-11.1c-.7-.8-.6-1.9.2-2.6.8-.6 1.9-.6 2.5.2l8.6 9.8c0 .1.2.1.4 0l8.6-9.8c.7-.8 1.8-.9 2.6-.2s.9 1.8.2 2.6l-9.8 11.1c-.4.5-1.1.8-1.7.8z' fill='%23fff'/%3E%3C/svg%3E");
+      }
+    }
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+/* Prompt */
+
+:where(.lexxy-prompt-menu) {
+  --lexxy-prompt-avatar-size: 24px;
+  --lexxy-prompt-padding: 0.5ch;
+
+  --lexxy-prompt-offset-x: 0;
+  --lexxy-prompt-offset-y: 0;
+
+  background-color: var(--lexxy-color-canvas);
+  border-radius: calc(var(--lexxy-prompt-padding) * 2);
+  box-shadow: var(--lexxy-shadow);
+  color: var(--lexxy-color-ink);
+  font-family: var(--lexxy-font-base);
+  font-size: var(--lexxy-text-small);
+  list-style: none;
+  inset-block-start: var(--lexxy-prompt-offset-y);
+  inset-inline-start: var(--lexxy-prompt-offset-x);
+  margin: 0;
+  max-block-size: 200px;
+  max-inline-size: min(20ch, calc(100% - var(--lexxy-prompt-offset-x)));
+  min-inline-size: 20ch;
+  overflow: auto;
+  padding: var(--lexxy-prompt-padding);
+  position: absolute;
+  visibility: hidden;
+  z-index: var(--lexxy-z-popup);
+
+  &[data-clipped-at-right] {
+    inset-inline-start: unset;
+    inset-inline-end: 1ch;
+    max-inline-size: calc(100% - 1ch);
+  }
+
+  &[data-clipped-at-bottom] {
+    inset-block-start: unset;
+    inset-block-end: var(--lexxy-prompt-offset-y);
+  }
+}
+
+:where(.lexxy-prompt-menu--visible[data-anchored]) {
+  visibility: initial;
+}
+
+:where(.lexxy-prompt-menu__item) {
+  align-items: center;
+  border-radius: var(--lexxy-radius);
+  cursor: pointer;
+  display: flex;
+  gap: var(--lexxy-prompt-padding);
+  padding: var(--lexxy-prompt-padding);
+
+  &:hover {
+    background-color: var(--lexxy-color-ink-lightest);
+  }
+
+  &[aria-selected] {
+    background-color: var(--lexxy-color-selected);
+  }
+
+  img {
+    block-size: var(--lexxy-prompt-avatar-size);
+    border-radius: 50%;
+    flex-shrink: 0;
+    inline-size: var(--lexxy-prompt-avatar-size);
+    margin: 0;
+  }
+
+  + & {
+    margin-top: 2px;
+  }
+}
+
+:where(.lexxy-prompt-menu__item--empty) {
+  color: var(--lexxy-color-ink-medium);
+  padding: var(--lexxy-prompt-padding);
+}
+
+
+/* --------------------------------------------------------------------------
+/* Custom attachments */
+action-text-attachment[content-type^="application/vnd.actiontext"] {
+  &.node--selected {
+    --lexxy-attachment-bg-color: var(--lexxy-color-accent-dark);
+    --lexxy-attachment-text-color: var(--lexxy-color-ink-inverted);
+
+    outline: none;
+  }
+
+  lexxy-node-delete-button {
+    inset-inline-start: 0;
+    line-height: 1lh;
+
+    .lexxy-floating-controls__group {
+      --button-size: 1lh;
+
+      background-color: var(--lexxy-color-accent-dark);
+      padding: 0;
+
+      button {
+        border-radius: 50%;
+      }
+    }
+  }
+}
