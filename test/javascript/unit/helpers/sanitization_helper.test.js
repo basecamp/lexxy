@@ -141,6 +141,38 @@ test("safe-XML re-inflation strips content for the editor whose config denies it
   expect(sanitized).toContain("action-text-attachment")
 })
 
+// This also stands in for the version coupling. XML_UNSAFE_ATTRIBUTE_VALUE mirrors
+// a check private to DOMPurify, and package.json allows any ^3.4.13, so a later
+// release could widen that check and leave our neutralizer behind. Rather than
+// pinning an exact version — which would also refuse security patches for the
+// dependency this whole file is about — these cases run the real sanitizer end to
+// end. If DOMPurify starts rejecting something we do not neutralize, the attribute
+// is dropped and this test fails on the version that introduced it.
+//
+// The values below cover every alternation in the pattern: a comment terminator, a
+// bracket terminator, and a raw-text closing tag.
+//
+// They also cover the merge case. Neutralizing by deletion can join a match's
+// neighbours into a *new* unsafe sequence, and String#replace does not rescan what
+// it just produced. Deleting `</style` from `foo--</style>bar` leaves `foo-->bar`,
+// which still trips the guard — and the guard runs before the forceKeepAttr check,
+// so the attribute would be dropped by the very hook meant to keep it.
+test("keeps content whose unsafe sequences would merge when removed", () => {
+  const merging = { name: "attachments on" }
+  setSanitizerConfig(merging, withContent)
+
+  for (const value of [
+    "foo--</style>bar", "--</style>>", "a]</title>>b",
+    "plain --> comment", "bracket ]> close", "<!-- BEGIN app/views/x --><span>ok</span>",
+    "</textarea>", "</noscript>", "--!>"
+  ]) {
+    const html = `<action-text-attachment content-type="text/html" sgid="x" content="${value.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}"></action-text-attachment>`
+
+    expect(sanitize(html, merging, { safeForXml: true }), `lost content for ${value}`)
+      .toContain("content=")
+  }
+})
+
 test("safe-XML mode keeps the per-editor allowlist and the rest of the config", () => {
   const allows = { name: "attachments on" }
   setSanitizerConfig(allows, withContent)
