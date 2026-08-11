@@ -1,0 +1,14 @@
+test/javascript/unit/helpers/sanitization_helper.test.js
+  h_7c48a88bf05c0d 59-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "998ff9669301338005c81098b253b0b6db69af02",
+  "prompts": {},
+  "humans": {
+    "h_7c48a88bf05c0d": {
+      "author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
