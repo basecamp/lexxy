@@ -361,7 +361,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #readSanitizedEditorValue() {
     return this.editor?.read(() => {
-      return sanitize($generateHtmlFromNodes(this.editor, null))
+      return sanitize($generateHtmlFromNodes(this.editor, null), this.editor)
     }) ?? null
   }
 
@@ -755,7 +755,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #configureSanitizer(editor) {
-    setSanitizerConfig(this.#getAllowedElements(editor))
+    setSanitizerConfig(editor, this.#getAllowedElements(editor))
   }
 
   #getAllowedElements(editor) {

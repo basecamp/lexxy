@@ -72,11 +72,13 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     this.plainText = plainText ?? extractPlainTextFromHtml(innerHtml)
   }
 
-  createDOM() {
+  createDOM(_config, editor) {
     const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true, draggable: true })
     figure.dataset.lexicalNodeKey = this.__key
 
-    figure.insertAdjacentHTML("beforeend", sanitize(this.innerHtml))
+    // The editor is passed through so this content is sanitized with its own
+    // allowlist rather than whichever editor connected most recently.
+    figure.insertAdjacentHTML("beforeend", sanitize(this.innerHtml, editor))
 
     const deleteButton = createElement("lexxy-node-delete-button")
     figure.appendChild(deleteButton)
