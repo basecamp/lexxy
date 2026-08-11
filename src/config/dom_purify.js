@@ -180,10 +180,18 @@ function preserveSerializedContentHook(currentNode, hookEvent, config) {
   // attachments are disabled — falls through to normal validation and is stripped.
   // The bypass never leaks past what the calling editor's config already permits.
   if (hookEvent.attrName === "content" && isAttachmentTag(tag) && config?.ADD_ATTR?.("content", tag)) {
-    // Neutralize only the copy DOMPurify inspects for its XML-safety guard;
-    // forceKeepAttr then keeps the original value verbatim, so the neutralized
-    // copy is never written to the DOM.
-    hookEvent.attrValue = hookEvent.attrValue.replace(XML_UNSAFE_ATTRIBUTE_VALUE, "")
+    // Neutralize only the copy DOMPurify inspects for its XML-safety guard. The
+    // original value is what reaches the DOM: forceKeepAttr makes _sanitizeAttributes
+    // `continue`, which skips the _setAttributeValue at the end of the loop, so the
+    // attribute is left exactly as parsed.
+    //
+    // Replaced with a space rather than an empty string, because deleting a match can
+    // join its neighbours into a *new* unsafe sequence that String#replace will not
+    // rescan. `foo--</style>bar` collapses to `foo-->bar`, which still trips the guard
+    // — and the guard runs before the forceKeepAttr check, so the attribute would be
+    // dropped despite this hook. A separator makes that impossible for every
+    // alternation in the pattern.
+    hookEvent.attrValue = hookEvent.attrValue.replace(XML_UNSAFE_ATTRIBUTE_VALUE, " ")
     hookEvent.forceKeepAttr = true
   }
 }
