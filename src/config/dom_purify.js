@@ -1,97 +1,9 @@
-import createDOMPurify from "dompurify"
+import DOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 
-// Lexxy's own DOMPurify instance, deliberately not the shared default export.
-//
-// dompurify's default export is a singleton, and both its config and its hooks
-// are global to every consumer in the bundle. That makes configuring it from an
-// editor's connectedCallback actively dangerous for the host app: DOMPurify
-// treats a persistent config as final, so once setConfig() has run, every
-// later `sanitize(html, config)` anywhere in the app silently ignores its own
-// config argument. An app sanitizing untrusted HTML with, say,
-// `{ ALLOW_DATA_ATTR: false }` would keep passing that option and stop getting
-// it the moment a Lexxy editor connected — with no error and no visible change
-// at the call site.
-//
-// Calling the default export with a window returns a fresh, independent
-// instance. This one carries the hooks and config below; nothing we do here can
-// reach the app's instance, and nothing it does can reach ours.
-//
-// Under Trusted Types, every DOMPurify instance tries to create a policy named
-// `dompurify` on its first sanitize, and TT rejects a duplicate name — so the
-// second instance on the page gets none. That matters: DOMPurify hands its input
-// to DOMParser.parseFromString, which is itself a TT sink, so an unsigned
-// instance throws rather than degrading, and which sanitizer breaks depends on
-// which one ran first.
-//
-// So we create our own, under our own name, and hand it to DOMPurify rather than
-// letting it try. Guarded, because creating a policy the CSP hasn't allowlisted
-// throws: if that happens we're back to no policy, which is exactly where this
-// stood before. An app enforcing `require-trusted-types-for 'script'` should add
-// `lexxy` to its `trusted-types` directive.
-const TRUSTED_TYPES_POLICY = createTrustedTypesPolicy()
-
-function createTrustedTypesPolicy() {
-  // Feature-detected below, so browsers without Trusted Types simply get no
-  // policy — the same path as a CSP that doesn't allowlist ours.
-  // eslint-disable-next-line compat/compat
-  const trustedTypes = window.trustedTypes
-
-  if (typeof trustedTypes?.createPolicy !== "function") return null
-
-  try {
-    return trustedTypes.createPolicy("lexxy", { createHTML: (html) => html, createScriptURL: (url) => url })
-  } catch {
-    return null
-  }
-}
-
-const DOMPurify = createDOMPurify(window)
-
-// alt is inert on every element it can appear on, so it sits in the blanket
-// list. srcset is deliberately absent — it carries URLs, so it belongs to a
-// consumer that declares it.
-const ALLOWED_HTML_ATTRIBUTES = [ "alt", "class", "contenteditable", "href", "src", "style", "title" ]
-
-// width/height are scoped to img rather than allowlisted globally, because
-// ALLOWED_ATTR is not per-tag: putting them there would also permit
-// `<table width="100000">` and `<td height="500">` in attachment content, which
-// is layout the editor previously stripped. An image needs them to hold its
-// place while it loads; nothing else here does.
-const DEFAULT_TAG_ATTRIBUTES = { img: [ "width", "height" ] }
+const ALLOWED_HTML_ATTRIBUTES = [ "class", "contenteditable", "href", "src", "style", "title" ]
 
 const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
-
-// An attachment's `url` ends up as an <img src> (action_text_attachment_node
-// reads it into `this.src`, which is assigned to img.src). DOMPurify already
-// permits a data: URI on img[src] — img is in its DATA_URI_TAGS — but it has no
-// way to know that a custom element's `url` feeds the same sink, so it applies
-// the plain URI check and drops it.
-//
-// Until 3.3.2 that never came up: attributes admitted by a *functional* ADD_ATTR
-// skipped URI validation entirely (GHSA-cjmm-f4jc-qw8r), which is how data:
-// URLs worked here — and, less happily, how `url="javascript:…"` survived too.
-// The fix restored validation for both.
-//
-// So `url` is marked URI-safe, which hands the decision to this hook, and the
-// hook allows exactly what DOMPurify allows on an img src: its default scheme
-// list plus data:. javascript: and friends are dropped, which is stricter than
-// what shipped before the upgrade. The hook only ever removes an attribute — it
-// never force-keeps one — so scoping stays with the ADD_ATTR predicate, and a
-// `url` on a tag that never declared it is dropped as it always was.
-const URI_BEARING_ATTACHMENT_ATTRIBUTES = [ "url" ]
-const SAFE_ATTACHMENT_URI = /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))/i
-// eslint-disable-next-line no-control-regex -- mirrors DOMPurify's own ATTR_WHITESPACE
-const ATTR_WHITESPACE = /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u2029\u205F\u3000]/g
-
-function attachmentUriFilterHook(_currentNode, hookEvent) {
-  if (!URI_BEARING_ATTACHMENT_ATTRIBUTES.includes(hookEvent.attrName)) return
-
-  if (!SAFE_ATTACHMENT_URI.test(String(hookEvent.attrValue).replace(ATTR_WHITESPACE, ""))) {
-    hookEvent.keepAttr = false
-  }
-}
-
 
 function styleFilterHook(_currentNode, hookEvent) {
   if (hookEvent.attrName === "style" && hookEvent.attrValue) {
@@ -113,7 +25,6 @@ function styleFilterHook(_currentNode, hookEvent) {
 }
 
 DOMPurify.addHook("uponSanitizeAttribute", styleFilterHook)
-DOMPurify.addHook("uponSanitizeAttribute", attachmentUriFilterHook)
 
 const FORBIDDEN_STIMULUS_ATTRIBUTES = [ "data-controller", "data-action" ]
 
@@ -151,18 +62,11 @@ export function buildConfig(allowedElements ) {
     }
   }
 
-  // Only for tags the caller already permits — this widens what an allowed
-  // element may carry, never which elements are allowed.
-  for (const [ tag, attributes ] of Object.entries(DEFAULT_TAG_ATTRIBUTES)) {
-    if (tagAttributes[tag]) tagAttributes[tag].push(...attributes)
-  }
-
   return {
     ALLOWED_TAGS: Object.keys(tagAttributes),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute),
-    ADD_URI_SAFE_ATTR: [ "caption", "filename", ...URI_BEARING_ATTACHMENT_ATTRIBUTES ],
-    ...(TRUSTED_TYPES_POLICY ? { TRUSTED_TYPES_POLICY } : {}),
+    ADD_URI_SAFE_ATTR: [ "caption", "filename" ],
     SAFE_FOR_XML: false, // So that it does not strip attributes that contains serialized HTML (like content)
     // Stimulus behavior attributes must never survive sanitization: they let stored content
     // wire up arbitrary controllers/actions in the viewer's session. FORBID_ATTR wins over

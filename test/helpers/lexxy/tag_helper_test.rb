@@ -8,8 +8,6 @@ class Lexxy::TagHelperTest < ActionView::TestCase
   end
 
   test "#lexxy_rich_textarea_tag renders <action-text-attachment> elements" do
-    person = people(:james)
-
     render inline: <<~ERB, locals: { post: posts(:hello_james) }
       <%= lexxy_rich_textarea_tag :body, post.body %>
     ERB
@@ -19,15 +17,8 @@ class Lexxy::TagHelperTest < ActionView::TestCase
         attachment = value.at("action-text-attachment")
 
         assert_equal "Hello ", value.text
+        assert_equal %(<bc-mention gid="#{people(:james).to_gid}"><em>James Anderson</em> (<strong>JA</strong>)</bc-mention>), JSON.parse(attachment["content"])
         assert_equal "application/vnd.actiontext.mention", attachment["content-type"]
-
-        # Assert the parts of the mention this test is about, not the partial's
-        # exact markup: test/dummy/app/views/people/_person.html.erb is shared
-        # with the attachment-content image tests and changes when they do.
-        mention = fragment(JSON.parse(attachment["content"]))
-        assert_dom mention, %(bc-mention[gid="#{person.to_gid}"]), count: 1
-        assert_dom mention, "bc-mention em", text: person.name
-        assert_dom mention, "bc-mention strong", text: person.initials
       end
     end
   end
