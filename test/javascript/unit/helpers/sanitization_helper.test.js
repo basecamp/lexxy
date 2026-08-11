@@ -100,3 +100,47 @@ test("does not permit an element the caller left out", () => {
 
   expect(sanitize('<p>text</p><img src="/a.png" width="20">', noImages)).toBe("<p>text</p>")
 })
+
+// An attachment's `url` becomes an <img src>, so it has to allow the data: URIs
+// DOMPurify already allows there — without allowing the schemes it doesn't.
+//
+// Before dompurify 3.3.2 this attribute skipped URI validation altogether, because
+// it is admitted by a functional ADD_ATTR (GHSA-cjmm-f4jc-qw8r). That is what let
+// data: URLs through, and javascript: with them. These assert the split the hook
+// now draws, which is stricter than what shipped before the fix.
+const attachments = { name: "an editor with attachments" }
+const attachment = (url) => `<action-text-attachment content-type="image/*" url="${url}"></action-text-attachment>`
+
+test("keeps the data: URIs an attachment url legitimately carries", () => {
+  setSanitizerConfig(attachments, [ { tag: "action-text-attachment", attributes: [ "url", "content-type" ] } ])
+
+  for (const url of [
+    "data:image/png;base64,iVBORw0KGgo=",
+    "data:application/pdf;base64,aGVsbG8=",
+    "data:image/svg+xml,%3Csvg%3E%3C/svg%3E",
+    "https://example.com/a.png",
+    "/rails/active_storage/blobs/a.png"
+  ]) {
+    expect(sanitize(attachment(url), attachments)).toContain(url)
+  }
+})
+
+test("drops an executable scheme from an attachment url", () => {
+  setSanitizerConfig(attachments, [ { tag: "action-text-attachment", attributes: [ "url", "content-type" ] } ])
+
+  for (const url of [ "javascript:alert(1)", "JaVaScRiPt:alert(1)", "vbscript:msgbox(1)" ]) {
+    const sanitized = sanitize(attachment(url), attachments)
+
+    expect(sanitized).not.toContain("url=")
+    // The element itself survives — only the attribute is refused.
+    expect(sanitized).toContain("action-text-attachment")
+  }
+})
+
+test("url is still refused on a tag that never declared it", () => {
+  const noAttachments = { name: "an editor without attachments" }
+  setSanitizerConfig(noAttachments, [ "p" ])
+
+  // The hook only ever removes, so scoping stays with the ADD_ATTR predicate.
+  expect(sanitize('<p url="data:image/png;base64,x">hi</p>', noAttachments)).toBe("<p>hi</p>")
+})
