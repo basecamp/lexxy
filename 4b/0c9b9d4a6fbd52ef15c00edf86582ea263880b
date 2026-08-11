@@ -1,0 +1,29 @@
+dist/lexxy.esm.js
+  s_303fd9ad35defa::t_cf41dbb6bb17b3 1-11944
+dist/lexxy_helpers.esm.js
+  s_303fd9ad35defa::t_7bf1bf6423004f 1-168
+dist/stylesheets/lexxy-content.css
+  s_303fd9ad35defa::t_cf43cf7a60a7c1 1-504
+dist/stylesheets/lexxy-editor.css
+  s_303fd9ad35defa::t_f16bd8d74d84cc 1-1154
+dist/stylesheets/lexxy-variables.css
+  s_303fd9ad35defa::t_1f52b58e0b26b1 1-87
+dist/stylesheets/lexxy.css
+  s_303fd9ad35defa::t_a8ddedc21a327a 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "4b0c9b9d4a6fbd52ef15c00edf86582ea263880b",
+  "prompts": {},
+  "sessions": {
+    "s_303fd9ad35defa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9465ed19-2c3c-4fd4-88ee-467d03ad01b8",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
