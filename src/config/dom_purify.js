@@ -1,7 +1,17 @@
 import DOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 
-const ALLOWED_HTML_ATTRIBUTES = [ "class", "contenteditable", "href", "src", "style", "title" ]
+// alt is inert on every element it can appear on, so it sits in the blanket
+// list. srcset is deliberately absent — it carries URLs, so it belongs to a
+// consumer that declares it.
+const ALLOWED_HTML_ATTRIBUTES = [ "alt", "class", "contenteditable", "href", "src", "style", "title" ]
+
+// width/height are scoped to img rather than allowlisted globally, because
+// ALLOWED_ATTR is not per-tag: putting them there would also permit
+// `<table width="100000">` and `<td height="500">` in attachment content, which
+// is layout the editor previously stripped. An image needs them to hold its
+// place while it loads; nothing else here does.
+const DEFAULT_TAG_ATTRIBUTES = { img: [ "width", "height" ] }
 
 const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
 
@@ -92,6 +102,12 @@ export function buildConfig(allowedElements ) {
       tagAttributes[element.tag] ||= []
       tagAttributes[element.tag].push(...element.attributes)
     }
+  }
+
+  // Only for tags the caller already permits — this widens what an allowed
+  // element may carry, never which elements are allowed.
+  for (const [ tag, attributes ] of Object.entries(DEFAULT_TAG_ATTRIBUTES)) {
+    if (tagAttributes[tag]) tagAttributes[tag].push(...attributes)
   }
 
   return {
