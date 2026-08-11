@@ -1,0 +1,25 @@
+package.json
+  s_8a881e0b15478b::t_91d64f211e8ffc 73
+src/config/dom_purify.js
+  s_8a881e0b15478b::t_4e889e045af092 53-83,104,136
+test/javascript/unit/helpers/sanitization_helper.test.js
+  s_8a881e0b15478b::t_646d3c852b35b0 103-146
+yarn.lock
+  s_8a881e0b15478b::t_ca3db2bfeaf1aa 1163-1166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "71d05c5479ead3344004a107df2e440b989e1d4e",
+  "prompts": {},
+  "sessions": {
+    "s_8a881e0b15478b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5a5009c2-58bf-4654-8c0c-c3163395286d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
