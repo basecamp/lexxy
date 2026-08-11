@@ -1,5 +1,22 @@
-import DOMPurify from "dompurify"
+import createDOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
+
+// Lexxy's own DOMPurify instance, deliberately not the shared default export.
+//
+// dompurify's default export is a singleton, and both its config and its hooks
+// are global to every consumer in the bundle. That makes configuring it from an
+// editor's connectedCallback actively dangerous for the host app: DOMPurify
+// treats a persistent config as final, so once setConfig() has run, every
+// later `sanitize(html, config)` anywhere in the app silently ignores its own
+// config argument. An app sanitizing untrusted HTML with, say,
+// `{ ALLOW_DATA_ATTR: false }` would keep passing that option and stop getting
+// it the moment a Lexxy editor connected — with no error and no visible change
+// at the call site.
+//
+// Calling the default export with a window returns a fresh, independent
+// instance. This one carries the hooks and config below; nothing we do here can
+// reach the app's instance, and nothing it does can reach ours.
+const DOMPurify = createDOMPurify(window)
 
 // alt is inert on every element it can appear on, so it sits in the blanket
 // list. srcset is deliberately absent — it carries URLs, so it belongs to a
