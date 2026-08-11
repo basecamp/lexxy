@@ -1,0 +1,57 @@
+src/config/dom_purify.js
+  s_303fd9ad35defa::t_017d3cdd6d183d 156-161
+  s_303fd9ad35defa::t_f5a1f6b7160f5c 22-32
+test/javascript/unit/dom_purify_image_attributes.test.js
+  s_303fd9ad35defa::t_51931425fbadbb 1-50
+test/actiontext/image_attributes_test.rb
+  s_303fd9ad35defa::t_3a7ebae4459eed 1-5,7,19-21,36-42,44-46,48-55,69-72,75-76
+test/dummy/app/views/people/_person.html.erb
+  s_303fd9ad35defa::t_c5b1c92f6a37f1 1-5
+test/helpers/lexxy/tag_helper_test.rb
+  s_303fd9ad35defa::t_40b1f1bde374b4 11-12,23-30
+test/system/attachment_content_images_test.rb
+  s_303fd9ad35defa::t_baf567469540c9 1-50
+src/elements/editor.js
+  s_303fd9ad35defa::t_14d9cfa9a7abd5 364,758
+src/helpers/sanitization_helper.js
+  s_303fd9ad35defa::t_dd9f480e2501c0 3-32,35-36
+src/nodes/custom_action_text_attachment_node.js
+  s_303fd9ad35defa::t_e3d36236a91d1a 75,79-81
+test/browser/fixtures/sanitizer-isolation.html
+  s_303fd9ad35defa::t_5aa5ee3ce30717 1-26
+  s_8a881e0b15478b::t_15c5969f9066e2 1-26
+test/browser/fixtures/sanitizer-isolation.js
+  s_303fd9ad35defa::t_54f34686480122 1-6
+  s_8a881e0b15478b::t_2475b72a6f6a44 1-6
+test/browser/tests/editor/sanitizer_isolation.test.js
+  s_303fd9ad35defa::t_1f3330c7710746 1-56
+  s_8a881e0b15478b::t_eee09d880168d4 1-56
+test/javascript/unit/editor/sanitizer_isolation.test.js
+  s_303fd9ad35defa::t_82133d6ef25304 1-79
+test/javascript/unit/helpers/sanitization_helper.test.js
+  s_303fd9ad35defa::t_77a9b531e69001 1-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "7c80284d737f59a31f6a5d0a1ef50f64dcfb1b40",
+  "prompts": {},
+  "sessions": {
+    "s_303fd9ad35defa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9465ed19-2c3c-4fd4-88ee-467d03ad01b8",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    },
+    "s_8a881e0b15478b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5a5009c2-58bf-4654-8c0c-c3163395286d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
