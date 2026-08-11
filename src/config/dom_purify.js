@@ -16,6 +16,36 @@ import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection
 // Calling the default export with a window returns a fresh, independent
 // instance. This one carries the hooks and config below; nothing we do here can
 // reach the app's instance, and nothing it does can reach ours.
+//
+// Under Trusted Types, every DOMPurify instance tries to create a policy named
+// `dompurify` on its first sanitize, and TT rejects a duplicate name — so the
+// second instance on the page gets none. That matters: DOMPurify hands its input
+// to DOMParser.parseFromString, which is itself a TT sink, so an unsigned
+// instance throws rather than degrading, and which sanitizer breaks depends on
+// which one ran first.
+//
+// So we create our own, under our own name, and hand it to DOMPurify rather than
+// letting it try. Guarded, because creating a policy the CSP hasn't allowlisted
+// throws: if that happens we're back to no policy, which is exactly where this
+// stood before. An app enforcing `require-trusted-types-for 'script'` should add
+// `lexxy` to its `trusted-types` directive.
+const TRUSTED_TYPES_POLICY = createTrustedTypesPolicy()
+
+function createTrustedTypesPolicy() {
+  // Feature-detected below, so browsers without Trusted Types simply get no
+  // policy — the same path as a CSP that doesn't allowlist ours.
+  // eslint-disable-next-line compat/compat
+  const trustedTypes = window.trustedTypes
+
+  if (typeof trustedTypes?.createPolicy !== "function") return null
+
+  try {
+    return trustedTypes.createPolicy("lexxy", { createHTML: (html) => html, createScriptURL: (url) => url })
+  } catch {
+    return null
+  }
+}
+
 const DOMPurify = createDOMPurify(window)
 
 // alt is inert on every element it can appear on, so it sits in the blanket
@@ -132,6 +162,7 @@ export function buildConfig(allowedElements ) {
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute),
     ADD_URI_SAFE_ATTR: [ "caption", "filename", ...URI_BEARING_ATTACHMENT_ATTRIBUTES ],
+    ...(TRUSTED_TYPES_POLICY ? { TRUSTED_TYPES_POLICY } : {}),
     SAFE_FOR_XML: false, // So that it does not strip attributes that contains serialized HTML (like content)
     // Stimulus behavior attributes must never survive sanitization: they let stored content
     // wire up arbitrary controllers/actions in the viewer's session. FORBID_ATTR wins over

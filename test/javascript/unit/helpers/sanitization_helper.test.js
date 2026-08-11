@@ -56,3 +56,33 @@ test("each editor keeps its own allowlist", () => {
   expect(sanitize("<span>a</span><strong>b</strong>", editor)).toBe("<span>a</span><strong>b</strong>")
   expect(sanitize("<span>a</span><strong>b</strong>", other)).toBe("a<strong>b</strong>")
 })
+
+// Every DOMPurify instance claims a policy named `dompurify` under Trusted Types,
+// and TT rejects a duplicate — so on a page with a host sanitizer, ours would get
+// none, and an unsigned instance throws at DOMParser rather than degrading.
+// Ours is created under its own name and handed over, so both work.
+test("uses its own Trusted Types policy name", async () => {
+  const created = []
+  const previous = globalThis.trustedTypes
+
+  globalThis.trustedTypes = {
+    createPolicy(name, rules) {
+      if (created.includes(name)) throw new TypeError(`Policy "${name}" already exists`)
+      created.push(name)
+      return { createHTML: rules.createHTML, createScriptURL: rules.createScriptURL }
+    },
+    getAttributeType: () => null
+  }
+
+  try {
+    // Re-import so the module-scope policy is created against the stub.
+    const fresh = await import(`src/config/dom_purify?tt=${created.length}`)
+    const config = fresh.buildConfig([ "b" ])
+
+    expect(created).toContain("lexxy")
+    expect(created).not.toContain("dompurify")
+    expect(config.TRUSTED_TYPES_POLICY).toBeTruthy()
+  } finally {
+    globalThis.trustedTypes = previous
+  }
+})
