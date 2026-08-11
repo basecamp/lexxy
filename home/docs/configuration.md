@@ -108,3 +108,40 @@ Lexxy.configure({
   }
 })
 ```
+
+## Content Security Policy
+
+Lexxy sanitizes with its own DOMPurify instance rather than the shared one, so
+that configuring the editor cannot change how your app's own sanitizing behaves.
+
+That has one consequence you have to act on. Under Trusted Types, every DOMPurify
+instance asks for a policy named `dompurify` the first time it sanitizes, and the
+browser refuses a duplicate name — so on a page with two instances, one of them
+gets no policy at all. An instance without a policy does not quietly degrade: it
+throws, because DOMPurify parses through `DOMParser.parseFromString`, which is
+itself a Trusted Types sink. Which sanitizer breaks would come down to which one
+ran first.
+
+So Lexxy asks for a policy under its own name, `lexxy`. **If you enforce
+`require-trusted-types-for 'script'`, add `lexxy` to your `trusted-types`
+directive:**
+
+```
+Content-Security-Policy: require-trusted-types-for 'script'; trusted-types dompurify lexxy
+```
+
+In Rails, that is:
+
+```ruby
+# config/initializers/content_security_policy.rb
+Rails.application.config.content_security_policy do |policy|
+  policy.trusted_types :dompurify, :lexxy
+  policy.require_trusted_types_for :script
+end
+```
+
+If the directive doesn't allowlist `lexxy`, creating the policy throws and Lexxy
+catches it, falling back to no policy — the same position it was in before, and
+the same position every other unsigned sanitizer on the page is in. Browsers
+without Trusted Types take the same path. Nothing here is required unless you
+enforce Trusted Types.
