@@ -78,7 +78,11 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
     // The editor is passed through so this content is sanitized with its own
     // allowlist rather than whichever editor connected most recently.
-    figure.insertAdjacentHTML("beforeend", sanitize(this.innerHtml, editor))
+    //
+    // this.innerHtml is untrusted stored content being re-inflated into the editor,
+    // so it goes through DOMPurify's mXSS-safe mode. The serialized `content`
+    // attribute survives that via preserveSerializedContentHook.
+    figure.insertAdjacentHTML("beforeend", sanitize(this.innerHtml, editor, { safeForXml: true }))
 
     const deleteButton = createElement("lexxy-node-delete-button")
     figure.appendChild(deleteButton)

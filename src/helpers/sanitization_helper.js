@@ -32,6 +32,21 @@ export function setSanitizerConfig(editor, allowedTags) {
   configs.set(editor, fallbackConfig)
 }
 
-export function sanitize(html, editor) {
-  return DOMPurify.sanitize(html, configs.get(editor) ?? fallbackConfig)
+// Re-inflating stored attachment content is an untrusted storage round-trip, so that
+// call site opts into DOMPurify's mXSS-safe mode with { safeForXml: true }.
+//
+// The safe-XML config is derived from *this editor's* config rather than a module
+// base, and by spreading it rather than rebuilding: that keeps TRUSTED_TYPES_POLICY
+// and ADD_URI_SAFE_ATTR, and keeps the per-editor allowlist that the whole point of
+// keying on the editor was to preserve. Building from a shared base here would
+// quietly reintroduce the last-editor-wins bug on the one path that handles
+// untrusted content.
+//
+// The serialized `content` attribute survives SAFE_FOR_XML via
+// preserveSerializedContentHook in config/dom_purify, which reads the same config
+// off the hook's third argument.
+export function sanitize(html, editor, { safeForXml = false } = {}) {
+  const config = configs.get(editor) ?? fallbackConfig
+
+  return DOMPurify.sanitize(html, safeForXml ? { ...config, SAFE_FOR_XML: true } : config)
 }
