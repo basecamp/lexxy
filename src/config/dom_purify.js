@@ -127,7 +127,6 @@ export { DOMPurify }
 export function buildConfig(allowedElements = null) {
   const config = {
     ADD_URI_SAFE_ATTR: [ "caption", "filename", ...URI_BEARING_ATTACHMENT_ATTRIBUTES ],
-    ...(TRUSTED_TYPES_POLICY ? { TRUSTED_TYPES_POLICY } : {}),
     SAFE_FOR_XML: false, // So that it does not strip attributes that contains serialized HTML (like content)
     // Stimulus behavior attributes must never survive sanitization: they let stored content
     // wire up arbitrary controllers/actions in the viewer's session. FORBID_ATTR wins over
@@ -141,6 +140,14 @@ export function buildConfig(allowedElements = null) {
   // default, it would be a refusal: it strips every tag. An editor that declares
   // an empty allowlist still gets that refusal, because it asked for it.
   if (allowedElements) Object.assign(config, allowlistFor(allowedElements))
+
+  // Assigned rather than spread in, because the key has to be absent — not
+  // present and undefined — when we have no policy: DOMPurify reads
+  // `cfg.TRUSTED_TYPES_POLICY` and validates its shape, so handing it undefined
+  // is not the same as leaving it out.
+  if (TRUSTED_TYPES_POLICY) {
+    config.TRUSTED_TYPES_POLICY = TRUSTED_TYPES_POLICY
+  }
 
   return config
 }

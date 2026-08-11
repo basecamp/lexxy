@@ -146,3 +146,48 @@ test("uses its own Trusted Types policy name", async () => {
     globalThis.trustedTypes = previous
   }
 })
+
+// The other two shapes the policy can land in. Creating a policy the CSP has not
+// allowlisted throws, and that throw is caught — so the interesting assertion is
+// not just "no crash" but that the config comes back with the key *absent*.
+// DOMPurify reads cfg.TRUSTED_TYPES_POLICY and validates its shape, so a present
+// -but-undefined key is not the same as an omitted one.
+test("falls back to no policy when the CSP refuses the name", async () => {
+  const previous = globalThis.trustedTypes
+  let asked = false
+
+  globalThis.trustedTypes = {
+    createPolicy(name) {
+      asked = true
+      throw new TypeError(`Refused to create a TrustedTypePolicy named '${name}'`)
+    },
+    getAttributeType: () => null
+  }
+
+  try {
+    const fresh = await import("src/config/dom_purify?tt=refused")
+    const config = fresh.buildConfig([ "b" ])
+
+    expect(asked, "should have attempted to create its own policy").toBe(true)
+    expect(config).not.toHaveProperty("TRUSTED_TYPES_POLICY")
+    // Still sanitizes — this is the position Lexxy was in before it asked at all.
+    expect(fresh.DOMPurify.sanitize("<b>hi</b><script>x()</script>", config)).toBe("<b>hi</b>")
+  } finally {
+    globalThis.trustedTypes = previous
+  }
+})
+
+test("asks for no policy in a browser without Trusted Types", async () => {
+  const previous = globalThis.trustedTypes
+  delete globalThis.trustedTypes
+
+  try {
+    const fresh = await import("src/config/dom_purify?tt=absent")
+    const config = fresh.buildConfig([ "b" ])
+
+    expect(config).not.toHaveProperty("TRUSTED_TYPES_POLICY")
+    expect(fresh.DOMPurify.sanitize("<b>hi</b><script>x()</script>", config)).toBe("<b>hi</b>")
+  } finally {
+    globalThis.trustedTypes = previous
+  }
+})
