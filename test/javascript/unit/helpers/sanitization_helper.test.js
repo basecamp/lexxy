@@ -144,3 +144,33 @@ test("url is still refused on a tag that never declared it", () => {
   // The hook only ever removes, so scoping stays with the ADD_ATTR predicate.
   expect(sanitize('<p url="data:image/png;base64,x">hi</p>', noAttachments)).toBe("<p>hi</p>")
 })
+
+// Every DOMPurify instance claims a policy named `dompurify` under Trusted Types,
+// and TT rejects a duplicate — so on a page with a host sanitizer, ours would get
+// none, and an unsigned instance throws at DOMParser rather than degrading.
+// Ours is created under its own name and handed over, so both work.
+test("uses its own Trusted Types policy name", async () => {
+  const created = []
+  const previous = globalThis.trustedTypes
+
+  globalThis.trustedTypes = {
+    createPolicy(name, rules) {
+      if (created.includes(name)) throw new TypeError(`Policy "${name}" already exists`)
+      created.push(name)
+      return { createHTML: rules.createHTML, createScriptURL: rules.createScriptURL }
+    },
+    getAttributeType: () => null
+  }
+
+  try {
+    // Re-import so the module-scope policy is created against the stub.
+    const fresh = await import(`src/config/dom_purify?tt=${created.length}`)
+    const config = fresh.buildConfig([ "b" ])
+
+    expect(created).toContain("lexxy")
+    expect(created).not.toContain("dompurify")
+    expect(config.TRUSTED_TYPES_POLICY).toBeTruthy()
+  } finally {
+    globalThis.trustedTypes = previous
+  }
+})

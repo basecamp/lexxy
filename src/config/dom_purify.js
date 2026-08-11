@@ -17,23 +17,35 @@ import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection
 // instance. This one carries the hooks and config below; nothing we do here can
 // reach the app's instance, and nothing it does can reach ours.
 //
-// Known limitation, and read this before enabling Trusted Types. Every DOMPurify
-// instance lazily creates a policy named `dompurify` on its first sanitize, and
-// TT rejects a duplicate name, so whichever instance sanitizes second gets none —
-// DOMPurify catches that, warns, and carries on unsigned.
+// Under Trusted Types, every DOMPurify instance tries to create a policy named
+// `dompurify` on its first sanitize, and TT rejects a duplicate name — so the
+// second instance on the page gets none. That matters: DOMPurify hands its input
+// to DOMParser.parseFromString, which is itself a TT sink, so an unsigned
+// instance throws rather than degrading, and which sanitizer breaks depends on
+// which one ran first.
 //
-// Under `require-trusted-types-for 'script'` that is not cosmetic. DOMPurify
-// hands its input to DOMParser.parseFromString, which *is* a TT sink — that's
-// why it wraps the payload in `trustedTypesPolicy.createHTML` when it has a
-// policy. Without one, sanitizing throws. Whichever instance loses the race
-// breaks, so this can take out the host app's sanitizing rather than ours.
-//
-// It's latent today only because no app here sends a `trusted-types` directive,
-// and it can't be fixed from inside this file: the distinct-policy route needs a
-// name the host's CSP allowlists, and TRUSTED_TYPES_POLICY needs the host to
-// supply one. If you're turning TT on, that's the decision to make here — and
-// the `insertAdjacentHTML` sink in nodes/custom_action_text_attachment_node.js
-// receives a plain string and needs the same attention, independently of this.
+// So we create our own, under our own name, and hand it to DOMPurify rather than
+// letting it try. Guarded, because creating a policy the CSP hasn't allowlisted
+// throws: if that happens we're back to no policy, which is exactly where this
+// stood before. An app enforcing `require-trusted-types-for 'script'` should add
+// `lexxy` to its `trusted-types` directive.
+const TRUSTED_TYPES_POLICY = createTrustedTypesPolicy()
+
+function createTrustedTypesPolicy() {
+  // Feature-detected below, so browsers without Trusted Types simply get no
+  // policy — the same path as a CSP that doesn't allowlist ours.
+  // eslint-disable-next-line compat/compat
+  const trustedTypes = window.trustedTypes
+
+  if (typeof trustedTypes?.createPolicy !== "function") return null
+
+  try {
+    return trustedTypes.createPolicy("lexxy", { createHTML: (html) => html, createScriptURL: (url) => url })
+  } catch {
+    return null
+  }
+}
+
 const DOMPurify = createDOMPurify(window)
 
 // alt is inert on every element it can appear on, so it sits in the blanket
@@ -150,6 +162,7 @@ export function buildConfig(allowedElements ) {
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute),
     ADD_URI_SAFE_ATTR: [ "caption", "filename", ...URI_BEARING_ATTACHMENT_ATTRIBUTES ],
+    ...(TRUSTED_TYPES_POLICY ? { TRUSTED_TYPES_POLICY } : {}),
     SAFE_FOR_XML: false, // So that it does not strip attributes that contains serialized HTML (like content)
     // Stimulus behavior attributes must never survive sanitization: they let stored content
     // wire up arbitrary controllers/actions in the viewer's session. FORBID_ATTR wins over
