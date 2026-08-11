@@ -156,8 +156,84 @@ function styleFilterHook(_currentNode, hookEvent) {
   }
 }
 
+// DOMPurify's SAFE_FOR_XML guard drops any attribute whose value contains an
+// XML-unsafe sequence — a comment terminator (`-->`, `--!>`, `]>`) or a raw
+// `</style`-style tag close. Lexxy serializes attachment content (arbitrary HTML,
+// including Rails view-annotation comments like `<!-- BEGIN app/views/... -->`)
+// into the `content` attribute of an <action-text-attachment>. Under SAFE_FOR_XML
+// that value trips the guard and the whole attribute is stripped, silently losing
+// the attachment on the storage round-trip.
+//
+// The content attribute is inert: it is always entity-escaped on serialization and
+// is only ever re-parsed — and re-sanitized — by the attachment node's own renderer,
+// so preserving it here is mXSS-safe. This regexp mirrors DOMPurify's own
+// SAFE_FOR_XML attribute-value check, so it is coupled to the dompurify version in
+// package.json — verified identical against 3.4.13's check apart from the /g needed
+// for replace().
+const XML_UNSAFE_ATTRIBUTE_VALUE =
+  /((--!?|])>)|<\/(style|script|title|xmp|textarea|noscript|iframe|noembed|noframes)/gi
+
+// Narrowed to the attachment element itself, via the same isAttachmentTag the url
+// hook uses — both are asking the one question that matters, "is this our element",
+// and the answer has to stay the same for both. The justification for the bypass
+// below is specific to attachment content: it is entity-escaped on serialization and
+// only ever re-parsed by the attachment node's own renderer, which re-sanitizes it.
+// Extensions may declare `content` on any tag they like (see home/docs/extensions.md),
+// and for `{ tag: "x-widget", attributes: ["content"] }` none of that reasoning holds
+// — whatever renders x-widget is free to treat the value as markup.
+//
+// No fallback to the literal `action-text-attachment`: when a consumer renames the
+// element (bc3 uses `bc-attachment`), that name is no longer imported or rendered by
+// the attachment node, so exempting it would grant the bypass to a tag nothing here
+// treats as an attachment. The configured name is the only one that means anything.
+//
+// Stateless: the per-editor config arrives as the hook's third argument.
+//
+// This is the whole reason the hook cannot keep its own copy of which tags allow
+// `content`. buildConfig() now runs once per editor, so a module-level set would be
+// whichever editor connected last, and it would desynchronise from the config this
+// call is actually running under — in both directions. Editor B (attachments off)
+// connecting last would strip editor A's content; the reverse would force-keep
+// `content` on an element whose in-force config denied it.
+//
+// DOMPurify passes the resolved config to every hook (`hook.call(DOMPurify, node,
+// data, CONFIG)`), and because nothing calls setConfig any more, _parseConfig runs on
+// each sanitize() — so CONFIG is this call's config, not a stale one. buildConfig
+// already exposes the per-tag predicate as ADD_ATTR, which is exactly the question
+// being asked here.
+function preserveSerializedContentHook(currentNode, hookEvent, config) {
+  const tag = currentNode?.nodeName?.toLowerCase()
+
+  // forceKeepAttr bypasses DOMPurify's per-tag attribute allowlist, so it is scoped
+  // to a tag this config actually granted `content` on. Anything else — a
+  // non-attachment tag, or an attachment tag configured without `content` because
+  // attachments are disabled — falls through to normal validation and is stripped.
+  // The bypass never leaks past what the calling editor's config already permits.
+  if (hookEvent.attrName === "content" && isAttachmentTag(tag) && config?.ADD_ATTR?.("content", tag)) {
+    // Neutralize only the copy DOMPurify inspects for its XML-safety guard. The
+    // original value is what reaches the DOM: forceKeepAttr makes _sanitizeAttributes
+    // `continue`, which skips the _setAttributeValue at the end of the loop, so the
+    // attribute is left exactly as parsed.
+    //
+    // Replaced with a space rather than an empty string, because deleting a match can
+    // join its neighbours into a *new* unsafe sequence that String#replace will not
+    // rescan. `foo--</style>bar` collapses to `foo-->bar`, which still trips the guard
+    // — and the guard runs before the forceKeepAttr check, so the attribute would be
+    // dropped despite this hook. A separator makes that impossible for every
+    // alternation in the pattern.
+    hookEvent.attrValue = hookEvent.attrValue.replace(XML_UNSAFE_ATTRIBUTE_VALUE, " ")
+    hookEvent.forceKeepAttr = true
+  }
+}
+
 DOMPurify.addHook("uponSanitizeAttribute", styleFilterHook)
 DOMPurify.addHook("uponSanitizeAttribute", attachmentUriFilterHook)
+// Registered ahead of stimulusAttributeFilterHook, which sets keepAttr = false.
+// forceKeepAttr wins over keepAttr in DOMPurify, so if this hook's attribute set
+// ever widened past `content` to overlap that one's (`data-controller`,
+// `data-action`) it would silently defeat it. They are disjoint today and no test
+// links them, so the ordering is noted here rather than left to be rediscovered.
+DOMPurify.addHook("uponSanitizeAttribute", preserveSerializedContentHook)
 
 const FORBIDDEN_STIMULUS_ATTRIBUTES = [ "data-controller", "data-action" ]
 
