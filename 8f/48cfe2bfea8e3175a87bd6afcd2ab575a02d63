@@ -1,0 +1,23 @@
+test/browser/fixtures/sanitizer-isolation.html
+  s_8a881e0b15478b::t_15c5969f9066e2 1-26
+test/browser/fixtures/sanitizer-isolation.js
+  s_8a881e0b15478b::t_2475b72a6f6a44 1-6
+test/browser/tests/editor/sanitizer_isolation.test.js
+  s_8a881e0b15478b::t_eee09d880168d4 1-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "8f48cfe2bfea8e3175a87bd6afcd2ab575a02d63",
+  "prompts": {},
+  "sessions": {
+    "s_8a881e0b15478b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5a5009c2-58bf-4654-8c0c-c3163395286d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
