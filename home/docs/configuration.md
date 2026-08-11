@@ -114,23 +114,20 @@ Lexxy.configure({
 Lexxy sanitizes with its own DOMPurify instance rather than the shared one, so
 that configuring the editor cannot change how your app's own sanitizing behaves.
 
-That has one consequence you have to act on. Under Trusted Types, every DOMPurify
-instance asks for a policy named `dompurify` the first time it sanitizes, and the
-browser refuses a duplicate name — so on a page with two instances, one of them
-gets no policy at all. An instance without a policy does not quietly degrade: it
-throws, because DOMPurify parses through `DOMParser.parseFromString`, which is
-itself a Trusted Types sink. Which sanitizer breaks would come down to which one
-ran first.
+That has one consequence under Trusted Types. Every DOMPurify instance asks for a
+policy named `dompurify` the first time it sanitizes, and the browser refuses a
+duplicate name — so on a page with two instances, one of them gets no policy at
+all. An instance without a policy does not quietly degrade: it throws, because
+DOMPurify parses through `DOMParser.parseFromString`, which is itself a Trusted
+Types sink. Which sanitizer breaks would come down to which one ran first, and it
+could just as easily be yours as ours.
 
-So Lexxy asks for a policy under its own name, `lexxy`. **If you enforce
-`require-trusted-types-for 'script'`, add `lexxy` to your `trusted-types`
-directive:**
+So Lexxy asks under its own name, `lexxy`. If you enforce
+`require-trusted-types-for 'script'`, add it to your `trusted-types` directive:
 
 ```
 Content-Security-Policy: require-trusted-types-for 'script'; trusted-types dompurify lexxy
 ```
-
-In Rails, that is:
 
 ```ruby
 # config/initializers/content_security_policy.rb
@@ -140,8 +137,23 @@ Rails.application.config.content_security_policy do |policy|
 end
 ```
 
-If the directive doesn't allowlist `lexxy`, creating the policy throws and Lexxy
-catches it, falling back to no policy — the same position it was in before, and
-the same position every other unsigned sanitizer on the page is in. Browsers
-without Trusted Types take the same path. Nothing here is required unless you
-enforce Trusted Types.
+If the directive doesn't allowlist `lexxy`, creating the policy throws, Lexxy
+catches it, and falls back to no policy — the same position it was in before.
+Browsers without Trusted Types take the same path.
+
+### Lexxy does not yet work under enforced Trusted Types
+
+Allowlisting `lexxy` is necessary but **not sufficient**. It keeps Lexxy's
+sanitizer from breaking your app's; it does not make the editor itself work
+under `require-trusted-types-for 'script'`.
+
+Lexxy writes raw HTML through several sinks it does not wrap in a policy — the
+initial-value parse in `helpers/html_helper.js`, the attachment content
+`insertAdjacentHTML`, and the `innerHTML` writes that build the toolbar and
+dropdowns. Under enforcement the editor throws while connecting, whether or not
+`lexxy` is allowlisted. This is long-standing and is not changed either way by
+the policy above.
+
+If you enforce Trusted Types today, Lexxy will not run. Please open an issue if
+you need it to — knowing there is demand is what will get the remaining sinks
+wrapped.

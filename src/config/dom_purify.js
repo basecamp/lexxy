@@ -29,6 +29,18 @@ import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection
 // throws: if that happens we're back to no policy, which is exactly where this
 // stood before. An app enforcing `require-trusted-types-for 'script'` should add
 // `lexxy` to its `trusted-types` directive.
+//
+// What this does NOT do is make Lexxy work under enforced Trusted Types. It
+// stops *our* sanitizer from taking the host's policy name and breaking the
+// host's; it does nothing about Lexxy's own unwrapped sinks, and there are
+// several. `parseHtml` in helpers/html_helper.js hands a plain string to
+// DOMParser.parseFromString on the initial-value path, so the editor throws
+// before it finishes connecting — verified in Chromium under
+// `require-trusted-types-for 'script'`, with `lexxy` allowlisted and without.
+// The `insertAdjacentHTML` in nodes/custom_action_text_attachment_node.js and
+// the `innerHTML` writes across elements/ are in the same position. Making the
+// editor usable under TT is a separate piece of work; this is a prerequisite
+// for it, not the whole of it.
 const TRUSTED_TYPES_POLICY = createTrustedTypesPolicy()
 
 function createTrustedTypesPolicy() {
