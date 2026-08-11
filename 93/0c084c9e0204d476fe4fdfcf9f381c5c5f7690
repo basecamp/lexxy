@@ -6,10 +6,13 @@ src/nodes/custom_action_text_attachment_node.js
   s_303fd9ad35defa::t_e3d36236a91d1a 75,79-81
 test/browser/fixtures/sanitizer-isolation.html
   s_303fd9ad35defa::t_5aa5ee3ce30717 1-26
+  s_8a881e0b15478b::t_15c5969f9066e2 1-26
 test/browser/fixtures/sanitizer-isolation.js
   s_303fd9ad35defa::t_54f34686480122 1-6
+  s_8a881e0b15478b::t_2475b72a6f6a44 1-6
 test/browser/tests/editor/sanitizer_isolation.test.js
   s_303fd9ad35defa::t_1f3330c7710746 1-56
+  s_8a881e0b15478b::t_eee09d880168d4 1-56
 test/javascript/unit/editor/sanitizer_isolation.test.js
   s_303fd9ad35defa::t_82133d6ef25304 1-79
 test/javascript/unit/helpers/sanitization_helper.test.js
@@ -25,6 +28,14 @@ test/javascript/unit/helpers/sanitization_helper.test.js
       "agent_id": {
         "tool": "claude",
         "id": "9465ed19-2c3c-4fd4-88ee-467d03ad01b8",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    },
+    "s_8a881e0b15478b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5a5009c2-58bf-4654-8c0c-c3163395286d",
         "model": "claude-opus-5"
       },
       "human_author": "Jeremy Daer <jeremy@37signals.com>"
