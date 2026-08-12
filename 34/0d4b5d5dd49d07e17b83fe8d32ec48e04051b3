@@ -1,0 +1,19 @@
+test/actiontext/image_attributes_test.rb
+  s_303fd9ad35defa::t_f8f59ea36b89e3 6,8-18,22-35,43,47,56-68,73-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "340d4b5d5dd49d07e17b83fe8d32ec48e04051b3",
+  "prompts": {},
+  "sessions": {
+    "s_303fd9ad35defa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9465ed19-2c3c-4fd4-88ee-467d03ad01b8",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
