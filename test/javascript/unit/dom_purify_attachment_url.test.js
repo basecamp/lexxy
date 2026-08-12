@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vitest"
+import { afterEach, describe, expect, test } from "vitest"
 import { DOMPurify, buildConfig } from "../../../src/config/dom_purify"
+import Lexxy from "../../../src/config/lexxy"
 
 function sanitizeWith(allowedElements, html) {
   return DOMPurify.sanitize(html, buildConfig(allowedElements))
@@ -72,6 +73,39 @@ describe("dom_purify — attachment url validation", () => {
     test("the attachment element still keeps its data: urls", () => {
       expect(sanitizeWith(withUrl, attachment("data:image/png;base64,iVBORw0KGgo=")))
         .toContain("data:image/png;base64,iVBORw0KGgo=")
+    })
+  })
+
+  // The scoping follows the *configured* attachment tag, not the literal
+  // action-text-attachment string — which is the whole point of reading it from
+  // the global. bc3 renames the element to bc-attachment, so this is that
+  // consumer's real path, and getting it wrong fails in one of two silent ways:
+  // bc3's avatars (data: urls on bc-attachment) get stripped, or a stray
+  // action-text-attachment keeps a data: exception it should no longer have.
+  describe("scoping follows the configured attachment tag name", () => {
+    const renamed = (tag, url) => `<${tag} content-type="image/*" url="${url}"></${tag}>`
+    const original = Lexxy.global.get("attachmentTagName")
+
+    afterEach(() => Lexxy.global.merge({ attachmentTagName: original }))
+
+    test("a renamed attachment element keeps its data: urls", () => {
+      Lexxy.global.merge({ attachmentTagName: "bc-attachment" })
+
+      const config = [ { tag: "bc-attachment", attributes: [ "url", "content-type" ] } ]
+      expect(sanitizeWith(config, renamed("bc-attachment", "data:image/png;base64,iVBORw0KGgo=")))
+        .toContain("data:image/png;base64,iVBORw0KGgo=")
+    })
+
+    test("the old name loses the exception once it is no longer the configured tag", () => {
+      Lexxy.global.merge({ attachmentTagName: "bc-attachment" })
+
+      // action-text-attachment is now just some element, so its url gets the
+      // standard policy — data: is refused, the element is kept.
+      const config = [ { tag: "action-text-attachment", attributes: [ "url", "content-type" ] } ]
+      const sanitized = sanitizeWith(config, renamed("action-text-attachment", "data:text/html,<b>x</b>"))
+
+      expect(sanitized).not.toContain("data:")
+      expect(sanitized).toContain("action-text-attachment")
     })
   })
 })
