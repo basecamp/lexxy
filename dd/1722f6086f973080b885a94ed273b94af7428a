@@ -1,0 +1,20 @@
+test/javascript/unit/dom_purify_attachment_url.test.js
+  s_303fd9ad35defa::t_c656f55d9bde67 1,3
+  s_303fd9ad35defa::t_054c48ebf2e6dc 78-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "dd1722f6086f973080b885a94ed273b94af7428a",
+  "prompts": {},
+  "sessions": {
+    "s_303fd9ad35defa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9465ed19-2c3c-4fd4-88ee-467d03ad01b8",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
