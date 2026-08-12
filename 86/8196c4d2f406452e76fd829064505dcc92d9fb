@@ -1,0 +1,95 @@
+src/config/dom_purify.js
+  s_303fd9ad35defa::t_017d3cdd6d183d 274-279
+  s_303fd9ad35defa::t_f5a1f6b7160f5c 64-74
+  s_303fd9ad35defa::t_05214eeb445358 20-32,45-61
+  s_303fd9ad35defa::t_706bcd64a13c86 33-44
+  s_303fd9ad35defa::t_d8210f47ff7482 280,292-301
+  s_303fd9ad35defa::t_6a64429c8dee8e 159-228,231-236
+  s_303fd9ad35defa::t_048daa3d016df0 20-32,45-61
+  s_6428b8c273c8c4::t_1ec0b03caa9e8a 3
+  s_6428b8c273c8c4::t_9798ee1bb9aefd 159-175,181-188,190-212,225-228,231-236
+test/javascript/unit/dom_purify_image_attributes.test.js
+  s_303fd9ad35defa::t_51931425fbadbb 1-50
+test/actiontext/image_attributes_test.rb
+  s_303fd9ad35defa::t_3a7ebae4459eed 1-5,7,19-21,36-42,44-46,48-55,69-72,75-76
+  s_303fd9ad35defa::t_f8f59ea36b89e3 6,8-18,22-35,43,47,56-68,73-74
+test/dummy/app/views/people/_person.html.erb
+  s_303fd9ad35defa::t_c5b1c92f6a37f1 1-5
+test/helpers/lexxy/tag_helper_test.rb
+  s_303fd9ad35defa::t_40b1f1bde374b4 11-12,23-30
+test/system/attachment_content_images_test.rb
+  s_303fd9ad35defa::t_baf567469540c9 1-50
+src/elements/editor.js
+  s_303fd9ad35defa::t_14d9cfa9a7abd5 364,758
+src/helpers/sanitization_helper.js
+  s_303fd9ad35defa::t_dd9f480e2501c0 3-32
+  s_303fd9ad35defa::t_c06c6adc2895f4 35-51
+  s_6428b8c273c8c4::t_1e26dfb9d4aa1e 35-51
+src/nodes/custom_action_text_attachment_node.js
+  s_303fd9ad35defa::t_e3d36236a91d1a 75,79-80
+  s_303fd9ad35defa::t_fc17f25996f40f 81-85
+  s_6428b8c273c8c4::t_08fd4c1d04b27a 81-85
+test/browser/fixtures/sanitizer-isolation.html
+  s_303fd9ad35defa::t_5aa5ee3ce30717 1-26
+  s_8a881e0b15478b::t_15c5969f9066e2 1-26
+test/browser/fixtures/sanitizer-isolation.js
+  s_303fd9ad35defa::t_54f34686480122 1-6
+  s_8a881e0b15478b::t_2475b72a6f6a44 1-6
+test/browser/tests/editor/sanitizer_isolation.test.js
+  s_303fd9ad35defa::t_1f3330c7710746 1-56
+  s_8a881e0b15478b::t_eee09d880168d4 1-56
+test/javascript/unit/editor/sanitizer_isolation.test.js
+  s_303fd9ad35defa::t_82133d6ef25304 1-79
+test/javascript/unit/helpers/sanitization_helper.test.js
+  s_303fd9ad35defa::t_77a9b531e69001 1-58
+  h_7c48a88bf05c0d 59-99
+  s_303fd9ad35defa::t_f6f4e8b9c9c3e4 100,154-182
+  s_303fd9ad35defa::t_4f0eb25902e635 183-227
+  s_303fd9ad35defa::t_e3ef719cc0375f 101-153
+  s_303fd9ad35defa::t_c52bc71fff4095 59,154-182
+  s_6428b8c273c8c4::t_1007572cd1a2f7 101-153
+home/docs/configuration.md
+  s_303fd9ad35defa::t_0bc9a16a6ac083 111-116,127-131,132-139
+  s_303fd9ad35defa::t_2ad39d57e8be58 117-126,140-159
+  s_303fd9ad35defa::t_8abd89fa2313be 111-116,127-131,132-139
+test/javascript/unit/editor/attachments/content_reinflation_sanitization.test.js
+  s_303fd9ad35defa::t_f19c4b3d9e5921 1-52
+  s_6428b8c273c8c4::t_250bc39b36c95c 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "868196c4d2f406452e76fd829064505dcc92d9fb",
+  "prompts": {},
+  "humans": {
+    "h_7c48a88bf05c0d": {
+      "author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  },
+  "sessions": {
+    "s_303fd9ad35defa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9465ed19-2c3c-4fd4-88ee-467d03ad01b8",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    },
+    "s_6428b8c273c8c4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "85425b85-b17c-4876-80b8-a856b5cbeca2",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    },
+    "s_8a881e0b15478b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5a5009c2-58bf-4654-8c0c-c3163395286d",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
