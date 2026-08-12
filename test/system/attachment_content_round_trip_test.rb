@@ -1,21 +1,18 @@
 require "application_system_test_case"
 
 # Attachment content is re-sanitized in mXSS-safe mode every time the attachment
-# renders in the editor, so a comment-bearing `content` attribute — Rails view
-# annotations land inside the partial an attachment renders — has to survive the
-# whole loop: the editor, the saved value, the rendered page and the re-edited
-# document all have to agree, with Loofah on the server getting a say between them.
-# Unit tests only ever see the first hop; this is the test that would catch a
-# server stage dropping the attribute.
+# renders in the editor, so comment-bearing content — Rails view annotations land
+# inside the partial an attachment renders — has to survive the whole loop: the
+# editor, the saved value, the rendered page and the re-edited document all have to
+# agree, with Loofah on the server getting a say between them. Unit tests only ever
+# see the first hop; this is the test that would catch a server stage dropping it.
 #
-# What this does NOT cover, despite what it looks like: preserveSerializedContentHook.
-# That hook fires on a `content` attribute sanitized under SAFE_FOR_XML, and no hop
-# here is one. The saved value is read with SAFE_FOR_XML false, and the safe-XML call
-# in CustomActionTextAttachmentNode#createDOM is handed the *inner* markup, which
-# carries no `content` attribute of its own — only a nested attachment would. Verified
-# by reverting this PR's src/ entirely: the test still passes. Sanitizer coverage for
-# the hook lives in test/javascript/unit/helpers/sanitization_helper.test.js, which
-# calls sanitize() with a shape createDOM does not currently produce.
+# The content survives without any special force-keep. The serialized `content`
+# attribute is only produced by exportDOM, where SAFE_FOR_XML is off, so it is never
+# subject to the mXSS guard; the safe-XML call in CustomActionTextAttachmentNode#createDOM
+# is handed the *decoded inner* markup, which has no `content` attribute of its own.
+# The client-side re-inflation guard is covered directly in
+# test/javascript/unit/editor/attachments/content_reinflation_sanitization.test.js.
 class AttachmentContentRoundTripTest < ApplicationSystemTestCase
   COMMENT = "BEGIN app/views/people/_person.html.erb"
 

@@ -80,8 +80,10 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     // allowlist rather than whichever editor connected most recently.
     //
     // this.innerHtml is untrusted stored content being re-inflated into the editor,
-    // so it goes through DOMPurify's mXSS-safe mode. The serialized `content`
-    // attribute survives that via preserveSerializedContentHook.
+    // so it goes through DOMPurify's mXSS-safe mode. What is sanitized here is the
+    // decoded inner markup, which carries no serialized `content` attribute of its
+    // own — that attribute is only ever produced by exportDOM, where SAFE_FOR_XML
+    // is off — so mXSS-safe mode is free to be strict on this hop.
     figure.insertAdjacentHTML("beforeend", sanitize(this.innerHtml, editor, { safeForXml: true }))
 
     const deleteButton = createElement("lexxy-node-delete-button")

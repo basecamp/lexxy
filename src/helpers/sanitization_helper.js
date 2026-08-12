@@ -41,10 +41,6 @@ export function setSanitizerConfig(editor, allowedTags) {
 // keying on the editor was to preserve. Building from a shared base here would
 // quietly reintroduce the last-editor-wins bug on the one path that handles
 // untrusted content.
-//
-// The serialized `content` attribute survives SAFE_FOR_XML via
-// preserveSerializedContentHook in config/dom_purify, which reads the same config
-// off the hook's third argument.
 export function sanitize(html, editor, { safeForXml = false } = {}) {
   const config = configs.get(editor) ?? fallbackConfig
 

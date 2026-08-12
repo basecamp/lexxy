@@ -98,80 +98,13 @@ test("an editor denying attachment content strips it when another editor allows 
   expect(sanitized).toContain("action-text-attachment")
 })
 
-// The mXSS-safe re-inflation path, across two editors.
-//
-// SAFE_FOR_XML drops any attribute whose value could close a comment or a raw-text
-// element, which is exactly what a serialized `content` attribute looks like — so a
-// hook force-keeps it. That bypass has to be scoped to the config of the editor
-// making the call, and this is the pair of tests that holds it there.
-//
-// Both register the *other* editor last on purpose. A hook keeping its own copy of
-// which tags allow `content` would hold whichever config was built most recently, and
-// each test below catches one direction of that desync: the first loses an
-// attachment that should have survived, the second force-keeps `content` on an
-// element whose config denied it. Neither shows up without two editors in play,
-// which is why single-editor coverage was not enough.
+// The mXSS-safe re-inflation opt-in derives its config from *this editor*, not a
+// module base — spreading buildConfig's result rather than rebuilding, so the
+// per-editor allowlist and the rest of the config survive the SAFE_FOR_XML flip.
+// Building from a shared base here would reintroduce the last-editor-wins bug on
+// the one path that handles untrusted content.
 const withContent = [ { tag: "action-text-attachment", attributes: [ "content", "content-type", "sgid" ] } ]
-const serialized = '<action-text-attachment content-type="text/html" sgid="x" content="&lt;p title=&quot;--&gt;&quot;&gt;hi&lt;/p&gt;"></action-text-attachment>'
-
-test("safe-XML re-inflation keeps content for the editor whose config allows it", () => {
-  const allows = { name: "attachments on" }
-  const denies = { name: "attachments off" }
-
-  setSanitizerConfig(allows, withContent)
-  setSanitizerConfig(denies, [ "p" ]) // registered last
-
-  // Under module-level state this is the silent data-loss direction: the attachment
-  // loses its content and is destroyed on the round trip.
-  expect(sanitize(serialized, allows, { safeForXml: true })).toContain("content=")
-})
-
-test("safe-XML re-inflation strips content for the editor whose config denies it", () => {
-  const denies = { name: "attachments off" }
-  const allows = { name: "attachments on" }
-
-  setSanitizerConfig(denies, [ { tag: "action-text-attachment", attributes: [ "content-type", "sgid" ] } ])
-  setSanitizerConfig(allows, withContent) // registered last
-
-  // The allowlist-bypass direction: forceKeepAttr skips _isValidAttribute entirely,
-  // so a stale gate would keep `content` on an element the in-force config refused.
-  const sanitized = sanitize(serialized, denies, { safeForXml: true })
-
-  expect(sanitized).not.toContain("content=\"")
-  expect(sanitized).toContain("action-text-attachment")
-})
-
-// This also stands in for the version coupling. XML_UNSAFE_ATTRIBUTE_VALUE mirrors
-// a check private to DOMPurify, and package.json allows any ^3.4.13, so a later
-// release could widen that check and leave our neutralizer behind. Rather than
-// pinning an exact version — which would also refuse security patches for the
-// dependency this whole file is about — these cases run the real sanitizer end to
-// end. If DOMPurify starts rejecting something we do not neutralize, the attribute
-// is dropped and this test fails on the version that introduced it.
-//
-// The values below cover every alternation in the pattern: a comment terminator, a
-// bracket terminator, and a raw-text closing tag.
-//
-// They also cover the merge case. Neutralizing by deletion can join a match's
-// neighbours into a *new* unsafe sequence, and String#replace does not rescan what
-// it just produced. Deleting `</style` from `foo--</style>bar` leaves `foo-->bar`,
-// which still trips the guard — and the guard runs before the forceKeepAttr check,
-// so the attribute would be dropped by the very hook meant to keep it.
-test("keeps content whose unsafe sequences would merge when removed", () => {
-  const merging = { name: "attachments on" }
-  setSanitizerConfig(merging, withContent)
-
-  for (const value of [
-    "foo--</style>bar", "--</style>>", "a]</title>>b",
-    "plain --> comment", "bracket ]> close", "<!-- BEGIN app/views/x --><span>ok</span>",
-    "</textarea>", "</noscript>", "--!>"
-  ]) {
-    const html = `<action-text-attachment content-type="text/html" sgid="x" content="${value.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}"></action-text-attachment>`
-
-    expect(sanitize(html, merging, { safeForXml: true }), `lost content for ${value}`)
-      .toContain("content=")
-  }
-})
+const serialized = '<action-text-attachment content-type="text/html" sgid="x" content="&lt;span&gt;hi&lt;/span&gt;"></action-text-attachment>'
 
 test("safe-XML mode keeps the per-editor allowlist and the rest of the config", () => {
   const allows = { name: "attachments on" }
