@@ -77,11 +77,57 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     figure.dataset.lexicalNodeKey = this.__key
 
     figure.insertAdjacentHTML("beforeend", sanitize(this.innerHtml))
-
-    const deleteButton = createElement("lexxy-node-delete-button")
-    figure.appendChild(deleteButton)
+    this.#markImagesAsDecorative(figure)
+    this.#tagLabelImage(figure)
+    this.#tagLabelMirrors(figure)
 
     return figure
+  }
+
+  get isAnnounceable() {
+    return true
+  }
+
+  setupAnnouncement(figure) {
+    const labelImage = figure.querySelector("[data-lexxy-label-image]")
+    if (labelImage) labelImage.alt = this.label
+
+    for (const span of figure.querySelectorAll("[data-lexxy-label-mirror]")) {
+      span.setAttribute("aria-hidden", "true")
+    }
+  }
+
+  teardownAnnouncement(figure) {
+    const labelImage = figure.querySelector("[data-lexxy-label-image]")
+    if (labelImage) labelImage.alt = ""
+
+    for (const span of figure.querySelectorAll("[data-lexxy-label-mirror]")) {
+      span.removeAttribute("aria-hidden")
+    }
+  }
+
+  // Tag the figure's image (if any) so setupAnnouncement can find it later
+  // without re-scanning a subtree that other modules may have added images to.
+  #tagLabelImage(figure) {
+    const image = figure.querySelector("img")
+    if (image) image.setAttribute("data-lexxy-label-image", "")
+  }
+
+  // Tag the deepest spans whose text already matches the label so they can be
+  // aria-hidden during announcement and the label isn't spoken twice. Tagged
+  // at createDOM time so spans injected later (e.g. by the fake selection)
+  // aren't mistakenly silenced.
+  #tagLabelMirrors(figure) {
+    const trimmedLabel = this.label.trim()
+    const matches = [ ...figure.querySelectorAll("span") ].filter((span) => span.textContent.trim() === trimmedLabel)
+    const deepest = matches.filter((span) => !matches.some((other) => other !== span && span.contains(other)))
+    for (const span of deepest) span.setAttribute("data-lexxy-label-mirror", "")
+  }
+
+  #markImagesAsDecorative(figure) {
+    for (const img of figure.querySelectorAll("img:not([alt])")) {
+      img.alt = ""
+    }
   }
 
   updateDOM() {
@@ -94,6 +140,10 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
   getReadableTextContent() {
     return this.plainText || `[${this.contentType}]`
+  }
+
+  get label() {
+    return this.getReadableTextContent()
   }
 
   isInline() {
