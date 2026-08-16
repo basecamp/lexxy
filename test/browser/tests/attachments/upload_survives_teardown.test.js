@@ -3,9 +3,9 @@ import { expect } from "@playwright/test"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
 
 // An in-flight direct upload can outlive the editor: teardown runs on
-// disconnect and on every turbo:before-cache, but the upload's ActiveStorage
-// callbacks still fire afterwards — #forgetUploadRequest when the store PUT
-// completes, #rememberUploadRequest when blob creation resolves — and both
+// disconnect, but the upload's ActiveStorage callbacks still fire afterwards
+// — #forgetUploadRequest when the store PUT completes,
+// #rememberUploadRequest when blob creation resolves — and both
 // dereference #editorElement on a torn-down editor.
 // Sentry: BC3-JS-N8HN, BC3-JS-N8HP.
 test.describe("Upload outliving editor teardown", () => {
