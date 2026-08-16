@@ -508,6 +508,94 @@ test.describe("Block formatting", () => {
     await expect(input).toHaveValue("https://37signals.com")
   })
 
+  test("editing an existing link with a collapsed caret replaces its URL", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      '<p>Hello <a href="https://37signals.com">everyone</a></p>',
+    )
+    await editor.placeCaretInside("everyone", 4)
+    await editor.flush()
+
+    await openToolbarDropdown(page, "link")
+
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input[type='url']").first()
+    await expect(input).toHaveValue("https://37signals.com")
+    await input.fill("https://example.com")
+    await page
+      .locator("lexxy-link-dropdown [data-dropdown-panel] button[value='link']")
+      .first()
+      .click()
+
+    await assertEditorHtml(
+      editor,
+      '<p>Hello <a href="https://example.com">everyone</a></p>',
+    )
+  })
+
+  test("editing an existing link with the caret at its trailing edge replaces its URL", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      '<p>Hello <a href="https://37signals.com">everyone</a> bye</p>',
+    )
+    await editor.placeCaretInside("everyone", "everyone".length)
+    await editor.flush()
+
+    await openToolbarDropdown(page, "link")
+
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input[type='url']").first()
+    await expect(input).toBeVisible({ timeout: 2_000 })
+    await input.fill("https://example.com")
+    await page
+      .locator("lexxy-link-dropdown [data-dropdown-panel] button[value='link']")
+      .first()
+      .click()
+
+    await assertEditorHtml(
+      editor,
+      '<p>Hello <a href="https://example.com">everyone</a> bye</p>',
+    )
+  })
+
+  test("unlinking with the caret at a link's trailing edge removes the link", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      '<p>Hello <a href="https://37signals.com">everyone</a> bye</p>',
+    )
+    await editor.placeCaretInside("everyone", "everyone".length)
+    await editor.flush()
+
+    await openToolbarDropdown(page, "link")
+    await page
+      .locator("lexxy-link-dropdown [data-dropdown-panel] button[value='unlink']")
+      .first()
+      .click()
+
+    await assertEditorHtml(editor, "<p>Hello everyone bye</p>")
+  })
+
+  test("link dialog shows existing URL when the caret is at the link's trailing edge", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      '<p>Hello <a href="https://37signals.com">everyone</a> bye</p>',
+    )
+    await editor.placeCaretInside("everyone", "everyone".length)
+    await editor.flush()
+
+    await openToolbarDropdown(page, "link")
+
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input[type='url']").first()
+    await expect(input).toBeVisible({ timeout: 2_000 })
+    await expect(input).toHaveValue("https://37signals.com")
+  })
+
   test("link dialog shows empty input when no link is selected", async ({
     page,
     editor,
