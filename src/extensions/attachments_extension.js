@@ -1,4 +1,4 @@
-import { $getSelection, $isDecoratorNode, $isParagraphNode, $splitNode, COMMAND_PRIORITY_NORMAL, DELETE_CHARACTER_COMMAND, defineExtension } from "lexical"
+import { $getSelection, $getSiblingCaret, $isDecoratorNode, $isParagraphNode, $splitNode, COMMAND_PRIORITY_NORMAL, DELETE_CHARACTER_COMMAND, defineExtension } from "lexical"
 import { mergeRegister } from "@lexical/utils"
 
 import { $findOrCreateGalleryForImage, $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
@@ -126,15 +126,45 @@ function $collapseAtGalleryEdge(anchor, backwards) {
   const anchorNode = anchor.getNode()
   if (!$isImageGalleryNode(anchorNode)) return false
 
+  const direction = $directionFor(backwards)
+  const spacer = $emptyParagraphBeside(anchorNode, direction)
+
+  let sibling = $adjacentSibling(anchorNode, direction)
+  if (spacer) sibling = $adjacentSibling(spacer, direction)
+
   const isAtGalleryEdge = $isAtNodeEdge(anchor, backwards)
-  const sibling = backwards ? anchorNode.getPreviousSibling() : anchorNode.getNextSibling()
 
   if (isAtGalleryEdge && anchorNode.collapseWith(sibling, backwards)) {
+    if (spacer) spacer.remove()
     const selectionOffset = backwards ? 1 : anchorNode.getChildrenSize() - 1
     anchorNode.select(selectionOffset, selectionOffset)
     return true
   } else {
     return false
+  }
+}
+
+// The caret slot between a gallery and an adjacent attachment is invisible, so a merge gesture
+// has to reach across it and take it along.
+function $emptyParagraphBeside(node, direction) {
+  const sibling = $adjacentSibling(node, direction)
+
+  if ($isParagraphNode(sibling) && sibling.isEmpty()) {
+    return sibling
+  } else {
+    return null
+  }
+}
+
+function $adjacentSibling(node, direction) {
+  return $getSiblingCaret(node, direction).getNodeAtCaret()
+}
+
+function $directionFor(backwards) {
+  if (backwards) {
+    return "previous"
+  } else {
+    return "next"
   }
 }
 
