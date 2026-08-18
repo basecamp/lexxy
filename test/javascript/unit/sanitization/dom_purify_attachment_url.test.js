@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest"
-import { DOMPurify, buildConfig } from "../../../src/config/dom_purify"
-import Lexxy from "../../../src/config/lexxy"
+import { DOMPurify, buildConfig } from "src/config/dom_purify"
+import Lexxy from "src/config/lexxy"
 
 function sanitizeWith(allowedElements, html) {
   return DOMPurify.sanitize(html, buildConfig(allowedElements))
