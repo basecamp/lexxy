@@ -52,7 +52,7 @@ export default class Contents {
   insertText(text, { tag } = {}) {
     this.editor.update(() => {
       const paragraph = $createParagraphNode()
-      text.split("\n").forEach((line, index) => {
+      text.split(/\r\n|\r|\n/).forEach((line, index) => {
         if (index > 0) paragraph.append($createLineBreakNode())
         paragraph.append($createTextNode(line))
       })
