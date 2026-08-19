@@ -17,6 +17,74 @@ import { URI_BEARING_ATTACHMENT_ATTRIBUTES, attachmentUriFilterHook } from "../h
 // Calling the default export with a window returns a fresh, independent
 // instance. This one carries the hooks and config below; nothing we do here can
 // reach the app's instance, and nothing it does can reach ours.
+//
+// Under Trusted Types, every DOMPurify instance tries to create a policy named
+// `dompurify` on its first sanitize, and TT rejects a duplicate name — so the
+// second instance on the page gets none. That matters, and not because it throws:
+// DOMPurify hands its input to DOMParser.parseFromString, which is itself a TT
+// sink, but `_initDocument` swallows that throw and the innerHTML throw from its
+// createDocument fallback, and `sanitize` then returns "" for the body it never
+// got. An unsigned instance silently drops all content, with nothing in the host's
+// error tracker to say why — and which sanitizer goes silent depends on which one
+// ran first.
+//
+// So we create our own, under our own name, and hand it to DOMPurify rather than
+// letting it try. Lazily, because resolving it at import would fire a CSP
+// violation report on every page load of an app that imports Lexxy and never
+// renders an editor, and at most once, because TT throws on a duplicate name.
+// Guarded too, because creating a policy the CSP hasn't allowlisted throws: if
+// that happens we're back to no policy, which is exactly where this stood before.
+// An app enforcing `require-trusted-types-for 'script'` should add `lexxy` to its
+// `trusted-types` directive.
+//
+// What this does NOT do is make Lexxy work under enforced Trusted Types. It
+// stops *our* sanitizer from taking the host's policy name and breaking the
+// host's; it does nothing about Lexxy's own unwrapped sinks, and there are
+// several. `parseHtml` in helpers/html_helper.js hands a plain string to
+// DOMParser.parseFromString on the initial-value path, so the editor throws
+// before it finishes connecting — verified in Chromium under
+// `require-trusted-types-for 'script'`, with `lexxy` allowlisted and without.
+// `createElement` in the same file is a second sink in it, writing its `content`
+// argument through innerHTML for the two callers that pass one — the wrapped-table
+// figure and the table tools' count. `highlightElement` in
+// helpers/code_highlighting_helper.js writes Prism's output the same way, and both
+// it and highlightCode are exported from src/index.js — so that one throws for a
+// host app calling Lexxy's highlighting API directly, outside any editor. The
+// `insertAdjacentHTML` in nodes/custom_action_text_attachment_node.js and the
+// `innerHTML` writes across elements/ — the toolbar, the dropdowns, the node
+// delete button — are in the same position. Making the editor usable under TT is a
+// separate piece of work; this is a prerequisite for it, not the whole of it.
+let trustedTypesPolicyResolved = false
+let resolvedTrustedTypesPolicy = null
+
+function trustedTypesPolicy() {
+  if (!trustedTypesPolicyResolved) {
+    resolvedTrustedTypesPolicy = createTrustedTypesPolicy()
+    trustedTypesPolicyResolved = true
+  }
+
+  return resolvedTrustedTypesPolicy
+}
+
+function createTrustedTypesPolicy() {
+  // Feature-detected below, so browsers without Trusted Types simply get no
+  // policy — the same path as a CSP that doesn't allowlist ours.
+  // eslint-disable-next-line compat/compat
+  const trustedTypes = window.trustedTypes
+
+  if (typeof trustedTypes?.createPolicy !== "function") return null
+
+  try {
+    return trustedTypes.createPolicy("lexxy", { createHTML: (html) => html, createScriptURL: (url) => url })
+  } catch {
+    // Warned rather than swallowed, matching what DOMPurify does when its own
+    // policy is refused. The fallback is a silent loss of Trusted Types coverage
+    // otherwise, and the CSP violation report alone doesn't name us.
+    console.warn("TrustedTypes policy lexxy could not be created.")
+    return null
+  }
+}
+
 const DOMPurify = createDOMPurify(window)
 
 // alt is inert on every element it can appear on, so it sits in the blanket
@@ -98,6 +166,19 @@ export function buildConfig(allowedElements = null) {
   // default, it would be a refusal: it strips every tag. An editor that declares
   // an empty allowlist still gets that refusal, because it asked for it.
   if (allowedElements) Object.assign(config, allowlistFor(allowedElements))
+
+  // Always assigned, including when we have no policy — `null` is what
+  // trustedTypesPolicy() returns then, and `TRUSTED_TYPES_POLICY: null` is
+  // DOMPurify's documented per-call opt-out: sign nothing, create nothing.
+  //
+  // Leaving the key out is a different thing entirely, and the wrong one. With no
+  // key DOMPurify falls through to _getDefaultTrustedTypesPolicy() and asks the
+  // browser for `dompurify` — the very name this exists to stop competing for — so
+  // an omitted key would disarm the sanitizer of a host shipping
+  // `trusted-types dompurify` on the one path where we couldn't get our own.
+  // Present-and-`undefined` lands in that same fallthrough, so it is not a
+  // substitute for `null` either.
+  config.TRUSTED_TYPES_POLICY = trustedTypesPolicy()
 
   return config
 }

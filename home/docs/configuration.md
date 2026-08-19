@@ -108,3 +108,91 @@ Lexxy.configure({
   }
 })
 ```
+
+## Content Security Policy
+
+Lexxy sanitizes with its own DOMPurify instance rather than the shared one, so
+that configuring the editor cannot change how your app's own sanitizing behaves.
+
+That has one consequence under Trusted Types. Every DOMPurify instance asks for a
+policy named `dompurify` the first time it sanitizes, and the browser refuses a
+duplicate name — so on a page with two instances, one of them gets no policy at
+all. An instance without a policy does not quietly degrade, and it does not throw
+either. It **silently returns an empty string and drops everything you gave it**:
+DOMPurify parses through `DOMParser.parseFromString`, which is a Trusted Types
+sink, but it swallows that error and the one from its `innerHTML` fallback, and
+then returns `""` for the document it never got. Nothing reaches your error
+tracker. Which sanitizer goes quiet would come down to which one ran first, and it
+could just as easily be yours as ours.
+
+So Lexxy asks under its own name, `lexxy`. If you enforce
+`require-trusted-types-for 'script'`, add it to your `trusted-types` directive:
+
+```
+Content-Security-Policy: require-trusted-types-for 'script'; trusted-types dompurify lexxy
+```
+
+```ruby
+# config/initializers/content_security_policy.rb
+Rails.application.config.content_security_policy do |policy|
+  policy.trusted_types "dompurify", "lexxy"
+  policy.require_trusted_types_for :script
+end
+```
+
+The policy names are strings, not symbols: Rails resolves a symbol source through
+its own mapping table and raises `ArgumentError` on anything not in it. `:script`
+is in that table, so the sink group stays a symbol.
+
+If the directive doesn't allowlist `lexxy`, creating the policy throws, Lexxy
+catches it, warns on the console, and falls back to signing nothing — the same
+position it was in before. It does not fall back to asking for `dompurify`, so
+your own sanitizer keeps the name whatever happens here. Browsers without Trusted
+Types take the same path.
+
+If you would rather not change the directive, `allow-duplicates` is a valid
+alternative that needs no code change on either side:
+
+```
+Content-Security-Policy: require-trusted-types-for 'script'; trusted-types dompurify allow-duplicates
+```
+
+It relaxes name uniqueness for every policy on the page, not just ours, and it
+does nothing about the sinks below.
+
+Which of Lexxy's DOMPurify copies you get depends on how you load it. Through npm,
+`dompurify` stays external and your bundler hands both of you the same module — so
+Lexxy creating its own instance from it is what keeps your config and hooks yours.
+Through the Rails asset pipeline, `lexxy.js` has its own copy inlined and cannot
+reach yours at all. The `trusted-types` directive is page-wide either way, so the
+policy name above applies to both.
+
+### Lexxy does not yet work under enforced Trusted Types
+
+Allowlisting `lexxy` is necessary but **not sufficient**. It keeps Lexxy's
+sanitizer from breaking your app's; it does not make the editor itself work
+under `require-trusted-types-for 'script'`.
+
+Lexxy writes raw HTML through several sinks it does not wrap in a policy:
+
+- `parseHtml` in `helpers/html_helper.js`, the initial-value parse — the first one
+  the editor hits, and where it throws while connecting.
+- `createElement` in the same file, a second sink in it: the `content` argument is
+  written through `innerHTML`. Two callers pass one — the wrapped-table figure in
+  `nodes/wrapped_table_node.js` and the row/column count in the table tools.
+- `highlightElement` in `helpers/code_highlighting_helper.js`, which writes Prism's
+  output through `innerHTML`. This one is not editor-only — `highlightCode` and
+  `highlightElement` are part of Lexxy's public API, so calling them yourself to
+  highlight already-rendered content throws too, with no editor involved.
+- The attachment content `insertAdjacentHTML` in
+  `nodes/custom_action_text_attachment_node.js`.
+- The `innerHTML` writes that build the toolbar, the dropdowns and the attachment
+  delete button, across `elements/`.
+
+Under enforcement the editor throws while connecting, whether or not `lexxy` is
+allowlisted. This is long-standing and is not changed either way by the policy
+above.
+
+If you enforce Trusted Types today, Lexxy will not run. Please open an issue if
+you need it to — knowing there is demand is what will get the remaining sinks
+wrapped.
