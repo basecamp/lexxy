@@ -9,8 +9,12 @@ afterEach(async () => {
 
 // Re-inflating stored attachment content is an untrusted storage round-trip. The
 // custom attachment node re-parses the serialized `content` HTML into the live
-// editor DOM, so it must be sanitized in DOMPurify's mXSS-safe mode while keeping
-// legitimate content (including comments) intact.
+// editor DOM, so it must be sanitized in DOMPurify's mXSS-safe mode.
+//
+// Only the first test here guards that opt-in. The second one passes with the
+// opt-in reverted, and is meant to: it pins the lax value hop, where a
+// comment-bearing `content` attribute has to survive being read back. Both
+// properties are needed, but they are not the same property.
 describe("attachment content re-inflation sanitization", () => {
   const attachment = (content) =>
     `<action-text-attachment content-type="text/html" sgid="abc123" content="${content}"></action-text-attachment>`
@@ -31,13 +35,23 @@ describe("attachment content re-inflation sanitization", () => {
     const figure = editorElement.querySelector("action-text-attachment, [content-type]")
     expect(figure, "attachment was dropped on re-inflation").not.toBeNull()
 
-    // Verified by reverting the safeForXml opt-in in createDOM: without it the
-    // title survives verbatim and this assertion fails.
-    expect(figure.innerHTML).not.toContain("--&gt;")
+    // Asserted on the DOM rather than on serialized markup, because the serialized
+    // form does not show the difference. HTML attribute serialization escapes `&`
+    // and `"` and never `>`, so with the opt-in reverted figure.innerHTML reads
+    // `title="--><img src=x onerror=alert(1)>"` literally — a `--&gt;` never appears
+    // in it either way, and asserting on one could not fail.
+    //
+    // Reverting the safeForXml opt-in in createDOM fails these two, and only these.
+    expect(figure.querySelector("p").hasAttribute("title")).toBe(false)
     expect(figure.innerHTML).not.toMatch(/onerror/i)
     expect(figure.textContent).toContain("hi")
   })
 
+  // Passes with the opt-in reverted, by design. What it guards is the hop the opt-in
+  // is deliberately *not* applied to: an editor reading its own value back keeps
+  // SAFE_FOR_XML off, so a comment-bearing `content` attribute survives. Turn that
+  // hop strict and the attribute is dropped, importDOM returns null, and the
+  // attachment disappears on the next edit.
   test("preserves legitimate comment-bearing attachment content after round-trip", async () => {
     const content = "&lt;!-- BEGIN app/views/users/_user.html.erb --&gt;&lt;span&gt;Chris&lt;/span&gt;&lt;!-- END app/views/users/_user.html.erb --&gt;"
     editorElement = await createTestEditor({ value: attachment(content) })

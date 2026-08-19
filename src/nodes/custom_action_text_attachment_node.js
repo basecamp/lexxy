@@ -80,10 +80,17 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     // allowlist rather than whichever editor connected most recently.
     //
     // this.innerHtml is untrusted stored content being re-inflated into the editor,
-    // so it goes through DOMPurify's mXSS-safe mode. What is sanitized here is the
-    // decoded inner markup, which carries no serialized `content` attribute of its
-    // own — that attribute is only ever produced by exportDOM, where SAFE_FOR_XML
-    // is off — so mXSS-safe mode is free to be strict on this hop.
+    // so it goes through DOMPurify's mXSS-safe mode. Strictness is free here because
+    // of where the `content` attribute that has to survive is sanitized, which is not
+    // this hop: it is produced by exportDOM and by the server-side pass in
+    // lib/lexxy/rich_text_area_tag.rb, and it is only ever sanitized on the lax hop
+    // where an editor reads its own value back.
+    //
+    // The decoded inner markup can carry a `content` attribute of its own — nested
+    // attachment markup does, and the attribute is allowlisted on the attachment tag
+    // in extensions/attachments_extension.js — and mXSS-safe mode drops it. That loss
+    // is cosmetic: it is a nested attachment's rendering inside this one, not the
+    // attribute anything re-imports from.
     figure.insertAdjacentHTML("beforeend", EditorSanitizer.for(editor).sanitize(this.innerHtml, { safeForXml: true }))
 
     const deleteButton = createElement("lexxy-node-delete-button")

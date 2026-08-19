@@ -7,10 +7,12 @@ require "application_system_test_case"
 # agree, with Loofah on the server getting a say between them. Unit tests only ever
 # see the first hop; this is the test that would catch a server stage dropping it.
 #
-# The content survives without any special force-keep. The serialized `content`
-# attribute is only produced by exportDOM, where SAFE_FOR_XML is off, so it is never
-# subject to the mXSS guard; the safe-XML call in CustomActionTextAttachmentNode#createDOM
-# is handed the *decoded inner* markup, which has no `content` attribute of its own.
+# The content survives with no special handling. The `content` attribute this test
+# follows is produced by exportDOM and by the server-side pass in
+# lib/lexxy/rich_text_area_tag.rb, and it is only ever sanitized on the value hop,
+# where SAFE_FOR_XML is off — so the mXSS guard never sees it. The safe-XML call in
+# CustomActionTextAttachmentNode#createDOM is handed the *decoded inner* markup, one
+# level down, where a `content` attribute would only belong to a nested attachment.
 # The client-side re-inflation guard is covered directly in
 # test/javascript/unit/editor/attachments/content_reinflation_sanitization.test.js.
 class AttachmentContentRoundTripTest < ApplicationSystemTestCase
@@ -68,6 +70,6 @@ class AttachmentContentRoundTripTest < ApplicationSystemTestCase
       content = CGI.unescapeHTML(attachment["content"])
 
       assert_includes content, COMMENT,
-        "the comment inside attachment content was dropped, which is what SAFE_FOR_XML does without the preservation hook"
+        "the comment inside attachment content was dropped, which is what SAFE_FOR_XML would do to it on this hop"
     end
 end

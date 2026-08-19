@@ -85,9 +85,15 @@ export default class EditorSanitizer {
   }
 
   // safeForXml opts into DOMPurify's mXSS-safe mode, for a caller re-inflating
-  // stored content. It is off by default because that is what the config this
-  // sanitizer was built with says, and because the value an editor reads back is
-  // its own markup on its way out, not untrusted input on its way in.
+  // stored content. It is off by default, and the reason is not that the default
+  // hop is trustworthy — the value an editor reads back carries the attacker's
+  // stored `content` verbatim. The reason is that strictness there is destructive:
+  // SAFE_FOR_XML drops any attribute whose value could close a comment, a
+  // serialized `content` full of Rails view annotations is exactly that, and
+  // CustomActionTextAttachmentNode.importDOM returns null for an attachment with no
+  // `content` — so the attachment vanishes on the next edit. Verified: strict on the
+  // value hop leaves `<action-text-attachment sgid content-type>` and re-editing that
+  // renders nothing.
   //
   // The strict config is this instance's own, spread rather than rebuilt, so the
   // per-editor allowlist and everything else buildConfig put there — the Trusted
