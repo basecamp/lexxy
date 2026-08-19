@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest"
-import { DOMPurify, buildConfig } from "../../../src/config/dom_purify"
+import { DOMPurify, buildConfig } from "src/config/dom_purify"
 
 function sanitizeWith(allowedElements, html) {
   return DOMPurify.sanitize(html, buildConfig(allowedElements))
