@@ -5,6 +5,12 @@ require "test_helper"
 # shows something the server quietly drops, and the difference only appears
 # after a reload — so this asserts they agree about images.
 #
+# Agreement means the attribute survives on the image carrying a value, not that
+# its name appears somewhere in the rendered document. Those are different
+# claims: the dummy layout wraps content in `<div class="lexxy-content">`, so a
+# whole-document substring check passed the `class` case with no class on the
+# image at all, and passed `style` while Action Text emptied its value.
+#
 # Lexxy's list is read from source rather than copied. That is deliberately not
 # the STYLE.md default of testing behaviour over implementation, and the reason
 # is that the property here spans two languages: the thing that has to hold is
@@ -34,6 +40,11 @@ class ImageAttributesTest < ActiveSupport::TestCase
   # claims to catch.
   IMAGE_ATTRIBUTES = (TAG_SCOPED_IMAGE_ATTRIBUTES + (BLANKET_ATTRIBUTES - NOT_PERSISTED)).uniq
 
+  # A uniform "1" won't do: Action Text parses `style` as CSS and hands back
+  # `style=""` for it — the name kept, the value destroyed. `color` and
+  # `background-color` are the two properties Lexxy allows, and both round-trip.
+  ATTRIBUTE_VALUES = { "style" => "color: red" }.freeze
+
   test "the source still declares the image attributes this test reads" do
     # Guards the regexes above: if the declarations are renamed or restructured,
     # IMAGE_ATTRIBUTES silently empties and every assertion below passes vacuously.
@@ -44,12 +55,17 @@ class ImageAttributesTest < ActiveSupport::TestCase
   end
 
   test "every image attribute Lexxy preserves also survives Action Text" do
-    markup = %(<img #{IMAGE_ATTRIBUTES.map { |name| %(#{name}="1") }.join(" ")}>)
+    markup = %(<img #{IMAGE_ATTRIBUTES.map { |name| %(#{name}="#{ATTRIBUTE_VALUES.fetch(name, "1")}") }.join(" ")}>)
 
     sanitized = ActionText::Content.new(markup).to_s
+    image = Nokogiri::HTML5.fragment(sanitized).at("img")
+
+    assert_not_nil image, "Action Text dropped the image itself"
 
     IMAGE_ATTRIBUTES.each do |name|
-      assert_includes sanitized, "#{name}=", "Lexxy keeps #{name} on an image but Action Text strips it on save"
+      assert image.key?(name), "Lexxy keeps #{name} on an image but Action Text strips it on save"
+      # Not equality: Action Text normalizes `style` to `color:red;`.
+      assert_not_empty image[name], "Action Text keeps #{name} on an image but empties its value"
     end
   end
 
