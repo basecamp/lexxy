@@ -165,7 +165,15 @@ export function buildConfig(allowedElements = null) {
   // default tag and attribute policy stands. `ALLOWED_TAGS: []` would not be a
   // default, it would be a refusal: it strips every tag. An editor that declares
   // an empty allowlist still gets that refusal, because it asked for it.
-  if (allowedElements) Object.assign(config, allowlistFor(allowedElements))
+  //
+  // uriSafeAttributes is pulled out and appended rather than assigned: it extends
+  // the base ADD_URI_SAFE_ATTR above (caption/filename/url), where an Object.assign
+  // would replace it and drop those.
+  if (allowedElements) {
+    const { uriSafeAttributes, ...tagPolicy } = allowlistFor(allowedElements)
+    config.ADD_URI_SAFE_ATTR.push(...uriSafeAttributes)
+    Object.assign(config, tagPolicy)
+  }
 
   // Always assigned, including when we have no policy — `null` is what
   // trustedTypesPolicy() returns then, and `TRUSTED_TYPES_POLICY: null` is
@@ -188,6 +196,7 @@ function allowlistFor(allowedElements) {
   // Object.prototype key: `tagAttributes["constructor"]` would answer with a
   // function, and ADD_ATTR would call .includes on it.
   const tagAttributes = Object.create(null)
+  const uriSafeAttributes = []
 
   // Lowercased, because DOMPurify lowercases ALLOWED_TAGS and calls ADD_ATTR
   // with the lowercased tag and attribute names. Keeping the caller's casing
@@ -200,6 +209,18 @@ function allowlistFor(allowedElements) {
 
     tagAttributes[tag] ||= []
     tagAttributes[tag].push(...attributes)
+
+    // An attribute a caller declares URI-safe skips DOMPurify's scheme check — the
+    // same attribute-name-wide exemption `url`/`caption`/`filename` carry above. It
+    // is how a custom-scheme identifier value survives sanitization: a mention's
+    // `gid="gid://…"`, for one, which DOMPurify otherwise drops as an unknown
+    // scheme even once the `gid` name is allowed. Attribute-name-wide, not per-tag,
+    // because DOMPurify has no per-tag URI exemption — a caller vouches for the
+    // name, so it should not be a navigational attribute (`href`/`src`), which
+    // would then skip scheme checking wherever it appears.
+    for (const attribute of element.uriSafeAttributes ?? []) {
+      uriSafeAttributes.push(attribute.toLowerCase())
+    }
   }
 
   // Only for tags the caller already permits — this widens what an allowed
@@ -211,6 +232,7 @@ function allowlistFor(allowedElements) {
   return {
     ALLOWED_TAGS: Object.keys(tagAttributes),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
-    ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute)
+    ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute),
+    uriSafeAttributes
   }
 }
