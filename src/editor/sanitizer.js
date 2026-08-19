@@ -27,16 +27,28 @@ import { DOMPurify, buildConfig } from "../config/dom_purify"
 export default class EditorSanitizer {
   static #instances = new WeakMap()
 
-  // Only reached for an editor that never registered — an attachment node in a
-  // Lexical editor Lexxy did not build. Reusing the most recent allowlist keeps
-  // the behavior of the module-level config this replaced, rather than silently
-  // widening to DOMPurify's permissive defaults.
+  // Only reached for an editor that never registered, which is a supported case:
+  // CustomActionTextAttachmentNode is exported from src/index.js, so it can be
+  // registered in a Lexical editor Lexxy did not build.
+  //
+  // Fixed, and never reassigned. Pointing it at whichever sanitizer registered
+  // most recently would make an unregistered consumer's allowlist depend on
+  // which Lexxy editor happened to initialise last — the last-editor-wins bug
+  // this class exists to remove, reintroduced on the one path that has no editor
+  // to key on, and unobservable from the consumer's own code.
+  //
+  // It declares no allowlist, so DOMPurify's own default policy applies. An
+  // empty allowlist would be deterministic too and strips every tag, which
+  // silently drops markup a standalone consumer used to keep. It holds no
+  // editor either, so nothing here pins a disconnected editor's DOM.
+  //
+  // A consumer wanting its own allowlist registers for it: register() needs only
+  // the Lexical editor and is reachable as EditorSanitizer from src/index.js.
   static #fallback = new EditorSanitizer()
 
-  static register(editor, allowedElements) {
+  static register(editor, allowedElements = []) {
     const sanitizer = new EditorSanitizer(this.#allowedElementsFor(editor, allowedElements))
     this.#instances.set(editor, sanitizer)
-    this.#fallback = sanitizer
 
     return sanitizer
   }
@@ -59,7 +71,7 @@ export default class EditorSanitizer {
 
   #config
 
-  constructor(allowedElements = []) {
+  constructor(allowedElements = null) {
     this.#config = buildConfig(allowedElements)
   }
 

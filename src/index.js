@@ -9,6 +9,9 @@ export * from "./nodes"
 export * from "./commands"
 export { highlightCode, highlightElement } from "./helpers/code_highlighting_helper"
 export { NativeAdapter } from "./editor/adapters/native_adapter"
+// So a consumer registering the exported attachment nodes in its own Lexical
+// editor can declare an allowlist for them, rather than taking the default.
+export { default as EditorSanitizer } from "./editor/sanitizer"
 
 export const configure = Lexxy.configure
 export { default as Extension } from "./extensions/lexxy_extension"
