@@ -33,9 +33,14 @@ class AttachmentUrlRoundTripTest < ApplicationSystemTestCase
     assert_url_in_editor_value
   end
 
-  # The other half of the same decision. Before dompurify 3.3.2 restored URI
-  # validation for functional ADD_ATTR attributes, this survived the round trip;
-  # the hook now refuses it, and the attachment element itself is kept.
+  # The other half of the same decision, and the half the hook is the only guard
+  # for: `url` is in ADD_URI_SAFE_ATTR, so DOMPurify does not validate it at all.
+  # Delete the hook and leave that entry in place and an executable scheme rides
+  # through again, exactly as it did before dompurify 3.3.2 restored URI
+  # validation for functional ADD_ATTR attributes. Revert both instead — the hook
+  # and the ADD_URI_SAFE_ATTR entry — and it is the data: case above that fails,
+  # because DOMPurify's plain check refuses a data: URI on a custom element. The
+  # attachment element itself is kept either way.
   test "an attachment url with an executable scheme never reaches the server" do
     # Deliberate, and asserted rather than waved through — see the console check
     # at the end of this test, which is the point of allowing it.
