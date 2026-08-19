@@ -20,10 +20,13 @@ import { URI_BEARING_ATTACHMENT_ATTRIBUTES, attachmentUriFilterHook } from "../h
 //
 // Under Trusted Types, every DOMPurify instance tries to create a policy named
 // `dompurify` on its first sanitize, and TT rejects a duplicate name — so the
-// second instance on the page gets none. That matters: DOMPurify hands its input
-// to DOMParser.parseFromString, which is itself a TT sink, so an unsigned
-// instance throws rather than degrading, and which sanitizer breaks depends on
-// which one ran first.
+// second instance on the page gets none. That matters, and not because it throws:
+// DOMPurify hands its input to DOMParser.parseFromString, which is itself a TT
+// sink, but `_initDocument` swallows that throw and the innerHTML throw from its
+// createDocument fallback, and `sanitize` then returns "" for the body it never
+// got. An unsigned instance silently drops all content, with nothing in the host's
+// error tracker to say why — and which sanitizer goes silent depends on which one
+// ran first.
 //
 // So we create our own, under our own name, and hand it to DOMPurify rather than
 // letting it try. Lazily, because resolving it at import would fire a CSP
@@ -41,10 +44,16 @@ import { URI_BEARING_ATTACHMENT_ATTRIBUTES, attachmentUriFilterHook } from "../h
 // DOMParser.parseFromString on the initial-value path, so the editor throws
 // before it finishes connecting — verified in Chromium under
 // `require-trusted-types-for 'script'`, with `lexxy` allowlisted and without.
-// The `insertAdjacentHTML` in nodes/custom_action_text_attachment_node.js and
-// the `innerHTML` writes across elements/ are in the same position. Making the
-// editor usable under TT is a separate piece of work; this is a prerequisite
-// for it, not the whole of it.
+// `createElement` in the same file is a second sink in it, writing its `content`
+// argument through innerHTML for the two callers that pass one — the wrapped-table
+// figure and the table tools' count. `highlightElement` in
+// helpers/code_highlighting_helper.js writes Prism's output the same way, and both
+// it and highlightCode are exported from src/index.js — so that one throws for a
+// host app calling Lexxy's highlighting API directly, outside any editor. The
+// `insertAdjacentHTML` in nodes/custom_action_text_attachment_node.js and the
+// `innerHTML` writes across elements/ — the toolbar, the dropdowns, the node
+// delete button — are in the same position. Making the editor usable under TT is a
+// separate piece of work; this is a prerequisite for it, not the whole of it.
 let trustedTypesPolicyResolved = false
 let resolvedTrustedTypesPolicy = null
 
