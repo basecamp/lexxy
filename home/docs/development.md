@@ -33,6 +33,31 @@ PORT=3200 bin/dev
 
 Use the matching URL for that worktree, for example `http://lexxy.localhost:3100/posts`.
 
+## Trying an unreleased change in another app
+
+To QA a branch or a commit before it is released, point the app's `package.json` at
+the git repo. A `prepare` script builds `dist/` on install, so a git install produces
+the same output a published package would.
+
+Use the full git URL, not the `basecamp/lexxy#<ref>` shorthand:
+
+```bash
+yarn add git+https://github.com/basecamp/lexxy.git#<sha>
+```
+
+Yarn 1 resolves the shorthand to a codeload tarball instead of cloning, so it never
+runs `prepare`. The install exits 0 with no warning, the package is a copy of the
+repo with no `dist/`, and the app only fails later, at bundle time, with
+`ERR_MODULE_NOT_FOUND`. npm handles every form, so the full URL is the one to write
+down.
+
+If you already tried the shorthand, run `yarn cache clean @37signals/lexxy` before
+switching. Yarn caches both forms under the same key and otherwise fails with
+`Incorrect hash when fetching from the cache`.
+
+`--ignore-scripts` skips `prepare` in both package managers, and likewise installs a
+`dist/`-less package with no warning.
+
 ## Tests
 
 CI runs the full suite on every pull request and push to `main` via GitHub Actions (see `.github/workflows/ci.yml`). It runs four jobs in parallel: lint, JS unit tests, Rails system tests, and Playwright browser tests (across Chromium, Firefox, and WebKit).
