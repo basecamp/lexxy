@@ -5,7 +5,7 @@ import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
-import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
+import { $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
 import { $convertInlineImageDataURIs } from "../helpers/inline_image_uri_helper"
 import { CodeHighlightNode, CodeNode } from "@lexical/code"
@@ -20,13 +20,13 @@ import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
 import { isAttachmentSpacerTextNode, isEditorFocused } from "../helpers/lexical_helper"
-import { sanitize, setSanitizerConfig } from "../helpers/sanitization_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
 import HeadingDropdown from "./dropdown/heading"
 import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
+import SanitizedEditor from "../editor/sanitized"
 import Extensions from "../editor/extensions"
 import { BrowserAdapter } from "../editor/adapters/browser_adapter"
 import { getHighlightStyles } from "../helpers/format_helper"
@@ -330,7 +330,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   get value() {
-    return this.cachedValue ??= this.#readSanitizedEditorValue()
+    return this.cachedValue ??= this.sanitized?.value ?? null
   }
 
   set value(html) {
@@ -357,12 +357,6 @@ export class LexicalEditorElement extends HTMLElement {
 
   get canRedo() {
     return this.#historyState.redo
-  }
-
-  #readSanitizedEditorValue() {
-    return this.editor?.read(() => {
-      return sanitize($generateHtmlFromNodes(this.editor, null), this.editor)
-    }) ?? null
   }
 
   #parseHtmlIntoLexicalNodes(html, { editor = this.editor } = {}) {
@@ -755,7 +749,8 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #configureSanitizer(editor) {
-    setSanitizerConfig(editor, this.#getAllowedElements(editor))
+    this.sanitized = new SanitizedEditor(editor)
+    this.sanitized.allowedTags = this.#getAllowedElements(editor)
   }
 
   #getAllowedElements(editor) {

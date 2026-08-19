@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from "vitest"
 import DOMPurify from "dompurify"
-import { sanitize, setSanitizerConfig } from "src/helpers/sanitization_helper"
+import SanitizedEditor from "src/editor/sanitized"
 
 // Lexxy must not configure the DOMPurify singleton the host app also imports.
 //
@@ -10,16 +10,19 @@ import { sanitize, setSanitizerConfig } from "src/helpers/sanitization_helper"
 // it would silently disarm the app's own sanitizing — options the app is still
 // passing, and still relying on, would stop applying with no error anywhere.
 //
-// These assert isolation in both directions against the real singleton. The
-// config is keyed by editor, but nothing here depends on it being a real
-// Lexical editor — any identity will do.
+// These assert isolation in both directions against the real singleton. A
+// sanitizer is built around a Lexical editor, but nothing here reads it: only
+// `value` does, so any identity will do as a stand-in.
 
 const DIRTY = '<span data-controller="evil" class="keep">hi</span>'
 const editor = { name: "stand-in for a Lexical editor" }
 
+let sanitized
+
 beforeEach(() => {
   DOMPurify.clearConfig()
-  setSanitizerConfig(editor, [ "span", "p", "strong" ])
+  sanitized = new SanitizedEditor(editor)
+  sanitized.allowedTags = [ "span", "p", "strong" ]
 })
 
 test("configuring Lexxy's sanitizer leaves the app's per-call config working", () => {
@@ -35,7 +38,7 @@ test("configuring Lexxy's sanitizer leaves the app's per-call config working", (
 test("the app's persistent config does not reach into Lexxy's sanitizing", () => {
   DOMPurify.setConfig({ ALLOWED_TAGS: [ "b" ], ALLOWED_ATTR: [] })
 
-  expect(sanitize('<span class="keep">hi</span>', editor)).toBe('<span class="keep">hi</span>')
+  expect(sanitized.sanitize('<span class="keep">hi</span>')).toBe('<span class="keep">hi</span>')
 })
 
 test("Lexxy's hooks are not installed on the shared instance", () => {
@@ -45,16 +48,19 @@ test("Lexxy's hooks are not installed on the shared instance", () => {
     .toContain("position")
 })
 
-test("sanitize applies the configured allowlist", () => {
-  expect(sanitize("<span>keep</span><script>evil()</script>", editor)).toBe("<span>keep</span>")
+test("sanitizing applies the editor's allowlist", () => {
+  expect(sanitized.sanitize("<span>keep</span><script>evil()</script>")).toBe("<span>keep</span>")
 })
 
+// The remaining tests resolve the sanitizer with for(), the way a node does from
+// createDOM()'s editor argument. That lookup is what keeps an editor's allowlist
+// its own, so exercising it is the point rather than incidental.
 test("each editor keeps its own allowlist", () => {
   const other = { name: "a second editor" }
-  setSanitizerConfig(other, [ "strong" ])
+  new SanitizedEditor(other).allowedTags = [ "strong" ]
 
-  expect(sanitize("<span>a</span><strong>b</strong>", editor)).toBe("<span>a</span><strong>b</strong>")
-  expect(sanitize("<span>a</span><strong>b</strong>", other)).toBe("a<strong>b</strong>")
+  expect(SanitizedEditor.for(editor).sanitize("<span>a</span><strong>b</strong>")).toBe("<span>a</span><strong>b</strong>")
+  expect(SanitizedEditor.for(other).sanitize("<span>a</span><strong>b</strong>")).toBe("a<strong>b</strong>")
 })
 
 // The regression this change exists for, at attribute rather than tag level.
@@ -65,11 +71,11 @@ test("each editor keeps its own allowlist", () => {
 // the attachment's serialized markup, so losing it destroys the attachment on
 // the round trip rather than merely trimming it.
 //
-// Both cases register the *other* editor last on purpose. Under the module-level
+// Both cases configure the *other* editor last on purpose. Under the module-level
 // config this replaced, the last editor to connect decided for every editor on
 // the page, and each direction below catches one half of that: the first loses an
 // attachment that should have survived, the second keeps `content` on an element
-// whose own config denied it.
+// whose own allowlist denied it.
 const ATTACHMENT = '<action-text-attachment sgid="x" content-type="text/html" content="&lt;span&gt;hi&lt;/span&gt;"></action-text-attachment>'
 const ALLOWS_CONTENT = [ { tag: "action-text-attachment", attributes: [ "content", "content-type", "sgid" ] } ]
 const DENIES_CONTENT = [ { tag: "action-text-attachment", attributes: [ "content-type", "sgid" ] } ]
@@ -78,22 +84,22 @@ test("an editor allowing attachment content keeps it when another editor denies 
   const allows = { name: "attachments on" }
   const denies = { name: "attachments off" }
 
-  setSanitizerConfig(allows, ALLOWS_CONTENT)
-  setSanitizerConfig(denies, DENIES_CONTENT) // registered last
+  new SanitizedEditor(allows).allowedTags = ALLOWS_CONTENT
+  new SanitizedEditor(denies).allowedTags = DENIES_CONTENT // configured last
 
-  expect(sanitize(ATTACHMENT, allows)).toContain("content=")
+  expect(SanitizedEditor.for(allows).sanitize(ATTACHMENT)).toContain("content=")
 })
 
 test("an editor denying attachment content strips it when another editor allows it", () => {
   const denies = { name: "attachments off" }
   const allows = { name: "attachments on" }
 
-  setSanitizerConfig(denies, DENIES_CONTENT)
-  setSanitizerConfig(allows, ALLOWS_CONTENT) // registered last
+  new SanitizedEditor(denies).allowedTags = DENIES_CONTENT
+  new SanitizedEditor(allows).allowedTags = ALLOWS_CONTENT // configured last
 
-  const sanitized = sanitize(ATTACHMENT, denies)
+  const result = SanitizedEditor.for(denies).sanitize(ATTACHMENT)
 
-  expect(sanitized).not.toContain("content=\"")
+  expect(result).not.toContain("content=\"")
   // Only the attribute is refused — the element itself is still allowed here.
-  expect(sanitized).toContain("action-text-attachment")
+  expect(result).toContain("action-text-attachment")
 })
