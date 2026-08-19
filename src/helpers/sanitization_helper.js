@@ -32,9 +32,32 @@ import Lexxy from "../config/lexxy"
 // ordinary prose like "Q4: results" is not a URI any regex here would accept.
 export const URI_BEARING_ATTACHMENT_ATTRIBUTES = [ "url" ]
 
-// DOMPurify's own IS_ALLOWED_URI, reproduced rather than narrowed, so `url` on a
-// non-attachment tag is treated exactly as DOMPurify would have treated it.
-const ALLOWED_URI = /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))/i
+// DOMPurify's own IS_ALLOWED_URI scheme list, reproduced rather than narrowed, so
+// `url` on a non-attachment tag is treated exactly as DOMPurify would have treated
+// it. Kept as a source string so allowedUriRegexp() can widen it with an editor's
+// declared schemes without re-deriving the rest of the pattern.
+const BASE_URI_SCHEMES = "(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix"
+
+// Builds DOMPurify's default IS_ALLOWED_URI, optionally with extra schemes folded
+// into the scheme alternation. Widening the recognised-safe scheme set is how a
+// custom-scheme identifier (a mention's `gid://…`) passes validation without
+// exempting any attribute from it — so javascript:/data: stay refused on every
+// attribute, including href and object[data]. Passing no schemes reproduces
+// DOMPurify's default exactly.
+export function allowedUriRegexp(extraSchemes = []) {
+  // Only real scheme names, regexp-escaped, so a caller can't inject pattern
+  // syntax through the scheme list.
+  const extra = extraSchemes
+    .map(scheme => String(scheme).toLowerCase())
+    .filter(scheme => /^[a-z][a-z0-9+.-]*$/.test(scheme))
+    .map(scheme => scheme.replace(/[.+-]/g, "\\$&"))
+
+  const schemes = [ BASE_URI_SCHEMES, ...extra ].join("|")
+
+  return new RegExp(`^(?:(?:${schemes}):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))`, "i")
+}
+
+const ALLOWED_URI = allowedUriRegexp()
 
 // eslint-disable-next-line no-control-regex -- mirrors DOMPurify's own ATTR_WHITESPACE
 const ATTR_WHITESPACE = /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u2029\u205F\u3000]/g

@@ -47,17 +47,17 @@ get allowedElements() {
 }
 ```
 
-### URI-safe attributes
+### URI-safe schemes
 
-Allowing an attribute lets it survive by name, but Lexxy still runs DOMPurify's URL scheme check on its value and drops anything whose scheme it doesn't recognize. If your element carries an identifier that uses a custom scheme — a mention's `gid="gid://…"`, say — declare that attribute in `uriSafeAttributes` so its value is kept:
+Allowing an attribute lets it survive by name, but Lexxy still runs DOMPurify's URL scheme check on its value and drops anything whose scheme it doesn't recognize. If your element carries an identifier that uses a custom scheme — a mention's `gid="gid://…"`, say — declare that scheme in `uriSafeSchemes` so values using it are kept:
 
 ```js
 get allowedElements() {
-  return [ { tag: "bc-mention", attributes: [ "gid" ], uriSafeAttributes: [ "gid" ] } ]
+  return [ { tag: "bc-mention", attributes: [ "gid" ], uriSafeSchemes: [ "gid" ] } ]
 }
 ```
 
-This is the same exemption Lexxy's own attachment attributes (`url`, `caption`, `filename`) carry. It applies to the attribute **name across every element**, not just the one you declare it on, because DOMPurify has no per-tag exemption — so use it only for custom identifier attributes. Navigational attributes (`href`, `src`, `xlink:href`, `action`, `formaction`) can never be made URI-safe this way: a declaration of one is dropped, and its value keeps the scheme check, so a `javascript:` or `data:` URL can't ride through a link or resource attribute.
+This widens the editor's recognized-safe scheme set; it does **not** exempt any attribute from validation. `javascript:` and `data:` are still refused on every attribute, including `href` and `object[data]`, so a declared scheme can't be used to smuggle an executable URL through a link or resource attribute. Declare it on the element that needs it for locality, though the scheme is recognized editor-wide once allowed — so use it only for schemes that are inert in the browser (an identifier like `gid:`, not something a browser would navigate to or execute).
 
 ## Example
 

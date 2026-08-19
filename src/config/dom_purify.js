@@ -1,6 +1,6 @@
 import createDOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
-import { URI_BEARING_ATTACHMENT_ATTRIBUTES, attachmentUriFilterHook } from "../helpers/sanitization_helper"
+import { URI_BEARING_ATTACHMENT_ATTRIBUTES, attachmentUriFilterHook, allowedUriRegexp } from "../helpers/sanitization_helper"
 
 // Lexxy's own DOMPurify instance, deliberately not the shared default export.
 //
@@ -99,11 +99,6 @@ const ALLOWED_HTML_ATTRIBUTES = [ "alt", "class", "contenteditable", "href", "sr
 // place while it loads; nothing else here does.
 const DEFAULT_TAG_ATTRIBUTES = { img: [ "width", "height" ] }
 
-// Navigational/URL attributes an editor may never declare URI-safe: their values
-// reach a navigation, submission, or resource-load sink where a javascript:/data:
-// scheme executes or loads. See uriSafeAttributes handling in allowlistFor.
-const NEVER_URI_SAFE = [ "href", "src", "xlink:href", "action", "formaction" ]
-
 const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
 
 function styleFilterHook(_currentNode, hookEvent) {
@@ -171,12 +166,14 @@ export function buildConfig(allowedElements = null) {
   // default, it would be a refusal: it strips every tag. An editor that declares
   // an empty allowlist still gets that refusal, because it asked for it.
   //
-  // uriSafeAttributes is pulled out and appended rather than assigned: it extends
-  // the base ADD_URI_SAFE_ATTR above (caption/filename/url), where an Object.assign
-  // would replace it and drop those.
+  // uriSafeSchemes widens the scheme validation rather than exempting an attribute
+  // from it: ALLOWED_URI_REGEXP is set only when an editor declares custom schemes,
+  // so a value like a mention's `gid://…` passes while javascript:/data: stay
+  // refused on every attribute — including href and object[data]. Nothing is taken
+  // out of URI checking, so there is no attribute to guard against exempting.
   if (allowedElements) {
-    const { uriSafeAttributes, ...tagPolicy } = allowlistFor(allowedElements)
-    config.ADD_URI_SAFE_ATTR.push(...uriSafeAttributes)
+    const { uriSafeSchemes, ...tagPolicy } = allowlistFor(allowedElements)
+    if (uriSafeSchemes.length) config.ALLOWED_URI_REGEXP = allowedUriRegexp(uriSafeSchemes)
     Object.assign(config, tagPolicy)
   }
 
@@ -201,7 +198,7 @@ function allowlistFor(allowedElements) {
   // Object.prototype key: `tagAttributes["constructor"]` would answer with a
   // function, and ADD_ATTR would call .includes on it.
   const tagAttributes = Object.create(null)
-  const uriSafeAttributes = []
+  const uriSafeSchemes = []
 
   // Lowercased, because DOMPurify lowercases ALLOWED_TAGS and calls ADD_ATTR
   // with the lowercased tag and attribute names. Keeping the caller's casing
@@ -215,22 +212,14 @@ function allowlistFor(allowedElements) {
     tagAttributes[tag] ||= []
     tagAttributes[tag].push(...attributes)
 
-    // An attribute a caller declares URI-safe skips DOMPurify's scheme check — the
-    // same attribute-name-wide exemption `url`/`caption`/`filename` carry above. It
-    // is how a custom-scheme identifier value survives sanitization: a mention's
-    // `gid="gid://…"`, for one, which DOMPurify otherwise drops as an unknown
-    // scheme even once the `gid` name is allowed.
-    //
-    // A navigational attribute is never exemptable, even when declared. The
-    // exemption is attribute-name-wide (DOMPurify has no per-tag one), so exempting
-    // `href`/`src`/etc. would route a `javascript:`/`data:` value to a navigational
-    // or resource sink unchecked, on every tag — the class this sanitizer exists to
-    // stop. It is dropped rather than honored, so a mistaken or hostile declaration
-    // fails safe: the attribute keeps its scheme check.
-    for (const attribute of element.uriSafeAttributes ?? []) {
-      const name = attribute.toLowerCase()
-      if (!NEVER_URI_SAFE.includes(name)) uriSafeAttributes.push(name)
-    }
+    // A custom scheme a caller declares is folded into the editor's URI-scheme
+    // allowlist (ALLOWED_URI_REGEXP in buildConfig), so a value like a mention's
+    // `gid="gid://…"` — which DOMPurify otherwise drops as an unknown scheme, even
+    // once the `gid` name is allowed — passes validation. It widens the recognised
+    // schemes, it does not exempt an attribute: javascript:/data: stay refused
+    // everywhere, so there is no navigational attribute to guard. Declared per
+    // element for locality, but a scheme is editor-wide once allowed.
+    uriSafeSchemes.push(...(element.uriSafeSchemes ?? []))
   }
 
   // Only for tags the caller already permits — this widens what an allowed
@@ -243,6 +232,6 @@ function allowlistFor(allowedElements) {
     ALLOWED_TAGS: Object.keys(tagAttributes),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute),
-    uriSafeAttributes
+    uriSafeSchemes
   }
 }
