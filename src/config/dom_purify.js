@@ -64,15 +64,22 @@ DOMPurify.addHook("uponSanitizeElement", (node, data) => {
 export { DOMPurify }
 
 export function buildConfig(allowedElements ) {
-  const tagAttributes = {}
+  // Null prototype, so a declared tag can never read through to an
+  // Object.prototype key: `tagAttributes["constructor"]` would answer with a
+  // function, and ADD_ATTR would call .includes on it.
+  const tagAttributes = Object.create(null)
 
+  // Lowercased, because DOMPurify lowercases ALLOWED_TAGS and calls ADD_ATTR
+  // with the lowercased tag and attribute names. Keeping the caller's casing
+  // makes allowedElements silently partial: `[ "IMG" ]` allows the element but
+  // drops the width/height below, and `[ { tag: "img", attributes: [ "GID" ] } ]`
+  // drops the attribute it declares.
   for (const element of allowedElements) {
-    if (typeof element === "string") {
-      tagAttributes[element] ||= []
-    } else {
-      tagAttributes[element.tag] ||= []
-      tagAttributes[element.tag].push(...element.attributes)
-    }
+    const tag = String(element.tag ?? element).toLowerCase()
+    const attributes = (element.attributes ?? []).map(attribute => attribute.toLowerCase())
+
+    tagAttributes[tag] ||= []
+    tagAttributes[tag].push(...attributes)
   }
 
   // Only for tags the caller already permits — this widens what an allowed

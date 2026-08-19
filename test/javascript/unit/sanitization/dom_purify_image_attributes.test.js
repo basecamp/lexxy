@@ -39,6 +39,17 @@ describe("dom_purify — image attributes", () => {
     expect(sanitizeWith([ "p" ], '<p>text</p><img src="/a.png" width="20">')).toBe("<p>text</p>")
   })
 
+  // DOMPurify lowercases tag and attribute names before it consults the config,
+  // so a declaration keeping the caller's casing matches nothing. Both halves
+  // fail silently — the element stays allowed, it just loses its attributes.
+  test("normalizes a differently cased declaration", () => {
+    expect(sanitizeWith([ "IMG" ], '<img src="/a.png" alt="Joe" width="20" height="20">'))
+      .toBe('<img src="/a.png" alt="Joe" width="20" height="20">')
+
+    expect(sanitizeWith([ { tag: "SPAN", attributes: [ "GID" ] } ], '<span gid="1">@joe</span>'))
+      .toBe('<span gid="1">@joe</span>')
+  })
+
   test("declared attributes survive only in the object form of allowedElements", () => {
     // A bare tag name declares the element with no attributes of its own, so an
     // identifying attribute is stripped. Consumers that need one — a mention's
