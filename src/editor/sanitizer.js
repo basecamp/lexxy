@@ -44,7 +44,16 @@ export default class EditorSanitizer {
   //
   // A consumer wanting its own allowlist registers for it: register() needs only
   // the Lexical editor and is reachable as EditorSanitizer from src/index.js.
-  static #fallback = new EditorSanitizer()
+  //
+  // Built on first use rather than as a static field initializer, which would run
+  // buildConfig at import: src/index.js exports this class, so that would create
+  // the Trusted Types policy — and, unallowlisted, report a CSP violation — on
+  // every page load of an app that never renders an editor.
+  static #fallback
+
+  static #fallbackSanitizer() {
+    return this.#fallback ||= new EditorSanitizer()
+  }
 
   static register(editor, allowedElements = []) {
     const sanitizer = new EditorSanitizer(this.#allowedElementsFor(editor, allowedElements))
@@ -54,7 +63,7 @@ export default class EditorSanitizer {
   }
 
   static for(editor) {
-    return this.#instances.get(editor) ?? this.#fallback
+    return this.#instances.get(editor) ?? this.#fallbackSanitizer()
   }
 
   // An editor can import every tag it can convert from HTML, plus whatever its

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest"
 
-// The policy is created once per module instance, so each test installs
+// The policy is resolved at most once per module instance, so each test installs
 // its stub and then re-imports the module through resetModules to get a fresh
 // one — otherwise it would see whatever the first test in the file resolved.
 describe("dom_purify — Trusted Types policy", () => {
@@ -61,6 +61,33 @@ describe("dom_purify — Trusted Types policy", () => {
     expect(created).toEqual([ "lexxy" ])
     expect(signed).toContainEqual([ "lexxy", "<b>hi</b><script>x()</script>" ])
     expect(config.TRUSTED_TYPES_POLICY).toBeTruthy()
+  })
+
+  // The policy is resolved on the first buildConfig, not at import. Under enforced
+  // Trusted Types without `lexxy` allowlisted, resolving it at import would report a
+  // CSP violation on every page load of an app that imports Lexxy — src/index.js
+  // exports both this module and EditorSanitizer — and never renders an editor.
+  test("asks for no policy until something builds a config", async () => {
+    const { created } = stubTrustedTypes()
+
+    const fresh = await freshModule("src/config/dom_purify")
+    expect(created).toEqual([])
+
+    fresh.buildConfig([ "b" ])
+    expect(created).toEqual([ "lexxy" ])
+  })
+
+  // EditorSanitizer's fallback is the other import-time trap, and the one that
+  // actually loads on a page: built as a static field initializer it would run
+  // buildConfig while the module evaluated, and src/index.js exports the class.
+  test("asks for no policy when only the sanitizer module is imported", async () => {
+    const { created } = stubTrustedTypes()
+
+    const { default: EditorSanitizer } = await freshModule("src/editor/sanitizer")
+    expect(created).toEqual([])
+
+    EditorSanitizer.for({}).sanitize("<b>hi</b>")
+    expect(created).toEqual([ "lexxy" ])
   })
 
   // Creating a policy the CSP has not allowlisted throws, and that throw is caught.

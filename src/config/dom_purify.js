@@ -26,10 +26,13 @@ import { URI_BEARING_ATTACHMENT_ATTRIBUTES, attachmentUriFilterHook } from "../h
 // which one ran first.
 //
 // So we create our own, under our own name, and hand it to DOMPurify rather than
-// letting it try. Guarded, because creating a policy the CSP hasn't allowlisted
-// throws: if that happens we're back to no policy, which is exactly where this
-// stood before. An app enforcing `require-trusted-types-for 'script'` should add
-// `lexxy` to its `trusted-types` directive.
+// letting it try. Lazily, because resolving it at import would fire a CSP
+// violation report on every page load of an app that imports Lexxy and never
+// renders an editor, and at most once, because TT throws on a duplicate name.
+// Guarded too, because creating a policy the CSP hasn't allowlisted throws: if
+// that happens we're back to no policy, which is exactly where this stood before.
+// An app enforcing `require-trusted-types-for 'script'` should add `lexxy` to its
+// `trusted-types` directive.
 //
 // What this does NOT do is make Lexxy work under enforced Trusted Types. It
 // stops *our* sanitizer from taking the host's policy name and breaking the
@@ -42,7 +45,17 @@ import { URI_BEARING_ATTACHMENT_ATTRIBUTES, attachmentUriFilterHook } from "../h
 // the `innerHTML` writes across elements/ are in the same position. Making the
 // editor usable under TT is a separate piece of work; this is a prerequisite
 // for it, not the whole of it.
-const TRUSTED_TYPES_POLICY = createTrustedTypesPolicy()
+let trustedTypesPolicyResolved = false
+let resolvedTrustedTypesPolicy = null
+
+function trustedTypesPolicy() {
+  if (!trustedTypesPolicyResolved) {
+    resolvedTrustedTypesPolicy = createTrustedTypesPolicy()
+    trustedTypesPolicyResolved = true
+  }
+
+  return resolvedTrustedTypesPolicy
+}
 
 function createTrustedTypesPolicy() {
   // Feature-detected below, so browsers without Trusted Types simply get no
@@ -55,6 +68,10 @@ function createTrustedTypesPolicy() {
   try {
     return trustedTypes.createPolicy("lexxy", { createHTML: (html) => html, createScriptURL: (url) => url })
   } catch {
+    // Warned rather than swallowed, matching what DOMPurify does when its own
+    // policy is refused. The fallback is a silent loss of Trusted Types coverage
+    // otherwise, and the CSP violation report alone doesn't name us.
+    console.warn("TrustedTypes policy lexxy could not be created.")
     return null
   }
 }
@@ -141,9 +158,9 @@ export function buildConfig(allowedElements = null) {
   // an empty allowlist still gets that refusal, because it asked for it.
   if (allowedElements) Object.assign(config, allowlistFor(allowedElements))
 
-  // Always assigned, including when we have no policy — TRUSTED_TYPES_POLICY is
-  // null then, and `TRUSTED_TYPES_POLICY: null` is DOMPurify's documented per-call
-  // opt-out: sign nothing, create nothing.
+  // Always assigned, including when we have no policy — `null` is what
+  // trustedTypesPolicy() returns then, and `TRUSTED_TYPES_POLICY: null` is
+  // DOMPurify's documented per-call opt-out: sign nothing, create nothing.
   //
   // Leaving the key out is a different thing entirely, and the wrong one. With no
   // key DOMPurify falls through to _getDefaultTrustedTypesPolicy() and asks the
@@ -152,7 +169,7 @@ export function buildConfig(allowedElements = null) {
   // `trusted-types dompurify` on the one path where we couldn't get our own.
   // Present-and-`undefined` lands in that same fallthrough, so it is not a
   // substitute for `null` either.
-  config.TRUSTED_TYPES_POLICY = TRUSTED_TYPES_POLICY
+  config.TRUSTED_TYPES_POLICY = trustedTypesPolicy()
 
   return config
 }
