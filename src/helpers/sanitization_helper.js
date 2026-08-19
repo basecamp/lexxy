@@ -35,22 +35,31 @@ export function sanitize(html) {
 // Nothing about a third party's element supports that, and `data:text/html` in a
 // navigational sink is script execution. Everything else gets the standard
 // policy, which is what it would have had if we had never touched `url`.
+//
+// That argument is about an attribute feeding a URL sink, not about
+// ADD_URI_SAFE_ATTR as such. The inert text attributes beside `url` in that list
+// — `caption`, `filename` — keep the attribute-name-wide exemption, and need it:
+// ordinary prose like "Q4: results" is not a URI any regex here would accept.
 export const URI_BEARING_ATTACHMENT_ATTRIBUTES = [ "url" ]
 
 // DOMPurify's own IS_ALLOWED_URI, reproduced rather than narrowed, so `url` on a
 // non-attachment tag is treated exactly as DOMPurify would have treated it.
 const ALLOWED_URI = /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))/i
 
-// The same list plus data:, for the attachment element only.
-//
-// One deliberate difference from DOMPurify's img[src] handling, stated because
-// the earlier claim of matching it "exactly" was not true: DOMPurify tests for a
-// literal lowercase `data:` at offset zero, and this is case-insensitive, so
-// `DATA:` passes here too. That matches how browsers resolve schemes, which is
-// what actually decides whether the URL loads.
-const ALLOWED_ATTACHMENT_URI = /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix|data):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))/i
 // eslint-disable-next-line no-control-regex -- mirrors DOMPurify's own ATTR_WHITESPACE
 const ATTR_WHITESPACE = /[\u0000-\u0020\u00A0\u1680\u180E\u2000-\u2029\u205F\u3000]/g
+
+// Tested against the value as given, never the whitespace-stripped copy, so a
+// scheme smuggled at a nonzero offset is refused. DOMPurify draws the same line:
+// its data: allowance is a prefix test on the un-stripped value, which is why
+// this is a second step rather than one more scheme in ALLOWED_URI.
+//
+// One deliberate difference from DOMPurify's img[src] handling remains, stated
+// because the earlier claim of matching it "exactly" was not true: DOMPurify
+// tests for a literal lowercase `data:` and this is case-insensitive, so `DATA:`
+// passes here too. That matches how browsers resolve schemes, which is what
+// actually decides whether the URL loads.
+const ATTACHMENT_DATA_URI = /^data:/i
 
 function isAttachmentTag(tag) {
   return tag === Lexxy.global.get("attachmentTagName")
@@ -59,14 +68,14 @@ function isAttachmentTag(tag) {
 export function attachmentUriFilterHook(currentNode, hookEvent) {
   if (!URI_BEARING_ATTACHMENT_ATTRIBUTES.includes(hookEvent.attrName)) return
 
-  let permitted
-  if (isAttachmentTag(currentNode?.nodeName?.toLowerCase())) {
-    permitted = ALLOWED_ATTACHMENT_URI
-  } else {
-    permitted = ALLOWED_URI
-  }
+  // DOMPurify keeps an empty value — its chain ends `else if (value) { return
+  // false } else ;` — while every alternation here needs at least one character.
+  if (!hookEvent.attrValue) return
 
-  if (!permitted.test(String(hookEvent.attrValue).replace(ATTR_WHITESPACE, ""))) {
-    hookEvent.keepAttr = false
-  }
+  const value = String(hookEvent.attrValue)
+
+  if (ALLOWED_URI.test(value.replace(ATTR_WHITESPACE, ""))) return
+  if (isAttachmentTag(currentNode?.nodeName?.toLowerCase()) && ATTACHMENT_DATA_URI.test(value)) return
+
+  hookEvent.keepAttr = false
 }

@@ -29,6 +29,11 @@ describe("dom_purify — attachment url validation", () => {
     }
   })
 
+  // This is the hook's guard, and the only one. `url` is in ADD_URI_SAFE_ATTR, so
+  // DOMPurify does not validate it at all — delete the hook and leave that entry
+  // in place, which is the likeliest way this gets half-removed, and this is the
+  // assertion that fails. (Reverting both instead moves the failure to the data:
+  // case above, where DOMPurify's plain check refuses what the hook allowed.)
   test("drops an executable scheme from an attachment url", () => {
     for (const url of [ "javascript:alert(1)", "JaVaScRiPt:alert(1)", "vbscript:msgbox(1)" ]) {
       const sanitized = sanitizeWith(withUrl, attachment(url))
@@ -36,6 +41,28 @@ describe("dom_purify — attachment url validation", () => {
       expect(sanitized).not.toContain("url=")
       // The element itself survives — only the attribute is refused.
       expect(sanitized).toContain("action-text-attachment")
+    }
+  })
+
+  // The data: allowance is a prefix test on the value as given, matching
+  // DOMPurify's own. Stripping ATTR_WHITESPACE first instead would let a control
+  // character carry the scheme past offset zero — `new URL()` still resolves this
+  // one to protocol "data:", and DOMPurify refuses the same string on an img[src].
+  test("refuses a data: scheme hidden behind a leading control character", () => {
+    const sanitized = sanitizeWith(withUrl, attachment("\u0001data:text/html,<script>alert(1)</script>"))
+
+    expect(sanitized).not.toContain("data:")
+    expect(sanitized).toContain("action-text-attachment")
+  })
+
+  // DOMPurify keeps an empty value rather than refusing it — its check chain ends
+  // `else if (value) { return false } else ;` — and the hook has to agree, since
+  // what it rests on is that a `url` is treated exactly as DOMPurify would treat
+  // it. Values are trimmed before a hook sees them, so a whitespace-only url
+  // arrives empty too.
+  test("keeps an empty url, as DOMPurify keeps an empty img src", () => {
+    for (const url of [ "", "   " ]) {
+      expect(sanitizeWith(withUrl, attachment(url))).toContain('url=""')
     }
   })
 
