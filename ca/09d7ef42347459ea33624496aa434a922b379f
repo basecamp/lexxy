@@ -1,0 +1,19 @@
+src/helpers/sanitization_helper.js
+  s_1816aea1ce0fe7::t_6122c0308c96c4 12-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ca09d7ef42347459ea33624496aa434a922b379f",
+  "prompts": {},
+  "sessions": {
+    "s_1816aea1ce0fe7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1e830cb9-f6f1-442b-b61e-5e3744fa41d5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
