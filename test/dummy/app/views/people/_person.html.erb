@@ -2,4 +2,12 @@
 <%# custom attachment get sanitized on re-edit, and alt/width/height on it are %>
 <%# what attachment_content_images_test asserts survive the round trip. A data: %>
 <%# URI keeps the fixture self-contained and off the network. %>
+<%# %>
+<%# The HTML comment is load-bearing too, and is emitted rather than written as %>
+<%# an ERB comment so it reaches the serialized content attribute. It stands in %>
+<%# for the view annotations Rails emits with annotate_rendered_view_with_filenames, %>
+<%# which is how comments turn up inside real attachment content. A comment is %>
+<%# the value DOMPurify's SAFE_FOR_XML guard rejects, so this is what %>
+<%# attachment_content_round_trip_test needs in order to mean anything. %>
+<!-- BEGIN app/views/people/_person.html.erb -->
 <bc-mention gid="<%= person.to_gid %>"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="<%= person.name %>" width="20" height="20" class="avatar"><em><%= person.name %></em> (<strong><%= person.initials %></strong>)</bc-mention>
