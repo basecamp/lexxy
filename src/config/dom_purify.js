@@ -99,6 +99,11 @@ const ALLOWED_HTML_ATTRIBUTES = [ "alt", "class", "contenteditable", "href", "sr
 // place while it loads; nothing else here does.
 const DEFAULT_TAG_ATTRIBUTES = { img: [ "width", "height" ] }
 
+// Navigational/URL attributes an editor may never declare URI-safe: their values
+// reach a navigation, submission, or resource-load sink where a javascript:/data:
+// scheme executes or loads. See uriSafeAttributes handling in allowlistFor.
+const NEVER_URI_SAFE = [ "href", "src", "xlink:href", "action", "formaction" ]
+
 const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
 
 function styleFilterHook(_currentNode, hookEvent) {
@@ -214,12 +219,17 @@ function allowlistFor(allowedElements) {
     // same attribute-name-wide exemption `url`/`caption`/`filename` carry above. It
     // is how a custom-scheme identifier value survives sanitization: a mention's
     // `gid="gid://…"`, for one, which DOMPurify otherwise drops as an unknown
-    // scheme even once the `gid` name is allowed. Attribute-name-wide, not per-tag,
-    // because DOMPurify has no per-tag URI exemption — a caller vouches for the
-    // name, so it should not be a navigational attribute (`href`/`src`), which
-    // would then skip scheme checking wherever it appears.
+    // scheme even once the `gid` name is allowed.
+    //
+    // A navigational attribute is never exemptable, even when declared. The
+    // exemption is attribute-name-wide (DOMPurify has no per-tag one), so exempting
+    // `href`/`src`/etc. would route a `javascript:`/`data:` value to a navigational
+    // or resource sink unchecked, on every tag — the class this sanitizer exists to
+    // stop. It is dropped rather than honored, so a mistaken or hostile declaration
+    // fails safe: the attribute keeps its scheme check.
     for (const attribute of element.uriSafeAttributes ?? []) {
-      uriSafeAttributes.push(attribute.toLowerCase())
+      const name = attribute.toLowerCase()
+      if (!NEVER_URI_SAFE.includes(name)) uriSafeAttributes.push(name)
     }
   }
 

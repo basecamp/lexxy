@@ -55,6 +55,29 @@ describe("dom_purify — per-editor uriSafeAttributes", () => {
     expect(sanitized).toContain("data:image/png;base64,iVBORw0KGgo=")
   })
 
+  test("never exempts a navigational attribute, even when an editor declares it", () => {
+    // The exemption is attribute-name-wide, so honoring uriSafeAttributes: ["href"]
+    // would skip scheme checking for href everywhere. A declaration of a
+    // navigational attribute is dropped, and its javascript: value refused as usual.
+    const html = `<a href="javascript:alert(1)">x</a>`
+    const sanitized = sanitizeWith(
+      [ { tag: "a", attributes: [ "href" ], uriSafeAttributes: [ "href" ] } ],
+      html
+    )
+
+    expect(sanitized).not.toContain("javascript:")
+  })
+
+  test("drops src from the exemption too, keeping its data:/scheme handling", () => {
+    const html = `<img src="javascript:alert(1)">`
+    const sanitized = sanitizeWith(
+      [ { tag: "img", attributes: [ "src" ], uriSafeAttributes: [ "src" ] } ],
+      html
+    )
+
+    expect(sanitized).not.toContain("javascript:")
+  })
+
   test("still refuses an executable scheme on the attachment url beside a URI-safe mention", () => {
     // The new exemption is scoped to the names a caller lists; it does not loosen
     // url's own scheme check.

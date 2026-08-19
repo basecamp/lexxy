@@ -47,6 +47,18 @@ get allowedElements() {
 }
 ```
 
+### URI-safe attributes
+
+Allowing an attribute lets it survive by name, but Lexxy still runs DOMPurify's URL scheme check on its value and drops anything whose scheme it doesn't recognize. If your element carries an identifier that uses a custom scheme — a mention's `gid="gid://…"`, say — declare that attribute in `uriSafeAttributes` so its value is kept:
+
+```js
+get allowedElements() {
+  return [ { tag: "bc-mention", attributes: [ "gid" ], uriSafeAttributes: [ "gid" ] } ]
+}
+```
+
+This is the same exemption Lexxy's own attachment attributes (`url`, `caption`, `filename`) carry. It applies to the attribute **name across every element**, not just the one you declare it on, because DOMPurify has no per-tag exemption — so use it only for custom identifier attributes. Navigational attributes (`href`, `src`, `xlink:href`, `action`, `formaction`) can never be made URI-safe this way: a declaration of one is dropped, and its value keeps the scheme check, so a `javascript:` or `data:` URL can't ride through a link or resource attribute.
+
 ## Example
 
 ```js
