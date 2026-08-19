@@ -9,7 +9,8 @@ import Lexxy from "../config/lexxy"
 // Until 3.3.2 that never came up: attributes admitted by a *functional* ADD_ATTR
 // skipped URI validation entirely (GHSA-cjmm-f4jc-qw8r), which is how data:
 // URLs worked here — and, less happily, how `url="javascript:…"` survived too.
-// The fix restored validation for both.
+// The fix restored validation for both. The bypass was reported to us by
+// @petitpois via HackerOne.
 //
 // So `url` is marked URI-safe, which hands the decision to this hook. The hook
 // only ever removes an attribute — it never force-keeps one — so scoping stays
