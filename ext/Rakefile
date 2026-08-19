@@ -25,7 +25,8 @@ task :default do
       MSG
     end
 
-    sh "yarn install --frozen-lockfile"
+    # Skip `prepare`: it builds the npm package, which the gem does not need.
+    sh "yarn install --frozen-lockfile --ignore-scripts"
     sh "yarn build"
   end
 end
