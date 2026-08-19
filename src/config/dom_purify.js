@@ -2,7 +2,17 @@ import DOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 import { URI_BEARING_ATTACHMENT_ATTRIBUTES, attachmentUriFilterHook } from "../helpers/sanitization_helper"
 
-const ALLOWED_HTML_ATTRIBUTES = [ "class", "contenteditable", "href", "src", "style", "title" ]
+// alt is inert on every element it can appear on, so it sits in the blanket
+// list. srcset is deliberately absent — it carries URLs, so it belongs to a
+// consumer that declares it.
+const ALLOWED_HTML_ATTRIBUTES = [ "alt", "class", "contenteditable", "href", "src", "style", "title" ]
+
+// width/height are scoped to img rather than allowlisted globally, because
+// ALLOWED_ATTR is not per-tag: putting them there would also permit
+// `<table width="100000">` and `<td height="500">` in attachment content, which
+// is layout the editor previously stripped. An image needs them to hold its
+// place while it loads; nothing else here does.
+const DEFAULT_TAG_ATTRIBUTES = { img: [ "width", "height" ] }
 
 const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
 
@@ -54,15 +64,28 @@ DOMPurify.addHook("uponSanitizeElement", (node, data) => {
 export { DOMPurify }
 
 export function buildConfig(allowedElements ) {
-  const tagAttributes = {}
+  // Null prototype, so a declared tag can never read through to an
+  // Object.prototype key: `tagAttributes["constructor"]` would answer with a
+  // function, and ADD_ATTR would call .includes on it.
+  const tagAttributes = Object.create(null)
 
+  // Lowercased, because DOMPurify lowercases ALLOWED_TAGS and calls ADD_ATTR
+  // with the lowercased tag and attribute names. Keeping the caller's casing
+  // makes allowedElements silently partial: `[ "IMG" ]` allows the element but
+  // drops the width/height below, and `[ { tag: "img", attributes: [ "GID" ] } ]`
+  // drops the attribute it declares.
   for (const element of allowedElements) {
-    if (typeof element === "string") {
-      tagAttributes[element] ||= []
-    } else {
-      tagAttributes[element.tag] ||= []
-      tagAttributes[element.tag].push(...element.attributes)
-    }
+    const tag = String(element.tag ?? element).toLowerCase()
+    const attributes = (element.attributes ?? []).map(attribute => attribute.toLowerCase())
+
+    tagAttributes[tag] ||= []
+    tagAttributes[tag].push(...attributes)
+  }
+
+  // Only for tags the caller already permits — this widens what an allowed
+  // element may carry, never which elements are allowed.
+  for (const [ tag, attributes ] of Object.entries(DEFAULT_TAG_ATTRIBUTES)) {
+    if (tagAttributes[tag]) tagAttributes[tag].push(...attributes)
   }
 
   return {

@@ -1,1 +1,5 @@
-<bc-mention gid="<%= person.to_gid %>"><em><%= person.name %></em> (<strong><%= person.initials %></strong>)</bc-mention>
+<%# The avatar is here because attachment content is where images inside a %>
+<%# custom attachment get sanitized on re-edit, and alt/width/height on it are %>
+<%# what attachment_content_images_test asserts survive the round trip. A data: %>
+<%# URI keeps the fixture self-contained and off the network. %>
+<bc-mention gid="<%= person.to_gid %>"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="<%= person.name %>" width="20" height="20" class="avatar"><em><%= person.name %></em> (<strong><%= person.initials %></strong>)</bc-mention>
