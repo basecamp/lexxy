@@ -5,7 +5,7 @@ import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
-import { $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
+import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
 import { $convertInlineImageDataURIs } from "../helpers/inline_image_uri_helper"
 import { CodeHighlightNode, CodeNode } from "@lexical/code"
@@ -26,7 +26,7 @@ import HeadingDropdown from "./dropdown/heading"
 import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
-import SanitizedEditor from "../editor/sanitized"
+import EditorSanitizer from "../editor/sanitizer"
 import Extensions from "../editor/extensions"
 import { BrowserAdapter } from "../editor/adapters/browser_adapter"
 import { getHighlightStyles } from "../helpers/format_helper"
@@ -330,7 +330,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   get value() {
-    return this.cachedValue ??= this.sanitized?.value ?? null
+    return this.cachedValue ??= this.#readSanitizedEditorValue()
   }
 
   set value(html) {
@@ -357,6 +357,12 @@ export class LexicalEditorElement extends HTMLElement {
 
   get canRedo() {
     return this.#historyState.redo
+  }
+
+  #readSanitizedEditorValue() {
+    return this.editor?.read(() => {
+      return this.sanitizer.sanitize($generateHtmlFromNodes(this.editor, null))
+    }) ?? null
   }
 
   #parseHtmlIntoLexicalNodes(html, { editor = this.editor } = {}) {
@@ -749,17 +755,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #configureSanitizer(editor) {
-    this.sanitized = new SanitizedEditor(editor)
-    this.sanitized.allowedTags = this.#getAllowedElements(editor)
-  }
-
-  #getAllowedElements(editor) {
-    return this.#getImportableTags(editor).concat(this.extensions.allowedElements)
-  }
-
-  #getImportableTags(editor) {
-    const tags = Array.from(editor._htmlConversions.keys())
-    return tags.filter(tag => !tag.startsWith("#"))
+    this.sanitizer = EditorSanitizer.register(editor, this.extensions.allowedElements)
   }
 
   #dispatchAttributesChange() {

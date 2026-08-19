@@ -1,6 +1,6 @@
 import { beforeEach, expect, test } from "vitest"
 import DOMPurify from "dompurify"
-import SanitizedEditor from "src/editor/sanitized"
+import EditorSanitizer from "src/editor/sanitizer"
 
 // Lexxy must not configure the DOMPurify singleton the host app also imports.
 //
@@ -11,18 +11,21 @@ import SanitizedEditor from "src/editor/sanitized"
 // passing, and still relying on, would stop applying with no error anywhere.
 //
 // These assert isolation in both directions against the real singleton. A
-// sanitizer is built around a Lexical editor, but nothing here reads it: only
-// `value` does, so any identity will do as a stand-in.
+// sanitizer is registered against a Lexical editor, but the only thing it reads
+// from one is `_htmlConversions`, so a stand-in with a map of them will do.
 
 const DIRTY = '<span data-controller="evil" class="keep">hi</span>'
-const editor = { name: "stand-in for a Lexical editor" }
 
-let sanitized
+function editorAllowing(...tags) {
+  return { _htmlConversions: new Map(tags.map(tag => [ tag, () => null ])) }
+}
+
+let editor, sanitizer
 
 beforeEach(() => {
   DOMPurify.clearConfig()
-  sanitized = new SanitizedEditor(editor)
-  sanitized.allowedTags = [ "span", "p", "strong" ]
+  editor = editorAllowing()
+  sanitizer = EditorSanitizer.register(editor, [ "span", "p", "strong" ])
 })
 
 test("configuring Lexxy's sanitizer leaves the app's per-call config working", () => {
@@ -38,7 +41,7 @@ test("configuring Lexxy's sanitizer leaves the app's per-call config working", (
 test("the app's persistent config does not reach into Lexxy's sanitizing", () => {
   DOMPurify.setConfig({ ALLOWED_TAGS: [ "b" ], ALLOWED_ATTR: [] })
 
-  expect(sanitized.sanitize('<span class="keep">hi</span>')).toBe('<span class="keep">hi</span>')
+  expect(sanitizer.sanitize('<span class="keep">hi</span>')).toBe('<span class="keep">hi</span>')
 })
 
 test("Lexxy's hooks are not installed on the shared instance", () => {
@@ -49,18 +52,28 @@ test("Lexxy's hooks are not installed on the shared instance", () => {
 })
 
 test("sanitizing applies the editor's allowlist", () => {
-  expect(sanitized.sanitize("<span>keep</span><script>evil()</script>")).toBe("<span>keep</span>")
+  expect(sanitizer.sanitize("<span>keep</span><script>evil()</script>")).toBe("<span>keep</span>")
+})
+
+// Registering also allows everything the editor can import, so that reading a
+// value back never strips markup the editor was willing to parse. The `#`-keyed
+// conversions are Lexical's own node types, not tags.
+test("an editor may keep the tags it can import from HTML", () => {
+  const importer = editorAllowing("blockquote", "#text")
+
+  expect(EditorSanitizer.register(importer, []).sanitize("<blockquote>quoted</blockquote><span>x</span>"))
+    .toBe("<blockquote>quoted</blockquote>x")
 })
 
 // The remaining tests resolve the sanitizer with for(), the way a node does from
 // createDOM()'s editor argument. That lookup is what keeps an editor's allowlist
 // its own, so exercising it is the point rather than incidental.
 test("each editor keeps its own allowlist", () => {
-  const other = { name: "a second editor" }
-  new SanitizedEditor(other).allowedTags = [ "strong" ]
+  const other = editorAllowing()
+  EditorSanitizer.register(other, [ "strong" ])
 
-  expect(SanitizedEditor.for(editor).sanitize("<span>a</span><strong>b</strong>")).toBe("<span>a</span><strong>b</strong>")
-  expect(SanitizedEditor.for(other).sanitize("<span>a</span><strong>b</strong>")).toBe("a<strong>b</strong>")
+  expect(EditorSanitizer.for(editor).sanitize("<span>a</span><strong>b</strong>")).toBe("<span>a</span><strong>b</strong>")
+  expect(EditorSanitizer.for(other).sanitize("<span>a</span><strong>b</strong>")).toBe("a<strong>b</strong>")
 })
 
 // The regression this change exists for, at attribute rather than tag level.
@@ -71,7 +84,7 @@ test("each editor keeps its own allowlist", () => {
 // the attachment's serialized markup, so losing it destroys the attachment on
 // the round trip rather than merely trimming it.
 //
-// Both cases configure the *other* editor last on purpose. Under the module-level
+// Both cases register the *other* editor last on purpose. Under the module-level
 // config this replaced, the last editor to connect decided for every editor on
 // the page, and each direction below catches one half of that: the first loses an
 // attachment that should have survived, the second keeps `content` on an element
@@ -81,23 +94,23 @@ const ALLOWS_CONTENT = [ { tag: "action-text-attachment", attributes: [ "content
 const DENIES_CONTENT = [ { tag: "action-text-attachment", attributes: [ "content-type", "sgid" ] } ]
 
 test("an editor allowing attachment content keeps it when another editor denies it", () => {
-  const allows = { name: "attachments on" }
-  const denies = { name: "attachments off" }
+  const allows = editorAllowing()
+  const denies = editorAllowing()
 
-  new SanitizedEditor(allows).allowedTags = ALLOWS_CONTENT
-  new SanitizedEditor(denies).allowedTags = DENIES_CONTENT // configured last
+  EditorSanitizer.register(allows, ALLOWS_CONTENT)
+  EditorSanitizer.register(denies, DENIES_CONTENT) // registered last
 
-  expect(SanitizedEditor.for(allows).sanitize(ATTACHMENT)).toContain("content=")
+  expect(EditorSanitizer.for(allows).sanitize(ATTACHMENT)).toContain("content=")
 })
 
 test("an editor denying attachment content strips it when another editor allows it", () => {
-  const denies = { name: "attachments off" }
-  const allows = { name: "attachments on" }
+  const denies = editorAllowing()
+  const allows = editorAllowing()
 
-  new SanitizedEditor(denies).allowedTags = DENIES_CONTENT
-  new SanitizedEditor(allows).allowedTags = ALLOWS_CONTENT // configured last
+  EditorSanitizer.register(denies, DENIES_CONTENT)
+  EditorSanitizer.register(allows, ALLOWS_CONTENT) // registered last
 
-  const result = SanitizedEditor.for(denies).sanitize(ATTACHMENT)
+  const result = EditorSanitizer.for(denies).sanitize(ATTACHMENT)
 
   expect(result).not.toContain("content=\"")
   // Only the attribute is refused — the element itself is still allowed here.

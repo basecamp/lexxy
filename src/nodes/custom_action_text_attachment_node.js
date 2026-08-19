@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { $createTextNode, DecoratorNode } from "lexical"
 
-import SanitizedEditor from "../editor/sanitized"
+import EditorSanitizer from "../editor/sanitizer"
 import { createElement, extractPlainTextFromHtml } from "../helpers/html_helper"
 import { parseAttachmentContent } from "../helpers/storage_helper"
 
@@ -78,7 +78,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
     // Resolved from the editor so this content is sanitized with its own
     // allowlist rather than whichever editor connected most recently.
-    figure.insertAdjacentHTML("beforeend", SanitizedEditor.for(editor).sanitize(this.innerHtml))
+    figure.insertAdjacentHTML("beforeend", EditorSanitizer.for(editor).sanitize(this.innerHtml))
 
     const deleteButton = createElement("lexxy-node-delete-button")
     figure.appendChild(deleteButton)
