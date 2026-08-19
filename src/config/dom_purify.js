@@ -141,13 +141,18 @@ export function buildConfig(allowedElements = null) {
   // an empty allowlist still gets that refusal, because it asked for it.
   if (allowedElements) Object.assign(config, allowlistFor(allowedElements))
 
-  // Assigned rather than spread in, because the key has to be absent — not
-  // present and undefined — when we have no policy: DOMPurify reads
-  // `cfg.TRUSTED_TYPES_POLICY` and validates its shape, so handing it undefined
-  // is not the same as leaving it out.
-  if (TRUSTED_TYPES_POLICY) {
-    config.TRUSTED_TYPES_POLICY = TRUSTED_TYPES_POLICY
-  }
+  // Always assigned, including when we have no policy — TRUSTED_TYPES_POLICY is
+  // null then, and `TRUSTED_TYPES_POLICY: null` is DOMPurify's documented per-call
+  // opt-out: sign nothing, create nothing.
+  //
+  // Leaving the key out is a different thing entirely, and the wrong one. With no
+  // key DOMPurify falls through to _getDefaultTrustedTypesPolicy() and asks the
+  // browser for `dompurify` — the very name this exists to stop competing for — so
+  // an omitted key would disarm the sanitizer of a host shipping
+  // `trusted-types dompurify` on the one path where we couldn't get our own.
+  // Present-and-`undefined` lands in that same fallthrough, so it is not a
+  // substitute for `null` either.
+  config.TRUSTED_TYPES_POLICY = TRUSTED_TYPES_POLICY
 
   return config
 }

@@ -1,157 +1,157 @@
-import { describe, expect, test, vi } from "vitest"
+import { afterEach, describe, expect, test, vi } from "vitest"
 
-// The policy is created once, when config/dom_purify is first evaluated, so each
-// test installs its stub and then re-imports the module — with a distinct query
-// so it gets a fresh instance rather than the one the suite already loaded.
+// The policy is created once per module instance, so each test installs
+// its stub and then re-imports the module through resetModules to get a fresh
+// one — otherwise it would see whatever the first test in the file resolved.
 describe("dom_purify — Trusted Types policy", () => {
-  // Every DOMPurify instance claims a policy named `dompurify` under Trusted Types,
-  // and TT rejects a duplicate — so on a page with a host sanitizer, ours would get
-  // none, and an unsigned instance throws at DOMParser rather than degrading.
-  // Ours is created under its own name and handed over, so both work.
-  test("uses its own Trusted Types policy name", async () => {
+  const previousTrustedTypes = globalThis.trustedTypes
+
+  afterEach(() => {
+    globalThis.trustedTypes = previousTrustedTypes
+    vi.resetModules()
+  })
+
+  // Records every policy the module asks the browser for, and every string signed
+  // through one, tagged with the name that signed it. `refuse` is the name the CSP
+  // does not allowlist.
+  function stubTrustedTypes({ refuse = null } = {}) {
     const created = []
-    const previous = globalThis.trustedTypes
+    const signed = []
 
     globalThis.trustedTypes = {
       createPolicy(name, rules) {
+        if (name === refuse) throw new TypeError(`Refused to create a TrustedTypePolicy named '${name}'`)
         if (created.includes(name)) throw new TypeError(`Policy "${name}" already exists`)
         created.push(name)
-        return { createHTML: rules.createHTML, createScriptURL: rules.createScriptURL }
+
+        return {
+          createHTML(html) {
+            signed.push([ name, html ])
+            return rules.createHTML(html)
+          },
+          createScriptURL: rules.createScriptURL
+        }
       },
       getAttributeType: () => null
     }
 
-    try {
-      const fresh = await import("src/config/dom_purify?tt=allowlisted")
-      const config = fresh.buildConfig([ "b" ])
+    return { created, signed }
+  }
 
-      expect(created).toContain("lexxy")
-      expect(created).not.toContain("dompurify")
-      expect(config.TRUSTED_TYPES_POLICY).toBeTruthy()
-    } finally {
-      globalThis.trustedTypes = previous
-    }
+  async function freshModule(path) {
+    vi.resetModules()
+    return import(path)
+  }
+
+  // Every DOMPurify instance claims a policy named `dompurify` under Trusted Types,
+  // and TT rejects a duplicate — so on a page with a host sanitizer, ours would get
+  // none, and an unsigned instance silently returns an empty string. Ours is created
+  // under its own name and handed over, so both work.
+  //
+  // The sanitize() call is the assertion, not decoration: DOMPurify creates its own
+  // default policy lazily inside _parseConfig, so a `not.toContain("dompurify")`
+  // check on a config that was never sanitized with cannot fail.
+  test("signs through its own Trusted Types policy name, and never asks for dompurify", async () => {
+    const { created, signed } = stubTrustedTypes()
+
+    const fresh = await freshModule("src/config/dom_purify")
+    const config = fresh.buildConfig([ "b" ])
+
+    expect(fresh.DOMPurify.sanitize("<b>hi</b><script>x()</script>", config)).toBe("<b>hi</b>")
+    expect(created).toEqual([ "lexxy" ])
+    expect(signed).toContainEqual([ "lexxy", "<b>hi</b><script>x()</script>" ])
+    expect(config.TRUSTED_TYPES_POLICY).toBeTruthy()
   })
 
-  // The other two shapes the policy can land in. Creating a policy the CSP has not
-  // allowlisted throws, and that throw is caught — so the interesting assertion is
-  // not just "no crash" but that the config comes back with the key *absent*.
-  // DOMPurify reads cfg.TRUSTED_TYPES_POLICY and validates its shape, so a present
-  // -but-undefined key is not the same as an omitted one.
-  test("falls back to no policy when the CSP refuses the name", async () => {
-    const previous = globalThis.trustedTypes
-    let asked = false
+  // Creating a policy the CSP has not allowlisted throws, and that throw is caught.
+  // The interesting assertion is not "no crash" but that we then sanitize with *no*
+  // policy rather than letting DOMPurify pick one: with the key omitted it falls
+  // through to its own default and asks for `dompurify`, which is the name this
+  // whole thing exists to leave alone. So the stub refuses only `lexxy` and would
+  // happily grant `dompurify` — and the created list has to come back empty.
+  test("falls back to no policy at all when the CSP refuses the name", async () => {
+    const { created, signed } = stubTrustedTypes({ refuse: "lexxy" })
 
-    globalThis.trustedTypes = {
-      createPolicy(name) {
-        asked = true
-        throw new TypeError(`Refused to create a TrustedTypePolicy named '${name}'`)
-      },
-      getAttributeType: () => null
-    }
+    const fresh = await freshModule("src/config/dom_purify")
+    const config = fresh.buildConfig([ "b" ])
 
-    try {
-      const fresh = await import("src/config/dom_purify?tt=refused")
-      const config = fresh.buildConfig([ "b" ])
-
-      expect(asked, "should have attempted to create its own policy").toBe(true)
-      expect(config).not.toHaveProperty("TRUSTED_TYPES_POLICY")
-      // Still sanitizes — this is the position Lexxy was in before it asked at all.
-      expect(fresh.DOMPurify.sanitize("<b>hi</b><script>x()</script>", config)).toBe("<b>hi</b>")
-    } finally {
-      globalThis.trustedTypes = previous
-    }
+    // Still sanitizes — this is the position Lexxy was in before it asked at all.
+    expect(fresh.DOMPurify.sanitize("<b>hi</b><script>x()</script>", config)).toBe("<b>hi</b>")
+    expect(created).toEqual([])
+    expect(signed).toEqual([])
+    // Null, not absent. An absent key is what sends DOMPurify to its own default.
+    expect(config).toHaveProperty("TRUSTED_TYPES_POLICY", null)
   })
 
   test("asks for no policy in a browser without Trusted Types", async () => {
-    const previous = globalThis.trustedTypes
     delete globalThis.trustedTypes
 
-    try {
-      const fresh = await import("src/config/dom_purify?tt=absent")
-      const config = fresh.buildConfig([ "b" ])
+    const fresh = await freshModule("src/config/dom_purify")
+    const config = fresh.buildConfig([ "b" ])
 
-      expect(config).not.toHaveProperty("TRUSTED_TYPES_POLICY")
-      expect(fresh.DOMPurify.sanitize("<b>hi</b><script>x()</script>", config)).toBe("<b>hi</b>")
-    } finally {
-      globalThis.trustedTypes = previous
-    }
+    expect(config).toHaveProperty("TRUSTED_TYPES_POLICY", null)
+    expect(fresh.DOMPurify.sanitize("<b>hi</b><script>x()</script>", config)).toBe("<b>hi</b>")
   })
 
   // buildConfig carrying the key is only half of it: what matters is that the key
   // is still there in the config an editor's sanitizer actually sanitizes with.
-  // buildConfig now runs once per editor, inside EditorSanitizer's constructor, and
-  // its result is held privately and handed to DOMPurify.sanitize — so this asserts
+  // buildConfig runs once per editor, inside EditorSanitizer's constructor, and its
+  // result is held privately and handed to DOMPurify.sanitize — so this asserts
   // across that boundary rather than on buildConfig's return value.
   //
-  // DOMPurify routes its input through createHTML, so the recorded call is the
-  // evidence. It has to be recorded *per policy name*: with no policy in the config
-  // DOMPurify asks for one of its own, so a stub that recorded regardless of name
-  // would see the call either way and prove nothing. resetModules is what lets the
-  // whole chain — sanitizer, dom_purify, the policy — be built against the stub.
-  // The fallback sanitizer declares no allowlist at all, and still has to carry
-  // the policy. Without it DOMPurify asks the browser for one of its own on our
-  // instance, under the `dompurify` name — the collision this exists to avoid,
-  // reached by nothing more than an unregistered consumer sanitizing first.
-  // That is why the key is assigned in buildConfig rather than alongside the
-  // allowlist it derives.
-  test("a sanitizer with no allowlist still sanitizes through the lexxy policy", async () => {
-    const trusted = []
-    const previous = globalThis.trustedTypes
+  // The signed name is the evidence, and it has to be recorded per name: with no
+  // policy in the config DOMPurify asks for one of its own, so a stub that recorded
+  // regardless of name would see the call either way and prove nothing.
+  test("an editor's sanitizer sanitizes through the lexxy policy", async () => {
+    const { created, signed } = stubTrustedTypes()
 
-    globalThis.trustedTypes = {
-      createPolicy(name, rules) {
-        return {
-          createHTML(html) {
-            trusted.push([ name, html ])
-            return rules.createHTML(html)
-          },
-          createScriptURL: rules.createScriptURL
-        }
-      },
-      getAttributeType: () => null
-    }
+    const { default: EditorSanitizer } = await freshModule("src/editor/sanitizer")
+    const sanitizer = EditorSanitizer.register({ _htmlConversions: new Map() }, [ "b" ])
 
-    try {
-      vi.resetModules()
-      const { default: EditorSanitizer } = await import("src/editor/sanitizer")
-
-      // Never registered, so this resolves to the fallback.
-      expect(EditorSanitizer.for({}).sanitize("<b>hi</b>")).toBe("<b>hi</b>")
-      expect(trusted).toContainEqual([ "lexxy", "<b>hi</b>" ])
-    } finally {
-      globalThis.trustedTypes = previous
-      vi.resetModules()
-    }
+    expect(sanitizer.sanitize("<b>hi</b><script>x()</script>")).toBe("<b>hi</b>")
+    expect(created).toEqual([ "lexxy" ])
+    expect(signed).toContainEqual([ "lexxy", "<b>hi</b><script>x()</script>" ])
   })
 
-  test("an editor's sanitizer sanitizes through the lexxy policy", async () => {
-    const trusted = []
-    const previous = globalThis.trustedTypes
+  // The fallback sanitizer declares no allowlist at all, and still has to carry the
+  // policy. Without it DOMPurify asks the browser for one of its own on our
+  // instance, under the `dompurify` name — the collision this exists to avoid,
+  // reached by nothing more than an unregistered consumer sanitizing first. That is
+  // why the key is assigned in buildConfig rather than alongside the allowlist it
+  // derives.
+  test("a sanitizer with no allowlist still sanitizes through the lexxy policy", async () => {
+    const { created, signed } = stubTrustedTypes()
 
-    globalThis.trustedTypes = {
-      createPolicy(name, rules) {
-        return {
-          createHTML(html) {
-            trusted.push([ name, html ])
-            return rules.createHTML(html)
-          },
-          createScriptURL: rules.createScriptURL
-        }
-      },
-      getAttributeType: () => null
+    const { default: EditorSanitizer } = await freshModule("src/editor/sanitizer")
+
+    // Never registered, so this resolves to the fallback.
+    expect(EditorSanitizer.for({}).sanitize("<b>hi</b>")).toBe("<b>hi</b>")
+    expect(created).toEqual([ "lexxy" ])
+    expect(signed).toContainEqual([ "lexxy", "<b>hi</b>" ])
+  })
+
+  // One policy for the whole module, reused across every editor and every call. The
+  // stub throws on a duplicate name, exactly as Trusted Types does, so re-resolving
+  // it per editor or per sanitize would land the second one in the no-policy
+  // fallback — and only some of these strings would come back signed.
+  test("reuses the one policy across editors and repeated sanitizes", async () => {
+    const { created, signed } = stubTrustedTypes()
+
+    const { default: EditorSanitizer } = await freshModule("src/editor/sanitizer")
+    const rich = EditorSanitizer.register({ _htmlConversions: new Map() }, [ "b", "i" ])
+    const plain = EditorSanitizer.register({ _htmlConversions: new Map() }, [ "b" ])
+
+    for (const round of [ 1, 2, 3 ]) {
+      expect(rich.sanitize(`<b>${round}</b><i>x</i>`)).toBe(`<b>${round}</b><i>x</i>`)
+      expect(plain.sanitize(`<b>${round}</b><i>x</i>`)).toBe(`<b>${round}</b>x`)
     }
 
-    try {
-      vi.resetModules()
-      const { default: EditorSanitizer } = await import("src/editor/sanitizer")
-      const sanitizer = EditorSanitizer.register({ _htmlConversions: new Map() }, [ "b" ])
+    // DOMPurify signs an empty string of its own on every parse, for the value it
+    // returns when the input has no body, so only the markup is counted here.
+    const signedMarkup = signed.filter(([ , html ]) => html !== "")
 
-      expect(sanitizer.sanitize("<b>hi</b><script>x()</script>")).toBe("<b>hi</b>")
-      expect(trusted).toContainEqual([ "lexxy", "<b>hi</b><script>x()</script>" ])
-    } finally {
-      globalThis.trustedTypes = previous
-      vi.resetModules()
-    }
+    expect(created).toEqual([ "lexxy" ])
+    expect(signedMarkup).toHaveLength(6)
+    expect(signedMarkup.map(([ name ]) => name)).toEqual(Array(6).fill("lexxy"))
   })
 })
