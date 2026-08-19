@@ -84,7 +84,19 @@ export default class EditorSanitizer {
     this.#config = buildConfig(allowedElements)
   }
 
-  sanitize(html) {
+  // safeForXml opts into DOMPurify's mXSS-safe mode, for a caller re-inflating
+  // stored content. It is off by default because that is what the config this
+  // sanitizer was built with says, and because the value an editor reads back is
+  // its own markup on its way out, not untrusted input on its way in.
+  //
+  // The strict config is this instance's own, spread rather than rebuilt, so the
+  // per-editor allowlist and everything else buildConfig put there — the Trusted
+  // Types policy, ADD_URI_SAFE_ATTR — survive the flip.
+  sanitize(html, { safeForXml = false } = {}) {
+    if (safeForXml) {
+      return DOMPurify.sanitize(html, { ...this.#config, SAFE_FOR_XML: true })
+    }
+
     return DOMPurify.sanitize(html, this.#config)
   }
 }
