@@ -116,3 +116,33 @@ test("an editor denying attachment content strips it when another editor allows 
   // Only the attribute is refused — the element itself is still allowed here.
   expect(result).toContain("action-text-attachment")
 })
+
+// The mXSS-safe re-inflation opt-in, which the attachment node passes on
+// createDOM. The strict config is this instance's own, spread rather than
+// rebuilt, so everything buildConfig put in it survives the SAFE_FOR_XML flip —
+// rebuilding from a bare buildConfig([]) here would drop the allowlist along
+// with the rest.
+test("safe-XML mode keeps the editor's own allowlist and the rest of its config", () => {
+  const allows = editorAllowing()
+  EditorSanitizer.register(allows, ALLOWS_CONTENT)
+
+  expect(EditorSanitizer.for(allows).sanitize("<span>a</span>", { safeForXml: true })).toBe("a")
+  expect(EditorSanitizer.for(allows).sanitize(ATTACHMENT, { safeForXml: true })).toContain("action-text-attachment")
+})
+
+// Every other call site — an editor reading its own value back — passes no
+// options at all, and has to keep sanitizing exactly as it did before the option
+// existed. SAFE_FOR_XML off is what buildConfig sets, and it is what keeps a
+// serialized `content` attribute intact on the way out.
+test("sanitizing without options leaves mXSS-safe mode off", () => {
+  expect(sanitizer.sanitize(ATTACHMENT)).toBe(EditorSanitizer.for(editor).sanitize(ATTACHMENT, { safeForXml: false }))
+
+  const withContent = EditorSanitizer.register(editorAllowing(), ALLOWS_CONTENT)
+
+  // A comment terminator in the value is what SAFE_FOR_XML rejects, so this is
+  // the assertion that distinguishes the default from the opt-in.
+  const commented = '<action-text-attachment sgid="x" content-type="text/html" content="&lt;!-- BEGIN --&gt;"></action-text-attachment>'
+
+  expect(withContent.sanitize(commented)).toContain("content=")
+  expect(withContent.sanitize(commented, { safeForXml: true })).not.toContain("content=")
+})
