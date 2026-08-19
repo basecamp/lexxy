@@ -13,6 +13,7 @@ jobs:
       contents: read
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -43,6 +44,7 @@ jobs:
   lint-actions:
     name: GitHub Actions audit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
 
@@ -62,6 +64,7 @@ jobs:
   js-unit-tests:
     name: JS unit tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
@@ -85,6 +88,7 @@ jobs:
   rails-system-tests:
     name: Rails system tests
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
 
@@ -146,6 +150,7 @@ jobs:
   browser-test:
     name: Browser tests (${{ matrix.browser }})
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
     strategy:
@@ -180,11 +185,18 @@ jobs:
 
       - name: Install Playwright browser
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps ${{ matrix.browser }}
+        run: npx playwright install ${{ matrix.browser }}
 
+      # apt-get on the hosted runners stalls for tens of minutes when its mirror
+      # is degraded, so bound each attempt and retry: apt keeps the .debs it
+      # already fetched, so retries make forward progress.
       - name: Install Playwright system deps
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps ${{ matrix.browser }}
+        run: |
+          for attempt in 1 2 3; do
+            timeout 10m npx playwright install-deps ${{ matrix.browser }} && exit 0
+            echo "::warning::playwright install-deps stalled on attempt $attempt, retrying"
+          done
+          exit 1
 
       - name: Run Playwright tests
         run: yarn test:browser:${{ matrix.browser }}
