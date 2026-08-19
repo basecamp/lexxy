@@ -1,14 +1,4 @@
-import { DOMPurify, buildConfig } from "../config/dom_purify"
 import Lexxy from "../config/lexxy"
-
-export function setSanitizerConfig(allowedTags) {
-  DOMPurify.clearConfig()
-  DOMPurify.setConfig(buildConfig(allowedTags))
-}
-
-export function sanitize(html) {
-  return DOMPurify.sanitize(html)
-}
 
 // An attachment's `url` ends up as an <img src> (action_text_attachment_node
 // reads it into `this.src`, which is assigned to img.src). DOMPurify already

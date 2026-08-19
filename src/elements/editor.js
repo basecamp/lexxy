@@ -20,13 +20,13 @@ import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
 import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
 import { isAttachmentSpacerTextNode, isEditorFocused } from "../helpers/lexical_helper"
-import { sanitize, setSanitizerConfig } from "../helpers/sanitization_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
 import HeadingDropdown from "./dropdown/heading"
 import Configuration from "../editor/configuration"
 import Contents from "../editor/contents"
 import Clipboard from "../editor/clipboard"
+import EditorSanitizer from "../editor/sanitizer"
 import Extensions from "../editor/extensions"
 import { BrowserAdapter } from "../editor/adapters/browser_adapter"
 import { getHighlightStyles } from "../helpers/format_helper"
@@ -361,7 +361,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #readSanitizedEditorValue() {
     return this.editor?.read(() => {
-      return sanitize($generateHtmlFromNodes(this.editor, null))
+      return this.sanitizer.sanitize($generateHtmlFromNodes(this.editor, null))
     }) ?? null
   }
 
@@ -755,16 +755,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #configureSanitizer(editor) {
-    setSanitizerConfig(this.#getAllowedElements(editor))
-  }
-
-  #getAllowedElements(editor) {
-    return this.#getImportableTags(editor).concat(this.extensions.allowedElements)
-  }
-
-  #getImportableTags(editor) {
-    const tags = Array.from(editor._htmlConversions.keys())
-    return tags.filter(tag => !tag.startsWith("#"))
+    this.sanitizer = EditorSanitizer.register(editor, this.extensions.allowedElements)
   }
 
   #dispatchAttributesChange() {

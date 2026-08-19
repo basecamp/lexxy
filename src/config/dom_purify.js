@@ -1,6 +1,23 @@
-import DOMPurify from "dompurify"
+import createDOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 import { URI_BEARING_ATTACHMENT_ATTRIBUTES, attachmentUriFilterHook } from "../helpers/sanitization_helper"
+
+// Lexxy's own DOMPurify instance, deliberately not the shared default export.
+//
+// dompurify's default export is a singleton, and both its config and its hooks
+// are global to every consumer in the bundle. That makes configuring it from an
+// editor's connectedCallback actively dangerous for the host app: DOMPurify
+// treats a persistent config as final, so once setConfig() has run, every
+// later `sanitize(html, config)` anywhere in the app silently ignores its own
+// config argument. An app sanitizing untrusted HTML with, say,
+// `{ ALLOW_DATA_ATTR: false }` would keep passing that option and stop getting
+// it the moment a Lexxy editor connected — with no error and no visible change
+// at the call site.
+//
+// Calling the default export with a window returns a fresh, independent
+// instance. This one carries the hooks and config below; nothing we do here can
+// reach the app's instance, and nothing it does can reach ours.
+const DOMPurify = createDOMPurify(window)
 
 // alt is inert on every element it can appear on, so it sits in the blanket
 // list. srcset is deliberately absent — it carries URLs, so it belongs to a
@@ -63,7 +80,29 @@ DOMPurify.addHook("uponSanitizeElement", (node, data) => {
 
 export { DOMPurify }
 
-export function buildConfig(allowedElements ) {
+// Called with no allowedElements for a sanitizer that has no allowlist to apply,
+// which is not the same thing as an empty one — see EditorSanitizer's fallback.
+export function buildConfig(allowedElements = null) {
+  const config = {
+    ADD_URI_SAFE_ATTR: [ "caption", "filename", ...URI_BEARING_ATTACHMENT_ATTRIBUTES ],
+    SAFE_FOR_XML: false, // So that it does not strip attributes that contains serialized HTML (like content)
+    // Stimulus behavior attributes must never survive sanitization: they let stored content
+    // wire up arbitrary controllers/actions in the viewer's session. FORBID_ATTR wins over
+    // ALLOWED_ATTR/ADD_ATTR/ALLOW_DATA_ATTR in DOMPurify, so this holds even though other
+    // data-* attributes (data-language, data-trix-*, etc.) are otherwise allowed through.
+    FORBID_ATTR: [ "data-controller", "data-action" ]
+  }
+
+  // Left out rather than emptied when there is no allowlist, so DOMPurify's own
+  // default tag and attribute policy stands. `ALLOWED_TAGS: []` would not be a
+  // default, it would be a refusal: it strips every tag. An editor that declares
+  // an empty allowlist still gets that refusal, because it asked for it.
+  if (allowedElements) Object.assign(config, allowlistFor(allowedElements))
+
+  return config
+}
+
+function allowlistFor(allowedElements) {
   // Null prototype, so a declared tag can never read through to an
   // Object.prototype key: `tagAttributes["constructor"]` would answer with a
   // function, and ADD_ATTR would call .includes on it.
@@ -91,13 +130,6 @@ export function buildConfig(allowedElements ) {
   return {
     ALLOWED_TAGS: Object.keys(tagAttributes),
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
-    ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute),
-    ADD_URI_SAFE_ATTR: [ "caption", "filename", ...URI_BEARING_ATTACHMENT_ATTRIBUTES ],
-    SAFE_FOR_XML: false, // So that it does not strip attributes that contains serialized HTML (like content)
-    // Stimulus behavior attributes must never survive sanitization: they let stored content
-    // wire up arbitrary controllers/actions in the viewer's session. FORBID_ATTR wins over
-    // ALLOWED_ATTR/ADD_ATTR/ALLOW_DATA_ATTR in DOMPurify, so this holds even though other
-    // data-* attributes (data-language, data-trix-*, etc.) are otherwise allowed through.
-    FORBID_ATTR: [ "data-controller", "data-action" ]
+    ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute)
   }
 }

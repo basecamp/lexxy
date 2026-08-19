@@ -1,8 +1,8 @@
 import Lexxy from "../config/lexxy"
 import { $createTextNode, DecoratorNode } from "lexical"
 
+import EditorSanitizer from "../editor/sanitizer"
 import { createElement, extractPlainTextFromHtml } from "../helpers/html_helper"
-import { sanitize } from "../helpers/sanitization_helper"
 import { parseAttachmentContent } from "../helpers/storage_helper"
 
 export class CustomActionTextAttachmentNode extends DecoratorNode {
@@ -72,11 +72,13 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     this.plainText = plainText ?? extractPlainTextFromHtml(innerHtml)
   }
 
-  createDOM() {
+  createDOM(_config, editor) {
     const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true, draggable: true })
     figure.dataset.lexicalNodeKey = this.__key
 
-    figure.insertAdjacentHTML("beforeend", sanitize(this.innerHtml))
+    // Resolved from the editor so this content is sanitized with its own
+    // allowlist rather than whichever editor connected most recently.
+    figure.insertAdjacentHTML("beforeend", EditorSanitizer.for(editor).sanitize(this.innerHtml))
 
     const deleteButton = createElement("lexxy-node-delete-button")
     figure.appendChild(deleteButton)
