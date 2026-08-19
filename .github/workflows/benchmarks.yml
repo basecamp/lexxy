@@ -66,12 +66,17 @@ jobs:
         with:
           node-version: "22"
 
+      # No --with-deps: on the ubuntu-24.04 image chromium's system libraries are
+      # all present already, and the only thing apt adds is nine CJK and Cyrillic
+      # font packages that no benchmark measures. Asking for them puts this job
+      # behind the Ubuntu mirror, which is what hung it for 29 minutes in
+      # https://github.com/basecamp/lexxy/actions/runs/32262893631.
       - name: Benchmark baseline
         if: steps.baseline.outputs.sha != ''
         working-directory: baseline
         run: |
           yarn install --frozen-lockfile
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
           yarn benchmark:browser --output ../tmp/browser-benchmarks-baseline.json
 
       - name: Benchmark current
@@ -79,7 +84,7 @@ jobs:
         working-directory: current
         run: |
           yarn install --frozen-lockfile
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
           yarn benchmark:browser --output ../tmp/browser-benchmarks-current.json
 
       - name: Compare benchmarks
