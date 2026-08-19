@@ -132,10 +132,14 @@ Content-Security-Policy: require-trusted-types-for 'script'; trusted-types dompu
 ```ruby
 # config/initializers/content_security_policy.rb
 Rails.application.config.content_security_policy do |policy|
-  policy.trusted_types :dompurify, :lexxy
+  policy.trusted_types "dompurify", "lexxy"
   policy.require_trusted_types_for :script
 end
 ```
+
+The policy names are strings, not symbols: Rails resolves a symbol source through
+its own mapping table and raises `ArgumentError` on anything not in it. `:script`
+is in that table, so the sink group stays a symbol.
 
 If the directive doesn't allowlist `lexxy`, creating the policy throws, Lexxy
 catches it, and falls back to no policy — the same position it was in before.
