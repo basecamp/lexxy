@@ -1,6 +1,6 @@
 {
   "name": "@37signals/lexxy",
-  "version": "0.9.25",
+  "version": "0.9.31-beta",
   "description": "Lexxy - A modern rich text editor for Rails.",
   "module": "dist/lexxy.esm.js",
   "type": "module",
@@ -51,6 +51,7 @@
     "test:browser:webkit": "npx playwright test --config test/browser/playwright.config.js --project=webkit",
     "test:browser:headed": "npx playwright test --config test/browser/playwright.config.js --headed",
     "test:browser:debug": "npx playwright test --config test/browser/playwright.config.js --debug",
+    "prepare": "rollup -c rollup.config.npm.mjs",
     "prerelease": "yarn build:npm",
     "release": "yarn build:npm && yarn publish",
     "release:alpha": "yarn build:npm && yarn publish --tag alpha"
@@ -69,7 +70,7 @@
     "@lexical/selection": "^0.44.0",
     "@lexical/table": "^0.44.0",
     "@lexical/utils": "^0.44.0",
-    "dompurify": "^3.3.0",
+    "dompurify": "^3.4.13",
     "lexical": "^0.44.0",
     "marked": "^16.4.1",
     "prismjs": "^1.30.0"

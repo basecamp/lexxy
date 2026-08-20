@@ -9,7 +9,12 @@ export function parsePastedMarkdown(text) {
 // isolated from the global `marked` singleton, so a host bundle sharing the
 // deduped module can't leak `marked.use(...)` customizations into pasting.
 // The additions are breaks: true, matching the render pass Clipboard always
-// used, and the `html` renderer.
+// used, the `html` renderer, and the dropped `code` tokenizer.
+//
+// Markdown reads any line indented by a tab or four spaces as a code block. Pasted
+// plain text is full of incidental indentation — outlines, notes, logs — and nobody
+// indents a note meaning "this is code"; they fence it. Keep fences, drop the
+// indentation rule.
 //
 // Following CommonMark, marked tokenizes a bare "<tag>" in prose as raw inline
 // (or block) HTML. That is intentional for recognized tags — pasted plain text
@@ -29,7 +34,7 @@ export function parsePastedMarkdown(text) {
 const pasteMarked = new Marked({
   breaks: true,
   renderer: { html: renderPastedHtmlToken }
-})
+}).use({ tokenizer: { code: () => undefined } })
 
 // Matches a single HTML tag lexeme: an optional "/", a tag name, then attribute
 // characters up to the closing ">". Quoted attribute values may contain ">" —

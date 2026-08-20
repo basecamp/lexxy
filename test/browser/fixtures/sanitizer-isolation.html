@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — sanitizer isolation</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <form>
+    <div class="body">
+      <lexxy-editor id="rich" class="lexxy-content" placeholder="Rich"></lexxy-editor>
+    </div>
+
+    <!-- Connects second, so under the old module-level config it was this
+         editor's allowlist that governed the rich one above. -->
+    <div class="body">
+      <lexxy-editor id="plain" preset="plain" class="lexxy-content" placeholder="Plain"></lexxy-editor>
+    </div>
+
+    <div class="events"></div>
+  </form>
+
+  <script type="module" src="/sanitizer-isolation.js"></script>
+</body>
+</html>

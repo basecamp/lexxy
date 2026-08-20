@@ -58,7 +58,9 @@ class Trix::FromLexxyToTrixTest < ApplicationSystemTestCase
     attach_file [ file_fixture("example.png"), file_fixture("example2.png") ] do
       click_on "Upload file"
     end
-    assert_selector ".attachment-gallery"
+    within first(".attachment-gallery") do
+      assert_selector "figure.attachment", count: 2
+    end
     find_editor.send "With gallery"
 
     click_on "Create Post"

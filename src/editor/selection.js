@@ -1,7 +1,8 @@
 import {
   $addUpdateTag, $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
-  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND,
-  HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
+  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_LOW,
+  DELETE_CHARACTER_COMMAND, HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
+  SELECTION_CHANGE_COMMAND, SKIP_DOM_SELECTION_TAG, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
@@ -345,8 +346,32 @@ export default class Selection {
 
       this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
         this.#syncSelectedClasses()
-      }, COMMAND_PRIORITY_LOW)
+      }, COMMAND_PRIORITY_LOW),
+
+      this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
+        this.#preserveFocusOfOtherFields()
+        return false
+      }, COMMAND_PRIORITY_CRITICAL)
     )
+  }
+
+  // Firefox (152+) keeps window.getSelection() anchored inside the editor after focus
+  // moves to another field, and fires document selectionchange for every keystroke
+  // typed there. Lexical reads that stale selection, reconciles, and pulls focus back
+  // into the editor — stealing it mid-typing. When another text-entry field owns focus,
+  // tag the update so Lexical leaves the DOM selection (and with it, focus) alone.
+  #preserveFocusOfOtherFields() {
+    if (this.#anotherFieldIsFocused) {
+      $addUpdateTag(SKIP_DOM_SELECTION_TAG)
+    }
+  }
+
+  get #anotherFieldIsFocused() {
+    const rootElement = this.editor.getRootElement()
+    const activeElement = rootElement?.ownerDocument.activeElement
+
+    return activeElement && !rootElement.contains(activeElement) &&
+      (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA" || activeElement.isContentEditable)
   }
 
   #listenForNodeSelections() {

@@ -9,6 +9,9 @@
   }
   --lexxy-toolbar-gap: 2px;
   --lexxy-toolbar-spacing: 0.5ch;
+  --lexxy-toolbar-padding: 2px;
+  --lexxy-toolbar-border-size: 1px;
+  --lexxy-toolbar-height: calc(var(--lexxy-toolbar-button-size) + 2 * var(--lexxy-toolbar-padding) + var(--lexxy-toolbar-border-size));
 
   border: 1px solid var(--lexxy-color-ink-lighter);
   border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
@@ -408,6 +411,11 @@
   }
 }
 
+/* Reserve the mounted height before upgrade so it doesn't shift layout on mount. */
+:where(lexxy-editor:not(:defined)) {
+  min-block-size: calc(var(--lexxy-toolbar-height) + var(--lexxy-editor-rows) + 2 * var(--lexxy-editor-padding));
+}
+
 /* Placeholder */
 :where(.lexxy-editor--empty) {
   .lexxy-editor__content:not(:has(h1, h2, h3, h4, h5, h6, table, ul, ol, figure, .attachment-gallery))::before {
@@ -461,13 +469,13 @@
 :where(lexxy-toolbar) {
   --lexxy-toolbar-icon-size: 1.125em;
 
-  border-block-end: 1px solid var(--lexxy-color-ink-lighter);
+  border-block-end: var(--lexxy-toolbar-border-size) solid var(--lexxy-color-ink-lighter);
   color: currentColor;
   display: flex;
   font-size: inherit;
   gap: var(--lexxy-toolbar-gap);
   max-inline-size: 100%;
-  padding: 2px;
+  padding: var(--lexxy-toolbar-padding);
   position: relative;
 
   @container (width < 300px) {
