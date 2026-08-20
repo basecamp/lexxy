@@ -272,6 +272,12 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #refreshOverflow() {
+    // The overflow control may be absent when a refresh fires: the toolbar
+    // template can be transiently detached during a Turbo/idiomorph morph, or a
+    // page server-rendered by an older Lexxy may be hydrated by newer JS. Bail
+    // out — setEditor() and the ResizeObserver re-run this once it's in the DOM.
+    if (!this.#overflowMenuButton) return
+
     this.#hideOverflowMenuButton()
     this.#resetToolbarOverflow()
     this.#reindexToolbarItems()
