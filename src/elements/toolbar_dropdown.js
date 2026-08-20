@@ -1,11 +1,13 @@
 import { nextFrame } from "../helpers/timing_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
+import { handleRollingTabIndex, isKeyboardActivation } from "../helpers/accessibility_helper"
 
 export class ToolbarDropdown extends HTMLElement {
   #listeners = new ListenerBin()
+  #shouldReturnFocusToTrigger = false
 
   connectedCallback() {
-    this.#onToolbarEditor(() => {
+    this.#onHostEditor(() => {
       this.#registerListeners()
       this.editorReady()
     })
@@ -27,16 +29,16 @@ export class ToolbarDropdown extends HTMLElement {
     return this.querySelector(":scope > [data-dropdown-panel]")
   }
 
-  get toolbar() {
-    return this.closest("lexxy-toolbar")
+  get host() {
+    return this.closest("lexxy-toolbar, lexxy-table-tools")
   }
 
   get editorElement() {
-    return this.toolbar?.editorElement
+    return this.host?.editorElement
   }
 
   get editor() {
-    return this.toolbar?.editor
+    return this.host?.editor
   }
 
   get isOpen() {
@@ -53,7 +55,7 @@ export class ToolbarDropdown extends HTMLElement {
 
   open() {
     if (this.isOpen) return
-    this.trigger.setAttribute("aria-expanded", "true")
+    this.trigger.ariaExpanded = true
     this.panel.hidden = false
     this.onOpen()
     this.#focusFirstInteractive()
@@ -63,7 +65,7 @@ export class ToolbarDropdown extends HTMLElement {
     if (focusEditor) this.editor?.focus()
 
     if (this.isClosed) return
-    this.trigger.setAttribute("aria-expanded", "false")
+    this.trigger.ariaExpanded = false
     this.panel.hidden = true
     this.onClose()
   }
@@ -75,31 +77,46 @@ export class ToolbarDropdown extends HTMLElement {
     )
   }
 
-  #handleTriggerClick = () => {
+  #handleTriggerClick = (event) => {
     if (this.isOpen) {
       this.close({ focusEditor: false })
     } else {
-      this.toolbar?.closeDropdowns({ except: this })
+      this.#shouldReturnFocusToTrigger = this.#isOpenedFromHost(event)
+      this.host?.closeDropdowns({ except: this })
       this.open()
     }
   }
 
-  async #onToolbarEditor(callback) {
-    if (!this.toolbar) return
+  #isOpenedFromHost(event) {
+    return isKeyboardActivation(event) && this.host?.contains(document.activeElement)
+  }
 
-    await this.toolbar.getEditorElement()
-    if (this.isConnected && this.toolbar) callback()
+  async #onHostEditor(callback) {
+    if (!this.host) return
+
+    await this.host.getEditorElement()
+    if (this.isConnected && this.host) callback()
   }
 
   #handleKeyDown = (event) => {
     if (event.key === "Escape") {
       event.stopPropagation()
-      this.close()
+      this.close({ focusEditor: !this.#shouldReturnFocusToTrigger })
+      if (this.#shouldReturnFocusToTrigger) this.trigger?.focus()
+    } else if (this.#isNavigatingMenu(event)) {
+      event.stopPropagation()
+      handleRollingTabIndex(this.#buttons, event, { orientation: "both", wrap: true })
     }
   }
 
+  #isNavigatingMenu(event) {
+    return this.panel.role === "menu" && this.panel.contains(event.target)
+  }
+
   async #focusFirstInteractive() {
-    this.#interactiveElements[0]?.focus()
+    // Ask for the ring explicitly: opening the menu with the mouse otherwise leaves the
+    // first item focused without a focus ring, since focus() inherits the mouse modality.
+    this.#interactiveElements[0]?.focus({ focusVisible: true })
     await this.#resetTabIndexValues()
   }
 
