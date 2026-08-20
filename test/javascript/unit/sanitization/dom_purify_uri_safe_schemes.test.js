@@ -63,6 +63,24 @@ describe("dom_purify — per-editor uriSafeSchemes", () => {
     expect(sanitized).not.toContain("data:text/html")
   })
 
+  test("refuses to admit an executable scheme, even when declared", () => {
+    // A caller can't turn javascript:/data:/vbscript: into a recognised-safe
+    // scheme — DOMPurify does not re-block a scheme its ALLOWED_URI_REGEXP accepts,
+    // so admitting one would let it survive on href/object[data]. These are dropped
+    // from the declared set.
+    for (const [ scheme, html, needle ] of [
+      [ "javascript", `<a href="javascript:alert(1)">x</a>`, "javascript:" ],
+      [ "vbscript", `<a href="vbscript:msgbox(1)">x</a>`, "vbscript:" ],
+      [ "data", `<object data="data:text/html,<script>alert(1)</script>">x</object>`, "data:text/html" ]
+    ]) {
+      const sanitized = sanitizeWith(
+        [ { tag: "a", attributes: [ "href" ] }, { tag: "object", attributes: [ "data" ], uriSafeSchemes: [ scheme ] } ],
+        html
+      )
+      expect(sanitized, `${scheme} should not be admitted`).not.toContain(needle)
+    }
+  })
+
   test("ignores a scheme carrying regexp metacharacters", () => {
     // The scheme is folded into a RegExp source, so a value that isn't a real
     // scheme name is dropped rather than injected as pattern syntax.

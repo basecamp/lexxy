@@ -57,7 +57,7 @@ get allowedElements() {
 }
 ```
 
-This widens the editor's recognized-safe scheme set; it does **not** exempt any attribute from validation. `javascript:` and `data:` are still refused on every attribute, including `href` and `object[data]`, so a declared scheme can't be used to smuggle an executable URL through a link or resource attribute. Declare it on the element that needs it for locality, though the scheme is recognized editor-wide once allowed — so use it only for schemes that are inert in the browser (an identifier like `gid:`, not something a browser would navigate to or execute).
+This widens the editor's recognized-safe scheme set; it does **not** exempt any attribute from validation. The executable schemes — `javascript:`, `data:`, `vbscript:` and the rest of the `…script:` family — can't be declared this way: they're dropped from the list, so they stay refused on every attribute, including `href` and `object[data]`, and a declared scheme can't smuggle an executable URL through a link or resource attribute. Declare it on the element that needs it for locality, though the scheme is recognized editor-wide once allowed — so use it only for schemes that are inert in the browser, like an identifier scheme (`gid:`).
 
 ## Example
 

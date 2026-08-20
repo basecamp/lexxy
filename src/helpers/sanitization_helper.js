@@ -38,18 +38,27 @@ export const URI_BEARING_ATTACHMENT_ATTRIBUTES = [ "url" ]
 // declared schemes without re-deriving the rest of the pattern.
 const BASE_URI_SCHEMES = "(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix"
 
+// A scheme name (not a full pattern), so a caller can't inject regexp syntax.
+const SCHEME_NAME = /^[a-z][a-z0-9+.-]*$/
+
+// The executable schemes, by DOMPurify's own IS_SCRIPT_OR_DATA definition
+// (/^(?:\w+script|data):/i): javascript, vbscript, …script, and data. Widening the
+// allowlist to admit one would let it survive on href/object[data], which the
+// override otherwise defeats — DOMPurify does not re-block a scheme its
+// ALLOWED_URI_REGEXP accepts. A caller declaring one is dropped, so it stays
+// refused. This is a closed set (the schemes a browser executes), not a growing
+// denylist.
+const EXECUTABLE_SCHEME = /^(?:\w+script|data)$/i
+
 // Builds DOMPurify's default IS_ALLOWED_URI, optionally with extra schemes folded
 // into the scheme alternation. Widening the recognised-safe scheme set is how a
 // custom-scheme identifier (a mention's `gid://…`) passes validation without
-// exempting any attribute from it — so javascript:/data: stay refused on every
-// attribute, including href and object[data]. Passing no schemes reproduces
-// DOMPurify's default exactly.
+// exempting any attribute from it. Passing no schemes reproduces DOMPurify's
+// default exactly.
 export function allowedUriRegexp(extraSchemes = []) {
-  // Only real scheme names, regexp-escaped, so a caller can't inject pattern
-  // syntax through the scheme list.
   const extra = extraSchemes
     .map(scheme => String(scheme).toLowerCase())
-    .filter(scheme => /^[a-z][a-z0-9+.-]*$/.test(scheme))
+    .filter(scheme => SCHEME_NAME.test(scheme) && !EXECUTABLE_SCHEME.test(scheme))
     .map(scheme => scheme.replace(/[.+-]/g, "\\$&"))
 
   const schemes = [ BASE_URI_SCHEMES, ...extra ].join("|")
