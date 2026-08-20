@@ -1,5 +1,5 @@
-import { Marked } from "marked"
 import { isAutolinkableURL } from "../helpers/string_helper"
+import { parsePastedMarkdown } from "../helpers/markdown_helper"
 import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
@@ -8,12 +8,6 @@ import { $insertDataTransferForRichText } from "@lexical/clipboard"
 import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
 import { ListenerBin } from "../helpers/listener_helper"
 import NodeInserter from "./contents/node_inserter"
-
-// Markdown reads any line indented by a tab or four spaces as a code block. Pasted
-// plain text is full of incidental indentation — outlines, notes, logs — and nobody
-// indents a note meaning "this is code"; they fence it. Keep fences, drop the
-// indentation rule.
-const pastedMarkdown = new Marked({ breaks: true }).use({ tokenizer: { code: () => undefined } })
 
 export default class Clipboard {
   #listeners = new ListenerBin()
@@ -201,7 +195,7 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
-    const html = pastedMarkdown.parse(text)
+    const html = parsePastedMarkdown(text)
     const doc = parseHtml(html)
 
     if (this.#isPlainTextWithoutMarkdown(doc)) {
