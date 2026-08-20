@@ -1,0 +1,19 @@
+src/config/dom_purify.js
+  s_1816aea1ce0fe7::t_0f995809a7770a 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "4f4e052756ea597ad8da31da65f3412e69b87e84",
+  "prompts": {},
+  "sessions": {
+    "s_1816aea1ce0fe7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1e830cb9-f6f1-442b-b61e-5e3744fa41d5",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
