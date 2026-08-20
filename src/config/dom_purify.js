@@ -1,6 +1,6 @@
 import createDOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
-import { URI_BEARING_ATTACHMENT_ATTRIBUTES, attachmentUriFilterHook, allowedUriRegexp } from "../helpers/sanitization_helper"
+import { URI_BEARING_ATTACHMENT_ATTRIBUTES, allowedUriRegexp, attachmentUriFilterHook } from "../helpers/sanitization_helper"
 
 // Lexxy's own DOMPurify instance, deliberately not the shared default export.
 //
