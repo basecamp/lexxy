@@ -24,7 +24,14 @@ module Lexxy
       # Temporary: we need to *adaptarize* action text
       def render_custom_attachments_in(value)
         if value.respond_to?(:body)
-          if html = value.body_before_type_cast.presence
+          encrypted_rich_text = defined?(ActionText::EncryptedRichText) && value.is_a?(ActionText::EncryptedRichText)
+          html = if encrypted_rich_text
+                   value.body&.to_html.presence
+          else
+                   value.body_before_type_cast.presence
+          end
+
+          if html
             self.prefix_partial_path_with_controller_namespace = false if respond_to?(:prefix_partial_path_with_controller_namespace=)
             ActionText::Fragment.wrap(html).replace(ActionText::Attachment.tag_name) do |node|
               if node["url"].blank?
