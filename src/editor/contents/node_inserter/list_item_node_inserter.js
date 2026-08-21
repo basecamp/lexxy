@@ -1,7 +1,7 @@
-import { $isDecoratorNode, $isRangeSelection, $splitNode } from "lexical"
+import { $isRangeSelection, $splitNode } from "lexical"
 import { $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
 import { $getNearestNodeOfType } from "@lexical/utils"
-import { $isBlankNode } from "../../../helpers/lexical_helper"
+import { $isBlankNode, $isBlockDecoratorNode } from "../../../helpers/lexical_helper"
 import BaseNodeInserter from "./base_node_inserter"
 
 // A list item can only hold inline content, so a block node (such as an image
@@ -16,7 +16,8 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
   }
 
   insertNodes(nodes) {
-    if (nodes.some(node => this.#isBlockDecorator(node))) {
+    // Pasted element blocks (paragraphs, quotes) keep Lexical's own list-escape semantics.
+    if (nodes.some($isBlockDecoratorNode)) {
       this.#insertAroundList(nodes)
     } else {
       this.selection.insertNodes(nodes)
@@ -64,12 +65,5 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
 
   #removeEmptyList(list) {
     if ($isListNode(list) && list.isEmpty()) list.remove()
-  }
-
-  // Only block decorator nodes (image/file attachments) are intercepted. A list
-  // item cannot hold them, so they must break out. Pasted element blocks
-  // (paragraphs, quotes) keep Lexical's own list-escape semantics.
-  #isBlockDecorator(node) {
-    return $isDecoratorNode(node) && !node.isInline()
   }
 }
