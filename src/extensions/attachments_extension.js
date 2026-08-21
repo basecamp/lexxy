@@ -4,6 +4,7 @@ import { mergeRegister } from "@lexical/utils"
 import { $findOrCreateGalleryForImage, $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
 import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node.js"
+import { $isProvisionalParagraphNode } from "../nodes/provisional_paragraph_node"
 import { AttachmentDragAndDrop } from "../editor/attachments/drag_and_drop"
 
 import LexxyExtension from "./lexxy_extension"
@@ -127,7 +128,7 @@ function $collapseAtGalleryEdge(anchor, backwards) {
   if (!$isImageGalleryNode(anchorNode)) return false
 
   const direction = $directionFor(backwards)
-  const spacer = $emptyParagraphBeside(anchorNode, direction)
+  const spacer = $spacerBeside(anchorNode, direction)
 
   let sibling = $adjacentSibling(anchorNode, direction)
   if (spacer) sibling = $adjacentSibling(spacer, direction)
@@ -145,11 +146,12 @@ function $collapseAtGalleryEdge(anchor, backwards) {
 }
 
 // The caret slot between a gallery and an adjacent attachment is invisible, so a merge gesture
-// has to reach across it and take it along.
-function $emptyParagraphBeside(node, direction) {
+// has to reach across it and take it along. Only that slot: a paragraph the user left there is
+// content, and reaching across it would merge and delete in a single keystroke.
+function $spacerBeside(node, direction) {
   const sibling = $adjacentSibling(node, direction)
 
-  if ($isParagraphNode(sibling) && sibling.isEmpty()) {
+  if ($isProvisionalParagraphNode(sibling)) {
     return sibling
   } else {
     return null
