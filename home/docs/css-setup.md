@@ -15,6 +15,23 @@ For the CSS, you can include it with the standard Rails helper:
 
 You can copy the CSS to your project and adapt it to your needs.
 
+## With a JavaScript bundler
+
+If you installed the npm package and bundle your CSS (Vite, esbuild, webpack, etc.), import the stylesheet from its subpath:
+
+```css
+@import "@37signals/lexxy/lexxy.css";
+```
+
+The following subpaths are exposed:
+
+| Import                                    | Contents                                            |
+|-------------------------------------------|-----------------------------------------------------|
+| `@37signals/lexxy/lexxy.css`              | Everything (editor + rendered content)              |
+| `@37signals/lexxy/lexxy-content.css`      | Rendered Action Text content only                   |
+| `@37signals/lexxy/lexxy-editor.css`       | Editor chrome only                                  |
+| `@37signals/lexxy/lexxy-variables.css`    | CSS variables only, for theming                     |
+
 ## Custom styles and dark mode
 
 All of Lexxy's color styles are defiend as CSS variables in `app/stylesheets/lexxy-variables.css`. This enables a straightforward way to customize Lexxy to match your application's theme. You can see an example implementation of a custom dark mode style in the Sandbox's stylesheet at `test/dummy/app/assets/stylesheets/sandbox.css`.
