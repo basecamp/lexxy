@@ -223,6 +223,45 @@ test.describe("Toolbar", () => {
     expect(accept).toBeNull()
   })
 
+  test("dropdown stays open during editor updates that do not change the selection", async ({ page, editor }) => {
+    await editor.setValue(HELLO_EVERYONE)
+
+    const formatPanel = page.locator("lexxy-toolbar-dropdown.lexxy-editor__toolbar-dropdown [data-dropdown-panel]").first()
+
+    await page.locator("lexxy-toolbar button[name='format']").click()
+    await expect(formatPanel).toBeVisible()
+
+    // Simulate an upload-driven update: content mutates but the selection is untouched,
+    // the same way upload progress / placeholder mutations fire while a dropdown is open.
+    await page.evaluate(async () => {
+      const element = document.querySelector("lexxy-editor")
+      await new Promise((resolve) => {
+        element.editor.update(() => {
+          const editorState = element.editor._pendingEditorState
+          const root = editorState._nodeMap.get("root")
+          const paragraph = editorState._nodeMap.get(root.__first)
+          const textNode = editorState._nodeMap.get(paragraph.__first)
+          textNode.setTextContent("Hello everyone uploading…")
+        }, { onUpdate: resolve })
+      })
+    })
+
+    await expect(formatPanel).toBeVisible()
+  })
+
+  test("dropdown closes when the selection changes", async ({ page, editor }) => {
+    await editor.setValue(HELLO_EVERYONE)
+
+    const formatPanel = page.locator("lexxy-toolbar-dropdown.lexxy-editor__toolbar-dropdown [data-dropdown-panel]").first()
+
+    await page.locator("lexxy-toolbar button[name='format']").click()
+    await expect(formatPanel).toBeVisible()
+
+    await editor.select("everyone")
+
+    await expect(formatPanel).toBeHidden()
+  })
+
   test("external toolbar", async ({ page }) => {
     await page.goto("/toolbar-external.html")
     await expect(
