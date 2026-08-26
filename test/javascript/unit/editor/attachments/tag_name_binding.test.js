@@ -1,5 +1,6 @@
-import { describe, expect, test } from "vitest"
+import { afterAll, beforeAll, describe, expect, test } from "vitest"
 import { createEditor } from "lexical"
+import Lexxy from "src/config/lexxy"
 import { ActionTextAttachmentNode } from "src/nodes/action_text_attachment_node"
 import { CustomActionTextAttachmentNode } from "src/nodes/custom_action_text_attachment_node"
 
@@ -9,8 +10,17 @@ import { CustomActionTextAttachmentNode } from "src/nodes/custom_action_text_att
 // (attachmentTagName), exactly as importDOM already binds it. A crafted
 // { tagName: "script", ... } must not become a <script> element and must not
 // round-trip back out through exportJSON.
-const CONFIGURED_TAG = "action-text-attachment"
+//
+// The suite runs under a NON-DEFAULT configured tag on purpose. Asserting against
+// the default ("action-text-attachment") would also pass if the implementation
+// hard-coded the default instead of reading configuration, which is the exact
+// behavior under test. A custom value proves the element tag follows config.
+const DEFAULT_TAG = "action-text-attachment"
+const CONFIGURED_TAG = "bc-attachment"
 const MALICIOUS = "script"
+
+beforeAll(() => { Lexxy.configure({ global: { attachmentTagName: CONFIGURED_TAG } }) })
+afterAll(() => { Lexxy.configure({ global: { attachmentTagName: DEFAULT_TAG } }) })
 
 function standaloneEditor() {
   return createEditor({
@@ -26,6 +36,12 @@ function inEditor(editor, fn) {
 }
 
 describe("attachment node tag name binding", () => {
+  test("configuration is bound, not hard-coded to the default tag", () => {
+    expect(CONFIGURED_TAG).not.toBe(DEFAULT_TAG)
+    expect(CustomActionTextAttachmentNode.TAG_NAME).toBe(CONFIGURED_TAG)
+    expect(ActionTextAttachmentNode.TAG_NAME).toBe(CONFIGURED_TAG)
+  })
+
   test("CustomActionTextAttachmentNode.importJSON ignores an attacker tagName when rendering", () => {
     const editor = standaloneEditor()
 
