@@ -1,0 +1,52 @@
+src/helpers/code_link_helper.js
+  s_964922bad4d340::t_4210cd44e94f49 1
+  s_964922bad4d340::t_62503cbbcde11b 2-26,32-35,53-55,58-132
+  s_964922bad4d340::t_d163d4ff01c866 27-31,36-52,56-57
+test/javascript/unit/helpers/code_highlighting_helper.test.js
+  s_964922bad4d340::t_58ef60acd63a3c 124-145
+test/system/code_block_links_test.rb
+  s_964922bad4d340::t_134a7c5c5d01d1 1-35
+src/extensions/highlight_extension.js
+  s_964922bad4d340::t_2b3704f1468d0b 203
+  s_964922bad4d340::t_023b359acea1e4 182-185
+  s_964922bad4d340::t_395cf96d10bda3 254-266,270
+  s_964922bad4d340::t_d3be6ec348fe57 1,4,6
+  s_964922bad4d340::t_71cd33d2feaf94 226,230-231,237-238
+  s_964922bad4d340::t_56d51c150efac8 271
+test/javascript/unit/editor/code_block_links.test.js
+  s_964922bad4d340::t_4fe3033c76f3b1 1-88
+src/helpers/text_node_export_helper.js
+  s_964922bad4d340::t_942376360792aa 1-2
+  s_964922bad4d340::t_de3bd8080feb58 17-40
+src/extensions/code_highlighting_extension.js
+  s_964922bad4d340::t_fabac7b388472a 2-4,21,26-45
+  s_964922bad4d340::t_551851d341d6bd 46-47
+src/helpers/text_range_helper.js
+  s_964922bad4d340::t_702e8087a7e852 1-27
+src/helpers/code_highlighting_helper.js
+  s_964922bad4d340::t_e4cdc1dfd8b666 107-109,112-128,132
+  s_964922bad4d340::t_99ab984f8dff37 19-25,34-37,41-48,51,69-74,87-97
+  s_964922bad4d340::t_6eaf90197e0092 147-148,153
+src/elements/editor.js
+  s_964922bad4d340::t_ed5d022decf5a1 36,430
+test/fixtures/action_text/rich_texts.yml
+  s_964922bad4d340::t_90045e8294310a 12-17
+test/fixtures/posts.yml
+  s_964922bad4d340::t_e4f477f194d889 9-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "95c54082985479b5b18004638247cfbc487cdea6",
+  "prompts": {},
+  "sessions": {
+    "s_964922bad4d340": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b315b378-55b7-45e0-911e-b964de3ac103",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
