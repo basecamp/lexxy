@@ -54,17 +54,25 @@ test.describe("Paste — attachment tagName is bound to config, not clipboard da
     let dialogTriggered = false
     page.on("dialog", async (dialog) => { dialogTriggered = true; await dialog.dismiss() })
 
+    // Distinct content in the lexical payload vs. the HTML fallback. Lexical
+    // prefers application/x-lexical-editor over text/html, so the JSON marker is
+    // what must survive. If a change ever stopped honoring the MIME payload and
+    // fell back to HTML, the FALLBACK marker would surface and the test would
+    // fail — proving this exercises the JSON paste boundary, not the HTML one.
+    const JSON_MARKER = "alert(from-lexical-json)"
+    const FALLBACK_MARKER = "from-html-fallback"
+
     const malicious = {
       type: "custom_action_text_attachment",
       version: 1,
       tagName: "script",
       contentType: "text/html",
-      innerHtml: "alert(document.domain)",
+      innerHtml: JSON_MARKER,
     }
 
     await pasteLexical(editor, {
       lexical: lexicalPayload([ malicious ]),
-      html: '<action-text-attachment content-type="text/html" content="alert(document.domain)"></action-text-attachment>',
+      html: `<action-text-attachment content-type="text/html" content="${FALLBACK_MARKER}"></action-text-attachment>`,
       text: "",
     })
 
@@ -75,11 +83,15 @@ test.describe("Paste — attachment tagName is bound to config, not clipboard da
     await assertEditorContent(editor, async (content) => {
       await expect(content.locator("script")).toHaveCount(0)
       await expect(content.locator(CONFIGURED_TAG)).toHaveCount(1)
+      await expect(content.locator(CONFIGURED_TAG)).toContainText(JSON_MARKER)
     })
 
-    // The exported value (what gets persisted) must carry the configured tag only.
+    // The exported value (what gets persisted) must carry the configured tag,
+    // built from the lexical payload — never a <script>, never the HTML fallback.
     const value = await editor.value()
     expect(value).not.toContain("<script")
     expect(value).toContain(CONFIGURED_TAG)
+    expect(value).toContain(JSON_MARKER)
+    expect(value).not.toContain(FALLBACK_MARKER)
   })
 })
