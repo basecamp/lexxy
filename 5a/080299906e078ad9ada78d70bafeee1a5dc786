@@ -1,0 +1,25 @@
+src/editor/contents/node_inserter/list_item_node_inserter.js
+  s_964922bad4d340::t_1b2b0d639ad61b 34,40,48-49,71
+  s_964922bad4d340::t_79996a1eefe8d9 44
+  s_964922bad4d340::t_cdcb1e5ab5e9be 36-39,41-43,45-47,59,66-67
+  s_964922bad4d340::t_e3cf2142658e2f 35,68-70,72-73
+test/javascript/unit/editor/list_item_node_inserter.test.js
+  s_964922bad4d340::t_33312c68c0bf2d 1-15,31-32,42,44-46
+  s_964922bad4d340::t_f885b267b53ffa 16-30,33-41,43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "5a080299906e078ad9ada78d70bafeee1a5dc786",
+  "prompts": {},
+  "sessions": {
+    "s_964922bad4d340": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b315b378-55b7-45e0-911e-b964de3ac103",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Jeremy Daer <jeremy@37signals.com>"
+    }
+  }
+}
