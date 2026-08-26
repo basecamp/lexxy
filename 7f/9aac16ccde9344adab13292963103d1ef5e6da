@@ -1,0 +1,31 @@
+test/javascript/unit/editor/list_item_node_inserter.test.js
+  s_964922bad4d340::t_4210c79574e231 48-66,70-71
+  s_964922bad4d340::t_e6cacc6592ca5d 67,69
+  s_964922bad4d340::t_22354792d97b66 68
+  s_964922bad4d340::t_726088388ff905 22
+  s_964922bad4d340::t_33312c68c0bf2d 1,3-15,32-33,43-47
+  s_964922bad4d340::t_76b9022bab5be7 2
+  s_964922bad4d340::t_f885b267b53ffa 16-21,23-31,34-42
+src/editor/contents/node_inserter/list_item_node_inserter.js
+  s_964922bad4d340::t_1b2b0d639ad61b 45
+  s_964922bad4d340::t_79996a1eefe8d9 43
+  s_964922bad4d340::t_c56b918ea9a4b9 60-69
+  s_964922bad4d340::t_e3cf2142658e2f 58-59
+  s_964922bad4d340::t_cdcb1e5ab5e9be 35-42,44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "7f9aac16ccde9344adab13292963103d1ef5e6da",
+  "prompts": {},
+  "sessions": {
+    "s_964922bad4d340": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b315b378-55b7-45e0-911e-b964de3ac103",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": null
+    }
+  }
+}
