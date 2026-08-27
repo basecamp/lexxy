@@ -102,6 +102,8 @@ export class CommandDispatcher {
 
   dispatchLink(url) {
     this.editor.update(() => {
+      this.selection.placeCursorInsideAdjacentLink()
+
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
@@ -125,6 +127,7 @@ export class CommandDispatcher {
         return
       }
 
+      this.selection.placeCursorInsideAdjacentLink()
       $toggleLink(null)
     })
   }
