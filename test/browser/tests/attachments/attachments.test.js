@@ -155,16 +155,17 @@ test.describe("Attachments", () => {
     await caption.click()
     await caption.pressSequentially("한글")
 
-    await caption.evaluate((textarea) => {
-      textarea.dispatchEvent(new KeyboardEvent("keydown", {
-        key: "Enter",
-        code: "Enter",
-        keyCode: 229,
-        isComposing: true,
-        bubbles: true,
-        cancelable: true,
-      }))
-    })
+    for (const compositionIndicator of [ { isComposing: true }, { keyCode: 229 } ]) {
+      await caption.evaluate((textarea, indicator) => {
+        textarea.dispatchEvent(new KeyboardEvent("keydown", {
+          key: "Enter",
+          code: "Enter",
+          bubbles: true,
+          cancelable: true,
+          ...indicator,
+        }))
+      }, compositionIndicator)
+    }
     await editor.flush()
 
     const captionHasFocus = await caption.evaluate((textarea) => document.activeElement === textarea)
