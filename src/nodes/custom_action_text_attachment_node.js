@@ -60,12 +60,11 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     return Lexxy.global.get("attachmentTagName")
   }
 
-  constructor({ tagName, sgid, contentType, innerHtml, plainText } = {}, key) {
+  constructor({ sgid, contentType, innerHtml, plainText } = {}, key) {
     super(key)
 
     const contentTypeNamespace = Lexxy.global.get("attachmentContentTypeNamespace")
 
-    this.tagName = tagName || CustomActionTextAttachmentNode.TAG_NAME
     this.sgid = sgid
     this.contentType = contentType || `application/vnd.${contentTypeNamespace}.unknown`
     this.innerHtml = innerHtml
@@ -73,7 +72,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   createDOM(_config, editor) {
-    const figure = createElement(this.tagName, { "content-type": this.contentType, "data-lexxy-decorator": true, draggable: true })
+    const figure = createElement(CustomActionTextAttachmentNode.TAG_NAME, { "content-type": this.contentType, "data-lexxy-decorator": true, draggable: true })
     figure.dataset.lexicalNodeKey = this.__key
 
     // Resolved from the editor so this content is sanitized with its own
@@ -116,7 +115,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   exportDOM() {
-    const attachment = createElement(this.tagName, {
+    const attachment = createElement(CustomActionTextAttachmentNode.TAG_NAME, {
       sgid: this.sgid,
       content: this.innerHtml,
       "content-type": this.contentType
@@ -129,7 +128,6 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     return {
       type: "custom_action_text_attachment",
       version: 1,
-      tagName: this.tagName,
       sgid: this.sgid,
       contentType: this.contentType,
       innerHtml: this.innerHtml,
