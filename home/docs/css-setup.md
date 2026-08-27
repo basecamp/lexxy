@@ -17,7 +17,7 @@ You can copy the CSS to your project and adapt it to your needs.
 
 ## Custom styles and dark mode
 
-All of Lexxy's color styles are defiend as CSS variables in `app/stylesheets/lexxy-variables.css`. This enables a straightforward way to customize Lexxy to match your application's theme. You can see an example implementation of a custom dark mode style in the Sandbox's stylesheet at `test/dummy/app/assets/stylesheets/sandbox.css`.
+All of Lexxy's color styles are defined as CSS variables in `app/stylesheets/lexxy-variables.css`. This enables a straightforward way to customize Lexxy to match your application's theme. You can see an example implementation of a custom dark mode style in the Sandbox's stylesheet at `test/dummy/app/assets/stylesheets/sandbox.css`.
 
 ## Rendered Action Text content
 
