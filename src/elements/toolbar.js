@@ -134,13 +134,15 @@ export class LexicalToolbarElement extends HTMLElement {
     }
   }
 
-  #dispatchButtonCommand(event, { dataset: { command, payload } }) {
+  #dispatchButtonCommand(event, button) {
+    const { command, payload } = button.dataset
     const isKeyboard = event instanceof PointerEvent && event.pointerId === -1
 
     this.editor.update(() => {
       this.editor.dispatchCommand(command, payload)
     }, { tag: isKeyboard ? SKIP_DOM_SELECTION_TAG : undefined })
 
+    if (button.closest(".lexxy-editor__toolbar-dropdown")) this.closeDropdowns()
     if (!isKeyboard) this.editor.focus()
   }
 
@@ -200,12 +202,21 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
-      editorState.read(() => {
-        this.#updateButtonStates()
-        this.closeDropdowns()
-      })
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState, prevEditorState }) => {
+      editorState.read(() => this.#updateButtonStates())
+      if (this.#selectionChanged(editorState, prevEditorState)) this.closeDropdowns()
     }))
+  }
+
+  #selectionChanged(editorState, prevEditorState) {
+    const selection = editorState.read($getSelection)
+    const previousSelection = prevEditorState.read($getSelection)
+
+    if (selection === null || previousSelection === null) {
+      return selection !== previousSelection
+    } else {
+      return !selection.is(previousSelection)
+    }
   }
 
   #monitorHistoryChanges() {
