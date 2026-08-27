@@ -1,8 +1,9 @@
-import { $getNodeByKey, $getState, $hasUpdateTag, $isTextNode, $setState, COMMAND_PRIORITY_NORMAL, PASTE_TAG, TextNode, createCommand, createState, defineExtension } from "lexical"
+import { $getNodeByKey, $getState, $hasUpdateTag, $isElementNode, $isTextNode, $setState, COMMAND_PRIORITY_NORMAL, PASTE_TAG, TextNode, createCommand, createState, defineExtension } from "lexical"
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty, $patchStyleText, getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
-import { $createCodeHighlightNode, $createCodeNode, $isCodeHighlightNode, $isCodeNode, CodeHighlightNode, PrismTokenizer } from "@lexical/code"
+import { $createCodeHighlightNode, $createCodeNode, $isCodeHighlightNode, $isCodeNode, CodeHighlightNode } from "@lexical/code"
 import { extendTextNodeConversion } from "../helpers/lexical_helper"
+import { segmentTextByRanges } from "../helpers/text_range_helper"
 import { StyleCanonicalizer, applyCanonicalizers, hasHighlightStyles } from "../helpers/format_helper"
 import { RichTextExtension } from "@lexical/rich-text"
 import LexxyExtension from "./lexxy_extension"
@@ -178,27 +179,10 @@ function extractHighlightStyleFromElement(element) {
   return css.length > 0 ? css : null
 }
 
-// The code retokenizer replaces a code block's children with freshly created
-// tokens that carry no styles, which would drop color highlights on every
-// edit. This tokenizer wraps the stock Prism tokenizer to restore them: it
-// recovers the block's highlight ranges — staged during HTML import, or read
-// from the children the fresh tokens are about to replace — and reapplies
-// them to the fresh tokens before the retokenizer splices them in.
-export function buildHighlightPreservingTokenizer(editor) {
-  return {
-    defaultLanguage: PrismTokenizer.defaultLanguage,
-    tokenize(code, language) {
-      return PrismTokenizer.tokenize(code, language)
-    },
-    $tokenize(codeNode, language) {
-      const tokens = PrismTokenizer.$tokenize(codeNode, language)
-      const highlights = $takeHighlightRanges(editor, codeNode)
-      return $applyHighlightRangesToTokens(tokens, highlights)
-    }
-  }
-}
-
-function $takeHighlightRanges(editor, codeNode) {
+// Recover the highlight ranges to reapply after a retokenization: the ranges
+// staged during HTML import, or the ones read from the children the fresh
+// tokens are about to replace.
+export function $takeHighlightRanges(editor, codeNode) {
   const pending = $getPendingHighlights(editor)
   const key = codeNode.getKey()
 
@@ -216,7 +200,7 @@ function $takeHighlightRanges(editor, codeNode) {
   }
 }
 
-function $applyHighlightRangesToTokens(tokens, highlights) {
+export function $applyHighlightRangesToTokens(tokens, highlights) {
   if (highlights.length === 0) return tokens
 
   const styledTokens = []
@@ -239,50 +223,23 @@ function $applyHighlightRangesToTokens(tokens, highlights) {
 // attached to the tree yet, so we create CodeHighlightNode replacements.
 function $splitTokenAtHighlightBoundaries(token, tokenStart, highlights) {
   const text = token.getTextContent()
-  const segments = segmentTextByHighlights(text, tokenStart, highlights)
+  const segments = segmentTextByRanges(text, tokenStart, highlights)
 
   if (segments.length === 1) {
     const [ segment ] = segments
-    if (segment.style) {
-      $applyHighlightStyleToToken(token, segment.style)
+    if (segment.range) {
+      $applyHighlightStyleToToken(token, segment.range.style)
     }
     return [ token ]
   } else {
     return segments.map((segment) => {
       const segmentToken = $createCodeHighlightNode(text.slice(segment.start, segment.end), token.getHighlightType())
-      if (segment.style) {
-        $applyHighlightStyleToToken(segmentToken, segment.style)
+      if (segment.range) {
+        $applyHighlightStyleToToken(segmentToken, segment.range.style)
       }
       return segmentToken
     })
   }
-}
-
-// Partition a token's text into consecutive { start, end, style } segments,
-// where offsets are relative to the token and style is null for the stretches
-// no highlight covers.
-function segmentTextByHighlights(text, tokenStart, highlights) {
-  const segments = []
-  let cursor = 0
-
-  for (const { start, end, style } of highlights) {
-    const from = Math.max(start - tokenStart, cursor)
-    const to = Math.min(end - tokenStart, text.length)
-
-    if (from < to) {
-      if (from > cursor) {
-        segments.push({ start: cursor, end: from, style: null })
-      }
-      segments.push({ start: from, end: to, style })
-      cursor = to
-    }
-  }
-
-  if (cursor < text.length) {
-    segments.push({ start: cursor, end: text.length, style: null })
-  }
-
-  return segments
 }
 
 function $applyHighlightStyleToToken(token, style) {
@@ -294,16 +251,23 @@ function $buildChildRanges(codeNode) {
   const childRanges = []
   let charOffset = 0
 
-  for (const child of codeNode.getChildren()) {
-    if ($isCodeHighlightNode(child) || $isTextNode(child)) {
-      const text = child.getTextContent()
-      childRanges.push({ node: child, start: charOffset, end: charOffset + text.length })
-      charOffset += text.length
-    } else {
-      // LineBreakNode, TabNode - count as 1 character each (\n, \t)
-      charOffset += 1
+  function walk(node) {
+    for (const child of node.getChildren()) {
+      if ($isElementNode(child)) {
+        // e.g. a LinkNode awaiting its first retokenization
+        walk(child)
+      } else if ($isCodeHighlightNode(child) || $isTextNode(child)) {
+        const text = child.getTextContent()
+        childRanges.push({ node: child, start: charOffset, end: charOffset + text.length })
+        charOffset += text.length
+      } else {
+        // LineBreakNode - counts as 1 character (\n)
+        charOffset += 1
+      }
     }
   }
+
+  walk(codeNode)
 
   return childRanges
 }

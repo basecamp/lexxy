@@ -16,12 +16,13 @@ export function highlightElement(preElement) {
   const grammar = Prism.languages?.[language]
   if (!grammar) return
 
-  // Read the source text and <mark> ranges in a single walk, before Prism
-  // rewrites the element. Sharing one traversal keeps the highlight offsets
-  // aligned with the code string and preserves leading whitespace — deriving
-  // either of them separately (e.g. textContent through DOMParser) collapses
-  // leading whitespace and shifts every range, re-indenting the rendered block.
-  const { code, highlights } = extractCodeAndHighlights(preElement)
+  // Read the source text and the <mark> and <a> ranges in a single walk,
+  // before Prism rewrites the element. Sharing one traversal keeps the range
+  // offsets aligned with the code string and preserves leading whitespace —
+  // deriving either of them separately (e.g. textContent through DOMParser)
+  // collapses leading whitespace and shifts every range, re-indenting the
+  // rendered block.
+  const { code, highlights, links } = extractCodeAndMarkup(preElement)
 
   const highlightedHtml = Prism.highlight(code, grammar, language)
   preElement.innerHTML = highlightedHtml
@@ -30,18 +31,24 @@ export function highlightElement(preElement) {
     applyHighlightRanges(preElement, highlights)
   }
 
+  if (links.length > 0) {
+    applyLinkRanges(preElement, links)
+  }
+
   preElement.dataset.highlighted = "true"
 }
 
-// Walk the <pre> once, building Prism's source text and the <mark> ranges
-// together: a text node contributes its text verbatim, a <br> contributes a
-// newline, and a <mark> records the slice of code it covers. Because both
-// outputs come from the same walk, every range offset is just a position in
-// `code` — so the highlights can't drift out of sync with the source, and the
-// block's leading whitespace survives (HTML parsing would collapse it).
-function extractCodeAndHighlights(preElement) {
+// Walk the <pre> once, building Prism's source text and the <mark> and <a>
+// ranges together: a text node contributes its text verbatim, a <br>
+// contributes a newline, and a <mark> or <a> records the slice of code it
+// covers. Because all outputs come from the same walk, every range offset is
+// just a position in `code` — so the markup can't drift out of sync with the
+// source, and the block's leading whitespace survives (HTML parsing would
+// collapse it).
+function extractCodeAndMarkup(preElement) {
   const root = preElement.querySelector("code") || preElement
   const highlights = []
+  const links = []
   let code = ""
 
   function walk(node) {
@@ -59,6 +66,12 @@ function extractCodeAndHighlights(preElement) {
         if (style) {
           highlights.push({ start, end: code.length, style })
         }
+      } else if (node.tagName === "A" && node.getAttribute("href")) {
+        const start = code.length
+        for (const child of node.childNodes) {
+          walk(child)
+        }
+        links.push({ start, end: code.length, attributes: linkAttributes(node) })
       } else {
         for (const child of node.childNodes) {
           walk(child)
@@ -71,7 +84,17 @@ function extractCodeAndHighlights(preElement) {
     walk(child)
   }
 
-  return { code, highlights }
+  return { code, highlights, links }
+}
+
+function linkAttributes(element) {
+  const attributes = { href: element.getAttribute("href") }
+  for (const name of [ "target", "rel", "title" ]) {
+    if (element.getAttribute(name)) {
+      attributes[name] = element.getAttribute(name)
+    }
+  }
+  return attributes
 }
 
 function extractStyle(element) {
@@ -81,16 +104,32 @@ function extractStyle(element) {
   return parts.length > 0 ? parts.join(" ") : null
 }
 
-// Wrap character ranges in <mark> elements within a Prism-highlighted DOM tree.
-// Each range is applied independently, re-collecting text nodes each time to
-// account for splits from previous ranges.
+// Wrap character ranges in <mark> or <a> elements within a Prism-highlighted
+// DOM tree. Each range is applied independently, re-collecting text nodes
+// each time to account for splits from previous ranges.
 function applyHighlightRanges(element, highlights) {
   for (const { start, end, style } of highlights) {
-    wrapRange(element, start, end, style)
+    wrapRange(element, start, end, () => {
+      const mark = document.createElement("mark")
+      mark.setAttribute("style", style)
+      return mark
+    })
   }
 }
 
-function wrapRange(container, rangeStart, rangeEnd, style) {
+function applyLinkRanges(element, links) {
+  for (const { start, end, attributes } of links) {
+    wrapRange(element, start, end, () => {
+      const anchor = document.createElement("a")
+      for (const [ name, value ] of Object.entries(attributes)) {
+        anchor.setAttribute(name, value)
+      }
+      return anchor
+    })
+  }
+}
+
+function wrapRange(container, rangeStart, rangeEnd, createWrapper) {
   const textNodes = collectTextNodes(container)
 
   // Process in reverse so DOM mutations don't shift earlier text node offsets
@@ -105,14 +144,13 @@ function wrapRange(container, rangeStart, rangeEnd, style) {
     const text = node.textContent
     const parent = node.parentNode
 
-    const mark = document.createElement("mark")
-    mark.setAttribute("style", style)
-    mark.textContent = text.slice(relStart, relEnd)
+    const wrapper = createWrapper()
+    wrapper.textContent = text.slice(relStart, relEnd)
 
     if (relEnd < text.length) {
       parent.insertBefore(document.createTextNode(text.slice(relEnd)), node.nextSibling)
     }
-    parent.insertBefore(mark, node.nextSibling)
+    parent.insertBefore(wrapper, node.nextSibling)
 
     if (relStart > 0) {
       node.textContent = text.slice(0, relStart)
