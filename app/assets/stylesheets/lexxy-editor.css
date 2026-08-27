@@ -416,6 +416,23 @@
   min-block-size: calc(var(--lexxy-toolbar-height) + var(--lexxy-editor-rows) + 2 * var(--lexxy-editor-padding));
 }
 
+/* The reservation above cannot help an editor sized by its content: with
+   `--lexxy-editor-rows: auto` the calc() is invalid and the declaration is
+   dropped, and a row count would be the wrong height for a field that has to
+   match the copy it stands in for anyway. Such an editor prerenders its content
+   instead (`rich_text_area … prerender: true`), which reserves the body, and
+   ships an empty toolbar alongside it, which this gives the height the filled
+   one will have. Only while undefined: from then on the toolbar's own contents
+   size it. A real <lexxy-toolbar> rather than a spacer, so a host that takes the
+   toolbar out of flow gets a reservation of nothing, automatically. */
+:where(lexxy-toolbar:not(:defined)) {
+  /* --lexxy-toolbar-height already counts the toolbar's padding and border, so
+     the reservation has to be a border-box one or they are added a second time
+     and the field gives 5px back on connect. */
+  box-sizing: border-box;
+  min-block-size: var(--lexxy-toolbar-height);
+}
+
 /* Placeholder */
 :where(.lexxy-editor--empty) {
   .lexxy-editor__content:not(:has(h1, h2, h3, h4, h5, h6, table, ul, ol, figure, .attachment-gallery))::before {

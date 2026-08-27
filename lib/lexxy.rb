@@ -1,4 +1,5 @@
 require "lexxy/version"
+require "lexxy/prerender"
 
 module Lexxy
   class << self
