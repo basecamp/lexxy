@@ -438,7 +438,10 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #handleCaptionInputKeydown(event) {
-    if (event.key === "Enter") {
+    // IME confirmation (Korean/Japanese/Chinese) sends Enter with isComposing
+    // and/or keyCode 229 ("Processing"). Stay in the caption until composition
+    // finishes, and don't preventDefault so the IME can commit the syllable.
+    if (event.key === "Enter" && !event.isComposing && event.keyCode !== 229) {
       event.preventDefault()
       event.target.blur()
 

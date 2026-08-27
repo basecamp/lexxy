@@ -143,6 +143,40 @@ test.describe("Attachments", () => {
     await assertEditorValueContains(editor, 'caption="My caption"')
   })
 
+  test("Enter during IME composition stays in the caption", async ({ page, editor }) => {
+    await editor.setValue(
+      '<action-text-attachment content-type="image/png" url="http://example.com/image.png" filename="photo.png"></action-text-attachment>',
+    )
+    await editor.flush()
+
+    const caption = page.locator("figure.attachment figcaption textarea")
+    await expect(caption).toBeVisible()
+
+    await caption.click()
+    await caption.pressSequentially("한글")
+
+    await caption.evaluate((textarea) => {
+      textarea.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "Enter",
+        code: "Enter",
+        keyCode: 229,
+        isComposing: true,
+        bubbles: true,
+        cancelable: true,
+      }))
+    })
+    await editor.flush()
+
+    const captionHasFocus = await caption.evaluate((textarea) => document.activeElement === textarea)
+    expect(captionHasFocus).toBe(true)
+    await expect(caption).toHaveValue("한글")
+    expect(await editor.value()).not.toContain("<p>한글</p>")
+
+    await caption.press("Enter")
+    await assertEditorHasFocus(editor)
+    await assertEditorValueContains(editor, 'caption="한글"')
+  })
+
   test("caption saves and editor has focus after click", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
