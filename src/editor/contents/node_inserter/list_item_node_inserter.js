@@ -31,15 +31,18 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
     // very corruption we are avoiding. The block must land at the list's level.
     const anchorNode = this.selection.anchor.getNode()
     const outerList = this.#outermostList(anchorNode)
-    const topItem = this.#topLevelItemFor(anchorNode, outerList)
 
-    // A blank top-level bullet is just the insertion point (e.g. the user pressed
-    // Enter to leave the list); break out of it entirely. A bullet with content —
-    // including one wrapping a nested list — splits so its content stays in the list.
-    const splitAfterItem = $isBlankNode(topItem) ? topItem.getPreviousSibling() : topItem
-    const splitIndex = splitAfterItem ? splitAfterItem.getIndexWithinParent() + 1 : 0
-    const [ listBefore, listAfter ] = $splitNode(outerList, splitIndex)
-    if ($isBlankNode(topItem)) { topItem.remove() }
+    // removeText() can relocate the anchor before we read it back — clean out
+    // of the list when the removed range spanned it. With no list left to
+    // split, default insertion applies.
+    if (!outerList) {
+      this.selection.insertNodes(nodes)
+      return
+    }
+
+    const topItem = this.#topLevelItemFor(anchorNode, outerList)
+    const [ listBefore, listAfter ] = $splitNode(outerList, this.#splitIndexFor(topItem))
+    if (topItem && $isBlankNode(topItem)) { topItem.remove() }
 
     let anchor = listBefore ?? listAfter
     for (const node of nodes) {
@@ -50,6 +53,18 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
     this.#removeEmptyList(listBefore)
     this.#removeEmptyList(listAfter)
     nodes.at(-1).selectNext()
+  }
+
+  // A blank top-level bullet is just the insertion point (e.g. the user pressed
+  // Enter to leave the list); break out of it entirely. A bullet with content —
+  // including one wrapping a nested list — splits so its content stays in the
+  // list. With no top-level bullet at all — removeText() relocated the anchor
+  // onto the list node itself — the anchor offset is the boundary between items.
+  #splitIndexFor(topItem) {
+    if (!topItem) return this.selection.anchor.offset
+
+    const splitAfterItem = $isBlankNode(topItem) ? topItem.getPreviousSibling() : topItem
+    return splitAfterItem ? splitAfterItem.getIndexWithinParent() + 1 : 0
   }
 
   #outermostList(node) {

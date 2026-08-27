@@ -503,10 +503,17 @@ export default class Selection {
       || this.#selectInLexical(this.topLevelNodeAfterCursor)
   }
 
+  // hasNodeSelection reads the committed state, while $getSelection() resolves
+  // against the pending one — so the selection here can be missing, no longer a
+  // NodeSelection, or reference a node that no longer exists (empty editor,
+  // just-deleted node, decorator boundary). Only invoke the callback when a
+  // node actually resolves; returning false lets the callers fall back —
+  // #selectInLexical for plain arrows, native pass-through for shift-arrows.
   #withCurrentNodeSelectionNode(fn) {
-    if (this.hasNodeSelection) {
-      return fn($getSelection().getNodes()[0])
-    }
+    const selection = this.hasNodeSelection ? $getSelection() : null
+    const currentNode = $isNodeSelection(selection) ? selection.getNodes()[0] : undefined
+
+    return currentNode ? fn(currentNode) : false
   }
 
   #rangeSelectDecorator(node, direction = "forward") {
