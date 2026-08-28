@@ -1,6 +1,6 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
-import { assertEditorHtml } from "../../helpers/assertions.js"
+import { assertEditorHtml, startMonitoringConsole } from "../../helpers/assertions.js"
 import { HELLO_EVERYONE } from "../../helpers/toolbar.js"
 
 test.describe("Toolbar", () => {
@@ -153,6 +153,31 @@ test.describe("Toolbar", () => {
     await expect(toolbar).not.toHaveAttribute("overflowing")
     await expect(overflowMenu.locator("button[name='async-injected']")).toHaveCount(0)
     await expect(toolbar.locator(":scope > button[name='async-injected']")).toHaveCount(1)
+  })
+
+  test("overflow refresh does not throw when the overflow control is absent from the DOM", async ({ page }) => {
+    startMonitoringConsole(page)
+
+    const toolbar = page.locator("lexxy-toolbar")
+    await expect(toolbar).toBeVisible()
+
+    // Reproduces the production rAF crash: when the overflow control is not in
+    // the DOM at the moment a refresh fires — e.g. a Turbo/idiomorph morph that
+    // transiently detaches the toolbar template, or a server/client template
+    // mismatch during a deploy — #refreshOverflow used to dereference a null
+    // overflow element inside requestAnimationFrame and throw.
+    await page.evaluate(async () => {
+      const tb = document.querySelector("lexxy-toolbar")
+      tb.querySelector(".lexxy-editor__toolbar-overflow").remove()
+      tb.requestOverflowRefresh()
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    })
+
+    expect(page).toHaveNoErrors()
+
+    // The rest of the toolbar keeps rendering and stays interactive.
+    await expect(toolbar.locator("button[name='bold']")).toBeVisible()
   })
 
   test("overflow compaction accounts for injected buttons that cannot overflow", async ({ page }) => {
