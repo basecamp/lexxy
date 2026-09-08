@@ -84,10 +84,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return Lexxy.global.get("attachmentTagName")
   }
 
-  constructor({ tagName, sgid, src, previewSrc, previewable, previewStatusUrl, pendingPreview, altText, caption, contentType, fileName, fileSize, width, height, uploadError } = {}, key) {
+  constructor({ sgid, src, previewSrc, previewable, previewStatusUrl, pendingPreview, altText, caption, contentType, fileName, fileSize, width, height, uploadError } = {}, key) {
     super(key)
 
-    this.tagName = tagName || ActionTextAttachmentNode.TAG_NAME
     this.sgid = sgid
     this.src = src
     this.previewSrc = previewSrc
@@ -146,7 +145,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   exportDOM() {
-    const attachment = createElement(this.tagName, {
+    const attachment = createElement(ActionTextAttachmentNode.TAG_NAME, {
       sgid: this.sgid,
       previewable: this.previewable || null,
       url: this.src,
@@ -167,7 +166,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return {
       type: "action_text_attachment",
       version: 1,
-      tagName: this.tagName,
       sgid: this.sgid,
       src: this.src,
       previewable: this.previewable,

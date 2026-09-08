@@ -136,8 +136,10 @@ class EditorHandler
     execute_script "this.focus()"
   end
 
-  def paste(text, html: nil)
+  def paste(text, html: nil, lexical: nil)
     simulate_first_interaction_if_needed
+
+    lexical = lexical.to_json unless lexical.nil? || lexical.is_a?(String)
 
     content_element.execute_script <<~JS
       const pasteEvent = new ClipboardEvent("paste", {
@@ -147,6 +149,7 @@ class EditorHandler
       })
       pasteEvent.clipboardData.setData("text/plain", #{text.to_json})
       #{"pasteEvent.clipboardData.setData(\"text/html\", `#{html}`)" if html}
+      #{"pasteEvent.clipboardData.setData(\"application/x-lexical-editor\", #{lexical.to_json})" if lexical}
       this.dispatchEvent(pasteEvent)
     JS
   end

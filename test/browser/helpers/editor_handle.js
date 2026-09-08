@@ -136,10 +136,10 @@ export class EditorHandle {
     })
   }
 
-  async paste(text, { html, files = [], uriList } = {}) {
+  async paste(text, { html, files = [], uriList, lexical } = {}) {
     await this.#ensureFirstInteraction()
     await this.content.evaluate(
-      (el, { text, html, files, uriList }) => {
+      (el, { text, html, files, uriList, lexical }) => {
         const buildFiles = () => {
           return files.map(({ base64, name, type }) => {
             const binary = atob(base64)
@@ -178,11 +178,12 @@ export class EditorHandle {
           if (typeof text === "string") event.clipboardData.setData("text/plain", text)
           if (html) event.clipboardData.setData("text/html", html)
           if (uriList) event.clipboardData.setData("text/uri-list", uriList)
+          if (lexical) event.clipboardData.setData("application/x-lexical-editor", lexical)
         }
 
         el.dispatchEvent(event)
       },
-      { text, html, files, uriList },
+      { text, html, files, uriList, lexical },
     )
     await this.flush()
   }
