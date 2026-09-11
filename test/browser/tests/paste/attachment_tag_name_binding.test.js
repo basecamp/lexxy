@@ -7,9 +7,9 @@ import { assertEditorContent } from "../../helpers/assertions.js"
 // application/x-lexical-editor is attacker-craftable clipboard JSON that flows
 // through the editor's clipboard parsing, node insertion, reconciliation, and
 // serialization. A crafted custom_action_text_attachment carrying
-// { tagName: "script", innerHtml: "alert(...)" } must not become a <script>
-// element in the live DOM: the attachment tag is bound to the configured
-// attachmentTagName, not to node data.
+// { tagName: "script", innerHtml: "..." } must not become a <script> element in
+// the live DOM: the attachment tag is bound to the configured attachmentTagName,
+// not to node data.
 //
 // The live DOM is where the damage lands. The exported value is a weaker witness
 // — DOMPurify's allowlist has no <script> in it, so the poisoned tag was dropped
@@ -36,16 +36,12 @@ test.describe("Paste — attachment tagName is bound to config, not clipboard da
     await editor.focus()
     await editor.select("world")
 
-    // If a poisoned tagName ever reached the DOM as <script>, this would fire.
-    let dialogTriggered = false
-    page.on("dialog", async (dialog) => { dialogTriggered = true; await dialog.dismiss() })
-
     // Distinct content in the lexical payload vs. the HTML fallback. Lexical
     // prefers application/x-lexical-editor over text/html, so the JSON marker is
     // what must survive. If a change ever stopped honoring the MIME payload and
     // fell back to HTML, the FALLBACK marker would surface and the test would
     // fail — proving this exercises the JSON paste boundary, not the HTML one.
-    const JSON_MARKER = "alert(from-lexical-json)"
+    const JSON_MARKER = "window.poisonedAttachmentTagExecuted = true"
     const FALLBACK_MARKER = "from-html-fallback"
 
     const malicious = {
@@ -64,9 +60,9 @@ test.describe("Paste — attachment tagName is bound to config, not clipboard da
     })
     await editor.flush()
 
-    await page.waitForTimeout(500)
-
-    expect(dialogTriggered).toBe(false)
+    // The JSON marker is a statement, so a poisoned tag that became a real <script>
+    // would already have run it: a script executes as it is inserted.
+    expect(await page.evaluate(() => window.poisonedAttachmentTagExecuted ?? null)).toBeNull()
 
     await assertEditorContent(editor, async (content) => {
       await expect(content.locator("script")).toHaveCount(0)
