@@ -187,5 +187,8 @@ jobs:
         if: failure()
         with:
           name: playwright-report-${{ matrix.browser }}
-          path: ${{ github.workspace }}/test/browser/playwright-report/
+          # Relative, not ${{ github.workspace }}: in a container job that expression
+          # is the host path, which does not exist inside the container, and
+          # if-no-files-found: ignore would hide the empty upload.
+          path: test/browser/playwright-report/
           if-no-files-found: ignore
