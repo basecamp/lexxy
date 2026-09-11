@@ -9,7 +9,7 @@ test.describe("Leak test", () => {
 
   test.beforeEach(async ({ page, editor }) => {
     await page.goto("/")
-    await page.waitForSelector("lexxy-editor[connected]")
+    await editor.waitForConnected()
 
     await editor.focus()
     await editor.setValue(CONTENT)
