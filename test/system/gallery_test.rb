@@ -13,6 +13,7 @@ class GalleryTest < ApplicationSystemTestCase
     assert_gallery_with_images(count: 2)
 
     click_on "Update Post"
+    assert_text "Post was successfully updated."
 
     visit post_path(posts(:empty))
     assert_gallery_with_images(count: 2)
