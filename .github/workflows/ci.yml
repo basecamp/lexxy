@@ -154,11 +154,11 @@ jobs:
     permissions:
       contents: read
     # Playwright's own image ships every browser and every system library they
-    # need, so this job never runs apt-get. Keep the tag in step with the
-    # @playwright/test version in yarn.lock: on a mismatch Playwright refuses to
-    # start and names the image tag to move to.
+    # need, so this job never runs apt-get. Keep the tag (and its digest) in step
+    # with the @playwright/test version in yarn.lock: when a bump needs different
+    # browser builds, Playwright refuses to launch and names the image to move to.
     container:
-      image: mcr.microsoft.com/playwright:v1.58.2-noble
+      image: mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d
       options: --user 1001
     strategy:
       fail-fast: false
