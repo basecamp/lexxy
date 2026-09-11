@@ -10,14 +10,14 @@ class SanitizerListsTest < ActiveSupport::TestCase
   RUBY
 
   test "allows the markup Lexxy produces" do
-    lists = sanitizer_lists_for_app
+    lists = sanitizer_lists_for_app(configuration: rails_without_lexxy)
 
     assert_includes lists["tags"], "table"
     assert_includes lists["attributes"], "data-language"
   end
 
   test "adds the markup Lexxy produces to the lists an application sets" do
-    lists = sanitizer_lists_for_app(initializer: APPLICATION_LISTS)
+    lists = sanitizer_lists_for_app(configuration: rails_without_lexxy, initializer: APPLICATION_LISTS)
 
     assert_equal %w[ p table ], lists["tags"] & %w[ p table ]
     assert_equal %w[ class data-language ], lists["attributes"] & %w[ class data-language ]
@@ -44,6 +44,10 @@ class SanitizerListsTest < ActiveSupport::TestCase
   end
 
   private
+    def rails_without_lexxy
+      "config.action_text.editors = ActiveSupport::InheritableOptions.new(trix: {})" if Lexxy.supports_editor_adapter?
+    end
+
     def sanitizer_lists_for_app(configuration: "", initializer: "", eager_load: false)
       output, status = Dir.mktmpdir do |root|
         environment = { "DATABASE_URL" => "sqlite3::memory:", "PRIMARY_DATABASE_URL" => nil }
@@ -58,7 +62,7 @@ class SanitizerListsTest < ActiveSupport::TestCase
           require "lexxy"
 
           class SanitizerListsApp < Rails::Application
-            config.load_defaults "8.1"
+            config.load_defaults "8.0"
             config.eager_load = #{eager_load}
             config.logger = Logger.new(nil)
             config.secret_key_base = "sanitizer-lists-test"

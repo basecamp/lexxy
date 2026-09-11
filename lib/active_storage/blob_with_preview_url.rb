@@ -21,11 +21,13 @@ module ActiveStorage
         root == true ? model_name.element : root
       end
 
+      # Mirrors Active Model: only takes precedence over except.
       def serializes_preview_field?(field, options)
-        only = Array(options[:only]).map(&:to_s)
-        except = Array(options[:except]).map(&:to_s)
-
-        (only.empty? || only.include?(field)) && except.exclude?(field)
+        if only = options[:only]
+          Array(only).map(&:to_s).include?(field)
+        else
+          Array(options[:except]).map(&:to_s).exclude?(field)
+        end
       end
 
       def preview_url_path

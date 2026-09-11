@@ -54,6 +54,9 @@ class BlobTest < ActiveSupport::TestCase
     json = blob.as_json(except: [ "previewable", "url" ])
     assert_not json.key?("previewable")
     assert_not json.key?("url")
+
+    assert_empty blob.as_json(only: []).keys
+    assert_equal %w[ id url ], blob.as_json(only: [ :id, :url ], except: :url).keys.sort
   end
 
   test "as_json adds preview fields inside the root" do
