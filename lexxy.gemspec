@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
 
   spec.extensions = [ "ext/Rakefile" ]
 
-  spec.add_dependency "rails", ">= 8.0.2"
+  spec.add_dependency "railties", ">= 8.0.2"
   spec.add_development_dependency "turbo-rails", "~> 2.0"
   spec.add_development_dependency "stimulus-rails", "~> 1.0"
   spec.add_development_dependency "capybara", "~> 3.0"
