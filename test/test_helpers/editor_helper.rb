@@ -24,9 +24,16 @@ module EditorHelper
     assert_equal normalize_html(expected), normalize_html(find_editor.value)
   end
 
+  # Polls against a deadline rather than wrapping the block in Timeout.timeout.
+  # A timeout that fires in the middle of a WebDriver call abandons that call's
+  # response on the connection, so every later command reads the previous one's
+  # and the rest of the run fails with a broken session.
   def wait_until(timeout: Capybara.default_max_wait_time)
-    Timeout.timeout(timeout) do
-      find_editor.flush_lexical_updates until yield
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+
+    until yield
+      raise Timeout::Error, "condition not met within #{timeout}s" if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+      find_editor.flush_lexical_updates
     end
   end
 
