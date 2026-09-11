@@ -72,27 +72,33 @@ Like the [sandbox]({{ "/sandbox/" | relative_url }}), Lexxy's JavaScript can be 
 
 ## Integration with Action Text
 
-Once the gem is installed, Lexxy takes over Action Text automatically — `form.rich_text_area` renders a Lexxy editor instead of Trix. No extra configuration is required. How it hooks in depends on your Rails version.
+How Lexxy hooks into Action Text depends on your Rails version. On Rails 8.0 and 8.1, and on Rails versions with the editor adapter that don't include Lexxy, installing the gem is enough: `form.rich_text_area` renders a Lexxy editor instead of Trix.
 
-### Rails 8.2+
+### Rails with the Action Text editor adapter
 
-Lexxy is registered as an [Action Text editor adapter](https://github.com/rails/rails/pull/51238) and set as the default, replacing the Trix default that Action Text configures. The gem does this for you (`config.action_text.editor = :lexxy`).
+On Rails versions with the [Action Text editor adapter](https://github.com/rails/rails/pull/51238), what makes Lexxy the default depends on whether that Rails version includes Lexxy.
 
-To keep Trix, or another editor, as the default while the gem is installed, disable this option in `application.rb`. Lexxy then leaves `config.action_text.editor` as you configure it:
+#### Rails versions that include Lexxy
+
+Action Text registers Lexxy as one of its editors and chooses the default editor with `config.load_defaults`. The gem doesn't change `config.action_text.editor`, so that setting decides which editor you get:
+
+```ruby
+# config/application.rb
+config.action_text.editor = :lexxy
+```
+
+The gem leaves the setting alone whenever Lexxy is already registered as an Action Text editor, whether by Rails or by your application. If your application uses Lexxy through this gem and upgrades to a Rails version that includes Lexxy, but keeps `config.load_defaults` below that version, set the editor as above to keep Lexxy.
+
+#### Rails versions that don't include Lexxy
+
+The gem registers Lexxy as an editor and sets it as the default (`config.action_text.editor = :lexxy`), replacing the Trix default that Action Text configures.
+
+To keep Trix, or another editor, while the gem is installed, disable this option in `application.rb`. Lexxy then leaves `config.action_text.editor` as you configure it:
 
 ```ruby
 # config/application.rb
 config.lexxy.override_action_text_defaults = false
 config.action_text.editor = :trix
-```
-
-Rails versions that include Lexxy as one of Action Text's editors register it themselves and choose the default editor with `config.load_defaults`. Whenever Lexxy is already registered as an Action Text editor, whether by Rails or by your application, the gem doesn't change `config.action_text.editor`.
-
-If your application uses Lexxy through this gem and upgrades to a Rails version that includes Lexxy, but keeps `config.load_defaults` below that version, set the editor explicitly to keep Lexxy:
-
-```ruby
-# config/application.rb
-config.action_text.editor = :lexxy
 ```
 
 ### Rails 8.0 and 8.1
