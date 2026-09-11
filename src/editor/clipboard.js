@@ -4,7 +4,6 @@ import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
 import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $onUpdate, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
-import { $insertDataTransferForRichText } from "@lexical/clipboard"
 import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
 import { ListenerBin } from "../helpers/listener_helper"
 import NodeInserter from "./contents/node_inserter"
@@ -148,7 +147,7 @@ export default class Clipboard {
       } else if (this.editorElement.supportsMarkdown) {
         this.#pasteMarkdown(text)
       } else {
-        this.#pasteRichText(clipboardData)
+        this.contents.insertText(text, { tag: PASTE_TAG })
       }
     })
   }
@@ -224,13 +223,6 @@ export default class Clipboard {
     const paragraph = elements[0]
     return paragraph.nodeName === "P"
       && Array.from(paragraph.childNodes).every((node) => node.nodeType === Node.TEXT_NODE || node.nodeName === "BR")
-  }
-
-  #pasteRichText(clipboardData) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      $insertDataTransferForRichText(clipboardData, selection, this.editor)
-    }, { tag: PASTE_TAG })
   }
 
   #handlePastedFiles(clipboardData) {
