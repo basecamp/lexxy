@@ -184,6 +184,7 @@ export class EditorHandle {
       },
       { text, html, files, uriList },
     )
+    await this.flush()
   }
 
   async sendTab({ shift = false } = {}) {
@@ -278,6 +279,8 @@ export class EditorHandle {
       )
       if (!isActive) {
         await this.content.click()
+        // Let Lexical pick up the selection the click placed before acting on it.
+        await this.flush()
       }
       this.#firstInteraction = true
     }
