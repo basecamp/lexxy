@@ -9,6 +9,23 @@ module Lexxy
     config.lexxy = ActiveSupport::OrderedOptions.new
     config.lexxy.override_action_text_defaults = true
 
+    # Rails versions that include Lexxy register it as an editor and allow its markup in
+    # Action Text content themselves, so sanitizer lists are left to the application there.
+    # This runs before Lexxy registers itself as an editor.
+    initializer "lexxy.sanitization", before: "lexxy.action_text_editor" do |app|
+      next if app.config.action_text.editors&.key?(:lexxy)
+
+      ActiveSupport.on_load(:action_text_content) do
+        default_allowed_tags = Class.new.include(ActionText::ContentHelper).new.sanitizer_allowed_tags
+        ActionText::ContentHelper.allowed_tags = default_allowed_tags + %w[ video audio source embed table tbody tr th td ]
+
+        default_allowed_attributes = Class.new.include(ActionText::ContentHelper).new.sanitizer_allowed_attributes
+        ActionText::ContentHelper.allowed_attributes = default_allowed_attributes + %w[ controls poster data-language style value start ]
+
+        Loofah::HTML5::SafeList::ALLOWED_CSS_FUNCTIONS << "var"
+      end
+    end
+
     if Lexxy.supports_editor_adapter?
       require_relative "../action_text/editor/lexxy_editor"
 
@@ -52,18 +69,6 @@ module Lexxy
       if Rails.application.config.respond_to?(:assets)
         app.config.assets.paths << root.join("app/assets/stylesheets")
         app.config.assets.paths << root.join("app/javascript")
-      end
-    end
-
-    initializer "lexxy.sanitization" do |app|
-      ActiveSupport.on_load(:action_text_content) do
-        default_allowed_tags = Class.new.include(ActionText::ContentHelper).new.sanitizer_allowed_tags
-        ActionText::ContentHelper.allowed_tags = default_allowed_tags + %w[ video audio source embed table tbody tr th td ]
-
-        default_allowed_attributes = Class.new.include(ActionText::ContentHelper).new.sanitizer_allowed_attributes
-        ActionText::ContentHelper.allowed_attributes = default_allowed_attributes + %w[ controls poster data-language style value start ]
-
-        Loofah::HTML5::SafeList::ALLOWED_CSS_FUNCTIONS << "var"
       end
     end
 

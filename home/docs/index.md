@@ -115,3 +115,9 @@ config.lexxy.override_action_text_defaults = false
 If you do this, you can invoke Lexxy explicitly using the same helpers with a `lexxy` prefix: `lexxy_rich_textarea_tag` and `form.lexxy_rich_text_area`.
 
 This path is meant to let you incrementally move to Lexxy, or to use it in specific places while keeping Trix in others.
+
+### Sanitizing rendered content
+
+Lexxy's markup includes tables, audio and video, code languages and highlight styles, which Action Text's sanitizer removes by default. The gem adds them to `ActionText::ContentHelper.allowed_tags` and `ActionText::ContentHelper.allowed_attributes`, including lists your application sets itself, and allows the CSS `var()` function.
+
+Rails versions that include Lexxy allow that markup themselves. On those, and whenever Lexxy is already registered as an Action Text editor, the gem leaves the sanitizer lists to Rails and your application. If your application sets its own lists there, include the markup you want to keep.
