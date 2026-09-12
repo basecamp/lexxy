@@ -130,6 +130,16 @@ test.describe("Show invisibles", () => {
       await expect(editor.content.locator("span.lexxy-line-break")).toHaveCount(0)
     })
 
+    test("toggling the marks returns focus to the editor", async ({ page, editor }) => {
+      await editor.send("Hello")
+
+      await button(page).click()
+      await page.keyboard.type("World")
+      await editor.flush()
+
+      await assertEditorHtml(editor, "<p>HelloWorld</p>")
+    })
+
     test("toggling and editing raises no console errors", async ({ page, editor }) => {
       startMonitoringConsole(page)
 

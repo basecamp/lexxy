@@ -54,9 +54,17 @@ export class ShowInvisiblesExtension extends LexxyExtension {
     }
   }
 
-  #toggle = () => {
+  #toggle = (event) => {
     const content = this.editorElement.editorContentElement
     const visible = content.classList.toggle(SHOW_INVISIBLES_CLASS)
     this.#button.setAttribute("aria-pressed", visible.toString())
+
+    // Mouse clicks hand focus to the button, so the caret has to be put back the
+    // way `lexxy-toolbar` does it for command buttons. A keyboard activation
+    // arrives as a PointerEvent with pointerId -1 and keeps its focus on the
+    // toolbar, where the user is navigating.
+    if (!(event instanceof PointerEvent && event.pointerId === -1)) {
+      this.editorElement.focus()
+    }
   }
 }
