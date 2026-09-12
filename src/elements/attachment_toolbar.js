@@ -1,6 +1,7 @@
 import { $getNodeByKey, $setSelection, COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND } from "lexical"
 
 import { $createNodeSelectionWith, registerLabelledDecoratorSelection } from "../helpers/lexical_helper"
+import { $isImageGalleryNode } from "../nodes/image_gallery_node"
 import { createElement } from "../helpers/html_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
@@ -14,6 +15,8 @@ export class AttachmentToolbar extends HTMLElement {
   #buttons = []
   #currentNodeKey = null
   #reflowObserver = new ResizeObserver(() => this.#updatePosition())
+  #presentationObserver = new MutationObserver(() => this.#refresh())
+  #observedElement = null
 
   connectedCallback() {
     this.classList.add("lexxy-floating-controls")
@@ -23,6 +26,7 @@ export class AttachmentToolbar extends HTMLElement {
     if (this.#editor) {
       this.#setUpButtons()
       this.#monitorSelection()
+      this.#followScrolling()
       this.#registerKeyboardShortcut()
     }
   }
@@ -34,6 +38,7 @@ export class AttachmentToolbar extends HTMLElement {
   dispose() {
     this.#listeners.dispose()
     this.#reflowObserver.disconnect()
+    this.#presentationObserver.disconnect()
   }
 
   get #editor() {
@@ -114,11 +119,66 @@ export class AttachmentToolbar extends HTMLElement {
   }
 
   #show(nodeKey) {
-    if (this.#currentNodeKey !== nodeKey) {
-      this.#currentNodeKey = nodeKey
+    this.#currentNodeKey = nodeKey
+    this.#refresh()
+    this.hidden = false
+    this.#reflowObserver.observe(this.#editorElement)
+  }
+
+  #refresh() {
+    if (this.#hasSelectedNode) {
+      this.#watchPresentation(this.#currentNodeKey)
+      this.#describeNode(this.#currentNodeKey)
       this.#updatePosition()
-      this.hidden = false
-      this.#reflowObserver.observe(this.#editorElement)
+    }
+  }
+
+  // A preview that fails to load swaps its figure to a file without a Lexical
+  // update, so the figure's class list is watched directly. The node can also
+  // replace its whole figure while keeping its key, so the watch follows the
+  // element rather than the key.
+  #watchPresentation(nodeKey) {
+    const element = this.#editor.getElementByKey(nodeKey)
+    if (element !== this.#observedElement) {
+      this.#presentationObserver.disconnect()
+      this.#observedElement = element
+      if (element) this.#presentationObserver.observe(element, { attributes: true, attributeFilter: [ "class" ] })
+    }
+  }
+
+  // Scrolling inside the editor moves the figure without resizing anything.
+  #followScrolling() {
+    this.#listeners.track(registerEventListener(this.#editorElement, "scroll", () => this.#updatePosition(), { capture: true, passive: true }))
+  }
+
+  // The stylesheet places the toolbar by what is selected: a chip sitting in a
+  // line of text, a thin divider and a full-size figure each want the button
+  // somewhere else, and host apps style their own attachment kinds the same way.
+  #describeNode(nodeKey) {
+    const element = this.#editor.getElementByKey(nodeKey)
+
+    this.#editor.getEditorState().read(() => {
+      const node = $getNodeByKey(nodeKey)
+      this.dataset.nodeType = node.getType()
+      this.dataset.presentation = this.#presentationOf(node, element)
+
+      if (node.contentType) {
+        this.dataset.contentType = node.contentType
+      } else {
+        delete this.dataset.contentType
+      }
+    })
+  }
+
+  #presentationOf(node, element) {
+    if ($isImageGalleryNode(node.getParent())) {
+      return "gallery"
+    } else if (node.isInline() && this.#rendersInline(element)) {
+      return "inline"
+    } else if (element?.classList.contains("attachment--preview")) {
+      return "preview"
+    } else {
+      return "block"
     }
   }
 
@@ -127,7 +187,13 @@ export class AttachmentToolbar extends HTMLElement {
       this.#currentNodeKey = null
       this.hidden = true
       this.#reflowObserver.disconnect()
+      this.#presentationObserver.disconnect()
+      this.#observedElement = null
     }
+  }
+
+  #rendersInline(element) {
+    return element != null && getComputedStyle(element).display.startsWith("inline")
   }
 
   #updatePosition() {
@@ -135,8 +201,20 @@ export class AttachmentToolbar extends HTMLElement {
     if (figureElement) {
       const rect = figureElement.getBoundingClientRect()
       const editorRect = this.#editorElement.getBoundingClientRect()
-      this.style.top = `${rect.top - editorRect.top}px`
-      this.style.left = `${rect.right - editorRect.left}px`
+      this.style.setProperty("--lexxy-anchor-top", `${rect.top - editorRect.top}px`)
+      this.style.setProperty("--lexxy-anchor-left", `${rect.left - editorRect.left}px`)
+      this.style.setProperty("--lexxy-anchor-width", `${rect.width}px`)
+      this.style.setProperty("--lexxy-anchor-height", `${rect.height}px`)
+      this.#flipWhenOverflowing(editorRect)
+    }
+  }
+
+  // A chip at the end of a line has no room after it; let the stylesheet place the
+  // toolbar before the chip instead.
+  #flipWhenOverflowing(editorRect) {
+    this.removeAttribute("data-overflow")
+    if (this.getBoundingClientRect().right > editorRect.right) {
+      this.setAttribute("data-overflow", "")
     }
   }
 

@@ -983,10 +983,34 @@
 
   &:is(lexxy-attachment-toolbar) {
     display: flex;
+    /* The anchor is measured in px from the editor's top-left, so these stay physical. */
+    left: calc(var(--lexxy-anchor-left) + var(--lexxy-anchor-width));
+    top: var(--lexxy-anchor-top);
     transform: translate(-100%, 0);
 
     &[hidden] {
       display: none;
+    }
+
+    /* A divider is thinner than the button, so hang off its middle rather than its top edge. */
+    &[data-node-type="horizontal_divider"] {
+      --button-size: 1.8lh;
+
+      top: calc(var(--lexxy-anchor-top) + var(--lexxy-anchor-height) / 2);
+      transform: translate(calc(-100% - 0.5ch), -50%);
+    }
+
+    /* Chips in a line of text (mentions and the like): sit just past the chip, centred on its line.
+       With no room after the chip, tuck into its end instead so the button stays inside the editor. */
+    &[data-presentation="inline"] {
+      --button-size: 1.6lh;
+
+      top: calc(var(--lexxy-anchor-top) + var(--lexxy-anchor-height) / 2);
+      transform: translate(0.5ch, -50%);
+
+      &[data-overflow] {
+        transform: translate(-100%, -50%);
+      }
     }
 
     .lexxy-attachment-toolbar__remove:hover,
