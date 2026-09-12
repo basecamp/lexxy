@@ -12,8 +12,6 @@ import { $isAtNodeEdge } from "../helpers/lexical_helper.js"
 const ATTACHMENT_ATTRIBUTES = [ "alt", "caption", "content", "content-type", "data-direct-upload-id",
   "data-sgid", "filename", "filesize", "height", "presentation", "previewable", "sgid", "url", "width" ]
 
-const UPLOADS_BUSY_MESSAGE = "Please wait for all files to upload"
-
 export class AttachmentsExtension extends LexxyExtension {
   #uploadsCount = 0
 
@@ -64,7 +62,7 @@ export class AttachmentsExtension extends LexxyExtension {
 
   #setUploadsValidity() {
     if (this.#uploadsCount) {
-      this.setEditorValidity({ customError: true }, UPLOADS_BUSY_MESSAGE)
+      this.setEditorValidity({ customError: true }, this.editorConfig.get("uploadsBusyMessage"))
     } else {
       this.setEditorValidity({})
     }
