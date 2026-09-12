@@ -21,6 +21,33 @@ export async function assertEditorContent(editor, assertionFn) {
   await assertionFn(editor.content)
 }
 
+// Assert the sequence of top-level blocks in the editor's serialized value.
+// Each block is described as "tag" or, when it has text, "tag:text".
+// Usage: await assertEditorBlocks(editor, [ "action-text-attachment", "p:between", "blockquote:quoted" ])
+export async function assertEditorBlocks(editor, expected) {
+  await expect
+    .poll(
+      async () => {
+        await editor.flush()
+        return editor.locator.evaluate((el) => {
+          const template = document.createElement("template")
+          template.innerHTML = el.value
+          return Array.from(template.content.children).map((block) => {
+            const text = block.textContent.trim()
+            const tag = block.tagName.toLowerCase()
+            if (text) {
+              return `${tag}:${text}`
+            } else {
+              return tag
+            }
+          })
+        })
+      },
+      { timeout: 5_000 },
+    )
+    .toEqual(expected)
+}
+
 // Assert editor plain text value.
 export async function assertEditorPlainText(editor, expected) {
   await expect
