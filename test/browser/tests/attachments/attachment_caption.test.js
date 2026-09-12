@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
-import { attachmentTag, selectAttachment } from "../../helpers/attachment_helpers.js"
+import { announcements, attachmentTag, selectAttachment, watchAnnouncements } from "../../helpers/attachment_helpers.js"
 
 test.describe("Attachment caption", () => {
   test.beforeEach(async ({ page }) => {
@@ -135,5 +135,20 @@ test.describe("Attachment caption", () => {
     await expect(avatar).toHaveAttribute("alt", "")
     await step("ArrowRight")
     await expect(avatar).toHaveAttribute("alt", "Alice")
+  })
+
+  test("announces the caption's name when it takes focus", async ({ page, editor }) => {
+    await editor.setValue(`<p>Above</p>${attachmentTag("a", "one.png")}`)
+    await editor.flush()
+    await watchAnnouncements(page)
+
+    const figure = page.locator("figure.attachment").first()
+    await expect(figure).toBeVisible()
+    await selectAttachment(figure)
+    await editor.focus()
+    await page.keyboard.press("Tab")
+
+    await expect(figure.locator("figcaption textarea")).toBeFocused()
+    await expect.poll(() => announcements(page)).toContain("Image caption")
   })
 })
