@@ -46,6 +46,7 @@ import { LinkOpenerExtension } from "../extensions/link_opener_extension.js"
 import { PreventLexicalTripleClickExtension } from "../extensions/prevent_lexical_triple_click_extension.js"
 import { CustomAttachmentDragAndDropExtension } from "../extensions/custom_attachment_drag_and_drop_extension.js"
 import { LineSeparatorsExtension } from "../extensions/line_separators_extension.js"
+import { ShowInvisiblesExtension } from "../extensions/show_invisibles_extension.js"
 import { nextFrame } from "../helpers/timing_helper.js"
 
 
@@ -208,7 +209,8 @@ export class LexicalEditorElement extends HTMLElement {
       LinkOpenerExtension,
       PreventLexicalTripleClickExtension,
       CustomAttachmentDragAndDropExtension,
-      LineSeparatorsExtension
+      LineSeparatorsExtension,
+      ShowInvisiblesExtension
     ]
   }
 
