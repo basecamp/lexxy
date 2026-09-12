@@ -339,7 +339,7 @@ export class TableTools extends HTMLElement {
     if (!cell) return
 
     const cellElement = this.editor.getElementByKey(cell.getKey())
-    if (!cellElement) return
+    if (!cellElement?.contains(document.getSelection()?.anchorNode)) return
 
     cellElement.classList.add(theme.tableCellFocus)
   }
