@@ -451,9 +451,13 @@
 
 /* Formatting marks ("show invisibles"): painted only in the editor, never in the
    rendered .lexxy-content. The glyphs are pseudo-elements, so they stay out of the
-   serialized value and out of text selections. */
-:where(.lexxy-editor__content--show-invisibles) {
-  :is(p, h1, h2, h3, h4, h5, h6)::after,
+   serialized value and out of text selections. The `lexxy-editor` ancestor keeps
+   saved content that happens to carry the marker class — `class` survives
+   sanitization — from opting itself into the marks on a rendered page.
+   Provisional paragraphs are excluded: they are spacers that `exportDOM` drops,
+   so a pilcrow there would announce a line the saved value doesn't have. */
+:where(lexxy-editor .lexxy-editor__content--show-invisibles) {
+  :is(p, h1, h2, h3, h4, h5, h6):not(.provisional-paragraph)::after,
   .lexxy-line-break::before {
     color: var(--lexxy-color-ink-light);
     -webkit-user-select: none;
@@ -463,7 +467,7 @@
     }
   }
 
-  :is(p, h1, h2, h3, h4, h5, h6)::after {
+  :is(p, h1, h2, h3, h4, h5, h6):not(.provisional-paragraph)::after {
     content: "¶";
     font-weight: normal;
   }

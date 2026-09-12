@@ -140,6 +140,21 @@ test.describe("Show invisibles", () => {
       await assertEditorHtml(editor, "<p>HelloWorld</p>")
     })
 
+    test("provisional paragraphs never get a pilcrow", async ({ page, editor }) => {
+      await editor.setValue("<hr>")
+      await button(page).click()
+
+      const provisional = editor.content.locator("p.provisional-paragraph").first()
+
+      await expect(provisional).toHaveCount(1)
+      expect(await pseudoContent(provisional, "::after")).toBe("none")
+    })
+
+    test("marks stay out of rendered content that carries the toggle class", async ({ page }) => {
+      const rendered = page.locator("#rendered p")
+      expect(await pseudoContent(rendered, "::after")).toBe("none")
+    })
+
     test("toggling and editing raises no console errors", async ({ page, editor }) => {
       startMonitoringConsole(page)
 
