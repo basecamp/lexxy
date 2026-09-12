@@ -52,13 +52,12 @@ export class AttachmentFakeSelection {
     }
   }
 
+  // Only the contenteditable itself: a control inside a decorator (a caption, a
+  // host app's play button) owns the focus and the screen reader's cursor while
+  // it is focused, and parking the range would pull the cursor away from it.
   get #isEditorFocused() {
     const root = this.#editor.getRootElement()
-    const active = document.activeElement
-    return root != null
-      && (root.contains(active) || active === root)
-      && active?.tagName !== "TEXTAREA"
-      && active?.tagName !== "INPUT"
+    return root != null && document.activeElement === root
   }
 
   get #isAlreadyParkedHere() {
