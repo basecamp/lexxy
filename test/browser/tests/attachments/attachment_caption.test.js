@@ -98,4 +98,42 @@ test.describe("Attachment caption", () => {
       { message: "Rabbit", options: { priority: "high" } }
     ])
   })
+
+  test("readies an inline attachment's label when the caret approaches from either side", async ({ page, editor }) => {
+    await editor.setValue(
+      '<p>Hi <action-text-attachment sgid="alice" content-type="application/vnd.test.mention" content="&lt;span&gt;&lt;img src=&quot;/example.png&quot;&gt;Alice&lt;/span&gt;"></action-text-attachment> there</p>'
+    )
+    await editor.flush()
+
+    const avatar = editor.content.locator("action-text-attachment[content-type='application/vnd.test.mention'] img")
+    await expect(avatar).toHaveAttribute("alt", "")
+
+    // Home and End behave differently across browsers on a Mac, so place the caret by
+    // clicking just inside the paragraph's edges instead.
+    const paragraph = editor.content.locator("p")
+    const paragraphBox = await paragraph.boundingBox()
+    const clickAtEnd = () => paragraph.click({ position: { x: paragraphBox.width - 2, y: paragraphBox.height / 2 } })
+    const clickAtStart = () => paragraph.click({ position: { x: 2, y: paragraphBox.height / 2 } })
+    const step = async (key) => {
+      await page.keyboard.press(key)
+      await editor.flush()
+    }
+
+    await clickAtEnd()
+    await editor.flush()
+    await expect(avatar).toHaveAttribute("alt", "")
+
+    for (let i = 0; i < " there".length - 1; i++) await step("ArrowLeft")
+    await expect(avatar).toHaveAttribute("alt", "Alice")
+
+    await clickAtEnd()
+    await editor.flush()
+    await expect(avatar).toHaveAttribute("alt", "")
+
+    await clickAtStart()
+    await step("ArrowRight")
+    await expect(avatar).toHaveAttribute("alt", "")
+    await step("ArrowRight")
+    await expect(avatar).toHaveAttribute("alt", "Alice")
+  })
 })
