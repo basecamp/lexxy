@@ -91,6 +91,28 @@ test.describe("Attachment keyboard move", () => {
     await expect(figures.first()).toHaveAttribute("data-lexical-node-key")
     await expect(figures.nth(1).locator("img")).toHaveAttribute("src", "/one.png")
   })
+
+  test("keeps a moved attachment in view", async ({ page, editor }) => {
+    await page.setViewportSize({ width: 800, height: 400 })
+    await editor.setValue(`${"<p>Paragraph</p>".repeat(40)}${attachmentTag("a", "one.png")}`)
+    await editor.flush()
+
+    const figure = page.locator("figure.attachment").first()
+    await selectAttachment(figure)
+    await editor.focus()
+
+    for (let i = 0; i < 25; i++) {
+      await page.keyboard.press("Alt+Shift+ArrowUp")
+    }
+    await editor.flush()
+
+    await expect.poll(async () => {
+      const box = await figure.boundingBox()
+      const viewport = page.viewportSize()
+      // Browsers land the scrolled figure a fraction of a pixel either side of the edge.
+      return box.y >= -1 && box.y + box.height <= viewport.height + 1
+    }).toBe(true)
+  })
 })
 
 // Built via the API instead of setValue: HTML parsing separates adjacent top-level
