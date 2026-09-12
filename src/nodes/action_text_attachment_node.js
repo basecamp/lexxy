@@ -155,14 +155,19 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   updateDOM(prevNode, dom) {
     if (this.uploadError !== prevNode.uploadError) return true
 
+    const image = dom.querySelector("img")
+    if (image && prevNode.altText !== this.altText) {
+      image.alt = this.altText
+    }
+
     const caption = dom.querySelector("figcaption textarea")
     if (caption && prevNode.caption !== this.caption) {
       caption.value = this.caption
     }
 
     const captionText = dom.querySelector("figcaption .attachment__caption-text")
-    if (captionText && prevNode.label !== this.label) {
-      captionText.textContent = this.label
+    if (captionText && prevNode.captionLabel !== this.captionLabel) {
+      captionText.textContent = this.captionLabel
     }
 
     return false
@@ -241,6 +246,14 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   get label() {
+    if (this.caption && this.altText && this.altText !== this.caption && this.altText !== this.fileName) {
+      return `${this.caption}. ${this.altText}`
+    }
+
+    return this.captionLabel
+  }
+
+  get captionLabel() {
     return this.caption || this.altText || this.fileName || ""
   }
 
@@ -449,7 +462,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   #createEditableCaption() {
     const caption = createElement("figcaption", { className: "attachment__caption" })
 
-    const text = createElement("span", { className: "attachment__caption-text", textContent: this.label })
+    const text = createElement("span", { className: "attachment__caption-text", textContent: this.captionLabel })
     const input = createElement("textarea", {
       value: this.caption,
       placeholder: this.fileName,
