@@ -7,6 +7,11 @@ module Lexxy
       # remove the html_safe attribute to preserve attribute escape
       value = value.to_str if value.respond_to? :to_str
 
+      # Opt-in: render the value into a content element the editor adopts on
+      # connect, so the field has its final height at first paint instead of
+      # reflowing when the editor builds a frame after load. Off by default.
+      prerender = options.delete(:prerender)
+
       options[:name] ||= name
       options[:value] ||= value
       options[:class] ||= "lexxy-content"
@@ -14,7 +19,8 @@ module Lexxy
       options[:data][:direct_upload_url] ||= main_app.rails_direct_uploads_url
       options[:data][:blob_url_template] ||= main_app.rails_service_blob_url(":signed_id", ":filename")
 
-      editor_tag = content_tag("lexxy-editor", "", options, &block)
+      inner = (block || !prerender) ? "" : Lexxy::Prerender.inner_html_for(self, options)
+      editor_tag = content_tag("lexxy-editor", inner, options, &block)
       editor_tag
     end
 
