@@ -168,7 +168,8 @@ test.describe("Toolbar", () => {
     // overflow element inside requestAnimationFrame and throw.
     await page.evaluate(async () => {
       const tb = document.querySelector("lexxy-toolbar")
-      tb.querySelector(".lexxy-editor__toolbar-overflow").remove()
+      window.detachedOverflowControl = tb.querySelector(".lexxy-editor__toolbar-overflow")
+      window.detachedOverflowControl.remove()
       tb.requestOverflowRefresh()
       await new Promise((resolve) => requestAnimationFrame(resolve))
       await new Promise((resolve) => requestAnimationFrame(resolve))
@@ -178,6 +179,27 @@ test.describe("Toolbar", () => {
 
     // The rest of the toolbar keeps rendering and stays interactive.
     await expect(toolbar.locator("button[name='bold']")).toBeVisible()
+
+    // Bailing out leaves the toolbar able to refresh again: the crash used to
+    // escape the animation frame before the pending-frame handle was cleared,
+    // so every later requestOverflowRefresh() returned early and the toolbar
+    // stayed stale for good once the control came back.
+    await page.evaluate(async () => {
+      const tb = document.querySelector("lexxy-toolbar")
+      tb.appendChild(window.detachedOverflowControl)
+      tb.requestOverflowRefresh()
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    })
+
+    const originalSize = page.viewportSize()
+    await page.setViewportSize({ width: 300, height: originalSize.height })
+    await expect(toolbar).toHaveAttribute("overflowing", "")
+    await expect(toolbar.locator(".lexxy-editor__toolbar-overflow-menu > button")).not.toHaveCount(0)
+
+    await page.setViewportSize(originalSize)
+    await expect(toolbar).not.toHaveAttribute("overflowing")
+    expect(page).toHaveNoErrors()
   })
 
   test("overflow compaction accounts for injected buttons that cannot overflow", async ({ page }) => {
