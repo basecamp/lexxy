@@ -1,6 +1,7 @@
 import {
   $createTextNode,
   $getSelection,
+  $isNodeSelection,
   $isRangeSelection,
   $isTextNode,
   $setSelection,
@@ -21,6 +22,7 @@ import { $createAutoLinkNode, $toggleLink, LinkNode } from "@lexical/link"
 import { $getNearestNodeOfType, $insertNodeToNearestRoot } from "@lexical/utils"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
+import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { createElement } from "../helpers/html_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { $normalizeBlockContainerSelection, getListType } from "../helpers/lexical_helper"
@@ -103,17 +105,11 @@ export class CommandDispatcher {
   dispatchLink(url) {
     this.editor.update(() => {
       const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
 
-      const anchorNode = selection.anchor.getNode()
-
-      if (selection.isCollapsed() && !$getNearestNodeOfType(anchorNode, LinkNode)) {
-        const autoLinkNode = $createAutoLinkNode(url)
-        const textNode = $createTextNode(url)
-        autoLinkNode.append(textNode)
-        selection.insertNodes([ autoLinkNode ])
-      } else {
-        $toggleLink(url)
+      if ($isNodeSelection(selection)) {
+        $setHrefOnSelectedImages(selection, url)
+      } else if ($isRangeSelection(selection)) {
+        $linkSelectedText(url, selection)
       }
     })
   }
@@ -125,7 +121,13 @@ export class CommandDispatcher {
         return
       }
 
-      $toggleLink(null)
+      const selection = $getSelection()
+
+      if ($isNodeSelection(selection)) {
+        $setHrefOnSelectedImages(selection, null)
+      } else {
+        $toggleLink(null)
+      }
     })
   }
 
@@ -452,6 +454,25 @@ export class CommandDispatcher {
     return $isRangeSelection(selection) && selection.isCollapsed()
   }
 
+}
+
+function $setHrefOnSelectedImages(selection, href) {
+  for (const node of selection.getNodes()) {
+    if ($isActionTextAttachmentNode(node) && node.isPreviewableImage) node.getWritable().href = href
+  }
+}
+
+function $linkSelectedText(url, selection) {
+  const anchorNode = selection.anchor.getNode()
+
+  if (selection.isCollapsed() && !$getNearestNodeOfType(anchorNode, LinkNode)) {
+    const autoLinkNode = $createAutoLinkNode(url)
+    const textNode = $createTextNode(url)
+    autoLinkNode.append(textNode)
+    selection.insertNodes([ autoLinkNode ])
+  } else {
+    $toggleLink(url)
+  }
 }
 
 function capitalize(str) {
