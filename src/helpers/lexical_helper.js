@@ -25,6 +25,10 @@ export function $isShadowRoot(node) {
   return $isElementNode(node) && $isRootOrShadowRoot(node) && !$isRootNode(node)
 }
 
+export function $isBlockDecoratorNode(node) {
+  return $isDecoratorNode(node) && !node.isInline()
+}
+
 export function $isSafeForRoot(node) {
   return ($isElementNode(node) || $isDecoratorNode(node)) && !node.isParentRequired()
 }
