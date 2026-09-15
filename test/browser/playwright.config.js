@@ -1,7 +1,11 @@
 import { defineConfig, devices } from "@playwright/test"
+import { existsSync } from "fs"
 
 const isCI = !!process.env.CI
 const vitePort = process.env.VITE_PORT || "5173"
+
+const chromiumPath = existsSync("/usr/bin/chromium") ? "/usr/bin/chromium" : undefined
+const firefoxPath = existsSync("/usr/bin/firefox") ? "/usr/bin/firefox" : undefined
 
 export default defineConfig({
   testDir: "./tests",
@@ -21,8 +25,10 @@ export default defineConfig({
   },
 
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+    { name: "chromium", use: { ...devices["Desktop Chrome"],
+      launchOptions: chromiumPath ? { executablePath: chromiumPath } : {} } },
+    { name: "firefox", use: { ...devices["Desktop Firefox"],
+      launchOptions: firefoxPath ? { executablePath: firefoxPath } : {} } },
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
   ],
 
