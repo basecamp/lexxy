@@ -106,7 +106,6 @@ export class HeadingDropdown extends HTMLElement {
     const button = document.createElement("button")
     button.type = "button"
     button.dataset.heading = tag
-    button.dataset.command = HeadingDropdown.commandFor(index)
     button.classList.add("lexxy-heading-button")
     button.name = name
     button.title = label
@@ -116,12 +115,12 @@ export class HeadingDropdown extends HTMLElement {
   }
 
   #registerButtonHandlers() {
-    this.#headingButtons.forEach(button => {
+    this.#headingButtons.forEach((button, index) => {
       this.#listeners.track(registerEventListener(button, "click", (event) => {
         if (!this.#editor) return
 
         event.preventDefault()
-        this.#editor.dispatchCommand(button.dataset.command, button.dataset.heading)
+        this.#editor.dispatchCommand(HeadingDropdown.commandFor(index), button.dataset.heading)
         this.#editor.focus()
       }))
     })
