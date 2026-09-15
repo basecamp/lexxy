@@ -146,6 +146,22 @@ test.describe("Attachment Drag and Drop", () => {
 
       await assertGalleryWithImages(editor, 3)
     })
+
+    test("drag a previewable non-image onto another keeps both", async ({ page, editor }) => {
+      await editor.uploadFile("test/fixtures/files/dummy.pdf")
+      await editor.send("Enter")
+      await editor.uploadFile("test/fixtures/files/dummy.pdf")
+      await waitForUploadsComplete(page, editor)
+      await expect(page.locator("figure.attachment")).toHaveCount(2)
+
+      await simulateDragByIndex(page, 1, 0, "onto")
+      await editor.flush()
+
+      // Galleries only take images, so this drop cannot be honoured. It should
+      // leave the document alone rather than swallow the dragged attachment.
+      await assertNoGallery(page)
+      await expect(page.locator("figure.attachment")).toHaveCount(2)
+    })
   })
 
   test.describe("Within-gallery reorder", () => {
