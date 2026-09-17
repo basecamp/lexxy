@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — Content Specificity</title>
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    article img { border-radius: 0px; }
+    article figure { padding: 0px; }
+    article figcaption { padding: 0px; }
+    article span { font-style: normal; }
+  </style>
+</head>
+<body>
+  <article>
+    <div class="lexxy-content" id="overridden">
+      <p><span class="lexxy-content__italic" id="overridden-italic">Italic</span></p>
+
+      <figure class="attachment attachment--preview attachment--jpg" id="overridden-figure">
+        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="" id="overridden-image">
+        <figcaption class="attachment__caption" id="overridden-caption">Caption</figcaption>
+      </figure>
+    </div>
+  </article>
+
+  <div class="lexxy-content" id="untouched">
+    <p><span class="lexxy-content__italic" id="untouched-italic">Italic</span></p>
+
+    <figure class="attachment attachment--preview attachment--jpg" id="untouched-figure">
+      <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="" id="untouched-image">
+      <figcaption class="attachment__caption" id="untouched-caption">Caption</figcaption>
+    </figure>
+  </div>
+</body>
+</html>
