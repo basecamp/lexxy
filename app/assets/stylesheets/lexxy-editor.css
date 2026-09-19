@@ -1006,6 +1006,19 @@
       }
     }
 
+    .lexxy-floating-controls__group {
+      display: flex;
+    }
+
+    button[hidden] {
+      display: none;
+    }
+
+    .lexxy-attachment-toolbar__alternative-text {
+      aspect-ratio: auto;
+      padding-inline: 0.75ch;
+    }
+
     .lexxy-attachment-toolbar__remove:hover,
     .lexxy-attachment-toolbar__remove:focus-visible {
       background-color: var(--lexxy-color-red);
@@ -1179,5 +1192,77 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
 
   &[hidden] {
     display: none;
+  }
+}
+
+.lexxy-alternative-text-dialog {
+  background: var(--lexxy-color-canvas);
+  border: 1px solid var(--lexxy-color-ink-light);
+  border-radius: var(--lexxy-radius);
+  box-sizing: border-box;
+  color: var(--lexxy-color-ink);
+  font: inherit;
+  inline-size: min(28em, calc(100% - 2em));
+  inset: 0;
+  margin: auto;
+  max-block-size: calc(100% - 2em);
+  overflow: auto;
+  padding: 1.5em;
+
+  &::backdrop {
+    background: rgb(0 0 0 / 40%);
+  }
+
+  h2 {
+    font-size: 1.25em;
+    margin: 0;
+  }
+
+  p {
+    line-height: 1.5;
+  }
+
+  label {
+    display: block;
+    font-weight: bold;
+  }
+
+  textarea {
+    background: var(--lexxy-color-canvas);
+    border: 1px solid var(--lexxy-color-ink-light);
+    border-radius: var(--lexxy-radius);
+    box-sizing: border-box;
+    color: inherit;
+    display: block;
+    font: inherit;
+    font-weight: normal;
+    inline-size: 100%;
+    margin-block-start: 0.5em;
+    padding: 0.5em;
+    @supports (resize: vertical) {
+      resize: vertical;
+    }
+  }
+
+  button {
+    background: var(--lexxy-color-canvas);
+    border: 1px solid var(--lexxy-color-ink-light);
+    border-radius: var(--lexxy-radius);
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    padding: 0.5em 1em;
+  }
+
+  :is(button, textarea):focus-visible {
+    outline: 2px solid var(--lexxy-focus-ring-color);
+    outline-offset: 2px;
+  }
+
+  .lexxy-alternative-text-dialog__actions {
+    display: flex;
+    gap: 0.5em;
+    justify-content: end;
+    margin-block-start: 1em;
   }
 }

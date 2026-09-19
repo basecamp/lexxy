@@ -2,6 +2,8 @@ import { $getNodeByKey, $setSelection, COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND }
 
 import { $createNodeSelectionWith, registerLabelledDecoratorSelection } from "../helpers/lexical_helper"
 import { $isImageGalleryNode } from "../nodes/image_gallery_node"
+import AlternativeTextDialog from "../editor/attachments/alternative_text_dialog"
+import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { createElement } from "../helpers/html_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
@@ -13,6 +15,8 @@ const DELETE_ICON = `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"
 export class AttachmentToolbar extends HTMLElement {
   #listeners = new ListenerBin()
   #buttons = []
+  #alternativeTextButton
+  #alternativeTextDialog
   #currentNodeKey = null
   #reflowObserver = new ResizeObserver(() => this.#updatePosition())
   #presentationObserver = new MutationObserver(() => this.#refresh())
@@ -39,6 +43,7 @@ export class AttachmentToolbar extends HTMLElement {
     this.#listeners.dispose()
     this.#reflowObserver.disconnect()
     this.#presentationObserver.disconnect()
+    this.#alternativeTextDialog?.dispose()
   }
 
   get #editor() {
@@ -54,6 +59,8 @@ export class AttachmentToolbar extends HTMLElement {
 
     const container = createElement("div", { className: "lexxy-floating-controls__group" })
     container.appendChild(this.#createRemoveButton())
+    container.appendChild(this.#createAlternativeTextButton())
+    this.#alternativeTextDialog = new AlternativeTextDialog(this.#editorElement)
     this.appendChild(container)
 
     this.#buttons = Array.from(this.querySelectorAll("button"))
@@ -73,6 +80,22 @@ export class AttachmentToolbar extends HTMLElement {
     button.innerHTML = DELETE_ICON
     this.#listeners.track(registerEventListener(button, "click", () => this.#removeSelectedNode()))
     return button
+  }
+
+  #createAlternativeTextButton() {
+    this.#alternativeTextButton = createElement("button", {
+      type: "button",
+      className: "lexxy-attachment-toolbar__alternative-text",
+      textContent: "ALT",
+      ariaLabel: "Alternative text",
+      title: "Alternative text",
+      ariaHasPopup: "dialog",
+      tabIndex: -1
+    })
+    this.#listeners.track(registerEventListener(this.#alternativeTextButton, "click", () => {
+      this.#alternativeTextDialog.open(this.#currentNodeKey)
+    }))
+    return this.#alternativeTextButton
   }
 
   #removeSelectedNode() {
@@ -158,6 +181,7 @@ export class AttachmentToolbar extends HTMLElement {
 
     this.#editor.getEditorState().read(() => {
       const node = $getNodeByKey(nodeKey)
+      this.#alternativeTextButton.hidden = !($isActionTextAttachmentNode(node) && node.getType() === "action_text_attachment" && node.isPreviewableAttachment)
       this.dataset.nodeType = node.getType()
       this.dataset.presentation = this.#presentationOf(node, element)
 

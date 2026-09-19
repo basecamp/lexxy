@@ -10,6 +10,28 @@ Lexxy uploads files using Active Storage's Direct Upload protocol and renders pr
 
 See [attachment hotkeys](hotkeys.html#attachments) for editing captions and arranging galleries with the keyboard.
 
+## Alternative text
+
+Select an image or an attachment with an image preview, then choose **ALT** in its attachment toolbar. Enter a description and choose **Save**. Open the same dialog to change the description or clear the field to remove it. **Cancel** or **Escape** discards your changes.
+
+With the attachment selected, press **Alt+F10** to focus its toolbar, then use the arrow keys to reach **Alternative text** and press **Enter**. The dialog returns focus to its button when it closes. Press **Escape** again to return to the editor. Description changes support undo and redo.
+
+Alternative text describes the image for people who cannot see it. It is independent of the visible caption, including when an image is pasted from another page. New uploads start without a description; Lexxy does not generate one from the filename.
+
+### Action Text support
+
+Saving and rendering descriptions requires Action Text's `alt` attachment support ([rails/rails#58337](https://github.com/rails/rails/pull/58337)). Earlier Rails versions discard this attribute when rebuilding attachments. Updating Lexxy alone does not add this support to those versions.
+
+If your application overrides `app/views/active_storage/blobs/_blob.html.erb`, pass the attachment's alternative text to `image_tag`, as the updated Rails partial does:
+
+```erb
+<%= image_tag blob.representation(resize_to_limit: [ 1024, 768 ]), alt: blob.try(:alt) %>
+```
+
+Lexxy also supplies a remote image partial that renders `remote_image.try(:alt)`. Applications overriding `app/views/action_text/attachables/_remote_image.html.erb` should pass that value to `image_tag` too.
+
+Clearing the description removes the authored alternative text. Action Text renders images without an `alt` attribute when no description is present; this is not a way to mark an image as decorative.
+
 ## Upload response
 
 After a Direct Upload completes, Lexxy reads the following fields from the blob JSON returned by the upload endpoint:

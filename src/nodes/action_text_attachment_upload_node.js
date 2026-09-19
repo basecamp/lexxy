@@ -265,7 +265,6 @@ class AttachmentNodeConversion {
     const { blob } = this
     return {
       sgid: blob.attachable_sgid,
-      altText: blob.filename,
       contentType: blob.content_type,
       fileName: blob.filename,
       fileSize: blob.byte_size,
