@@ -133,10 +133,8 @@ export class AttachmentToolbar extends HTMLElement {
     }
   }
 
-  // A preview that fails to load swaps its figure to a file without a Lexical
-  // update, so the figure's class list is watched directly. The node can also
-  // replace its whole figure while keeping its key, so the watch follows the
-  // element rather than the key.
+  // Failed previews change presentation without a Lexical update, and a node
+  // can replace its figure without changing its key.
   #watchPresentation(nodeKey) {
     const element = this.#editor.getElementByKey(nodeKey)
     if (element !== this.#observedElement) {
@@ -151,9 +149,6 @@ export class AttachmentToolbar extends HTMLElement {
     this.#listeners.track(registerEventListener(this.#editorElement, "scroll", () => this.#updatePosition(), { capture: true, passive: true }))
   }
 
-  // The stylesheet places the toolbar by what is selected: a chip sitting in a
-  // line of text, a thin divider and a full-size figure each want the button
-  // somewhere else, and host apps style their own attachment kinds the same way.
   #describeNode(nodeKey) {
     const element = this.#editor.getElementByKey(nodeKey)
 
@@ -209,8 +204,6 @@ export class AttachmentToolbar extends HTMLElement {
     }
   }
 
-  // A chip at the end of a line has no room after it; let the stylesheet place the
-  // toolbar before the chip instead.
   #flipWhenOverflowing(editorRect) {
     this.removeAttribute("data-overflow")
     if (this.getBoundingClientRect().right > editorRect.right) {

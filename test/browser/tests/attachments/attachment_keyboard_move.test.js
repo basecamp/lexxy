@@ -115,8 +115,7 @@ test.describe("Attachment keyboard move", () => {
   })
 })
 
-// Built via the API instead of setValue: HTML parsing separates adjacent top-level
-// decorators with provisional paragraphs inconsistently across browsers.
+// HTML parsing inserts paragraphs between adjacent decorators inconsistently across browsers.
 async function appendAdjacentAttachments(editor, attachments) {
   await editor.locator.evaluate((el, attachments) => {
     return new Promise((resolve) => {

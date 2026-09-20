@@ -987,7 +987,7 @@
       display: none;
     }
 
-    /* A divider is thinner than the button, so hang off its middle rather than its top edge. */
+    /* The divider is thinner than the button. */
     &[data-node-type="horizontal_divider"] {
       --button-size: 1.8lh;
 
@@ -995,8 +995,6 @@
       transform: translate(calc(-100% - 0.5ch), -50%);
     }
 
-    /* Chips in a line of text (mentions and the like): sit just past the chip, centred on its line.
-       With no room after the chip, tuck into its end instead so the button stays inside the editor. */
     &[data-presentation="inline"] {
       --button-size: 1.6lh;
 
@@ -1140,9 +1138,7 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
 }
 
 /* --------------------------------------------------------------------------
-/* Visually-hidden content kept reachable by assistive tech: announcements
- * from <lexxy-live-region>, the fake selection that gives screen readers a
- * label to read when a decorator is selected. */
+/* Screen readers need access to announcements and selection labels. */
 :where(lexxy-live-region, .lexxy-fake-selection) {
   block-size: 1px;
   border: 0;
@@ -1155,8 +1151,7 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
   white-space: nowrap;
 }
 
-/* The DOM Selection API needs user-select:text to park a range on the fake
- * selection span while it stays invisible to sighted users. */
+/* The DOM Selection API requires selectable text. */
 .lexxy-fake-selection {
   -webkit-user-select: text;
 
@@ -1166,7 +1161,7 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
 }
 
 
-/* Keep the active caption outside the editor's textbox in the accessibility tree. */
+/* Screen readers need the caption field outside the editor's textbox. */
 :where(.lexxy-caption-editor) {
   position: absolute;
   z-index: 2;

@@ -2,40 +2,12 @@ import { $getSelection, $isDecoratorNode, $isNodeSelection, $isRangeSelection, B
 import { announceFromEditor } from "../../helpers/lexical_helper"
 import { ListenerBin } from "../../helpers/listener_helper"
 
-// Decorators render as <figure contenteditable="false">.
-// Two screen-reader quirks force us to flip DOM hints on the figure only while
-// the caret is at it or one keystroke from crossing it, and revert them as
-// soon as the caret moves away:
+// Using a mention's label as avatar alt text can interrupt line-by-line reading,
+// but character navigation needs it near the caret to announce the mention.
 //
-// 1. INLINE IMAGE-BACKED FIGURES. In focus mode, when the user reads
-//    line by line (arrow up/down), the screen reader stops the moment it
-//    hits an <img> with alt. So we can't set the avatar's alt permanently
-//    — every line containing a mention would cut off there. We leave the
-//    alt empty by default and let the visible name span carry the label, so
-//    line-by-line reading flows through. We only set alt = label right
-//    before the caret can cross the figure, so character-by-character
-//    navigation announces the mention cleanly. As soon as the caret moves
-//    away we restore the authored alt (empty for decorative avatars).
-//
-// 2. GALLERY IMAGES. Stepping the caret past a gallery image's figcaption
-//    character by character only reads the FIRST LETTER of the caption, no
-//    matter what we put on the figcaption (an aria-label there isn't read
-//    either). The workaround is to push the caption through the live region
-//    at the moment the caret arrives. To stop that being announced doubled
-//    with the first letter the screen reader is reading anyway, we aria-hide
-//    the figcaption while the caret is there — and remove the aria-hidden as
-//    soon as the caret leaves so browse mode reads the figcaption normally.
-//
-// A decorator opts in by exposing:
-//
-//   - get isAnnounceable          — truthy means we manage it
-//   - setupAnnouncement(figure)   — flip into announcement-ready form
-//   - teardownAnnouncement(figure) — flip back to natural
-//
-// And, for figures that need the live-region push (case 2):
-//
-//   - get shouldAnnounceLabel
-//   - get label
+// Character navigation reads only the first letter of gallery captions, even
+// with aria-label. A live announcement needs the caption temporarily hidden to
+// avoid duplicate speech; browse mode still needs the caption when we leave.
 export class DecoratorAnnouncement {
   #editor
   #listeners = new ListenerBin()
@@ -104,8 +76,6 @@ export class DecoratorAnnouncement {
   }
 }
 
-// The decorator picked up by the current NodeSelection — a single
-// participating decorator that the user just landed on. Null otherwise.
 function decoratorSelectedBy(selection) {
   if ($isNodeSelection(selection)) {
     const nodes = selection.getNodes()
@@ -119,13 +89,8 @@ function decoratorSelectedBy(selection) {
   }
 }
 
-// The decorator one keystroke away from the anchor on either side: the anchor's
-// text node's next sibling when the offset is within one character of its end,
-// its previous sibling when within one character of its start, or the child on
-// either side of an element anchor's offset. The 1-character buffer gives the
-// screen reader time to pick up the freshly setup label before the caret steps
-// onto the figure, whichever way it is travelling. When both neighbours qualify,
-// as in the single space between two chips, the nearer one wins.
+// Screen readers need the label one character early to announce it as the caret
+// crosses the figure.
 function decoratorBesideAnchor(selection) {
   if ($isRangeSelection(selection) && selection.isCollapsed()) {
     const anchor = selection.anchor

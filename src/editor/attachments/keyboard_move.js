@@ -39,8 +39,7 @@ export class AttachmentKeyboardMove {
     return false
   }
 
-  // A node selection doesn't scroll the way a caret does, so a moved attachment
-  // can leave the viewport while it is still the thing being moved.
+  // Node selections don't scroll into view automatically like a caret does.
   #keepInView(node) {
     const key = node.getKey()
     cancelAnimationFrame(this.#scrollFrame)

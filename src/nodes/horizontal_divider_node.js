@@ -31,9 +31,7 @@ export class HorizontalDividerNode extends DecoratorNode {
     super(key)
   }
 
-  // The figure wraps the <hr> only for layout; assistive tech reads the
-  // separator role on the <hr> itself and doesn't need a figure boundary
-  // around it.
+  // The hr already provides separator semantics; a figure boundary would be redundant.
   createDOM() {
     const figure = createElement("figure", { className: "horizontal-divider", role: "presentation" })
     figure.appendChild(createElement("hr"))

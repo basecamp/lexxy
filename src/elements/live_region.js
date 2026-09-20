@@ -27,8 +27,6 @@ export class LiveRegion extends HTMLElement {
     this.replaceChildren()
   }
 
-  // Polite announcements wait for whatever the screen reader is already saying,
-  // such as the native description of a control that just took focus.
   announce(message, { transient = false, polite = false } = {}) {
     if (message) {
       if (typeof document.ariaNotify === "function") {

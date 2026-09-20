@@ -109,8 +109,7 @@ test.describe("Attachment caption", () => {
     const avatar = editor.content.locator("action-text-attachment[content-type='application/vnd.test.mention'] img")
     await expect(avatar).toHaveAttribute("alt", "")
 
-    // Home and End behave differently across browsers on a Mac, so place the caret by
-    // clicking just inside the paragraph's edges instead.
+    // Home and End behave differently across browsers on a Mac.
     const paragraph = editor.content.locator("p")
     const paragraphBox = await paragraph.boundingBox()
     const clickAtEnd = () => paragraph.click({ position: { x: paragraphBox.width - 2, y: paragraphBox.height / 2 } })

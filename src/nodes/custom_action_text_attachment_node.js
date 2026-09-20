@@ -120,8 +120,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     }
   }
 
-  // Tag the figure's image (if any) so setupAnnouncement can find it later
-  // without re-scanning a subtree that other modules may have added images to.
+  // Images injected later by other modules must not become the announcement image.
   #tagLabelImage(figure) {
     const image = figure.querySelector("img")
     if (image) {
@@ -130,10 +129,8 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     }
   }
 
-  // Tag the deepest spans whose text already matches the label so they can be
-  // aria-hidden during announcement and the label isn't spoken twice. Tagged
-  // at createDOM time so spans injected later (e.g. by the fake selection)
-  // aren't mistakenly silenced.
+  // Duplicate labels would be spoken twice. Only authored spans should be silenced,
+  // since the fake selection injects its own label later.
   #tagLabelMirrors(figure) {
     const trimmedLabel = this.label.trim()
     const matches = [ ...figure.querySelectorAll("span") ].filter((span) => span.textContent.trim() === trimmedLabel)

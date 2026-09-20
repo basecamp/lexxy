@@ -2,11 +2,8 @@ import { createElement } from "../../helpers/html_helper"
 import { registerLabelledDecoratorSelection } from "../../helpers/lexical_helper"
 import { ListenerBin } from "../../helpers/listener_helper"
 
-// Lexical clears the DOM range whenever a NodeSelection commits. With no range
-// anchored anywhere meaningful, a screen reader in focus mode reads whatever
-// the browser leaves selected, often stray characters next to the attachment
-// instead of the attachment itself. Parks the range on a visually hidden span
-// carrying the decorator's label so the announcement matches what was selected.
+// Lexical clears the DOM range on NodeSelection, leaving screen readers in focus
+// mode to read stray adjacent characters unless we provide a labelled range.
 export class AttachmentFakeSelection {
   #editor
   #listeners = new ListenerBin()
@@ -52,9 +49,7 @@ export class AttachmentFakeSelection {
     }
   }
 
-  // Only the contenteditable itself: a control inside a decorator (a caption, a
-  // host app's play button) owns the focus and the screen reader's cursor while
-  // it is focused, and parking the range would pull the cursor away from it.
+  // Parking the range while a nested control is focused steals its screen reader cursor.
   get #isEditorFocused() {
     const root = this.#editor.getRootElement()
     return root != null && document.activeElement === root

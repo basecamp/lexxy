@@ -148,7 +148,6 @@ function $collapseAtGalleryEdge(anchor, backwards) {
   }
 }
 
-// Tab from a selected attachment moves focus into the caption textarea.
 function $focusCaptionFromSelectedAttachment() {
   return (event) => {
     if (!event.shiftKey) {
