@@ -55,7 +55,7 @@ export class LiveRegion extends HTMLElement {
 
   #announceAddition(message, region) {
     const announcement = createElement("div", { textContent: message })
-    region.replaceChildren(announcement)
+    region.appendChild(announcement)
 
     const timeout = setTimeout(() => {
       announcement.remove()

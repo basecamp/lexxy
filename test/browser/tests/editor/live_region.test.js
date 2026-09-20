@@ -15,33 +15,35 @@ test.describe("Live region", () => {
     await expect(additions).toHaveAttribute("aria-live", "assertive")
     expect(await additions.getAttribute("aria-atomic")).toBeNull()
 
-    const repeatedAnnouncementsAreDistinct = await region.evaluate((element) => {
+    await pauseClock(page)
+    await region.evaluate((element) => {
       element.announce("Repeated")
-      const additions = element.querySelector("[aria-relevant='additions']")
-      const firstAnnouncement = additions.lastElementChild
       element.announce("Repeated")
-      return firstAnnouncement && firstAnnouncement !== additions.lastElementChild
     })
 
-    expect(repeatedAnnouncementsAreDistinct).toBe(true)
+    await expect(additions.locator(":scope > *")).toHaveText([ "Repeated", "Repeated" ])
   })
 
-  test("replaces an earlier announcement immediately", async ({ page }) => {
-    const region = page.locator("lexxy-live-region")
-    const additions = region.locator("[aria-live='assertive'][aria-relevant='additions']")
-    await pauseClock(page)
+  for (const channel of [ "assertive", "polite" ]) {
+    test(`keeps consecutive ${channel} announcements until each expires`, async ({ page }) => {
+      const region = page.locator("lexxy-live-region")
+      const additions = region.locator(`[aria-live='${channel}'][aria-relevant='additions']`)
+      const polite = channel === "polite"
+      await pauseClock(page)
 
-    await region.evaluate((element) => element.announce("First"))
-    await page.clock.runFor(100)
-    await region.evaluate((element) => element.announce("Second"))
+      await region.evaluate((element, polite) => element.announce("First", { polite }), polite)
+      await page.clock.runFor(100)
+      await region.evaluate((element, polite) => element.announce("Second", { polite }), polite)
 
-    await expect(additions.locator(":scope > *")).toHaveCount(1)
-    await expect(additions).toHaveText("Second")
-    await page.clock.runFor(900)
-    await expect(additions).toHaveText("Second")
-    await page.clock.runFor(100)
-    await expect(additions).toBeEmpty()
-  })
+      await expect(additions.locator(":scope > *")).toHaveText([ "First", "Second" ])
+      await page.clock.runFor(899)
+      await expect(additions.locator(":scope > *")).toHaveText([ "First", "Second" ])
+      await page.clock.runFor(1)
+      await expect(additions.locator(":scope > *")).toHaveText([ "Second" ])
+      await page.clock.runFor(100)
+      await expect(additions).toBeEmpty()
+    })
+  }
 
   test("an earlier cleanup does not interrupt the latest announcement", async ({ page }) => {
     const region = page.locator("lexxy-live-region")
