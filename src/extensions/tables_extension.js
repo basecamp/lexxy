@@ -21,7 +21,7 @@ import { mergeRegister } from "@lexical/utils"
 export class TablesExtension extends LexxyExtension {
 
   get enabled() {
-    return this.editorElement.supportsRichText
+    return this.editorElement.supportsTables
   }
 
   get allowedElements() {
