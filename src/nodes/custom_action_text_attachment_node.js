@@ -27,10 +27,11 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
         return {
           conversion: (attachment) => {
-            // Preserve initial space if present since Lexical removes it
+            // Preserve the space Lexical strips next to the attachment. ASCII only:
+            // \s also matches NBSP, which Lexical keeps, so it would add a phantom space.
             const nodes = []
             const previousSibling = attachment.previousSibling
-            if (previousSibling && previousSibling.nodeType === Node.TEXT_NODE && /\s$/.test(previousSibling.textContent)) {
+            if (previousSibling && /[ \t\r\n]$/.test(previousSibling.textContent)) {
               nodes.push($createTextNode(" "))
             }
 
@@ -44,7 +45,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
             }))
 
             const nextSibling = attachment.nextSibling
-            if (nextSibling && nextSibling.nodeType === Node.TEXT_NODE && /^\s/.test(nextSibling.textContent)) {
+            if (nextSibling && /^[ \t\r\n]/.test(nextSibling.textContent)) {
               nodes.push($createTextNode(" "))
             }
 
