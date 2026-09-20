@@ -401,7 +401,6 @@ export class LexicalEditorElement extends HTMLElement {
     this.#registerFileAcceptFilter()
     this.#attachDebugHooks()
     this.#attachToolbar()
-    this.#resetBeforeTurboCaches()
 
     this.#setInternalFormValue(this.value, { suppressEvent: true })
     this.#synchronizeWithChanges()
@@ -418,7 +417,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #createEditor() {
-    this.editorContentElement ||= this.#createEditorContentElement()
+    this.editorContentElement ||= this.#findOrCreateEditorContentElement()
     this.appendChild(this.editorContentElement)
 
     const editor = buildEditorFromExtensions({
@@ -466,6 +465,11 @@ export class LexicalEditorElement extends HTMLElement {
     }
 
     return nodes
+  }
+
+  // A restored Turbo snapshot already carries the content element; Lexical empties it on mount.
+  #findOrCreateEditorContentElement() {
+    return this.querySelector(":scope > .lexxy-editor__content") ?? this.#createEditorContentElement()
   }
 
   #createEditorContentElement() {
@@ -530,18 +534,6 @@ export class LexicalEditorElement extends HTMLElement {
       .clear()
       .selectEnd()
       .insertNodes(this.#parseHtmlIntoLexicalNodes(html, { editor }))
-  }
-
-  #resetBeforeTurboCaches() {
-    this.#listeners.track(
-      registerEventListener(document, "turbo:before-cache", this.#handleTurboBeforeCache)
-    )
-  }
-
-  #handleTurboBeforeCache = (event) => {
-    if (!this.closest("[data-turbo-permanent]")) {
-      this.#reset()
-    }
   }
 
   #synchronizeWithChanges() {

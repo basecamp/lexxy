@@ -283,7 +283,7 @@ export default class Contents {
   }
 
   uploadFiles(files, { selectLast } = {}) {
-    if (!this.editorElement) return // Disposed (e.g. on turbo:before-cache); a late drop can still land here
+    if (!this.editorElement) return // Disposed (e.g. on disconnect); a late drop can still land here
 
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
