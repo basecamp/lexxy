@@ -21,10 +21,7 @@ test.describe("Attachments", () => {
       "src",
       /\/rails\/active_storage\/blobs\/mock-signed-id-\d+\/example\.png/,
     )
-    await expect(figure.locator("figcaption textarea")).toHaveAttribute(
-      "placeholder",
-      "example.png",
-    )
+    await expect(figure.locator("figcaption")).toHaveText("example.png")
 
     await expect(page.locator("[data-event='lexxy:upload-start']")).toHaveCount(1)
     await expect(page.locator("[data-event='lexxy:upload-end']")).toHaveCount(1)
@@ -133,7 +130,8 @@ test.describe("Attachments", () => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
 
-    const caption = page.locator("figure.attachment figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await page.locator("figure.attachment figcaption").click()
     await expect(caption).toBeVisible({ timeout: 10_000 })
 
     await caption.click()
@@ -148,16 +146,14 @@ test.describe("Attachments", () => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
 
-    const caption = page.locator("figure.attachment figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await page.locator("figure.attachment figcaption").click()
     await expect(caption).toBeVisible({ timeout: 10_000 })
 
     await caption.click()
     await caption.pressSequentially("My caption")
 
-    // Blur the caption first to trigger the save, then click editor content
-    await caption.evaluate((el) => el.blur())
-    await editor.flush()
-    await editor.content.click()
+    await editor.content.locator("p").last().click()
 
     await assertEditorHasFocus(editor)
     await assertEditorValueContains(editor, 'caption="My caption"')
@@ -167,15 +163,13 @@ test.describe("Attachments", () => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
 
-    const caption = page.locator("figure.attachment figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await page.locator("figure.attachment figcaption").click()
     await expect(caption).toBeVisible({ timeout: 10_000 })
 
     await caption.click()
     await caption.pressSequentially("My caption")
 
-    // Blur the caption first to trigger the save, then press Tab
-    await caption.evaluate((el) => el.blur())
-    await editor.flush()
     await caption.press("Tab")
 
     await assertEditorValueContains(editor, 'caption="My caption"')
@@ -188,7 +182,8 @@ test.describe("Attachments", () => {
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
-    const caption = figure.locator("figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await figure.locator("figcaption").click()
     await caption.click()
     await caption.pressSequentially("Hello world")
 
@@ -209,7 +204,8 @@ test.describe("Attachments", () => {
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
-    const caption = figure.locator("figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await figure.locator("figcaption").click()
     await caption.click()
     await caption.pressSequentially("Cut me")
 
@@ -352,7 +348,8 @@ test.describe("Attachments", () => {
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
-    const caption = figure.locator("figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await figure.locator("figcaption").click()
     await caption.click()
     await caption.pressSequentially("Copy me")
 

@@ -113,7 +113,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
   teardownAnnouncement(figure) {
     const labelImage = figure.querySelector("[data-lexxy-label-image]")
-    if (labelImage) labelImage.alt = ""
+    if (labelImage) labelImage.alt = labelImage.dataset.lexxyOriginalAlt
 
     for (const span of figure.querySelectorAll("[data-lexxy-label-mirror]")) {
       span.removeAttribute("aria-hidden")
@@ -124,7 +124,10 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   // without re-scanning a subtree that other modules may have added images to.
   #tagLabelImage(figure) {
     const image = figure.querySelector("img")
-    if (image) image.setAttribute("data-lexxy-label-image", "")
+    if (image) {
+      image.setAttribute("data-lexxy-label-image", "")
+      image.dataset.lexxyOriginalAlt = image.alt
+    }
   }
 
   // Tag the deepest spans whose text already matches the label so they can be

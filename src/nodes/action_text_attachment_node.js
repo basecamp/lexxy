@@ -1,7 +1,6 @@
 import Lexxy from "../config/lexxy"
-import { $getEditor, $getNearestRootOrShadowRoot, $setSelection, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
+import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
-import { $createNodeSelectionWith, announceFromEditor } from "../helpers/lexical_helper"
 import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
 import { parseBoolean } from "../helpers/string_helper"
 import { REWRITE_HISTORY_COMMAND } from "../extensions/rewritable_history_extension"
@@ -138,7 +137,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     const figcaption = figure.querySelector("figcaption")
     if (figcaption) {
       for (const child of figcaption.children) {
-        if (child.tagName !== "TEXTAREA") child.setAttribute("aria-hidden", "true")
+        child.setAttribute("aria-hidden", "true")
       }
     }
   }
@@ -147,7 +146,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     const figcaption = figure.querySelector("figcaption")
     if (figcaption) {
       for (const child of figcaption.children) {
-        if (child.tagName !== "TEXTAREA") child.removeAttribute("aria-hidden")
+        child.removeAttribute("aria-hidden")
       }
     }
   }
@@ -160,9 +159,8 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       image.alt = this.altText
     }
 
-    const caption = dom.querySelector("figcaption textarea")
-    if (caption && prevNode.caption !== this.caption) {
-      caption.value = this.caption
+    if (prevNode.caption !== this.caption) {
+      dom.querySelector("figcaption")?.toggleAttribute("data-placeholder", !this.caption)
     }
 
     const captionText = dom.querySelector("figcaption .attachment__caption-text")
@@ -250,11 +248,11 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       return `${this.caption}. ${this.altText}`
     }
 
-    return this.captionLabel
+    return this.caption || this.altText || this.fileName || ""
   }
 
   get captionLabel() {
-    return this.caption || this.altText || this.fileName || ""
+    return this.caption || this.fileName || ""
   }
 
   get isVideo() {
@@ -262,12 +260,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   focusCaption() {
-    const textarea = this.editor.getElementByKey(this.getKey())?.querySelector("figcaption textarea")
-    if (textarea) {
-      textarea.ariaHidden = false
-      textarea.focus()
-    }
-    return textarea != null
+    return this.editor.getRootElement()?.closest("lexxy-editor")?.captionEditor.open(this.getKey()) ?? false
   }
 
   #createDOMForPendingPreview() {
@@ -460,79 +453,16 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #createEditableCaption() {
-    const caption = createElement("figcaption", { className: "attachment__caption" })
-
+    const caption = createElement("figcaption", { className: "attachment__caption attachment__caption--editable" })
     const text = createElement("span", { className: "attachment__caption-text", textContent: this.captionLabel })
-    const input = createElement("textarea", {
-      value: this.caption,
-      placeholder: this.fileName,
-      ariaLabel: this.isVideo ? "Video caption" : "Image caption",
-      ariaHidden: "true",
-      tabIndex: -1,
-      rows: "1"
-    })
-
-    input.addEventListener("focusin", () => {
-      input.placeholder = "Add caption..."
-      input.ariaHidden = false
-      // VoiceOver keeps its cursor on the editor's own textbox and says nothing
-      // when focus moves to a control nested inside it, so say it ourselves.
-      announceFromEditor(this.editor, input.ariaLabel, { polite: true })
-    })
-    input.addEventListener("blur", (event) => {
-      input.ariaHidden = true
-      this.#handleCaptionInputBlurred(event)
-    })
-    input.addEventListener("keydown", (event) => this.#handleCaptionInputKeydown(event))
-    input.addEventListener("copy", (event) => event.stopPropagation())
-    input.addEventListener("cut", (event) => event.stopPropagation())
-    input.addEventListener("paste", (event) => event.stopPropagation())
-
     caption.appendChild(text)
-    caption.appendChild(input)
-
-    return caption
-  }
-
-  #handleCaptionInputBlurred(event) {
-    this.#updateCaptionValueFromInput(event.target)
-  }
-
-  #updateCaptionValueFromInput(input) {
-    input.placeholder = this.fileName
-    this.editor.update(() => {
-      this.getWritable().caption = input.value
+    caption.toggleAttribute("data-placeholder", !this.caption)
+    caption.addEventListener("mousedown", event => event.preventDefault())
+    caption.addEventListener("click", event => {
+      event.stopPropagation()
+      this.focusCaption()
     })
-  }
-
-  #handleCaptionInputKeydown(event) {
-    if (event.key === "Enter") {
-      event.preventDefault()
-      event.target.blur()
-
-      this.editor.update(() => {
-        // Place the cursor after the current image
-        this.selectNext(0, 0)
-      }, {
-        tag: HISTORY_MERGE_TAG
-      })
-    } else if (event.key === "Escape") {
-      event.preventDefault()
-      event.target.blur()
-
-      this.editor.getRootElement()?.focus({ preventScroll: true })
-
-      this.editor.update(() => {
-        $setSelection($createNodeSelectionWith(this))
-      }, {
-        tag: HISTORY_MERGE_TAG
-      })
-    }
-
-    // Stop all keydown events from bubbling to the Lexical root element.
-    // The caption textarea is outside Lexical's content model and should
-    // handle its own keyboard events natively (Ctrl+A, Ctrl+C, Ctrl+X, etc.).
-    event.stopPropagation()
+    return caption
   }
 }
 

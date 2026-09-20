@@ -17,6 +17,7 @@ const pdfAttachment = (attrs = {}) => {
 
 test.describe("Non-previewable attachment", () => {
   test.beforeEach(async ({ page }) => {
+    await page.route("**/broken-preview.png", route => route.abort())
     await page.goto("/attachments-enabled.html")
     await page.waitForSelector("lexxy-editor[connected]")
   })

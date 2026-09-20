@@ -357,42 +357,27 @@
     }
   }
 
-  .attachment__caption {
-    textarea {
-      background: transparent;
-      block-size: fit-content;
-      border: 0;
-      border-radius: var(--lexxy-radius);
-      box-sizing: border-box;
-      color: inherit;
+  .attachment__caption--editable {
+    box-sizing: border-box;
+    cursor: text;
+
+    .attachment__caption-text {
       display: block;
-      font-size: inherit;
-      font-family: inherit;
-      inline-size: 100%;
-      max-inline-size: 100%;
-      padding: 0;
+      min-block-size: 1lh;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
       text-align: center;
-
-      @supports (resize: none) {
-        resize: none;
-      }
-
-      &:focus {
-        background: var(--lexxy-color-canvas);
-        outline: 0;
-      }
-
-      &:placeholder-shown {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      @supports (field-sizing: content) {
-        field-sizing: content;
-        inline-size: 100%;
-      }
     }
+
+    &[data-placeholder] .attachment__caption-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .attachment__caption--editing .attachment__caption-text {
+    display: none;
   }
 }
 
@@ -1157,9 +1142,8 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
 /* --------------------------------------------------------------------------
 /* Visually-hidden content kept reachable by assistive tech: announcements
  * from <lexxy-live-region>, the fake selection that gives screen readers a
- * label to read when a decorator is selected, and the caption text that
- * mirrors the editable textarea in browse mode. */
-:where(lexxy-live-region, .lexxy-fake-selection, .attachment__caption-text) {
+ * label to read when a decorator is selected. */
+:where(lexxy-live-region, .lexxy-fake-selection) {
   block-size: 1px;
   border: 0;
   clip-path: inset(50%);
@@ -1178,5 +1162,27 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
 
   @supports (user-select: text) {
     user-select: text;
+  }
+}
+
+
+/* Keep the active caption outside the editor's textbox in the accessibility tree. */
+:where(.lexxy-caption-editor) {
+  position: absolute;
+  z-index: 2;
+  box-sizing: border-box;
+  background: var(--lexxy-color-canvas);
+  border: 0;
+  border-radius: var(--lexxy-radius);
+  outline: 0;
+  padding: 0;
+  overflow: hidden;
+
+  @supports (resize: none) {
+    resize: none;
+  }
+
+  &[hidden] {
+    display: none;
   }
 }

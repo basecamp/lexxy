@@ -23,9 +23,8 @@ test.describe("Attachment alternative text", () => {
 
       const figure = page.locator("figure.attachment").nth(1)
       await expect(figure).not.toHaveClass(/node--selected/)
-      await expect(figure.locator("textarea")).toHaveValue(caption)
       await expect(figure.locator("img")).toHaveAttribute("alt", alt)
-      await expect(figure.locator(".attachment__caption-text")).toHaveText(caption || alt || "canoe.png")
+      await expect(figure.locator(".attachment__caption-text")).toHaveText(caption || "canoe.png")
 
       await selectAttachment(figure)
       await editor.focus()
@@ -40,7 +39,6 @@ test.describe("Attachment alternative text", () => {
       await editor.flush()
 
       expect(await page.evaluate(() => window.__lexxyAriaNotifications)).toEqual([ announcement ])
-      await expect(figure.locator("textarea")).toHaveValue(caption)
     })
   }
 
@@ -61,7 +59,7 @@ test.describe("Attachment alternative text", () => {
       await editor.flush()
 
       await expect(page.locator("figure.attachment img")).toHaveAttribute("alt", alt)
-      await expect(page.locator("figure.attachment textarea")).toHaveValue("On the river")
+      await expect(page.locator("figure.attachment figcaption")).toHaveText("On the river")
     }
   })
 })

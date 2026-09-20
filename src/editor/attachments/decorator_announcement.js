@@ -15,7 +15,7 @@ import { ListenerBin } from "../../helpers/listener_helper"
 //    line-by-line reading flows through. We only set alt = label right
 //    before the caret can cross the figure, so character-by-character
 //    navigation announces the mention cleanly. As soon as the caret moves
-//    away we put the alt back to empty.
+//    away we restore the authored alt (empty for decorative avatars).
 //
 // 2. GALLERY IMAGES. Stepping the caret past a gallery image's figcaption
 //    character by character only reads the FIRST LETTER of the caption, no
@@ -59,6 +59,11 @@ export class DecoratorAnnouncement {
   }
 
   #updateAnnouncement = () => {
+    if (document.activeElement !== this.#editor.getRootElement()) {
+      this.#teardownAnnouncement()
+      return
+    }
+
     this.#editor.getEditorState().read(() => {
       const selection = $getSelection()
       const selectedDecorator = decoratorSelectedBy(selection)

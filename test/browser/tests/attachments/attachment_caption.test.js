@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
-import { announcements, attachmentTag, selectAttachment, watchAnnouncements } from "../../helpers/attachment_helpers.js"
+import { attachmentTag, selectAttachment } from "../../helpers/attachment_helpers.js"
 
 test.describe("Attachment caption", () => {
   test.beforeEach(async ({ page }) => {
@@ -14,7 +14,8 @@ test.describe("Attachment caption", () => {
   test("Escape from caption restores attachment selection and editor focus", async ({ page, editor }) => {
     await editor.uploadFile("test/fixtures/files/example.png")
 
-    const caption = page.locator("figure.attachment figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await page.locator("figure.attachment figcaption").click()
     await expect(caption).toBeVisible({ timeout: 10_000 })
 
     await caption.click()
@@ -35,15 +36,15 @@ test.describe("Attachment caption", () => {
     await editor.focus()
     await page.keyboard.press("Tab")
 
-    await expect(figure.locator("figcaption textarea")).toBeFocused()
+    await expect(page.getByRole("textbox", { name: "Image caption", exact: true })).toBeFocused()
   })
 
-  test("clearing the caption in the model syncs the textarea", async ({ page, editor }) => {
+  test("clearing the caption in the model updates the displayed text", async ({ page, editor }) => {
     await editor.setValue(attachmentTag("abc", "example.png", { caption: "Hello" }))
     await editor.flush()
 
-    const caption = page.locator("figure.attachment figcaption textarea")
-    await expect(caption).toHaveValue("Hello")
+    const caption = page.locator("figure.attachment figcaption")
+    await expect(caption).toHaveText("Hello")
 
     await editor.locator.evaluate((el) => {
       return new Promise((resolve) => {
@@ -56,7 +57,7 @@ test.describe("Attachment caption", () => {
     })
     await editor.flush()
 
-    await expect(caption).toHaveValue("")
+    await expect(caption).toHaveText("example.png")
   })
 
   test("preserves the caption text node when its label is unchanged", async ({ page, editor }) => {
@@ -137,10 +138,9 @@ test.describe("Attachment caption", () => {
     await expect(avatar).toHaveAttribute("alt", "Alice")
   })
 
-  test("announces the caption's name when it takes focus", async ({ page, editor }) => {
+  test("exposes the caption's name when it takes focus", async ({ page, editor }) => {
     await editor.setValue(`<p>Above</p>${attachmentTag("a", "one.png")}`)
     await editor.flush()
-    await watchAnnouncements(page)
 
     const figure = page.locator("figure.attachment").first()
     await expect(figure).toBeVisible()
@@ -148,7 +148,31 @@ test.describe("Attachment caption", () => {
     await editor.focus()
     await page.keyboard.press("Tab")
 
-    await expect(figure.locator("figcaption textarea")).toBeFocused()
-    await expect.poll(() => announcements(page)).toContain("Image caption")
+    await expect(page.getByRole("textbox", { name: "Image caption", exact: true })).toBeFocused()
+    await expect(page.getByRole("textbox", { name: "Image caption", exact: true })).toHaveAccessibleName("Image caption")
   })
+})
+
+test("restores an authored avatar description after announcing a mention", async ({ page, editor }) => {
+  await page.goto("/attachments.html")
+  await editor.waitForConnected()
+  await editor.setValue('<p>Hi <action-text-attachment sgid="alice" content-type="application/vnd.test.mention" content="&lt;span&gt;&lt;img src=&quot;/example.png&quot; alt=&quot;Alice at the beach&quot;&gt;Alice&lt;/span&gt;"></action-text-attachment> there</p>')
+  await editor.flush()
+  const mention = editor.content.locator("action-text-attachment")
+  const avatar = mention.locator("img")
+  await expect(avatar).toHaveAttribute("alt", "Alice at the beach")
+  await selectAttachment(mention)
+  await expect(avatar).toHaveAttribute("alt", "Alice")
+  await editor.content.locator("p").click({ position: { x: 1, y: 5 } })
+  await expect(avatar).toHaveAttribute("alt", "Alice at the beach")
+})
+
+test("does not replace an avatar's description while the editor is unfocused", async ({ page, editor }) => {
+  await page.goto("/attachments.html")
+  await editor.waitForConnected()
+  await page.getByRole("textbox", { name: "Post title" }).click()
+  await editor.setValue('<p><action-text-attachment sgid="alice" content-type="application/vnd.test.mention" content="&lt;span&gt;&lt;img src=&quot;/example.png&quot; alt=&quot;Alice at the beach&quot;&gt;Alice&lt;/span&gt;"></action-text-attachment></p>')
+  await editor.flush()
+  await expect(page.getByRole("textbox", { name: "Post title" })).toBeFocused()
+  await expect(editor.content.locator("action-text-attachment img")).toHaveAttribute("alt", "Alice at the beach")
 })

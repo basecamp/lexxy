@@ -471,6 +471,8 @@ These are areas where bugs tend to cluster, based on the architecture:
 
 **Upload lifecycle** — `ActionTextAttachmentUploadNode.createDOM()` starts the upload as a side effect. Lexical can call `createDOM()` multiple times (history restore). Guard logic prevents re-upload but can falsely block.
 
+**Controls inside decorator nodes** — A focusable control with `aria-hidden` can disappear from assistive technology even with `tabindex="-1"`, and a control nested in the editor’s textbox can lose its native focus announcement. Exercise both pointer and keyboard entry, inspect the accessibility tree, and verify that leaving the control saves its value and restores the correct editor selection. Hidden controls outside the contenteditable avoid nesting, but need tests for positioning, gallery reflow and cleanup when their attachment disappears. Browser accessibility snapshots do not replace testing actual speech with VoiceOver or NVDA.
+
 **Toolbar focus after commands** — Clicking a toolbar button with the mouse moves focus to the button. If focus isn't returned to the editor, keyboard shortcuts like Ctrl+Z go to the browser instead of Lexical. The toolbar calls `editor.focus()` after mouse-click commands to prevent this.
 
 **External drag-and-drop** — When files are dragged from the OS file manager, the browser does NOT update the DOM selection to the drop coordinates. The drag caret is purely visual. Drop handlers must use `document.caretRangeFromPoint(event.clientX, event.clientY)` to determine the correct insertion point. Playwright's synthetic DragEvent DOES move the DOM selection, masking this class of bugs. To reproduce, intercept the drop event, restore the stale DOM selection, and call the drop logic with the event coordinates.
