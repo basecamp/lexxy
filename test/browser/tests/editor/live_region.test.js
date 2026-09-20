@@ -116,6 +116,33 @@ test.describe("Live region", () => {
 
     await expect(assertive).toHaveText("Moved")
   })
+
+  test("a polite announcement goes to the polite channel, leaving the assertive one alone", async ({ page }) => {
+    const region = page.locator("lexxy-live-region")
+    const assertive = region.locator("[aria-live='assertive'][aria-relevant='additions']")
+    const polite = region.locator("[aria-live='polite'][aria-relevant='additions']")
+
+    await region.evaluate((element) => element.announce("Image caption", { polite: true }))
+
+    await expect(polite).toHaveText("Image caption")
+    await expect(assertive).toBeEmpty()
+  })
+
+  test("a polite announcement uses normal priority with ariaNotify", async ({ page }) => {
+    const calls = await page.evaluate(() => {
+      const calls = []
+      document.ariaNotify = (message, options) => calls.push({ message, ...options })
+      const region = document.querySelector("lexxy-live-region")
+      region.announce("Image caption", { polite: true })
+      region.announce("Attachment moved up")
+      return calls
+    })
+
+    expect(calls).toEqual([
+      { message: "Image caption", priority: "normal" },
+      { message: "Attachment moved up", priority: "high" }
+    ])
+  })
 })
 
 async function pauseClock(page) {

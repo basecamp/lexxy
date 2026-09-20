@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { $getEditor, $getNearestRootOrShadowRoot, $setSelection, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
-import { $createNodeSelectionWith } from "../helpers/lexical_helper"
+import { $createNodeSelectionWith, announceFromEditor } from "../helpers/lexical_helper"
 import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
 import { parseBoolean } from "../helpers/string_helper"
 import { REWRITE_HISTORY_COMMAND } from "../extensions/rewritable_history_extension"
@@ -475,6 +475,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     input.addEventListener("focusin", () => {
       input.placeholder = "Add caption..."
       input.ariaHidden = false
+      // VoiceOver keeps its cursor on the editor's own textbox and says nothing
+      // when focus moves to a control nested inside it, so say it ourselves.
+      announceFromEditor(this.editor, input.ariaLabel, { polite: true })
     })
     input.addEventListener("blur", (event) => {
       input.ariaHidden = true

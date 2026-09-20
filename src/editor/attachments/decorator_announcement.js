@@ -62,7 +62,7 @@ export class DecoratorAnnouncement {
     this.#editor.getEditorState().read(() => {
       const selection = $getSelection()
       const selectedDecorator = decoratorSelectedBy(selection)
-      const upcomingDecorator = decoratorAheadOfAnchor(selection)
+      const upcomingDecorator = decoratorBesideAnchor(selection)
 
       if (selectedDecorator) {
         this.#setupAnnouncementOn(selectedDecorator)
@@ -114,22 +114,33 @@ function decoratorSelectedBy(selection) {
   }
 }
 
-// The decorator one keystroke ahead of the anchor: the anchor's text node's
-// next sibling (when the anchor offset is within one character of its end),
-// or the child immediately at the anchor's element offset. The 1-character
-// buffer gives the screen reader time to pick up the freshly setup label
-// before the caret steps onto the figure.
-function decoratorAheadOfAnchor(selection) {
+// The decorator one keystroke away from the anchor on either side: the anchor's
+// text node's next sibling when the offset is within one character of its end,
+// its previous sibling when within one character of its start, or the child on
+// either side of an element anchor's offset. The 1-character buffer gives the
+// screen reader time to pick up the freshly setup label before the caret steps
+// onto the figure, whichever way it is travelling. When both neighbours qualify,
+// as in the single space between two chips, the nearer one wins.
+function decoratorBesideAnchor(selection) {
   if ($isRangeSelection(selection) && selection.isCollapsed()) {
     const anchor = selection.anchor
     const parent = anchor.getNode()
-    let candidate = null
+    const candidates = []
+
     if (anchor.type === "text") {
-      if (anchor.offset >= parent.getTextContentSize() - 1) candidate = parent.getNextSibling()
+      const toEnd = parent.getTextContentSize() - anchor.offset
+      if (toEnd <= 1) candidates.push({ node: parent.getNextSibling(), distance: toEnd })
+      if (anchor.offset <= 1) candidates.push({ node: parent.getPreviousSibling(), distance: anchor.offset })
     } else {
-      candidate = parent.getChildAtIndex(anchor.offset)
+      candidates.push({ node: parent.getChildAtIndex(anchor.offset), distance: 0 })
+      candidates.push({ node: parent.getChildAtIndex(anchor.offset - 1), distance: 0 })
     }
-    return isAnnounceableDecorator(candidate) ? candidate : null
+
+    const nearest = candidates
+      .filter(({ node }) => isAnnounceableDecorator(node))
+      .sort((a, b) => a.distance - b.distance)[0]
+
+    return nearest?.node ?? null
   } else {
     return null
   }

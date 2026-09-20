@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
-import { attachmentTag, selectAttachment } from "../../helpers/attachment_helpers.js"
+import { announcements, attachmentTag, selectAttachment, watchAnnouncements } from "../../helpers/attachment_helpers.js"
 
 test.describe("Attachment caption", () => {
   test.beforeEach(async ({ page }) => {
@@ -97,5 +97,58 @@ test.describe("Attachment caption", () => {
     expect(await page.evaluate(() => window.__lexxyAriaNotifications)).toEqual([
       { message: "Rabbit", options: { priority: "high" } }
     ])
+  })
+
+  test("readies an inline attachment's label when the caret approaches from either side", async ({ page, editor }) => {
+    await editor.setValue(
+      '<p>Hi <action-text-attachment sgid="alice" content-type="application/vnd.test.mention" content="&lt;span&gt;&lt;img src=&quot;/example.png&quot;&gt;Alice&lt;/span&gt;"></action-text-attachment> there</p>'
+    )
+    await editor.flush()
+
+    const avatar = editor.content.locator("action-text-attachment[content-type='application/vnd.test.mention'] img")
+    await expect(avatar).toHaveAttribute("alt", "")
+
+    // Home and End behave differently across browsers on a Mac, so place the caret by
+    // clicking just inside the paragraph's edges instead.
+    const paragraph = editor.content.locator("p")
+    const paragraphBox = await paragraph.boundingBox()
+    const clickAtEnd = () => paragraph.click({ position: { x: paragraphBox.width - 2, y: paragraphBox.height / 2 } })
+    const clickAtStart = () => paragraph.click({ position: { x: 2, y: paragraphBox.height / 2 } })
+    const step = async (key) => {
+      await page.keyboard.press(key)
+      await editor.flush()
+    }
+
+    await clickAtEnd()
+    await editor.flush()
+    await expect(avatar).toHaveAttribute("alt", "")
+
+    for (let i = 0; i < " there".length - 1; i++) await step("ArrowLeft")
+    await expect(avatar).toHaveAttribute("alt", "Alice")
+
+    await clickAtEnd()
+    await editor.flush()
+    await expect(avatar).toHaveAttribute("alt", "")
+
+    await clickAtStart()
+    await step("ArrowRight")
+    await expect(avatar).toHaveAttribute("alt", "")
+    await step("ArrowRight")
+    await expect(avatar).toHaveAttribute("alt", "Alice")
+  })
+
+  test("announces the caption's name when it takes focus", async ({ page, editor }) => {
+    await editor.setValue(`<p>Above</p>${attachmentTag("a", "one.png")}`)
+    await editor.flush()
+    await watchAnnouncements(page)
+
+    const figure = page.locator("figure.attachment").first()
+    await expect(figure).toBeVisible()
+    await selectAttachment(figure)
+    await editor.focus()
+    await page.keyboard.press("Tab")
+
+    await expect(figure.locator("figcaption textarea")).toBeFocused()
+    await expect.poll(() => announcements(page)).toContain("Image caption")
   })
 })

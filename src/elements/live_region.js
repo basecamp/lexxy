@@ -4,12 +4,13 @@ const REMOVAL_DELAY = 1000
 
 export class LiveRegion extends HTMLElement {
   #additions = createElement("span", { ariaLive: "assertive", ariaRelevant: "additions" })
+  #politeAdditions = createElement("span", { ariaLive: "polite", ariaRelevant: "additions" })
   #removalTimeouts = new Set()
   #transient = createElement("span", { ariaLive: "assertive", ariaAtomic: "true", ariaRelevant: "all" })
   #transientFrames = new Set()
 
   connectedCallback() {
-    this.replaceChildren(this.#transient, this.#additions)
+    this.replaceChildren(this.#transient, this.#additions, this.#politeAdditions)
   }
 
   disconnectedCallback() {
@@ -21,29 +22,40 @@ export class LiveRegion extends HTMLElement {
     this.#removalTimeouts.clear()
     this.#cancelTransientFrames()
     this.#additions.replaceChildren()
+    this.#politeAdditions.replaceChildren()
     this.#transient.replaceChildren()
     this.replaceChildren()
   }
 
-  announce(message, { transient = false } = {}) {
+  // Polite announcements wait for whatever the screen reader is already saying,
+  // such as the native description of a control that just took focus.
+  announce(message, { transient = false, polite = false } = {}) {
     if (message) {
       if (typeof document.ariaNotify === "function") {
-        this.#announceNatively(message)
+        this.#announceNatively(message, polite)
       } else if (transient) {
         this.#announceTransient(message)
+      } else if (polite) {
+        this.#announceAddition(message, this.#politeAdditions)
       } else {
-        this.#announceAddition(message)
+        this.#announceAddition(message, this.#additions)
       }
     }
   }
 
-  #announceNatively(message) {
-    document.ariaNotify(message, { priority: "high" })
+  #announceNatively(message, polite) {
+    let priority
+    if (polite) {
+      priority = "normal"
+    } else {
+      priority = "high"
+    }
+    document.ariaNotify(message, { priority })
   }
 
-  #announceAddition(message) {
+  #announceAddition(message, region) {
     const announcement = createElement("div", { textContent: message })
-    this.#additions.replaceChildren(announcement)
+    region.replaceChildren(announcement)
 
     const timeout = setTimeout(() => {
       announcement.remove()

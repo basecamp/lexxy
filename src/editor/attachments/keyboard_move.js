@@ -9,6 +9,7 @@ import { ListenerBin } from "../../helpers/listener_helper"
 export class AttachmentKeyboardMove {
   #editor
   #listeners = new ListenerBin()
+  #scrollFrame
 
   constructor(editor) {
     this.#editor = editor
@@ -20,6 +21,7 @@ export class AttachmentKeyboardMove {
 
   destroy() {
     this.#listeners.dispose()
+    cancelAnimationFrame(this.#scrollFrame)
   }
 
   #tryReorder = (event) => {
@@ -30,10 +32,21 @@ export class AttachmentKeyboardMove {
         const message = this.#executeMove(event.key, node)
         $setSelection($createNodeSelectionWith(node))
         announceFromEditor(this.#editor, message)
+        this.#keepInView(node)
         return true
       }
     }
     return false
+  }
+
+  // A node selection doesn't scroll the way a caret does, so a moved attachment
+  // can leave the viewport while it is still the thing being moved.
+  #keepInView(node) {
+    const key = node.getKey()
+    cancelAnimationFrame(this.#scrollFrame)
+    this.#scrollFrame = requestAnimationFrame(() => {
+      this.#editor.getElementByKey(key)?.scrollIntoView({ block: "nearest" })
+    })
   }
 
   #executeMove(key, node) {
