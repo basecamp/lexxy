@@ -20,7 +20,7 @@
     <turbo-frame id="editor" target="_top">
       <div>
         <%= rich_text_area_tag :sandbox, render(@template), placeholder: "Write something...", data: { lexxy_output_target: "editor" } do %>
-          <lexxy-prompt trigger="@" src="<%= people_path %>" name="mention"></lexxy-prompt>
+          <lexxy-prompt trigger="@" src="<%= people_path(delay: params[:delay]) %>" name="mention"></lexxy-prompt>
           <%= render "emoji_prompt", trigger: ":" %>
         <% end %>
       </div>
