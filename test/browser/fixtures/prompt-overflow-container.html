@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test - Prompt overflow container</title>
+  <link rel="stylesheet" href="/styles.css">
+
+  <style>
+    body {
+      margin: 0;
+    }
+
+    .scroll-container {
+      block-size: 220px;
+      inline-size: 360px;
+      overflow: auto;
+      border: 1px solid #ccc;
+    }
+
+    .filler {
+      block-size: 150px;
+    }
+
+    lexxy-editor {
+      border: 1px solid #ccc;
+      display: block;
+    }
+
+    .lexxy-editor__content {
+      min-block-size: 64px;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+  <form>
+    <div class="scroll-container">
+      <div class="filler"></div>
+      <lexxy-editor class="lexxy-content" placeholder="Prompt in a scroll container">
+        <lexxy-prompt trigger="@" name="mention">
+          <lexxy-prompt-item search="Alice" sgid="test-sgid-alice">
+            <template type="menu">
+              <span class="person person--prompt-item">Alice</span>
+            </template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="Sam" sgid="test-sgid-sam">
+            <template type="menu">
+              <span class="person person--prompt-item">Sam</span>
+            </template>
+          </lexxy-prompt-item>
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+  </form>
+
+  <script type="module" src="/editor.js"></script>
+</body>
+</html>

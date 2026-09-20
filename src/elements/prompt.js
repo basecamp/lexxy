@@ -323,12 +323,31 @@ export class LexicalPromptElement extends HTMLElement {
 
     const forceTop = this.verticalDirection === "top"
     const forceBottom = this.verticalDirection === "bottom"
-    const overflowsWindow = popoverRect.bottom > window.innerHeight
+    const overflowsViewport = popoverRect.bottom > this.#availableBottom()
 
-    if (!forceBottom && (forceTop || overflowsWindow)) {
+    if (!forceBottom && (forceTop || overflowsViewport)) {
       this.#setPopoverOffsetY(contentRect.height - y + fontSize)
       this.popoverElement.toggleAttribute("data-clipped-at-bottom", true)
     }
+  }
+
+  // The bottom edge the menu must stay within: the tightest clipping bound among the
+  // editor and its ancestors — the smallest bottom of any element whose computed
+  // `overflow-y` is not `visible` — capped by the window. This flips the menu above the
+  // cursor when a scroll container or modal would clip it; with no clipping ancestor it
+  // returns `window.innerHeight`, leaving an unclipped editor anchored below as before.
+  #availableBottom() {
+    let bottom = window.innerHeight
+    let node = this.#editorElement
+
+    while (node && node !== document.body && node !== document.documentElement) {
+      if (getComputedStyle(node).overflowY !== "visible") {
+        bottom = Math.min(bottom, node.getBoundingClientRect().bottom)
+      }
+      node = node.parentElement
+    }
+
+    return bottom
   }
 
   #setPopoverOffsetX(value) {
