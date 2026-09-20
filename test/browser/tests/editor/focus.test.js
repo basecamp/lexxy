@@ -26,4 +26,21 @@ test.describe("Focus", () => {
 
     await expect(editor.content).toBeFocused()
   })
+
+  test("focus() on an uninitialized editor is a safe no-op", async ({ page }) => {
+    const thrown = await page.evaluate(async () => {
+      await customElements.whenDefined("lexxy-editor")
+
+      const editor = document.createElement("lexxy-editor")
+
+      try {
+        editor.focus()
+        return null
+      } catch (error) {
+        return error.message
+      }
+    })
+
+    expect(thrown).toBeNull()
+  })
 })
