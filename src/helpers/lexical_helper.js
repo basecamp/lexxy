@@ -414,15 +414,22 @@ function $splitAroundLineBreak(lineBreakCaret) {
   return outer
 }
 
+// A container of blocks — a quote holding paragraphs, a list holding items — has no caret
+// position of its own at `direction`'s edge: the nearest one belongs to the child block
+// inside it, which reads as being within the container rather than beside it.
+export function $isBlockContainer(node, direction = "next") {
+  if (!$isElementNode(node)) return false
+
+  const edgeChild = $getChildCaret(node, direction).getNodeAtCaret()
+  return ($isElementNode(edgeChild) || $isDecoratorNode(edgeChild)) && !edgeChild.isInline()
+}
+
 // Lexical's RangeSelection.insertNodes/insertLineBreak require every selection point to have a
 // block ancestor with inline children. An element point on a container of block nodes — e.g. a
 // quote holding paragraphs — has none, so Lexical throws invariant #211 or #212. This detects
 // such a point so callers can descend it to a leaf before inserting.
 export function $isPointOnBlockContainer(point) {
-  if (point.type !== "element") return false
-
-  const firstChild = point.getNode().getFirstChild()
-  return ($isElementNode(firstChild) || $isDecoratorNode(firstChild)) && !firstChild.isInline()
+  return point.type === "element" && $isBlockContainer(point.getNode())
 }
 
 export function $hasPointOnBlockContainer(selection) {
