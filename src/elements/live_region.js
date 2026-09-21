@@ -4,13 +4,12 @@ const REMOVAL_DELAY = 1000
 
 export class LiveRegion extends HTMLElement {
   #additions = createElement("span", { ariaLive: "assertive", ariaRelevant: "additions" })
-  #politeAdditions = createElement("span", { ariaLive: "polite", ariaRelevant: "additions" })
   #removalTimeouts = new Set()
   #transient = createElement("span", { ariaLive: "assertive", ariaAtomic: "true", ariaRelevant: "all" })
   #transientFrames = new Set()
 
   connectedCallback() {
-    this.replaceChildren(this.#transient, this.#additions, this.#politeAdditions)
+    this.replaceChildren(this.#transient, this.#additions)
   }
 
   disconnectedCallback() {
@@ -22,38 +21,25 @@ export class LiveRegion extends HTMLElement {
     this.#removalTimeouts.clear()
     this.#cancelTransientFrames()
     this.#additions.replaceChildren()
-    this.#politeAdditions.replaceChildren()
     this.#transient.replaceChildren()
     this.replaceChildren()
   }
 
-  announce(message, { transient = false, polite = false } = {}) {
+  announce(message, { transient = false } = {}) {
     if (message) {
       if (typeof document.ariaNotify === "function") {
-        this.#announceNatively(message, polite)
+        document.ariaNotify(message, { priority: "high" })
       } else if (transient) {
         this.#announceTransient(message)
-      } else if (polite) {
-        this.#announceAddition(message, this.#politeAdditions)
       } else {
-        this.#announceAddition(message, this.#additions)
+        this.#announceAddition(message)
       }
     }
   }
 
-  #announceNatively(message, polite) {
-    let priority
-    if (polite) {
-      priority = "normal"
-    } else {
-      priority = "high"
-    }
-    document.ariaNotify(message, { priority })
-  }
-
-  #announceAddition(message, region) {
+  #announceAddition(message) {
     const announcement = createElement("div", { textContent: message })
-    region.appendChild(announcement)
+    this.#additions.appendChild(announcement)
 
     const timeout = setTimeout(() => {
       announcement.remove()
