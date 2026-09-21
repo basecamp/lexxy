@@ -5,7 +5,7 @@ class AttachmentAltTextRoundTripTest < ApplicationSystemTestCase
     skip "Action Text alternative text support is required" unless ActionText::Attachment::ATTRIBUTES.include?("alt")
   end
 
-  test "uploaded image descriptions survive save, render, re-edit and removal" do
+  test "uploaded image descriptions survive save, render and re-edit" do
     post = posts(:empty)
     visit edit_post_path(post)
     wait_for_editor
@@ -19,26 +19,17 @@ class AttachmentAltTextRoundTripTest < ApplicationSystemTestCase
     find("textarea[aria-label='Image caption']").fill_in with: "On the river"
     find("textarea[aria-label='Image caption']").send_keys :enter
 
-    [ 'A canoe beside a sign reading "River & lake"', "A blue canoe", "" ].each do |description|
+    [ 'A canoe beside a sign reading "River & lake"', "A blue canoe" ].each do |description|
       edit_description description
       click_on "Update Post"
 
       within "article.post" do
-        if description.present?
-          assert_selector "img[alt='#{description}']"
-        else
-          assert_no_selector "img[alt]"
-          assert_selector "img"
-        end
+        assert_selector "img[alt='#{description}']"
         assert_selector "figcaption", text: "On the river"
       end
 
       attachment = post.reload.body.body.attachments.first
-      if description.present?
-        assert_equal description, attachment.alt
-      else
-        assert_nil attachment.alt
-      end
+      assert_equal description, attachment.alt
       assert_equal "On the river", attachment.caption
 
       click_on "Edit this post"
@@ -48,6 +39,42 @@ class AttachmentAltTextRoundTripTest < ApplicationSystemTestCase
       assert_equal "On the river", find("textarea[aria-label='Image caption']").value
       find("textarea[aria-label='Image caption']").send_keys :escape
     end
+  end
+
+  test "removing an image description survives save, render and re-edit" do
+    post = posts(:empty)
+    visit edit_post_path(post)
+    wait_for_editor
+
+    attach_file file_fixture("example.png") do
+      click_on "Upload files"
+    end
+    assert_selector "figure.attachment .attachment__caption--editable"
+    find("figure.attachment figcaption").click
+    find("textarea[aria-label='Image caption']").fill_in with: "On the river"
+    find("textarea[aria-label='Image caption']").send_keys :enter
+    edit_description "A red canoe"
+    click_on "Update Post"
+    assert_selector "article.post img[alt='A red canoe']"
+
+    click_on "Edit this post"
+    wait_for_editor
+    edit_description ""
+    click_on "Update Post"
+
+    assert_selector "article.post img"
+    assert_no_selector "article.post img[alt]"
+    assert_selector "article.post figcaption", text: "On the river"
+    assert_nil post.reload.body.body.attachments.first.alt
+    assert_equal "On the river", post.body.body.attachments.first.caption
+
+    click_on "Edit this post"
+    wait_for_editor
+    assert_selector "figure.attachment img[alt='']"
+    assert_selector "figure.attachment figcaption", text: "On the river"
+    find("figure.attachment").click x: 8, y: 8
+    click_on "Alternative text"
+    assert_field "Description", with: ""
   end
 
   test "remote image descriptions survive save, render and re-edit without becoming captions" do

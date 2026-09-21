@@ -20,7 +20,9 @@ Alternative text describes the image for people who cannot see it. It is indepen
 
 ### Action Text support
 
-Saving and rendering descriptions requires Action Text's `alt` attachment support ([rails/rails#58337](https://github.com/rails/rails/pull/58337)). Earlier Rails versions discard this attribute when rebuilding attachments. Updating Lexxy alone does not add this support to those versions.
+Saving and rendering descriptions requires Action Text's `alt` attachment support ([rails/rails#58337](https://github.com/rails/rails/pull/58337)). Rails-generated editors enable the ALT button only when Action Text supports this attribute. Earlier versions discard it when rebuilding attachments.
+
+Applications with custom rendering that does not preserve descriptions can disable authoring with `"alternative-text": false` in the Rails helper, or `<lexxy-editor alternative-text="false">`. Existing descriptions remain in the editor's content. Standalone JavaScript editors enable authoring by default; their host application is responsible for preserving and rendering the `alt` attribute.
 
 If your application overrides `app/views/active_storage/blobs/_blob.html.erb`, pass the attachment's alternative text to `image_tag`, as the updated Rails partial does:
 

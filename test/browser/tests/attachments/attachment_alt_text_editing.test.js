@@ -10,12 +10,12 @@ test.describe("Editing attachment alternative text", () => {
     await editor.waitForConnected()
   })
 
-  test("adds, edits and removes a description independently of the caption", async ({ page, editor }) => {
+  test("adds and edits a description independently of the caption", async ({ page, editor }) => {
     await editor.setValue(attachmentTag("a", "canoe.png", { caption: "On the river" }))
     await editor.flush()
     const figure = page.locator("figure.attachment")
 
-    for (const description of [ "A red canoe beside green trees", 'A blue canoe near a sign reading "River & lake"', "" ]) {
+    for (const description of [ "A red canoe beside green trees", 'A blue canoe near a sign reading "River & lake"' ]) {
       await editor.focus()
       await selectAttachment(figure)
       await page.getByRole("button", { name: "Alternative text", exact: true }).click()
@@ -41,7 +41,53 @@ test.describe("Editing attachment alternative text", () => {
     }
   })
 
-  test("keyboard authoring, cancellation, undo and redo preserve the attachment", async ({ page, editor }) => {
+  test("removing a description preserves the caption", async ({ page, editor }) => {
+    await editor.setValue(attachmentTag("a", "canoe.png", { caption: "On the river", alt: "A red canoe" }))
+    await editor.flush()
+    await editor.focus()
+    const figure = page.locator("figure.attachment")
+    await selectAttachment(figure)
+    await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+    const dialog = page.getByRole("dialog", { name: "Alternative text" })
+    await dialog.getByRole("textbox", { name: "Description" }).fill("")
+    await dialog.getByRole("button", { name: "Save", exact: true }).click()
+
+    await expect(figure.locator("img")).toHaveAttribute("alt", "")
+    await expect(figure.locator(".attachment__caption-text")).toHaveText("On the river")
+    await editor.setValue(await editor.value())
+    await editor.flush()
+    await expect(figure.locator("img")).toHaveAttribute("alt", "")
+    await expect(figure.locator(".attachment__caption-text")).toHaveText("On the river")
+  })
+
+  for (const action of [ "Cancel", "Escape" ]) {
+    test(`${action} discards a draft description and returns focus`, async ({ page, editor }) => {
+      await editor.setValue(attachmentTag("a", "canoe.png", { alt: "A red canoe" }))
+      await editor.flush()
+      await editor.focus()
+      const figure = page.locator("figure.attachment")
+      await selectAttachment(figure)
+      const button = page.getByRole("button", { name: "Alternative text", exact: true })
+      await button.focus()
+      await button.press("Enter")
+      const dialog = page.getByRole("dialog", { name: "Alternative text" })
+      const input = dialog.getByRole("textbox", { name: "Description" })
+      await input.fill("Discard this description")
+      if (action === "Escape") {
+        await input.press("Escape")
+      } else {
+        await dialog.getByRole("button", { name: "Cancel" }).click()
+      }
+
+      await expect(dialog).toBeHidden()
+      await expect(button).toBeFocused()
+      await expect(figure.locator("img")).toHaveAttribute("alt", "A red canoe")
+      await button.press("Enter")
+      await expect(input).toHaveValue("A red canoe")
+    })
+  }
+
+  test("keyboard authoring, undo and redo preserve the attachment", async ({ page, editor }) => {
     await editor.setValue(attachmentTag("a", "canoe.png", { alt: "A red canoe" }))
     await editor.flush()
     const figure = page.locator("figure.attachment")
@@ -58,14 +104,6 @@ test.describe("Editing attachment alternative text", () => {
     const dialog = page.getByRole("dialog", { name: "Alternative text" })
     const input = dialog.getByRole("textbox", { name: "Description" })
     await expect(input).toBeFocused()
-    await input.fill("Discard this description")
-    await input.press("Escape")
-    await expect(dialog).toBeHidden()
-    await expect(button).toBeFocused()
-    await expect(figure.locator("img")).toHaveAttribute("alt", "A red canoe")
-
-    await button.press("Enter")
-    await expect(input).toHaveValue("A red canoe")
     await input.fill("A blue canoe")
     await input.press("Tab")
     await page.keyboard.press("Tab")
@@ -135,5 +173,24 @@ test.describe("Editing attachment alternative text", () => {
     await selectAttachment(page.locator("figure.attachment"))
     await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible()
     await expect(page.getByRole("button", { name: "Alternative text", exact: true })).toBeHidden()
+  })
+
+  test("disabling alternative text editing preserves existing descriptions", async ({ page, editor }) => {
+    await editor.locator.evaluate(element => {
+      const parent = element.parentElement
+      element.remove()
+      element.setAttribute("alternative-text", "false")
+      parent.append(element)
+    })
+    await editor.waitForConnected()
+    await editor.setValue(attachmentTag("a", "canoe.png", { alt: "A red canoe" }))
+    await editor.flush()
+    await editor.focus()
+    await selectAttachment(page.locator("figure.attachment"))
+
+    await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible()
+    await expect(page.getByRole("button", { name: "Alternative text", exact: true })).toBeHidden()
+    await expect(page.locator("figure.attachment img")).toHaveAttribute("alt", "A red canoe")
+    expect(await editor.value()).toContain('alt="A red canoe"')
   })
 })

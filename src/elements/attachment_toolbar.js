@@ -3,7 +3,6 @@ import { $getNodeByKey, $setSelection, COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND }
 import { $createNodeSelectionWith, registerLabelledDecoratorSelection } from "../helpers/lexical_helper"
 import { $isImageGalleryNode } from "../nodes/image_gallery_node"
 import AlternativeTextDialog from "../editor/attachments/alternative_text_dialog"
-import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { createElement } from "../helpers/html_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
@@ -181,7 +180,7 @@ export class AttachmentToolbar extends HTMLElement {
 
     this.#editor.getEditorState().read(() => {
       const node = $getNodeByKey(nodeKey)
-      this.#alternativeTextButton.hidden = !($isActionTextAttachmentNode(node) && node.getType() === "action_text_attachment" && node.isPreviewableAttachment)
+      this.#alternativeTextButton.hidden = !this.#canEditAlternativeText(node)
       this.dataset.nodeType = node.getType()
       this.dataset.presentation = this.#presentationOf(node, element)
 
@@ -191,6 +190,12 @@ export class AttachmentToolbar extends HTMLElement {
         delete this.dataset.contentType
       }
     })
+  }
+
+  #canEditAlternativeText(node) {
+    return this.#editorElement.config.get("alternativeText")
+      && node.getType() === "action_text_attachment"
+      && node.isPreviewableAttachment
   }
 
   #presentationOf(node, element) {
