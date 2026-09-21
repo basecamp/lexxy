@@ -8,10 +8,6 @@ nav_order: 4
 
 Lexxy uploads files using Active Storage's Direct Upload protocol and renders previews for previewable blobs (images, PDFs, videos).
 
-## Captions
-
-Images and videos support editable captions. Click the caption or filename below the preview to edit it.
-
 ## Upload response
 
 After a Direct Upload completes, Lexxy reads the following fields from the blob JSON returned by the upload endpoint:
