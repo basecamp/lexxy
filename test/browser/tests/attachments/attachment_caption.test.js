@@ -159,11 +159,15 @@ test("restores an authored avatar description after announcing a mention", async
   await editor.flush()
   const mention = editor.content.locator("action-text-attachment")
   const avatar = mention.locator("img")
+  const label = mention.locator("span").first()
   await expect(avatar).toHaveAttribute("alt", "Alice at the beach")
+  await expect(label).not.toHaveAttribute("aria-hidden", "true")
   await selectAttachment(mention)
   await expect(avatar).toHaveAttribute("alt", "Alice")
+  await expect(label).toHaveAttribute("aria-hidden", "true")
   await editor.content.locator("p").click({ position: { x: 1, y: 5 } })
   await expect(avatar).toHaveAttribute("alt", "Alice at the beach")
+  await expect(label).not.toHaveAttribute("aria-hidden", "true")
 })
 
 test("does not replace an avatar's description while the editor is unfocused", async ({ page, editor }) => {
@@ -174,4 +178,19 @@ test("does not replace an avatar's description while the editor is unfocused", a
   await editor.flush()
   await expect(page.getByRole("textbox", { name: "Post title" })).toBeFocused()
   await expect(editor.content.locator("action-text-attachment img")).toHaveAttribute("alt", "Alice at the beach")
+})
+
+test("preserves an authored aria-hidden label after announcing a mention", async ({ page, editor }) => {
+  await page.goto("/attachments.html")
+  await editor.waitForConnected()
+  await editor.setValue('<p>Hi <action-text-attachment sgid="alice" content-type="application/vnd.test.mention" content="&lt;span&gt;&lt;img src=&quot;/example.png&quot; alt=&quot;Alice&quot;&gt;&lt;span class=&quot;mention-label&quot; aria-hidden=&quot;true&quot;&gt;Alice&lt;/span&gt;&lt;/span&gt;"></action-text-attachment> there</p>')
+  await editor.flush()
+  const mention = editor.content.locator("action-text-attachment")
+  const label = mention.locator(".mention-label")
+  await expect(label).toHaveAttribute("aria-hidden", "true")
+
+  await selectAttachment(mention)
+  await page.getByRole("textbox", { name: "Post title" }).click()
+
+  await expect(label).toHaveAttribute("aria-hidden", "true")
 })

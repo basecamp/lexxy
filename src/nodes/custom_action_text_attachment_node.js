@@ -135,7 +135,11 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     const trimmedLabel = this.label.trim()
     const matches = [ ...figure.querySelectorAll("span") ].filter((span) => span.textContent.trim() === trimmedLabel)
     const deepest = matches.filter((span) => !matches.some((other) => other !== span && span.contains(other)))
-    for (const span of deepest) span.setAttribute("data-lexxy-label-mirror", "")
+    for (const span of deepest) {
+      if (span.getAttribute("aria-hidden") !== "true") {
+        span.setAttribute("data-lexxy-label-mirror", "")
+      }
+    }
   }
 
   #markImagesAsDecorative(figure) {
