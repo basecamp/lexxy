@@ -239,8 +239,9 @@ export default class Clipboard {
     const html = clipboardData.getData("text/html")
     const files = clipboardData.files
 
-    if (files.length && this.#isCopiedImageHTML(html)) {
-      this.#uploadFilesPreservingScroll(files)
+    const copiedImage = files.length && this.#copiedImage(html)
+    if (copiedImage) {
+      this.#uploadFilesPreservingScroll(files, copiedImage.getAttribute("alt"))
       return true
     }
 
@@ -261,19 +262,21 @@ export default class Clipboard {
     return Array.from(clipboardData.types).includes("application/x-lexical-editor")
   }
 
-  #isCopiedImageHTML(html) {
-    if (!html) return false
+  #copiedImage(html) {
+    if (!html) return null
 
     const doc = parseHtml(html)
     const elementChildren = Array.from(doc.body.children)
 
-    return elementChildren.length === 1 && elementChildren[0].tagName === "IMG"
+    if (elementChildren.length === 1 && elementChildren[0].tagName === "IMG") {
+      return elementChildren[0]
+    }
   }
 
-  #uploadFilesPreservingScroll(files) {
+  #uploadFilesPreservingScroll(files, altText) {
     this.#preservingScrollPosition(() => {
       if (files.length) {
-        this.contents.uploadFiles(files, { selectLast: true })
+        this.contents.uploadFiles(files, { selectLast: true, altText })
       }
     })
   }
