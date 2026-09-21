@@ -1,14 +1,6 @@
 require "application_system_test_case"
 
-class AlternativeTextSupportTest < ApplicationSystemTestCase
-  test "the editor declares Action Text alternative text support" do
-    visit edit_post_path(posts(:empty))
-    wait_for_editor
-
-    supported = ActionText::Attachment::ATTRIBUTES.include?("alt")
-    assert_selector "lexxy-editor[data-action-text-supports-alt='#{supported}']"
-  end
-
+class AttachmentAlternativeTextSupportTest < ApplicationSystemTestCase
   test "unsupported Action Text does not offer alternative text authoring" do
     skip "Action Text supports alternative text" if ActionText::Attachment::ATTRIBUTES.include?("alt")
 

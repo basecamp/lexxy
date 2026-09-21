@@ -1,6 +1,6 @@
 require "application_system_test_case"
 
-class AttachmentAltTextRoundTripTest < ApplicationSystemTestCase
+class AttachmentAlternativeTextRoundTripTest < ApplicationSystemTestCase
   setup do
     skip "Action Text alternative text support is required" unless ActionText::Attachment::ATTRIBUTES.include?("alt")
   end

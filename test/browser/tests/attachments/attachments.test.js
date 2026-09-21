@@ -25,6 +25,8 @@ test.describe("Attachments", () => {
 
     await expect(page.locator("[data-event='lexxy:upload-start']")).toHaveCount(1)
     await expect(page.locator("[data-event='lexxy:upload-end']")).toHaveCount(1)
+    await expect(figure.locator("img")).toHaveAttribute("alt", "")
+    expect(await editor.value()).not.toContain('alt="example.png"')
   })
 
   test("image keeps local preview until server image loads", async ({ page, editor }) => {

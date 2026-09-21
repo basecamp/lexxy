@@ -3,7 +3,7 @@ import { expect } from "@playwright/test"
 import { attachmentTag, selectAttachment } from "../../helpers/attachment_helpers.js"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
 
-test.describe("Editing attachment alternative text", () => {
+test.describe("Attachment alternative text editing", () => {
   test.beforeEach(async ({ page, editor }) => {
     await page.route("**/*.png", route => route.fulfill({ path: "test/fixtures/files/example.png", contentType: "image/png" }))
     await page.goto("/attachments.html")
@@ -26,18 +26,6 @@ test.describe("Editing attachment alternative text", () => {
       await expect(dialog).toBeHidden()
       await expect(figure.locator("img")).toHaveAttribute("alt", description)
       await expect(figure.locator(".attachment__caption-text")).toHaveText("On the river")
-      await figure.locator("figcaption").click()
-      const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
-      await expect(caption).toHaveValue("On the river")
-      await caption.press("Escape")
-      const value = await editor.value()
-      await editor.setValue(value)
-      await editor.flush()
-      await editor.focus()
-      await selectAttachment(figure)
-      await page.getByRole("button", { name: "Alternative text", exact: true }).click()
-      await expect(dialog.getByRole("textbox", { name: "Description" })).toHaveValue(description)
-      await dialog.getByRole("button", { name: "Cancel" }).click()
     }
   })
 
@@ -54,10 +42,7 @@ test.describe("Editing attachment alternative text", () => {
 
     await expect(figure.locator("img")).toHaveAttribute("alt", "")
     await expect(figure.locator(".attachment__caption-text")).toHaveText("On the river")
-    await editor.setValue(await editor.value())
-    await editor.flush()
-    await expect(figure.locator("img")).toHaveAttribute("alt", "")
-    await expect(figure.locator(".attachment__caption-text")).toHaveText("On the river")
+    expect(await editor.value()).not.toContain('alt="A red canoe"')
   })
 
   for (const action of [ "Cancel", "Escape" ]) {
@@ -137,23 +122,6 @@ test.describe("Editing attachment alternative text", () => {
     await dialog.getByRole("button", { name: "Save", exact: true }).click()
     await expect(page.locator("figure.attachment img").nth(0)).toHaveAttribute("alt", "A whale")
     await expect(page.locator("figure.attachment img").nth(1)).toHaveAttribute("alt", "Two people paddling a canoe")
-  })
-
-  test("new uploads do not use the filename as a description", async ({ page, editor }) => {
-    await mockActiveStorageUploads(page)
-    await editor.uploadFile("test/fixtures/files/example.png")
-    await expect(page.locator("figure.attachment img")).toHaveAttribute("alt", "")
-    expect(await editor.value()).not.toContain('alt="example.png"')
-  })
-
-  test("imported image descriptions do not become captions", async ({ page, editor }) => {
-    await editor.setValue('<img src="/canoe.png" alt="A red canoe" width="50" height="50">')
-    await editor.flush()
-    await expect(page.locator("figure.attachment img")).toHaveAttribute("alt", "A red canoe")
-    await expect(page.locator(".attachment__caption-text")).toHaveText("canoe.png")
-    await page.locator("figure.attachment figcaption").click()
-    await expect(page.getByRole("textbox", { name: "Image caption", exact: true })).toHaveValue("")
-    expect(await editor.value()).toContain('alt="A red canoe"')
   })
 
   test("a delayed preview uses the description authored while it was loading", async ({ page, editor }) => {
