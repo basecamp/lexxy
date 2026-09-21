@@ -246,9 +246,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   get label() {
     if (this.caption && this.altText && this.altText !== this.caption && this.altText !== this.fileName) {
       return `${this.caption}. ${this.altText}`
+    } else {
+      return this.caption || this.altText || this.fileName || ""
     }
-
-    return this.caption || this.altText || this.fileName || ""
   }
 
   get captionLabel() {

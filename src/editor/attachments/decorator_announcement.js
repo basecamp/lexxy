@@ -30,31 +30,30 @@ export class DecoratorAnnouncement {
     this.#teardownAnnouncement()
   }
 
-  #updateAnnouncement = () => {
-    if (document.activeElement !== this.#editor.getRootElement()) {
-      this.#teardownAnnouncement()
-      return
-    }
+  #updateAnnouncement = ({ editorState }) => {
+    if (document.activeElement === this.#editor.getRootElement()) {
+      editorState.read(() => {
+        const selection = $getSelection()
+        const selectedDecorator = decoratorSelectedBy(selection)
+        const upcomingDecorator = decoratorBesideAnchor(selection)
 
-    this.#editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      const selectedDecorator = decoratorSelectedBy(selection)
-      const upcomingDecorator = decoratorBesideAnchor(selection)
-
-      if (selectedDecorator) {
-        this.#setupAnnouncementOn(selectedDecorator)
-        this.#announcedDecoratorKey = null
-      } else if (upcomingDecorator) {
-        this.#setupAnnouncementOn(upcomingDecorator)
-        const key = upcomingDecorator.getKey()
-        if (upcomingDecorator.shouldAnnounceLabel && key !== this.#announcedDecoratorKey) {
-          announceFromEditor(this.#editor, upcomingDecorator.label, { transient: true })
-          this.#announcedDecoratorKey = key
+        if (selectedDecorator) {
+          this.#setupAnnouncementOn(selectedDecorator)
+          this.#announcedDecoratorKey = null
+        } else if (upcomingDecorator) {
+          this.#setupAnnouncementOn(upcomingDecorator)
+          const key = upcomingDecorator.getKey()
+          if (upcomingDecorator.shouldAnnounceLabel && key !== this.#announcedDecoratorKey) {
+            announceFromEditor(this.#editor, upcomingDecorator.label, { transient: true })
+            this.#announcedDecoratorKey = key
+          }
+        } else {
+          this.#teardownAnnouncement()
         }
-      } else {
-        this.#teardownAnnouncement()
-      }
-    })
+      })
+    } else {
+      this.#teardownAnnouncement()
+    }
   }
 
   #setupAnnouncementOn(decorator) {

@@ -6,7 +6,7 @@ export class LiveRegion extends HTMLElement {
   #additions = createElement("span", { ariaLive: "assertive", ariaRelevant: "additions" })
   #removalTimeouts = new Set()
   #transient = createElement("span", { ariaLive: "assertive", ariaAtomic: "true", ariaRelevant: "all" })
-  #transientFrames = new Set()
+  #transientFrame
 
   connectedCallback() {
     this.replaceChildren(this.#transient, this.#additions)
@@ -19,21 +19,17 @@ export class LiveRegion extends HTMLElement {
   dispose() {
     for (const timeout of this.#removalTimeouts) clearTimeout(timeout)
     this.#removalTimeouts.clear()
-    this.#cancelTransientFrames()
+    cancelAnimationFrame(this.#transientFrame)
     this.#additions.replaceChildren()
     this.#transient.replaceChildren()
     this.replaceChildren()
   }
 
   announce(message, { transient = false } = {}) {
-    if (message) {
-      if (typeof document.ariaNotify === "function") {
-        document.ariaNotify(message, { priority: "high" })
-      } else if (transient) {
-        this.#announceTransient(message)
-      } else {
-        this.#announceAddition(message)
-      }
+    if (transient) {
+      this.#announceTransient(message)
+    } else {
+      this.#announceAddition(message)
     }
   }
 
@@ -49,24 +45,11 @@ export class LiveRegion extends HTMLElement {
   }
 
   #announceTransient(message) {
-    this.#cancelTransientFrames()
+    cancelAnimationFrame(this.#transientFrame)
     this.#transient.textContent = message
-    this.#requestTransientFrame(() => {
-      this.#requestTransientFrame(() => this.#transient.textContent = "")
+    this.#transientFrame = requestAnimationFrame(() => {
+      this.#transientFrame = requestAnimationFrame(() => this.#transient.textContent = "")
     })
-  }
-
-  #requestTransientFrame(callback) {
-    const frame = requestAnimationFrame(() => {
-      this.#transientFrames.delete(frame)
-      callback()
-    })
-    this.#transientFrames.add(frame)
-  }
-
-  #cancelTransientFrames() {
-    for (const frame of this.#transientFrames) cancelAnimationFrame(frame)
-    this.#transientFrames.clear()
   }
 }
 

@@ -1,14 +1,14 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 
-test.describe("Live region", () => {
+test.describe("Editor announcements", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/")
     await page.waitForSelector("lexxy-editor[connected]")
     await page.evaluate(() => document.ariaNotify = undefined)
   })
 
-  test("treats every announcement as a new addition", async ({ page }) => {
+  test("treats every announcement as a new addition", async ({ page, editor }) => {
     const region = page.locator("lexxy-live-region")
     const additions = region.locator("[aria-live='assertive'][aria-relevant='additions']")
 
@@ -16,7 +16,7 @@ test.describe("Live region", () => {
     expect(await additions.getAttribute("aria-atomic")).toBeNull()
 
     await pauseClock(page)
-    await region.evaluate((element) => {
+    await editor.locator.evaluate((element) => {
       element.announce("Repeated")
       element.announce("Repeated")
     })
@@ -24,14 +24,14 @@ test.describe("Live region", () => {
     await expect(additions.locator(":scope > *")).toHaveText([ "Repeated", "Repeated" ])
   })
 
-  test("keeps consecutive announcements until each expires", async ({ page }) => {
+  test("keeps consecutive announcements until each expires", async ({ page, editor }) => {
     const region = page.locator("lexxy-live-region")
     const additions = region.locator("[aria-relevant='additions']")
     await pauseClock(page)
 
-    await region.evaluate(element => element.announce("First"))
+    await editor.locator.evaluate(element => element.announce("First"))
     await page.clock.runFor(100)
-    await region.evaluate(element => element.announce("Second"))
+    await editor.locator.evaluate(element => element.announce("Second"))
 
     await expect(additions.locator(":scope > *")).toHaveText([ "First", "Second" ])
     await page.clock.runFor(899)
@@ -42,12 +42,12 @@ test.describe("Live region", () => {
     await expect(additions).toBeEmpty()
   })
 
-  test("clears a transient announcement without using the additions channel", async ({ page }) => {
+  test("clears a transient announcement without using the additions channel", async ({ page, editor }) => {
     const region = page.locator("lexxy-live-region")
     const transient = region.locator("[aria-atomic='true']")
     await pauseClock(page)
 
-    await region.evaluate((element) => element.announce("Caption", { transient: true }))
+    await editor.locator.evaluate((element) => element.announce("Caption", { transient: true }))
 
     await expect(transient).toHaveAttribute("aria-live", "assertive")
     await expect(transient).toHaveAttribute("aria-relevant", "all")
@@ -57,14 +57,49 @@ test.describe("Live region", () => {
     await expect(region.locator("[aria-live='assertive'][aria-relevant='additions']")).toBeEmpty()
   })
 
-  test("uses ariaNotify for every announcement when available", async ({ page }) => {
+  test("a new transient announcement gets its own two frames", async ({ editor }) => {
+    const messages = await editor.locator.evaluate(async element => {
+      const transient = element.querySelector("lexxy-live-region [aria-atomic='true']")
+      element.announce("First", { transient: true })
+      await new Promise(requestAnimationFrame)
+      element.announce("Second", { transient: true })
+      await new Promise(requestAnimationFrame)
+      const afterFirstFrame = transient.textContent
+      await new Promise(requestAnimationFrame)
+      return [ afterFirstFrame, transient.textContent ]
+    })
+
+    expect(messages).toEqual([ "Second", "" ])
+  })
+
+  test("disconnecting the live region clears pending announcements", async ({ page, editor }) => {
+    const region = page.locator("lexxy-live-region")
+    await pauseClock(page)
+    await editor.locator.evaluate(element => {
+      element.announce("Status")
+      element.announce("Caption", { transient: true })
+      const region = element.querySelector("lexxy-live-region")
+      region.remove()
+      element.append(region)
+    })
+
+    await expect(region).toBeEmpty()
+    await editor.locator.evaluate(element => element.announce("After reconnecting"))
+    await expect(region.locator("[aria-relevant='additions']")).toHaveText("After reconnecting")
+    await page.clock.runFor(1000)
+    await expect(region).toBeEmpty()
+  })
+
+  test("uses ariaNotify for every announcement when available", async ({ page, editor }) => {
     const region = page.locator("lexxy-live-region")
 
     await page.evaluate(() => {
       window.__lexxyAriaNotifications = []
       document.ariaNotify = (message, options) => window.__lexxyAriaNotifications.push({ message, options })
     })
-    await region.evaluate((element) => {
+    await editor.locator.evaluate((element) => {
+      element.announce("")
+      element.announce(null)
       element.announce("Status")
       element.announce("Caption", { transient: true })
       element.announce("Moved")

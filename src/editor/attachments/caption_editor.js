@@ -34,9 +34,17 @@ export default class CaptionEditor {
 
   open(nodeKey) {
     const caption = this.#editor.getElementByKey(nodeKey)?.querySelector("figcaption.attachment__caption--editable")
-    if (!caption) return false
-    if (this.#nodeKey === nodeKey) return true
+    if (caption) {
+      if (this.#nodeKey !== nodeKey) {
+        this.#edit(nodeKey, caption)
+      }
+      return true
+    } else {
+      return false
+    }
+  }
 
+  #edit(nodeKey, caption) {
     this.#save()
     this.#nodeKey = nodeKey
     this.#caption = caption
@@ -62,7 +70,6 @@ export default class CaptionEditor {
     this.#resizeObserver.observe(this.#editorElement)
     this.#updatePosition()
     this.#input.focus({ preventScroll: true })
-    return true
   }
 
   #save() {

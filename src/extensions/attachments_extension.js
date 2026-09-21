@@ -45,7 +45,7 @@ export class AttachmentsExtension extends LexxyExtension {
         return mergeRegister(
           editor.registerNodeTransform(ActionTextAttachmentNode, $extractAttachmentFromParagraph),
           editor.registerCommand(DELETE_CHARACTER_COMMAND, $collapseIntoGallery, COMMAND_PRIORITY_NORMAL),
-          editor.registerCommand(KEY_TAB_COMMAND, $focusCaptionFromSelectedAttachment(), COMMAND_PRIORITY_HIGH),
+          editor.registerCommand(KEY_TAB_COMMAND, $focusCaptionFromSelectedAttachment, COMMAND_PRIORITY_HIGH),
           editor.registerMutationListener(ActionTextAttachmentUploadNode, this.#handleUploadMutations.bind(this)),
           () => dragAndDrop.destroy(),
           () => keyboardMove.destroy(),
@@ -148,15 +148,12 @@ function $collapseAtGalleryEdge(anchor, backwards) {
   }
 }
 
-function $focusCaptionFromSelectedAttachment() {
-  return (event) => {
-    if (!event.shiftKey) {
-      const node = $singleSelectedNode()
-      if ($isActionTextAttachmentNode(node) && node.focusCaption()) {
-        event.preventDefault()
-        return true
-      }
-    }
+function $focusCaptionFromSelectedAttachment(event) {
+  const node = $singleSelectedNode()
+  if (!event.shiftKey && $isActionTextAttachmentNode(node) && node.focusCaption()) {
+    event.preventDefault()
+    return true
+  } else {
     return false
   }
 }

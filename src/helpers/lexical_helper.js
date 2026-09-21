@@ -25,7 +25,11 @@ export function $singleSelectedNode() {
   const selection = $getSelection()
   if ($isNodeSelection(selection)) {
     const nodes = selection.getNodes()
-    return nodes.length === 1 ? nodes[0] : null
+    if (nodes.length === 1) {
+      return nodes[0]
+    } else {
+      return null
+    }
   } else {
     return null
   }
@@ -41,8 +45,8 @@ export function $selectedLabelledDecoratorNode() {
 }
 
 export function registerLabelledDecoratorSelection(editor, onChange) {
-  return editor.registerUpdateListener(() => {
-    onChange(editor.getEditorState().read($selectedLabelledDecoratorNode))
+  return editor.registerUpdateListener(({ editorState }) => {
+    onChange(editorState.read($selectedLabelledDecoratorNode))
   })
 }
 

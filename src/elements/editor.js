@@ -69,6 +69,7 @@ export class LexicalEditorElement extends HTMLElement {
   #validity = new Map()
   #validationTextArea = document.createElement("textarea")
   #uploadRequests
+  #liveRegion
 
   constructor() {
     super()
@@ -99,9 +100,9 @@ export class LexicalEditorElement extends HTMLElement {
     this.clipboard = new Clipboard(this)
     this.#disposables.push(this.clipboard)
 
-    this.liveRegion = this.querySelector("lexxy-live-region") ?? createElement("lexxy-live-region")
-    this.append(this.liveRegion)
-    this.#disposables.push(this.liveRegion)
+    this.#liveRegion = this.querySelector("lexxy-live-region") ?? createElement("lexxy-live-region")
+    this.append(this.#liveRegion)
+    this.#disposables.push(this.#liveRegion)
 
     this.adapter = new BrowserAdapter()
     this.#uploadRequests = new UploadRequests()
@@ -249,7 +250,13 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   announce(message, options) {
-    this.liveRegion?.announce(message, options)
+    if (message) {
+      if (typeof document.ariaNotify === "function") {
+        document.ariaNotify(message, { priority: "high" })
+      } else {
+        this.#liveRegion?.announce(message, options)
+      }
+    }
   }
 
   $generateNodesFromDOM(doc, { editor = this.editor } = {}) {

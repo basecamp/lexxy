@@ -25,18 +25,17 @@ export class AttachmentKeyboardMove {
   }
 
   #tryReorder = (event) => {
-    if (event.altKey && event.shiftKey && event.key.startsWith("Arrow")) {
-      const node = $singleSelectedNode()
-      if ($isActionTextAttachmentNode(node)) {
-        event.preventDefault()
-        const message = this.#executeMove(event.key, node)
-        $setSelection($createNodeSelectionWith(node))
-        announceFromEditor(this.#editor, message)
-        this.#keepInView(node)
-        return true
-      }
+    const node = $singleSelectedNode()
+    if (event.altKey && event.shiftKey && event.key.startsWith("Arrow") && $isActionTextAttachmentNode(node)) {
+      event.preventDefault()
+      const message = this.#executeMove(event.key, node)
+      $setSelection($createNodeSelectionWith(node))
+      announceFromEditor(this.#editor, message)
+      this.#keepInView(node)
+      return true
+    } else {
+      return false
     }
-    return false
   }
 
   // Node selections don't scroll into view automatically like a caret does.
@@ -74,14 +73,13 @@ class AttachmentReorder {
   }
 
   reorderInGallery() {
-    if ($isImageGalleryNode(this.node.getParent())) {
-      const sibling = $getSiblingCaret(this.node, this.direction).getNodeAtCaret()
-      if (sibling) {
-        $getSiblingCaret(sibling, this.direction).insert(this.node)
-        return "Image reordered in gallery"
-      }
+    const sibling = $getSiblingCaret(this.node, this.direction).getNodeAtCaret()
+    if ($isImageGalleryNode(this.node.getParent()) && sibling) {
+      $getSiblingCaret(sibling, this.direction).insert(this.node)
+      return "Image reordered in gallery"
+    } else {
+      return this.#blockedMessage
     }
-    return this.#blockedMessage
   }
 
   #extractFromGallery() {
@@ -137,10 +135,18 @@ class AttachmentReorder {
 
   #swapWith(target) {
     $getSiblingCaret(target, this.direction).insert(this.node)
-    return this.direction === "next" ? "Attachment moved down" : "Attachment moved up"
+    if (this.direction === "next") {
+      return "Attachment moved down"
+    } else {
+      return "Attachment moved up"
+    }
   }
 
   get #blockedMessage() {
-    return this.direction === "next" ? "Already at the end" : "Already at the start"
+    if (this.direction === "next") {
+      return "Already at the end"
+    } else {
+      return "Already at the start"
+    }
   }
 }
