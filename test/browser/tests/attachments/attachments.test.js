@@ -131,7 +131,7 @@ test.describe("Attachments", () => {
     await editor.uploadFile("test/fixtures/files/example.png")
 
     const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
-    await page.locator("figure.attachment figcaption").click()
+    await page.locator("figure.attachment .attachment__caption--editable").click()
     await expect(caption).toBeVisible({ timeout: 10_000 })
 
     await caption.click()
@@ -147,7 +147,7 @@ test.describe("Attachments", () => {
     await editor.uploadFile("test/fixtures/files/example.png")
 
     const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
-    await page.locator("figure.attachment figcaption").click()
+    await page.locator("figure.attachment .attachment__caption--editable").click()
     await expect(caption).toBeVisible({ timeout: 10_000 })
 
     await caption.click()
@@ -164,7 +164,7 @@ test.describe("Attachments", () => {
     await editor.uploadFile("test/fixtures/files/example.png")
 
     const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
-    await page.locator("figure.attachment figcaption").click()
+    await page.locator("figure.attachment .attachment__caption--editable").click()
     await expect(caption).toBeVisible({ timeout: 10_000 })
 
     await caption.click()
@@ -183,7 +183,7 @@ test.describe("Attachments", () => {
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
     const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
-    await figure.locator("figcaption").click()
+    await figure.locator(".attachment__caption--editable").click()
     await caption.click()
     await caption.pressSequentially("Hello world")
 
@@ -205,7 +205,7 @@ test.describe("Attachments", () => {
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
     const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
-    await figure.locator("figcaption").click()
+    await figure.locator(".attachment__caption--editable").click()
     await caption.click()
     await caption.pressSequentially("Cut me")
 
@@ -349,7 +349,7 @@ test.describe("Attachments", () => {
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
     const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
-    await figure.locator("figcaption").click()
+    await figure.locator(".attachment__caption--editable").click()
     await caption.click()
     await caption.pressSequentially("Copy me")
 
