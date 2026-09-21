@@ -855,7 +855,7 @@
 
   .lexxy-table-control__more-menu-trigger {
     aspect-ratio: auto;
-    box-shadow: 0 0 0 1px inset rgba(128, 128, 128, 0.3);
+    box-shadow: 0 0 0 1px inset var(--lexxy-color-floating-controls-separator);
     font-weight: normal;
     padding: 0 1.25ch;
   }
@@ -981,7 +981,7 @@
     /* The anchor is measured in px from the editor's top-left, so these stay physical. */
     left: calc(var(--lexxy-anchor-left) + var(--lexxy-anchor-width));
     top: var(--lexxy-anchor-top);
-    transform: translate(-100%, 0);
+    transform: translate(calc(-100% - 1.5ch), 1.5ch);
 
     &[hidden] {
       display: none;
@@ -1014,9 +1014,30 @@
       display: none;
     }
 
+    /* Carried by the optional button so it disappears along with it. */
     .lexxy-attachment-toolbar__alternative-text {
       aspect-ratio: auto;
-      padding-inline: 0.75ch;
+      margin-inline-end: calc(var(--lexxy-toolbar-spacing) + 1px);
+      padding-inline: 1ch;
+      position: relative;
+
+      span {
+        display: inline-block;
+        font-size: 0.9em;
+      }
+
+      &:after {
+        background-color: var(--lexxy-color-floating-controls-separator);
+        block-size: 1.125em;
+        content: "";
+        display: block;
+        inline-size: 1px;
+        inset-block: 0;
+        inset-inline-end: calc(-1 * var(--lexxy-toolbar-spacing));
+        margin: auto;
+        pointer-events: none;
+        position: absolute;
+      }
     }
 
     .lexxy-attachment-toolbar__remove:hover,

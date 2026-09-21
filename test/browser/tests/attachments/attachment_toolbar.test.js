@@ -31,7 +31,7 @@ test.describe("Attachment toolbar", () => {
     await expect(toolbar).toBeHidden()
   })
 
-  test("Alt+F10 focuses the remove button; Escape returns focus to the editor", async ({ page, editor }) => {
+  test("Alt+F10 focuses the first button; Escape returns focus to the editor", async ({ page, editor }) => {
     await editor.setValue(attachmentTag("a", "example.png"))
     await editor.flush()
 
@@ -43,12 +43,29 @@ test.describe("Attachment toolbar", () => {
     await expect(figure).toHaveClass(/node--selected/)
     await page.keyboard.press("Alt+F10")
 
-    const removeButton = page.locator("lexxy-attachment-toolbar button[aria-label='Remove']")
-    await expect(removeButton).toBeFocused()
+    await expect(page.locator("lexxy-attachment-toolbar button[aria-label='Alternative text']")).toBeFocused()
+
+    await page.keyboard.press("ArrowRight")
+    await expect(page.locator("lexxy-attachment-toolbar button[aria-label='Remove']")).toBeFocused()
 
     await page.keyboard.press("Escape")
     await expect(editor.content).toBeFocused()
     await expect(figure).toHaveClass(/node--selected/)
+  })
+
+  test("Alt+F10 falls through to Remove when the attachment cannot have a description", async ({ page, editor }) => {
+    await editor.setValue(FILE_ATTACHMENT_TAG)
+    await editor.flush()
+
+    const figure = page.locator("figure.attachment")
+    await expect(figure).toBeVisible()
+
+    await editor.focus()
+    await selectAttachment(figure)
+    await page.keyboard.press("Alt+F10")
+
+    await expect(page.locator("lexxy-attachment-toolbar button[aria-label='Alternative text']")).toBeHidden()
+    await expect(page.locator("lexxy-attachment-toolbar button[aria-label='Remove']")).toBeFocused()
   })
 
   test("repositions beside the attachment when the editor reflows", async ({ page, editor }) => {
@@ -70,9 +87,10 @@ test.describe("Attachment toolbar", () => {
     await page.setViewportSize({ width: 360, height: 800 })
 
     await expect.poll(async () => (await figure.boundingBox()).y).not.toBe(wideTop)
+    const inset = await cornerInset(toolbar)
     await expect.poll(async () => {
       const [ figureBox, toolbarBox ] = await boxes(figure, toolbar)
-      return Math.max(Math.abs(toolbarBox.y - figureBox.y), Math.abs(right(toolbarBox) - right(figureBox)))
+      return Math.max(Math.abs(toolbarBox.y - (figureBox.y + inset)), Math.abs(right(toolbarBox) - (right(figureBox) - inset)))
     }).toBeLessThanOrEqual(TOLERANCE)
   })
 
@@ -87,12 +105,10 @@ test.describe("Attachment toolbar", () => {
     const toolbar = page.locator("lexxy-attachment-toolbar")
     await expect(toolbar).toHaveAttribute("data-presentation", "gallery")
 
-    const [ figureBox, toolbarBox ] = await boxes(figure, toolbar)
-    expect(Math.abs(toolbarBox.y - figureBox.y)).toBeLessThanOrEqual(TOLERANCE)
-    expect(Math.abs(right(toolbarBox) - right(figureBox))).toBeLessThanOrEqual(TOLERANCE)
+    await expectInsetFromCorner(figure, toolbar)
   })
 
-  test("hangs off the top-right corner of a block attachment", async ({ page, editor }) => {
+  test("sits inset from the top-right corner of a block attachment", async ({ page, editor }) => {
     await editor.setValue(
       "<p>Above</p>" +
       attachmentTag("a", "example.png")
@@ -105,9 +121,7 @@ test.describe("Attachment toolbar", () => {
 
     const toolbar = page.locator("lexxy-attachment-toolbar")
     await expect(toolbar).toBeVisible()
-    const [ figureBox, toolbarBox ] = await boxes(figure, toolbar)
-    expect(Math.abs(toolbarBox.y - figureBox.y)).toBeLessThanOrEqual(TOLERANCE)
-    expect(Math.abs(right(toolbarBox) - right(figureBox))).toBeLessThanOrEqual(TOLERANCE)
+    await expectInsetFromCorner(figure, toolbar)
   })
 
   test("centers on a horizontal divider", async ({ page, editor }) => {
@@ -166,8 +180,40 @@ test.describe("Attachment toolbar", () => {
   })
 })
 
+// A non-previewable attachment: the alternative text button does not apply to it.
+const FILE_ATTACHMENT_TAG = `<action-text-attachment sgid="f" content-type="application/pdf" url="/doc.pdf" filename="doc.pdf" filesize="100"></action-text-attachment>`
+
 // Browsers round subpixel boxes differently; two device pixels covers all three.
 const TOLERANCE = 2
+
+// Matches the inset in lexxy-editor.css; ch resolves against the toolbar's own font.
+const CORNER_INSET = "1.5ch"
+
+// Both gaps come from the same inset, so they track each other far more tightly than TOLERANCE allows.
+const SYMMETRY_TOLERANCE = 1
+
+async function expectInsetFromCorner(figure, toolbar) {
+  const inset = await cornerInset(toolbar)
+  const [ figureBox, toolbarBox ] = await boxes(figure, toolbar)
+  const topGap = toolbarBox.y - figureBox.y
+  const rightGap = right(figureBox) - right(toolbarBox)
+
+  expect(Math.abs(topGap - inset)).toBeLessThanOrEqual(TOLERANCE)
+  expect(Math.abs(rightGap - inset)).toBeLessThanOrEqual(TOLERANCE)
+  expect(Math.abs(topGap - rightGap)).toBeLessThanOrEqual(SYMMETRY_TOLERANCE)
+}
+
+async function cornerInset(toolbar) {
+  return toolbar.evaluate((element, inset) => {
+    const probe = document.createElement("div")
+    probe.style.position = "absolute"
+    probe.style.inlineSize = inset
+    element.append(probe)
+    const { width } = probe.getBoundingClientRect()
+    probe.remove()
+    return width
+  }, CORNER_INSET)
+}
 
 async function boxes(...locators) {
   return Promise.all(locators.map((locator) => locator.boundingBox()))

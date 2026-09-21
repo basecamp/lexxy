@@ -80,8 +80,6 @@ test.describe("Attachment alternative text editing", () => {
     await selectAttachment(figure)
     await editor.focus()
     await page.keyboard.press("Alt+F10")
-    await expect(page.locator("lexxy-attachment-toolbar").getByRole("button", { name: "Remove", exact: true })).toBeFocused()
-    await page.keyboard.press("ArrowRight")
     const button = page.getByRole("button", { name: "Alternative text", exact: true })
     await expect(button).toBeFocused()
     await page.keyboard.press("Enter")
