@@ -116,6 +116,7 @@ test.describe("Attachments", () => {
 
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
+    await expect(page.locator("[data-event='lexxy:upload-end']")).toHaveCount(1)
 
     await figure.click({ position: { x: 8, y: 8 } })
     const toolbar = page.locator("lexxy-attachment-toolbar")
