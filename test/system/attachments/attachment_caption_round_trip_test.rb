@@ -15,6 +15,7 @@ class AttachmentCaptionRoundTripTest < ApplicationSystemTestCase
     find("textarea[aria-label='Image caption']").fill_in with: "On the river"
     find("textarea[aria-label='Image caption']").send_keys :enter
     click_on "Update Post"
+    assert_current_path post_path(post)
 
     within "article.post" do
       assert_selector "figcaption", text: "On the river"
