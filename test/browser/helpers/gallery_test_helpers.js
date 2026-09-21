@@ -32,6 +32,7 @@ export async function positionCursorAfterNode(editor, anchorType) {
 
 export async function selectGalleryImage(page, index, galleryIndex = 0) {
   const gallery = page.locator(".attachment-gallery").nth(galleryIndex)
+  await expect(gallery.locator("progress")).toHaveCount(0)
   await gallery.locator("figure.attachment img").nth(index).click()
 }
 
