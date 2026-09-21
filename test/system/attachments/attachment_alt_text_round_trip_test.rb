@@ -22,6 +22,7 @@ class AttachmentAltTextRoundTripTest < ApplicationSystemTestCase
     [ 'A canoe beside a sign reading "River & lake"', "A blue canoe" ].each do |description|
       edit_description description
       click_on "Update Post"
+      assert_current_path post_path(post)
 
       within "article.post" do
         assert_selector "img[alt='#{description}']"
@@ -55,12 +56,14 @@ class AttachmentAltTextRoundTripTest < ApplicationSystemTestCase
     find("textarea[aria-label='Image caption']").send_keys :enter
     edit_description "A red canoe"
     click_on "Update Post"
+    assert_current_path post_path(post)
     assert_selector "article.post img[alt='A red canoe']"
 
     click_on "Edit this post"
     wait_for_editor
     edit_description ""
     click_on "Update Post"
+    assert_current_path post_path(post)
 
     assert_selector "article.post img"
     assert_no_selector "article.post img[alt]"
@@ -87,6 +90,7 @@ class AttachmentAltTextRoundTripTest < ApplicationSystemTestCase
     HTML
     edit_description "A green tree"
     click_on "Update Post"
+    assert_current_path post_path(post)
 
     within "article.post" do
       assert_selector "img[alt='A green tree']"
