@@ -9,7 +9,6 @@ const global = new Configuration({
 
 const presets = new Configuration({
   default: {
-    alternativeText: true,
     attachments: true,
     markdown: true,
     multiLine: true,

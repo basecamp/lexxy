@@ -175,14 +175,10 @@ test.describe("Editing attachment alternative text", () => {
     await expect(page.getByRole("button", { name: "Alternative text", exact: true })).toBeHidden()
   })
 
-  test("disabling alternative text editing preserves existing descriptions", async ({ page, editor }) => {
+  test("older Action Text hides authoring without removing existing descriptions", async ({ page, editor }) => {
     await editor.locator.evaluate(element => {
-      const parent = element.parentElement
-      element.remove()
-      element.setAttribute("alternative-text", "false")
-      parent.append(element)
+      element.dataset.actionTextSupportsAlt = "false"
     })
-    await editor.waitForConnected()
     await editor.setValue(attachmentTag("a", "canoe.png", { alt: "A red canoe" }))
     await editor.flush()
     await editor.focus()

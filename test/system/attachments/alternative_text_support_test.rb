@@ -6,7 +6,7 @@ class AlternativeTextSupportTest < ApplicationSystemTestCase
     wait_for_editor
 
     supported = ActionText::Attachment::ATTRIBUTES.include?("alt")
-    assert_selector "lexxy-editor[alternative-text='#{supported}']"
+    assert_selector "lexxy-editor[data-action-text-supports-alt='#{supported}']"
   end
 
   test "unsupported Action Text does not offer alternative text authoring" do

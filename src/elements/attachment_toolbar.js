@@ -193,7 +193,7 @@ export class AttachmentToolbar extends HTMLElement {
   }
 
   #canEditAlternativeText(node) {
-    return this.#editorElement.config.get("alternativeText")
+    return this.#editorElement.dataset.actionTextSupportsAlt !== "false"
       && node.getType() === "action_text_attachment"
       && node.isPreviewableAttachment
   }

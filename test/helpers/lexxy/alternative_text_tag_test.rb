@@ -1,11 +1,12 @@
 require "test_helper"
 
 class Lexxy::AlternativeTextTagTest < ActionView::TestCase
-  test "applications can disable alternative text authoring" do
+  test "alternative text support follows Action Text capabilities" do
     render inline: <<~ERB
-      <%= rich_textarea_tag :body, "", "alternative-text": false %>
+      <%= rich_textarea_tag :body, "" %>
     ERB
 
-    assert_dom "lexxy-editor[alternative-text='false']"
+    supported = ActionText::Attachment::ATTRIBUTES.include?("alt")
+    assert_dom "lexxy-editor[data-action-text-supports-alt='#{supported}']"
   end
 end
