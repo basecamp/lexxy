@@ -10,7 +10,7 @@ Lexxy uploads files using Active Storage's Direct Upload protocol and renders pr
 
 ## Captions
 
-Click an image or video’s caption (or its filename) to edit it. With the attachment selected, press **Tab** to enter the caption. Changes save when you leave the field. **Escape** returns to the selected attachment, and **Enter** continues editing after it.
+Images and videos support editable captions. Click the caption or filename below the preview to edit it.
 
 ## Upload response
 
