@@ -12,11 +12,7 @@ See [attachment hotkeys](hotkeys.html#attachments) for editing captions and arra
 
 ## Alternative text
 
-Select an image or attachment preview and choose **ALT** to add or edit its alternative text. Choose **Save** to apply the description, or clear the field and save to remove it. Alternative text is separate from the visible caption.
-
-With the attachment selected, press **Alt+F10** to focus its toolbar, then use the arrow keys to reach **Alternative text** and press **Enter**.
-
-### Action Text support
+Images and attachment previews support alternative text through the ALT button in the attachment toolbar.
 
 Rails enables the ALT button only when Action Text supports the `alt` attachment attribute ([rails/rails#58337](https://github.com/rails/rails/pull/58337)).
 
@@ -24,8 +20,6 @@ If you override attachment partials, pass the description to `image_tag`:
 
 - `app/views/active_storage/blobs/_blob.html.erb`: `alt: blob.try(:alt)`.
 - `app/views/action_text/attachables/_remote_image.html.erb`: `alt: remote_image.try(:alt)`.
-
-Standalone JavaScript applications must preserve and render the `alt` attribute themselves.
 
 ## Upload response
 
