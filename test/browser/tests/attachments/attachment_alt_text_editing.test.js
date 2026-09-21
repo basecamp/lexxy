@@ -118,6 +118,12 @@ test.describe("Editing attachment alternative text", () => {
     await page.keyboard.press("ControlOrMeta+Shift+z")
     await expect(figure.locator("img")).toHaveAttribute("alt", "A blue canoe")
     await expect(figure.locator(".attachment__caption-text")).toHaveText("canoe.png")
+
+    await page.keyboard.press("Tab")
+    await expect(page.getByRole("textbox", { name: "Image caption", exact: true })).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(editor.content).toBeFocused()
+    await expect(figure).toHaveClass(/node--selected/)
   })
 
   test("editing a gallery image leaves the other descriptions alone", async ({ page, editor }) => {

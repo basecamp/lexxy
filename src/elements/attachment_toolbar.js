@@ -81,6 +81,17 @@ export class AttachmentToolbar extends HTMLElement {
     return button
   }
 
+  #removeSelectedNode() {
+    if (this.#hasSelectedNode) {
+      this.#editor.update(() => $getNodeByKey(this.#currentNodeKey)?.remove())
+      this.#editor.focus()
+    }
+  }
+
+  get #hasSelectedNode() {
+    return this.#currentNodeKey !== null
+  }
+
   #createAlternativeTextButton() {
     this.#alternativeTextButton = createElement("button", {
       type: "button",
@@ -95,17 +106,6 @@ export class AttachmentToolbar extends HTMLElement {
       this.#alternativeTextDialog.open(this.#currentNodeKey)
     }))
     return this.#alternativeTextButton
-  }
-
-  #removeSelectedNode() {
-    if (this.#hasSelectedNode) {
-      this.#editor.update(() => $getNodeByKey(this.#currentNodeKey)?.remove())
-      this.#editor.focus()
-    }
-  }
-
-  get #hasSelectedNode() {
-    return this.#currentNodeKey !== null
   }
 
   #navigateOrExit = (event) => {
