@@ -234,28 +234,26 @@ export default class Clipboard {
   }
 
   #handlePastedFiles(clipboardData) {
-    if (!this.editorElement.supportsAttachments) return false
+    if (this.editorElement.supportsAttachments) {
+      const html = clipboardData.getData("text/html")
+      const files = clipboardData.files
+      const copiedImage = files.length && this.#copiedImage(html)
 
-    const html = clipboardData.getData("text/html")
-    const files = clipboardData.files
-
-    const copiedImage = files.length && this.#copiedImage(html)
-    if (copiedImage) {
-      this.#uploadFilesPreservingScroll(files, copiedImage.getAttribute("alt"))
-      return true
+      if (copiedImage) {
+        this.#uploadFilesPreservingScroll(files, copiedImage.getAttribute("alt"))
+        return true
+      } else if (html && !this.#isLexicalClipboardData(clipboardData)) {
+        this.contents.insertHtml(html, { tag: PASTE_TAG })
+        return true
+      } else if (files.length) {
+        this.#uploadFilesPreservingScroll(files)
+        return true
+      } else {
+        return false
+      }
+    } else {
+      return false
     }
-
-    if (html && !this.#isLexicalClipboardData(clipboardData)) {
-      this.contents.insertHtml(html, { tag: PASTE_TAG })
-      return true
-    }
-
-    if (files.length) {
-      this.#uploadFilesPreservingScroll(files)
-      return true
-    }
-
-    return false
   }
 
   #isLexicalClipboardData(clipboardData) {
@@ -263,13 +261,17 @@ export default class Clipboard {
   }
 
   #copiedImage(html) {
-    if (!html) return null
+    if (html) {
+      const doc = parseHtml(html)
+      const elementChildren = Array.from(doc.body.children)
 
-    const doc = parseHtml(html)
-    const elementChildren = Array.from(doc.body.children)
-
-    if (elementChildren.length === 1 && elementChildren[0].tagName === "IMG") {
-      return elementChildren[0]
+      if (elementChildren.length === 1 && elementChildren[0].tagName === "IMG") {
+        return elementChildren[0]
+      } else {
+        return null
+      }
+    } else {
+      return null
     }
   }
 

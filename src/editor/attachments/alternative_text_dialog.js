@@ -42,7 +42,9 @@ export default class AlternativeTextDialog {
   open(nodeKey) {
     const description = this.#editor.read(() => {
       const node = $getNodeByKey(nodeKey)
-      if ($isActionTextAttachmentNode(node)) return node.altText
+      if ($isActionTextAttachmentNode(node)) {
+        return node.altText
+      }
     })
 
     if (description !== undefined) {
