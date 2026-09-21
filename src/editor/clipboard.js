@@ -256,6 +256,10 @@ export default class Clipboard {
     }
   }
 
+  #isLexicalClipboardData(clipboardData) {
+    return Array.from(clipboardData.types).includes("application/x-lexical-editor")
+  }
+
   #copiedImage(html) {
     if (html) {
       const doc = parseHtml(html)
@@ -279,10 +283,6 @@ export default class Clipboard {
     })
   }
 
-
-  #isLexicalClipboardData(clipboardData) {
-    return Array.from(clipboardData.types).includes("application/x-lexical-editor")
-  }
   // Deals with an issue in Safari where it scrolls to the tops after pasting attachments
   async #preservingScrollPosition(callback) {
     const scrollY = window.scrollY
