@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
-import { attachmentTag, selectAttachment } from "../../helpers/attachment_helpers.js"
+import { announcements, attachmentTag, selectAttachment, watchAnnouncements } from "../../helpers/attachment_helpers.js"
 
 test.describe("Attachment caption", () => {
   test.beforeEach(async ({ page }) => {
@@ -80,24 +80,23 @@ test.describe("Attachment caption", () => {
     await expect.poll(() => captionText.evaluate((element) => element.firstChild === element.__lexxyTextNode)).toBe(true)
   })
 
-  test("announces the caption once when moving left from a selected gallery image", async ({ page, editor }) => {
+  test("keeps gallery captions exposed without announcing them on cursor movement", async ({ page, editor }) => {
     await editor.setValue(`<div class="attachment-gallery">${attachmentTag("a", "whale.png", { caption: "Whale" })}${attachmentTag("b", "rabbit.png", { caption: "Rabbit" })}</div>`)
     await editor.flush()
+    await watchAnnouncements(page)
 
     const figure = page.locator("figure.attachment").nth(1)
     await selectAttachment(figure)
     await editor.focus()
-    await page.evaluate(() => {
-      window.__lexxyAriaNotifications = []
-      document.ariaNotify = (message, options) => window.__lexxyAriaNotifications.push({ message, options })
-    })
+    await expect(figure).toHaveClass(/node--selected/)
+    await expect(figure.locator(".attachment__caption-text")).not.toHaveAttribute("aria-hidden", "true")
 
     await page.keyboard.press("ArrowLeft")
     await editor.flush()
 
-    expect(await page.evaluate(() => window.__lexxyAriaNotifications)).toEqual([
-      { message: "Rabbit", options: { priority: "high" } }
-    ])
+    await expect(figure).not.toHaveClass(/node--selected/)
+    await expect(figure.locator(".attachment__caption-text")).not.toHaveAttribute("aria-hidden", "true")
+    expect(await announcements(page)).toEqual([])
   })
 
   test("readies an inline attachment's label when the caret approaches from either side", async ({ page, editor }) => {

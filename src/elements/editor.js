@@ -249,12 +249,12 @@ export class LexicalEditorElement extends HTMLElement {
     return dispatch(this, "lexxy:file-accept", { file }, true)
   }
 
-  announce(message, options) {
+  announce(message) {
     if (message) {
       if (typeof document.ariaNotify === "function") {
         document.ariaNotify(message, { priority: "high" })
       } else {
-        this.#liveRegion?.announce(message, options)
+        this.#liveRegion?.announce(message)
       }
     }
   }

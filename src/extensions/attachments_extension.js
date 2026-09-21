@@ -7,7 +7,7 @@ import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_
 import { AttachmentDragAndDrop } from "../editor/attachments/drag_and_drop"
 import { AttachmentFakeSelection } from "../editor/attachments/fake_selection"
 import { AttachmentKeyboardMove } from "../editor/attachments/keyboard_move"
-import { DecoratorAnnouncement } from "../editor/attachments/decorator_announcement"
+import { CustomAttachmentLabels } from "../editor/attachments/custom_attachment_labels"
 import { $isAtNodeEdge, $singleSelectedNode } from "../helpers/lexical_helper"
 
 import LexxyExtension from "./lexxy_extension"
@@ -40,7 +40,7 @@ export class AttachmentsExtension extends LexxyExtension {
         const dragAndDrop = new AttachmentDragAndDrop(editor)
         const keyboardMove = new AttachmentKeyboardMove(editor)
         const fakeSelection = new AttachmentFakeSelection(editor)
-        const decoratorAnnouncement = new DecoratorAnnouncement(editor)
+        const customAttachmentLabels = new CustomAttachmentLabels(editor)
 
         return mergeRegister(
           editor.registerNodeTransform(ActionTextAttachmentNode, $extractAttachmentFromParagraph),
@@ -50,7 +50,7 @@ export class AttachmentsExtension extends LexxyExtension {
           () => dragAndDrop.destroy(),
           () => keyboardMove.destroy(),
           () => fakeSelection.destroy(),
-          () => decoratorAnnouncement.destroy()
+          () => customAttachmentLabels.destroy()
         )
       }
     })

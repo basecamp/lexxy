@@ -9,15 +9,15 @@ test.describe("Attachment alternative text", () => {
     await editor.waitForConnected()
   })
 
-  for (const { name, caption, alt, announcement } of [
-    { name: "distinct caption and description", caption: "On the river", alt: "A red canoe passes green trees", announcement: "On the river. A red canoe passes green trees" },
-    { name: "description matching the caption", caption: "A red canoe", alt: "A red canoe", announcement: "A red canoe" },
-    { name: "filename used as alternative text", caption: "On the river", alt: "canoe.png", announcement: "On the river" },
-    { name: "description without a caption", caption: "", alt: "A red canoe", announcement: "A red canoe" },
-    { name: "filename without a caption", caption: "", alt: "canoe.png", announcement: "canoe.png" },
-    { name: "caption without alternative text", caption: "On the river", alt: "", announcement: "On the river" }
+  for (const { name, caption, alt, label } of [
+    { name: "distinct caption and description", caption: "On the river", alt: "A red canoe passes green trees", label: "On the river. A red canoe passes green trees" },
+    { name: "description matching the caption", caption: "A red canoe", alt: "A red canoe", label: "A red canoe" },
+    { name: "filename used as alternative text", caption: "On the river", alt: "canoe.png", label: "On the river" },
+    { name: "description without a caption", caption: "", alt: "A red canoe", label: "A red canoe" },
+    { name: "filename without a caption", caption: "", alt: "canoe.png", label: "canoe.png" },
+    { name: "caption without alternative text", caption: "On the river", alt: "", label: "On the river" }
   ]) {
-    test(`selects and announces ${name}`, async ({ page, editor }) => {
+    test(`labels the selection with ${name}`, async ({ page, editor }) => {
       await editor.setValue(`<div class="attachment-gallery">${attachmentTag("a", "whale.png")}${attachmentTag("b", "canoe.png", { caption, alt })}</div>`)
       await editor.flush()
 
@@ -28,17 +28,8 @@ test.describe("Attachment alternative text", () => {
 
       await selectAttachment(figure)
       await editor.focus()
-      await expect(figure.locator(".lexxy-fake-selection")).toHaveText(announcement)
-      await expect.poll(() => page.evaluate(() => document.getSelection().toString())).toBe(announcement)
-
-      await page.evaluate(() => {
-        window.__lexxyAriaNotifications = []
-        document.ariaNotify = (message) => window.__lexxyAriaNotifications.push(message)
-      })
-      await page.keyboard.press("ArrowLeft")
-      await editor.flush()
-
-      expect(await page.evaluate(() => window.__lexxyAriaNotifications)).toEqual([ announcement ])
+      await expect(figure.locator(".lexxy-fake-selection")).toHaveText(label)
+      await expect.poll(() => page.evaluate(() => document.getSelection().toString())).toBe(label)
     })
   }
 

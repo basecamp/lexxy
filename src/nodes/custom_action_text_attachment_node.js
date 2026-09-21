@@ -98,11 +98,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     return figure
   }
 
-  get isAnnounceable() {
-    return true
-  }
-
-  setupAnnouncement(figure) {
+  exposeLabel(figure) {
     const labelImage = figure.querySelector("[data-lexxy-label-image]")
     if (labelImage) labelImage.alt = this.label
 
@@ -119,7 +115,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     return this.plainText || `[${this.contentType}]`
   }
 
-  teardownAnnouncement(figure) {
+  restoreLabel(figure) {
     const labelImage = figure.querySelector("[data-lexxy-label-image]")
     if (labelImage) labelImage.alt = labelImage.dataset.lexxyOriginalAlt
 

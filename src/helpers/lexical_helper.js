@@ -75,8 +75,8 @@ export function getListType(node) {
   return list?.getListType() ?? null
 }
 
-export function announceFromEditor(editor, message, options) {
-  editor.getRootElement()?.closest("lexxy-editor")?.announce(message, options)
+export function announceFromEditor(editor, message) {
+  editor.getRootElement()?.closest("lexxy-editor")?.announce(message)
 }
 
 export function isEditorFocused(editor) {

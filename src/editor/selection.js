@@ -358,12 +358,12 @@ export default class Selection {
   // Selection changes can arrive after Tab moves focus to a toolbar or another field.
   // Reconciling that stale selection would pull focus back into the editor.
   #preserveFocusOutsideEditor() {
-    if (this.#anotherElementIsFocused) {
+    if (this.#isAnotherElementFocused) {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
     }
   }
 
-  get #anotherElementIsFocused() {
+  get #isAnotherElementFocused() {
     const rootElement = this.editor.getRootElement()
     const activeElement = rootElement?.ownerDocument.activeElement
 

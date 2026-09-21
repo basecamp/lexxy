@@ -42,42 +42,11 @@ test.describe("Editor announcements", () => {
     await expect(additions).toBeEmpty()
   })
 
-  test("clears a transient announcement without using the additions channel", async ({ page, editor }) => {
-    const region = page.locator("lexxy-live-region")
-    const transient = region.locator("[aria-atomic='true']")
-    await pauseClock(page)
-
-    await editor.locator.evaluate((element) => element.announce("Caption", { transient: true }))
-
-    await expect(transient).toHaveAttribute("aria-live", "assertive")
-    await expect(transient).toHaveAttribute("aria-relevant", "all")
-    await expect(transient).toHaveText("Caption")
-    await page.clock.runFor(34)
-    await expect(transient).toBeEmpty()
-    await expect(region.locator("[aria-live='assertive'][aria-relevant='additions']")).toBeEmpty()
-  })
-
-  test("a new transient announcement gets its own two frames", async ({ editor }) => {
-    const messages = await editor.locator.evaluate(async element => {
-      const transient = element.querySelector("lexxy-live-region [aria-atomic='true']")
-      element.announce("First", { transient: true })
-      await new Promise(requestAnimationFrame)
-      element.announce("Second", { transient: true })
-      await new Promise(requestAnimationFrame)
-      const afterFirstFrame = transient.textContent
-      await new Promise(requestAnimationFrame)
-      return [ afterFirstFrame, transient.textContent ]
-    })
-
-    expect(messages).toEqual([ "Second", "" ])
-  })
-
   test("disconnecting the live region clears pending announcements", async ({ page, editor }) => {
     const region = page.locator("lexxy-live-region")
     await pauseClock(page)
     await editor.locator.evaluate(element => {
       element.announce("Status")
-      element.announce("Caption", { transient: true })
       const region = element.querySelector("lexxy-live-region")
       region.remove()
       element.append(region)
@@ -101,16 +70,13 @@ test.describe("Editor announcements", () => {
       element.announce("")
       element.announce(null)
       element.announce("Status")
-      element.announce("Caption", { transient: true })
       element.announce("Moved")
     })
 
     expect(await page.evaluate(() => window.__lexxyAriaNotifications)).toEqual([
       { message: "Status", options: { priority: "high" } },
-      { message: "Caption", options: { priority: "high" } },
       { message: "Moved", options: { priority: "high" } }
     ])
-    await expect(region.locator("[aria-atomic='true']")).toBeEmpty()
     await expect(region.locator("[aria-live='assertive'][aria-relevant='additions']")).toBeEmpty()
   })
 
