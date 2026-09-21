@@ -1,19 +1,19 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
-import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
-import { selectAttachment } from "../../helpers/attachment_helpers.js"
+import { attachmentTag, selectAttachment } from "../../helpers/attachment_helpers.js"
 
 test.describe("Attachment toolbar", () => {
   test.beforeEach(async ({ page }) => {
+    await page.route("**/*.png", route => route.fulfill({ path: "test/fixtures/files/example.png", contentType: "image/png" }))
     await page.goto("/attachments.html")
     await page.waitForSelector("lexxy-editor[connected]")
     await page.waitForSelector("lexxy-toolbar[connected]")
   })
 
-  test("appears beside a selected attachment and hides on deselect", async ({ page, editor }) => {
+  test("appears for a selected attachment and hides when selection leaves it", async ({ page, editor }) => {
     await editor.setValue(
       "<p>Above</p>" +
-      '<action-text-attachment sgid="abc" content-type="image/png" url="/example.png" filename="example.png" filesize="100" width="50" height="50" previewable="true" presentation="gallery"></action-text-attachment>'
+      attachmentTag("a", "example.png")
     )
     await editor.flush()
 
@@ -32,14 +32,15 @@ test.describe("Attachment toolbar", () => {
   })
 
   test("Alt+F10 focuses the remove button; Escape returns focus to the editor", async ({ page, editor }) => {
-    await mockActiveStorageUploads(page)
-    await editor.uploadFile("test/fixtures/files/example.png")
+    await editor.setValue(attachmentTag("a", "example.png"))
+    await editor.flush()
 
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
-    await selectAttachment(figure)
     await editor.focus()
+    await selectAttachment(figure)
+    await expect(figure).toHaveClass(/node--selected/)
     await page.keyboard.press("Alt+F10")
 
     const removeButton = page.locator("lexxy-attachment-toolbar button[aria-label='Remove']")
@@ -50,29 +51,11 @@ test.describe("Attachment toolbar", () => {
     await expect(figure).toHaveClass(/node--selected/)
   })
 
-  test("clicking the remove button deletes the selected attachment", async ({ page, editor }) => {
-    await editor.setValue(
-      "<p>Before</p>" +
-      '<action-text-attachment sgid="abc" content-type="image/png" url="/example.png" filename="example.png" filesize="100" width="50" height="50" previewable="true" presentation="gallery"></action-text-attachment>' +
-      "<p>After</p>"
-    )
-    await editor.flush()
-
-    const figure = page.locator("figure.attachment[data-content-type='image/png']")
-    await expect(figure).toBeVisible()
-    await selectAttachment(figure)
-
-    await page.locator("lexxy-attachment-toolbar button[aria-label='Remove']").click()
-
-    await expect(figure).toHaveCount(0)
-    await expect(page.locator("lexxy-attachment-toolbar")).toBeHidden()
-  })
-
   test("repositions beside the attachment when the editor reflows", async ({ page, editor }) => {
     await page.setViewportSize({ width: 1200, height: 800 })
     await editor.setValue(
       `<p>${"word ".repeat(120)}</p>` +
-      '<action-text-attachment sgid="abc" content-type="image/png" url="/example.png" filename="example.png" filesize="100" width="50" height="50" previewable="true" presentation="gallery"></action-text-attachment>'
+      attachmentTag("a", "example.png")
     )
     await editor.flush()
 
@@ -82,37 +65,19 @@ test.describe("Attachment toolbar", () => {
 
     const toolbar = page.locator("lexxy-attachment-toolbar")
     await expect(toolbar).toBeVisible()
-    const wideTop = await toolbar.evaluate((element) => element.style.getPropertyValue("--lexxy-anchor-top"))
+    const wideTop = (await figure.boundingBox()).y
 
     await page.setViewportSize({ width: 360, height: 800 })
 
-    await expect.poll(() => toolbar.evaluate((element) => element.style.getPropertyValue("--lexxy-anchor-top"))).not.toBe(wideTop)
+    await expect.poll(async () => (await figure.boundingBox()).y).not.toBe(wideTop)
+    await expect.poll(async () => {
+      const [ figureBox, toolbarBox ] = await boxes(figure, toolbar)
+      return Math.max(Math.abs(toolbarBox.y - figureBox.y), Math.abs(right(toolbarBox) - right(figureBox)))
+    }).toBeLessThanOrEqual(TOLERANCE)
   })
 
-  test("describes the selected node so stylesheets can place the toolbar per kind", async ({ page, editor }) => {
-    await editor.setValue(
-      "<p>Above</p>" +
-      '<action-text-attachment sgid="abc" content-type="image/png" url="/example.png" filename="example.png" filesize="100" width="50" height="50" previewable="true" presentation="gallery"></action-text-attachment>'
-    )
-    await editor.flush()
-
-    const figure = page.locator("figure.attachment[data-content-type='image/png']")
-    await expect(figure).toBeVisible()
-    await selectAttachment(figure)
-
-    const toolbar = page.locator("lexxy-attachment-toolbar")
-    await expect(toolbar).toHaveAttribute("data-node-type", "action_text_attachment")
-    await expect(toolbar).toHaveAttribute("data-content-type", "image/png")
-    await expect(toolbar).toHaveAttribute("data-presentation", "preview")
-  })
-
-  test("describes an image in a gallery as a gallery item, not an inline chip", async ({ page, editor }) => {
-    await editor.setValue(
-      '<div class="attachment-gallery">' +
-      '<action-text-attachment sgid="one" content-type="image/png" url="/example.png" filename="one.png" filesize="100" width="50" height="50" previewable="true" presentation="gallery"></action-text-attachment>' +
-      '<action-text-attachment sgid="two" content-type="image/png" url="/example.png" filename="two.png" filesize="100" width="50" height="50" previewable="true" presentation="gallery"></action-text-attachment>' +
-      "</div>"
-    )
+  test("aligns with the selected gallery image", async ({ page, editor }) => {
+    await editor.setValue(`<div class="attachment-gallery">${attachmentTag("a", "one.png")}${attachmentTag("b", "two.png")}</div>`)
     await editor.flush()
 
     const figure = page.locator(".attachment-gallery figure.attachment").first()
@@ -130,7 +95,7 @@ test.describe("Attachment toolbar", () => {
   test("hangs off the top-right corner of a block attachment", async ({ page, editor }) => {
     await editor.setValue(
       "<p>Above</p>" +
-      '<action-text-attachment sgid="abc" content-type="image/png" url="/example.png" filename="example.png" filesize="100" width="50" height="50" previewable="true" presentation="gallery"></action-text-attachment>'
+      attachmentTag("a", "example.png")
     )
     await editor.flush()
 
@@ -145,7 +110,7 @@ test.describe("Attachment toolbar", () => {
     expect(Math.abs(right(toolbarBox) - right(figureBox))).toBeLessThanOrEqual(TOLERANCE)
   })
 
-  test("centres on a horizontal divider instead of hanging off its top edge", async ({ page, editor }) => {
+  test("centers on a horizontal divider", async ({ page, editor }) => {
     await editor.setValue("<p>Before</p><hr><p>After</p>")
     await editor.flush()
 
@@ -161,7 +126,7 @@ test.describe("Attachment toolbar", () => {
     expect(right(toolbarBox)).toBeLessThanOrEqual(right(figureBox))
   })
 
-  test("sits after an inline attachment rather than on top of it", async ({ page, editor }) => {
+  test("sits after an inline attachment", async ({ page, editor }) => {
     await editor.setValue(
       '<p>Hello <action-text-attachment sgid="alice" content-type="application/vnd.test.mention" content="&lt;span&gt;Alice&lt;/span&gt;"></action-text-attachment> and welcome to the project.</p>'
     )

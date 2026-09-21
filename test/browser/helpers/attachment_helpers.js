@@ -3,7 +3,8 @@ export async function selectAttachment(figure) {
 }
 
 export function attachmentTag(sgid, file, { caption = "", alt } = {}) {
-  const captionAttribute = caption ? ` caption="${caption}"` : ""
+  let captionAttribute = ""
+  if (caption) captionAttribute = ` caption="${caption}"`
   let altAttribute = ""
   if (alt != null) altAttribute = ` alt="${alt}"`
   return `<action-text-attachment sgid="${sgid}" content-type="image/png" url="/${file}" filename="${file}" filesize="100" width="50" height="50" previewable="true" presentation="gallery"${captionAttribute}${altAttribute}></action-text-attachment>`

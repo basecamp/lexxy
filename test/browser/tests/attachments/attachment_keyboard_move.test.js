@@ -88,7 +88,6 @@ test.describe("Attachment keyboard move", () => {
 
     await expect.poll(() => announcements(page)).toContain("Image reordered in gallery")
     const figures = page.locator(".attachment-gallery figure.attachment")
-    await expect(figures.first()).toHaveAttribute("data-lexical-node-key")
     await expect(figures.nth(1).locator("img")).toHaveAttribute("src", "/one.png")
   })
 

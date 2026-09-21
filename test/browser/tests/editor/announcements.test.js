@@ -12,7 +12,6 @@ test.describe("Editor announcements", () => {
     const region = page.locator("lexxy-live-region")
     const additions = region.locator("[aria-live='assertive'][aria-relevant='additions']")
 
-    await expect(additions).toHaveAttribute("aria-live", "assertive")
     expect(await additions.getAttribute("aria-atomic")).toBeNull()
 
     await pauseClock(page)
@@ -79,7 +78,6 @@ test.describe("Editor announcements", () => {
     ])
     await expect(region.locator("[aria-live='assertive'][aria-relevant='additions']")).toBeEmpty()
   })
-
 })
 
 async function pauseClock(page) {

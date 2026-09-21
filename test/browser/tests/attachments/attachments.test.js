@@ -55,6 +55,8 @@ test.describe("Attachments", () => {
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
+    await expect(page.locator("[data-event='lexxy:upload-end']")).toHaveCount(1)
+
     // Delete the attachment while the server image is still pending
     await figure.locator("img").click()
     await editor.send("Delete")
@@ -103,6 +105,7 @@ test.describe("Attachments", () => {
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
+    await expect(page.locator("[data-event='lexxy:upload-end']")).toHaveCount(1)
     await figure.locator("img").click()
     await editor.send("Delete")
 
@@ -124,6 +127,7 @@ test.describe("Attachments", () => {
     await toolbar.locator("button[aria-label='Remove']").click()
 
     await expect(figure).toHaveCount(0)
+    await expect(toolbar).toBeHidden()
     await assertEditorHtml(editor, "")
   })
 
