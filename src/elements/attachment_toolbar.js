@@ -49,10 +49,6 @@ export class AttachmentToolbar extends HTMLElement {
     return this.closest("lexxy-editor")
   }
 
-  get #hasSelectedNode() {
-    return this.#currentNodeKey !== null
-  }
-
   #setUpButtons() {
     this.innerHTML = ""
 
@@ -61,7 +57,10 @@ export class AttachmentToolbar extends HTMLElement {
     this.appendChild(container)
 
     this.#buttons = Array.from(this.querySelectorAll("button"))
-    this.#listeners.track(registerEventListener(this, "keydown", this.#navigateOrExit))
+    this.#listeners.track(
+      registerEventListener(this, "keydown", this.#navigateOrExit),
+      registerEventListener(this, "focusout", this.#resetTabIndexOnExit)
+    )
   }
 
   #createRemoveButton() {
@@ -83,6 +82,10 @@ export class AttachmentToolbar extends HTMLElement {
     }
   }
 
+  get #hasSelectedNode() {
+    return this.#currentNodeKey !== null
+  }
+
   #navigateOrExit = (event) => {
     if (event.key === "Escape") {
       event.preventDefault()
@@ -101,6 +104,12 @@ export class AttachmentToolbar extends HTMLElement {
         const node = $getNodeByKey(nodeKey)
         if (node) $setSelection($createNodeSelectionWith(node))
       })
+    }
+  }
+
+  #resetTabIndexOnExit = (event) => {
+    if (!this.contains(event.relatedTarget)) {
+      this.#buttons.forEach(button => button.tabIndex = -1)
     }
   }
 
@@ -144,11 +153,6 @@ export class AttachmentToolbar extends HTMLElement {
     }
   }
 
-  // Scrolling inside the editor moves the figure without resizing anything.
-  #followScrolling() {
-    this.#listeners.track(registerEventListener(this.#editorElement, "scroll", () => this.#updatePosition(), { capture: true, passive: true }))
-  }
-
   #describeNode(nodeKey) {
     const element = this.#editor.getElementByKey(nodeKey)
 
@@ -177,16 +181,6 @@ export class AttachmentToolbar extends HTMLElement {
     }
   }
 
-  #hide() {
-    if (this.#hasSelectedNode) {
-      this.#currentNodeKey = null
-      this.hidden = true
-      this.#reflowObserver.disconnect()
-      this.#presentationObserver.disconnect()
-      this.#observedElement = null
-    }
-  }
-
   #rendersInline(element) {
     return element != null && getComputedStyle(element).display.startsWith("inline")
   }
@@ -209,6 +203,21 @@ export class AttachmentToolbar extends HTMLElement {
     if (this.getBoundingClientRect().right > editorRect.right) {
       this.setAttribute("data-overflow", "")
     }
+  }
+
+  #hide() {
+    if (this.#hasSelectedNode) {
+      this.#currentNodeKey = null
+      this.hidden = true
+      this.#reflowObserver.disconnect()
+      this.#presentationObserver.disconnect()
+      this.#observedElement = null
+    }
+  }
+
+  // Scrolling inside the editor moves the figure without resizing anything.
+  #followScrolling() {
+    this.#listeners.track(registerEventListener(this.#editorElement, "scroll", () => this.#updatePosition(), { capture: true, passive: true }))
   }
 
   #registerKeyboardShortcut() {

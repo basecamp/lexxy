@@ -27,6 +27,20 @@ test.describe("Toolbar keyboard navigation", () => {
     await expect.poll(() => focusedName(page)).toBe("bold")
   })
 
+  test("a delayed selection change preserves keyboard focus in the toolbar", async ({ page, editor }) => {
+    await editor.content.click()
+    await page.keyboard.press("Shift+Tab")
+
+    const imageButton = page.locator("lexxy-toolbar button[name='image']")
+    await expect(imageButton).toBeFocused()
+    await page.evaluate(() => document.dispatchEvent(new Event("selectionchange")))
+    await editor.flush()
+    await expect(imageButton).toBeFocused()
+
+    await page.keyboard.press("ArrowRight")
+    await expect(page.locator("lexxy-toolbar button[name='file']")).toBeFocused()
+  })
+
   test("arrow keys keep moving along the toolbar when focus is on a menu dropdown trigger", async ({ page }) => {
     const formatTrigger = page.locator("lexxy-toolbar button[name='format']")
     await formatTrigger.focus()

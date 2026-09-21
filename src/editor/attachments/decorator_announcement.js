@@ -1,6 +1,6 @@
-import { $getSelection, $isDecoratorNode, $isNodeSelection, $isRangeSelection, BLUR_COMMAND, COMMAND_PRIORITY_NORMAL } from "lexical"
+import { $getSelection, $isDecoratorNode, $isNodeSelection, $isRangeSelection } from "lexical"
 import { announceFromEditor } from "../../helpers/lexical_helper"
-import { ListenerBin } from "../../helpers/listener_helper"
+import { ListenerBin, registerEventListener } from "../../helpers/listener_helper"
 
 // Using a mention's label as avatar alt text can interrupt line-by-line reading,
 // but character navigation needs it near the caret to announce the mention.
@@ -18,10 +18,12 @@ export class DecoratorAnnouncement {
     this.#editor = editor
     this.#listeners.track(
       editor.registerUpdateListener(this.#updateAnnouncement),
-      editor.registerCommand(BLUR_COMMAND, () => {
-        this.#teardownAnnouncement()
-        return false
-      }, COMMAND_PRIORITY_NORMAL)
+      // A blur command opens a Lexical update that can pull focus back into the editor.
+      editor.registerRootListener(rootElement => {
+        if (rootElement) {
+          return registerEventListener(rootElement, "blur", () => this.#teardownAnnouncement())
+        }
+      })
     )
   }
 

@@ -27,6 +27,34 @@ test("caption editing exposes the focused field outside the editor textbox", asy
   expect(await editor.value()).toContain('caption="At sunset"')
 })
 
+test("Shift+Tab from a caption returns to the attachment after using its toolbar", async ({ page, editor }) => {
+  await page.route("**/canoe.png", route => route.fulfill({ path: "test/fixtures/files/example.png", contentType: "image/png" }))
+  await page.goto("/attachments.html")
+  await editor.waitForConnected()
+  await editor.setValue(`<p>Before</p>${attachmentTag("a", "canoe.png")}<p>After</p>`)
+  await editor.flush()
+
+  const figure = editor.content.locator("figure.attachment")
+  await selectAttachment(figure)
+  await page.keyboard.press("Alt+F10")
+  await expect(page.locator("lexxy-attachment-toolbar button").first()).toBeFocused()
+  await page.keyboard.press("Home")
+  await page.keyboard.press("Escape")
+  await expect(editor.content).toBeFocused()
+  await page.keyboard.press("Tab")
+
+  const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+  await expect(caption).toBeFocused()
+  await caption.fill("At sunset")
+  await page.keyboard.press("Shift+Tab")
+  await expect(editor.content).toBeFocused()
+  await expect(figure).toHaveClass(/node--selected/)
+  await expect(caption).toHaveCount(0)
+  expect(await editor.value()).toContain('caption="At sunset"')
+  await page.keyboard.press("Tab")
+  await expect(caption).toBeFocused()
+})
+
 test("caption editing follows a gallery reflow and preserves each image's caption", async ({ page, editor }) => {
   await page.route("**/*.png", route => route.fulfill({ path: "test/fixtures/files/example.png", contentType: "image/png" }))
   await page.goto("/attachments.html")
