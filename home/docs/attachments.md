@@ -12,27 +12,20 @@ See [attachment hotkeys](hotkeys.html#attachments) for editing captions and arra
 
 ## Alternative text
 
-Select an image or an attachment with an image preview, then choose **ALT** in its attachment toolbar. Enter a description and choose **Save**. Open the same dialog to change the description or clear the field to remove it. **Cancel** or **Escape** discards your changes.
+Select an image or attachment preview and choose **ALT** to add or edit its alternative text. Choose **Save** to apply the description, or clear the field and save to remove it. Alternative text is separate from the visible caption.
 
-With the attachment selected, press **Alt+F10** to focus its toolbar, then use the arrow keys to reach **Alternative text** and press **Enter**. The dialog returns focus to its button when it closes. Press **Escape** again to return to the editor. Description changes support undo and redo.
-
-Alternative text describes the image for people who cannot see it. It is independent of the visible caption, including when an image is pasted from another page. New uploads start without a description; Lexxy does not generate one from the filename.
+With the attachment selected, press **Alt+F10** to focus its toolbar, then use the arrow keys to reach **Alternative text** and press **Enter**.
 
 ### Action Text support
 
-Saving and rendering descriptions requires Action Text's `alt` attachment support ([rails/rails#58337](https://github.com/rails/rails/pull/58337)). Rails-generated editors enable the ALT button only when Action Text supports this attribute. Earlier versions discard it when rebuilding attachments.
+Rails enables the ALT button only when Action Text supports the `alt` attachment attribute ([rails/rails#58337](https://github.com/rails/rails/pull/58337)).
 
-Standalone JavaScript editors include alternative text authoring; their host application is responsible for preserving and rendering the `alt` attribute.
+If you override attachment partials, pass the description to `image_tag`:
 
-If your application overrides `app/views/active_storage/blobs/_blob.html.erb`, pass the attachment's alternative text to `image_tag`, as the updated Rails partial does:
+- `app/views/active_storage/blobs/_blob.html.erb`: `alt: blob.try(:alt)`.
+- `app/views/action_text/attachables/_remote_image.html.erb`: `alt: remote_image.try(:alt)`.
 
-```erb
-<%= image_tag blob.representation(resize_to_limit: [ 1024, 768 ]), alt: blob.try(:alt) %>
-```
-
-Lexxy also supplies a remote image partial that renders `remote_image.try(:alt)`. Applications overriding `app/views/action_text/attachables/_remote_image.html.erb` should pass that value to `image_tag` too.
-
-Clearing the description removes the authored alternative text. Action Text renders images without an `alt` attribute when no description is present; this is not a way to mark an image as decorative.
+Standalone JavaScript applications must preserve and render the `alt` attribute themselves.
 
 ## Upload response
 
