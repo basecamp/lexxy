@@ -38,15 +38,6 @@ export class AttachmentKeyboardMove {
     }
   }
 
-  // Node selections don't scroll into view automatically like a caret does.
-  #keepInView(node) {
-    const key = node.getKey()
-    cancelAnimationFrame(this.#scrollFrame)
-    this.#scrollFrame = requestAnimationFrame(() => {
-      this.#editor.getElementByKey(key)?.scrollIntoView({ block: "nearest" })
-    })
-  }
-
   #executeMove(key, node) {
     switch (key) {
       case "ArrowUp": return new AttachmentReorder(node, "previous").moveVertically()
@@ -55,6 +46,15 @@ export class AttachmentKeyboardMove {
       case "ArrowRight": return new AttachmentReorder(node, "next").reorderInGallery()
       default: return null
     }
+  }
+
+  // Node selections don't scroll into view automatically like a caret does.
+  #keepInView(node) {
+    const key = node.getKey()
+    cancelAnimationFrame(this.#scrollFrame)
+    this.#scrollFrame = requestAnimationFrame(() => {
+      this.#editor.getElementByKey(key)?.scrollIntoView({ block: "nearest" })
+    })
   }
 }
 

@@ -33,6 +33,14 @@ export class LiveRegion extends HTMLElement {
     }
   }
 
+  #announceTransient(message) {
+    cancelAnimationFrame(this.#transientFrame)
+    this.#transient.textContent = message
+    this.#transientFrame = requestAnimationFrame(() => {
+      this.#transientFrame = requestAnimationFrame(() => this.#transient.textContent = "")
+    })
+  }
+
   #announceAddition(message) {
     const announcement = createElement("div", { textContent: message })
     this.#additions.appendChild(announcement)
@@ -42,14 +50,6 @@ export class LiveRegion extends HTMLElement {
       this.#removalTimeouts.delete(timeout)
     }, REMOVAL_DELAY)
     this.#removalTimeouts.add(timeout)
-  }
-
-  #announceTransient(message) {
-    cancelAnimationFrame(this.#transientFrame)
-    this.#transient.textContent = message
-    this.#transientFrame = requestAnimationFrame(() => {
-      this.#transientFrame = requestAnimationFrame(() => this.#transient.textContent = "")
-    })
   }
 }
 

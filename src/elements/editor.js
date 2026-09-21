@@ -341,10 +341,6 @@ export class LexicalEditorElement extends HTMLElement {
     this.editor.focus(() => this.#onFocus())
   }
 
-  get #isContentFocused() {
-    return !!this.editor && isEditorFocused(this.editor)
-  }
-
   get value() {
     return this.cachedValue ??= this.#readSanitizedEditorValue()
   }
@@ -373,6 +369,10 @@ export class LexicalEditorElement extends HTMLElement {
 
   get canRedo() {
     return this.#historyState.redo
+  }
+
+  get #isContentFocused() {
+    return !!this.editor && isEditorFocused(this.editor)
   }
 
   #readSanitizedEditorValue() {
@@ -648,6 +648,13 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(tableTools)
   }
 
+  #registerCodeLanguagePicker() {
+    let codeLanguagePicker = this.querySelector("lexxy-code-language-picker")
+    codeLanguagePicker ??= createElement("lexxy-code-language-picker")
+    this.append(codeLanguagePicker)
+    this.#disposables.push(codeLanguagePicker)
+  }
+
   #registerAttachmentToolbar() {
     let attachmentToolbar = this.querySelector("lexxy-attachment-toolbar")
     attachmentToolbar ??= createElement("lexxy-attachment-toolbar")
@@ -655,13 +662,6 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(attachmentToolbar)
     this.captionEditor = new CaptionEditor(this)
     this.#disposables.push(this.captionEditor)
-  }
-
-  #registerCodeLanguagePicker() {
-    let codeLanguagePicker = this.querySelector("lexxy-code-language-picker")
-    codeLanguagePicker ??= createElement("lexxy-code-language-picker")
-    this.append(codeLanguagePicker)
-    this.#disposables.push(codeLanguagePicker)
   }
 
   #handleEnter() {
