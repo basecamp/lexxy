@@ -341,6 +341,10 @@ export class LexicalEditorElement extends HTMLElement {
     this.editor.focus(() => this.#onFocus())
   }
 
+  get #isContentFocused() {
+    return !!this.editor && isEditorFocused(this.editor)
+  }
+
   get value() {
     return this.cachedValue ??= this.#readSanitizedEditorValue()
   }
@@ -369,10 +373,6 @@ export class LexicalEditorElement extends HTMLElement {
 
   get canRedo() {
     return this.#historyState.redo
-  }
-
-  get #isContentFocused() {
-    return !!this.editor && isEditorFocused(this.editor)
   }
 
   #readSanitizedEditorValue() {

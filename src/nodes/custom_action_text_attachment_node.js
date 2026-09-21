@@ -111,10 +111,6 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     return this.getReadableTextContent()
   }
 
-  getReadableTextContent() {
-    return this.plainText || `[${this.contentType}]`
-  }
-
   restoreLabel(figure) {
     const labelImage = figure.querySelector("[data-lexxy-label-image]")
     if (labelImage) labelImage.alt = labelImage.dataset.lexxyOriginalAlt
@@ -130,6 +126,10 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
   getTextContent() {
     return "\ufeff"
+  }
+
+  getReadableTextContent() {
+    return this.plainText || `[${this.contentType}]`
   }
 
   isInline() {

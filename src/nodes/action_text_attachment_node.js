@@ -125,33 +125,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return figure
   }
 
-  createDOMForError() {
-    const figure = this.createAttachmentFigure()
-    figure.classList.add("attachment--error")
-    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.fileName || "file"}` }))
-    return figure
-  }
-
-  createAttachmentFigure(previewable = this.isPreviewableAttachment) {
-    const figure = createAttachmentFigure(this.contentType, previewable, this.fileName)
-    figure.draggable = true
-    figure.dataset.lexicalNodeKey = this.__key
-
-    return figure
-  }
-
-  get isPreviewableAttachment() {
-    return this.isPreviewableImage || this.previewable
-  }
-
-  get isPreviewableImage() {
-    return isPreviewableImage(this.contentType)
-  }
-
-  get isVideo() {
-    return this.contentType.startsWith("video/")
-  }
-
   updateDOM(prevNode, dom) {
     if (this.uploadError !== prevNode.uploadError) return true
 
@@ -225,6 +198,33 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return null
   }
 
+  createDOMForError() {
+    const figure = this.createAttachmentFigure()
+    figure.classList.add("attachment--error")
+    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.fileName || "file"}` }))
+    return figure
+  }
+
+  createAttachmentFigure(previewable = this.isPreviewableAttachment) {
+    const figure = createAttachmentFigure(this.contentType, previewable, this.fileName)
+    figure.draggable = true
+    figure.dataset.lexicalNodeKey = this.__key
+
+    return figure
+  }
+
+  get isPreviewableAttachment() {
+    return this.isPreviewableImage || this.previewable
+  }
+
+  get isPreviewableImage() {
+    return isPreviewableImage(this.contentType)
+  }
+
+  get isVideo() {
+    return this.contentType.startsWith("video/")
+  }
+
   get label() {
     if (this.caption && this.altText && this.altText !== this.caption && this.altText !== this.fileName) {
       return `${this.caption}. ${this.altText}`
@@ -235,6 +235,14 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   focusCaption() {
     return this.editor.getRootElement()?.closest("lexxy-editor")?.captionEditor.open(this.getKey()) ?? false
+  }
+
+  #createDOMForPendingPreview() {
+    const figure = this.createAttachmentFigure(false)
+    figure.appendChild(this.#createDOMForFile())
+    figure.appendChild(this.#createDOMForNotImage())
+    this.#pollForPreview(figure)
+    return figure
   }
 
   patchAndRewriteHistory(patch) {
@@ -249,32 +257,58 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     })
   }
 
-  #createDOMForPendingPreview() {
-    const figure = this.createAttachmentFigure(false)
-    figure.appendChild(this.#createDOMForFile())
-    figure.appendChild(this.#createDOMForNotImage())
-    this.#pollForPreview(figure)
-    return figure
-  }
+  #createDOMForImage(options = {}) {
+    const initialSrc = this.previewSrc || this.src
+    const img = createElement("img", { src: initialSrc, draggable: false, alt: this.altText, ...this.#imageDimensions, ...options })
 
-  #createDOMForFile() {
-    const extension = this.fileName ? this.fileName.split(".").pop().toLowerCase() : "unknown"
-    return createElement("span", { className: "attachment__icon", textContent: `${extension}` })
-  }
-
-  #createDOMForNotImage() {
-    const figcaption = createElement("figcaption", { className: "attachment__caption" })
-
-    const nameTag = createElement("strong", { className: "attachment__name", textContent: this.caption || this.fileName })
-
-    figcaption.appendChild(nameTag)
-
-    if (this.fileSize) {
-      const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.fileSize) })
-      figcaption.appendChild(sizeSpan)
+    if (this.previewable && !this.isPreviewableImage) {
+      img.onerror = () => this.#swapPreviewToFileDOM(img)
     }
 
-    return figcaption
+    if (this.previewSrc) {
+      this.#preloadAndSwapSrc(img)
+    }
+
+    const container = createElement("div", { className: "attachment__container" })
+    container.appendChild(img)
+    return container
+  }
+
+  #preloadAndSwapSrc(img) {
+    const previewSrc = this.previewSrc
+    const serverImage = new Image()
+
+    serverImage.onload = () => this.#handleImageLoaded(img, previewSrc)
+    serverImage.onerror = () => this.#handleImageLoadError(previewSrc)
+    serverImage.src = this.src
+  }
+
+  #handleImageLoaded(img, previewSrc) {
+    img.src = this.src
+    this.patchAndRewriteHistory({ previewSrc: null })
+    this.#revokePreviewSrc(previewSrc)
+  }
+
+  #handleImageLoadError(previewSrc) {
+    this.patchAndRewriteHistory({
+      previewSrc: null,
+      uploadError: true
+    })
+    this.#revokePreviewSrc(previewSrc)
+  }
+
+  #revokePreviewSrc(previewSrc) {
+    if (previewSrc?.startsWith("blob:")) URL.revokeObjectURL(previewSrc)
+  }
+
+  #swapPreviewToFileDOM(img) {
+    const figure = img.closest("figure.attachment")
+    if (!figure) return
+
+    this.#swapFigureContent(figure, "attachment--preview", "attachment--file", () => {
+      figure.appendChild(this.#createDOMForFile())
+      figure.appendChild(this.#createDOMForNotImage())
+    })
   }
 
   // While the file-icon is shown, watch for the preview to become ready.
@@ -325,6 +359,22 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     setTimeout(tryStatus, INITIAL_PREVIEW_POLL_DELAY_MS)
   }
 
+  #waitForPreviewByPreloadingImage(figure) {
+    const img = new Image()
+    img.onload = () => {
+      if (!this.editor.read(() => this.isAttached())) return
+      this.#swapToPreviewDOM(figure, this.src)
+    }
+    img.onerror = () => {
+      // Clear pendingPreview so undo/redo or any JSON round-trip doesn't
+      // re-enter the pending flow and issue another fetch. The file icon
+      // stays as the stable fallback.
+      if (!this.editor.read(() => this.isAttached())) return
+      this.patchAndRewriteHistory({ pendingPreview: false })
+    }
+    img.src = this.src
+  }
+
   #swapToPreviewDOM(figure, previewSrc) {
     this.#swapFigureContent(figure, "attachment--file", "attachment--preview", () => {
       const img = createElement("img", { src: previewSrc, draggable: false, alt: this.altText })
@@ -348,14 +398,32 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     renderContent()
   }
 
-  #swapPreviewToFileDOM(img) {
-    const figure = img.closest("figure.attachment")
-    if (!figure) return
+  get #imageDimensions() {
+    if (this.width && this.height) {
+      return { width: this.width, height: this.height }
+    } else {
+      return {}
+    }
+  }
 
-    this.#swapFigureContent(figure, "attachment--preview", "attachment--file", () => {
-      figure.appendChild(this.#createDOMForFile())
-      figure.appendChild(this.#createDOMForNotImage())
-    })
+  #createDOMForFile() {
+    const extension = this.fileName ? this.fileName.split(".").pop().toLowerCase() : "unknown"
+    return createElement("span", { className: "attachment__icon", textContent: `${extension}` })
+  }
+
+  #createDOMForNotImage() {
+    const figcaption = createElement("figcaption", { className: "attachment__caption" })
+
+    const nameTag = createElement("strong", { className: "attachment__name", textContent: this.caption || this.fileName })
+
+    figcaption.appendChild(nameTag)
+
+    if (this.fileSize) {
+      const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.fileSize) })
+      figcaption.appendChild(sizeSpan)
+    }
+
+    return figcaption
   }
 
   #createEditableCaption() {
@@ -369,74 +437,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       this.focusCaption()
     })
     return caption
-  }
-
-  #waitForPreviewByPreloadingImage(figure) {
-    const img = new Image()
-    img.onload = () => {
-      if (!this.editor.read(() => this.isAttached())) return
-      this.#swapToPreviewDOM(figure, this.src)
-    }
-    img.onerror = () => {
-      // Clear pendingPreview so undo/redo or any JSON round-trip doesn't
-      // re-enter the pending flow and issue another fetch. The file icon
-      // stays as the stable fallback.
-      if (!this.editor.read(() => this.isAttached())) return
-      this.patchAndRewriteHistory({ pendingPreview: false })
-    }
-    img.src = this.src
-  }
-
-  #createDOMForImage(options = {}) {
-    const initialSrc = this.previewSrc || this.src
-    const img = createElement("img", { src: initialSrc, draggable: false, alt: this.altText, ...this.#imageDimensions, ...options })
-
-    if (this.previewable && !this.isPreviewableImage) {
-      img.onerror = () => this.#swapPreviewToFileDOM(img)
-    }
-
-    if (this.previewSrc) {
-      this.#preloadAndSwapSrc(img)
-    }
-
-    const container = createElement("div", { className: "attachment__container" })
-    container.appendChild(img)
-    return container
-  }
-
-  get #imageDimensions() {
-    if (this.width && this.height) {
-      return { width: this.width, height: this.height }
-    } else {
-      return {}
-    }
-  }
-
-  #preloadAndSwapSrc(img) {
-    const previewSrc = this.previewSrc
-    const serverImage = new Image()
-
-    serverImage.onload = () => this.#handleImageLoaded(img, previewSrc)
-    serverImage.onerror = () => this.#handleImageLoadError(previewSrc)
-    serverImage.src = this.src
-  }
-
-  #handleImageLoaded(img, previewSrc) {
-    img.src = this.src
-    this.patchAndRewriteHistory({ previewSrc: null })
-    this.#revokePreviewSrc(previewSrc)
-  }
-
-  #revokePreviewSrc(previewSrc) {
-    if (previewSrc?.startsWith("blob:")) URL.revokeObjectURL(previewSrc)
-  }
-
-  #handleImageLoadError(previewSrc) {
-    this.patchAndRewriteHistory({
-      previewSrc: null,
-      uploadError: true
-    })
-    this.#revokePreviewSrc(previewSrc)
   }
 }
 
