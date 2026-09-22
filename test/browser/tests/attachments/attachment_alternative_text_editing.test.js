@@ -72,6 +72,60 @@ test.describe("Attachment alternative text editing", () => {
     })
   }
 
+  test("opens inside the editor instead of as a page-level modal", async ({ page, editor }) => {
+    await editor.setValue(attachmentTag("a", "canoe.png"))
+    await editor.flush()
+    await editor.focus()
+    await selectAttachment(page.locator("figure.attachment"))
+    await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+
+    const dialog = page.getByRole("dialog", { name: "Alternative text" })
+    await expect(dialog).toBeVisible()
+    expect(await dialog.evaluate(element => element.matches(":modal"))).toBe(false)
+
+    const dialogBox = await dialog.boundingBox()
+    const editorBox = await editor.locator.boundingBox()
+    expect(dialogBox.x).toBeGreaterThanOrEqual(editorBox.x)
+    expect(dialogBox.x + dialogBox.width).toBeLessThanOrEqual(editorBox.x + editorBox.width)
+    expect(dialogBox.y).toBeGreaterThanOrEqual(editorBox.y)
+    expect(dialogBox.y + dialogBox.height).toBeLessThanOrEqual(editorBox.y + editorBox.height)
+    expect(dialogBox.width).toBeGreaterThan(editorBox.width * 0.9)
+  })
+
+  test("opening it closes an open toolbar dropdown", async ({ page, editor }) => {
+    await editor.setValue(attachmentTag("a", "canoe.png"))
+    await editor.flush()
+    await editor.focus()
+    await selectAttachment(page.locator("figure.attachment"))
+
+    await page.locator("lexxy-toolbar button[name='link']").click()
+    const linkPanel = page.locator("lexxy-link-dropdown [data-dropdown-panel]")
+    await expect(linkPanel).toBeVisible()
+
+    await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+
+    await expect(page.getByRole("dialog", { name: "Alternative text" })).toBeVisible()
+    await expect(linkPanel).toBeHidden()
+  })
+
+  test("clicking outside discards the draft and leaves focus where it landed", async ({ page, editor }) => {
+    await editor.setValue(`${attachmentTag("a", "canoe.png", { alt: "A red canoe" })}<p>Below</p>`)
+    await editor.flush()
+    await editor.focus()
+    const figure = page.locator("figure.attachment")
+    await selectAttachment(figure)
+    await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+
+    const dialog = page.getByRole("dialog", { name: "Alternative text" })
+    await dialog.getByRole("textbox", { name: "Description" }).fill("Discard this description")
+    // The panel covers the top of the editor, so dismiss by clicking below it.
+    await editor.content.locator("p", { hasText: "Below" }).click()
+
+    await expect(dialog).toBeHidden()
+    await expect(editor.content).toBeFocused()
+    await expect(figure.locator("img")).toHaveAttribute("alt", "A red canoe")
+  })
+
   test("keyboard authoring, undo and redo preserve the attachment", async ({ page, editor }) => {
     await editor.setValue(attachmentTag("a", "canoe.png", { alt: "A red canoe" }))
     await editor.flush()

@@ -1014,7 +1014,6 @@
       display: none;
     }
 
-    /* Carried by the optional button so it disappears along with it. */
     .lexxy-attachment-toolbar__alternative-text {
       aspect-ratio: auto;
       margin-inline-end: calc(var(--lexxy-toolbar-spacing) + 1px);
@@ -1218,72 +1217,108 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
 
 .lexxy-alternative-text-dialog {
   background: var(--lexxy-color-canvas);
-  border: 1px solid var(--lexxy-color-ink-light);
-  border-radius: var(--lexxy-radius);
+  border: 2px solid var(--lexxy-color-selected-hover);
+  border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
+  box-shadow: var(--lexxy-shadow);
   box-sizing: border-box;
   color: var(--lexxy-color-ink);
   font: inherit;
-  inline-size: min(28em, calc(100% - 2em));
-  inset: 0;
-  margin: auto;
-  max-block-size: calc(100% - 2em);
+  inline-size: auto;
+  inset-block: calc(var(--lexxy-toolbar-height) + var(--lexxy-toolbar-spacing)) auto;
+  inset-inline: var(--lexxy-toolbar-spacing);
+  margin: 0;
+  max-block-size: calc(100% - var(--lexxy-toolbar-height) - 2 * var(--lexxy-toolbar-spacing));
   overflow: auto;
-  padding: 1.5em;
-
-  &::backdrop {
-    background: rgb(0 0 0 / 40%);
-  }
+  padding: var(--lexxy-toolbar-spacing);
+  z-index: 3;
 
   h2 {
-    font-size: 1.25em;
-    margin: 0;
-  }
-
-  p {
-    line-height: 1.5;
-  }
-
-  label {
-    display: block;
+    font-size: inherit;
     font-weight: bold;
+    line-height: 1.5;
+    margin: 0;
+    padding-block-start: calc(0.25 * var(--lexxy-text-small));
+    padding-inline: calc(0.5 * var(--lexxy-text-small));
+  }
+
+  .lexxy-alternative-text-dialog__controls {
+    align-items: start;
+    display: flex;
+    gap: 0.5em;
+    margin-block-start: 0.5em;
   }
 
   textarea {
     background: var(--lexxy-color-canvas);
-    border: 1px solid var(--lexxy-color-ink-light);
+    border: 1px solid var(--lexxy-color-ink-lighter);
     border-radius: var(--lexxy-radius);
     box-sizing: border-box;
     color: inherit;
     display: block;
+    flex: 2;
     font: inherit;
+    font-size: var(--lexxy-text-small);
     font-weight: normal;
-    inline-size: 100%;
-    margin-block-start: 0.5em;
+    min-block-size: calc(1lh + 1em + 2px);
+    min-inline-size: 0;
     padding: 0.5em;
-    @supports (resize: vertical) {
-      resize: vertical;
+
+    @supports (field-sizing: content) {
+      field-sizing: content;
+    }
+
+    @supports (resize: none) {
+      resize: none;
     }
   }
 
   button {
-    background: var(--lexxy-color-canvas);
-    border: 1px solid var(--lexxy-color-ink-light);
+    background-color: var(--lexxy-color-ink-lightest);
+    block-size: var(--lexxy-toolbar-button-size);
+    border: 0;
     border-radius: var(--lexxy-radius);
-    color: inherit;
+    color: currentColor;
     cursor: pointer;
-    font: inherit;
-    padding: 0.5em 1em;
+    display: grid;
+    font-size: var(--lexxy-text-small);
+    inline-size: 100%;
+    line-height: inherit;
+    padding-inline: 2ch;
+    place-items: center;
+
+    &:hover {
+      opacity: 0.8;
+    }
   }
 
-  :is(button, textarea):focus-visible {
-    outline: 2px solid var(--lexxy-focus-ring-color);
-    outline-offset: 2px;
+  .lexxy-alternative-text-dialog__save {
+    background-color: var(--lexxy-color-accent-dark);
+    color: var(--lexxy-color-ink-inverted);
+
+    &:hover {
+      background-color: var(--lexxy-color-accent-medium);
+    }
+  }
+
+  textarea:focus-visible {
+    outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
+    outline-offset: var(--lexxy-focus-ring-offset);
   }
 
   .lexxy-alternative-text-dialog__actions {
     display: flex;
+    flex: 1;
     gap: 0.5em;
     justify-content: end;
-    margin-block-start: 1em;
+  }
+
+  lexxy-toolbar[overflowing] ~ & {
+    .lexxy-alternative-text-dialog__controls {
+      flex-wrap: wrap;
+    }
+
+    textarea {
+      min-inline-size: 100%;
+    }
   }
 }
