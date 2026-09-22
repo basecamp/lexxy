@@ -99,7 +99,7 @@ export class ToolbarDropdown extends HTMLElement {
   }
 
   #handleKeyDown = (event) => {
-    if (event.key === "Escape") {
+    if (event.key === "Escape" && this.isOpen) {
       event.stopPropagation()
       this.close({ focusEditor: !this.#shouldReturnFocusToTrigger })
       if (this.#shouldReturnFocusToTrigger) this.trigger?.focus()
