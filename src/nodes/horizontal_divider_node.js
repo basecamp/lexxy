@@ -31,14 +31,11 @@ export class HorizontalDividerNode extends DecoratorNode {
     super(key)
   }
 
+  // The hr already provides separator semantics; a figure boundary would be redundant.
   createDOM() {
-    const figure = createElement("figure", { className: "horizontal-divider" })
-    const hr = createElement("hr")
-
-    figure.appendChild(hr)
-
-    const deleteButton = createElement("lexxy-node-delete-button")
-    figure.appendChild(deleteButton)
+    const figure = createElement("figure", { className: "horizontal-divider", role: "presentation" })
+    figure.appendChild(createElement("hr"))
+    figure.dataset.lexicalNodeKey = this.__key
 
     return figure
   }
@@ -53,6 +50,10 @@ export class HorizontalDividerNode extends DecoratorNode {
 
   isInline() {
     return false
+  }
+
+  get label() {
+    return "Horizontal divider"
   }
 
   exportDOM() {

@@ -1,5 +1,5 @@
 import Lexxy from "../config/lexxy"
-import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode, HISTORY_MERGE_TAG } from "lexical"
+import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode } from "lexical"
 import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
 import { parseBoolean } from "../helpers/string_helper"
@@ -128,12 +128,25 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   updateDOM(prevNode, dom) {
     if (this.uploadError !== prevNode.uploadError) return true
 
-    const caption = dom.querySelector("figcaption textarea")
-    if (caption && this.caption) {
-      caption.value = this.caption
+    const image = dom.querySelector("img")
+    if (image && prevNode.altText !== this.altText) {
+      image.alt = this.altText
+    }
+
+    if (prevNode.caption !== this.caption) {
+      dom.querySelector("figcaption")?.toggleAttribute("data-placeholder", !this.caption)
+    }
+
+    const captionText = dom.querySelector("figcaption .attachment__caption-text")
+    if (captionText && prevNode.captionLabel !== this.captionLabel) {
+      captionText.textContent = this.captionLabel
     }
 
     return false
+  }
+
+  get captionLabel() {
+    return this.caption || this.fileName || ""
   }
 
   getTextContent() {
@@ -197,9 +210,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     figure.draggable = true
     figure.dataset.lexicalNodeKey = this.__key
 
-    const deleteButton = createElement("lexxy-node-delete-button")
-    figure.appendChild(deleteButton)
-
     return figure
   }
 
@@ -213,6 +223,18 @@ export class ActionTextAttachmentNode extends DecoratorNode {
 
   get isVideo() {
     return this.contentType.startsWith("video/")
+  }
+
+  get label() {
+    if (this.caption && this.altText && this.altText !== this.caption && this.altText !== this.fileName) {
+      return `${this.caption}. ${this.altText}`
+    } else {
+      return this.caption || this.altText || this.fileName || ""
+    }
+  }
+
+  focusCaption() {
+    return this.editor.getRootElement()?.closest("lexxy-editor")?.captionEditor.open(this.getKey()) ?? false
   }
 
   #createDOMForPendingPreview() {
@@ -405,53 +427,16 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #createEditableCaption() {
-    const caption = createElement("figcaption", { className: "attachment__caption" })
-    const input = createElement("textarea", {
-      value: this.caption,
-      placeholder: this.fileName,
-      rows: "1"
+    const caption = createElement("figcaption", { className: "attachment__caption attachment__caption--editable" })
+    const text = createElement("span", { className: "attachment__caption-text", textContent: this.captionLabel })
+    caption.appendChild(text)
+    caption.toggleAttribute("data-placeholder", !this.caption)
+    caption.addEventListener("mousedown", event => event.preventDefault())
+    caption.addEventListener("click", event => {
+      event.stopPropagation()
+      this.focusCaption()
     })
-
-    input.addEventListener("focusin", () => input.placeholder = "Add caption...")
-    input.addEventListener("blur", (event) => this.#handleCaptionInputBlurred(event))
-    input.addEventListener("keydown", (event) => this.#handleCaptionInputKeydown(event))
-    input.addEventListener("copy", (event) => event.stopPropagation())
-    input.addEventListener("cut", (event) => event.stopPropagation())
-    input.addEventListener("paste", (event) => event.stopPropagation())
-
-    caption.appendChild(input)
-
     return caption
-  }
-
-  #handleCaptionInputBlurred(event) {
-    this.#updateCaptionValueFromInput(event.target)
-  }
-
-  #updateCaptionValueFromInput(input) {
-    input.placeholder = this.fileName
-    this.editor.update(() => {
-      this.getWritable().caption = input.value
-    })
-  }
-
-  #handleCaptionInputKeydown(event) {
-    if (event.key === "Enter") {
-      event.preventDefault()
-      event.target.blur()
-
-      this.editor.update(() => {
-        // Place the cursor after the current image
-        this.selectNext(0, 0)
-      }, {
-        tag: HISTORY_MERGE_TAG
-      })
-    }
-
-    // Stop all keydown events from bubbling to the Lexical root element.
-    // The caption textarea is outside Lexical's content model and should
-    // handle its own keyboard events natively (Ctrl+A, Ctrl+C, Ctrl+X, etc.).
-    event.stopPropagation()
   }
 }
 

@@ -1,4 +1,4 @@
-import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
+import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
@@ -19,6 +19,35 @@ export function $createNodeSelectionWith(...nodes) {
   const selection = $createNodeSelection()
   nodes.forEach(node => selection.add(node.getKey()))
   return selection
+}
+
+export function $singleSelectedNode() {
+  const selection = $getSelection()
+  if ($isNodeSelection(selection)) {
+    const nodes = selection.getNodes()
+    if (nodes.length === 1) {
+      return nodes[0]
+    } else {
+      return null
+    }
+  } else {
+    return null
+  }
+}
+
+export function $selectedLabelledDecoratorNode() {
+  const node = $singleSelectedNode()
+  if (typeof node?.label === "string") {
+    return { key: node.getKey(), label: node.label }
+  } else {
+    return null
+  }
+}
+
+export function registerLabelledDecoratorSelection(editor, onChange) {
+  return editor.registerUpdateListener(({ editorState }) => {
+    onChange(editorState.read($selectedLabelledDecoratorNode))
+  })
 }
 
 export function $isShadowRoot(node) {
@@ -44,6 +73,10 @@ export function $makeSafeForRoot(node) {
 export function getListType(node) {
   const list = $getNearestNodeOfType(node, ListNode)
   return list?.getListType() ?? null
+}
+
+export function announceFromEditor(editor, message) {
+  editor.getRootElement()?.closest("lexxy-editor")?.announce(message)
 }
 
 export function isEditorFocused(editor) {
@@ -456,4 +489,3 @@ export function $consecutiveSiblingGroups(blocks) {
 
   return groups
 }
-

@@ -91,11 +91,33 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     // is cosmetic: it is a nested attachment's rendering inside this one, not the
     // attribute anything re-imports from.
     figure.insertAdjacentHTML("beforeend", EditorSanitizer.for(editor).sanitize(this.innerHtml, { safeForXml: true }))
-
-    const deleteButton = createElement("lexxy-node-delete-button")
-    figure.appendChild(deleteButton)
+    this.#markImagesAsDecorative(figure)
+    this.#tagLabelImage(figure)
+    this.#tagLabelMirrors(figure)
 
     return figure
+  }
+
+  exposeLabel(figure) {
+    const labelImage = figure.querySelector("[data-lexxy-label-image]")
+    if (labelImage) labelImage.alt = this.label
+
+    for (const span of figure.querySelectorAll("[data-lexxy-label-mirror]")) {
+      span.setAttribute("aria-hidden", "true")
+    }
+  }
+
+  get label() {
+    return this.getReadableTextContent()
+  }
+
+  restoreLabel(figure) {
+    const labelImage = figure.querySelector("[data-lexxy-label-image]")
+    if (labelImage) labelImage.alt = labelImage.dataset.lexxyOriginalAlt
+
+    for (const span of figure.querySelectorAll("[data-lexxy-label-mirror]")) {
+      span.removeAttribute("aria-hidden")
+    }
   }
 
   updateDOM() {
@@ -137,6 +159,34 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
   decorate() {
     return null
+  }
+
+  #markImagesAsDecorative(figure) {
+    for (const img of figure.querySelectorAll("img:not([alt])")) {
+      img.alt = ""
+    }
+  }
+
+  // Images injected later by other modules must not become the announcement image.
+  #tagLabelImage(figure) {
+    const image = figure.querySelector("img")
+    if (image) {
+      image.setAttribute("data-lexxy-label-image", "")
+      image.dataset.lexxyOriginalAlt = image.alt
+    }
+  }
+
+  // Duplicate labels would be spoken twice. Only authored spans should be silenced,
+  // since the fake selection injects its own label later.
+  #tagLabelMirrors(figure) {
+    const trimmedLabel = this.label.trim()
+    const matches = [ ...figure.querySelectorAll("span") ].filter((span) => span.textContent.trim() === trimmedLabel)
+    const deepest = matches.filter((span) => !matches.some((other) => other !== span && span.contains(other)))
+    for (const span of deepest) {
+      if (span.getAttribute("aria-hidden") !== "true") {
+        span.setAttribute("data-lexxy-label-mirror", "")
+      }
+    }
   }
 }
 

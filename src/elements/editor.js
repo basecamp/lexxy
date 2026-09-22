@@ -15,6 +15,7 @@ import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_ta
 
 import theme from "../config/theme"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import CaptionEditor from "../editor/attachments/caption_editor"
 import { UploadRequests } from "../editor/attachments/upload_requests"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
@@ -68,6 +69,7 @@ export class LexicalEditorElement extends HTMLElement {
   #validity = new Map()
   #validationTextArea = document.createElement("textarea")
   #uploadRequests
+  #liveRegion
 
   constructor() {
     super()
@@ -97,6 +99,10 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.clipboard = new Clipboard(this)
     this.#disposables.push(this.clipboard)
+
+    this.#liveRegion = this.querySelector("lexxy-live-region") ?? createElement("lexxy-live-region")
+    this.append(this.#liveRegion)
+    this.#disposables.push(this.#liveRegion)
 
     this.adapter = new BrowserAdapter()
     this.#uploadRequests = new UploadRequests()
@@ -241,6 +247,16 @@ export class LexicalEditorElement extends HTMLElement {
 
   acceptsFile(file) {
     return dispatch(this, "lexxy:file-accept", { file }, true)
+  }
+
+  announce(message) {
+    if (message) {
+      if (typeof document.ariaNotify === "function") {
+        document.ariaNotify(message, { priority: "high" })
+      } else {
+        this.#liveRegion?.announce(message)
+      }
+    }
   }
 
   $generateNodesFromDOM(doc, { editor = this.editor } = {}) {
@@ -608,6 +624,9 @@ export class LexicalEditorElement extends HTMLElement {
       )
       this.#registerTableComponents()
       this.#registerCodeLanguagePicker()
+      if (this.supportsAttachments) {
+        this.#registerAttachmentToolbar()
+      }
       if (this.supportsMarkdown) {
         const transformers = [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ]
         registered.push(
@@ -634,6 +653,15 @@ export class LexicalEditorElement extends HTMLElement {
     codeLanguagePicker ??= createElement("lexxy-code-language-picker")
     this.append(codeLanguagePicker)
     this.#disposables.push(codeLanguagePicker)
+  }
+
+  #registerAttachmentToolbar() {
+    let attachmentToolbar = this.querySelector("lexxy-attachment-toolbar")
+    attachmentToolbar ??= createElement("lexxy-attachment-toolbar")
+    this.append(attachmentToolbar)
+    this.#disposables.push(attachmentToolbar)
+    this.captionEditor = new CaptionEditor(this)
+    this.#disposables.push(this.captionEditor)
   }
 
   #handleEnter() {

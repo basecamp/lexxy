@@ -210,12 +210,6 @@
         inset-inline-end: 0;
         position: absolute;
       }
-
-      lexxy-node-delete-button {
-        inset-block-start: 1.5ch;
-        inset-inline-end: 1.5ch;
-        inset-inline-start: unset;
-      }
     }
 
     &.attachment--error {
@@ -327,15 +321,6 @@
     outline-offset: var(--lexxy-focus-ring-offset);
   }
 
-  .attachment--file {
-    lexxy-node-delete-button {
-      inset-block-start: 50%;
-      inset-inline-end: 1ch;
-      inset-inline-start: unset;
-      transform: translate(0, -50%);
-    }
-  }
-
   /* Image galleries */
   /* ------------------------------------------------------------------------ */
 
@@ -372,42 +357,27 @@
     }
   }
 
-  .attachment__caption {
-    textarea {
-      background: transparent;
-      block-size: fit-content;
-      border: 0;
-      border-radius: var(--lexxy-radius);
-      box-sizing: border-box;
-      color: inherit;
+  .attachment__caption--editable {
+    box-sizing: border-box;
+    cursor: text;
+
+    .attachment__caption-text {
       display: block;
-      font-size: inherit;
-      font-family: inherit;
-      inline-size: 100%;
-      max-inline-size: 100%;
-      padding: 0;
+      min-block-size: 1lh;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
       text-align: center;
-
-      @supports (resize: none) {
-        resize: none;
-      }
-
-      &:focus {
-        background: var(--lexxy-color-canvas);
-        outline: 0;
-      }
-
-      &:placeholder-shown {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      @supports (field-sizing: content) {
-        field-sizing: content;
-        inline-size: 100%;
-      }
     }
+
+    &[data-placeholder] .attachment__caption-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .attachment__caption--editing .attachment__caption-text {
+    display: none;
   }
 }
 
@@ -1004,20 +974,40 @@
 
 
   /* --------------------------------------------------------------------------
-  /* Attachment delete button */
+  /* Attachment toolbar */
 
-  &:is(lexxy-node-delete-button) {
-    inset-block-start: 0;
-    inset-inline-start: 100%;
-    opacity: 0;
-    pointer-events: none;
+  &:is(lexxy-attachment-toolbar) {
+    display: flex;
+    /* The anchor is measured in px from the editor's top-left, so these stay physical. */
+    left: calc(var(--lexxy-anchor-left) + var(--lexxy-anchor-width));
+    top: var(--lexxy-anchor-top);
+    transform: translate(-100%, 0);
 
-    .node--selected & {
-      opacity: 1;
-      pointer-events: auto;
+    &[hidden] {
+      display: none;
     }
 
-    .lexxy-node-delete:hover {
+    /* The divider is thinner than the button. */
+    &[data-node-type="horizontal_divider"] {
+      --button-size: 1.8lh;
+
+      top: calc(var(--lexxy-anchor-top) + var(--lexxy-anchor-height) / 2);
+      transform: translate(calc(-100% - 0.5ch), -50%);
+    }
+
+    &[data-presentation="inline"] {
+      --button-size: 1.6lh;
+
+      top: calc(var(--lexxy-anchor-top) + var(--lexxy-anchor-height) / 2);
+      transform: translate(0.5ch, -50%);
+
+      &[data-overflow] {
+        transform: translate(-100%, -50%);
+      }
+    }
+
+    .lexxy-attachment-toolbar__remove:hover,
+    .lexxy-attachment-toolbar__remove:focus-visible {
       background-color: var(--lexxy-color-red);
     }
   }
@@ -1145,20 +1135,49 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
 
     outline: none;
   }
+}
 
-  lexxy-node-delete-button {
-    inset-inline-start: 0;
-    line-height: 1lh;
+/* --------------------------------------------------------------------------
+/* Screen readers need access to announcements and selection labels. */
+:where(lexxy-live-region, .lexxy-fake-selection) {
+  block-size: 1px;
+  border: 0;
+  clip-path: inset(50%);
+  inline-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+}
 
-    .lexxy-floating-controls__group {
-      --button-size: 1lh;
+/* The DOM Selection API requires selectable text. */
+.lexxy-fake-selection {
+  -webkit-user-select: text;
 
-      background-color: var(--lexxy-color-accent-dark);
-      padding: 0;
+  @supports (user-select: text) {
+    user-select: text;
+  }
+}
 
-      button {
-        border-radius: 50%;
-      }
-    }
+
+/* Screen readers need the caption field outside the editor's textbox. */
+:where(.lexxy-caption-editor) {
+  position: absolute;
+  z-index: 2;
+  box-sizing: border-box;
+  background: var(--lexxy-color-canvas);
+  border: 0;
+  border-radius: var(--lexxy-radius);
+  outline: 0;
+  padding: 0;
+  overflow: hidden;
+
+  @supports (resize: none) {
+    resize: none;
+  }
+
+  &[hidden] {
+    display: none;
   }
 }
