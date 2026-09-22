@@ -54,10 +54,21 @@ export default class AlternativeTextDialog {
     if (description !== undefined) {
       this.#nodeKey = nodeKey
       this.#input.value = description
+      this.#anchorBelowAttachment(nodeKey)
       this.#elementToRefocus = document.activeElement
       this.#editorElement.querySelector("lexxy-toolbar")?.closeDropdowns()
       this.#dialog.show()
       this.#input.focus()
+    }
+  }
+
+  #anchorBelowAttachment(nodeKey) {
+    const figureElement = this.#editor.getElementByKey(nodeKey)
+    if (figureElement) {
+      const rect = figureElement.getBoundingClientRect()
+      const editorRect = this.#editorElement.getBoundingClientRect()
+      const bottom = rect.bottom - editorRect.top - this.#editorElement.clientTop + this.#editorElement.scrollTop
+      this.#dialog.style.setProperty("--lexxy-anchor-bottom", `${bottom}px`)
     }
   }
 
