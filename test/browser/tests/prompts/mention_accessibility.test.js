@@ -33,6 +33,7 @@ test.describe("Mention accessibility", () => {
 
     for (let i = 0; i < " there".length - 1; i++) await step("ArrowLeft")
     await expect(avatar).toHaveAttribute("alt", "Alice")
+    expect(await avatar.evaluate(image => image.closest('[aria-hidden="true"]') === null)).toBe(true)
 
     await clickAtEnd()
     await editor.flush()
@@ -43,6 +44,7 @@ test.describe("Mention accessibility", () => {
     await expect(avatar).toHaveAttribute("alt", "")
     await step("ArrowRight")
     await expect(avatar).toHaveAttribute("alt", "Alice")
+    expect(await avatar.evaluate(image => image.closest('[aria-hidden="true"]') === null)).toBe(true)
   })
 
   test("restores the original avatar description when the caret leaves a mention", async ({ page, editor }) => {
@@ -51,13 +53,14 @@ test.describe("Mention accessibility", () => {
 
     const mention = editor.content.locator("action-text-attachment")
     const avatar = mention.locator("img")
-    const label = mention.locator("span").first()
+    const label = mention.locator("[data-lexxy-label-mirror]")
     await expect(avatar).toHaveAttribute("alt", "Alice at the beach")
     await expect(label).not.toHaveAttribute("aria-hidden", "true")
 
     await selectAttachment(mention)
     await expect(avatar).toHaveAttribute("alt", "Alice")
     await expect(label).toHaveAttribute("aria-hidden", "true")
+    expect(await avatar.evaluate(image => image.closest('[aria-hidden="true"]') === null)).toBe(true)
 
     await editor.content.locator("p").click({ position: { x: 1, y: 5 } })
     await expect(avatar).toHaveAttribute("alt", "Alice at the beach")

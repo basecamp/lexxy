@@ -182,10 +182,31 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     const trimmedLabel = this.label.trim()
     const matches = [ ...figure.querySelectorAll("span") ].filter((span) => span.textContent.trim() === trimmedLabel)
     const deepest = matches.filter((span) => !matches.some((other) => other !== span && span.contains(other)))
+    const labelImage = figure.querySelector("[data-lexxy-label-image]")
+
     for (const span of deepest) {
       if (span.getAttribute("aria-hidden") !== "true") {
-        span.setAttribute("data-lexxy-label-mirror", "")
+        if (span.contains(labelImage)) {
+          this.#wrapLabelTextNodesIn(span)
+        } else {
+          span.setAttribute("data-lexxy-label-mirror", "")
+        }
       }
+    }
+  }
+
+  #wrapLabelTextNodesIn(element) {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+    const textNodes = []
+
+    while (walker.nextNode()) {
+      if (walker.currentNode.textContent.trim()) textNodes.push(walker.currentNode)
+    }
+
+    for (const textNode of textNodes) {
+      const mirror = createElement("span", { "data-lexxy-label-mirror": "" })
+      textNode.replaceWith(mirror)
+      mirror.append(textNode)
     }
   }
 }

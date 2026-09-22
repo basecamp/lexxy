@@ -19,12 +19,14 @@ test("pasting an image preserves its description without adding a caption", asyn
 test("pasting an image file with HTML preserves its description through upload", async ({ page, editor }) => {
   await page.goto("/attachments.html")
   await editor.waitForConnected()
-  await mockActiveStorageUploads(page)
+  const uploads = await mockActiveStorageUploads(page, { delayDirectUploadResponse: true })
   await editor.paste("", {
     html: '<img src="https://example.com/canoe.png" alt="A red canoe">',
     files: [ { base64: readFileSync("test/fixtures/files/example.png").toString("base64"), name: "canoe.png", type: "image/png" } ]
   })
 
+  await expect(page.locator("figure.attachment img")).toHaveAttribute("alt", "A red canoe")
+  await uploads.releaseDirectUploadResponses()
   await expect(page.locator("figure.attachment .attachment__caption--editable")).toBeVisible()
   await expect(page.locator("figure.attachment img")).toHaveAttribute("alt", "A red canoe")
   expect(await editor.value()).toContain('alt="A red canoe"')

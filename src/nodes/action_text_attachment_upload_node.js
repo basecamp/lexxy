@@ -67,6 +67,11 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   updateDOM(prevNode, dom) {
     if (this.uploadError !== prevNode.uploadError) return true
 
+    const image = dom.querySelector("img")
+    if (image && prevNode.altText !== this.altText) {
+      image.alt = this.altText
+    }
+
     if (prevNode.progress !== this.progress) {
       const progress = dom.querySelector("progress")
       progress.value = this.progress ?? 0
@@ -100,7 +105,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   #createDOMForImage() {
-    return createElement("img")
+    return createElement("img", { alt: this.altText })
   }
 
   #createDOMForFile() {
