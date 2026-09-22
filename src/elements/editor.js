@@ -67,6 +67,7 @@ export class LexicalEditorElement extends HTMLElement {
   #historyState = { undo: false, redo: false }
 
   #validity = new Map()
+  #validationAttempted = false
   #validationTextArea = document.createElement("textarea")
   #uploadRequests
   #liveRegion
@@ -151,10 +152,13 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   requiredChangedCallback() {
+    if (this.editorContentElement) this.#synchronizeAriaAttribute("aria-required")
     if (this.isConnected) this.#requestValidityRefresh()
   }
 
   formResetCallback() {
+    this.#validationAttempted = false
+    this.#synchronizeAriaAttribute("aria-invalid")
     this.value = this.#initialValue
     this.editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
   }
@@ -179,6 +183,15 @@ export class LexicalEditorElement extends HTMLElement {
 
   get validity() {
     return this.internals.validity
+  }
+
+  get validationMessage() {
+    return this.internals.validationMessage
+  }
+
+  setCustomValidity(message) {
+    this.#validationTextArea.setCustomValidity(message)
+    this.#refreshValidity()
   }
 
   checkValidity() {
@@ -418,6 +431,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#resetBeforeTurboCaches()
+    this.#observeAriaAttributes()
 
     this.#setInternalFormValue(this.value, { suppressEvent: true })
     this.#synchronizeWithChanges()
@@ -490,7 +504,9 @@ export class LexicalEditorElement extends HTMLElement {
       classList: "lexxy-editor__content",
       contenteditable: true,
       role: "textbox",
-      "aria-multiline": true,
+      "aria-multiline": this.supportsMultiLine,
+      "aria-required": this.required,
+      "aria-invalid": false,
       "aria-label": this.#labelText,
       placeholder: this.getAttribute("placeholder")
     })
@@ -521,6 +537,46 @@ export class LexicalEditorElement extends HTMLElement {
 
   get #ariaAttributes() {
     return Array.from(this.attributes).filter(attribute => attribute.name.startsWith("aria-"))
+  }
+
+  #observeAriaAttributes() {
+    const observer = new MutationObserver(mutations => {
+      for (const { attributeName } of mutations) {
+        if (attributeName.startsWith("aria-")) {
+          this.#synchronizeAriaAttribute(attributeName)
+        } else if (attributeName === "single-line") {
+          this.#synchronizeAriaAttribute("aria-multiline")
+        }
+      }
+    })
+    observer.observe(this, { attributes: true })
+
+    this.#listeners.track(
+      () => observer.disconnect(),
+      registerEventListener(this, "invalid", () => {
+        this.#validationAttempted = true
+        this.#synchronizeAriaAttribute("aria-invalid")
+      })
+    )
+  }
+
+  #synchronizeAriaAttribute(name) {
+    const value = this.getAttribute(name) ?? this.#defaultAriaValue(name)
+    if (value === null) {
+      this.editorContentElement.removeAttribute(name)
+    } else if (this.editorContentElement.getAttribute(name) !== String(value)) {
+      this.editorContentElement.setAttribute(name, value)
+    }
+  }
+
+  #defaultAriaValue(name) {
+    switch (name) {
+      case "aria-label": return this.#labelText
+      case "aria-required": return this.required
+      case "aria-multiline": return this.supportsMultiLine
+      case "aria-invalid": return this.#validationAttempted && !this.validity.valid
+      default: return null
+    }
   }
 
   #setInternalFormValue(html, { suppressEvent = false } = {}) {
@@ -579,11 +635,16 @@ export class LexicalEditorElement extends HTMLElement {
   #refreshValidity() {
     this.#refreshInternalValidity()
     const { validity, message } = this.#calculateValidity()
-    this.internals.setValidity(validity, message, this.editorContentElement)
+    this.internals.setValidity(validity, message, this.editorContentElement ?? undefined)
+    if (this.editorContentElement) {
+      this.#synchronizeAriaAttribute("aria-invalid")
+    }
   }
 
   #refreshInternalValidity() {
-    this.#validationTextArea.required = this.required && this.isBlank
+    if (this.editorContentElement) {
+      this.#validationTextArea.required = this.required && this.isBlank
+    }
     const flags = this.#validationTextArea.validity
     const message = this.#validationTextArea.validationMessage
 
@@ -598,12 +659,14 @@ export class LexicalEditorElement extends HTMLElement {
       // internal TextArea's ValidityState can contain `valid: true`
       if (flags.valid === true) continue
 
+      let hasError = false
       for (const flag in flags) {
         if (flags[flag]) {
           validity[flag] = true
-          messages.push(message)
+          hasError = true
         }
       }
+      if (hasError) messages.push(message)
     }
 
     return { validity, message: messages.join("\n") }
@@ -928,6 +991,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #resetValidity() {
     this.#validity = new Map()
+    this.#validationAttempted = false
   }
 }
 

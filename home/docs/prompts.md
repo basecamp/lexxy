@@ -15,6 +15,8 @@ Prompts let you implement features like @mentions, /commands, or any other trigg
 
 Lexxy also lets you configure how to load the items: inline or remotely, and how to do the filtering (locally or on the server).
 
+You can browse and select suggestions with the keyboard, with screen reader support as you navigate the results. See [prompt hotkeys](hotkeys.html#prompts) and [Accessibility](accessibility.html#prompts-and-suggestions).
+
 ## General setup
 
 The first thing to do is to add a `<lexxy-prompt>` element to the editor:
