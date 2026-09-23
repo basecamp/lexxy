@@ -1,6 +1,7 @@
 import { $getNodeByKey, HISTORY_PUSH_TAG, SKIP_DOM_SELECTION_TAG } from "lexical"
 import { $isActionTextAttachmentNode } from "../../nodes/action_text_attachment_node"
 import { createElement } from "../../helpers/html_helper"
+import { trapFocusAtTabBoundary } from "../../helpers/accessibility_helper"
 import { ListenerBin, registerEventListener } from "../../helpers/listener_helper"
 
 export default class AlternativeTextDialog {
@@ -33,7 +34,7 @@ export default class AlternativeTextDialog {
     this.#listeners.track(
       registerEventListener(cancel, "click", () => this.#close()),
       registerEventListener(save, "click", () => this.#save()),
-      registerEventListener(this.#dialog, "keydown", this.#closeOnEscape),
+      registerEventListener(this.#dialog, "keydown", this.#handleKeyDown),
       registerEventListener(document, "pointerdown", this.#closeOnClickOutside)
     )
   }
@@ -83,10 +84,12 @@ export default class AlternativeTextDialog {
     this.#close()
   }
 
-  #closeOnEscape = (event) => {
+  #handleKeyDown = (event) => {
     event.stopPropagation()
     if (event.key === "Escape") {
       this.#close()
+    } else {
+      trapFocusAtTabBoundary(this.#dialog, event)
     }
   }
 
