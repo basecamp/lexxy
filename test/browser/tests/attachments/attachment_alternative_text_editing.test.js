@@ -93,6 +93,36 @@ test.describe("Attachment alternative text editing", () => {
     expect(dialogBox.width / editorBox.width).toBeCloseTo(0.6, 1)
   })
 
+  test("traps Tab at both dialog boundaries and leaves the inner tab order to the browser", async ({ page, editor }) => {
+    await editor.setValue(attachmentTag("a", "canoe.png"))
+    await editor.flush()
+    await editor.focus()
+    await selectAttachment(page.locator("figure.attachment"))
+    await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+
+    const dialog = page.getByRole("dialog", { name: "Alternative text" })
+    const input = dialog.getByRole("textbox", { name: "Description" })
+    const cancel = dialog.getByRole("button", { name: "Cancel" })
+    const save = dialog.getByRole("button", { name: "Save", exact: true })
+
+    await expect(input).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(cancel).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(save).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(input).toBeFocused()
+
+    await page.keyboard.press("Shift+Tab")
+    await expect(save).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(cancel).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(input).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(save).toBeFocused()
+  })
+
   test("opening it closes an open toolbar dropdown", async ({ page, editor }) => {
     await editor.setValue(`<p>Above</p>${attachmentTag("a", "canoe.png")}`)
     await editor.flush()

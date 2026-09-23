@@ -5,6 +5,35 @@ export function isKeyboardActivation(event) {
   return event instanceof PointerEvent && event.pointerId === -1
 }
 
+export function trapFocusAtTabBoundary(container, event) {
+  if (event.key !== "Tab") return
+
+  const tabStops = Array.from(container.querySelectorAll("a[href], area[href], button, input:not([type='hidden']), select, textarea, iframe, object, embed, [contenteditable]:not([contenteditable='false']), [tabindex], summary, audio[controls], video[controls]"))
+    .filter(element => element.tabIndex >= 0 && !element.matches(":disabled") && !element.closest("[inert]") && isActiveAndVisible(element))
+    .sort((first, second) => {
+      if (first.tabIndex > 0 && second.tabIndex > 0) {
+        return first.tabIndex - second.tabIndex
+      } else if (first.tabIndex > 0) {
+        return -1
+      } else if (second.tabIndex > 0) {
+        return 1
+      } else {
+        return 0
+      }
+    })
+
+  const firstTabStop = tabStops[0]
+  const lastTabStop = tabStops.at(-1)
+
+  if (event.shiftKey && document.activeElement === firstTabStop) {
+    event.preventDefault()
+    lastTabStop.focus()
+  } else if (!event.shiftKey && document.activeElement === lastTabStop) {
+    event.preventDefault()
+    firstTabStop.focus()
+  }
+}
+
 export function handleRollingTabIndex(elements, event, { orientation = "horizontal", wrap = false } = {}) {
   const previousActiveElement = document.activeElement
 
