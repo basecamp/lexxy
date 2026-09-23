@@ -94,7 +94,7 @@ test.describe("Attachment alternative text editing", () => {
   })
 
   test("opening it closes an open toolbar dropdown", async ({ page, editor }) => {
-    await editor.setValue(attachmentTag("a", "canoe.png"))
+    await editor.setValue(`<p>Above</p>${attachmentTag("a", "canoe.png")}`)
     await editor.flush()
     await editor.focus()
     await selectAttachment(page.locator("figure.attachment"))
