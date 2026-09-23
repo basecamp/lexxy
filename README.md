@@ -8,6 +8,7 @@ A modern rich text editor for Rails.
 
 - Built on top of [Lexical](https://lexical.dev), the powerful text editor framework from Meta.
 - Good HTML semantics. Paragraphs are real `<p>` tags, as they should be.
+- Designed with [accessibility](https://lexxy.dev/docs/accessibility.html) in mind.
 - Markdown support: shortcuts, auto-formatting on paste.
 - Real-time code syntax highlighting.
 - Create links by pasting URLs on selected text.
