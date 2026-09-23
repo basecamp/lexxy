@@ -108,6 +108,14 @@ jobs:
       - name: Install packages
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config google-chrome-stable mupdf build-essential ffmpeg groff libreoffice-writer libreoffice-impress libreoffice-calc mupdf-tools libvips zip
 
+      - name: Remove runner's ChromeDriver
+        run: |
+          chrome_driver_path="$(command -v chromedriver || true)"
+          if [ -n "$chrome_driver_path" ]; then
+            "$chrome_driver_path" --version
+            sudo rm "$chrome_driver_path"
+          fi
+
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
