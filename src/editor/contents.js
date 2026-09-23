@@ -282,7 +282,7 @@ export default class Contents {
     this.#performTextReplacement(anchorNode, lastIndex, stringToReplace, replacementNodes)
   }
 
-  uploadFiles(files, { selectLast } = {}) {
+  uploadFiles(files, { selectLast, altText } = {}) {
     if (!this.editorElement) return // Disposed (e.g. on turbo:before-cache); a late drop can still land here
 
     if (!this.editorElement.supportsAttachments) {
@@ -294,6 +294,10 @@ export default class Contents {
     this.editor.update(() => {
       const uploader = Uploader.for(this.editorElement, validFiles)
       uploader.$uploadFiles()
+
+      if (altText && files.length === 1 && uploader.nodes.length === 1) {
+        uploader.nodes[0].getWritable().altText = altText
+      }
 
       if (selectLast && uploader.nodes?.length) {
         const lastNode = uploader.nodes.at(-1)

@@ -35,6 +35,7 @@
   --lexxy-color-selected-dark: var(--lexxy-color-blue);
   --lexxy-color-selected-50: color-mix(in oklch, var(--lexxy-color-selected-dark) 50%, transparent);
   --lexxy-color-code-bg: var(--lexxy-color-ink-lightest);
+  --lexxy-color-floating-controls-separator: rgba(128, 128, 128, 0.3);
 
   /* Text color highlights */
   --highlight-1: rgb(136, 118, 38);

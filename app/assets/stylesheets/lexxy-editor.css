@@ -855,7 +855,7 @@
 
   .lexxy-table-control__more-menu-trigger {
     aspect-ratio: auto;
-    box-shadow: 0 0 0 1px inset rgba(128, 128, 128, 0.3);
+    box-shadow: 0 0 0 1px inset var(--lexxy-color-floating-controls-separator);
     font-weight: normal;
     padding: 0 1.25ch;
   }
@@ -981,7 +981,7 @@
     /* The anchor is measured in px from the editor's top-left, so these stay physical. */
     left: calc(var(--lexxy-anchor-left) + var(--lexxy-anchor-width));
     top: var(--lexxy-anchor-top);
-    transform: translate(-100%, 0);
+    transform: translate(calc(-100% - 1.5ch), 1.5ch);
 
     &[hidden] {
       display: none;
@@ -1003,6 +1003,39 @@
 
       &[data-overflow] {
         transform: translate(-100%, -50%);
+      }
+    }
+
+    .lexxy-floating-controls__group {
+      display: flex;
+    }
+
+    button[hidden] {
+      display: none;
+    }
+
+    .lexxy-attachment-toolbar__alternative-text {
+      aspect-ratio: auto;
+      margin-inline-end: calc(var(--lexxy-toolbar-spacing) + 1px);
+      padding-inline: 1ch;
+      position: relative;
+
+      span {
+        display: inline-block;
+        font-size: 0.9em;
+      }
+
+      &:after {
+        background-color: var(--lexxy-color-floating-controls-separator);
+        block-size: 1.125em;
+        content: "";
+        display: block;
+        inline-size: 1px;
+        inset-block: 0;
+        inset-inline-end: calc(-1 * var(--lexxy-toolbar-spacing));
+        margin: auto;
+        pointer-events: none;
+        position: absolute;
       }
     }
 
@@ -1179,5 +1212,107 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
 
   &[hidden] {
     display: none;
+  }
+}
+
+.lexxy-alternative-text-dialog {
+  background: var(--lexxy-color-canvas);
+  border: 2px solid var(--lexxy-color-selected-hover);
+  border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
+  box-shadow: var(--lexxy-shadow);
+  box-sizing: border-box;
+  color: var(--lexxy-color-ink);
+  font: inherit;
+  inline-size: 60%;
+  inset-block: calc(var(--lexxy-anchor-bottom) + var(--lexxy-toolbar-spacing)) auto;
+  inset-inline: 0;
+  margin-block: 0;
+  margin-inline: auto;
+  min-inline-size: min(20rem, 100%);
+  overflow: auto;
+  padding: var(--lexxy-toolbar-spacing);
+  z-index: 3;
+
+  h2 {
+    font-size: inherit;
+    font-weight: bold;
+    line-height: 1.5;
+    margin: 0;
+    padding-block-start: calc(0.25 * var(--lexxy-text-small));
+    padding-inline: calc(0.5 * var(--lexxy-text-small));
+    text-align: center;
+  }
+
+  .lexxy-alternative-text-dialog__controls {
+    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    margin-block-start: 0.5em;
+  }
+
+  textarea {
+    background: var(--lexxy-color-canvas);
+    border: 1px solid var(--lexxy-color-ink-lighter);
+    border-radius: var(--lexxy-radius);
+    box-sizing: border-box;
+    color: inherit;
+    display: block;
+    font: inherit;
+    font-size: var(--lexxy-text-small);
+    font-weight: normal;
+    min-block-size: calc(2lh + 1em + 2px);
+    min-inline-size: 0;
+    padding: 0.5em;
+
+    @supports (field-sizing: content) {
+      field-sizing: content;
+    }
+
+    @supports (resize: none) {
+      resize: none;
+    }
+  }
+
+  button {
+    background-color: var(--lexxy-color-ink-lightest);
+    block-size: var(--lexxy-toolbar-button-size);
+    border: 0;
+    border-radius: var(--lexxy-radius);
+    color: currentColor;
+    cursor: pointer;
+    display: grid;
+    font-size: var(--lexxy-text-small);
+    inline-size: 100%;
+    line-height: inherit;
+    padding-inline: 2ch;
+    place-items: center;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  .lexxy-alternative-text-dialog__save {
+    background-color: var(--lexxy-color-accent-dark);
+    color: var(--lexxy-color-ink-inverted);
+
+    &:hover {
+      background-color: var(--lexxy-color-accent-medium);
+    }
+  }
+
+  textarea:focus-visible {
+    outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
+    outline-offset: var(--lexxy-focus-ring-offset);
+  }
+
+  .lexxy-alternative-text-dialog__actions {
+    display: flex;
+    gap: 0.5em;
+
+    button {
+      flex: 1;
+    }
   }
 }

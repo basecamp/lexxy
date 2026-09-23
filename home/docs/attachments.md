@@ -10,6 +10,17 @@ Lexxy uploads files using Active Storage's Direct Upload protocol and renders pr
 
 See [attachment hotkeys](hotkeys.html#attachments) for editing captions and arranging galleries with the keyboard.
 
+## Alternative text
+
+Images and attachment previews support alternative text through the ALT button in the attachment toolbar.
+
+Rails enables the ALT button only when Action Text supports the `alt` attachment attribute ([rails/rails#58337](https://github.com/rails/rails/pull/58337)).
+
+If you override attachment partials, pass the description to `image_tag`:
+
+- `app/views/active_storage/blobs/_blob.html.erb`: `alt: blob.try(:alt)`.
+- `app/views/action_text/attachables/_remote_image.html.erb`: `alt: remote_image.try(:alt)`.
+
 ## Upload response
 
 After a Direct Upload completes, Lexxy reads the following fields from the blob JSON returned by the upload endpoint:

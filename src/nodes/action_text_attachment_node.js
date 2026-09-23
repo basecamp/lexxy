@@ -51,7 +51,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
               node: new ActionTextAttachmentNode({
                 src: img.getAttribute("src"),
                 fileName: fileName,
-                caption: img.getAttribute("alt") || "",
+                altText: img.getAttribute("alt"),
                 contentType: "image/*",
                 width: img.getAttribute("width"),
                 height: img.getAttribute("height")
@@ -376,8 +376,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   #swapToPreviewDOM(figure, previewSrc) {
+    const altText = this.editor.read(() => this.getLatest().altText)
     this.#swapFigureContent(figure, "attachment--file", "attachment--preview", () => {
-      const img = createElement("img", { src: previewSrc, draggable: false, alt: this.altText })
+      const img = createElement("img", { src: previewSrc, draggable: false, alt: altText })
       img.onerror = () => this.#swapPreviewToFileDOM(img)
       const container = createElement("div", { className: "attachment__container" })
       container.appendChild(img)

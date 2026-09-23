@@ -461,7 +461,7 @@ These are areas where bugs tend to cluster, based on the architecture:
 
 **Soft line break selections** — `Shift+Enter` produces `LineBreakNode`s inside a single paragraph. Formatting actions that work on top-level elements can accidentally treat multiple visible lines as one block, so reproduce selection bugs with real soft line breaks (or `<br>` setup) whenever the report mentions composer line breaks.
 
-**Mixed clipboard payload precedence** — Some apps copy the same image as both an HTML `<img>` snippet and a real file. Reproductions need to exercise both payloads together because browsers may expose them differently, and Lexxy should prefer the upload path when attachments are supported.
+**Mixed clipboard payload precedence** — Some apps copy the same image as both an HTML `<img>` snippet and a real file. Reproductions need to exercise both payloads together because browsers may expose them differently, and Lexxy should prefer the upload path when attachments are supported. Choosing the file bytes must not discard descriptions carried by the parallel HTML representation; verify metadata after upload completion as well as during import.
 
 **Highlight style sync** — The `HighlightExtension` keeps Lexical's `highlight` format bit in sync with inline CSS styles. Two TextNode transforms run on every mutation: one for sync, one for canonical palette enforcement. Infinite loop risk if the sync logic disagrees with Lexical's internal state.
 

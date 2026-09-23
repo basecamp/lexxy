@@ -2,7 +2,8 @@ import { $getNodeByKey, $setSelection, COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND }
 
 import { $createNodeSelectionWith, registerLabelledDecoratorSelection } from "../helpers/lexical_helper"
 import { $isImageGalleryNode } from "../nodes/image_gallery_node"
-import { createElement } from "../helpers/html_helper"
+import AlternativeTextDialog from "../editor/attachments/alternative_text_dialog"
+import { createElement, isActiveAndVisible } from "../helpers/html_helper"
 import { handleRollingTabIndex } from "../helpers/accessibility_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
@@ -13,6 +14,8 @@ const DELETE_ICON = `<svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"
 export class AttachmentToolbar extends HTMLElement {
   #listeners = new ListenerBin()
   #buttons = []
+  #alternativeTextButton
+  #alternativeTextDialog
   #currentNodeKey = null
   #reflowObserver = new ResizeObserver(() => this.#updatePosition())
   #presentationObserver = new MutationObserver(() => this.#refresh())
@@ -39,6 +42,7 @@ export class AttachmentToolbar extends HTMLElement {
     this.#listeners.dispose()
     this.#reflowObserver.disconnect()
     this.#presentationObserver.disconnect()
+    this.#alternativeTextDialog?.dispose()
   }
 
   get #editor() {
@@ -53,7 +57,9 @@ export class AttachmentToolbar extends HTMLElement {
     this.innerHTML = ""
 
     const container = createElement("div", { className: "lexxy-floating-controls__group" })
+    container.appendChild(this.#createAlternativeTextButton())
     container.appendChild(this.#createRemoveButton())
+    this.#alternativeTextDialog = new AlternativeTextDialog(this.#editorElement)
     this.appendChild(container)
 
     this.#buttons = Array.from(this.querySelectorAll("button"))
@@ -84,6 +90,22 @@ export class AttachmentToolbar extends HTMLElement {
 
   get #hasSelectedNode() {
     return this.#currentNodeKey !== null
+  }
+
+  #createAlternativeTextButton() {
+    this.#alternativeTextButton = createElement("button", {
+      type: "button",
+      className: "lexxy-attachment-toolbar__alternative-text",
+      ariaLabel: "Alternative text",
+      title: "Alternative text",
+      ariaHasPopup: "dialog",
+      tabIndex: -1
+    })
+    this.#alternativeTextButton.appendChild(createElement("span", null, "ALT"))
+    this.#listeners.track(registerEventListener(this.#alternativeTextButton, "click", () => {
+      this.#alternativeTextDialog.open(this.#currentNodeKey)
+    }))
+    return this.#alternativeTextButton
   }
 
   #navigateOrExit = (event) => {
@@ -158,6 +180,7 @@ export class AttachmentToolbar extends HTMLElement {
 
     this.#editor.getEditorState().read(() => {
       const node = $getNodeByKey(nodeKey)
+      this.#alternativeTextButton.hidden = !this.#canEditAlternativeText(node)
       this.dataset.nodeType = node.getType()
       this.dataset.presentation = this.#presentationOf(node, element)
 
@@ -167,6 +190,12 @@ export class AttachmentToolbar extends HTMLElement {
         delete this.dataset.contentType
       }
     })
+  }
+
+  #canEditAlternativeText(node) {
+    return this.#editorElement.dataset.actionTextSupportsAlt !== "false"
+      && node.getType() === "action_text_attachment"
+      && node.isPreviewableAttachment
   }
 
   #presentationOf(node, element) {
@@ -190,8 +219,11 @@ export class AttachmentToolbar extends HTMLElement {
     if (figureElement) {
       const rect = figureElement.getBoundingClientRect()
       const editorRect = this.#editorElement.getBoundingClientRect()
-      this.style.setProperty("--lexxy-anchor-top", `${rect.top - editorRect.top}px`)
-      this.style.setProperty("--lexxy-anchor-left", `${rect.left - editorRect.left}px`)
+      // We are positioned against the editor's padding box, but the rect measures its border box.
+      const borderTop = this.#editorElement.clientTop
+      const borderLeft = this.#editorElement.clientLeft
+      this.style.setProperty("--lexxy-anchor-top", `${rect.top - editorRect.top - borderTop}px`)
+      this.style.setProperty("--lexxy-anchor-left", `${rect.left - editorRect.left - borderLeft}px`)
       this.style.setProperty("--lexxy-anchor-width", `${rect.width}px`)
       this.style.setProperty("--lexxy-anchor-height", `${rect.height}px`)
       this.#flipWhenOverflowing(editorRect)
@@ -231,7 +263,7 @@ export class AttachmentToolbar extends HTMLElement {
   #focusToolbarOnAltF10 = (event) => {
     if (this.#hasSelectedNode && event.altKey && event.key === "F10") {
       event.preventDefault()
-      this.#buttons[0]?.focus()
+      this.#buttons.find(isActiveAndVisible)?.focus()
       return true
     } else {
       return false
