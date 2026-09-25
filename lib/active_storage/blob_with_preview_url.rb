@@ -3,16 +3,37 @@ module ActiveStorage
     PREVIEW_SIZE = [ 1024, 768 ]
 
     def as_json(options = nil)
-      json = super(options)
+      json = super
+      options ||= {}
 
-      if previewable?
-        json["previewable"] = true
-        json["url"] = Rails.application.routes.url_helpers.rails_representation_path(
-          preview(resize_to_limit: PREVIEW_SIZE), ActiveStorage::Current.url_options.merge(only_path: true)
-        )
+      if previewable? && ActiveStorage::Current.url_options
+        attributes = (root = preview_json_root(options)) ? json[root] : json
+        attributes["previewable"] = true if serializes_preview_field?("previewable", options)
+        attributes["url"] = preview_url_path if serializes_preview_field?("url", options)
       end
 
       json
     end
+
+    private
+      def preview_json_root(options)
+        root = options.key?(:root) ? options[:root] : include_root_in_json
+        root == true ? model_name.element : root
+      end
+
+      # Mirrors Active Model: only takes precedence over except.
+      def serializes_preview_field?(field, options)
+        if only = options[:only]
+          Array(only).map(&:to_s).include?(field)
+        else
+          Array(options[:except]).map(&:to_s).exclude?(field)
+        end
+      end
+
+      def preview_url_path
+        Rails.application.routes.url_helpers.rails_representation_path(
+          preview(resize_to_limit: PREVIEW_SIZE), ActiveStorage::Current.url_options.merge(only_path: true)
+        )
+      end
   end
 end
