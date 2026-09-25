@@ -277,15 +277,18 @@ export class AttachmentDragAndDrop {
     if (!targetNode || !$isActionTextAttachmentNode(targetNode)) return
     if (draggedNode.is(targetNode)) return
 
+    // Resolve the gallery before detaching: the drop target matches any
+    // previewable attachment, but galleries only accept images, so removing
+    // first deleted PDFs and videos dropped onto another attachment.
+    const gallery = $findOrCreateGalleryForImage(targetNode)
+    if (!gallery) return
+
     draggedNode.remove()
 
-    const gallery = $findOrCreateGalleryForImage(targetNode)
-    if (gallery) {
-      if (position === "before") {
-        targetNode.insertBefore(draggedNode)
-      } else {
-        targetNode.insertAfter(draggedNode)
-      }
+    if (position === "before") {
+      targetNode.insertBefore(draggedNode)
+    } else {
+      targetNode.insertAfter(draggedNode)
     }
   }
 
