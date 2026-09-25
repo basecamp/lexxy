@@ -14,6 +14,7 @@ const presets = new Configuration({
     multiLine: true,
     permittedAttachmentTypes: null,
     richText: true,
+    uploadsBusyMessage: "Please wait for all files to upload",
     toolbar: {
       upload: "both"
     },
