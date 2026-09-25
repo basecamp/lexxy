@@ -11,7 +11,7 @@ import { CodeNode } from "@lexical/code"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
 import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } from "../helpers/lexical_helper"
-import { LinkNode } from "@lexical/link"
+import { $isLinkNode, LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ListenerBin, handlingDefault, registerEventListener } from "../helpers/listener_helper"
@@ -118,6 +118,14 @@ export default class Selection {
   nearestNodeOfType(nodeType) {
     const anchorNode = $getSelection()?.anchor?.getNode()
     return $getNearestNodeOfType(anchorNode, nodeType)
+  }
+
+  get linkUrl() {
+    return this.#linkAtCursor()?.getURL() ?? null
+  }
+
+  placeCursorInsideAdjacentLink() {
+    this.#linkEndingAtCursor()?.selectEnd()
   }
 
   get hasSelectedWordsInSingleLine() {
@@ -271,6 +279,26 @@ export default class Selection {
     this.previouslySelectedKeys = null
 
     this.#listeners.dispose()
+  }
+
+  #linkAtCursor() {
+    const anchorNode = $getSelection()?.anchor?.getNode()
+    return $getNearestNodeOfType(anchorNode, LinkNode) ?? this.#linkEndingAtCursor()
+  }
+
+  // Lexical resolves a caret sitting at a link's trailing edge to the start of the
+  // node that follows it, so a cursor that looks like it's on the link lands outside.
+  #linkEndingAtCursor() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null
+
+    const { anchor } = selection
+    if (anchor.type !== "text" || anchor.offset !== 0) return null
+
+    const previousSibling = anchor.getNode().getPreviousSibling()
+    if (!$isLinkNode(previousSibling)) return null
+
+    return previousSibling
   }
 
   // When all inline code text is deleted, Lexical's selection retains the stale
