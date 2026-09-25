@@ -2,6 +2,8 @@ import "./config/prism"
 import "./config/dom_purify"
 
 import { defineElements } from "./elements/index"
+import "./editor/vendor/dragon/support"
+import "./editor/vendor/dragon/make_changes"
 
 import Lexxy from "./config/lexxy"
 

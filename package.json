@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     ".": "./dist/lexxy.esm.js",
-    "./helpers": "./dist/lexxy_helpers.esm.js"
+    "./helpers": "./dist/lexxy_helpers.esm.js",
+    "./dragon": "./dist/lexxy_dragon.esm.js"
   },
   "files": [
     "dist"
