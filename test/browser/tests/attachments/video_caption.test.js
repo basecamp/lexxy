@@ -28,9 +28,10 @@ test.describe("Video attachment caption", () => {
     await expect(figure).toBeVisible()
 
     // Video attachments should have an editable caption textarea, just like images
-    const caption = figure.locator("figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Video caption", exact: true })
+    await figure.locator("figcaption").click()
     await expect(caption).toBeVisible()
-    await expect(caption).toHaveAttribute("placeholder", "clip.mp4")
+    await expect(caption).toHaveAttribute("placeholder", "Add caption...")
   })
 
   test("video attachment caption can be edited and saved", async ({ page, editor }) => {
@@ -40,7 +41,8 @@ test.describe("Video attachment caption", () => {
     const figure = page.locator("figure.attachment")
     await expect(figure).toBeVisible()
 
-    const caption = figure.locator("figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Video caption", exact: true })
+    await figure.locator("figcaption").click()
     await expect(caption).toBeVisible()
 
     await caption.click()

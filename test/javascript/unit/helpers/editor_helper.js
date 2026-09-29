@@ -8,6 +8,7 @@ function ensureElementsRegistered() {
   if (elementsRegistered) return
   elementsRegistered = true
   stubElementInternals()
+  stubResizeObserver()
   defineElements()
 }
 
@@ -22,6 +23,15 @@ function stubElementInternals() {
       Object.defineProperty(internals, "labels", { get: () => [] })
     }
     return internals
+  }
+}
+
+// jsdom doesn't implement ResizeObserver
+function stubResizeObserver() {
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
   }
 }
 

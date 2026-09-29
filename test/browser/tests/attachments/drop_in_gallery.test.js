@@ -1,6 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
+import { assertGalleryWithImages, selectGalleryAtOffset, selectGalleryImage } from "../../helpers/gallery_test_helpers.js"
 
 test.describe("Drop in gallery", () => {
   test.beforeEach(async ({ page }) => {
@@ -65,27 +66,6 @@ test.describe("Drop in gallery", () => {
 })
 
 // --- Helpers ---
-
-async function assertGalleryWithImages(editor, count) {
-  const gallery = editor.content.locator(".attachment-gallery").first()
-  await expect(gallery).toBeVisible({ timeout: 10_000 })
-  await expect(gallery.locator("figure.attachment")).toHaveCount(count)
-}
-
-async function selectGalleryImage(page, index, galleryIndex = 0) {
-  const gallery = page.locator(".attachment-gallery").nth(galleryIndex)
-  await gallery.locator("figure.attachment img").nth(index).click()
-}
-
-async function selectGalleryAtOffset(page, editor, offset, galleryIndex = 0) {
-  if (offset === 0) {
-    await selectGalleryImage(page, 0, galleryIndex)
-    await editor.send("ArrowLeft")
-  } else {
-    await selectGalleryImage(page, offset - 1, galleryIndex)
-    await editor.send("ArrowRight")
-  }
-}
 
 /**
  * Simulates an external file drop at the current selection position.

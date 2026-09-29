@@ -522,6 +522,38 @@ test.describe("Block formatting", () => {
     await expect(input).toBeVisible({ timeout: 2_000 })
     await expect(input).toHaveValue("")
   })
+
+  test("traps Tab at both link dialog boundaries and leaves the inner tab order to the browser", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(HELLO_EVERYONE)
+    await editor.select("everyone")
+    await editor.flush()
+    await openToolbarDropdown(page, "link")
+
+    const dialog = page.getByRole("dialog", { name: "Link" })
+    const input = dialog.getByRole("textbox")
+    const link = dialog.getByRole("button", { name: "Link", exact: true })
+    const unlink = dialog.getByRole("button", { name: "Unlink", exact: true })
+
+    await expect(input).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(link).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(unlink).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(input).toBeFocused()
+
+    await page.keyboard.press("Shift+Tab")
+    await expect(unlink).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(link).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(input).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(unlink).toBeFocused()
+  })
 })
 
 test.describe("Blockquote selection matrix", () => {

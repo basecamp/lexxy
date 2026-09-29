@@ -210,12 +210,6 @@
         inset-inline-end: 0;
         position: absolute;
       }
-
-      lexxy-node-delete-button {
-        inset-block-start: 1.5ch;
-        inset-inline-end: 1.5ch;
-        inset-inline-start: unset;
-      }
     }
 
     &.attachment--error {
@@ -327,15 +321,6 @@
     outline-offset: var(--lexxy-focus-ring-offset);
   }
 
-  .attachment--file {
-    lexxy-node-delete-button {
-      inset-block-start: 50%;
-      inset-inline-end: 1ch;
-      inset-inline-start: unset;
-      transform: translate(0, -50%);
-    }
-  }
-
   /* Image galleries */
   /* ------------------------------------------------------------------------ */
 
@@ -372,42 +357,27 @@
     }
   }
 
-  .attachment__caption {
-    textarea {
-      background: transparent;
-      block-size: fit-content;
-      border: 0;
-      border-radius: var(--lexxy-radius);
-      box-sizing: border-box;
-      color: inherit;
+  .attachment__caption--editable {
+    box-sizing: border-box;
+    cursor: text;
+
+    .attachment__caption-text {
       display: block;
-      font-size: inherit;
-      font-family: inherit;
-      inline-size: 100%;
-      max-inline-size: 100%;
-      padding: 0;
+      min-block-size: 1lh;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
       text-align: center;
-
-      @supports (resize: none) {
-        resize: none;
-      }
-
-      &:focus {
-        background: var(--lexxy-color-canvas);
-        outline: 0;
-      }
-
-      &:placeholder-shown {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      @supports (field-sizing: content) {
-        field-sizing: content;
-        inline-size: 100%;
-      }
     }
+
+    &[data-placeholder] .attachment__caption-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .attachment__caption--editing .attachment__caption-text {
+    display: none;
   }
 }
 
@@ -636,7 +606,7 @@
       padding: 1ch;
       position: relative;
 
-      &[aria-pressed="true"] {
+      &[aria-checked="true"] {
         background-color: var(--lexxy-color-selected);
 
         &:hover {
@@ -782,6 +752,10 @@
         grid-template-columns: repeat(auto-fill, minmax(var(--lexxy-toolbar-button-size), 1fr));
         max-inline-size: var(--max-inline-size);
 
+        .lexxy-highlight-colors__group {
+          display: contents;
+        }
+
         button {
           block-size: unset;
           inline-size: 100%;
@@ -796,7 +770,7 @@
             position: absolute;
           }
 
-          &[aria-pressed="true"] {
+          &[aria-checked="true"] {
             background-color: transparent;
             box-shadow: 0 0 0 2px currentColor inset;
 
@@ -830,8 +804,7 @@
   position: absolute;
   z-index: 2;
 
-  button,
-  summary {
+  button {
     align-items: center;
     background: transparent;
     block-size: var(--button-size);
@@ -849,7 +822,7 @@
 
     @media(any-hover: hover) {
       &:hover:not([aria-disabled="true"]),
-      [open] &:is(summary) {
+      &.lexxy-table-control__more-menu-trigger[aria-expanded="true"] {
         background: var(--lexxy-color-ink-medium);
 
         svg {
@@ -880,8 +853,10 @@
     }
   }
 
-  summary {
-    box-shadow: 0 0 0 1px inset rgba(128, 128, 128, 0.3);
+  .lexxy-table-control__more-menu-trigger {
+    aspect-ratio: auto;
+    box-shadow: 0 0 0 1px inset var(--lexxy-color-floating-controls-separator);
+    font-weight: normal;
     padding: 0 1.25ch;
   }
 
@@ -909,6 +884,7 @@
       white-space: nowrap;
 
       .lexxy-table-control__more-menu {
+        display: flex;
         gap: 0;
         position: relative;
 
@@ -923,6 +899,10 @@
           padding: 0.25ch;
           position: absolute;
           transform: translateX(-50%);
+
+          &[hidden] {
+            display: none;
+          }
 
           button {
             aspect-ratio: unset;
@@ -994,20 +974,73 @@
 
 
   /* --------------------------------------------------------------------------
-  /* Attachment delete button */
+  /* Attachment toolbar */
 
-  &:is(lexxy-node-delete-button) {
-    inset-block-start: 0;
-    inset-inline-start: 100%;
-    opacity: 0;
-    pointer-events: none;
+  &:is(lexxy-attachment-toolbar) {
+    display: flex;
+    /* The anchor is measured in px from the editor's top-left, so these stay physical. */
+    left: calc(var(--lexxy-anchor-left) + var(--lexxy-anchor-width));
+    top: var(--lexxy-anchor-top);
+    transform: translate(calc(-100% - 1.5ch), 1.5ch);
 
-    .node--selected & {
-      opacity: 1;
-      pointer-events: auto;
+    &[hidden] {
+      display: none;
     }
 
-    .lexxy-node-delete:hover {
+    /* The divider is thinner than the button. */
+    &[data-node-type="horizontal_divider"] {
+      --button-size: 1.8lh;
+
+      top: calc(var(--lexxy-anchor-top) + var(--lexxy-anchor-height) / 2);
+      transform: translate(calc(-100% - 0.5ch), -50%);
+    }
+
+    &[data-presentation="inline"] {
+      --button-size: 1.6lh;
+
+      top: calc(var(--lexxy-anchor-top) + var(--lexxy-anchor-height) / 2);
+      transform: translate(0.5ch, -50%);
+
+      &[data-overflow] {
+        transform: translate(-100%, -50%);
+      }
+    }
+
+    .lexxy-floating-controls__group {
+      display: flex;
+    }
+
+    button[hidden] {
+      display: none;
+    }
+
+    .lexxy-attachment-toolbar__alternative-text {
+      aspect-ratio: auto;
+      margin-inline-end: calc(var(--lexxy-toolbar-spacing) + 1px);
+      padding-inline: 1ch;
+      position: relative;
+
+      span {
+        display: inline-block;
+        font-size: 0.9em;
+      }
+
+      &:after {
+        background-color: var(--lexxy-color-floating-controls-separator);
+        block-size: 1.125em;
+        content: "";
+        display: block;
+        inline-size: 1px;
+        inset-block: 0;
+        inset-inline-end: calc(-1 * var(--lexxy-toolbar-spacing));
+        margin: auto;
+        pointer-events: none;
+        position: absolute;
+      }
+    }
+
+    .lexxy-attachment-toolbar__remove:hover,
+    .lexxy-attachment-toolbar__remove:focus-visible {
       background-color: var(--lexxy-color-red);
     }
   }
@@ -1135,20 +1168,151 @@ action-text-attachment[content-type^="application/vnd.actiontext"] {
 
     outline: none;
   }
+}
 
-  lexxy-node-delete-button {
-    inset-inline-start: 0;
-    line-height: 1lh;
+/* --------------------------------------------------------------------------
+/* Screen readers need access to announcements and selection labels. */
+:where(lexxy-live-region, .lexxy-fake-selection) {
+  block-size: 1px;
+  border: 0;
+  clip-path: inset(50%);
+  inline-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+}
 
-    .lexxy-floating-controls__group {
-      --button-size: 1lh;
+/* The DOM Selection API requires selectable text. */
+.lexxy-fake-selection {
+  -webkit-user-select: text;
 
-      background-color: var(--lexxy-color-accent-dark);
-      padding: 0;
+  @supports (user-select: text) {
+    user-select: text;
+  }
+}
 
-      button {
-        border-radius: 50%;
-      }
+
+/* Screen readers need the caption field outside the editor's textbox. */
+:where(.lexxy-caption-editor) {
+  position: absolute;
+  z-index: 2;
+  box-sizing: border-box;
+  background: var(--lexxy-color-canvas);
+  border: 0;
+  border-radius: var(--lexxy-radius);
+  outline: 0;
+  padding: 0;
+  overflow: hidden;
+
+  @supports (resize: none) {
+    resize: none;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.lexxy-alternative-text-dialog {
+  background: var(--lexxy-color-canvas);
+  border: 2px solid var(--lexxy-color-selected-hover);
+  border-radius: calc(var(--lexxy-radius) + var(--lexxy-toolbar-gap));
+  box-shadow: var(--lexxy-shadow);
+  box-sizing: border-box;
+  color: var(--lexxy-color-ink);
+  font: inherit;
+  inline-size: 60%;
+  inset-block: calc(var(--lexxy-anchor-bottom) + var(--lexxy-toolbar-spacing)) auto;
+  inset-inline: 0;
+  margin-block: 0;
+  margin-inline: auto;
+  min-inline-size: min(20rem, 100%);
+  overflow: auto;
+  padding: var(--lexxy-toolbar-spacing);
+  z-index: 3;
+
+  h2 {
+    font-size: inherit;
+    font-weight: bold;
+    line-height: 1.5;
+    margin: 0;
+    padding-block-start: calc(0.25 * var(--lexxy-text-small));
+    padding-inline: calc(0.5 * var(--lexxy-text-small));
+    text-align: center;
+  }
+
+  .lexxy-alternative-text-dialog__controls {
+    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+    margin-block-start: 0.5em;
+  }
+
+  textarea {
+    background: var(--lexxy-color-canvas);
+    border: 1px solid var(--lexxy-color-ink-lighter);
+    border-radius: var(--lexxy-radius);
+    box-sizing: border-box;
+    color: inherit;
+    display: block;
+    font: inherit;
+    font-size: var(--lexxy-text-small);
+    font-weight: normal;
+    min-block-size: calc(2lh + 1em + 2px);
+    min-inline-size: 0;
+    padding: 0.5em;
+
+    @supports (field-sizing: content) {
+      field-sizing: content;
+    }
+
+    @supports (resize: none) {
+      resize: none;
+    }
+  }
+
+  button {
+    background-color: var(--lexxy-color-ink-lightest);
+    block-size: var(--lexxy-toolbar-button-size);
+    border: 0;
+    border-radius: var(--lexxy-radius);
+    color: currentColor;
+    cursor: pointer;
+    display: grid;
+    font-size: var(--lexxy-text-small);
+    inline-size: 100%;
+    line-height: inherit;
+    padding-inline: 2ch;
+    place-items: center;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  .lexxy-alternative-text-dialog__save {
+    background-color: var(--lexxy-color-accent-dark);
+    color: var(--lexxy-color-ink-inverted);
+
+    &:hover {
+      background-color: var(--lexxy-color-accent-medium);
+    }
+  }
+
+  textarea:focus-visible {
+    outline: var(--lexxy-focus-ring-size) solid var(--lexxy-focus-ring-color);
+    outline-offset: var(--lexxy-focus-ring-offset);
+  }
+
+  .lexxy-alternative-text-dialog__actions {
+    display: flex;
+    gap: 0.5em;
+
+    button {
+      flex: 1;
     }
   }
 }

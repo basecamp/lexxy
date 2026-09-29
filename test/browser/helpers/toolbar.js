@@ -1,5 +1,9 @@
 export const HELLO_EVERYONE = "<p>Hello everyone</p>"
 
+export function focusedName(page) {
+  return page.evaluate(() => document.activeElement?.name)
+}
+
 export async function openFormatDropdown(page) {
   await openToolbarDropdown(page, "format")
 }

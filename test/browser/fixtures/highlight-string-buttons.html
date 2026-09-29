@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <form>
+    <div class="body"></div>
+  </form>
+
+  <script type="module">
+    import { configure } from "lexxy"
+
+    configure({
+      default: {
+        highlight: {
+          buttons: {
+            color: [ "red" ],
+            "background-color": [ "yellow" ]
+          }
+        }
+      }
+    })
+
+    document.querySelector(".body").innerHTML = '<lexxy-editor class="lexxy-content"></lexxy-editor>'
+  </script>
+</body>
+</html>

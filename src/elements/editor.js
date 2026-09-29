@@ -15,6 +15,7 @@ import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_ta
 
 import theme from "../config/theme"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
+import CaptionEditor from "../editor/attachments/caption_editor"
 import { UploadRequests } from "../editor/attachments/upload_requests"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
@@ -29,7 +30,7 @@ import Clipboard from "../editor/clipboard"
 import EditorSanitizer from "../editor/sanitizer"
 import Extensions from "../editor/extensions"
 import { BrowserAdapter } from "../editor/adapters/browser_adapter"
-import { getHighlightStyles } from "../helpers/format_helper"
+import { getHighlightStyles, normalizeColorButtons } from "../helpers/format_helper"
 import { styleResolverRoot } from "../helpers/style_resolver_root"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
@@ -66,8 +67,10 @@ export class LexicalEditorElement extends HTMLElement {
   #historyState = { undo: false, redo: false }
 
   #validity = new Map()
+  #validationAttempted = false
   #validationTextArea = document.createElement("textarea")
   #uploadRequests
+  #liveRegion
 
   constructor() {
     super()
@@ -97,6 +100,10 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.clipboard = new Clipboard(this)
     this.#disposables.push(this.clipboard)
+
+    this.#liveRegion = this.querySelector("lexxy-live-region") ?? createElement("lexxy-live-region")
+    this.append(this.#liveRegion)
+    this.#disposables.push(this.#liveRegion)
 
     this.adapter = new BrowserAdapter()
     this.#uploadRequests = new UploadRequests()
@@ -145,10 +152,13 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   requiredChangedCallback() {
+    if (this.editorContentElement) this.#synchronizeAriaAttribute("aria-required")
     if (this.isConnected) this.#requestValidityRefresh()
   }
 
   formResetCallback() {
+    this.#validationAttempted = false
+    this.#synchronizeAriaAttribute("aria-invalid")
     this.value = this.#initialValue
     this.editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined)
   }
@@ -173,6 +183,15 @@ export class LexicalEditorElement extends HTMLElement {
 
   get validity() {
     return this.internals.validity
+  }
+
+  get validationMessage() {
+    return this.internals.validationMessage
+  }
+
+  setCustomValidity(message) {
+    this.#validationTextArea.setCustomValidity(message)
+    this.#refreshValidity()
   }
 
   checkValidity() {
@@ -241,6 +260,16 @@ export class LexicalEditorElement extends HTMLElement {
 
   acceptsFile(file) {
     return dispatch(this, "lexxy:file-accept", { file }, true)
+  }
+
+  announce(message) {
+    if (message) {
+      if (typeof document.ariaNotify === "function") {
+        document.ariaNotify(message, { priority: "high" })
+      } else {
+        this.#liveRegion?.announce(message)
+      }
+    }
   }
 
   $generateNodesFromDOM(doc, { editor = this.editor } = {}) {
@@ -402,6 +431,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#attachDebugHooks()
     this.#attachToolbar()
     this.#resetBeforeTurboCaches()
+    this.#observeAriaAttributes()
 
     this.#setInternalFormValue(this.value, { suppressEvent: true })
     this.#synchronizeWithChanges()
@@ -474,7 +504,9 @@ export class LexicalEditorElement extends HTMLElement {
       classList: "lexxy-editor__content",
       contenteditable: true,
       role: "textbox",
-      "aria-multiline": true,
+      "aria-multiline": this.supportsMultiLine,
+      "aria-required": this.required,
+      "aria-invalid": false,
       "aria-label": this.#labelText,
       placeholder: this.getAttribute("placeholder")
     })
@@ -505,6 +537,46 @@ export class LexicalEditorElement extends HTMLElement {
 
   get #ariaAttributes() {
     return Array.from(this.attributes).filter(attribute => attribute.name.startsWith("aria-"))
+  }
+
+  #observeAriaAttributes() {
+    const observer = new MutationObserver(mutations => {
+      for (const { attributeName } of mutations) {
+        if (attributeName.startsWith("aria-")) {
+          this.#synchronizeAriaAttribute(attributeName)
+        } else if (attributeName === "single-line") {
+          this.#synchronizeAriaAttribute("aria-multiline")
+        }
+      }
+    })
+    observer.observe(this, { attributes: true })
+
+    this.#listeners.track(
+      () => observer.disconnect(),
+      registerEventListener(this, "invalid", () => {
+        this.#validationAttempted = true
+        this.#synchronizeAriaAttribute("aria-invalid")
+      })
+    )
+  }
+
+  #synchronizeAriaAttribute(name) {
+    const value = this.getAttribute(name) ?? this.#defaultAriaValue(name)
+    if (value === null) {
+      this.editorContentElement.removeAttribute(name)
+    } else if (this.editorContentElement.getAttribute(name) !== String(value)) {
+      this.editorContentElement.setAttribute(name, value)
+    }
+  }
+
+  #defaultAriaValue(name) {
+    switch (name) {
+      case "aria-label": return this.#labelText
+      case "aria-required": return this.required
+      case "aria-multiline": return this.supportsMultiLine
+      case "aria-invalid": return this.#validationAttempted && !this.validity.valid
+      default: return null
+    }
   }
 
   #setInternalFormValue(html, { suppressEvent = false } = {}) {
@@ -566,11 +638,16 @@ export class LexicalEditorElement extends HTMLElement {
   #refreshValidity() {
     this.#refreshInternalValidity()
     const { validity, message } = this.#calculateValidity()
-    this.internals.setValidity(validity, message, this.editorContentElement)
+    this.internals.setValidity(validity, message, this.editorContentElement ?? undefined)
+    if (this.editorContentElement) {
+      this.#synchronizeAriaAttribute("aria-invalid")
+    }
   }
 
   #refreshInternalValidity() {
-    this.#validationTextArea.required = this.required && this.isBlank
+    if (this.editorContentElement) {
+      this.#validationTextArea.required = this.required && this.isBlank
+    }
     const flags = this.#validationTextArea.validity
     const message = this.#validationTextArea.validationMessage
 
@@ -585,12 +662,14 @@ export class LexicalEditorElement extends HTMLElement {
       // internal TextArea's ValidityState can contain `valid: true`
       if (flags.valid === true) continue
 
+      let hasError = false
       for (const flag in flags) {
         if (flags[flag]) {
           validity[flag] = true
-          messages.push(message)
+          hasError = true
         }
       }
+      if (hasError) messages.push(message)
     }
 
     return { validity, message: messages.join("\n") }
@@ -611,6 +690,9 @@ export class LexicalEditorElement extends HTMLElement {
       )
       this.#registerTableComponents()
       this.#registerCodeLanguagePicker()
+      if (this.supportsAttachments) {
+        this.#registerAttachmentToolbar()
+      }
       if (this.supportsMarkdown) {
         const transformers = [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ]
         registered.push(
@@ -637,6 +719,15 @@ export class LexicalEditorElement extends HTMLElement {
     codeLanguagePicker ??= createElement("lexxy-code-language-picker")
     this.append(codeLanguagePicker)
     this.#disposables.push(codeLanguagePicker)
+  }
+
+  #registerAttachmentToolbar() {
+    let attachmentToolbar = this.querySelector("lexxy-attachment-toolbar")
+    attachmentToolbar ??= createElement("lexxy-attachment-toolbar")
+    this.append(attachmentToolbar)
+    this.#disposables.push(attachmentToolbar)
+    this.captionEditor = new CaptionEditor(this)
+    this.#disposables.push(this.captionEditor)
   }
 
   #handleEnter() {
@@ -854,21 +945,22 @@ export class LexicalEditorElement extends HTMLElement {
   // — triggering at most one forced reflow. The previous implementation interleaved
   // setProperty/getComputedStyle/removeProperty on the same element, forcing a style
   // recalc on every iteration during editor initialization.
-  #resolveColors(property, cssValues) {
+  #resolveColors(property, buttons) {
     const container = document.createElement("span")
     container.style.display = "none"
 
-    const resolvers = cssValues.map(cssValue => {
+    const resolvers = normalizeColorButtons(buttons).map(({ value, label }) => {
       const element = document.createElement("span")
-      element.style.setProperty(property, cssValue)
+      element.style.setProperty(property, value)
       container.appendChild(element)
-      return { element, name: cssValue }
+      return { element, name: value, label }
     })
 
     styleResolverRoot().appendChild(container)
 
-    const resolved = resolvers.map(({ element, name }) => ({
+    const resolved = resolvers.map(({ element, name, label }) => ({
       name,
+      label,
       value: window.getComputedStyle(element).getPropertyValue(property)
     }))
 
@@ -902,6 +994,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #resetValidity() {
     this.#validity = new Map()
+    this.#validationAttempted = false
   }
 }
 

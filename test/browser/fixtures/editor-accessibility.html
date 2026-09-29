@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — Editor accessibility</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <form>
+    <label for="message">Message</label>
+    <p id="message-help">Include the details.</p>
+    <p id="reply-help">Describe your reply.</p>
+    <lexxy-editor id="message" name="message" class="lexxy-content"
+      required aria-label="Compose" aria-describedby="message-help"></lexxy-editor>
+    <button type="submit">Submit</button>
+    <button type="reset">Reset</button>
+  </form>
+
+  <label><input id="required" type="checkbox" checked>Required</label>
+  <button id="update-details" type="button">Update details</button>
+  <button id="clear-details" type="button">Clear details</button>
+
+  <script type="module">
+    import "lexxy"
+
+    const editor = document.querySelector("lexxy-editor")
+    document.querySelector("form").addEventListener("submit", event => event.preventDefault())
+    document.querySelector("#required").addEventListener("change", event => {
+      editor.toggleAttribute("required", event.target.checked)
+    })
+    document.querySelector("#update-details").addEventListener("click", () => {
+      editor.setAttribute("aria-label", "Reply")
+      editor.setAttribute("aria-describedby", "reply-help")
+      editor.setAttribute("aria-description", "Updated description")
+    })
+    document.querySelector("#clear-details").addEventListener("click", () => {
+      editor.removeAttribute("aria-label")
+      editor.removeAttribute("aria-describedby")
+      editor.removeAttribute("aria-description")
+    })
+  </script>
+</body>
+</html>

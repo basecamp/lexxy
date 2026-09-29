@@ -1,11 +1,13 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
+import { selectAttachment } from "../../helpers/attachment_helpers.js"
 
 test.describe("List formatting with attachment selected", () => {
   const ATTACHMENT_HTML =
     '<action-text-attachment content-type="image/png" url="/test.png" filename="photo.png" width="100" height="100"></action-text-attachment>'
 
   test.beforeEach(async ({ page }) => {
+    await page.route("**/test.png", route => route.fulfill({ path: "test/fixtures/files/example.png", contentType: "image/png" }))
     await page.goto("/attachments-enabled.html")
     await page.waitForSelector("lexxy-editor[connected]")
     await page.waitForSelector("lexxy-toolbar[connected]")
@@ -15,7 +17,7 @@ test.describe("List formatting with attachment selected", () => {
     await editor.setValue(`<p>Hello</p>${ATTACHMENT_HTML}`)
 
     // Click the figure to select the attachment (creating a NodeSelection)
-    await editor.content.locator("figure.attachment").click()
+    await selectAttachment(editor.content.locator("figure.attachment"))
     await editor.flush()
     await expect(editor.content.locator("figure.node--selected")).toHaveCount(1)
 
@@ -39,7 +41,7 @@ test.describe("List formatting with attachment selected", () => {
     await editor.setValue(`<p>Hello</p>${ATTACHMENT_HTML}`)
 
     // Click the figure to select the attachment (creating a NodeSelection)
-    await editor.content.locator("figure.attachment").click()
+    await selectAttachment(editor.content.locator("figure.attachment"))
     await editor.flush()
     await expect(editor.content.locator("figure.node--selected")).toHaveCount(1)
 

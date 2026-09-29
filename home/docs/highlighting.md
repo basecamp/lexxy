@@ -32,3 +32,27 @@ Lexxy.configure({
   }
 })
 ```
+
+## Custom color labels
+
+Use `{ value, label }` entries to give custom colors a readable name for screen readers. `value` is the CSS color; `label` is the name of the button in the color menu.
+
+```javascript
+Lexxy.configure({
+  default: {
+    highlight: {
+      buttons: {
+        color: [
+          { value: "#124e78", label: "Deep blue" },
+          { value: "var(--brand-color)", label: "Brand purple" }
+        ],
+        "background-color": [
+          { value: "#fff3b0", label: "Pale yellow" }
+        ]
+      }
+    }
+  }
+})
+```
+
+Lexxy groups the buttons under **Text color** and **Background color** and indicates the selected colors. String entries use the CSS value as their accessible name. Labels make hex values and CSS variables easier to identify.
