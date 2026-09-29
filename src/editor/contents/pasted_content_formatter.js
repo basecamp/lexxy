@@ -19,6 +19,7 @@ export default class PastedContentFormatter {
   format() {
     this.#inlinePreservableStyles()
     this.#stripStyleElements()
+    this.#stripInterchangeNewlines()
     this.#unwrapPlaceholderAnchors()
     this.#stripTableCellColorStyles()
     new OfficeFormatter(this.doc).format()
@@ -51,6 +52,16 @@ export default class PastedContentFormatter {
   #stripStyleElements() {
     for (const style of this.doc.querySelectorAll("style")) {
       style.remove()
+    }
+  }
+
+  // Chrome and Safari append <br class="Apple-interchange-newline"> when the
+  // copied selection ends at a line end (Google Docs does this on every copy).
+  // It marks the end of the selection, not a line the author wrote, so left in
+  // place it pastes as an extra empty paragraph.
+  #stripInterchangeNewlines() {
+    for (const br of this.doc.querySelectorAll("br.Apple-interchange-newline")) {
+      br.remove()
     }
   }
 

@@ -101,14 +101,14 @@ export function extendTextNodeConversion(conversionName, ...callbacks) {
     ...conversionOutput,
     forChild: (lexicalNode, parentNode) => {
       const originalForChild = conversionOutput?.forChild ?? (x => x)
-      let childNode = originalForChild(lexicalNode, parentNode)
-
+      const childNode = originalForChild(lexicalNode, parentNode)
 
       if ($isTextNode(childNode)) {
-        childNode = callbacks.reduce(
+        return callbacks.reduce(
           (childNode, callback) => callback(childNode, element) ?? childNode,
           childNode
         )
+      } else {
         return childNode
       }
     }

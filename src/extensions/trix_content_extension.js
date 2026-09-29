@@ -22,7 +22,7 @@ export class TrixContentExtension extends LexxyExtension {
             priority: 1
           }),
           span: (element) => onlyStyledElements(element, {
-            conversion: extendTextNodeConversion("mark", $applyHighlightStyle),
+            conversion: extendTextNodeConversion("span", $applyHighlightStyle),
             priority: 1
           }),
           strong: (element) => onlyStyledElements(element, {
