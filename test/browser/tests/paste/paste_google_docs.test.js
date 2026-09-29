@@ -82,6 +82,13 @@ test.describe("Paste formatting from other sources", () => {
     expect(page).toHaveNoErrors()
   })
 
+  test("keeps a leading Apple-interchange-newline as a line break", async ({ page, editor }) => {
+    await pasteHtml(page, editor, `<br class="Apple-interchange-newline"><p>first</p><p>second</p>`)
+
+    await assertEditorHtml(editor, "<p><br></p><p>first</p><p>second</p>")
+    expect(page).toHaveNoErrors()
+  })
+
   test("keeps a <br> inside a highlighted span", async ({ page, editor }) => {
     await pasteHtml(page, editor, `<p><span style="background-color: rgba(229, 223, 6, 0.3);">one<br>two</span></p>`)
 
