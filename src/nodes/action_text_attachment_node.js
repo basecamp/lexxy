@@ -30,6 +30,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
           conversion: (attachment) => ({
             node: new ActionTextAttachmentNode({
               sgid: attachment.getAttribute("sgid"),
+              href: attachment.getAttribute("href"),
               src: attachment.getAttribute("url"),
               previewable: attachment.getAttribute("previewable"),
               altText: attachment.getAttribute("alt"),
@@ -84,10 +85,11 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     return Lexxy.global.get("attachmentTagName")
   }
 
-  constructor({ sgid, src, previewSrc, previewable, previewStatusUrl, pendingPreview, altText, caption, contentType, fileName, fileSize, width, height, uploadError } = {}, key) {
+  constructor({ sgid, href, src, previewSrc, previewable, previewStatusUrl, pendingPreview, altText, caption, contentType, fileName, fileSize, width, height, uploadError } = {}, key) {
     super(key)
 
     this.sgid = sgid
+    this.href = href || null
     this.src = src
     this.previewSrc = previewSrc
     this.previewable = parseBoolean(previewable)
@@ -160,6 +162,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   exportDOM() {
     const attachment = createElement(ActionTextAttachmentNode.TAG_NAME, {
       sgid: this.sgid,
+      href: this.href,
       previewable: this.previewable || null,
       url: this.src,
       alt: this.altText,
@@ -180,6 +183,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
       type: "action_text_attachment",
       version: 1,
       sgid: this.sgid,
+      href: this.href,
       src: this.src,
       previewable: this.previewable,
       previewStatusUrl: this.previewStatusUrl,
