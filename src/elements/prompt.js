@@ -301,6 +301,8 @@ export class LexicalPromptElement extends HTMLElement {
   // skip it and let a later reposition anchor it once the selection is ready. The menu
   // stays hidden until anchored (see the `[data-anchored]` rule in the stylesheet).
   #positionPopover() {
+    if (!this.popoverElement) return
+
     const cursorPosition = this.#selection.cursorPosition
     if (!cursorPosition) return
 
@@ -365,6 +367,7 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   #removePopover() {
+    this.showPopoverId++
     this.#popoverListeners.dispose()
     this.popoverElement?.remove()
     this.popoverElement = null
@@ -376,8 +379,11 @@ export class LexicalPromptElement extends HTMLElement {
       return
     }
 
+    if (!this.popoverElement) return
+
     if (this.#editorContents.containsTextBackUntil(this.trigger)) {
       await this.#showFilteredOptions()
+      if (!this.popoverElement) return
 
       // Re-check after async operation — the trigger may have been consumed
       // (e.g. markdown heading shortcut converted "# " to h1 during the fetch)
