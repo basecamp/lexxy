@@ -1,4 +1,4 @@
-import { $caretRangeFromSelection, $comparePointCaretNext, $getCaretInDirection, $getCaretRangeInDirection, $getChildCaret, $normalizeCaret, COMMAND_PRIORITY_NORMAL, SELECT_ALL_COMMAND, defineExtension } from "lexical"
+import { $caretRangeFromSelection, $comparePointCaretNext, $getCaretInDirection, $getCaretRangeInDirection, $getChildCaret, $isElementNode, $normalizeCaret, COMMAND_PRIORITY_NORMAL, SELECT_ALL_COMMAND, defineExtension } from "lexical"
 import { $getSelection, $isRangeSelection } from "lexical"
 import {
   $deleteTableColumnAtSelection,
@@ -142,12 +142,18 @@ function $selectCellContents() {
   if (!$isRangeSelection(selection)) return false
 
   const cell = $findCellNode(selection.anchor.getNode())
-  if (cell && cell.is($findCellNode(selection.focus.getNode())) && !$isCellFullySelected(cell, selection)) {
+  if (cell && cell.is($findCellNode(selection.focus.getNode())) && $startsWithBlock(cell) && !$isCellFullySelected(cell, selection)) {
     cell.select(0, cell.getChildrenSize())
     return true
   } else {
     return false
   }
+}
+
+// A cell that starts with an attachment can only be selected from an element point on the cell
+// itself, and Lexical 0.44 inserts typed text there as a bare text node outside any paragraph.
+function $startsWithBlock(cell) {
+  return $isElementNode(cell.getFirstChild())
 }
 
 function $isCellFullySelected(cell, selection) {
