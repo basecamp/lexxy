@@ -1,8 +1,9 @@
-import { COMMAND_PRIORITY_NORMAL, defineExtension } from "lexical"
+import { $caretRangeFromSelection, $comparePointCaretNext, $getCaretInDirection, $getCaretRangeInDirection, $getChildCaret, $normalizeCaret, COMMAND_PRIORITY_NORMAL, SELECT_ALL_COMMAND, defineExtension } from "lexical"
 import { $getSelection, $isRangeSelection } from "lexical"
 import {
   $deleteTableColumnAtSelection,
   $deleteTableRowAtSelection,
+  $findCellNode,
   $findTableNode,
   $insertTableColumnAtSelection,
   $insertTableRowAtSelection,
@@ -127,9 +128,32 @@ export class TablesExtension extends LexxyExtension {
             const selection = $getSelection()
             if (!$isRangeSelection(selection)) return false
             $findTableNode(selection.anchor.getNode())?.remove()
-          }, COMMAND_PRIORITY_NORMAL)
+          }, COMMAND_PRIORITY_NORMAL),
+
+          editor.registerCommand(SELECT_ALL_COMMAND, $selectCellContents, COMMAND_PRIORITY_NORMAL)
         )
       }
     })
   }
+}
+
+function $selectCellContents() {
+  const selection = $getSelection()
+  if (!$isRangeSelection(selection)) return false
+
+  const cell = $findCellNode(selection.anchor.getNode())
+  if (cell && cell.is($findCellNode(selection.focus.getNode())) && !$isCellFullySelected(cell, selection)) {
+    cell.select(0, cell.getChildrenSize())
+    return true
+  } else {
+    return false
+  }
+}
+
+function $isCellFullySelected(cell, selection) {
+  const range = $getCaretRangeInDirection($caretRangeFromSelection(selection), "next")
+  const cellStart = $normalizeCaret($getChildCaret(cell, "next"))
+  const cellEnd = $getCaretInDirection($normalizeCaret($getChildCaret(cell, "previous")), "next")
+
+  return $comparePointCaretNext(range.anchor, cellStart) <= 0 && $comparePointCaretNext(range.focus, cellEnd) >= 0
 }
