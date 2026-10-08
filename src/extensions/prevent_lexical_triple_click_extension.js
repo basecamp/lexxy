@@ -1,5 +1,5 @@
-import { $findMatchingParent, $getNearestNodeFromDOMNode, $isElementNode, CLICK_COMMAND, COMMAND_PRIORITY_LOW, defineExtension } from "lexical"
-import { $findCellNode } from "@lexical/table"
+import { $findMatchingParent, $getNearestNodeFromDOMNode, $getSelection, $isDecoratorNode, $isElementNode, $isRangeSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, defineExtension } from "lexical"
+import { $findCellNode, $isTableCellNode, $isTableNode, $isTableRowNode } from "@lexical/table"
 import { mergeRegister } from "@lexical/utils"
 import { registerEventListener } from "../helpers/listener_helper"
 import LexxyExtension from "./lexxy_extension"
@@ -50,10 +50,12 @@ export class PreventLexicalTripleClickExtension extends LexxyExtension {
 // Lexical's own table click handler only selects blocks that are direct children of a cell, so
 // list items and paragraphs inside quotes would otherwise be left with nothing selected.
 function $selectClickedBlockInTableCell(event) {
-  if (event.detail < 3) return false
+  if (event.detail < 3 || !$isRangeSelection($getSelection())) return false
 
   const node = $getNearestNodeFromDOMNode(event.target)
-  const cell = node && $findCellNode(node)
+  if (!node || $isDecoratorNode(node) || $isTableStructure(node)) return false
+
+  const cell = $findCellNode(node)
   if (!cell) return false
 
   const block = $findMatchingParent(node, (candidate) => $isElementNode(candidate) && !candidate.isInline())
@@ -63,4 +65,8 @@ function $selectClickedBlockInTableCell(event) {
   } else {
     return false
   }
+}
+
+function $isTableStructure(node) {
+  return $isTableNode(node) || $isTableRowNode(node) || $isTableCellNode(node)
 }
