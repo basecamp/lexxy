@@ -26,10 +26,18 @@ export class PreventLexicalTripleClickExtension extends LexxyExtension {
   // "overselection" behavior, where a triple-click selection might end at offset 0 of the following
   // block, which can cause issues when transforming the selection. But the implementation breaks
   // many common real-world use cases and Lexxy does not demonstrate the behavior it's intended to
-  // work around (in headers or tables).
+  // work around (in headers).
+  //
+  // Table cells are the exception: Lexical's table plugin cancels the browser's own triple-click
+  // selection inside a cell and selects the cell's text from its click handler instead, so the
+  // click has to reach Lexical there or nothing gets selected at all.
   #handleTripleClick(event) {
-    if (event.detail === 3) {
+    if (event.detail === 3 && !this.#isInsideTableCell(event.target)) {
       event.stopPropagation()
     }
+  }
+
+  #isInsideTableCell(target) {
+    return target.closest("td, th") !== null
   }
 }
