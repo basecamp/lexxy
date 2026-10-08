@@ -7,13 +7,21 @@ module Lexxy
     isolate_namespace Lexxy
 
     config.lexxy = ActiveSupport::OrderedOptions.new
+    config.lexxy.override_action_text_defaults = true
 
     if Lexxy.supports_editor_adapter?
       require_relative "../action_text/editor/lexxy_editor"
 
       initializer "lexxy.action_text_editor", before: "action_text.editors" do |app|
-        app.config.action_text.editors[:lexxy] = {}
-        app.config.action_text.editor = :lexxy
+        action_text = app.config.action_text
+
+        # Rails versions that include Lexxy register it themselves and choose the
+        # default editor with config.load_defaults. When Lexxy is already registered,
+        # config.action_text.editor is left to the application.
+        unless action_text.editors.key?(:lexxy)
+          action_text.editors[:lexxy] = {}
+          action_text.editor = :lexxy if app.config.lexxy.override_action_text_defaults
+        end
       end
     else
       # Rails 8.0/8.1 fallback: monkey-patch Action Text helpers
@@ -21,8 +29,6 @@ module Lexxy
       require_relative "form_helper"
       require_relative "form_builder"
       require_relative "action_text_tag"
-
-      config.lexxy.override_action_text_defaults = true
 
       initializer "lexxy.initialize" do |app|
         app.config.to_prepare do
