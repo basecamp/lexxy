@@ -1,5 +1,4 @@
 import BaseSource from "./base_source"
-import { filterMatchPosition } from "../../helpers/string_helper"
 
 const MAX_RENDERED_SUGGESTIONS = 100
 
@@ -27,8 +26,7 @@ export default class LocalFilterSource extends BaseSource {
 
     const matches = []
     for (const promptItem of promptItems) {
-      const searchableText = promptItem.getAttribute("search")
-      const position = filterMatchPosition(searchableText, filter)
+      const position = this.matchPosition(promptItem, filter)
       if (position >= 0) {
         matches.push({ promptItem, position })
       }
