@@ -283,7 +283,7 @@ export default class Contents {
     return result
   }
 
-  replaceTextBackUntil(stringToReplace, replacementNodes) {
+  replaceTextBackUntil(stringToReplace, replacementNodes, { followedBy = "" } = {}) {
     replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ]
 
     const { anchorNode, offset } = this.#getTextAnchorData()
@@ -292,7 +292,7 @@ export default class Contents {
     const lastIndex = this.#findReplacementStart(anchorNode, offset, stringToReplace)
     if (lastIndex === -1) return
 
-    this.#performTextReplacement(anchorNode, lastIndex, stringToReplace, replacementNodes)
+    this.#performTextReplacement(anchorNode, lastIndex, stringToReplace, replacementNodes, followedBy)
   }
 
   uploadFiles(files, { selectLast, altText } = {}) {
@@ -626,10 +626,10 @@ export default class Contents {
     }
   }
 
-  #performTextReplacement(anchorNode, startIndex, stringToReplace, replacementNodes) {
+  #performTextReplacement(anchorNode, startIndex, stringToReplace, replacementNodes, followedBy) {
     const fullText = anchorNode.getTextContent()
     const textBeforeString = fullText.slice(0, startIndex)
-    const textAfterString = fullText.slice(startIndex + stringToReplace.length)
+    const textAfterString = followedBy + fullText.slice(startIndex + stringToReplace.length)
 
     const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, textBeforeString)
     const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, textAfterString || " ")
@@ -640,7 +640,7 @@ export default class Contents {
     lastInsertedNode.insertAfter(textNodeAfter)
 
     this.#appendLineBreakIfNeeded(textNodeAfter.getParentOrThrow())
-    const cursorOffset = textAfterString ? 0 : 1
+    const cursorOffset = textAfterString ? followedBy.length : 1
     textNodeAfter.select(cursorOffset, cursorOffset)
   }
 
