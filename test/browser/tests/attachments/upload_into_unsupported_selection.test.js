@@ -179,4 +179,48 @@ test.describe("Uploading into an unsupported selection", () => {
     expect(errors).toEqual([])
     await expect(editor.content.locator("figure.attachment")).toHaveCount(1, { timeout: 10_000 })
   })
+  // "Expected node to have a parent": RangeSelection.insertNodes holds on to the caret's block
+  // across its own insertParagraph(), and HeadingNode.insertNewAfter replaces that block when the
+  // caret is at offset 0, so insertNodes went on to insert after a node that had left the document.
+  test("uploading a file with the caret at the start of a heading lands it above the heading", async ({ page, editor }) => {
+    await editor.setValue("<h2>Design system</h2>")
+    await editor.flush()
+    await editor.placeCaretInside("Design system", 0)
+
+    const errorMessage = await uploadDroppedPdf(page)
+
+    expect(errorMessage).toBeNull()
+    await expect(editor.content.locator("figure.attachment")).toHaveCount(1, { timeout: 10_000 })
+    await expect(editor.content.locator("h2")).toHaveText("Design system")
+    const blocks = await editor.content.evaluate((element) =>
+      Array.from(element.children).map((child) => child.tagName.toLowerCase())
+    )
+    expect(blocks.indexOf("figure")).toBeLessThan(blocks.indexOf("h2"))
+  })
+
+  test("uploading a file with the caret inside a heading splits the heading around it", async ({ page, editor }) => {
+    await editor.setValue("<h2>Design system</h2>")
+    await editor.flush()
+    await editor.placeCaretInside("Design system", 6)
+
+    const errorMessage = await uploadDroppedPdf(page)
+
+    expect(errorMessage).toBeNull()
+    await expect(editor.content.locator("figure.attachment")).toHaveCount(1, { timeout: 10_000 })
+    await expect(editor.content.locator("h2")).toHaveCount(2)
+  })
 })
+
+// Contents#uploadFiles is the entry point a document-level drop zone relays dropped files through.
+async function uploadDroppedPdf(page) {
+  return page.evaluate(() => {
+    const editorElement = document.querySelector("lexxy-editor")
+    const file = new File([ "%PDF-1.4 dummy" ], "dropped.pdf", { type: "application/pdf" })
+    try {
+      editorElement.contents.uploadFiles([ file ])
+      return null
+    } catch (error) {
+      return error.message
+    }
+  })
+}
