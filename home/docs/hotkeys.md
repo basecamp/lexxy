@@ -91,7 +91,7 @@ Type the configured trigger, such as `@` for mentions, to open a prompt. Keep ty
 | `Up Arrow` / `Down Arrow` | Select the previous or next suggestion. |
 | `Enter` / `Tab` | Insert the selected suggestion. |
 | `Space` | Insert the selected suggestion, unless the prompt allows spaces in searches. |
-| `Comma` | Insert the selected suggestion followed by a comma. |
+| `,` `.` `!` `?` `;` `:` `)` `'` | Insert the selected suggestion followed by the punctuation, unless the punctuation continues a suggestion, as in `O'Connor`, or is the prompt's own trigger. |
 | `Escape` | Close the prompt without inserting a suggestion. |
 
 The [`supports-space-in-searches` option](prompts/options-reference.html) makes `Space` part of the search term; use `Enter` or `Tab` to confirm a suggestion instead.
