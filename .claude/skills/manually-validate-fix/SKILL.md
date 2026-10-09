@@ -19,12 +19,12 @@ PR → UNDERSTAND BUG → PLAN REPRODUCTION → WRITE SCRIPT → RUN vs PRODUCTI
 
 | Environment | URL | Runs | Expected |
 |---|---|---|---|
-| **Production** | `https://basecamp.github.io/lexxy/try-it.html` | Latest released version (CDN) | Bug reproduces |
+| **Production** | `https://lexxy.dev/sandbox/` | Latest released version (CDN) | Bug reproduces |
 | **Local** | `http://lexxy.localhost:3000` | Current branch with the fix | Bug does NOT reproduce |
 
 ### Production page
 
-The try-it page loads Lexxy from jsDelivr CDN. After JS executes:
+The sandbox loads the latest released Lexxy from esm.sh (`@37signals/lexxy@latest`). After JS executes:
 
 - `<lexxy-editor>` with toolbar, emoji prompt on `:` trigger
 - `data-direct-upload-url` and `data-blob-url-template` are set but uploads go to a service worker (no real backend)
@@ -94,7 +94,7 @@ if (!BASE_URL) {
   process.exit(1)
 }
 
-const ENV = BASE_URL.includes('github.io') ? 'production' : 'local'
+const ENV = BASE_URL.includes('lexxy.dev') ? 'production' : 'local'
 
 async function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
 
@@ -181,7 +181,7 @@ cd ~/Work/basecamp/lexxy && git branch --show-current
 
 ```bash
 # Production — expect the bug
-node /tmp/validate-fix-<pr>.mjs "https://basecamp.github.io/lexxy/try-it.html"
+node /tmp/validate-fix-<pr>.mjs "https://lexxy.dev/sandbox/"
 
 # Local — expect the fix
 node /tmp/validate-fix-<pr>.mjs "http://lexxy.localhost:3000"
@@ -205,7 +205,7 @@ Review screenshots and console output from both runs.
 **PR:** #<number> — <title>
 **Bug:** <one-line description>
 
-**Production** (https://basecamp.github.io/lexxy/try-it.html):
+**Production** (https://lexxy.dev/sandbox/):
 - <what happened>
 - Evidence: <screenshot paths>
 
@@ -249,4 +249,4 @@ EOF
 - **One script, two URLs.** The reproduction is identical in both environments.
 - **Evidence is mandatory.** Screenshots + editor state for both runs.
 - **Don't touch the code.** This skill validates only — no source modifications.
-- **Production may be slow.** CDN version loads from jsDelivr. Allow extra wait time.
+- **Production may be slow.** CDN version loads from esm.sh. Allow extra wait time.
