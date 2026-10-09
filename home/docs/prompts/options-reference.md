@@ -17,7 +17,7 @@ nav_order: 6
 - `remote-filtering`: Enable server-side filtering instead of loading all options at once.
 - `insert-editable-text`: Insert prompt item HTML directly as editable text instead of Action Text attachments.
 - `supports-space-in-searches`: Allow spaces in search queries (useful with remote filtering for full name searches).
-- `only-at`: Regular expression controlling where the trigger can open the prompt. The pattern is matched against the document text immediately before the trigger and the prompt opens only when it matches. Defaults to `^|[ \n]`, meaning the trigger fires at the very start of the document or right after a space or paragraph break. See [Restricting where the prompt opens](#restricting-where-the-prompt-opens-with-only-at).
+- `only-at`: Regular expression controlling where the trigger can open the prompt. The pattern is matched against the document text immediately before the trigger and the prompt opens only when it matches. Defaults to `(?:^|[ \n])\(?`, meaning the trigger fires at the very start of the document or right after a space or paragraph break, with an optional opening parenthesis in between. See [Restricting where the prompt opens](#restricting-where-the-prompt-opens-with-only-at).
 - `vertical-direction`: Can be set to `top` or `bottom`. Forces the prompt menu to open either upward or downward. By default, Lexxy uses the window viewport to calculate the best direction. Useful when there are floating elements that might cover up the prompt.
 
 ## `<lexxy-prompt-item>`
@@ -34,7 +34,7 @@ Each `<lexxy-prompt-item>` can contain one or more `<template type="editor">` el
 
 ## Restricting where the prompt opens with `only-at`
 
-By default the prompt opens when its `trigger` appears at the start of the document or right after a space or paragraph break. This is what you usually want for `@mentions` and similar features, where you don't want a stray `@` inside an email address to pop the prompt open.
+By default the prompt opens when its `trigger` appears at the start of the document or right after a space or paragraph break, with an optional opening parenthesis in between, as in `(@Jane)`. This is what you usually want for `@mentions` and similar features, where you don't want a stray `@` inside an email address to pop the prompt open.
 
 The `only-at` attribute lets you change this rule by providing a regular expression. The pattern is matched against the document text immediately before the trigger, and the prompt opens only when the pattern matches.
 
@@ -43,7 +43,7 @@ The text passed to the regex is the full editor text up to the trigger, with par
 Some useful patterns:
 
 ```html
-<!-- Default. Trigger fires at the start of the document or after whitespace/paragraph break. -->
+<!-- Default. Trigger fires at the start of the document or after whitespace/paragraph break, optionally followed by "(". -->
 <lexxy-prompt trigger="@" name="mention">…</lexxy-prompt>
 
 <!-- Trigger fires only when it is the very first character of the document. -->
