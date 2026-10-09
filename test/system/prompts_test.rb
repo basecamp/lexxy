@@ -167,6 +167,21 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_no_selector %(action-text-attachment[content-type="application/vnd.actiontext.mention"])
   end
 
+  test "removing trigger during slow remote load does not cause errors" do
+    visit edit_post_path(posts(:empty), slow_prompt: true)
+
+    # Quickly remove the trigger
+    find_editor.send "4"
+    sleep 0.2
+    find_editor.send :backspace
+
+    # Editor should remain functional after deleting the trigger mid-load
+    # No console errors should occur, and we should be able to type and see the text in the editor
+    wait_until { !find_editor.open_prompt? }
+    find_editor.send "Hello"
+    find_editor.within_contents { assert_text "Hello" }
+  end
+
   private
     def start_bold_prompt_insertion
       find_editor.toggle_command("bold")
