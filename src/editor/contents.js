@@ -234,13 +234,26 @@ export default class Contents {
   // right before a period, extending across it would glue "." onto everything
   // typed ("B" would query "B."), matching the wrong names or nothing at all.
   // But punctuation joining two word characters is part of a name — "@" before
-  // "Anne-Marie" or "O'Connor" must keep the whole name as the query.
+  // "Anne-Marie" or "O'Connor" must keep the whole name as the query, unless
+  // it starts a possessive: "@" before "Joan's" queries "Joan".
   #isQueryBoundary(fullText, offset) {
     const character = fullText[offset]
-    if (/\s/.test(character)) return true
-    if (!/\p{P}/u.test(character)) return false
 
-    return !(this.#isWordCharacter(fullText[offset - 1]) && this.#isWordCharacter(fullText[offset + 1]))
+    if (/\s/.test(character)) {
+      return true
+    } else if (/\p{P}/u.test(character)) {
+      return this.#startsPossessive(fullText, offset) || !this.#joinsWordCharacters(fullText, offset)
+    } else {
+      return false
+    }
+  }
+
+  #startsPossessive(fullText, offset) {
+    return /^['’]s(?![\p{L}\p{N}])/u.test(fullText.slice(offset))
+  }
+
+  #joinsWordCharacters(fullText, offset) {
+    return this.#isWordCharacter(fullText[offset - 1]) && this.#isWordCharacter(fullText[offset + 1])
   }
 
   #isWordCharacter(character) {

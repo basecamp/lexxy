@@ -117,6 +117,24 @@ test.describe("@ inserted before an existing word", () => {
     expect(names).toEqual([ "Anne-Marie O'Connor" ])
   })
 
+  test("ends the query before a possessive apostrophe", async ({ page, editor }) => {
+    await editor.send("Jack's turn")
+    await editor.send("Home")
+    await editor.send("@")
+
+    const popover = page.locator(".lexxy-prompt-menu--visible")
+    await expect(popover).toBeVisible({ timeout: 5_000 })
+
+    const items = popover.locator(".lexxy-prompt-menu__item")
+    const names = await items.allTextContents()
+    expect(names).toEqual([ "Jack Franklin", "Clara Jackson" ])
+
+    await editor.send("Enter")
+    await editor.flush()
+
+    expect(await editor.plainTextValue()).toContain("Jack Franklin's turn")
+  })
+
   test("replaces the trigger and the following word with the selected mention", async ({ page, editor }) => {
     await editor.send("Jack")
     await editor.send("Home")
