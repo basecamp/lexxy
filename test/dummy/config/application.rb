@@ -27,5 +27,11 @@ module Dummy
     # config.eager_load_paths << Rails.root.join("extras")
 
     config.hosts = []
+
+    if Rails.env.test?
+      config.active_record.encryption.primary_key = "test-deterministic-key-32-bytes!"
+      config.active_record.encryption.deterministic_key = "test-deterministic-key-32-bytes!"
+      config.active_record.encryption.key_derivation_salt = "test-salt"
+    end
   end
 end
