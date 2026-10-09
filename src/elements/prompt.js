@@ -13,8 +13,8 @@ import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found"
 const FILTER_DEBOUNCE_INTERVAL = 50
 
-// Start of line, or after a space or newline.
-const DEFAULT_ONLY_AT_PATTERN = "^|[ \\n]"
+// Start of line, or after a space or newline, optionally followed by an opening parenthesis.
+const DEFAULT_ONLY_AT_PATTERN = "(?:^|[ \\n])\\(?"
 
 export class LexicalPromptElement extends HTMLElement {
   #globalListeners = new ListenerBin()
