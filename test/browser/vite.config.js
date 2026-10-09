@@ -5,6 +5,7 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname, "fixtures"),
   resolve: {
     alias: {
+      "lexxy/dragon": path.resolve(import.meta.dirname, "../../src/editor/vendor/dragon/support.js"),
       lexxy: path.resolve(import.meta.dirname, "../../src/index.js"),
     },
   },

@@ -6,7 +6,7 @@ const helperChunks = [
 ]
 
 export default {
-  input: { lexxy: "src/index.js" },
+  input: { lexxy: "src/index.js", lexxy_dragon: "src/editor/vendor/dragon/support.js" },
   output: {
     dir: "./dist",
     format: "esm",
