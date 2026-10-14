@@ -1,7 +1,7 @@
 import Lexxy from "../config/lexxy"
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $createTextNode, $getSelection, $isRangeSelection, $isTextNode, COMMAND_PRIORITY_CRITICAL, INPUT_COMMAND, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
+import { $createTextNode, $isTextNode, COMMAND_PRIORITY_CRITICAL, INPUT_COMMAND, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
 import { $textBeforeOffset } from "../helpers/lexical_helper"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
@@ -12,13 +12,15 @@ import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
 const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found"
 const FILTER_DEBOUNCE_INTERVAL = 50
+const COMPLETING_PUNCTUATION = [ ",", ".", "!", "?", ";", ":", ")", "'", "’" ]
 
-// Start of line, or after a space or newline.
-const DEFAULT_ONLY_AT_PATTERN = "^|[ \\n]"
+// Start of line, or after a space or newline, optionally followed by an opening parenthesis.
+const DEFAULT_ONLY_AT_PATTERN = "(?:^|[ \\n])\\(?"
 
 export class LexicalPromptElement extends HTMLElement {
   #globalListeners = new ListenerBin()
   #popoverListeners = new ListenerBin()
+  #shownFilter
   #debouncedFilterOptions = debounce(() => this.#filterOptions(), FILTER_DEBOUNCE_INTERVAL)
 
   constructor() {
@@ -401,6 +403,7 @@ export class LexicalPromptElement extends HTMLElement {
     if (!this.#editorContents.containsTextBackUntil(this.trigger)) return
 
     this.popoverElement.innerHTML = ""
+    this.#shownFilter = filter
 
     if (filteredListItems.length > 0) {
       this.#showResults(filteredListItems)
@@ -431,18 +434,35 @@ export class LexicalPromptElement extends HTMLElement {
       this.#hidePopover()
       this.#editorElement.focus()
       event.stopPropagation()
-    } else if (event.key === ",") {
-      event.preventDefault()
-      event.stopPropagation()
-      this.#optionWasSelected()
-      this.#editor.update(() => {
-        const selection = $getSelection()
-        if ($isRangeSelection(selection)) {
-          selection.insertText(",")
-        }
-      })
+    } else if (this.#isCompletingPunctuation(event)) {
+      this.#completeWithPunctuation(event)
     }
     // Arrow keys are handled via Lexical commands
+  }
+
+  #isCompletingPunctuation(event) {
+    return COMPLETING_PUNCTUATION.includes(event.key) && event.key !== this.trigger && !event.isComposing && !this.#isShortcut(event)
+  }
+
+  // AltGr reports as Ctrl+Alt on Windows, but types characters rather than running shortcuts.
+  #isShortcut(event) {
+    return (event.ctrlKey || event.metaKey) && !event.getModifierState("AltGraph")
+  }
+
+  #completeWithPunctuation(event) {
+    const filter = this.#editorContents.textBackUntil(this.trigger)
+
+    if (!this.#selectedListItem) {
+      this.#hidePopover()
+    } else if (this.#selectedOptionMatches(filter) && !this.source.anyCandidateMatches(filter + event.key)) {
+      event.preventDefault()
+      event.stopPropagation()
+      this.#optionWasSelected(event.key)
+    }
+  }
+
+  #selectedOptionMatches(filter) {
+    return filter === this.#shownFilter || this.source.listItemMatches(this.#selectedListItem, filter)
   }
 
   // Android Mobile keyboard doesn't trigger KEY_SPACE_COMMAND
@@ -475,13 +495,13 @@ export class LexicalPromptElement extends HTMLElement {
     return true
   }
 
-  #optionWasSelected() {
-    this.#replaceTriggerWithSelectedItem()
+  #optionWasSelected(followedBy = "") {
+    this.#replaceTriggerWithSelectedItem(followedBy)
     this.#hidePopover()
     this.#editorElement.focus()
   }
 
-  #replaceTriggerWithSelectedItem() {
+  #replaceTriggerWithSelectedItem(followedBy) {
     const promptItem = this.source.promptItemFor(this.#selectedListItem)
 
     if (!promptItem) { return }
@@ -490,16 +510,16 @@ export class LexicalPromptElement extends HTMLElement {
     const stringToReplace = `${this.trigger}${this.#editorContents.textBackUntil(this.trigger)}`
 
     if (this.hasAttribute("insert-editable-text")) {
-      this.#insertTemplatesAsEditableText(templates, stringToReplace)
+      this.#insertTemplatesAsEditableText(templates, stringToReplace, { followedBy })
     } else {
-      this.#insertTemplatesAsAttachments(templates, stringToReplace, promptItem.getAttribute("sgid"))
+      this.#insertTemplatesAsAttachments(templates, stringToReplace, { fallbackSgid: promptItem.getAttribute("sgid"), followedBy })
     }
   }
 
-  #insertTemplatesAsEditableText(templates, stringToReplace) {
+  #insertTemplatesAsEditableText(templates, stringToReplace, { followedBy }) {
     this.#editor.update(() => {
       const nodes = templates.flatMap(template => this.#buildEditableTextNodes(template))
-      this.#editorContents.replaceTextBackUntil(stringToReplace, nodes)
+      this.#editorContents.replaceTextBackUntil(stringToReplace, nodes, { followedBy })
     })
   }
 
@@ -507,11 +527,11 @@ export class LexicalPromptElement extends HTMLElement {
     return this.#editorElement.$generateNodesFromDOM(parseHtml(`${template.innerHTML}`))
   }
 
-  #insertTemplatesAsAttachments(templates, stringToReplace, fallbackSgid = null) {
+  #insertTemplatesAsAttachments(templates, stringToReplace, { fallbackSgid, followedBy }) {
     this.#editor.update(() => {
       const attachmentNodes = this.#buildAttachmentNodes(templates, fallbackSgid)
       const spacedAttachmentNodes = attachmentNodes.flatMap(node => [ node, this.#getSpacerTextNode() ]).slice(0, -1)
-      this.#editorContents.replaceTextBackUntil(stringToReplace, spacedAttachmentNodes)
+      this.#editorContents.replaceTextBackUntil(stringToReplace, spacedAttachmentNodes, { followedBy })
     })
   }
 

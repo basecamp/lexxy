@@ -234,13 +234,26 @@ export default class Contents {
   // right before a period, extending across it would glue "." onto everything
   // typed ("B" would query "B."), matching the wrong names or nothing at all.
   // But punctuation joining two word characters is part of a name — "@" before
-  // "Anne-Marie" or "O'Connor" must keep the whole name as the query.
+  // "Anne-Marie" or "O'Connor" must keep the whole name as the query, unless
+  // it starts a possessive: "@" before "Joan's" queries "Joan".
   #isQueryBoundary(fullText, offset) {
     const character = fullText[offset]
-    if (/\s/.test(character)) return true
-    if (!/\p{P}/u.test(character)) return false
 
-    return !(this.#isWordCharacter(fullText[offset - 1]) && this.#isWordCharacter(fullText[offset + 1]))
+    if (/\s/.test(character)) {
+      return true
+    } else if (/\p{P}/u.test(character)) {
+      return this.#startsPossessive(fullText, offset) || !this.#joinsWordCharacters(fullText, offset)
+    } else {
+      return false
+    }
+  }
+
+  #startsPossessive(fullText, offset) {
+    return /^['’]s(?![\p{L}\p{N}])/u.test(fullText.slice(offset))
+  }
+
+  #joinsWordCharacters(fullText, offset) {
+    return this.#isWordCharacter(fullText[offset - 1]) && this.#isWordCharacter(fullText[offset + 1])
   }
 
   #isWordCharacter(character) {
@@ -270,7 +283,7 @@ export default class Contents {
     return result
   }
 
-  replaceTextBackUntil(stringToReplace, replacementNodes) {
+  replaceTextBackUntil(stringToReplace, replacementNodes, { followedBy = "" } = {}) {
     replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ]
 
     const { anchorNode, offset } = this.#getTextAnchorData()
@@ -279,7 +292,7 @@ export default class Contents {
     const lastIndex = this.#findReplacementStart(anchorNode, offset, stringToReplace)
     if (lastIndex === -1) return
 
-    this.#performTextReplacement(anchorNode, lastIndex, stringToReplace, replacementNodes)
+    this.#performTextReplacement(anchorNode, lastIndex, stringToReplace, replacementNodes, followedBy)
   }
 
   uploadFiles(files, { selectLast, altText } = {}) {
@@ -613,10 +626,10 @@ export default class Contents {
     }
   }
 
-  #performTextReplacement(anchorNode, startIndex, stringToReplace, replacementNodes) {
+  #performTextReplacement(anchorNode, startIndex, stringToReplace, replacementNodes, followedBy) {
     const fullText = anchorNode.getTextContent()
     const textBeforeString = fullText.slice(0, startIndex)
-    const textAfterString = fullText.slice(startIndex + stringToReplace.length)
+    const textAfterString = followedBy + fullText.slice(startIndex + stringToReplace.length)
 
     const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, textBeforeString)
     const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, textAfterString || " ")
@@ -627,7 +640,7 @@ export default class Contents {
     lastInsertedNode.insertAfter(textNodeAfter)
 
     this.#appendLineBreakIfNeeded(textNodeAfter.getParentOrThrow())
-    const cursorOffset = textAfterString ? 0 : 1
+    const cursorOffset = textAfterString ? followedBy.length : 1
     textNodeAfter.select(cursorOffset, cursorOffset)
   }
 
