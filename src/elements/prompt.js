@@ -86,7 +86,8 @@ export class LexicalPromptElement extends HTMLElement {
     const src = this.getAttribute("src")
     if (src) {
       if (this.hasAttribute("remote-filtering")) {
-        return new RemoteFilterSource(src)
+        const filterParam = this.getAttribute("filter-param") || "filter"
+        return new RemoteFilterSource(src, { filterParam })
       } else {
         return new DeferredPromptSource(src)
       }
