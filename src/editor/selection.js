@@ -104,7 +104,7 @@ export default class Selection {
       isStrikethrough: selection.hasFormat("strikethrough"),
       isUnderline: selection.hasFormat("underline"),
       isHighlight: isSelectionHighlighted(selection),
-      isInLink: $getNearestNodeOfType(anchorNode, LinkNode) !== null,
+      isInLink: this.isInLink,
       isInQuote: $isQuoteNode(topLevelElement),
       isInHeading: headingNode !== null,
       isInCode: this.#isInCode(selection, anchorNode),
@@ -112,6 +112,20 @@ export default class Selection {
       isInList: listType !== null,
       listType,
       isInTable: $getTableCellNodeFromLexicalNode(anchorNode) !== null
+    }
+  }
+
+  get isInLink() {
+    return this.linkUrl !== null
+  }
+
+  get linkUrl() {
+    const { node } = this.selectedNodeWithOffset()
+
+    if ($isActionTextAttachmentNode(node)) {
+      return node.href
+    } else {
+      return $getNearestNodeOfType(node, LinkNode)?.getURL() ?? null
     }
   }
 
