@@ -1,5 +1,6 @@
-import { $isDecoratorNode, $isRangeSelection, $splitNode } from "lexical"
+import { $isDecoratorNode, $isElementNode, $isRangeSelection, $splitNode } from "lexical"
 import { $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
+import { $isQuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $isBlankNode } from "../../../helpers/lexical_helper"
 import BaseNodeInserter from "./base_node_inserter"
@@ -77,8 +78,12 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
     )
   }
 
-  #removeEmptyList(list) {
-    if ($isListNode(list) && list.isEmpty()) list.remove()
+  // $splitNode splits up to the root, so for a list inside a quote each half is a quote holding a list.
+  #removeEmptyList(node) {
+    if ($isElementNode(node)) {
+      node.getChildren().forEach(child => this.#removeEmptyList(child))
+      if (($isListNode(node) || $isQuoteNode(node)) && node.isEmpty()) node.remove()
+    }
   }
 
   // Only block decorator nodes (image/file attachments) are intercepted. A list
