@@ -1,6 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $hasUpdateTag,
-  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
   HISTORY_MERGE_TAG, PASTE_TAG,
   SELECTION_INSERT_CLIPBOARD_NODES_COMMAND
 } from "lexical"
@@ -15,7 +15,7 @@ import { $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
-import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
+import { $findMatchingParent, $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
 import PastedContentFormatter from "./contents/pasted_content_formatter"
 import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
@@ -533,7 +533,8 @@ export default class Contents {
   #blockLevelElementsInSelection(selection) {
     const blocks = new Set()
     for (const node of selection.getNodes()) {
-      blocks.add($getNearestBlockElementAncestorOrThrow(node))
+      const block = $findMatchingParent(node, (parent) => $isElementNode(parent) && !parent.isInline())
+      if (block) blocks.add(block)
     }
 
     return Array.from(blocks)
