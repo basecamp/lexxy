@@ -21,6 +21,7 @@ import {
 import { upcaseFirst } from "../../helpers/string_helper"
 import { nextFrame } from "../../helpers/timing_helper"
 import { ListenerBin } from "../../helpers/listener_helper"
+import { $isProvisionalParagraphNode } from "../../nodes/provisional_paragraph_node"
 
 export class TableController {
   #listeners = new ListenerBin()
@@ -272,15 +273,23 @@ export class TableController {
 
   #deleteRowAndSelectNextNode() {
     const tableNode = this.currentTableNode
+    const [ parent, index, previous, next ] = this.editor.getEditorState().read(() => [
+      tableNode?.getParent(), tableNode?.getIndexWithinParent(), tableNode?.getPreviousSibling(), tableNode?.getNextSibling()
+    ])
     this.executeTableCommand({ action: "delete", childType: "row" })
 
     this.editor.update(() => {
-      const next = tableNode?.getNextSibling()
-      if ($isParagraphNode(next)) {
+      if ($isParagraphNode(next) && !$isProvisionalParagraphNode(next) && next.isAttached()) {
         next.selectStart()
       } else {
         const newParagraph = $createParagraphNode()
-        this.currentTableNode.insertAfter(newParagraph)
+        if (tableNode?.isAttached()) {
+          tableNode.insertAfter(newParagraph)
+        } else if (previous?.isAttached()) {
+          previous.insertAfter(newParagraph)
+        } else {
+          parent.splice(index, 0, [ newParagraph ])
+        }
         newParagraph.selectStart()
       }
     })
