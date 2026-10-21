@@ -162,6 +162,30 @@ test.describe("Inline formatting", () => {
     )
   })
 
+  test("applying code to a selection that starts at the end of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p><strong>ab</strong> cd</p>")
+    await selectBetween(editor, { text: "ab", offset: 2 }, { text: " cd", offset: 3 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><strong>ab</strong><code> cd</code></p>")
+  })
+
+  test("removing code from a selection that starts at the end of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p><strong>ab</strong><code> cd</code></p>")
+    await selectBetween(editor, { text: "ab", offset: 2 }, { text: " cd", offset: 3 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><strong>ab</strong> cd</p>")
+  })
+
   test("toggle code for block", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.click()
@@ -227,3 +251,18 @@ test.describe("Inline formatting", () => {
     )
   })
 })
+
+async function selectBetween(editor, start, end) {
+  await editor.content.evaluate((el, { start, end }) => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    const textNodes = []
+    while (walker.nextNode()) textNodes.push(walker.currentNode)
+    const range = document.createRange()
+    range.setStart(textNodes.find((node) => node.nodeValue === start.text), start.offset)
+    range.setEnd(textNodes.find((node) => node.nodeValue === end.text), end.offset)
+    const selection = window.getSelection()
+    selection.removeAllRanges()
+    selection.addRange(range)
+  }, { start, end })
+  await editor.flush()
+}
