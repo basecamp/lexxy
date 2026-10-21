@@ -173,7 +173,11 @@ export class CommandDispatcher {
 
     if (!selection.isCollapsed()) {
       const textNodes = selection.getNodes().filter($isTextNode)
-      const applyingCode = !textNodes.every((node) => node.hasFormat("code"))
+      const selectedTextNodes = textNodes.filter((node, i) => {
+        const [ startOffset, endOffset ] = this.#selectedOffsets(selection, textNodes, i)
+        return startOffset !== endOffset
+      })
+      const applyingCode = !selectedTextNodes.every((node) => node.hasFormat("code"))
 
       if (applyingCode) {
         this.#stripInlineFormattingFromSelection(selection, textNodes)
@@ -197,8 +201,8 @@ export class CommandDispatcher {
 
       const isFirst = i === 0
       const isLast = i === textNodes.length - 1
-      const startOffset = isFirst && startPoint.type === "text" ? startPoint.offset : 0
-      const endOffset = isLast && endPoint.type === "text" ? endPoint.offset : node.getTextContentSize()
+      const [ startOffset, endOffset ] = this.#selectedOffsets(selection, textNodes, i)
+      if (startOffset === endOffset) continue
 
       if (startOffset === 0 && endOffset === node.getTextContentSize()) {
         node.setFormat(0)
@@ -215,6 +219,15 @@ export class CommandDispatcher {
         }
       }
     }
+  }
+
+  #selectedOffsets(selection, textNodes, i) {
+    const isBackward = selection.isBackward()
+    const startPoint = isBackward ? selection.focus : selection.anchor
+    const endPoint = isBackward ? selection.anchor : selection.focus
+    const startOffset = i === 0 && startPoint.type === "text" ? startPoint.offset : 0
+    const endOffset = i === textNodes.length - 1 && endPoint.type === "text" ? endPoint.offset : textNodes[i].getTextContentSize()
+    return [ startOffset, endOffset ]
   }
 
   dispatchSetCodeLanguage(language) {
