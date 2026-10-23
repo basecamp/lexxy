@@ -1,6 +1,6 @@
 {
   "name": "@37signals/lexxy",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Lexxy - A modern rich text editor for Rails.",
   "module": "dist/lexxy.esm.js",
   "type": "module",
@@ -70,7 +70,7 @@
     "@lexical/selection": "^0.44.0",
     "@lexical/table": "^0.44.0",
     "@lexical/utils": "^0.44.0",
-    "dompurify": "^3.4.13",
+    "dompurify": "^3.4.17",
     "lexical": "^0.44.0",
     "marked": "^16.4.1",
     "prismjs": "^1.30.0"
