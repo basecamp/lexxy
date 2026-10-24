@@ -1,7 +1,7 @@
 import "./config/prism"
 import "./config/dom_purify"
 
-import { defineElements, reconfigureElements } from "./elements/index"
+import { defineElements } from "./elements/index"
 
 import Lexxy from "./config/lexxy"
 
@@ -15,20 +15,21 @@ export { default as EditorSanitizer } from "./editor/sanitizer"
 
 export function configure(config) {
   Lexxy.configure(config)
-  if (editorsFollowConfigure) {
-    reconfigureElements()
-  }
+  configured = true
 }
-
 export { default as Extension } from "./extensions/lexxy_extension"
 export * as Lexical from "lexical"
 
 // Define the elements once the current call stack is done, so a configure() call right after the import still comes
-// first. A microtask rather than a timer: it runs before the browser can paint, so editors already on the page are
-// drawn upgraded instead of popping in a frame or two later.
-queueMicrotask(defineElements)
+// first. When the app has configured Lexxy by then, as the docs ask, define them in a microtask, which runs before the
+// browser can paint, so editors already on the page are drawn upgraded. Otherwise wait for the next task as before,
+// for a configure() call from a later module script or after an await.
+let configured = false
 
-// Until the next task, configure() rebuilds the editors that already started, so a call from a later module script or
-// after an await still reaches them, as it did when the elements were defined in that task.
-let editorsFollowConfigure = true
-setTimeout(() => editorsFollowConfigure = false, 0)
+queueMicrotask(() => {
+  if (configured) {
+    defineElements()
+  } else {
+    setTimeout(defineElements, 0)
+  }
+})

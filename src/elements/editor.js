@@ -62,8 +62,6 @@ export class LexicalEditorElement extends HTMLElement {
 
   #initializeEventDispatched = false
   #editorInitializedDispatched = false
-  #mountFrame
-  #defaultToolbar
   #listeners = new ListenerBin()
   #disposables = []
   #historyState = { undo: false, redo: false }
@@ -117,7 +115,7 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.toggleAttribute("connected", true)
 
-    this.#mountFrame = requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
       this.#mountRoot()
       this.#handleAutofocus()
       this.#dispatchInitialize()
@@ -133,12 +131,6 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.#clearCachedValues()
     this.#reset() // Prevent hangs with Safari when morphing
-  }
-
-  reconfigure() {
-    cancelAnimationFrame(this.#mountFrame)
-    this.#defaultToolbar?.remove()
-    this.#reconnect()
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -846,7 +838,6 @@ export class LexicalEditorElement extends HTMLElement {
     toolbar.setAttribute("data-attachments", this.supportsAttachments) // Drives toolbar CSS styles
     toolbar.configure(this.config.get("toolbar"))
     this.prepend(toolbar)
-    this.#defaultToolbar = toolbar
     return toolbar
   }
 
