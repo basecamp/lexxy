@@ -33,3 +33,9 @@ export function defineElements() {
     customElements.define(name, element)
   })
 }
+
+export function reconfigureElements() {
+  for (const editor of document.querySelectorAll("lexxy-editor:defined")) {
+    editor.reconfigure()
+  }
+}

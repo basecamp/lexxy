@@ -1,7 +1,7 @@
 import "./config/prism"
 import "./config/dom_purify"
 
-import { defineElements } from "./elements/index"
+import { defineElements, reconfigureElements } from "./elements/index"
 
 import Lexxy from "./config/lexxy"
 
@@ -13,7 +13,13 @@ export { NativeAdapter } from "./editor/adapters/native_adapter"
 // editor can declare an allowlist for them, rather than taking the default.
 export { default as EditorSanitizer } from "./editor/sanitizer"
 
-export const configure = Lexxy.configure
+export function configure(config) {
+  Lexxy.configure(config)
+  if (editorsFollowConfigure) {
+    reconfigureElements()
+  }
+}
+
 export { default as Extension } from "./extensions/lexxy_extension"
 export * as Lexical from "lexical"
 
@@ -21,3 +27,8 @@ export * as Lexical from "lexical"
 // first. A microtask rather than a timer: it runs before the browser can paint, so editors already on the page are
 // drawn upgraded instead of popping in a frame or two later.
 queueMicrotask(defineElements)
+
+// Until the next task, configure() rebuilds the editors that already started, so a call from a later module script or
+// after an await still reaches them, as it did when the elements were defined in that task.
+let editorsFollowConfigure = true
+setTimeout(() => editorsFollowConfigure = false, 0)
