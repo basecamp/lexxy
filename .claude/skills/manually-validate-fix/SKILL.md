@@ -87,7 +87,7 @@ For each run, record a clear line: **PASS** when the behavior is correct (expect
 
 Run the server from the worktree that has the PR's branch checked out (see AGENTS.md, "Worktrees", for `bin/setup` and seeding a fresh one).
 
-If no worktree has it, make one: `git worktree add ../lexxy-pr-<number> origin/<headRefName>`.
+If no worktree has it, make one: `git fetch origin pull/<number>/head && git worktree add ../lexxy-pr-<number> FETCH_HEAD`.
 
 ```bash
 cd <pr-worktree>
@@ -99,11 +99,11 @@ A server already answering on a port may be serving another checkout, so start y
 
 ```bash
 # bin/dev force-kills whatever listens on its port, so pick a free one
-curl -s -o /dev/null -m 2 http://localhost:<port>/ && echo "port <port> is taken, pick another"
+curl -s -o /dev/null -m 2 http://localhost:<port>/; [ $? -eq 7 ] || echo "port <port> is taken, pick another"
 
 mkdir -p tmp
 PORT=<port> bin/dev > tmp/dev-<port>.log 2>&1 &
-DEV_PID=$!
+echo $! > tmp/dev-<port>.pid
 for i in $(seq 1 60); do
   curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ 2>/dev/null | grep -q 200 && break
   sleep 1
@@ -111,7 +111,7 @@ done
 curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ | grep -q 200 || tail -30 tmp/dev-<port>.log
 ```
 
-Before testing, wait for the JS build to finish: `tmp/dev-<port>.log` shows rollup's "waiting for changes". When you're done, `kill $DEV_PID` (foreman stops its children).
+Before testing, wait for the JS build to finish: `tmp/dev-<port>.log` shows rollup's "waiting for changes". When you're done, `kill "$(cat tmp/dev-<port>.pid)"` (foreman stops its children).
 
 ### 6. Run Against Both Environments
 
