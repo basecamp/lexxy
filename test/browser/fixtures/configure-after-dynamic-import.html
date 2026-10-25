@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — Configure after a dynamic import</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module">
+    const Lexxy = await import("lexxy")
+    Lexxy.configure({ global: { attachmentTagName: "bc-attachment" }, default: { attachments: false }, simple: { richText: false } })
+  </script>
+</head>
+<body>
+  <form>
+    <div class="body">
+      <lexxy-editor
+        id="mention"
+        class="lexxy-content"
+        placeholder="Write something..."
+        attachments="true"
+        value='<p>Hello <bc-attachment sgid="test-sgid-alice" content-type="application/vnd.basecamp.mention" content="Alice"></bc-attachment></p>'>
+      </lexxy-editor>
+      <lexxy-editor id="plain" class="lexxy-content" placeholder="Write something..."></lexxy-editor>
+      <lexxy-editor id="simple" class="lexxy-content" placeholder="Write something..." preset="simple"></lexxy-editor>
+    </div>
+  </form>
+</body>
+</html>
