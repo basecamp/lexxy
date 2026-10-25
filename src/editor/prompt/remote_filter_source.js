@@ -34,6 +34,7 @@ export default class RemoteFilterSource extends BaseSource {
 
   #buildListItemsFromPromptItems(promptItems) {
     const listItems = []
+    this.candidatePromptItems = promptItems
     this.promptItemByListItem = new WeakMap()
 
     for (const promptItem of promptItems) {
