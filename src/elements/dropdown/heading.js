@@ -4,9 +4,9 @@ import { ListenerBin, registerEventListener } from "../../helpers/listener_helpe
 const HEADING_BUTTON_SELECTOR = "button.lexxy-heading-button"
 
 const HEADING_PRESETS = [
-  { label: "Large Heading", name: "heading-large" },
-  { label: "Medium Heading", name: "heading-medium" },
-  { label: "Small Heading", name: "heading-small" }
+  { label: "Large Heading", name: "heading-large", command: "setFormatHeadingLarge" },
+  { label: "Medium Heading", name: "heading-medium", command: "setFormatHeadingMedium" },
+  { label: "Small Heading", name: "heading-small", command: "setFormatHeadingSmall" }
 ]
 
 export class HeadingDropdown extends HTMLElement {
@@ -36,6 +36,14 @@ export class HeadingDropdown extends HTMLElement {
     }
   }
 
+  static commandFor(index) {
+    if (index < HEADING_PRESETS.length) {
+      return HEADING_PRESETS[index].command
+    } else {
+      return "applyHeadingFormat"
+    }
+  }
+
   #listeners = new ListenerBin()
 
   connectedCallback() {
@@ -56,8 +64,8 @@ export class HeadingDropdown extends HTMLElement {
   updateActiveHeading(tag) {
     this.#headingButtons.forEach(button => {
       const next = (button.dataset.heading === tag).toString()
-      if (button.getAttribute("aria-pressed") !== next) {
-        button.setAttribute("aria-pressed", next)
+      if (button.getAttribute("aria-checked") !== next) {
+        button.setAttribute("aria-checked", next)
       }
     })
   }
@@ -101,18 +109,18 @@ export class HeadingDropdown extends HTMLElement {
     button.classList.add("lexxy-heading-button")
     button.name = name
     button.title = label
-    button.setAttribute("role", "menuitem")
+    button.setAttribute("role", "menuitemradio")
     button.innerHTML = `${icon} <span>${label}</span>`
     return button
   }
 
   #registerButtonHandlers() {
-    this.#headingButtons.forEach(button => {
+    this.#headingButtons.forEach((button, index) => {
       this.#listeners.track(registerEventListener(button, "click", (event) => {
         if (!this.#editor) return
 
         event.preventDefault()
-        this.#editor.dispatchCommand("applyHeadingFormat", button.dataset.heading)
+        this.#editor.dispatchCommand(HeadingDropdown.commandFor(index), button.dataset.heading)
         this.#editor.focus()
       }))
     })

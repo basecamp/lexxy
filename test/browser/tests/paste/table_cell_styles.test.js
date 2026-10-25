@@ -178,6 +178,77 @@ test.describe("Paste — Table cell color styles", () => {
     })
   })
 
+  // Excel doesn't color cells inline: it ships a <style> block whose rules
+  // (td { color: black }, .xlNN { color: ... }) cascade onto the cells by
+  // element and class. That cascaded color rides past the inline-style
+  // stripping and the paste canonicalizer, so pasted table text kept a
+  // hardcoded color that didn't adapt to the theme. Stripping the foreign
+  // <style> block fixes it. The markup below is a real Excel clipboard paste.
+  test("strips cascaded text color from a real Excel paste", async ({
+    editor,
+  }) => {
+    const excelHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:x="urn:schemas-microsoft-com:office:excel"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=utf-8">
+<meta name=ProgId content=Excel.Sheet>
+<meta name=Generator content="Microsoft Excel 15">
+<link id=Main-File rel=Main-File href="file:///C:/Users/Gabriel/AppData/Local/Temp/msohtmlclip1/01/clip.htm">
+<link rel=File-List href="file:///C:/Users/Gabriel/AppData/Local/Temp/msohtmlclip1/01/clip_filelist.xml">
+<style>
+<!--table
+	{mso-displayed-decimal-separator:"\\.";
+	mso-displayed-thousand-separator:"\\,";}
+td
+	{padding-top:1px;
+	padding-right:1px;
+	padding-left:1px;
+	mso-ignore:padding;
+	color:black;
+	font-size:11.0pt;
+	font-weight:400;
+	font-family:Calibri, sans-serif;
+	text-align:general;
+	vertical-align:bottom;
+	border:none;
+	white-space:nowrap;}
+.xl63
+	{color:#1F4E78;}
+.xl64
+	{color:red;}
+-->
+</style>
+</head>
+<body link="#0563C1" vlink="#954F72">
+<table border=0 cellpadding=0 cellspacing=0 width=128 style='border-collapse:collapse;width:96pt'>
+ <col width=64 span=2 style='width:48pt'>
+ <tr height=20 style='height:15.0pt'>
+<!--StartFragment-->
+  <td height=20 class=xl63 width=64 style='height:15.0pt;width:48pt'>BLUE</td>
+  <td class=xl64 width=64 style='width:48pt'>RED</td>
+<!--EndFragment-->
+ </tr>
+</table>
+</body>
+</html>`
+
+    await editor.paste("BLUE\tRED", { html: excelHtml })
+
+    await assertEditorContent(editor, async (content) => {
+      const cells = content.locator("table td")
+      await expect(cells).toHaveCount(2)
+
+      for (const cell of await cells.all()) {
+        const color = await cell.evaluate((el) => el.style.color)
+        expect(color).toBe("")
+      }
+
+      const coloredText = content.locator('table td [style*="color"]')
+      await expect(coloredText).toHaveCount(0)
+    })
+  })
+
   // Shading survives as TableCellNode state, so it reappears when previously
   // stored content is loaded back into the editor — a path the paste-time
   // formatter never sees. Normalize it away on load too.
