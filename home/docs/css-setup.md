@@ -42,6 +42,10 @@ If you only need part of the styles, import the individual files instead:
 
 All of Lexxy's color styles are defined as CSS variables in `app/stylesheets/lexxy-variables.css`. This enables a straightforward way to customize Lexxy to match your application's theme. You can see an example implementation of a custom dark mode style in the Sandbox's stylesheet at `test/dummy/app/assets/stylesheets/sandbox.css`.
 
+### Text size
+
+Content inherits its font size from the surrounding page, and headings are sized relative to it. To change the size of the editor and rendered content, set `--lexxy-text-size`, for example `--lexxy-text-size: 1.125rem`. Headings scale with it. Captions, file icons and the editor's menus use `--lexxy-text-small` (`0.875rem` by default), which you can set separately.
+
 ## Rendered Action Text content
 
 For applying the same styles to rendered Action Text content, you need to override the current default by adding this template  `app/views/layouts/action_text/contents/_content.html.erb`:

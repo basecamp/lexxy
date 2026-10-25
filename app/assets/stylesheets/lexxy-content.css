@@ -327,7 +327,7 @@
   :where(.attachment__caption) {
     color: var(--lexxy-color-text-subtle);
     display: block;
-    font-size: 0.875em;
+    font-size: var(--lexxy-text-small);
     padding: 1ch;
   }
 
@@ -341,7 +341,7 @@
     box-sizing: border-box;
     color: var(--lexxy-attachment-icon-color);
     display: grid;
-    font-size: 0.875em;
+    font-size: var(--lexxy-text-small);
     font-weight: bold;
     inline-size: auto;
     overflow: hidden;
