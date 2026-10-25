@@ -22,6 +22,8 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+const anything = { property: "font-family", validate: () => true }
+
 describe("dom_purify — extension allowed styles", () => {
   test("keeps only the built-in properties when no extension declares styles", () => {
     expect(styleOf(sanitizeWith([], '<p style="color: red; text-align: center">x</p>'))).toBe("color: red;")
@@ -82,7 +84,15 @@ describe("dom_purify — extension allowed styles", () => {
       [ "list-style-image", "url(https://attacker.example/pixel.gif)" ],
       [ "content", "\"x\"" ],
       [ "-moz-binding", "url(https://attacker.example/xbl.xml)" ],
-      [ "behavior", "url(https://attacker.example/x.htc)" ]
+      [ "behavior", "url(https://attacker.example/x.htc)" ],
+      [ "-webkit-clip-path", "circle(50%)" ],
+      [ "-webkit-filter", "blur(2px)" ],
+      [ "offset", "none" ],
+      [ "-webkit-mask-box-image-source", "none" ],
+      [ "mask-border", "none" ],
+      [ "-webkit-box-reflect", "below" ],
+      [ "backdrop-filter", "none" ],
+      [ "fill", "red" ]
     ])("%s is never allowed, even with its value declared", (property, value) => {
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
 
@@ -109,7 +119,6 @@ describe("dom_purify — extension allowed styles", () => {
   // A validator that accepts everything is the worst an extension can write. The
   // floor still holds under it.
   describe("adversarial values under a validator that accepts anything", () => {
-    const anything = { property: "font-family", validate: () => true }
 
     test.each([
       [ "url()", "url(https://attacker.example/pixel.gif)" ],
@@ -125,7 +134,12 @@ describe("dom_purify — extension allowed styles", () => {
       [ "!important", "serif !important" ],
       [ "javascript:", "javascript:alert(1)" ],
       [ "an at-rule", "@import 'https://attacker.example/x.css'" ],
-      [ "markup", "</style><script>alert(1)</script>" ]
+      [ "markup", "</style><script>alert(1)</script>" ],
+      [ "var()", "var(--host-secret)" ],
+      [ "env()", "env(safe-area-inset-top)" ],
+      [ "an unclosed quote", "\"Georgia" ],
+      [ "an unclosed bracket", "[" ],
+      [ "a stray closing parenthesis", "serif)" ]
     ])("drops %s", (_name, value) => {
       const html = `<p style='font-family: ${value.replace(/'/g, "&#39;")}'>x</p>`
       const sanitized = sanitizeWith([ anything ], html)
@@ -144,6 +158,16 @@ describe("dom_purify — extension allowed styles", () => {
     })
   })
 
+  test("an unbalanced value can't swallow the declarations serialized after it", () => {
+    expect(styleOf(sanitizeWith([ anything ], '<p style="font-family: [; color: red">x</p>'))).toBe("color: red;")
+  })
+
+  test("layout properties outside the forbidden list stay declarable", () => {
+    const underline = { property: "text-underline-offset", values: [ "2px" ] }
+
+    expect(styleOf(sanitizeWith([ underline ], '<p style="text-underline-offset: 2px">x</p>'))).toBe("text-underline-offset: 2px;")
+  })
+
   test("a validator must return true, not merely something truthy", () => {
     const sloppy = { property: "line-height", validate: () => "yes" }
 
@@ -158,6 +182,35 @@ describe("dom_purify — extension allowed styles", () => {
 
   test("a sanitize call that didn't come from buildConfig gets only the built-in properties", () => {
     expect(styleOf(DOMPurify.sanitize('<p style="color: red; text-align: center">x</p>'))).toBe("color: red;")
+  })
+})
+
+// color and background-color keep any ordinary value, but not one built to read
+// as more declarations to the browser than to Lexical's parser. jsdom can't show
+// what a browser makes of these; test/browser/tests/paste/sanitized_styles does.
+describe("dom_purify — built-in style properties", () => {
+  test.each([
+    [ "a CSS var", "var(--highlight-1)" ],
+    [ "a hex color", "#ff0000" ],
+    [ "an rgb color", "rgb(255, 0, 0)" ]
+  ])("keeps %s", (_name, value) => {
+    expect(styleOf(sanitizeWith([], `<p style="color: ${value}">x</p>`))).toBe(`color: ${value};`)
+  })
+
+  test("drops a value with an escaped quote that would open a string only for Lexical", () => {
+    const sanitized = sanitizeWith([], `<p style='color: \\"; background-image: url(https://attacker.example/p.gif); x: "'>x</p>`)
+
+    expect(sanitized).not.toContain("background-image")
+  })
+
+  test("a line break can't end a string for the browser but not for Lexical", () => {
+    const sanitized = sanitizeWith([], '<p style="color: &quot;x&#10;;background-image:url(https://attacker.example/p.gif);&quot;">x</p>')
+
+    expect(sanitized).not.toContain("background-image")
+  })
+
+  test("drops a resource function", () => {
+    expect(sanitizeWith([], '<p style="background-color: image(https://attacker.example/p.gif)">x</p>')).toBe("<p>x</p>")
   })
 })
 

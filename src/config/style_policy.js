@@ -18,34 +18,29 @@
 // fixed set of values or a validator, and on top of both every value passes the
 // floor below, which no extension can lower.
 //
-// Some properties are refused whatever an extension declares, because they are
-// dangerous with any value an editor would ever want: they load resources, take
-// content out of its box to sit over the host page (position: fixed is a
-// phishing overlay), or bind behavior. A refused property is dropped with a
-// warning, so the extension's author learns about it while developing.
+// Some properties are refused whatever an extension declares, because they load
+// resources or bind behavior with values an editor has no business storing. The
+// list can't make layout safe, though: transform, margins or z-index can move
+// content over the host page as well as position can, so which layout properties
+// to open is the extension author's call. A refused property is dropped with a
+// warning, so the author learns about it while developing.
 
 const FORBIDDEN_STYLE_PROPERTIES = new Set([
   "background",
-  "background-image",
   "behavior",
-  "border-image",
-  "border-image-source",
   "content",
   "cursor",
-  "filter",
-  "clip-path",
+  "fill",
   "list-style",
-  "list-style-image",
-  "mask",
-  "mask-image",
-  "-webkit-mask",
-  "-webkit-mask-image",
-  "-moz-binding",
-  "offset-path",
   "position",
-  "shape-outside",
-  "src"
+  "src",
+  "stroke"
 ])
+
+// Families named by what they take, so a vendor alias or a new longhand is
+// refused without being listed: -webkit-clip-path, -webkit-mask-box-image-source,
+// mask-border, -webkit-backdrop-filter, the offset shorthand of offset-path.
+const FORBIDDEN_STYLE_PROPERTY_PATTERN = /image|mask|filter|clip-path|shape-outside|^offset|marker|binding|reflect/
 
 // color and background-color are governed by the built-in rule (and the
 // highlight extension's canonicalization), so an extension can neither redeclare
@@ -56,15 +51,30 @@ export const DEFAULT_ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
 // declarable: they would let content define values that var() elsewhere reads.
 const PROPERTY_NAME = /^-?[a-z]+(?:-[a-z]+)*$/
 
+// The style filter splits declarations with Lexical's CSS parser and serializes
+// the survivors back, so what it checks is only what the browser applies if both
+// parsers agree on where each value ends. They don't, on two counts: Lexical
+// takes a backslash outside quotes as a plain character while the browser takes
+// `\"` as an escaped quote, and Lexical runs a string across a newline while the
+// browser ends it there. Either lets a value that looks like one harmless
+// declaration to us read as several to the browser, background-image included.
+// So no value may contain a backslash or a line break, and quotes and brackets
+// must balance, so a value can't swallow the declarations serialized after it.
+// Without those, the two parsers agree.
+//
 // Checked against the value as Lexical's CSS parser returns it, which has already
 // dropped comments — so `u/**/rl(` arrives here as `url(` and is caught.
-//
-// - Functions that fetch or embed a resource, or run script.
-// - Backslashes: CSS escapes spell any of the above (`u\72l(`) past a text check.
-// - `!`, so content can't outrank the host's own !important rules.
-// - Characters that only belong to markup, at-rules or blocks.
-// - `javascript:` anywhere, for the benefit of legacy engines.
-const UNSAFE_STYLE_VALUE = /(?:url|expression|image|image-set|cross-fade|element|paint|src|attr)\s*\(|[\\!<>{}@;]|\/\*|javascript:/i
+const STRUCTURALLY_UNSAFE_STYLE_VALUE = /[\\\n\r\f<>{}@;]|\/\*|javascript:/i
+
+// Functions that fetch or embed a resource, or run script. Applied to the
+// built-in properties too: no color needs one.
+const RESOURCE_STYLE_FUNCTION = /(?:url|expression|image|image-set|cross-fade|element|paint|src|attr)\s*\(/i
+
+// Only for extension properties. `!`, so content can't outrank the host's own
+// !important rules. var() and env(), because the browser substitutes the host's
+// value after the validator ran, so a validator's shape check doesn't hold.
+// color and background-color keep them: highlights are stored as var() colors.
+const EXTENSION_ONLY_UNSAFE_STYLE_VALUE = /!|(?:var|env)\s*\(/i
 
 export function buildStylePolicy(allowedStyles = []) {
   const policy = new Map()
@@ -75,7 +85,7 @@ export function buildStylePolicy(allowedStyles = []) {
 
     if (!PROPERTY_NAME.test(property) || DEFAULT_ALLOWED_STYLE_PROPERTIES.includes(property)) {
       warn(`ignoring allowed style "${property}": not a property an extension can declare`)
-    } else if (FORBIDDEN_STYLE_PROPERTIES.has(property)) {
+    } else if (FORBIDDEN_STYLE_PROPERTIES.has(property) || FORBIDDEN_STYLE_PROPERTY_PATTERN.test(property)) {
       warn(`ignoring allowed style "${property}": this property is never allowed`)
     } else if (!acceptor) {
       warn(`ignoring allowed style "${property}": declare its accepted values or a validate function`)
@@ -88,16 +98,49 @@ export function buildStylePolicy(allowedStyles = []) {
   return policy
 }
 
+// For color and background-color, whose values are otherwise kept as they come.
+export function isSafeBuiltInStyleValue(value) {
+  return isStructurallySafe(String(value))
+}
+
 export function isAllowedStyle(policy, property, value) {
   const acceptors = policy?.get(property)
   if (!acceptors) return false
 
   const candidate = String(value).trim()
-  if (candidate === "" || UNSAFE_STYLE_VALUE.test(candidate)) return false
+  if (candidate === "" || !isStructurallySafe(candidate) || EXTENSION_ONLY_UNSAFE_STYLE_VALUE.test(candidate)) return false
 
   return acceptors.some(accepts => accepts(candidate))
 }
 
+function isStructurallySafe(value) {
+  return !STRUCTURALLY_UNSAFE_STYLE_VALUE.test(value) && !RESOURCE_STYLE_FUNCTION.test(value) && isBalanced(value)
+}
+
+// Quotes close, and brackets close in order outside them. No backslash reaches
+// here, so there are no escapes to account for.
+function isBalanced(value) {
+  const closers = { "(": ")", "[": "]" }
+  const expected = []
+  let quote = null
+
+  for (const char of value) {
+    if (quote) {
+      if (char === quote) quote = null
+    } else if (char === "\"" || char === "'") {
+      quote = char
+    } else if (closers[char]) {
+      expected.push(closers[char])
+    } else if (char === ")" || char === "]") {
+      if (expected.pop() !== char) return false
+    }
+  }
+
+  return quote === null && expected.length === 0
+}
+
+// A validator is called during sanitizing and must be pure: in particular it must
+// not sanitize anything itself, which would swap the policy in use mid-call.
 function acceptorFor(declaration) {
   if (Array.isArray(declaration?.values) && declaration.values.length) {
     const values = new Set(declaration.values.map(value => String(value).trim().toLowerCase()))

@@ -1,7 +1,7 @@
 import createDOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 import { URI_BEARING_ATTACHMENT_ATTRIBUTES, allowedUriRegexp, attachmentUriFilterHook } from "../helpers/sanitization_helper"
-import { DEFAULT_ALLOWED_STYLE_PROPERTIES, buildStylePolicy, isAllowedStyle } from "./style_policy"
+import { DEFAULT_ALLOWED_STYLE_PROPERTIES, buildStylePolicy, isAllowedStyle, isSafeBuiltInStyleValue } from "./style_policy"
 
 // Lexxy's own DOMPurify instance, deliberately not the shared default export.
 //
@@ -111,13 +111,16 @@ const EXTENSION_STYLE_POLICY = "LEXXY_EXTENSION_STYLE_POLICY"
 
 function styleFilterHook(_currentNode, hookEvent, config) {
   if (hookEvent.attrName === "style" && hookEvent.attrValue) {
-    const styles = { ...getStyleObjectFromCSS(hookEvent.attrValue) }
+    // Line breaks become spaces before parsing: Lexical runs a string across one
+    // and the browser doesn't, and the values serialized back must read the same
+    // to both. See config/style_policy.
+    const styles = { ...getStyleObjectFromCSS(hookEvent.attrValue.replace(/[\n\r\f]/g, " ")) }
     const extensionStylePolicy = config?.[EXTENSION_STYLE_POLICY]
     const sanitizedStyles = { }
 
     for (const property in styles) {
       if (DEFAULT_ALLOWED_STYLE_PROPERTIES.includes(property)) {
-        sanitizedStyles[property] = styles[property]
+        if (isSafeBuiltInStyleValue(styles[property])) sanitizedStyles[property] = styles[property]
       } else if (isAllowedStyle(extensionStylePolicy, property.toLowerCase(), styles[property])) {
         sanitizedStyles[property.toLowerCase()] = styles[property].trim()
       }

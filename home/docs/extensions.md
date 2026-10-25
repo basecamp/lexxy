@@ -72,10 +72,12 @@ get allowedStyles() {
 }
 ```
 
-A property without values or a validator is ignored: allowing a property by name would let stored content give it any value, and the value is where CSS attacks live. Some protections apply whatever you declare:
+A property without values or a validator is ignored: allowing a property by name would let stored content give it any value, and the value is where CSS attacks live. A validator must return `true` exactly, and must be pure: it runs during sanitizing. Some protections apply whatever you declare:
 
-- Values that load a resource or run script are always dropped — `url()`, `image-set()`, `expression()` and the like — as are values containing backslash escapes, comments or `!important`.
-- Properties that are dangerous with any value — those that load images or other resources (`background`, `background-image`, `list-style-image`, `content`, …), `position`, and `behavior`/`-moz-binding` — can't be declared at all. Neither can custom properties (`--x`), or `color` and `background-color`, which Lexxy manages itself.
+- Values that load a resource or run script are always dropped (`url()`, `image-set()`, `expression()` and the like), as are values with backslash escapes, comments, unbalanced quotes or brackets, `!important`, or `var()`/`env()`.
+- Properties that load images or other resources (`background`, anything with `image`, `mask` or `filter` in its name, `content`, `cursor`, `list-style`, …), `position`, and `behavior`/`-moz-binding` can't be declared at all. Neither can custom properties (`--x`), or `color` and `background-color`, which Lexxy manages itself.
+
+That isn't a guarantee about layout: properties such as `transform`, margins or `z-index` can move content over the rest of the page, so only open layout properties with values you have checked.
 
 Declared styles apply only to editors where your extension is enabled; other editors on the page keep filtering them out.
 
