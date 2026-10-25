@@ -61,7 +61,8 @@ function $removeUnneededProvisionalParagraphs(rootNode) {
 // made in response to a selection change joins the update that moved it (Lexical
 // 0.52), so it would leak into history or merge with the triggering edit.
 function $syncProvisionalParagraphsVisibility(editor) {
-  for (const provisionalParagraph of $getAllProvisionalParagraphs()) {
+  // Only direct root children are kept; nested ones are removed by the transforms
+  for (const provisionalParagraph of $getRoot().getChildren().filter($isProvisionalParagraphNode)) {
     const dom = editor.getElementByKey(provisionalParagraph.getKey())
     dom?.classList.toggle("hidden", !provisionalParagraph.isSelected())
   }

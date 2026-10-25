@@ -5,7 +5,7 @@ import {
   SELECTION_CHANGE_COMMAND, SKIP_DOM_SELECTION_TAG, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
-import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
+import { $getListDepth, $isListItemNode, ListItemNode, ListNode } from "@lexical/list"
 import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
 import { isSelectionHighlighted } from "../helpers/format_helper"
@@ -347,9 +347,7 @@ export default class Selection {
       this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, handlingDefault(this.#selectNextTopLevelNode.bind(this)), COMMAND_PRIORITY_LOW),
 
       this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW),
-      // Since 0.52, the list extension collapses a list item on Backspace before
-      // DELETE_CHARACTER_COMMAND is dispatched, so empty items are handled here first.
-      this.editor.registerCommand(KEY_BACKSPACE_COMMAND, this.#removeEmptyListItemOnBackspace.bind(this), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_BACKSPACE_COMMAND, this.#handleBackspaceAtListItemStart.bind(this), COMMAND_PRIORITY_LOW),
 
       // DOM work: runs after reconciliation, so newly created nodes have elements
       this.editor.registerUpdateListener(({ editorState }) => {
@@ -613,11 +611,36 @@ export default class Selection {
     }
   }
 
-  #removeEmptyListItemOnBackspace(event) {
-    if (!this.#removeEmptyListItem()) return false
+  // Since Lexical 0.48, the list extension handles Backspace at the start of a
+  // list item itself, before DELETE_CHARACTER_COMMAND is dispatched: it turns the
+  // item into a paragraph and splits the list around it. Keep Lexxy's behavior:
+  // nested items outdent, empty items are removed as below, and a top-level item
+  // that follows another one merges into it, as plain deletion does.
+  #handleBackspaceAtListItemStart(event) {
+    const listItem = this.#listItemWithCaretAtStart()
+    if (!listItem || listItem.getIndent() > 0) return false
 
-    event?.preventDefault()
-    return true
+    if (this.#removeEmptyListItem()) {
+      event?.preventDefault()
+      return true
+    } else if (listItem.getPreviousSibling()) {
+      event?.preventDefault()
+      return this.editor.dispatchCommand(DELETE_CHARACTER_COMMAND, true)
+    } else {
+      return false
+    }
+  }
+
+  #listItemWithCaretAtStart() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.offset !== 0) return null
+
+    let node = selection.anchor.getNode()
+    while (node && !$isListItemNode(node)) {
+      if (node.getPreviousSibling()) return null
+      node = node.getParent()
+    }
+    return node
   }
 
   #selectDecoratorNodeBeforeDeletion(backwards) {

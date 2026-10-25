@@ -1,4 +1,4 @@
-import { $createParagraphNode, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isRangeSelection, $isRootOrShadowRoot } from "lexical"
+import { $createParagraphNode, $isDecoratorNode, $isElementNode, $isLineBreakNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode } from "lexical"
 import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import BaseNodeInserter from "./base_node_inserter"
 
@@ -45,7 +45,7 @@ export default class NestedBlockNodeInserter extends BaseNodeInserter {
       anchor = block
     }
 
-    const lastInsertedBlock = $isElementNode(lastToInsert) ? $nearestBlock(nodeToSelect) : null
+    const lastInsertedBlock = $isLeafBlock(lastToInsert) ? $nearestBlock(nodeToSelect) : null
     if (trailingBlock && lastInsertedBlock) {
       lastInsertedBlock.append(...trailingBlock.getChildren())
       trailingBlock.remove()
@@ -68,9 +68,17 @@ function $isBlockNode(node) {
   return ($isElementNode(node) || $isDecoratorNode(node)) && !node.isInline()
 }
 
+// A block holding inline content, such as a paragraph or a heading, but not a
+// list, table or quote
+function $isLeafBlock(node) {
+  if (!$isElementNode(node) || node.isInline() || $isRootOrShadowRoot(node)) return false
+
+  const firstChild = node.getFirstChild()
+  return firstChild === null || $isTextNode(firstChild) || $isLineBreakNode(firstChild) || firstChild.isInline()
+}
+
 function $isMergeable(node, targetBlock) {
-  return $isElementNode(node) && $isBlockNode(node) && !node.isEmpty() &&
-    (!targetBlock.isEmpty() || targetBlock.canMergeWhenEmpty())
+  return $isLeafBlock(node) && !node.isEmpty() && (!targetBlock.isEmpty() || targetBlock.canMergeWhenEmpty())
 }
 
 // Consecutive inline nodes become one paragraph, so every inserted node is a block.
