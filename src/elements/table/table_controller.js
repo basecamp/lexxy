@@ -272,25 +272,40 @@ export class TableController {
   }
 
   #deleteRowAndSelectNextNode() {
+    if (this.tableRows?.length === 1) {
+      this.#removeTableAndSelectNextParagraph()
+      return
+    }
+
     const tableNode = this.currentTableNode
-    const [ parent, index, previous, next ] = this.editor.getEditorState().read(() => [
-      tableNode?.getParent(), tableNode?.getIndexWithinParent(), tableNode?.getPreviousSibling(), tableNode?.getNextSibling()
-    ])
     this.executeTableCommand({ action: "delete", childType: "row" })
 
     this.editor.update(() => {
-      if ($isParagraphNode(next) && !$isProvisionalParagraphNode(next) && next.isAttached()) {
+      const next = tableNode?.getNextSibling()
+      if ($isParagraphNode(next)) {
         next.selectStart()
       } else {
         const newParagraph = $createParagraphNode()
-        if (tableNode?.isAttached()) {
-          tableNode.insertAfter(newParagraph)
-        } else if (previous?.isAttached()) {
-          previous.insertAfter(newParagraph)
-        } else {
-          parent.splice(index, 0, [ newParagraph ])
-        }
+        this.currentTableNode.insertAfter(newParagraph)
         newParagraph.selectStart()
+      }
+    })
+  }
+
+  // Deleting a table's only row removes the table, so leave the caret in the
+  // paragraph after it, or in a new paragraph where the table was.
+  #removeTableAndSelectNextParagraph() {
+    const tableNode = this.currentTableNode
+
+    this.editor.update(() => {
+      const next = tableNode.getNextSibling()
+      if ($isParagraphNode(next) && !$isProvisionalParagraphNode(next)) {
+        tableNode.remove()
+        next.selectStart()
+      } else {
+        const paragraph = $createParagraphNode()
+        tableNode.replace(paragraph)
+        paragraph.selectStart()
       }
     })
   }
