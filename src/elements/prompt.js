@@ -344,10 +344,10 @@ export class LexicalPromptElement extends HTMLElement {
     }
   }
 
-  #fitsBetterAbove(popoverRect, lineHeight) {
+  #fitsBetterAbove(popoverRect, fontSize) {
     const { top, bottom } = this.#visibleBounds()
     const overflowsBelow = popoverRect.bottom > bottom
-    const roomAbove = popoverRect.top - lineHeight - top
+    const roomAbove = popoverRect.top - fontSize - top
     const roomBelow = bottom - popoverRect.top
 
     return overflowsBelow && roomAbove > roomBelow
