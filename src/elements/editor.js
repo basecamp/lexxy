@@ -430,7 +430,6 @@ export class LexicalEditorElement extends HTMLElement {
     this.#registerFileAcceptFilter()
     this.#attachDebugHooks()
     this.#attachToolbar()
-    this.#resetBeforeTurboCaches()
     this.#observeAriaAttributes()
 
     this.#setInternalFormValue(this.value, { suppressEvent: true })
@@ -448,6 +447,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #createEditor() {
+    this.#removeCachedEditorContentElement()
     this.editorContentElement ||= this.#createEditorContentElement()
     this.appendChild(this.editorContentElement)
 
@@ -496,6 +496,12 @@ export class LexicalEditorElement extends HTMLElement {
     }
 
     return nodes
+  }
+
+  // A restored Turbo snapshot carries the content element the cached page had built,
+  // with its stale content and state. Start from a fresh one instead.
+  #removeCachedEditorContentElement() {
+    this.querySelector(":scope > .lexxy-editor__content")?.remove()
   }
 
   #createEditorContentElement() {
@@ -602,18 +608,6 @@ export class LexicalEditorElement extends HTMLElement {
       .clear()
       .selectEnd()
       .insertNodes(this.#parseHtmlIntoLexicalNodes(html, { editor }))
-  }
-
-  #resetBeforeTurboCaches() {
-    this.#listeners.track(
-      registerEventListener(document, "turbo:before-cache", this.#handleTurboBeforeCache)
-    )
-  }
-
-  #handleTurboBeforeCache = (event) => {
-    if (!this.closest("[data-turbo-permanent]")) {
-      this.#reset()
-    }
   }
 
   #synchronizeWithChanges() {
