@@ -1,8 +1,12 @@
-import { afterEach, expect, test } from "vitest"
+import { afterEach, expect, test, vi } from "vitest"
 import { highlightCode, highlightElement } from "../../../../src/helpers/code_highlighting_helper"
 
-afterEach(() => {
+afterEach(async () => {
+  vi.restoreAllMocks()
   document.body.innerHTML = ""
+  // Let the task end, closing highlightCode's time slice, so the next test
+  // starts with a fresh budget.
+  await new Promise(resolve => setTimeout(resolve, 10))
 })
 
 const Prism = window.Prism
@@ -81,39 +85,48 @@ test("highlightCode is idempotent — already-highlighted blocks are skipped", a
   expect(pre.dataset.highlighted).toBe("true")
 })
 
-test("highlightCode yields to the event loop while highlighting every block", async () => {
-  const code = Array.from({ length: 30 }, (_line, index) =>
-    `const value_${index} = compute(${index}, "token string", [ 1, 2, 3 ]) // comment ${index}`
-  ).join("<br>")
+test("highlightCode yields to the event loop while blocks remain", async () => {
+  const blocks = appendBlocks(8)
+  advanceClockPerCall(5)
 
-  for (let index = 0; index < 8; index += 1) {
-    document.body.appendChild(appendPre(`block-${index}`, "javascript", code))
-  }
-
-  // A macrotask queued just before highlighting starts must get a chance to run
-  // before highlightCode resolves. A single synchronous pass would block the
-  // main thread and only let it run after completion.
-  let macrotaskRan = false
+  // A macrotask queued as highlighting starts must run while blocks are still
+  // pending. A single synchronous pass would only let it run after all of them.
+  let highlightedWhenTaskRan = null
   const result = highlightCode()
-  setTimeout(() => { macrotaskRan = true }, 0)
+  setTimeout(() => { highlightedWhenTaskRan = countHighlighted(blocks) }, 0)
 
   expect(typeof result.then).toBe("function")
   await result
 
-  expect(macrotaskRan).toBe(true)
+  expect(highlightedWhenTaskRan).toBeGreaterThan(0)
+  expect(highlightedWhenTaskRan).toBeLessThan(blocks.length)
+  expect(countHighlighted(blocks)).toBe(blocks.length)
+})
 
-  for (const pre of document.querySelectorAll("pre[data-language]")) {
-    expect(pre.dataset.highlighted).toBe("true")
-  }
+test("concurrent highlightCode calls share one time budget", async () => {
+  const roots = Array.from({ length: 10 }, () => {
+    const root = document.createElement("div")
+    appendBlocks(1, root)
+    document.body.appendChild(root)
+    return root
+  })
+  const blocks = [ ...document.querySelectorAll("pre[data-language]") ]
+  advanceClockPerCall(5)
+
+  // Like one Stimulus controller per rendered rich text body, all connecting in
+  // the same task. Separate loops would each spend a chunk before yielding.
+  const results = roots.map(root => highlightCode(root))
+  const highlightedSynchronously = countHighlighted(blocks)
+
+  await Promise.all(results)
+
+  expect(highlightedSynchronously).toBeLessThanOrEqual(2)
+  expect(countHighlighted(blocks)).toBe(blocks.length)
 })
 
 test("highlightCode skips blocks removed from the root while it yields", async () => {
-  const code = Array.from({ length: 30 }, (_line, index) =>
-    `const value_${index} = compute(${index}, "token string", [ 1, 2, 3 ]) // comment ${index}`
-  ).join("<br>")
-
-  const blocks = Array.from({ length: 40 }, (_block, index) => appendPre(`block-${index}`, "javascript", code))
-  blocks.forEach(pre => document.body.appendChild(pre))
+  const blocks = appendBlocks(8)
+  advanceClockPerCall(5)
 
   const result = highlightCode()
   const removed = blocks.filter(pre => pre.dataset.highlighted !== "true")
@@ -121,9 +134,32 @@ test("highlightCode skips blocks removed from the root while it yields", async (
   await result
 
   expect(removed.length).toBeGreaterThan(0)
-  for (const pre of removed) {
-    expect(pre.dataset.highlighted).toBeUndefined()
-  }
+  expect(countHighlighted(removed)).toBe(0)
+})
+
+test("highlightCode stops on a connected root that is detached while it yields", async () => {
+  const root = document.createElement("div")
+  const blocks = appendBlocks(8, root)
+  document.body.appendChild(root)
+  advanceClockPerCall(5)
+
+  const result = highlightCode(root)
+  const pending = blocks.filter(pre => pre.dataset.highlighted !== "true")
+  root.remove()
+  await result
+
+  expect(pending.length).toBeGreaterThan(0)
+  expect(countHighlighted(pending)).toBe(0)
+})
+
+test("highlightCode highlights a root that was never connected", async () => {
+  const root = document.createElement("div")
+  const blocks = appendBlocks(8, root)
+  advanceClockPerCall(5)
+
+  await highlightCode(root)
+
+  expect(countHighlighted(blocks)).toBe(blocks.length)
 })
 
 test("highlightElement highlights a single pre element", () => {
@@ -194,4 +230,20 @@ function appendPre(id, language, code) {
   pre.setAttribute("data-language", language)
   pre.innerHTML = code
   return pre
+}
+
+function appendBlocks(count, parent = document.body) {
+  const code = Array.from({ length: 5 }, (_line, index) => `const value_${index} = compute(${index})`).join("<br>")
+  return Array.from({ length: count }, (_block, index) => parent.appendChild(appendPre(`block-${index}`, "javascript", code)))
+}
+
+function countHighlighted(blocks) {
+  return blocks.filter(pre => pre.dataset.highlighted === "true").length
+}
+
+// Makes every block cost `ms` of budget, so chunk boundaries don't depend on
+// how fast the machine running the tests is.
+function advanceClockPerCall(ms) {
+  let now = 0
+  vi.spyOn(performance, "now").mockImplementation(() => (now += ms))
 }

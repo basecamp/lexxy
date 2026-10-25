@@ -6,23 +6,72 @@ import Prism from "../config/prism"
 // them so the browser can paint and handle input while highlighting continues.
 const CHUNK_TIME_BUDGET_MS = 8
 
-export async function highlightCode(root = document) {
-  const elements = root.querySelectorAll("pre[data-language]:not([data-highlighted])")
+// Every call feeds one shared queue drained by a single loop, and the budget
+// covers the whole task rather than one call. Host apps typically call
+// highlightCode() from a Stimulus controller on each rendered rich text body,
+// and many of those connect in the same task: if each call got its own budget,
+// they would add up to the long task we are avoiding.
+const queue = new Map()
+let draining = false
+let drained = Promise.resolve()
+let slice = null
 
-  let chunkStart = performance.now()
-  for (const preElement of elements) {
-    // A block can leave the root between chunks, e.g. when Turbo swaps the
-    // page mid-run. Skip it rather than spend main-thread time on a page that
-    // is gone.
-    if (!root.contains(preElement)) continue
-
-    highlightElement(preElement)
-
-    if (performance.now() - chunkStart >= CHUNK_TIME_BUDGET_MS) {
-      await yieldToEventLoop()
-      chunkStart = performance.now()
+export function highlightCode(root = document) {
+  for (const preElement of root.querySelectorAll("pre[data-language]:not([data-highlighted])")) {
+    if (!queue.has(preElement)) {
+      queue.set(preElement, { root, rootWasConnected: root.isConnected })
     }
   }
+
+  // A running loop picks up the new entries: Map iteration visits entries
+  // added while it is underway.
+  if (!draining) drained = drainQueue()
+  return drained
+}
+
+async function drainQueue() {
+  draining = true
+  try {
+    for (const [ preElement, entry ] of queue) {
+      if (sliceExhausted()) {
+        await yieldToEventLoop()
+        startSlice()
+      }
+
+      queue.delete(preElement)
+      if (hasLeftRoot(preElement, entry)) continue
+
+      highlightElement(preElement)
+    }
+  } finally {
+    draining = false
+  }
+}
+
+// The first block highlighted in a task opens a slice that lasts until the
+// task ends, so a small thread still highlights before the first paint.
+function sliceExhausted() {
+  if (!slice) {
+    startSlice()
+    return false
+  }
+  return performance.now() - slice.start >= CHUNK_TIME_BUDGET_MS
+}
+
+function startSlice() {
+  const current = { start: performance.now() }
+  slice = current
+  afterCurrentTask(() => {
+    if (slice === current) slice = null
+  })
+}
+
+// A block can leave its root between chunks, e.g. when Turbo swaps the page
+// mid-run. Skip it rather than spend main-thread time on a page that is gone.
+// A root that was detached from the start (highlighting a fragment before
+// inserting it) only needs to still contain the block.
+function hasLeftRoot(preElement, { root, rootWasConnected }) {
+  return !root.contains(preElement) || (rootWasConnected && !preElement.isConnected)
 }
 
 // MessageChannel posts a clean macrotask without setTimeout's 4ms clamp,
@@ -31,11 +80,16 @@ export async function highlightCode(root = document) {
 // keeps highlighting fast but barely lets frames through. A plain macrotask
 // keeps input and scrolling responsive on heavy threads, which is the point.
 function yieldToEventLoop() {
-  return new Promise((resolve) => {
-    const channel = new MessageChannel()
-    channel.port1.onmessage = () => resolve()
-    channel.port2.postMessage(undefined)
-  })
+  return new Promise(afterCurrentTask)
+}
+
+function afterCurrentTask(callback) {
+  const channel = new MessageChannel()
+  channel.port1.onmessage = () => {
+    channel.port1.close()
+    callback()
+  }
+  channel.port2.postMessage(undefined)
 }
 
 export function highlightElement(preElement) {
