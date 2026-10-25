@@ -36,4 +36,52 @@ test.describe("Paste — Markdown", () => {
     await editor.paste("Hello **there**")
     await assertEditorHtml(editor, "<p>Hello **there**</p>")
   })
+
+  test("keep blank lines between paragraphs in a blockquote as separate paragraphs", async ({
+    page,
+    editor,
+  }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.paste(
+      "> First paragraph of the quote.\n>\n> Second paragraph of the quote.",
+    )
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("blockquote")).toHaveCount(1)
+      await expect(content.locator("blockquote > p")).toHaveCount(2)
+      await expect(content.locator("blockquote > p").nth(0)).toHaveText(
+        "First paragraph of the quote.",
+      )
+      await expect(content.locator("blockquote > p").nth(1)).toHaveText(
+        "Second paragraph of the quote.",
+      )
+    })
+  })
+
+  test("addBlockSpacing keeps the gap between paragraphs inside a blockquote", async ({
+    page,
+    editor,
+  }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await page.evaluate(() => {
+      document
+        .querySelector("lexxy-editor")
+        .addEventListener("lexxy:insert-markdown", (event) => {
+          event.detail.addBlockSpacing()
+        })
+    })
+
+    await editor.paste(
+      "> First paragraph of the quote.\n>\n> Second paragraph of the quote.",
+    )
+
+    await assertEditorHtml(
+      editor,
+      "<blockquote><p>First paragraph of the quote.</p><p><br></p><p>Second paragraph of the quote.</p></blockquote>",
+    )
+  })
 })

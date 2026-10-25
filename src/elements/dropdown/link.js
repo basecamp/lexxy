@@ -1,4 +1,3 @@
-import { LinkNode } from "@lexical/link"
 import { ToolbarDropdown } from "../toolbar_dropdown"
 import { registerEventListener } from "../../helpers/listener_helper"
 
@@ -39,6 +38,8 @@ export class LinkDropdown extends ToolbarDropdown {
   }
 
   #handleLink = () => {
+    this.input.value = this.input.value.trim()
+
     if (!this.input.checkValidity()) {
       this.input.reportValidity()
       return
@@ -54,10 +55,7 @@ export class LinkDropdown extends ToolbarDropdown {
   }
 
   get #selectedLinkUrl() {
-    return this.editor.getEditorState().read(() => {
-      const linkNode = this.editorElement.selection.nearestNodeOfType(LinkNode)
-      return linkNode?.getURL() ?? ""
-    })
+    return this.editor.getEditorState().read(() => this.editorElement.selection.linkUrl ?? "")
   }
 }
 

@@ -30,6 +30,17 @@ test.describe("Paste — Plain text paths and spacing", () => {
     expect(await editor.plainTextValue()).toBe(path)
   })
 
+  test("preserves leading backslashes when a UNC path spans multiple lines", async ({ editor }) => {
+    const path = "\\\\Arina-alvand\\alvand\\03 - ENGINEERING\n\\00. Input\\2026-06-17"
+
+    await editor.paste(path)
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("a")).toHaveCount(0)
+    })
+    expect(await editor.plainTextValue()).toBe(path)
+  })
+
   test("preserves runs of consecutive spaces in plain text", async ({ editor }) => {
     const text = "path  with    multiple   spaces"
 

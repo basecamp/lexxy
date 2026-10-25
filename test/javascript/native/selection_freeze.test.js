@@ -39,6 +39,19 @@ describe("selection freeze and thaw", () => {
     expect(editorElement.adapter.frozenLinkKey).not.toBeNull()
   })
 
+  test("freeze captures the link node key when the caret sits at its trailing edge", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p>Hello <a href='https://example.com'>everyone</a> bye</p>")
+    editorElement.editor.update(() => {
+      $getRoot().getFirstChild().getLastChild().select(0, 0)
+    }, { discrete: true })
+
+    editorElement.freezeSelection()
+
+    const linkKey = editorElement.editor.getEditorState().read(() => $getRoot().getFirstChild().getChildAtIndex(1).getKey())
+    expect(editorElement.adapter.frozenLinkKey).toBe(linkKey)
+  })
+
   test("freeze sets frozenLinkKey to null when not inside a link", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p>plain text</p>")
