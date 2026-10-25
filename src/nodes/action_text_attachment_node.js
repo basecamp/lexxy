@@ -255,9 +255,9 @@ export class ActionTextAttachmentNode extends DecoratorNode {
     })
   }
 
-  replaceAndRewriteHistory(node) {
+  replaceAndRewriteHistory(node, replaceInHistory) {
     this.editor.dispatchCommand(REWRITE_HISTORY_COMMAND, {
-      [this.getKey()]: { replace: node }
+      [this.getKey()]: { replace: node, replaceInHistory }
     })
   }
 

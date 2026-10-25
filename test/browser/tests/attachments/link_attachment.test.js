@@ -171,6 +171,12 @@ test.describe("Linking attachments", () => {
 
     await expect(page.locator("figure.attachment img")).toHaveAttribute("src", /\/rails\/active_storage\/blobs\//, { timeout: 10_000 })
     await expect.poll(() => editor.value()).toContain('href="https://example.com"')
+
+    await page.getByRole("button", { name: "Undo" }).click()
+    await expect.poll(() => editor.value()).not.toContain("href")
+
+    await page.getByRole("button", { name: "Redo" }).click()
+    await expect.poll(() => editor.value()).toContain('href="https://example.com"')
   })
 })
 

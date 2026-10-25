@@ -232,14 +232,14 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   $showUploadedAttachment(blob) {
     const previewSrc = this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
 
-    const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
-    this.replaceAndRewriteHistory(replacementNode)
+    const replacementNode = this.#toActionTextAttachmentNodeWith(this.getLatest(), blob, previewSrc)
+    this.replaceAndRewriteHistory(replacementNode, (uploadNode) => this.#toActionTextAttachmentNodeWith(uploadNode, blob, previewSrc))
 
     return replacementNode.getKey()
   }
 
-  #toActionTextAttachmentNodeWith(blob, previewSrc) {
-    const conversion = new AttachmentNodeConversion(this.getLatest(), blob, previewSrc)
+  #toActionTextAttachmentNodeWith(uploadNode, blob, previewSrc) {
+    const conversion = new AttachmentNodeConversion(uploadNode, blob, previewSrc)
     return conversion.toAttachmentNode()
   }
 
