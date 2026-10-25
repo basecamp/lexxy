@@ -36,4 +36,14 @@ test.describe("Code block trailing newline", () => {
       "<pre data-language=\"plain\" data-highlight-language=\"plain\">line one<br>line two</pre>",
     )
   })
+
+  test("importing a pre with a real blank last line keeps it", async ({ editor }) => {
+    await editor.setValue("<pre data-language=\"plain\">line one\n<br></pre>")
+    await editor.flush()
+
+    await assertEditorHtml(
+      editor,
+      "<pre data-language=\"plain\" data-highlight-language=\"plain\">line one<br></pre>",
+    )
+  })
 })

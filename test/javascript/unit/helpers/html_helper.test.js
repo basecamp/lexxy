@@ -101,6 +101,12 @@ test("strips the trailing newline from the last text node inside nested markup",
   expect(bodyHtml(doc)).toBe("<pre><code>first\n<span>last</span></code></pre>")
 })
 
+test("keeps a newline followed by a line break, which is a real blank line", () => {
+  const doc = parseHtml("<pre>content\n<br></pre>")
+  stripTrailingCodeBlockNewlines(doc)
+  expect(bodyHtml(doc)).toBe("<pre>content\n<br></pre>")
+})
+
 test("handles empty code blocks", () => {
   const doc = parseHtml("<pre></pre>")
   stripTrailingCodeBlockNewlines(doc)
