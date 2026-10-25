@@ -64,8 +64,8 @@ export class HeadingDropdown extends HTMLElement {
   updateActiveHeading(tag) {
     this.#headingButtons.forEach(button => {
       const next = (button.dataset.heading === tag).toString()
-      if (button.getAttribute("aria-pressed") !== next) {
-        button.setAttribute("aria-pressed", next)
+      if (button.getAttribute("aria-checked") !== next) {
+        button.setAttribute("aria-checked", next)
       }
     })
   }
@@ -106,22 +106,21 @@ export class HeadingDropdown extends HTMLElement {
     const button = document.createElement("button")
     button.type = "button"
     button.dataset.heading = tag
-    button.dataset.command = HeadingDropdown.commandFor(index)
     button.classList.add("lexxy-heading-button")
     button.name = name
     button.title = label
-    button.setAttribute("role", "menuitem")
+    button.setAttribute("role", "menuitemradio")
     button.innerHTML = `${icon} <span>${label}</span>`
     return button
   }
 
   #registerButtonHandlers() {
-    this.#headingButtons.forEach(button => {
+    this.#headingButtons.forEach((button, index) => {
       this.#listeners.track(registerEventListener(button, "click", (event) => {
         if (!this.#editor) return
 
         event.preventDefault()
-        this.#editor.dispatchCommand(button.dataset.command, button.dataset.heading)
+        this.#editor.dispatchCommand(HeadingDropdown.commandFor(index), button.dataset.heading)
         this.#editor.focus()
       }))
     })

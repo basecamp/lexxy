@@ -38,10 +38,10 @@
     <% if params[:toolbar_external] %>
       <lexxy-toolbar id="external_toolbar">
         <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="Bold">bold</button>
-        <details class="lexxy-editor__toolbar-overflow">
-          <summary class="lexxy-editor__toolbar-button" aria-label="Show more toolbar buttons">•••</summary>
-          <div class="lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons"></div>
-        </details>
+        <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-overflow">
+          <button class="lexxy-editor__toolbar-button" type="button" data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" aria-label="More options">•••</button>
+          <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-overflow-menu" aria-label="More options" hidden></div>
+        </lexxy-toolbar-dropdown>
       </lexxy-toolbar>
     <% end %>
 

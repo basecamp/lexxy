@@ -28,6 +28,41 @@ test.describe("Code highlighting", () => {
   })
 })
 
+test.describe("Code block links survive editing", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await page.waitForSelector("lexxy-toolbar[connected]")
+  })
+
+  test("a link survives typing elsewhere in the code block", async ({ editor }) => {
+    await editor.setValue('<pre data-language="plain"><code>see <a href="https://example.com/">the docs</a> here</code></pre>')
+    await editor.flush()
+
+    await editor.select("here")
+    await editor.send("there")
+    await editor.flush()
+
+    const savedHtml = await editor.value()
+    expect(savedHtml).toContain("see ")
+    expect(savedHtml).toContain("there")
+    expect(savedHtml).toMatch(/<a href="https:\/\/example\.com\/"[^>]*>the docs<\/a>/)
+  })
+
+  test("a link survives typing inside highlighted javascript code", async ({ editor }) => {
+    await editor.setValue('<pre data-language="javascript"><code>const a = 1\n<a href="https://example.com/">docs</a></code></pre>')
+    await editor.flush()
+
+    await editor.select("1")
+    await editor.send("2")
+    await editor.flush()
+
+    const savedHtml = await editor.value()
+    expect(savedHtml).toContain("const a = 2")
+    expect(savedHtml).toMatch(/<a href="https:\/\/example\.com\/"[^>]*>docs<\/a>/)
+  })
+})
+
 test.describe("Code block color highlights survive editing", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/")
