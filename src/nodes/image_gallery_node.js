@@ -128,7 +128,7 @@ export class ImageGalleryNode extends ElementNode {
   replaceWithSingularChild() {
     if (this.#hasSingularChild) {
       const child = this.getFirstChild()
-      return this.replace(child)
+      return this.replace($makeSafeForRoot(child))
     }
   }
 

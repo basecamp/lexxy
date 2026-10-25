@@ -66,3 +66,35 @@ test.describe("Reconnect with extension toolbar buttons", () => {
     await expect(page.locator("lexxy-toolbar button[name='custom-extension-button']")).toHaveCount(1)
   })
 })
+
+test.describe("Reconnect with extension dispose lifecycle", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/extension-dispose.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+  })
+
+  test("extension dispose() removes toolbar listeners across reconnect", async ({ page, editor }) => {
+    const ping = () => page.evaluate(() => {
+      document.querySelector("lexxy-toolbar").dispatchEvent(new CustomEvent("lexxy-test-ping"))
+    })
+    const pingCount = () => page.evaluate(() => window.__lexxyDisposeTest_pingCount || 0)
+    const disposeCount = () => page.evaluate(() => window.__lexxyDisposeTest_disposeCount || 0)
+
+    await ping()
+    expect(await pingCount()).toBe(1)
+
+    await page.evaluate(() => {
+      const el = document.querySelector("lexxy-editor")
+      const parent = el.parentElement
+      parent.removeChild(el)
+      parent.appendChild(el)
+    })
+
+    await editor.waitForConnected()
+
+    expect(await disposeCount()).toBe(1)
+
+    await ping()
+    expect(await pingCount()).toBe(2)
+  })
+})

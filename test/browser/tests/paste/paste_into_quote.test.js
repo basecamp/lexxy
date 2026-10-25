@@ -84,4 +84,58 @@ test.describe("Paste into quote", () => {
     // not on a second line after a blank first line
     await assertEditorHtml(editor, "<blockquote><p>A copied sentence</p></blockquote>")
   })
+
+  test("pasting multi-line content into a quote started via the markdown shortcut keeps every line inside the quote", async ({
+    page,
+    editor,
+  }) => {
+    await page.goto("/attachments.html")
+    await editor.waitForConnected()
+
+    // Start the quote via the markdown shortcut (`>` + space).
+    // This path used to leave a QuoteNode with no ParagraphNode child,
+    // unlike the toolbar button which wraps an existing paragraph.
+    await editor.click()
+    await editor.send("> ")
+    // Wait for the QuoteNode transform to add the <p> child before pasting,
+    // otherwise the paste can race the transform and escape the quote.
+    await expect
+      .poll(async () => {
+        await editor.flush()
+        return await editor.value()
+      })
+      .toBe("<blockquote><p><br></p></blockquote>")
+
+    await editor.paste("First paragraph\nSecond paragraph", {
+      html: "<p>First paragraph</p><p>Second paragraph</p>",
+    })
+    await editor.flush()
+
+    await assertEditorHtml(
+      editor,
+      "<blockquote><p>First paragraph</p><p>Second paragraph</p></blockquote>",
+    )
+  })
+
+  test("the QuoteNode transform does not re-wrap toolbar-button quote children", async ({
+    page,
+    editor,
+  }) => {
+    await page.goto("/attachments.html")
+    await editor.waitForConnected()
+
+    await editor.click()
+    await page.getByRole("button", { name: "Quote" }).click()
+    await editor.flush()
+
+    await editor.paste("First paragraph\nSecond paragraph", {
+      html: "<p>First paragraph</p><p>Second paragraph</p>",
+    })
+    await editor.flush()
+
+    await assertEditorHtml(
+      editor,
+      "<blockquote><p>First paragraph</p><p>Second paragraph</p></blockquote>",
+    )
+  })
 })

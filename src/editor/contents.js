@@ -1,23 +1,24 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $hasUpdateTag,
-  $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
-  HISTORY_MERGE_TAG, PASTE_TAG
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
+  HISTORY_MERGE_TAG, PASTE_TAG,
+  SELECTION_INSERT_CLIPBOARD_NODES_COMMAND
 } from "lexical"
 
-import { $generateFilteredNodesFromDOM } from "../helpers/attachment_filter_helper"
 import { $createCodeNode, $isCodeNode } from "@lexical/code"
 import { $createHeadingNode, $createQuoteNode, $isQuoteNode } from "@lexical/rich-text"
-import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
+import { $createListItemNode, $createListNode, $isListNode, INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { $createLinkNode, $toggleLink } from "@lexical/link"
-import { dispatch, parseHtml } from "../helpers/html_helper"
+import { parseHtml } from "../helpers/html_helper"
 import { $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
-import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
-import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
+import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
+import { $findMatchingParent, $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
-import { $isShadowRoot, $splitParagraphsAtLineBreakBoundaries } from "../helpers/lexical_helper"
+import PastedContentFormatter from "./contents/pasted_content_formatter"
+import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -37,34 +38,40 @@ export default class Contents {
   }
 
   insertDOM(doc, { tag } = {}) {
-    this.#unwrapPlaceholderAnchors(doc)
-
     this.editor.update(() => {
-      if ($hasUpdateTag(PASTE_TAG)) this.#stripTableCellColorStyles(doc)
+      if ($hasUpdateTag(PASTE_TAG)) this.#formatPastedDOM(doc)
 
-      const nodes = $generateFilteredNodesFromDOM(this.editorElement, doc)
-      if (!this.#insertUploadNodes(nodes)) {
-        this.insertAtCursor(...nodes)
+      const nodes = this.editorElement.$generateNodesFromDOM(doc)
+
+      if (!$hasUpdateTag(PASTE_TAG) || !this.#dispatchPastedNodesCommand(nodes)) {
+        this.#insertUploadNodes(nodes) || this.insertAtCursor(...nodes)
       }
     }, { tag })
   }
 
+  insertText(text, { tag } = {}) {
+    this.editor.update(() => {
+      const paragraph = $createParagraphNode()
+      text.split(/\r\n|\r|\n/).forEach((line, index) => {
+        if (index > 0) paragraph.append($createLineBreakNode())
+        paragraph.append($createTextNode(line))
+      })
+      this.insertAtCursor(paragraph)
+    }, { tag })
+  }
+
   insertAtCursor(...nodes) {
-    const selection = $getSelection() ?? $getRoot().selectEnd()
+    const selection = this.#insertableSelection()
     const inserter = NodeInserter.for(selection)
 
     inserter.insertNodes(nodes)
-  }
-
-  insertAtCursorEnsuringLineBelow(node) {
-    this.insertAtCursor(node)
-    this.#insertLineBelowIfLastNode(node)
   }
 
   applyParagraphFormat() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
+    $expandSelectionToLineBreaksAndSplitAtEdges(selection, (node) => $getNearestBlockElementAncestorOrThrow(node))
     $setBlocksType(selection, () => $createParagraphNode())
   }
 
@@ -72,17 +79,16 @@ export default class Contents {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
+    $expandSelectionToLineBreaksAndSplitAtEdges(selection)
     $setBlocksType(selection, () => $createHeadingNode(tag))
   }
 
   applyUnorderedListFormat() {
-    this.#splitParagraphsAtLineBreaksUnlessInsideList()
-    this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
+    this.#applyListFormat("bullet", INSERT_UNORDERED_LIST_COMMAND)
   }
 
   applyOrderedListFormat() {
-    this.#splitParagraphsAtLineBreaksUnlessInsideList()
-    this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
+    this.#applyListFormat("number", INSERT_ORDERED_LIST_COMMAND)
   }
 
   clearFormatting() {
@@ -113,11 +119,18 @@ export default class Contents {
     if (allCode) {
       blockElements.forEach(node => this.#unwrapCodeBlock(node))
     } else {
-      const codeNode = $createCodeNode("plain")
-      blockElements.at(-1).insertAfter(codeNode)
-      codeNode.selectEnd()
-      this.insertAtCursor(...blockElements)
+      $expandSelectionToLineBreaksAndSplitAtEdges(selection)
+      for (const blocks of this.#blockLevelElementRunsInSelection(selection)) {
+        this.#convertToCodeBlock(this.#outermostElements(blocks))
+      }
     }
+  }
+
+  #convertToCodeBlock(elements) {
+    const codeNode = $createCodeNode("plain")
+    elements.at(-1).insertAfter(codeNode)
+    codeNode.selectEnd()
+    this.insertAtCursor(...elements)
   }
 
   toggleBlockquote() {
@@ -135,8 +148,7 @@ export default class Contents {
     } else {
       topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
-      $splitParagraphsAtLineBreakBoundaries(selection)
-
+       $expandSelectionToLineBreaksAndSplitAtEdges(selection)
       const elements = this.#topLevelElementsInSelection(selection)
       if (elements.length === 0) return
 
@@ -167,7 +179,7 @@ export default class Contents {
 
       const selection = $getSelection()
       if ($isRangeSelection(selection)) {
-        selection.insertNodes([ linkNode ])
+        NodeInserter.for(selection).insertNodes([ linkNode ])
         linkNodeKey = linkNode.getKey()
       }
     })
@@ -199,15 +211,56 @@ export default class Contents {
       const fullText = anchorNode.getTextContent()
       const offset = anchor.offset
 
-      const textBeforeCursor = fullText.slice(0, offset)
-
-      const lastIndex = textBeforeCursor.lastIndexOf(string)
+      const lastIndex = fullText.slice(0, offset).lastIndexOf(string)
       if (lastIndex !== -1) {
-        result = textBeforeCursor.slice(lastIndex + string.length)
+        result = fullText.slice(lastIndex + string.length, this.#endOffsetAt(fullText, offset))
       }
     })
 
     return result
+  }
+
+  // The query runs from the trigger up to the next boundary, even when the
+  // cursor sits inside an existing word — inserting "@" before "Jack" must
+  // filter by "Jack" rather than treating the prompt as empty.
+  #endOffsetAt(fullText, cursorOffset) {
+    for (let offset = cursorOffset; offset < fullText.length; offset++) {
+      if (this.#isQueryBoundary(fullText, offset)) {
+        return offset
+      }
+    }
+
+    return fullText.length
+  }
+
+  // Whitespace always ends the query. Punctuation ends it too: with "@" typed
+  // right before a period, extending across it would glue "." onto everything
+  // typed ("B" would query "B."), matching the wrong names or nothing at all.
+  // But punctuation joining two word characters is part of a name — "@" before
+  // "Anne-Marie" or "O'Connor" must keep the whole name as the query, unless
+  // it starts a possessive: "@" before "Joan's" queries "Joan".
+  #isQueryBoundary(fullText, offset) {
+    const character = fullText[offset]
+
+    if (/\s/.test(character)) {
+      return true
+    } else if (/\p{P}/u.test(character)) {
+      return this.#startsPossessive(fullText, offset) || !this.#joinsWordCharacters(fullText, offset)
+    } else {
+      return false
+    }
+  }
+
+  #startsPossessive(fullText, offset) {
+    return /^['’]s(?![\p{L}\p{N}])/u.test(fullText.slice(offset))
+  }
+
+  #joinsWordCharacters(fullText, offset) {
+    return this.#isWordCharacter(fullText[offset - 1]) && this.#isWordCharacter(fullText[offset + 1])
+  }
+
+  #isWordCharacter(character) {
+    return character != null && /[\p{L}\p{N}]/u.test(character)
   }
 
   containsTextBackUntil(string) {
@@ -233,29 +286,34 @@ export default class Contents {
     return result
   }
 
-  replaceTextBackUntil(stringToReplace, replacementNodes) {
+  replaceTextBackUntil(stringToReplace, replacementNodes, { followedBy = "" } = {}) {
     replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ]
 
-    const selection = $getSelection()
     const { anchorNode, offset } = this.#getTextAnchorData()
     if (!anchorNode) return
 
-    const lastIndex = this.#findLastIndexBeforeCursor(anchorNode, offset, stringToReplace)
+    const lastIndex = this.#findReplacementStart(anchorNode, offset, stringToReplace)
     if (lastIndex === -1) return
 
-    this.#performTextReplacement(anchorNode, selection, offset, lastIndex, replacementNodes)
+    this.#performTextReplacement(anchorNode, lastIndex, stringToReplace, replacementNodes, followedBy)
   }
 
-  uploadFiles(files, { selectLast } = {}) {
+  uploadFiles(files, { selectLast, altText } = {}) {
+    if (!this.editorElement) return // Disposed (e.g. on disconnect); a late drop can still land here
+
     if (!this.editorElement.supportsAttachments) {
       console.warn("This editor does not supports attachments (it's configured with [attachments=false])")
       return
     }
-    const validFiles = Array.from(files).filter(this.#shouldUploadFile.bind(this))
+    const validFiles = Array.from(files).filter(file => this.editorElement.acceptsFile(file))
 
     this.editor.update(() => {
       const uploader = Uploader.for(this.editorElement, validFiles)
       uploader.$uploadFiles()
+
+      if (altText && files.length === 1 && uploader.nodes.length === 1) {
+        uploader.nodes[0].getWritable().altText = altText
+      }
 
       if (selectLast && uploader.nodes?.length) {
         const lastNode = uploader.nodes.at(-1)
@@ -265,24 +323,55 @@ export default class Contents {
     })
   }
 
+  $createUploadNode(file) {
+    return $createActionTextAttachmentUploadNode({
+      file,
+      uploadUrl: this.editorElement.directUploadUrl,
+      blobUrlTemplate: this.editorElement.blobUrlTemplate,
+      contentType: file.type,
+    })
+  }
+
+  $createPendingUploadNode(file) {
+    return $createActionTextAttachmentUploadNode({
+      file,
+      uploadUrl: null,
+      blobUrlTemplate: this.editorElement.blobUrlTemplate,
+      contentType: file.type,
+    })
+  }
+
   insertPendingAttachment(file) {
     if (!this.editorElement.supportsAttachments) return null
 
     let nodeKey = null
     this.editor.update(() => {
-      const uploadNode = new ActionTextAttachmentUploadNode({
-        file,
-        uploadUrl: null,
-        blobUrlTemplate: this.editorElement.blobUrlTemplate,
-        editor: this.editor
-      })
+      const uploadNode = this.$createPendingUploadNode(file)
       this.insertAtCursor(uploadNode)
       nodeKey = uploadNode.getKey()
-    }, { tag: HISTORY_MERGE_TAG })
+    })
 
-    if (!nodeKey) return null
+    return nodeKey ? this.#pendingAttachmentHandle(nodeKey) : null
+  }
 
+  insertPendingAttachments(files) {
+    const fileList = Array.from(files)
+    if (!this.editorElement.supportsAttachments || fileList.length === 0) return []
+
+    let nodeKeys = []
+    this.editor.update(() => {
+      const uploader = Uploader.for(this.editorElement, fileList, { pending: true })
+      uploader.$uploadFiles()
+      nodeKeys = (uploader.nodes ?? []).map(node => node.getKey())
+    })
+
+    return nodeKeys.map(nodeKey => this.#pendingAttachmentHandle(nodeKey))
+  }
+
+  #pendingAttachmentHandle(initialNodeKey) {
     const editor = this.editor
+    let nodeKey = initialNodeKey
+
     return {
       setAttributes(blob) {
         editor.update(() => {
@@ -350,6 +439,25 @@ export default class Contents {
     })
   }
 
+  #insertableSelection() {
+    const selection = $getSelection()
+    if ($isNodeSelection(selection) && selection.getNodes().length === 0) {
+      return $getRoot().selectEnd()
+    }
+
+    return selection ?? $getRoot().selectEnd()
+  }
+
+  #formatPastedDOM(doc) {
+    new PastedContentFormatter(doc).format()
+  }
+
+  #dispatchPastedNodesCommand(nodes) {
+    return this.editor.dispatchCommand(SELECTION_INSERT_CLIPBOARD_NODES_COMMAND, {
+      nodes, selection: $getSelection()
+    })
+  }
+
   #insertNodeIfRoot(node) {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return false
@@ -389,60 +497,74 @@ export default class Contents {
     codeNode.remove()
   }
 
+  #applyListFormat(listType, command) {
+    if (this.selection.isInsideBlockQuote) {
+      this.#insertListInsideQuote(listType)
+    } else {
+      this.#splitParagraphsAtLineBreaksUnlessInsideList()
+      this.editor.dispatchCommand(command)
+    }
+  }
+
+  #insertListInsideQuote(listType) {
+    for (const group of $consecutiveSiblingGroups(this.#quotedBlocksInSelection())) {
+      this.#wrapBlocksInList(group, listType)
+    }
+  }
+
+  #quotedBlocksInSelection() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return []
+
+    const blocks = this.#outermostElements(this.#blockLevelElementsInSelection(selection))
+    return blocks.filter((block) => $isQuoteNode(block.getParent()))
+  }
+
+  #wrapBlocksInList(blocks, listType) {
+    const list = $createListNode(listType)
+    blocks[0].insertBefore(list)
+
+    for (const block of blocks) {
+      const listItem = $createListItemNode()
+      if ($isListNode(block)) {
+        listItem.append(...block.getChildren().flatMap((item) => item.getChildren()))
+      } else {
+        listItem.append(...block.getChildren())
+      }
+      list.append(listItem)
+      block.remove()
+    }
+  }
+
   #splitParagraphsAtLineBreaksUnlessInsideList() {
     if (this.selection.isInsideList) return
 
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return
 
-    this.#splitParagraphsAtLineBreaks(selection)
-  }
-
-  #splitParagraphsAtLineBreaks(selection) {
-    const anchorTopLevel = selection.anchor.getNode().getTopLevelElement()
-    const focusTopLevel = selection.focus.getNode().getTopLevelElement()
-    const topLevelElements = this.#topLevelElementsInSelection(selection)
-
-    for (const element of topLevelElements) {
-      if (!$isParagraphNode(element)) continue
-
-      const children = element.getChildren()
-      if (!children.some($isLineBreakNode)) continue
-
-      // Check whether this paragraph needs splitting: skip only if neither
-      // selection endpoint is inside it (meaning it's a middle paragraph
-      // fully between anchor and focus with no partial lines to split off).
-      // Compare top-level elements so endpoints inside nested inline nodes
-      // (e.g. text inside a LinkNode) are still recognized.
-      if (element !== anchorTopLevel && element !== focusTopLevel) continue
-
-      const groups = [ [] ]
-      for (const child of children) {
-        if ($isLineBreakNode(child)) {
-          groups.push([])
-          child.remove()
-        } else {
-          groups[groups.length - 1].push(child)
-        }
-      }
-
-      for (const group of groups) {
-        if (group.length === 0) continue
-        const paragraph = $createParagraphNode()
-        group.forEach(child => paragraph.append(child))
-        element.insertBefore(paragraph)
-      }
-      if (groups.some(group => group.length > 0)) element.remove()
-    }
+    $expandSelectionToLineBreaksAndSplitAtEdges(selection)
+    $splitSelectedParagraphsAtInnerLineBreaks(selection)
   }
 
   #blockLevelElementsInSelection(selection) {
-    const blocks = new Set()
+    return this.#blockLevelElementRunsInSelection(selection).flat()
+  }
+
+  // A block decorator directly under the root (an attachment, a divider) has
+  // no block ancestor. It splits the selection into runs, so converting the
+  // blocks around it leaves it in place.
+  #blockLevelElementRunsInSelection(selection) {
+    const runs = [ new Set() ]
     for (const node of selection.getNodes()) {
-      blocks.add($getNearestBlockElementAncestorOrThrow(node))
+      const block = $findMatchingParent(node, (parent) => $isElementNode(parent) && !parent.isInline())
+      if (block) {
+        runs.at(-1).add(block)
+      } else if (runs.at(-1).size > 0) {
+        runs.push(new Set())
+      }
     }
 
-    return Array.from(blocks)
+    return runs.filter((run) => run.size > 0).map((run) => Array.from(run))
   }
 
   #topLevelElementsInSelection(selection) {
@@ -454,6 +576,18 @@ export default class Contents {
     return Array.from(elements)
   }
 
+  // Selections spanning nested structures (a quote and its inner paragraphs,
+  // nested list items) yield both an element and its ancestor. Converting the
+  // ancestor detaches its whole subtree — including a node freshly inserted
+  // inside it — which can leave the selection on removed nodes (Lexical
+  // invariant #19). The outermost elements already cover their descendants'
+  // text content, so keep only those.
+  #outermostElements(elements) {
+    return elements.filter((element) => {
+      return elements.every((other) => other === element || !element.getParents().includes(other))
+    })
+  }
+
   #insertUploadNodes(nodes) {
     if (nodes.every($isActionTextAttachmentNode)) {
       const uploader = Uploader.for(this.editorElement, [])
@@ -461,17 +595,6 @@ export default class Contents {
       uploader.$insertUploadNodes()
       return true
     }
-  }
-
-  #insertLineBelowIfLastNode(node) {
-    this.editor.update(() => {
-      const nextSibling = node.getNextSibling()
-      if (!nextSibling) {
-        const newParagraph = $createParagraphNode()
-        node.insertAfter(newParagraph)
-        newParagraph.selectStart()
-      }
-    })
   }
 
   #unwrap(node) {
@@ -494,30 +617,6 @@ export default class Contents {
     node.remove()
   }
 
-  // Anchors with non-meaningful hrefs (e.g. "#", "") appear in content copied
-  // from rendered views where mentions and interactive elements are wrapped in
-  // <a href="#"> tags. Unwrap them so their text content pastes as plain text
-  // and real links are preserved.
-  #unwrapPlaceholderAnchors(doc) {
-    for (const anchor of doc.querySelectorAll("a")) {
-      const href = anchor.getAttribute("href") || ""
-      if (href === "" || href === "#") {
-        anchor.replaceWith(...anchor.childNodes)
-      }
-    }
-  }
-
-  // Table cells copied from a page inherit the source theme's inline color
-  // styles (e.g. dark-mode backgrounds). Strip them so pasted tables adopt
-  // the current theme instead of carrying stale colors.
-  #stripTableCellColorStyles(doc) {
-    for (const cell of doc.querySelectorAll("td, th")) {
-      cell.style.removeProperty("background-color")
-      cell.style.removeProperty("background")
-      cell.style.removeProperty("color")
-    }
-  }
-
   #getTextAnchorData() {
     const selection = $getSelection()
     if (!selection || !selection.isCollapsed()) return { anchorNode: null, offset: 0 }
@@ -530,19 +629,25 @@ export default class Contents {
     return { anchorNode, offset: anchor.offset }
   }
 
-  #findLastIndexBeforeCursor(anchorNode, offset, stringToReplace) {
-    const fullText = anchorNode.getTextContent()
-    const textBeforeCursor = fullText.slice(0, offset)
-    return textBeforeCursor.lastIndexOf(stringToReplace)
+  // The replaced span must start before the cursor but can extend past it
+  // (e.g. "@Jack" when "@" was just inserted before "Jack"), so we bound the
+  // match's start with lastIndexOf's fromIndex rather than slicing the text.
+  #findReplacementStart(anchorNode, offset, stringToReplace) {
+    if (offset === 0) {
+      // A negative fromIndex clamps to 0 and could match at the cursor
+      return -1
+    } else {
+      return anchorNode.getTextContent().lastIndexOf(stringToReplace, offset - 1)
+    }
   }
 
-  #performTextReplacement(anchorNode, selection, offset, lastIndex, replacementNodes) {
+  #performTextReplacement(anchorNode, startIndex, stringToReplace, replacementNodes, followedBy) {
     const fullText = anchorNode.getTextContent()
-    const textBeforeString = fullText.slice(0, lastIndex)
-    const textAfterCursor = fullText.slice(offset)
+    const textBeforeString = fullText.slice(0, startIndex)
+    const textAfterString = followedBy + fullText.slice(startIndex + stringToReplace.length)
 
-    const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, selection, textBeforeString)
-    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, selection, textAfterCursor || " ")
+    const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, textBeforeString)
+    const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, textAfterString || " ")
 
     anchorNode.replace(textNodeBefore)
 
@@ -550,22 +655,16 @@ export default class Contents {
     lastInsertedNode.insertAfter(textNodeAfter)
 
     this.#appendLineBreakIfNeeded(textNodeAfter.getParentOrThrow())
-    const cursorOffset = textAfterCursor ? 0 : 1
+    const cursorOffset = textAfterString ? followedBy.length : 1
     textNodeAfter.select(cursorOffset, cursorOffset)
   }
 
-  #cloneTextNodeFormatting(anchorNode, selection, text) {
-    const parent = anchorNode.getParent()
-    const fallbackFormat = parent?.getTextFormat?.() || 0
-    const fallbackStyle = parent?.getTextStyle?.() || ""
-    const format = $isRangeSelection(selection) && selection.format ? selection.format : (anchorNode.getFormat() || fallbackFormat)
-    const style = $isRangeSelection(selection) && selection.style ? selection.style : (anchorNode.getStyle() || fallbackStyle)
-
+  #cloneTextNodeFormatting(anchorNode, text) {
     return $createTextNode(text)
-      .setFormat(format)
+      .setFormat(anchorNode.getFormat())
       .setDetail(anchorNode.getDetail())
       .setMode(anchorNode.getMode())
-      .setStyle(style)
+      .setStyle(anchorNode.getStyle())
   }
 
   #insertReplacementNodes(startNode, replacementNodes) {
@@ -603,12 +702,8 @@ export default class Contents {
   }
 
   #createHtmlNodeWith(html) {
-    const htmlNodes = $generateFilteredNodesFromDOM(this.editorElement, parseHtml(html))
+    const htmlNodes = this.editorElement.$generateNodesFromDOM(parseHtml(html))
     return htmlNodes[0] || $createParagraphNode()
-  }
-
-  #shouldUploadFile(file) {
-    return dispatch(this.editorElement, "lexxy:file-accept", { file }, true)
   }
 
   // When the selection anchor is on a shadow root (e.g. a table cell), Lexical's
