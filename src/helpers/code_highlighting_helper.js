@@ -20,7 +20,9 @@ export function highlightCode(root = document) {
   // The latest call's root wins: a block moved to a new root mid-run must be
   // judged against that root, not the one it was first queued under.
   for (const preElement of root.querySelectorAll("pre[data-language]:not([data-highlighted])")) {
-    queue.set(preElement, { root, rootWasConnected: root.isConnected })
+    if (queue.get(preElement)?.root !== root) {
+      queue.set(preElement, { root, rootWasConnected: root.isConnected })
+    }
   }
 
   // A running loop picks up the new entries: Map iteration visits entries
@@ -43,7 +45,13 @@ async function drainQueue() {
       queue.delete(preElement)
       if (hasLeftRoot(preElement, entry)) continue
 
-      highlightElement(preElement)
+      // One bad block must not strand the rest of the page: every caller
+      // shares this loop.
+      try {
+        highlightElement(preElement)
+      } catch (error) {
+        reportError(error)
+      }
     }
   } finally {
     draining = false
@@ -68,12 +76,13 @@ function startSlice() {
   })
 }
 
-// A block can leave its root between chunks, e.g. when Turbo swaps the page
+// A block can leave the page between chunks, e.g. when Turbo swaps the body
 // mid-run. Skip it rather than spend main-thread time on a page that is gone.
-// A root that was detached from the start (highlighting a fragment before
-// inserting it) only needs to still contain the block.
+// A block still in the document is highlighted wherever it moved, and one
+// queued from a root that was never connected (a fragment highlighted before
+// insertion) is highlighted while that root still holds it.
 function hasLeftRoot(preElement, { root, rootWasConnected }) {
-  return !root.contains(preElement) || (rootWasConnected && !preElement.isConnected)
+  return !preElement.isConnected && (rootWasConnected || !root.contains(preElement))
 }
 
 // MessageChannel posts a clean macrotask without setTimeout's 4ms clamp,

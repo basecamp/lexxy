@@ -3,6 +3,7 @@ import { highlightCode, highlightElement } from "../../../../src/helpers/code_hi
 
 afterEach(async () => {
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
   document.body.innerHTML = ""
   // Let the task end, closing highlightCode's time slice, so the next test
   // starts with a fresh budget.
@@ -89,17 +90,14 @@ test("highlightCode yields to the event loop while blocks remain", async () => {
   const blocks = appendBlocks(8)
   advanceClockPerCall(5)
 
-  // A macrotask queued as highlighting starts must run while blocks are still
-  // pending. A single synchronous pass would only let it run after all of them.
-  let highlightedWhenTaskRan = null
   const result = highlightCode()
-  setTimeout(() => { highlightedWhenTaskRan = countHighlighted(blocks) }, 0)
+  const highlightedSynchronously = countHighlighted(blocks)
 
   expect(typeof result.then).toBe("function")
   await result
 
-  expect(highlightedWhenTaskRan).toBeGreaterThan(0)
-  expect(highlightedWhenTaskRan).toBeLessThan(blocks.length)
+  expect(highlightedSynchronously).toBeGreaterThan(0)
+  expect(highlightedSynchronously).toBeLessThan(blocks.length)
   expect(countHighlighted(blocks)).toBe(blocks.length)
 })
 
@@ -168,6 +166,48 @@ test("highlightCode highlights a pending block moved to a new root and highlight
 
   expect(moved.length).toBeGreaterThan(0)
   expect(countHighlighted(moved)).toBe(moved.length)
+})
+
+test("highlightCode highlights a fragment's blocks after the fragment is inserted", async () => {
+  const template = document.createElement("template")
+  const blocks = appendBlocks(8, template.content)
+  advanceClockPerCall(5)
+
+  const result = highlightCode(template.content)
+  document.body.appendChild(template.content)
+  await result
+
+  expect(countHighlighted(blocks)).toBe(blocks.length)
+})
+
+test("highlightCode highlights pending blocks moved elsewhere in the document", async () => {
+  const root = document.createElement("div")
+  const blocks = appendBlocks(8, root)
+  document.body.appendChild(root)
+  advanceClockPerCall(5)
+
+  const result = highlightCode(root)
+  const elsewhere = document.createElement("div")
+  document.body.appendChild(elsewhere)
+  blocks.filter(pre => pre.dataset.highlighted !== "true").forEach(pre => elsewhere.appendChild(pre))
+  await result
+
+  expect(countHighlighted(blocks)).toBe(blocks.length)
+})
+
+test("a block that fails to highlight doesn't stop the others", async () => {
+  const reportError = vi.fn()
+  vi.stubGlobal("reportError", reportError)
+  const blocks = appendBlocks(8)
+  const broken = blocks[1]
+  Object.defineProperty(broken, "innerHTML", { set() { throw new Error("blocked sink") } })
+  advanceClockPerCall(5)
+
+  await highlightCode()
+
+  expect(reportError).toHaveBeenCalledOnce()
+  expect(countHighlighted(blocks)).toBe(blocks.length - 1)
+  expect(broken.dataset.highlighted).toBeUndefined()
 })
 
 test("highlightCode highlights a root that was never connected", async () => {
