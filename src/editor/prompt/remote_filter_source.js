@@ -5,13 +5,11 @@ const DEBOUNCE_INTERVAL = 200
 const MAX_RENDERED_SUGGESTIONS = 100
 
 export default class RemoteFilterSource extends BaseSource {
-  #filterParam
-
-  constructor(url, { filterParam = "filter" } = {}) {
+  constructor(url, filterParam) {
     super()
 
     this.baseURL = url
-    this.#filterParam = filterParam
+    this.filterParam = filterParam
     this.loadAndFilterListItems = debounceAsync(this.fetchFilteredListItems.bind(this), DEBOUNCE_INTERVAL)
   }
 
@@ -30,7 +28,7 @@ export default class RemoteFilterSource extends BaseSource {
 
   #urlFor(filter) {
     const url = new URL(this.baseURL, window.location.origin)
-    url.searchParams.append(this.#filterParam, filter)
+    url.searchParams.append(this.filterParam, filter)
     return url.toString()
   }
 
