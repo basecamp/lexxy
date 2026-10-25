@@ -27,4 +27,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "selenium-webdriver", "~> 4.0"
   spec.add_development_dependency "cuprite", "~> 0.17"
   spec.add_development_dependency "image_processing", "~> 2.2"
+  spec.add_development_dependency "ruby-vips", "~> 2.2"
 end
