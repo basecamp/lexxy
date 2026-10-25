@@ -159,7 +159,7 @@
     margin: calc(0.5em + var(--lexxy-content-margin)) 0;
   }
 
-  :where(.horizontal-divider) {
+  .horizontal-divider {
     margin: 0;
     padding: calc(0.5em + var(--lexxy-content-margin)) 0;
 
@@ -316,6 +316,11 @@
     padding: var(--lexxy-attachment-gap);
     position: relative;
     text-align: center;
+  }
+
+  /* Element weight, so a bare `figure { margin: 0 }` reset loaded before Lexxy doesn't uncenter attachments. */
+  figure:where(.attachment) {
+    margin-inline: auto;
   }
 
   :where(.attachment__caption) {
@@ -491,7 +496,8 @@
   /* Horizontal divider */
   /* ------------------------------------------------------------------------ */
 
-  :where(.horizontal-divider) {
+  /* Kept at class specificity: the editor renders the divider as a figure, and this must outweigh the figure margin rule above. */
+  .horizontal-divider {
     margin: 0;
     margin-block-end: .5em;
     padding: 1.5em 0 .5em;

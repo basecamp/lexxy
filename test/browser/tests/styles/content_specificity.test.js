@@ -30,5 +30,17 @@ test.describe("Content stylesheet specificity", () => {
       await expect(page.locator("#untouched-caption")).not.toHaveCSS("padding", "0px")
       await expect(page.locator("#untouched-italic")).toHaveCSS("font-style", "italic")
     })
+
+    test("a linked preview keeps its block anchor", async ({ page }) => {
+      await expect(page.locator("#untouched-link")).toHaveCSS("display", "block")
+    })
+
+    test("a divider figure keeps its own margin over the figure margin", async ({ page }) => {
+      await expect(page.locator("#untouched-divider")).toHaveCSS("margin-bottom", "8px")
+    })
+
+    test("a bare figure reset loaded first does not uncenter attachments", async ({ page }) => {
+      await expect(page.locator("#untouched-figure")).not.toHaveCSS("margin-left", "0px")
+    })
   })
 })

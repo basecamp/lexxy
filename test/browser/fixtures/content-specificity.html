@@ -4,6 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Lexxy Test — Content Specificity</title>
+  <style>
+    /* A bare-element reset loaded before Lexxy, like Tailwind's preflight. */
+    figure { margin: 0; }
+  </style>
   <link rel="stylesheet" href="/styles.css">
   <style>
     article img { border-radius: 0px; }
@@ -31,6 +35,13 @@
       <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="" id="untouched-image">
       <figcaption class="attachment__caption" id="untouched-caption">Caption</figcaption>
     </figure>
+
+    <figure class="attachment attachment--preview attachment--jpg">
+      <a href="#" id="untouched-link"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt=""></a>
+    </figure>
+
+    <figure class="horizontal-divider" id="untouched-divider"><hr></figure>
+    <p>After the divider</p>
   </div>
 </body>
 </html>
