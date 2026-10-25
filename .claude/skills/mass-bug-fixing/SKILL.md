@@ -3,7 +3,8 @@ name: mass-bug-fixing
 description: |
   Process multiple bugs from a Fizzy board (or GitHub issues) in parallel.
   Uses worktree agents to reproduce, fix, test, create PRs, and comment on cards.
-invocation: user
+invocation: auto_and_user
+auto_trigger: when the user asks to fix more than one bug at a time (e.g., provides multiple bug URLs, card numbers, or issue references)
 user_invocation: /mass-bug-fixing
 ---
 

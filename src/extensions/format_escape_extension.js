@@ -1,17 +1,21 @@
 import { $createParagraphNode, $getSelection, $isRangeSelection, $splitNode, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, INSERT_PARAGRAPH_COMMAND, KEY_ARROW_DOWN_COMMAND, ParagraphNode, defineExtension } from "lexical"
 import { CodeNode } from "@lexical/code"
 import { ListItemNode } from "@lexical/list"
-import { $isQuoteNode } from "@lexical/rich-text"
+import { $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType, mergeRegister } from "@lexical/utils"
 import { EarlyEscapeCodeNode } from "../nodes/early_escape_code_node"
 import { EarlyEscapeListItemNode } from "../nodes/early_escape_list_item_node"
-import { $isBlankNode, $isCursorOnLastLine, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
+import { $containsRangeSelection, $isBlankNode, $isCursorOnLastLine, $trimTrailingBlankNodes } from "../helpers/lexical_helper"
 import LexxyExtension from "./lexxy_extension"
 
 export class FormatEscapeExtension extends LexxyExtension {
 
   get enabled() {
     return this.editorElement.supportsRichText
+  }
+
+  get allowedElements() {
+    return [ { tag: "ol", attributes: [ "start" ] }, { tag: "li", attributes: [ "value" ] } ]
   }
 
   get lexicalExtension() {
@@ -34,7 +38,8 @@ export class FormatEscapeExtension extends LexxyExtension {
             KEY_ARROW_DOWN_COMMAND,
             (event) => $handleArrowDownInCodeBlock(event),
             COMMAND_PRIORITY_NORMAL
-          )
+          ),
+          editor.registerNodeTransform(QuoteNode, $ensureQuoteHasParagraphChild)
         )
       }
     })
@@ -42,24 +47,47 @@ export class FormatEscapeExtension extends LexxyExtension {
 }
 
 function $escapeFromBlockquote() {
-  const anchorNode = $getSelection().anchor.getNode()
+  return $escapeBeforeBlockquoteStart() || $escapeFromBlankBlockquoteParagraph()
+}
 
-  const paragraph = $getNearestNodeOfType(anchorNode, ParagraphNode)
+function $escapeBeforeBlockquoteStart() {
+  const selection = $getSelection()
+  if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.offset !== 0) return false
+
+  const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
+  if (paragraph && !$isBlankNode(paragraph) && !paragraph.getPreviousSibling()) {
+    const blockquote = paragraph.getParent()
+    if ($isQuoteNode(blockquote)) {
+      blockquote.insertBefore($createParagraphNode())
+      return true
+    }
+  }
+
+  return false
+}
+
+function $escapeFromBlankBlockquoteParagraph() {
+  const selection = $getSelection()
+  if (!$isRangeSelection(selection)) return false
+
+  const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
   if (!paragraph || !$isBlankNode(paragraph)) return false
 
   const blockquote = paragraph.getParent()
-  if (!blockquote || !$isQuoteNode(blockquote)) return false
+  if ($isQuoteNode(blockquote)) {
+    const nonEmptySiblings = paragraph.getNextSiblings().filter(sibling => !$isBlankNode(sibling))
 
-  const nonEmptySiblings = paragraph.getNextSiblings().filter(sibling => !$isBlankNode(sibling))
+    if (nonEmptySiblings.length > 0) {
+      $splitQuoteNode(blockquote, paragraph)
+    } else {
+      blockquote.insertAfter(paragraph)
+      paragraph.selectStart()
+    }
 
-  if (nonEmptySiblings.length > 0) {
-    $splitQuoteNode(blockquote, paragraph)
-  } else {
-    blockquote.insertAfter(paragraph)
-    paragraph.selectStart()
+    return true
   }
 
-  return true
+  return false
 }
 
 function $splitQuoteNode(node, paragraph) {
@@ -85,4 +113,11 @@ function $handleArrowDownInCodeBlock(event) {
   }
 
   return false
+}
+
+function $ensureQuoteHasParagraphChild(quoteNode) {
+  if (!quoteNode.isEmpty()) return
+
+  quoteNode.append($createParagraphNode())
+  if ($containsRangeSelection(quoteNode)) quoteNode.getFirstChild().select()
 }
