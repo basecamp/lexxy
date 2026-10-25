@@ -91,8 +91,8 @@ test.describe("Heading format", () => {
       parent.appendChild(fresh)
     })
 
-    await expect(page.locator("[name='heading-large']")).toHaveAttribute("aria-pressed", "true")
-    await expect(page.locator("[name='heading-medium']")).toHaveAttribute("aria-pressed", "false")
+    await expect(page.locator("[name='heading-large']")).toHaveAttribute("aria-checked", "true")
+    await expect(page.locator("[name='heading-medium']")).toHaveAttribute("aria-checked", "false")
   })
 
   test("dedicated commands apply the default headings when invoked by name", async ({ page, editor }) => {
@@ -133,6 +133,17 @@ test.describe("Heading format", () => {
     await assertEditorHtml(editor, "<h3>Lexxy</h3>")
   })
 
+  test("clicking a heading beyond the built-in presets applies its own tag", async ({ page, editor }) => {
+    await recreateEditorWithHeadings(page, [ "h1", "h2", "h3", "h4", "h5", "h6" ])
+    await editor.waitForConnected()
+
+    await editor.setValue("<p>Lexxy</p>")
+    await editor.select("Lexxy")
+
+    await clickToolbarButton(page, "heading-6")
+    await assertEditorHtml(editor, "<h6>Lexxy</h6>")
+  })
+
   test("heading inside blockquote shows heading button as active, not paragraph", async ({ page, editor }) => {
     await editor.setValue("<p>Lexxy</p>")
     await editor.select("Lexxy")
@@ -151,7 +162,8 @@ test.describe("Heading format", () => {
     const headingLarge = page.locator("[name='heading-large']")
     const paragraph = page.locator("[name='paragraph']")
 
-    await expect(headingLarge).toHaveAttribute("aria-pressed", "true")
-    await expect(paragraph).toHaveAttribute("aria-pressed", "false")
+    await expect(headingLarge).toHaveAttribute("role", "menuitemradio")
+    await expect(headingLarge).toHaveAttribute("aria-checked", "true")
+    await expect(paragraph).toHaveAttribute("aria-checked", "false")
   })
 })

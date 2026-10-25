@@ -67,6 +67,26 @@ test.describe("Prompt only-at attribute", () => {
     await expect(popover).toBeVisible({ timeout: 5_000 })
   })
 
+  test("default behavior: opens after an opening parenthesis when only-at is not set", async ({ page }) => {
+    const editor = new EditorHandle(page, "[data-editor='default'] lexxy-editor")
+    await editor.waitForConnected()
+    const popover = page.locator("[data-editor='default'] .lexxy-prompt-menu--visible")
+
+    await editor.send("hello (")
+    await editor.send("@")
+    await expect(popover).toBeVisible({ timeout: 5_000 })
+  })
+
+  test("default behavior: does not open after a parenthesis mid-word when only-at is not set", async ({ page }) => {
+    const editor = new EditorHandle(page, "[data-editor='default'] lexxy-editor")
+    await editor.waitForConnected()
+    const popover = page.locator("[data-editor='default'] .lexxy-prompt-menu--visible")
+
+    await editor.send("hello(")
+    await editor.send("@")
+    await expect(popover).toHaveCount(0)
+  })
+
   test("default behavior: opens at the start of a later paragraph", async ({ page }) => {
     const editor = new EditorHandle(page, "[data-editor='default'] lexxy-editor")
     await editor.waitForConnected()
