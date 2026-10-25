@@ -1,6 +1,7 @@
 import createDOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 import { URI_BEARING_ATTACHMENT_ATTRIBUTES, allowedUriRegexp, attachmentUriFilterHook } from "../helpers/sanitization_helper"
+import { DEFAULT_ALLOWED_STYLE_PROPERTIES, allowedStyleValue, buildStylePolicy, isSafeBuiltInStyleValue } from "./style_policy"
 
 // Lexxy's own DOMPurify instance, deliberately not the shared default export.
 //
@@ -99,16 +100,30 @@ const ALLOWED_HTML_ATTRIBUTES = [ "alt", "class", "contenteditable", "href", "sr
 // place while it loads; nothing else here does.
 const DEFAULT_TAG_ATTRIBUTES = { img: [ "width", "height" ] }
 
-const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
+// The key buildConfig stores an editor's extension style policy under. DOMPurify
+// ignores config keys it doesn't know, and hands the parsed config to every hook
+// as its third argument (a typed, documented part of the hook signature), so the
+// policy travels with each sanitize() call. That is what keeps it per editor: the
+// hook itself is shared by every editor on the page, the config is not. A call
+// without the key — any sanitize that didn't come from buildConfig — gets only the
+// built-in properties, so a missing policy fails closed.
+const EXTENSION_STYLE_POLICY = "LEXXY_EXTENSION_STYLE_POLICY"
 
-function styleFilterHook(_currentNode, hookEvent) {
+function styleFilterHook(_currentNode, hookEvent, config) {
   if (hookEvent.attrName === "style" && hookEvent.attrValue) {
-    const styles = { ...getStyleObjectFromCSS(hookEvent.attrValue) }
+    // Line breaks become spaces before parsing: Lexical runs a string across one
+    // and the browser doesn't, and the values serialized back must read the same
+    // to both. See config/style_policy.
+    const styles = { ...getStyleObjectFromCSS(hookEvent.attrValue.replace(/[\n\r\f]/g, " ")) }
+    const extensionStylePolicy = config?.[EXTENSION_STYLE_POLICY]
     const sanitizedStyles = { }
 
     for (const property in styles) {
-      if (ALLOWED_STYLE_PROPERTIES.includes(property)) {
-        sanitizedStyles[property] = styles[property]
+      if (DEFAULT_ALLOWED_STYLE_PROPERTIES.includes(property)) {
+        if (isSafeBuiltInStyleValue(styles[property])) sanitizedStyles[property] = styles[property]
+      } else {
+        const value = allowedStyleValue(extensionStylePolicy, property.toLowerCase(), styles[property])
+        if (value !== null) sanitizedStyles[property.toLowerCase()] = value
       }
     }
 
@@ -150,7 +165,8 @@ export { DOMPurify }
 
 // Called with no allowedElements for a sanitizer that has no allowlist to apply,
 // which is not the same thing as an empty one — see EditorSanitizer's fallback.
-export function buildConfig(allowedElements = null) {
+// allowedStyles are the extensions' style declarations; see config/style_policy.
+export function buildConfig(allowedElements = null, allowedStyles = []) {
   const config = {
     ADD_URI_SAFE_ATTR: [ "caption", "filename", ...URI_BEARING_ATTACHMENT_ATTRIBUTES ],
     SAFE_FOR_XML: false, // So that it does not strip attributes that contains serialized HTML (like content)
@@ -158,7 +174,8 @@ export function buildConfig(allowedElements = null) {
     // wire up arbitrary controllers/actions in the viewer's session. FORBID_ATTR wins over
     // ALLOWED_ATTR/ADD_ATTR/ALLOW_DATA_ATTR in DOMPurify, so this holds even though other
     // data-* attributes (data-language, data-trix-*, etc.) are otherwise allowed through.
-    FORBID_ATTR: [ "data-controller", "data-action" ]
+    FORBID_ATTR: [ "data-controller", "data-action" ],
+    [EXTENSION_STYLE_POLICY]: buildStylePolicy(allowedStyles)
   }
 
   // Left out rather than emptied when there is no allowlist, so DOMPurify's own
