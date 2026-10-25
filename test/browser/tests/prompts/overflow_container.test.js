@@ -9,26 +9,10 @@ test.describe("Prompt popover inside a clipping container", () => {
   })
 
   test("flips above the cursor when the menu overflows a scroll container while the window still has room below", async ({ page }) => {
-    const editor = new EditorHandle(page, "lexxy-editor")
-    await editor.waitForConnected()
-
-    await editor.send("@")
-
-    const popover = page.locator(".lexxy-prompt-menu--visible")
-    await expect(popover).toBeVisible({ timeout: 5_000 })
+    const popover = await openPrompt(page)
     await expect(popover).toHaveAttribute("data-clipped-at-bottom", "")
 
-    const positions = await page.evaluate(() => {
-      const container = document.querySelector(".scroll-container")
-      const popover = document.querySelector(".lexxy-prompt-menu--visible")
-
-      return {
-        containerBottom: container.getBoundingClientRect().bottom,
-        popoverBottom: popover.getBoundingClientRect().bottom,
-        viewportBottom: window.innerHeight,
-      }
-    })
-
+    const positions = await measure(page)
     expect(positions.popoverBottom).toBeLessThanOrEqual(positions.containerBottom + 1)
     expect(positions.popoverBottom).toBeLessThan(positions.viewportBottom)
   })
@@ -40,29 +24,76 @@ test.describe("Prompt popover inside a clipping container", () => {
       container.style.blockSize = "auto"
     })
 
-    const editor = new EditorHandle(page, "lexxy-editor")
-    await editor.waitForConnected()
-
-    await editor.send("@")
-
-    const popover = page.locator(".lexxy-prompt-menu--visible")
-    await expect(popover).toBeVisible({ timeout: 5_000 })
+    const popover = await openPrompt(page)
     await expect(popover).not.toHaveAttribute("data-clipped-at-bottom", "")
   })
 
   test("stays below the cursor when the scroll container has even less room above it", async ({ page }) => {
     await page.evaluate(() => {
       document.querySelector(".filler").remove()
-      document.querySelector(".scroll-container").style.blockSize = "110px"
+      document.querySelector(".scroll-container").style.blockSize = "150px"
     })
 
-    const editor = new EditorHandle(page, "lexxy-editor")
-    await editor.waitForConnected()
+    const popover = await openPrompt(page)
+    await expect(popover).not.toHaveAttribute("data-clipped-at-bottom", "")
 
-    await editor.send("@")
+    const positions = await measure(page)
+    expect(positions.popoverBottom).toBeGreaterThan(positions.containerBottom)
+  })
 
-    const popover = page.locator(".lexxy-prompt-menu--visible")
-    await expect(popover).toBeVisible({ timeout: 5_000 })
+  test("flips above the cursor at the bottom edge of the window with no clipping ancestor", async ({ page }) => {
+    await page.evaluate(() => {
+      const container = document.querySelector(".scroll-container")
+      container.style.overflow = "visible"
+      container.style.blockSize = "auto"
+      document.querySelector(".filler").style.blockSize = "600px"
+    })
+
+    const popover = await openPrompt(page)
+    await expect(popover).toHaveAttribute("data-clipped-at-bottom", "")
+
+    const positions = await measure(page)
+    expect(positions.popoverBottom).toBeLessThanOrEqual(positions.viewportBottom)
+  })
+
+  test("ignores clipping ancestors that a fixed-position container escapes", async ({ page }) => {
+    await page.evaluate(() => {
+      const form = document.querySelector("form")
+      form.style.overflow = "hidden"
+      form.style.blockSize = "0"
+
+      const container = document.querySelector(".scroll-container")
+      container.style.position = "fixed"
+      container.style.insetBlockStart = "0"
+      container.style.overflow = "visible"
+      container.style.blockSize = "auto"
+    })
+
+    const popover = await openPrompt(page)
     await expect(popover).not.toHaveAttribute("data-clipped-at-bottom", "")
   })
 })
+
+async function openPrompt(page) {
+  const editor = new EditorHandle(page, "lexxy-editor")
+  await editor.waitForConnected()
+
+  await editor.send("@")
+
+  const popover = page.locator(".lexxy-prompt-menu--visible")
+  await expect(popover).toBeVisible({ timeout: 5_000 })
+  return popover
+}
+
+async function measure(page) {
+  return page.evaluate(() => {
+    const container = document.querySelector(".scroll-container")
+    const popover = document.querySelector(".lexxy-prompt-menu--visible")
+
+    return {
+      containerBottom: container.getBoundingClientRect().bottom,
+      popoverBottom: popover.getBoundingClientRect().bottom,
+      viewportBottom: window.innerHeight,
+    }
+  })
+}

@@ -338,33 +338,38 @@ export class LexicalPromptElement extends HTMLElement {
     const forceTop = this.verticalDirection === "top"
     const forceBottom = this.verticalDirection === "bottom"
 
-    if (!forceBottom && (forceTop || this.#fitsBetterAbove(popoverRect))) {
+    if (!forceBottom && (forceTop || this.#fitsBetterAbove(popoverRect, fontSize))) {
       this.#setPopoverOffsetY(contentRect.height - y + fontSize)
       this.popoverElement.toggleAttribute("data-clipped-at-bottom", true)
     }
   }
 
-  #fitsBetterAbove(popoverRect) {
+  #fitsBetterAbove(popoverRect, lineHeight) {
     const { top, bottom } = this.#visibleBounds()
     const overflowsBelow = popoverRect.bottom > bottom
-    const roomAbove = popoverRect.top - top
+    const roomAbove = popoverRect.top - lineHeight - top
     const roomBelow = bottom - popoverRect.top
 
     return overflowsBelow && roomAbove > roomBelow
   }
 
   // A scroll container or modal around the editor clips the menu before the window does,
-  // so the visible area is the window narrowed by every clipping ancestor.
+  // so the visible area is the window narrowed by every clipping ancestor. A fixed ancestor
+  // escapes the clipping of everything above it, so the walk ends there.
   #visibleBounds() {
     let top = 0
     let bottom = window.innerHeight
 
     for (let node = this.#editorElement; node && node !== document.body; node = node.parentElement) {
-      if (getComputedStyle(node).overflowY !== "visible") {
+      const style = getComputedStyle(node)
+
+      if (style.overflowY !== "visible" && style.display !== "contents") {
         const rect = node.getBoundingClientRect()
         top = Math.max(top, rect.top)
         bottom = Math.min(bottom, rect.bottom)
       }
+
+      if (style.position === "fixed") break
     }
 
     return { top, bottom }
