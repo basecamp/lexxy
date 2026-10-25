@@ -604,7 +604,7 @@ export class LexicalPromptElement extends HTMLElement {
     popoverContainer.style.position = "absolute"
     popoverContainer.setAttribute("nonce", getNonce())
     popoverContainer.append(...listItems)
-    this.#globalListeners.track(registerEventListener(popoverContainer, "click", this.#handlePopoverClick))
+    popoverContainer.addEventListener("click", this.#handlePopoverClick)
     this.#editorElement.appendChild(popoverContainer)
     return popoverContainer
   }
