@@ -59,6 +59,28 @@ get allowedElements() {
 
 This widens the editor's recognized-safe scheme set; it does **not** exempt any attribute from validation. The executable schemes — `javascript:`, `data:`, `vbscript:` and the rest of the `…script:` family — can't be declared this way: they're dropped from the list, so they stay refused on every attribute, including `href` and `object[data]`, and a declared scheme can't smuggle an executable URL through a link or resource attribute. Declare it on the element that needs it for locality, though the scheme is recognized editor-wide once allowed — so use it only for schemes that are inert in the browser, like an identifier scheme (`gid:`).
 
+## Allowing additional inline styles
+
+Lexxy also filters the `style` attribute, keeping only `color` and `background-color`. If your extension produces other inline styles, declare each property with an `allowedStyles` getter, together with the values it accepts: either a fixed list of `values`, or a `validate` function that returns `true` for a value to keep.
+
+```js
+get allowedStyles() {
+  return [
+    { property: "text-align", values: [ "left", "center", "right", "justify" ] },
+    { property: "line-height", validate: value => /^\d(\.\d+)?$/.test(value) }
+  ]
+}
+```
+
+A property without values or a validator is ignored: allowing a property by name would let stored content give it any value, and the value is where CSS attacks live. Some protections apply whatever you declare:
+
+- Values that load a resource or run script are always dropped — `url()`, `image-set()`, `expression()` and the like — as are values containing backslash escapes, comments or `!important`.
+- Properties that are dangerous with any value — those that load images or other resources (`background`, `background-image`, `list-style-image`, `content`, …), `position`, and `behavior`/`-moz-binding` — can't be declared at all. Neither can custom properties (`--x`), or `color` and `background-color`, which Lexxy manages itself.
+
+Declared styles apply only to editors where your extension is enabled; other editors on the page keep filtering them out.
+
+They govern Lexxy's sanitizing in the browser. When the content is rendered, Action Text sanitizes it again on the server, with your application's sanitizer: by default that keeps only the CSS properties Loofah allows (`text-align`, `line-height` and `font-family` are among them), so check that the styles you declare survive rendering, and widen the server's list if they need to.
+
 ## Example
 
 ```js
