@@ -211,8 +211,11 @@ export class LexicalPromptElement extends HTMLElement {
 
   async #showPopover() {
     const showId = ++this.showPopoverId
-    this.popoverElement ??= await this.#buildPopover()
-    if (this.showPopoverId !== showId) return
+    if (!this.popoverElement) {
+      const listItems = await this.source.buildListItems()
+      if (this.showPopoverId !== showId) return
+      this.popoverElement = this.#buildPopover(listItems)
+    }
 
     this.#resetPopoverPosition()
     await this.#filterOptions()
@@ -372,6 +375,7 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   #removePopover() {
+    this.showPopoverId++
     this.#popoverListeners.dispose()
     this.popoverElement?.remove()
     this.popoverElement = null
@@ -383,8 +387,12 @@ export class LexicalPromptElement extends HTMLElement {
       return
     }
 
+    if (!this.popoverElement) return
+
+    const showId = this.showPopoverId
     if (this.#editorContents.containsTextBackUntil(this.trigger)) {
       await this.#showFilteredOptions()
+      if (this.showPopoverId !== showId) return
 
       // Re-check after async operation — the trigger may have been consumed
       // (e.g. markdown heading shortcut converted "# " to h1 during the fetch)
@@ -394,6 +402,7 @@ export class LexicalPromptElement extends HTMLElement {
       }
 
       await nextFrame()
+      if (this.showPopoverId !== showId) return
       this.#positionPopover()
     } else {
       this.#hidePopover()
@@ -578,12 +587,12 @@ export class LexicalPromptElement extends HTMLElement {
     return this.#editorElement.editorContentElement
   }
 
-  async #buildPopover() {
+  #buildPopover(listItems) {
     const popoverContainer = createElement("ul", { role: "listbox", id: generateDomId("prompt-popover") }) // Avoiding [popover] due to not being able to position at an arbitrary X, Y position.
     popoverContainer.classList.add("lexxy-prompt-menu")
     popoverContainer.style.position = "absolute"
     popoverContainer.setAttribute("nonce", getNonce())
-    popoverContainer.append(...await this.source.buildListItems())
+    popoverContainer.append(...listItems)
     this.#globalListeners.track(registerEventListener(popoverContainer, "click", this.#handlePopoverClick))
     this.#editorElement.appendChild(popoverContainer)
     return popoverContainer
