@@ -77,6 +77,21 @@ describe("attributes change event", () => {
     expect(event.detail.link).toEqual({ href: "https://example.com" })
   })
 
+  test("reports the link with its href when the caret sits at its trailing edge", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p>Hello <a href='https://example.com'>everyone</a> bye</p>")
+    editorElement.editor.update(() => {
+      $getRoot().getFirstChild().getLastChild().select(0, 0)
+    }, { discrete: true })
+
+    const event = await captureEvent(editorElement, "lexxy:attributes-change", () => {
+      editorElement.dispatchAttributesChange()
+    })
+
+    expect(event.detail.attributes.link.active).toBe(true)
+    expect(event.detail.link).toEqual({ href: "https://example.com" })
+  })
+
   test("returns null link when not inside a link", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p>plain text</p>")

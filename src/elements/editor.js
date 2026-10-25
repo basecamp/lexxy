@@ -2,7 +2,6 @@ import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdat
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
-import { $getNearestNodeOfType } from "@lexical/utils"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
@@ -862,9 +861,6 @@ export class LexicalEditorElement extends HTMLElement {
       const format = this.selection.getFormat()
       if (Object.keys(format).length === 0) return
 
-      const anchorNode = selection.anchor.getNode()
-      const linkNode = $getNearestNodeOfType(anchorNode, LinkNode)
-
       attributes = {
         bold: { active: format.isBold, enabled: true },
         italic: { active: format.isItalic, enabled: true },
@@ -880,7 +876,7 @@ export class LexicalEditorElement extends HTMLElement {
         redo: { active: false, enabled: this.canRedo }
       }
 
-      linkHref = linkNode ? linkNode.getURL() : null
+      linkHref = this.selection.linkUrl
       highlight = format.isHighlight ? getHighlightStyles(selection) : null
       headingTag = format.headingTag ?? null
     })

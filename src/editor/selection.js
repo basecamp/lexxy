@@ -108,7 +108,7 @@ export default class Selection {
       isStrikethrough: selection.hasFormat("strikethrough"),
       isUnderline: selection.hasFormat("underline"),
       isHighlight: isSelectionHighlighted(selection),
-      isInLink: $getNearestNodeOfType(anchorNode, LinkNode) !== null,
+      isInLink: this.linkUrl !== null,
       isInQuote: $isQuoteNode(topLevelElement),
       isInHeading: headingNode !== null,
       isInCode: this.#isInCode(selection, anchorNode),
@@ -120,7 +120,12 @@ export default class Selection {
   }
 
   get linkUrl() {
-    return this.#linkAtCursor()?.getURL() ?? null
+    return this.linkAtCursor?.getURL() ?? null
+  }
+
+  get linkAtCursor() {
+    const anchorNode = $getSelection()?.anchor?.getNode()
+    return $getNearestNodeOfType(anchorNode, LinkNode) ?? this.#linkEndingAtCursor()
   }
 
   nearestNodeOfType(nodeType) {
@@ -283,11 +288,6 @@ export default class Selection {
     this.previouslySelectedKeys = null
 
     this.#listeners.dispose()
-  }
-
-  #linkAtCursor() {
-    const anchorNode = $getSelection()?.anchor?.getNode()
-    return $getNearestNodeOfType(anchorNode, LinkNode) ?? this.#linkEndingAtCursor()
   }
 
   // Lexical resolves a caret sitting at a link's trailing edge to the start of the

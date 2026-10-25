@@ -645,6 +645,19 @@ test.describe("Block formatting", () => {
     await expect(input).toHaveValue("https://37signals.com")
   })
 
+  test("the Link button is pressed when the caret is at a link's trailing edge", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      '<p>Hello <a href="https://37signals.com">everyone</a> bye</p>',
+    )
+    await editor.placeCaretInside("everyone", "everyone".length)
+    await editor.flush()
+
+    await expect(page.getByRole("button", { name: "Link" }).first()).toHaveAttribute("aria-pressed", "true")
+  })
+
   test("link dialog shows empty input when no link is selected", async ({
     page,
     editor,
