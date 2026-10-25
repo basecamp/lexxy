@@ -1,7 +1,6 @@
 import { dispatch } from "../../helpers/html_helper"
 import { $getNodeByKey, $getSelection, $isElementNode, $isRangeSelection, $isTextNode } from "lexical"
-import { $isLinkNode, LinkNode } from "@lexical/link"
-import { $getNearestNodeOfType } from "@lexical/utils"
+import { $isLinkNode } from "@lexical/link"
 
 export class NativeAdapter {
   frozenLinkKey = null
@@ -27,13 +26,9 @@ export class NativeAdapter {
   freeze() {
     let frozenLinkKey = null
     this.editorElement.editor?.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+      if (!$isRangeSelection($getSelection())) return
 
-      const linkNode = $getNearestNodeOfType(selection.anchor.getNode(), LinkNode)
-      if (linkNode) {
-        frozenLinkKey = linkNode.getKey()
-      }
+      frozenLinkKey = this.editorElement.selection.linkAtCursor?.getKey() ?? null
     })
 
     this.frozenLinkKey = frozenLinkKey

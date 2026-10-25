@@ -41,12 +41,32 @@ export function dispatch(element, eventName, detail = null, cancelable = false) 
 }
 
 export function addBlockSpacing(doc) {
-  const blocks = doc.querySelectorAll("body > :not(h1, h2, h3, h4, h5, h6) + *")
-  for (const block of blocks) {
+  const selector = "body > :not(h1, h2, h3, h4, h5, h6) + *, blockquote > :not(h1, h2, h3, h4, h5, h6) + *"
+  for (const block of doc.querySelectorAll(selector)) {
     const spacer = doc.createElement("p")
     spacer.appendChild(doc.createElement("br"))
     block.before(spacer)
   }
+}
+
+// A trailing newline before </pre> is presentational: markdown renderers routinely
+// emit one, and the HTML spec similarly disregards a leading newline right after <pre>.
+// Left in place, it imports as a spurious blank last line in the code block. Only a
+// newline that ends the block is stripped; one followed by a <br> is a real line.
+// Blocks highlighted by highlightElement() are skipped: it turns each stored <br>
+// into a newline, so their trailing newline is a real line too.
+export function stripTrailingCodeBlockNewlines(doc) {
+  for (const pre of doc.querySelectorAll("pre:not([data-highlighted])")) {
+    const last = lastDescendantOf(pre)
+    if (last.nodeType === Node.TEXT_NODE && last.nodeValue.endsWith("\n")) {
+      last.nodeValue = last.nodeValue.slice(0, -1)
+    }
+  }
+}
+
+function lastDescendantOf(node) {
+  while (node.lastChild) node = node.lastChild
+  return node
 }
 
 export function generateDomId(prefix) {

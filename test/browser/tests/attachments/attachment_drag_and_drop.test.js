@@ -68,6 +68,9 @@ test.describe("Attachment Drag and Drop", () => {
 
     test("drag a file attachment above a text paragraph", async ({ page, editor }) => {
       await editor.send("Hello world", "Enter")
+      // Re-mock with delayBlobResponses so the PDF stays in the file-icon
+      // (pending preview) state; the drag target is `figure.attachment--file`.
+      await mockActiveStorageUploads(page, { delayBlobResponses: true })
       await editor.uploadFile("test/fixtures/files/dummy.pdf", { via: "file" })
       await waitForUploadsComplete(page, editor)
 
@@ -142,6 +145,36 @@ test.describe("Attachment Drag and Drop", () => {
       await dragLocatorToLocator(page, standalone, galleryImg, "onto")
 
       await assertGalleryWithImages(editor, 3)
+    })
+
+    test("drag a previewable non-image onto another keeps both", async ({ page, editor }) => {
+      await editor.uploadFile("test/fixtures/files/dummy.pdf")
+      await editor.send("Enter")
+      await editor.uploadFile("test/fixtures/files/dummy.pdf")
+      await waitForUploadsComplete(page, editor)
+      await expect(page.locator("figure.attachment")).toHaveCount(2)
+
+      await simulateDragByIndex(page, 1, 0, "onto")
+      await editor.flush()
+
+      // Galleries only take images, so this drop cannot be honoured. It should
+      // leave the document alone rather than swallow the dragged attachment.
+      await assertNoGallery(page)
+      await expect(page.locator("figure.attachment")).toHaveCount(2)
+    })
+
+    test("drag an image onto a previewable non-image keeps both", async ({ page, editor }) => {
+      await editor.uploadFile("test/fixtures/files/dummy.pdf")
+      await editor.send("Enter")
+      await editor.uploadFile("test/fixtures/files/example.png")
+      await waitForUploadsComplete(page, editor)
+      await expect(page.locator("figure.attachment")).toHaveCount(2)
+
+      await simulateDragByIndex(page, 1, 0, "onto")
+      await editor.flush()
+
+      await assertNoGallery(page)
+      await expect(page.locator("figure.attachment")).toHaveCount(2)
     })
   })
 

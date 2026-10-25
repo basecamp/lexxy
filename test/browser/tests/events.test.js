@@ -10,6 +10,28 @@ test.describe("Events", () => {
     await expect(page.locator("[data-event='lexxy:change']")).toHaveCount(0)
   })
 
+  test("no lexxy:change event on initial load when value re-serializes differently", async ({ page, editor }) => {
+    await page.goto("/initial-value-renormalized.html")
+    await editor.waitForConnected()
+    await editor.flush()
+
+    // Initial value has <del> elements
+    await assertEditorHtml(editor, "<p><s>renormalized</s></p>")
+
+    await expect(page.locator("[data-event='lexxy:change']")).toHaveCount(0)
+  })
+
+  test("no lexxy:change event on initial load when value has a sanitized tag stripped", async ({ page, editor }) => {
+    await page.goto("/initial-value-sanitized.html")
+    await editor.waitForConnected()
+    await editor.flush()
+
+    // Initial value contains a <script> tag stripped by the sanitizer
+    await assertEditorHtml(editor, "<p>hello</p>")
+
+    await expect(page.locator("[data-event='lexxy:change']")).toHaveCount(0)
+  })
+
   test("dispatch lexxy:focus and lexxy:blur events on focus gain and loss", async ({
     page,
     editor,
