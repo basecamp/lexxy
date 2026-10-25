@@ -216,8 +216,8 @@ The Playwright config starts its own Vite dev server automatically when you run 
 **For the real-browser fallback** (needs the dummy app): run it from your worktree on a port of your own (see AGENTS.md, "Worktrees", for `bin/setup` and seeding):
 
 ```bash
-# bin/dev force-kills whatever listens on its port, so pick a free one: this must print nothing
-lsof -ti tcp:<port> -sTCP:LISTEN
+# bin/dev force-kills whatever listens on its port, so pick a free one
+curl -s -o /dev/null -m 2 http://localhost:<port>/ && echo "port <port> is taken, pick another"
 
 mkdir -p tmp
 PORT=<port> bin/dev > tmp/dev-<port>.log 2>&1 &

@@ -98,8 +98,8 @@ git status --porcelain   # must print nothing
 A server already answering on a port may be serving another checkout, so start your own rather than reusing one:
 
 ```bash
-# bin/dev force-kills whatever listens on its port, so pick a free one: this must print nothing
-lsof -ti tcp:<port> -sTCP:LISTEN
+# bin/dev force-kills whatever listens on its port, so pick a free one
+curl -s -o /dev/null -m 2 http://localhost:<port>/ && echo "port <port> is taken, pick another"
 
 mkdir -p tmp
 PORT=<port> bin/dev > tmp/dev-<port>.log 2>&1 &
