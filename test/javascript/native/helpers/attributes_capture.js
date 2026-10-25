@@ -1,13 +1,8 @@
 import { expect } from "vitest"
 
-// Public contract, as the iOS and Android apps decode it. Hard-coded so a
-// regression that drops a key (or sneaks one in) is caught here, not silently
-// re-derived from the implementation.
-//
-// `attributes` carries one `{ active, enabled }` toolbar state per button.
-// `link` is `{ href }` or null and `highlight` is `{ color, backgroundColor }`
-// or null: the apps decode `href` as a non-optional string, so a link object
-// without one fails the whole message.
+// The payload as the iOS and Android apps decode it, hard-coded rather than derived from
+// the implementation. The apps decode link.href as a non-optional string, so a link
+// object without one fails the whole message.
 const EXPECTED_ATTRIBUTE_KEYS = [
   "bold",
   "code",
@@ -24,9 +19,6 @@ const EXPECTED_ATTRIBUTE_KEYS = [
 ]
 const HEADING_TAGS = [ "h1", "h2", "h3", "h4", "h5", "h6" ]
 
-// Wires a listener on `lexxy:attributes-change` that records every event
-// detail and asserts the public contract on each one. Use afterEach to dispose
-// and surface any contract violation.
 export function captureAttributesChange(element) {
   const events = []
   const violations = []

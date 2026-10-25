@@ -1,8 +1,6 @@
 import { expect } from "@playwright/test"
 
-// Public NativeAdapter contract, as the iOS and Android apps decode it. Hard-coded
-// so a regression that drops a key is caught here. Mirrors
-// test/javascript/native/helpers/attributes_capture.js.
+// The payload as the iOS and Android apps decode it. Mirrors test/javascript/native/helpers/attributes_capture.js.
 const EXPECTED_ATTRIBUTE_KEYS = [
   "bold",
   "code",
@@ -19,9 +17,7 @@ const EXPECTED_ATTRIBUTE_KEYS = [
 ]
 const HEADING_TAGS = [ "h1", "h2", "h3", "h4", "h5", "h6" ]
 
-// Installs NativeAdapter on the <lexxy-editor> and starts collecting
-// `lexxy:attributes-change` event details into a window-side array. The Node side
-// reads the array via `events()` / `last()` / `count()`.
+// Registers a NativeAdapter on the editor and records the attributes-change events it dispatches.
 export class NativeCapture {
   constructor(page, selector = "lexxy-editor") {
     this.page = page

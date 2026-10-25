@@ -73,10 +73,7 @@ export async function destroyTestEditor(element) {
   await tick()
 }
 
-// Simulates the native-app kill/resume cycle: detach the element from the DOM
-// (firing disconnectedCallback / #reset), then re-attach it to fire
-// connectedCallback. Returns the same element. Two ticks flush the post-reconnect
-// requestAnimationFrame and any work it schedules.
+// Detaches and re-attaches the element, as a restored native composer does.
 export async function recreateEditor(element) {
   const placeholder = document.createComment("recreating editor")
   element.replaceWith(placeholder)

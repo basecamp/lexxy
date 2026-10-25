@@ -37,7 +37,7 @@ test.describe("native: history dispatch", () => {
     expect(await capture.count()).toBeGreaterThan(0)
   })
 
-  test("redo dispatches an attributes-change with redo.enabled true after undo", async ({ page, editor }) => {
+  test("redo dispatches an attributes-change, and redo is disabled again once nothing is left to redo", async ({ page, editor }) => {
     const capture = new NativeCapture(page)
     await capture.install()
     await editor.click()
