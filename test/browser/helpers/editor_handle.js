@@ -7,9 +7,20 @@ export class EditorHandle {
     this.content = this.locator.locator(".lexxy-editor__content")
   }
 
+  // The element turns [connected] as soon as connectedCallback runs, but it
+  // mounts Lexical onto its content element on the next animation frame. Until
+  // then the editor ignores input and its DOM is still being rebuilt, so wait
+  // for the mount too.
   async waitForConnected() {
     await this.locator.waitFor({ state: "attached" })
     await this.page.waitForSelector(`${this.selector}[connected]`)
+
+    const element = await this.locator.elementHandle()
+    await this.page.waitForFunction((el) => {
+      const root = el.editor?.getRootElement()
+      return root != null && root === el.editorContentElement
+    }, element)
+    await element.dispose()
   }
 
   async value() {
@@ -34,6 +45,10 @@ export class EditorHandle {
 
   async focus() {
     await this.content.focus()
+  }
+
+  async isFocused() {
+    return this.content.evaluate((element) => document.activeElement === element)
   }
 
   async click() {
@@ -125,10 +140,10 @@ export class EditorHandle {
     })
   }
 
-  async paste(text, { html, files = [], uriList } = {}) {
+  async paste(text, { html, files = [], uriList, lexical } = {}) {
     await this.#ensureFirstInteraction()
     await this.content.evaluate(
-      (el, { text, html, files, uriList }) => {
+      (el, { text, html, files, uriList, lexical }) => {
         const buildFiles = () => {
           return files.map(({ base64, name, type }) => {
             const binary = atob(base64)
@@ -167,12 +182,14 @@ export class EditorHandle {
           if (typeof text === "string") event.clipboardData.setData("text/plain", text)
           if (html) event.clipboardData.setData("text/html", html)
           if (uriList) event.clipboardData.setData("text/uri-list", uriList)
+          if (lexical) event.clipboardData.setData("application/x-lexical-editor", lexical)
         }
 
         el.dispatchEvent(event)
       },
-      { text, html, files, uriList },
+      { text, html, files, uriList, lexical },
     )
+    await this.flush()
   }
 
   async sendTab({ shift = false } = {}) {
@@ -236,13 +253,13 @@ export class EditorHandle {
 
   async openTableRowMenu() {
     await this.locator
-      .locator("lexxy-table-tools .lexxy-table-control--row details")
+      .locator("lexxy-table-tools .lexxy-table-control--row [data-dropdown-trigger]")
       .click()
   }
 
   async openTableColumnMenu() {
     await this.locator
-      .locator("lexxy-table-tools .lexxy-table-control--column details")
+      .locator("lexxy-table-tools .lexxy-table-control--column [data-dropdown-trigger]")
       .click()
   }
 
@@ -267,6 +284,8 @@ export class EditorHandle {
       )
       if (!isActive) {
         await this.content.click()
+        // Let Lexical pick up the selection the click placed before acting on it.
+        await this.flush()
       }
       this.#firstInteraction = true
     }

@@ -67,6 +67,11 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   updateDOM(prevNode, dom) {
     if (this.uploadError !== prevNode.uploadError) return true
 
+    const image = dom.querySelector("img")
+    if (image && prevNode.altText !== this.altText) {
+      image.alt = this.altText
+    }
+
     if (prevNode.progress !== this.progress) {
       const progress = dom.querySelector("progress")
       progress.value = this.progress ?? 0
@@ -100,7 +105,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   #createDOMForImage() {
-    return createElement("img")
+    return createElement("img", { alt: this.altText })
   }
 
   #createDOMForFile() {
@@ -265,7 +270,6 @@ class AttachmentNodeConversion {
     const { blob } = this
     return {
       sgid: blob.attachable_sgid,
-      altText: blob.filename,
       contentType: blob.content_type,
       fileName: blob.filename,
       fileSize: blob.byte_size,

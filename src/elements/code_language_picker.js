@@ -1,4 +1,5 @@
-import { CODE_LANGUAGE_FRIENDLY_NAME_MAP, CodeNode, normalizeCodeLang } from "@lexical/code"
+import { CodeNode } from "@lexical/code"
+import { CODE_LANGUAGE_FRIENDLY_NAME_MAP, normalizeCodeLanguage } from "@lexical/code-prism"
 import { createElement, dispatch } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
@@ -133,7 +134,7 @@ export class CodeLanguagePicker extends HTMLElement {
 
   #updateLanguagePickerWith(language) {
     if (this.languagePickerElement && language) {
-      const normalizedLanguage = normalizeCodeLang(language)
+      const normalizedLanguage = normalizeCodeLanguage(language)
       this.languagePickerElement.value = normalizedLanguage
     }
   }
