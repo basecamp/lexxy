@@ -1,4 +1,6 @@
-import { $createParagraphNode, $getSelection, $isElementNode, $isRangeSelection, $isRootOrShadowRoot, ParagraphNode } from "lexical"
+import { $createParagraphNode, $getSelection, $isDecoratorNode, $isElementNode, $isRangeSelection, $isRootOrShadowRoot, ParagraphNode } from "lexical"
+import { $isBlockContainer } from "../helpers/lexical_helper"
+import { $isImageGalleryNode } from "./image_gallery_node"
 
 export class ProvisionalParagraphNode extends ParagraphNode {
   $config() {
@@ -13,8 +15,8 @@ export class ProvisionalParagraphNode extends ParagraphNode {
   }
 
   static neededBetween(nodeBefore, nodeAfter) {
-    return !$isSelectableElement(nodeBefore, "next")
-      && !$isSelectableElement(nodeAfter, "previous")
+    return !$offersCaretAtEdge(nodeBefore, "previous", nodeAfter)
+      && !$offersCaretAtEdge(nodeAfter, "next", nodeBefore)
   }
 
   createDOM(editor) {
@@ -97,6 +99,28 @@ export function $isProvisionalParagraphNode(node) {
   return node instanceof ProvisionalParagraphNode
 }
 
-function $isSelectableElement(node, direction) {
-  return $isElementNode(node) && (direction === "next" ? node.canInsertTextBefore() : node.canInsertTextAfter())
+// `direction` points from the gap into the node: "next" asks about a node's leading edge,
+// "previous" about its trailing one. A block container — a quote holding paragraphs, a list
+// holding items — holds no caret at that edge either, but it only earns a spacer when a decorator
+// sits across the gap. Anywhere else its edge is already reachable, and a spacer there would
+// widen what Select All covers.
+function $offersCaretAtEdge(node, direction, opposite) {
+  return $isElementNode(node)
+    && $acceptsTextAtEdge(node, direction)
+    && !($isDecoratorNode(opposite) && $holdsOnlyBlocks(node, direction))
+}
+
+// A gallery is a block container as well, but its attachments report themselves inline — they
+// only do so to satisfy Lexical's rule that the root holds no inline nodes — so the generic
+// check can't see it.
+function $holdsOnlyBlocks(node, direction) {
+  return $isImageGalleryNode(node) || $isBlockContainer(node, direction)
+}
+
+function $acceptsTextAtEdge(node, direction) {
+  if (direction === "next") {
+    return node.canInsertTextBefore()
+  } else {
+    return node.canInsertTextAfter()
+  }
 }
