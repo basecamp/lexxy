@@ -11,6 +11,7 @@ import { debounce, nextFrame } from "../helpers/timing_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
 const NOTHING_FOUND_DEFAULT_MESSAGE = "Nothing found"
+const DEFAULT_FILTER_PARAM = "filter"
 const FILTER_DEBOUNCE_INTERVAL = 50
 
 // Start of line, or after a space or newline.
@@ -78,6 +79,10 @@ export class LexicalPromptElement extends HTMLElement {
     return !this.open
   }
 
+  get #filterParam() {
+    return this.getAttribute("filter-param") || DEFAULT_FILTER_PARAM
+  }
+
   get #doesSpaceSelect() {
     return !this.supportsSpaceInSearches
   }
@@ -86,7 +91,7 @@ export class LexicalPromptElement extends HTMLElement {
     const src = this.getAttribute("src")
     if (src) {
       if (this.hasAttribute("remote-filtering")) {
-        return new RemoteFilterSource(src)
+        return new RemoteFilterSource(src, this.#filterParam)
       } else {
         return new DeferredPromptSource(src)
       }
