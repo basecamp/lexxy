@@ -21,6 +21,10 @@ test.describe("Content stylesheet specificity", () => {
     test("over the inline format styles", async ({ page }) => {
       await expect(page.locator("#overridden-italic")).toHaveCSS("font-style", "normal")
     })
+
+    test("over the upright emphasis inside a blockquote", async ({ page }) => {
+      await expect(page.locator("#overridden-quoted-italic")).toHaveCSS("font-style", "italic")
+    })
   })
 
   test.describe("without a consumer rule", () => {
@@ -29,6 +33,7 @@ test.describe("Content stylesheet specificity", () => {
       await expect(page.locator("#untouched-figure")).not.toHaveCSS("padding", "0px")
       await expect(page.locator("#untouched-caption")).not.toHaveCSS("padding", "0px")
       await expect(page.locator("#untouched-italic")).toHaveCSS("font-style", "italic")
+      await expect(page.locator("#untouched-quoted-italic")).toHaveCSS("font-style", "normal")
     })
 
     test("a linked preview keeps its block anchor", async ({ page }) => {

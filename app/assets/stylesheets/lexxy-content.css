@@ -78,7 +78,7 @@
     padding: 0.5lh 2ch;
 
     em,
-    .lexxy-content__italic {
+    :where(.lexxy-content__italic) {
       font-style: normal;
     }
 
