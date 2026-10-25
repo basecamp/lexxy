@@ -22,6 +22,16 @@ class PlainTextPasteTest < ApplicationSystemTestCase
     end
   end
 
+  test "pastes a URL as plain text in a plain-text-only editor" do
+    visit new_post_path(rich_text_disabled: 1)
+    paste_from_clipboard "https://example.com/some/page"
+
+    find_editor.within_contents do
+      assert_text "https://example.com/some/page"
+      assert_no_selector "a"
+    end
+  end
+
   private
     def paste_from_clipboard(text)
       copy_to_clipboard text

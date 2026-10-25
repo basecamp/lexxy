@@ -148,7 +148,7 @@ export default class Clipboard {
     const item = this.#plainTextOrURLItem(clipboardData)
     item.getAsString((text) => {
       const url = text.trim()
-      if (isAutolinkableURL(url)) {
+      if (this.editorElement.supportsRichText && isAutolinkableURL(url)) {
         this.#pasteURL(url)
       } else if (this.editorElement.supportsMarkdown) {
         this.#pasteMarkdown(text)
