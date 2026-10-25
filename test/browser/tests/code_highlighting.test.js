@@ -175,6 +175,29 @@ test.describe("Code block color highlights survive editing", () => {
     })
   })
 
+  test("pressing Enter twice after a highlight loaded from persisted HTML exits the code block", async ({ page, editor }) => {
+    await editor.setValue('<pre data-language="plain"><code>as<mark style="background-color: var(--highlight-bg-1);">df</mark> </code></pre>')
+
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toHaveText("df")
+    }).toPass({ timeout: 5_000 })
+
+    const errors = []
+    page.on("pageerror", (error) => errors.push(error.message))
+
+    await editor.select("df")
+    await editor.send("End", "Enter", "Enter", "hello")
+    await editor.flush()
+
+    expect(errors).toEqual([])
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code mark")).toHaveCount(1)
+      await expect(content.locator("code mark")).toHaveText("df")
+      await expect(content.locator("p")).toContainText("hello")
+    })
+  })
+
   test("a highlight survives switching the code language", async ({ page, editor }) => {
     await editor.setValue('<pre data-language="plain"><code>def hello_world</code></pre>')
     await editor.select("hello")
