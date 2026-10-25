@@ -3,8 +3,10 @@
 // editing the DOM directly. It holds no Lexical to keep that bundle light, and
 // make_changes.js handles the edit lazily. The flag keeps a single registration
 // when this module loads from both the app's bundle and Lexxy's.
-if (!window.lexxyDragonInstalled) {
-  window.lexxyDragonInstalled = true
+const INSTALLED = Symbol.for("lexxy/dragon/support")
+
+if (!window[INSTALLED]) {
+  window[INSTALLED] = true
   window.addEventListener("message", handleMessage, { capture: true })
 }
 
@@ -12,12 +14,18 @@ function handleMessage(event) {
   if (event.origin !== window.location.origin) return
 
   const args = makeChangesArgumentsFrom(event.data)
-  const editor = args && document.activeElement?.closest("lexxy-editor")
 
-  if (editor) {
+  if (args && isEditorFocused()) {
     event.stopImmediatePropagation()
     document.dispatchEvent(new CustomEvent("lexxy:dragon-make-changes", { detail: args }))
   }
+}
+
+// Only the editable root: Lexxy's own inputs and textareas (link, caption, alt
+// text) are left to the extension
+function isEditorFocused() {
+  const element = document.activeElement
+  return element?.isContentEditable && element.closest("lexxy-editor")?.editor?.getRootElement() === element
 }
 
 function makeChangesArgumentsFrom(data) {

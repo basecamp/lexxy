@@ -13,29 +13,36 @@ const TEXT_FORMAT_BY_EXEC_COMMAND = new Map([
   [ "underline", "underline" ]
 ])
 
-document.addEventListener("lexxy:dragon-make-changes", (event) => {
-  const editor = document.activeElement?.closest("lexxy-editor")?.editor
-  if (editor && isWellFormed(event.detail)) {
-    new MakeChangesMessage(event.detail).applyTo(editor)
-  }
-})
+const INSTALLED = Symbol.for("lexxy/dragon/makeChanges")
+
+if (!document[INSTALLED]) {
+  document[INSTALLED] = true
+  document.addEventListener("lexxy:dragon-make-changes", (event) => {
+    const editorElement = document.activeElement?.closest("lexxy-editor")
+    const isEditorFocused = editorElement?.editor?.getRootElement() === document.activeElement
+
+    if (isEditorFocused && isWellFormed(event.detail)) {
+      new MakeChangesMessage(event.detail).applyTo(editorElement)
+    }
+  })
+}
 
 function isWellFormed(args) {
   if (!Array.isArray(args)) return false
 
   const [ elementStart, elementLength, text, selStart, selLength ] = args
   return [ elementStart, elementLength, selStart, selLength ].every(Number.isFinite) &&
-    (typeof text === "string" || text === -1)
+    (typeof text === "string" || text === -1 || text === null)
 }
 
 // A text of -1 (a number, not a string) means "change the selection without
 // touching the text", which is how Select-and-Say corrections and cursor moves
-// by voice arrive.
+// by voice arrive. The extension reads a null text as an empty one.
 class MakeChangesMessage {
   constructor([ elementStart, elementLength, text, selStart, selLength, formatCommand ]) {
     this.elementStart = elementStart
     this.elementLength = elementLength
-    this.text = text
+    this.text = text ?? ""
     this.selStart = selStart
     this.selLength = selLength
     this.formatCommand = formatCommand
@@ -43,20 +50,24 @@ class MakeChangesMessage {
 
   // Offsets are resolved against the rendered DOM, so the text change has to be
   // reconciled (discrete) before the final selection, which addresses the new text.
-  applyTo(editor) {
-    this.editor = editor
-    editor.update(() => this.#replaceAddressedRange(), { discrete: true })
-    editor.update(() => this.#selectFinalRange())
+  applyTo(editorElement) {
+    this.editorElement = editorElement
+    this.editor = editorElement.editor
+    this.editor.update(() => this.#replaceAddressedRange(), { discrete: true })
+    this.editor.update(() => this.#selectFinalRange())
   }
 
+  // Like the extension, a range it can't address leaves the selection alone, and
+  // then the text goes nowhere rather than replacing whatever is selected
   #replaceAddressedRange() {
+    let isAddressed = true
     if (this.elementStart >= 0 && this.elementLength >= 0) {
-      this.#select(this.elementStart, this.elementStart + this.elementLength)
+      isAddressed = this.#select(this.elementStart, this.elementStart + this.elementLength)
     }
 
     const selection = $getSelection()
-    if (this.#changesText && $isRangeSelection(selection)) {
-      selection.insertRawText(this.text.replace(/\r\n?/g, "\n"))
+    if (isAddressed && this.#changesText && $isRangeSelection(selection)) {
+      selection.insertRawText(this.#insertableText)
     }
   }
 
@@ -64,22 +75,33 @@ class MakeChangesMessage {
     return typeof this.text === "string" && (this.text !== "" || this.elementLength > 0)
   }
 
-  // Negative offsets collapse the selection instead of leaving a backward range
-  // that the next input would replace
-  #selectFinalRange() {
-    if (this.selStart >= 0 && this.selLength >= 0) {
-      this.#select(this.selStart, this.selStart + this.selLength)
+  get #insertableText() {
+    const text = this.text.replace(/\r\n?/g, "\n")
+    if (this.editorElement.supportsMultiLine) {
+      return text
     } else {
-      this.#select(this.selStart, this.selStart)
+      return text.replace(/\n/g, " ")
+    }
+  }
+
+  // A negative length collapses the selection instead of leaving a backward
+  // range that the next input would replace
+  #selectFinalRange() {
+    let isSelected
+    if (this.selStart >= 0 && this.selLength >= 0) {
+      isSelected = this.#select(this.selStart, this.selStart + this.selLength)
+    } else {
+      isSelected = this.#select(this.selStart, this.selStart)
     }
 
-    this.#applyFormatCommand()
+    if (isSelected) this.#applyFormatCommand()
   }
 
   #select(from, to) {
     const text = new DragonText(this.editor.getRootElement())
     const anchor = text.pointAt(from)
     const focus = text.pointAt(to)
+    if (!anchor || !focus) return false
 
     const selection = $createRangeSelectionFromDom({
       anchorNode: anchor.node,
@@ -89,13 +111,14 @@ class MakeChangesMessage {
     }, this.editor)
 
     if (selection) $setSelection(selection)
+    return true
   }
 
   // Voice commands like "bold that" arrive as execCommand names. A collapsed
   // selection would toggle the pending format instead of formatting a range.
   #applyFormatCommand() {
     const selection = $getSelection()
-    if (this.#format && this.selLength > 0 && $isRangeSelection(selection) && !selection.isCollapsed()) {
+    if (this.#format && this.editorElement.supportsRichText && this.selLength > 0 && $isRangeSelection(selection) && !selection.isCollapsed()) {
       selection.formatText(this.#format)
     }
   }
@@ -114,7 +137,8 @@ const LUMP = "[~]"
 // the contenteditable: a line feed (\r\n, or \r on macOS) around blocks and for
 // each <br>, and a "[~]" placeholder for any element it doesn't parse (<mark>,
 // <code>, <pre>, <hr>, attachments...), whose contents it skips. This mirrors
-// that flattening and returns the DOM point a Dragon offset lands on.
+// that flattening and returns the DOM point a Dragon offset lands on, or null
+// when the offset is outside the field.
 class DragonText {
   constructor(root) {
     this.root = root
@@ -122,14 +146,15 @@ class DragonText {
   }
 
   pointAt(offset) {
-    this.target = Math.max(offset, 0)
+    this.target = offset
     this.length = 0
     this.lastBreak = "start"
-    this.point = { node: this.root, offset: 0 }
+    this.point = null
     this.found = false
 
     this.#visitChildren(this.root)
-    return this.point
+    if (this.found || this.length >= offset) return this.point
+    return null
   }
 
   #visitChildren(element) {
@@ -151,9 +176,10 @@ class DragonText {
     }
   }
 
+  // Indexes by UTF-16 code unit, like the extension and DOM offsets do
   #visitText(node) {
-    for (const [ index, character ] of Array.from(node.data).entries()) {
-      const flattened = this.#flatten(character)
+    for (let index = 0; index < node.data.length; index++) {
+      const flattened = this.#flatten(node.data[index])
       this.#mark(node, index)
       this.length += flattened.length
       if (flattened.length > 0) this.lastBreak = null
@@ -208,7 +234,7 @@ class DragonText {
   // where the offset lands: the start of the next character beats the end of the
   // previous one when both share the offset.
   #mark(node, offset) {
-    if (this.length <= this.target) {
+    if (this.target >= 0 && this.length <= this.target) {
       this.point = { node, offset }
     } else {
       this.found = true

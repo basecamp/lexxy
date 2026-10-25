@@ -176,6 +176,56 @@ test.describe("Dragon NaturallySpeaking support", () => {
     expect(await selectedText(editor)).toBe("after")
     expect(pageErrors).toEqual([])
   })
+
+  test("counts UTF-16 code units like the extension", async ({ editor }) => {
+    await editor.setValue("<p>😀 I'm dictating here</p>")
+    await postMakeChanges(editor, [ 7, 9, "speaking", 15, 0 ])
+    await editor.flush()
+
+    expect(await editor.plainTextValue()).toBe("😀 I'm speaking here")
+    expect(pageErrors).toEqual([])
+  })
+
+  test("ignores a replacement whose range runs past the end of the field", async ({ editor }) => {
+    await editor.setValue("<p>First paragraph</p><p>Second paragraph</p><p>Third paragraph</p>")
+    await postMakeChanges(editor, [ 6, 900, "word", 10, 0 ])
+    await editor.flush()
+
+    expect(await editor.value()).toContain("Second paragraph")
+    expect(await editor.value()).toContain("Third paragraph")
+    expect(pageErrors).toEqual([])
+  })
+
+  test("leaves the caret after the inserted text when the final selection is out of the field", async ({ editor }) => {
+    await editor.setValue("<p>First paragraph</p><p>I'm dictating here</p>")
+    await postMakeChanges(editor, [ 21, 9, "speaking", -1, 0 ])
+    await editor.send("!")
+    await editor.flush()
+
+    expect(await editor.value()).toContain("I'm speaking! here")
+    expect(pageErrors).toEqual([])
+  })
+
+  test("stops the message before listeners registered after Lexxy, like the extension's", async ({ page, editor }) => {
+    await listenForLaterMessages(page)
+    await postMakeChanges(editor, [ 4, 9, -1, 4, 9 ])
+
+    expect(await page.evaluate(() => window.laterMessages)).toEqual(0)
+  })
+
+  test("leaves dictation into Lexxy's own fields to the extension", async ({ page, editor }) => {
+    await listenForLaterMessages(page)
+    await page.evaluate(() => {
+      const textarea = document.createElement("textarea")
+      document.querySelector("lexxy-editor").append(textarea)
+      textarea.focus()
+    })
+    await postMakeChanges(editor, [ 0, 0, "hijacked", 8, 0 ])
+    await editor.flush()
+
+    expect(await page.evaluate(() => window.laterMessages)).toEqual(1)
+    expect(await editor.plainTextValue()).toBe("I'm dictating in the main content section")
+  })
 })
 
 test.describe("Dragon NaturallySpeaking support on macOS", () => {
@@ -210,4 +260,38 @@ async function postMakeChanges(editor, args) {
 
 function selectedText(editor) {
   return editor.content.evaluate(() => window.getSelection().toString())
+}
+
+test.describe("Dragon NaturallySpeaking support in restricted editors", () => {
+  test("keeps dictated line breaks out of a single-line editor", async ({ page, editor }) => {
+    await page.goto("/single-line.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await editor.focus()
+    await editor.send("one")
+    await postMakeChanges(editor, [ 3, 0, "\r\ntwo", 8, 0 ])
+    await editor.flush()
+
+    expect(await editor.value()).not.toContain("<br>")
+    expect(await editor.plainTextValue()).toBe("one two")
+  })
+
+  test("ignores format commands in a plain text editor", async ({ page, editor }) => {
+    await page.goto("/rich-text-disabled.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await editor.focus()
+    await editor.send("dictating")
+    await postMakeChanges(editor, [ 0, 9, -1, 0, 9, "bold" ])
+    await editor.flush()
+
+    expect(await editor.value()).not.toContain("<strong>")
+  })
+})
+
+function listenForLaterMessages(page) {
+  return page.evaluate(() => {
+    window.laterMessages = 0
+    window.addEventListener("message", (event) => {
+      if (String(event.data).includes("nuanria_messaging")) window.laterMessages += 1
+    })
+  })
 }
