@@ -59,11 +59,22 @@ test("builds a dropdown group as a menu of its items", () => {
 
   const [ table, separator, divider, bold ] = panel.children
   expect(table.dataset.command).toBe("insertTable")
-  expect(table.getAttribute("role")).toBe("menuitem")
   expect(table.querySelector("span").textContent).toBe("Insert a table")
   expect(separator.getAttribute("role")).toBe("separator")
   expect(divider.name).toBe("divider")
+  expect(divider.getAttribute("role")).toBe("menuitem")
+  expect(divider.hasAttribute("aria-checked")).toBe(false)
   expect(bold.dataset.command).toBe("bold")
+})
+
+test("toggles in a dropdown group are menu checkboxes", () => {
+  const toolbar = build([ { name: "more", label: "More", items: [ "bold", "unordered-list" ] } ])
+
+  for (const name of [ "bold", "unordered-list" ]) {
+    const button = toolbar.querySelector(`[name=${name}]`)
+    expect(button.getAttribute("role")).toBe("menuitemcheckbox")
+    expect(button.getAttribute("aria-checked")).toBe("false")
+  }
 })
 
 test("a group's label is text, never markup", () => {

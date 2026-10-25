@@ -264,7 +264,7 @@ export class LexicalToolbarElement extends HTMLElement {
 
   #updateGroupStates({ isInHeading }) {
     this.querySelectorAll(":scope > [data-toolbar-group]").forEach((group) => {
-      const hasPressedItem = group.panel.querySelector("[aria-pressed='true']") != null
+      const hasPressedItem = group.panel.querySelector("[aria-pressed='true'], [role='menuitemcheckbox'][aria-checked='true']") != null
       const hasActiveHeading = isInHeading && group.querySelector("lexxy-heading-dropdown") != null
       group.trigger.ariaPressed = hasPressedItem || hasActiveHeading
     })
@@ -272,7 +272,11 @@ export class LexicalToolbarElement extends HTMLElement {
 
   #setButtonPressed(name, isPressed) {
     const button = this.querySelector(`[name="${name}"]`)
-    if (button) button.ariaPressed = isPressed
+    if (button?.getAttribute("role") === "menuitemcheckbox") {
+      button.ariaChecked = isPressed
+    } else if (button) {
+      button.ariaPressed = isPressed
+    }
   }
 
   #setButtonChecked(name, isChecked) {

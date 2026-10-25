@@ -1,6 +1,7 @@
 import { nextFrame } from "../helpers/timing_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { handleRollingTabIndex, isKeyboardActivation, trapFocusAtTabBoundary } from "../helpers/accessibility_helper"
+import { isActiveAndVisible } from "../helpers/html_helper"
 
 export class ToolbarDropdown extends HTMLElement {
   #listeners = new ListenerBin()
@@ -118,14 +119,15 @@ export class ToolbarDropdown extends HTMLElement {
   async #focusFirstInteractive() {
     // Ask for the ring explicitly: opening the menu with the mouse otherwise leaves the
     // first item focused without a focus ring, since focus() inherits the mouse modality.
-    this.#interactiveElements[0]?.focus({ focusVisible: true })
+    this.#interactiveElements.find(isActiveAndVisible)?.focus({ focusVisible: true })
     if (this.panel.role === "menu") await this.#resetTabIndexValues()
   }
 
   async #resetTabIndexValues() {
     await nextFrame()
-    this.#buttons.forEach((element, index) => {
-      element.setAttribute("tabindex", index === 0 ? 0 : "-1")
+    const firstButton = this.#buttons.find(isActiveAndVisible)
+    this.#buttons.forEach((element) => {
+      element.setAttribute("tabindex", element === firstButton ? 0 : "-1")
     })
   }
 

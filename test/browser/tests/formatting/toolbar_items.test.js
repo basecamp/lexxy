@@ -36,7 +36,7 @@ test.describe("Toolbar items", () => {
     await toolbar.locator("button[name=insert]").click()
     await expect(toolbar.getByRole("menu", { name: "Insert" })).toBeVisible()
 
-    await toolbar.getByRole("menuitem", { name: "Insert a table" }).click()
+    await toolbar.getByRole("menuitemcheckbox", { name: "Insert a table" }).click()
     await expect(editor.content.locator("table")).toHaveCount(1)
     await expect(toolbar.getByRole("menu", { name: "Insert" })).toBeHidden()
   })
@@ -48,11 +48,33 @@ test.describe("Toolbar items", () => {
 
     const trigger = page.locator("#compact lexxy-toolbar button[name=insert]")
 
+    const strikethrough = page.locator("#compact lexxy-toolbar [name=strikethrough]")
+
     await editor.select("Hello")
     await expect(trigger).toHaveAttribute("aria-pressed", "false")
+    await expect(strikethrough).toHaveAttribute("aria-checked", "false")
 
     await editor.select("everyone")
     await expect(trigger).toHaveAttribute("aria-pressed", "true")
+    await expect(strikethrough).toHaveAttribute("role", "menuitemcheckbox")
+    await expect(strikethrough).toHaveAttribute("aria-checked", "true")
+    await expect(strikethrough).not.toHaveAttribute("aria-pressed")
+  })
+
+  test("opening a dropdown group focuses its first visible item", async ({ page }) => {
+    const editor = new EditorHandle(page, "#hidden-first-item")
+    await editor.waitForConnected()
+    await editor.click()
+    await editor.flush()
+
+    const toolbar = page.locator("#hidden-first-item lexxy-toolbar")
+    await toolbar.locator("button[name=italic]").focus()
+    await page.keyboard.press("ArrowRight")
+    await expect(toolbar.locator("button[name=more]")).toBeFocused()
+
+    await page.keyboard.press("Enter")
+    await expect(toolbar.locator("[name=bold]")).toBeFocused()
+    await expect(toolbar.locator("[name=bold]")).toHaveAttribute("tabindex", "0")
   })
 
   test("a disabled feature stays hidden even when its items are configured", async ({ page }) => {

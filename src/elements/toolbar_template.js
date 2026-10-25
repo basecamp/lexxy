@@ -7,16 +7,16 @@ const SPACER = "~"
 const BUTTONS = {
   "image": { command: "uploadImage", icon: "image", title: "Add images and video", preventOverflow: true },
   "file": { command: "uploadFile", icon: "attachment", title: "Upload files" },
-  "bold": { command: "bold", icon: "bold", title: "Bold" },
-  "italic": { command: "italic", icon: "italic", title: "Italic" },
-  "strikethrough": { command: "strikethrough", icon: "strikethrough", title: "Strikethrough" },
-  "underline": { command: "underline", icon: "underline", title: "Underline" },
+  "bold": { command: "bold", icon: "bold", title: "Bold", toggle: true },
+  "italic": { command: "italic", icon: "italic", title: "Italic", toggle: true },
+  "strikethrough": { command: "strikethrough", icon: "strikethrough", title: "Strikethrough", toggle: true },
+  "underline": { command: "underline", icon: "underline", title: "Underline", toggle: true },
   "clear-formatting": { command: "clearFormatting", icon: "clearFormatting", title: "Clear formatting" },
-  "quote": { command: "insertQuoteBlock", icon: "quote", title: "Quote" },
-  "code": { command: "insertCodeBlock", icon: "code", title: "Code" },
-  "unordered-list": { command: "insertUnorderedList", icon: "ul", title: "Bullet list" },
-  "ordered-list": { command: "insertOrderedList", icon: "ol", title: "Numbered list" },
-  "table": { command: "insertTable", icon: "table", title: "Insert a table" },
+  "quote": { command: "insertQuoteBlock", icon: "quote", title: "Quote", toggle: true },
+  "code": { command: "insertCodeBlock", icon: "code", title: "Code", toggle: true },
+  "unordered-list": { command: "insertUnorderedList", icon: "ul", title: "Bullet list", toggle: true },
+  "ordered-list": { command: "insertOrderedList", icon: "ol", title: "Numbered list", toggle: true },
+  "table": { command: "insertTable", icon: "table", title: "Insert a table", toggle: true },
   "divider": { command: "insertHorizontalDivider", icon: "hr", title: "Insert a divider" },
   "undo": { command: "undo", icon: "undo", title: "Undo", disabled: true },
   "redo": { command: "redo", icon: "redo", title: "Redo", disabled: true }
@@ -109,18 +109,21 @@ function menuItem(item) {
   }
 }
 
-function menuButton(name, { command, icon, title, label = title, role = "menuitem", disabled }) {
+function menuButton(name, { command, icon, title, label = title, role = "menuitem", toggle, disabled }) {
   const button = createElement("button", { type: "button", name, title, role, "data-command": command, "aria-disabled": disabled }, ToolbarIcons[icon])
+  if (toggle) {
+    button.setAttribute("role", "menuitemcheckbox")
+    button.setAttribute("aria-checked", "false")
+  }
+
   button.append(" ", createElement("span", { textContent: label }))
   return button
 }
 
 function dropdownTrigger({ name, icon, title, popup, chevron = false, hotkey }) {
-  const className = chevron ? "lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" : "lexxy-editor__toolbar-button"
-
   const trigger = createElement("button", {
     "data-dropdown-trigger": "",
-    className,
+    className: "lexxy-editor__toolbar-button",
     type: "button",
     title,
     "data-hotkey": hotkey,
@@ -129,6 +132,7 @@ function dropdownTrigger({ name, icon, title, popup, chevron = false, hotkey }) 
   }, ToolbarIcons[icon])
 
   if (name) trigger.name = name
+  if (chevron) trigger.classList.add("lexxy-editor__toolbar-button--chevron")
   return trigger
 }
 
