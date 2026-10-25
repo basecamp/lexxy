@@ -177,6 +177,15 @@ test.describe("Dragon NaturallySpeaking support", () => {
     expect(pageErrors).toEqual([])
   })
 
+  test("deletes the addressed range when the text is empty", async ({ editor }) => {
+    await postMakeChanges(editor, [ 4, 10, "", 4, 0 ])
+    await postMakeChanges(editor, [ 0, 4, null, 0, 0 ])
+    await editor.flush()
+
+    expect(await editor.plainTextValue()).toBe("in the main content section")
+    expect(pageErrors).toEqual([])
+  })
+
   test("counts UTF-16 code units like the extension", async ({ editor }) => {
     await editor.setValue("<p>😀 I'm dictating here</p>")
     await postMakeChanges(editor, [ 7, 9, "speaking", 15, 0 ])

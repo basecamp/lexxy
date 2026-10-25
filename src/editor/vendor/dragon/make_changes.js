@@ -67,12 +67,21 @@ class MakeChangesMessage {
 
     const selection = $getSelection()
     if (isAddressed && this.#changesText && $isRangeSelection(selection)) {
-      selection.insertRawText(this.#insertableText)
+      this.#replaceText(selection)
     }
   }
 
   get #changesText() {
     return typeof this.text === "string" && (this.text !== "" || this.elementLength > 0)
+  }
+
+  // insertRawText("") leaves the range in place, so deleting by voice removes it instead
+  #replaceText(selection) {
+    if (this.text === "") {
+      selection.removeText()
+    } else {
+      selection.insertRawText(this.#insertableText)
+    }
   }
 
   get #insertableText() {
@@ -110,7 +119,9 @@ class MakeChangesMessage {
       focusOffset: focus.offset
     }, this.editor)
 
-    if (selection) $setSelection(selection)
+    if (!selection) return false
+
+    $setSelection(selection)
     return true
   }
 
