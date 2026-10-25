@@ -79,9 +79,11 @@ test.describe("Tables disabled", () => {
 
     await page.goto("/tables-false.html")
     await editor.waitForConnected()
+    startMonitoringConsole(page)
     await editor.paste("alpha beta gamma delta After table", { html: TABLE_HTML, lexical })
 
     await assertEditorHtml(editor, TABLE_AS_PARAGRAPHS)
+    expect(page).toHaveNoErrors()
   })
 
   test("the editor connects without console errors", async ({ page, editor }) => {

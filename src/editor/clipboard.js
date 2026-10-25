@@ -46,6 +46,12 @@ export default class Clipboard {
       return true
     }
 
+    if (this.#isUnregisteredLexicalDataWithHtml(clipboardData)) {
+      this.contents.insertHtml(clipboardData.getData("text/html"), { tag: PASTE_TAG })
+      event.preventDefault()
+      return true
+    }
+
     const handled = this.#handlePastedFiles(clipboardData)
     if (handled) event.preventDefault()
     return handled
@@ -112,6 +118,27 @@ export default class Clipboard {
     const links = doc.body.querySelectorAll("a")
     if (links.length === 0) return true
     return links.length === 1 && links[0].getAttribute("href") === url
+  }
+
+  // Lexical data copied from an editor with more features than this one, such as
+  // a table copied into an editor with tables disabled, has nodes this editor
+  // doesn't register. Lexical would log an error before falling back to the HTML,
+  // so paste the HTML straight away.
+  #isUnregisteredLexicalDataWithHtml(clipboardData) {
+    return clipboardData.getData("text/html") && this.#hasUnregisteredLexicalNodes(clipboardData)
+  }
+
+  #hasUnregisteredLexicalNodes(clipboardData) {
+    try {
+      const { nodes } = JSON.parse(clipboardData.getData("application/x-lexical-editor"))
+      return nodes.some(node => !this.#isRegisteredSerializedNode(node))
+    } catch {
+      return false
+    }
+  }
+
+  #isRegisteredSerializedNode({ type, children = [] }) {
+    return this.editor._nodes.has(type) && children.every(child => this.#isRegisteredSerializedNode(child))
   }
 
   #isPastingIntoCodeBlock() {

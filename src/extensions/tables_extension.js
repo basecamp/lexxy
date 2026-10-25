@@ -158,7 +158,8 @@ export class TablesExtension extends LexxyExtension {
   // runs the text of header cells and captions together, since it only treats
   // <td> as a block. Turn every cell into a block first, so each keeps its text
   // on its own line. The lookup returns no conversion, so Lexical goes on to
-  // import the table's children.
+  // import the table's children. It rewrites the DOM it is given, which is safe
+  // because every import parses its HTML into a throwaway document.
   get #tablesDisabledExtension() {
     return defineExtension({
       name: "lexxy/tables-disabled",
