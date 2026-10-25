@@ -50,11 +50,21 @@ async function drainQueue() {
       try {
         highlightElement(preElement)
       } catch (error) {
-        reportError(error)
+        reportFailure(error)
       }
     }
   } finally {
     draining = false
+  }
+}
+
+// reportError surfaces the error to window error handlers (and error trackers)
+// without throwing; jsdom and other non-browser hosts lack it.
+function reportFailure(error) {
+  if (typeof reportError === "function") {
+    reportError(error)
+  } else {
+    console.error(error)
   }
 }
 

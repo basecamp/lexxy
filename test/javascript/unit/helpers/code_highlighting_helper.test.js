@@ -220,6 +220,18 @@ test("highlightCode highlights a root that was never connected", async () => {
   expect(countHighlighted(blocks)).toBe(blocks.length)
 })
 
+test("a failing block is logged where reportError is missing", async () => {
+  vi.stubGlobal("reportError", undefined)
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+  const blocks = appendBlocks(3)
+  Object.defineProperty(blocks[0], "innerHTML", { set() { throw new Error("blocked sink") } })
+
+  await highlightCode()
+
+  expect(consoleError).toHaveBeenCalledOnce()
+  expect(countHighlighted(blocks)).toBe(2)
+})
+
 test("highlightElement highlights a single pre element", () => {
   const pre = appendPre("single", "javascript", "const a = 1")
   document.body.appendChild(pre)
