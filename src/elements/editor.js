@@ -61,6 +61,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #initializeEventDispatched = false
   #editorInitializedDispatched = false
+  #focusRequested = false
   #listeners = new ListenerBin()
   #disposables = []
   #historyState = { undo: false, redo: false }
@@ -117,11 +118,13 @@ export class LexicalEditorElement extends HTMLElement {
     requestAnimationFrame(() => {
       this.#mountRoot()
       this.#handleAutofocus()
+      this.#handleRequestedFocus()
       this.#dispatchInitialize()
     })
   }
 
   disconnectedCallback() {
+    this.#focusRequested = false
     this.#initializeEventDispatched = false
     this.#editorInitializedDispatched = false
 
@@ -345,11 +348,23 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   focus() {
+    if (this.#isRootMounted) {
+      this.#focusEditor()
+    } else if (this.isConnected) {
+      this.#focusRequested = true
+    }
+  }
+
+  get #isRootMounted() {
+    return this.isConnected && !!this.editor?.getRootElement()
+  }
+
+  #focusEditor() {
     // `editor.focus()` commits a reconciler update to position the cursor.
     // Skip if the contenteditable already owns focus — the update would be a
     // no-op but still triggers a full style/layout pass on pages with large
     // DOMs.
-    if (this.editor && !this.#isContentFocused) {
+    if (!this.#isContentFocused) {
       this.editor.focus(() => this.#onFocus())
     }
   }
@@ -773,6 +788,13 @@ export class LexicalEditorElement extends HTMLElement {
   #onFocus() {
     if (this.isEmpty) {
       this.selection.placeCursorAtTheEnd()
+    }
+  }
+
+  #handleRequestedFocus() {
+    if (this.#focusRequested) {
+      this.#focusRequested = false
+      this.focus()
     }
   }
 

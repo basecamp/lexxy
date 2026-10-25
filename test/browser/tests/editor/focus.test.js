@@ -27,20 +27,37 @@ test.describe("Focus", () => {
     await expect(editor.content).toBeFocused()
   })
 
-  test("focus() on an uninitialized editor is a safe no-op", async ({ page }) => {
-    const thrown = await page.evaluate(async () => {
+  test("focus() on a detached editor is a no-op", async ({ page }) => {
+    const result = await page.evaluate(async () => {
       await customElements.whenDefined("lexxy-editor")
 
       const editor = document.createElement("lexxy-editor")
 
       try {
         editor.focus()
-        return null
       } catch (error) {
-        return error.message
+        return { thrown: error.message }
       }
+
+      const initialized = new Promise(resolve => editor.addEventListener("lexxy:initialize", resolve, { once: true }))
+      document.body.append(editor)
+      await initialized
+      await new Promise(requestAnimationFrame)
+
+      return { thrown: null, focused: editor.contains(document.activeElement) }
     })
 
-    expect(thrown).toBeNull()
+    expect(result).toEqual({ thrown: null, focused: false })
+  })
+
+  test("focus() before the editor finishes initializing focuses it once ready", async ({ page }) => {
+    await page.evaluate(() => {
+      const editor = document.createElement("lexxy-editor")
+      editor.id = "late-editor"
+      document.body.append(editor)
+      editor.focus()
+    })
+
+    await expect(page.locator("#late-editor .lexxy-editor__content")).toBeFocused()
   })
 })
