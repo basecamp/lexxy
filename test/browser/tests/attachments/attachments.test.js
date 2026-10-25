@@ -21,13 +21,12 @@ test.describe("Attachments", () => {
       "src",
       /\/rails\/active_storage\/blobs\/mock-signed-id-\d+\/example\.png/,
     )
-    await expect(figure.locator("figcaption textarea")).toHaveAttribute(
-      "placeholder",
-      "example.png",
-    )
+    await expect(figure.locator("figcaption")).toHaveText("example.png")
 
     await expect(page.locator("[data-event='lexxy:upload-start']")).toHaveCount(1)
     await expect(page.locator("[data-event='lexxy:upload-end']")).toHaveCount(1)
+    await expect(figure.locator("img")).toHaveAttribute("alt", "")
+    expect(await editor.value()).not.toContain('alt="example.png"')
   })
 
   test("image keeps local preview until server image loads", async ({ page, editor }) => {
@@ -58,6 +57,8 @@ test.describe("Attachments", () => {
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
+    await expect(page.locator("[data-event='lexxy:upload-end']")).toHaveCount(1)
+
     // Delete the attachment while the server image is still pending
     await figure.locator("img").click()
     await editor.send("Delete")
@@ -84,7 +85,9 @@ test.describe("Attachments", () => {
   })
 
   test("upload previewable PDF shows file icon initially while preview loads", async ({ page, editor }) => {
-    await mockActiveStorageUploads(page)
+    // delayBlobResponses holds the preview URL so the file-icon state is
+    // observable before the preload completes and swaps in the preview.
+    await mockActiveStorageUploads(page, { delayBlobResponses: true })
     await editor.uploadFile("test/fixtures/files/dummy.pdf", { via: "file" })
 
     const figure = page.locator("figure.attachment[data-content-type='application/pdf']")
@@ -104,6 +107,7 @@ test.describe("Attachments", () => {
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
+    await expect(page.locator("[data-event='lexxy:upload-end']")).toHaveCount(1)
     await figure.locator("img").click()
     await editor.send("Delete")
 
@@ -111,18 +115,21 @@ test.describe("Attachments", () => {
     await assertEditorHtml(editor, "")
   })
 
-  test("delete attachment with delete button", async ({ page, editor }) => {
+  test("delete attachment with toolbar button", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
 
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
+    await expect(page.locator("[data-event='lexxy:upload-end']")).toHaveCount(1)
 
-    await figure.locator("img").click()
-    await expect(page.locator("lexxy-node-delete-button")).toBeVisible()
-    await page.locator("lexxy-node-delete-button button[aria-label='Remove']").click()
+    await figure.click({ position: { x: 8, y: 8 } })
+    const toolbar = page.locator("lexxy-attachment-toolbar")
+    await expect(toolbar).toBeVisible()
+    await toolbar.locator("button[aria-label='Remove']").click()
 
     await expect(figure).toHaveCount(0)
+    await expect(toolbar).toBeHidden()
     await assertEditorHtml(editor, "")
   })
 
@@ -130,7 +137,8 @@ test.describe("Attachments", () => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
 
-    const caption = page.locator("figure.attachment figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await page.locator("figure.attachment .attachment__caption--editable").click()
     await expect(caption).toBeVisible({ timeout: 10_000 })
 
     await caption.click()
@@ -141,20 +149,51 @@ test.describe("Attachments", () => {
     await assertEditorValueContains(editor, 'caption="My caption"')
   })
 
+  test("Enter that confirms an IME composition stays in the caption", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await page.locator("figure.attachment .attachment__caption--editable").click()
+    await expect(caption).toBeVisible({ timeout: 10_000 })
+
+    await caption.click()
+    await caption.pressSequentially("한글")
+
+    // Playwright can't drive a real IME, so replay the events one sends when
+    // Enter confirms the last syllable. Chrome reports the keydown with
+    // isComposing; Safari ends the composition first, leaving only keyCode 229.
+    for (const indicator of [ { isComposing: true }, { keyCode: 229 } ]) {
+      await caption.evaluate((textarea, indicator) => {
+        textarea.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }))
+        if (!indicator.isComposing) textarea.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "글" }))
+        textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, ...indicator }))
+        if (indicator.isComposing) textarea.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "글" }))
+      }, indicator)
+      await editor.flush()
+
+      await expect(caption).toBeFocused()
+      await expect(caption).toHaveValue("한글")
+    }
+
+    await caption.press("Enter")
+    await assertEditorHasFocus(editor)
+    await assertEditorValueContains(editor, 'caption="한글"')
+    expect(await editor.value()).not.toContain("<p>한글</p>")
+  })
+
   test("caption saves and editor has focus after click", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
 
-    const caption = page.locator("figure.attachment figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await page.locator("figure.attachment .attachment__caption--editable").click()
     await expect(caption).toBeVisible({ timeout: 10_000 })
 
     await caption.click()
     await caption.pressSequentially("My caption")
 
-    // Blur the caption first to trigger the save, then click editor content
-    await caption.evaluate((el) => el.blur())
-    await editor.flush()
-    await editor.content.click()
+    await editor.content.locator("p").last().click()
 
     await assertEditorHasFocus(editor)
     await assertEditorValueContains(editor, 'caption="My caption"')
@@ -164,15 +203,13 @@ test.describe("Attachments", () => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
 
-    const caption = page.locator("figure.attachment figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await page.locator("figure.attachment .attachment__caption--editable").click()
     await expect(caption).toBeVisible({ timeout: 10_000 })
 
     await caption.click()
     await caption.pressSequentially("My caption")
 
-    // Blur the caption first to trigger the save, then press Tab
-    await caption.evaluate((el) => el.blur())
-    await editor.flush()
     await caption.press("Tab")
 
     await assertEditorValueContains(editor, 'caption="My caption"')
@@ -185,7 +222,8 @@ test.describe("Attachments", () => {
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
-    const caption = figure.locator("figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await figure.locator(".attachment__caption--editable").click()
     await caption.click()
     await caption.pressSequentially("Hello world")
 
@@ -206,7 +244,8 @@ test.describe("Attachments", () => {
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
-    const caption = figure.locator("figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await figure.locator(".attachment__caption--editable").click()
     await caption.click()
     await caption.pressSequentially("Cut me")
 
@@ -230,8 +269,8 @@ test.describe("Attachments", () => {
     // attachment so typing inserts text there. The trailing provisional paragraph
     // must be visible (not collapsed as hidden) so the caret renders correctly.
     const paragraphAfterAttachment = figure.locator("xpath=following-sibling::p[1]")
-    await expect(paragraphAfterAttachment).toHaveClass(/provisional-paragraph/)
-    await expect(paragraphAfterAttachment).not.toHaveClass(/hidden/)
+    await expect(paragraphAfterAttachment).toContainClass("provisional-paragraph")
+    await expect(paragraphAfterAttachment).not.toContainClass("hidden")
   })
 
   test("typing after uploading image into empty editor inserts text below the attachment", async ({ page, editor }) => {
@@ -256,13 +295,90 @@ test.describe("Attachments", () => {
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
     await editor.send("hello")
-    await expect.poll(() => editor.plainTextValue()).toContain("hello")
+    const paragraph = figure.locator("xpath=following-sibling::p[1]")
+    await expect(paragraph).toHaveText("hello")
+
 
     await calls.releaseDirectUploadResponses()
     await editor.flush()
 
     await editor.send(" world")
-    await expect.poll(() => editor.plainTextValue()).toContain("hello world")
+    await expect(paragraph).toHaveText("hello world")
+  })
+
+  test("undo after uploading into empty editor restores empty state", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+    await editor.flush()
+
+    // Wait for the history collapse to complete (runs in requestAnimationFrame)
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)))
+
+    // Undo until the undo button is disabled — no stale upload node should remain
+    const undoButton = page.getByRole("button", { name: "Undo" })
+    while (await undoButton.evaluate((element) => element.ariaDisabled !== "true")) {
+      await undoButton.click()
+      await editor.flush()
+    }
+
+    await expect(figure).toHaveCount(0)
+    await expect(editor.content.locator("progress")).toHaveCount(0)
+  })
+
+  test("undo preserves edits made during upload", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page, { uploadDelayMs: 1_000 })
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const uploadProgress = page.locator("figure.attachment progress")
+    await expect(uploadProgress).toBeVisible({ timeout: 10_000 })
+
+    // Type while the upload node is still in-flight.
+    await editor.send("hello world")
+    await expect(uploadProgress).toBeVisible()
+
+    const figure = page.locator("figure.attachment")
+    await expect(figure.locator("img")).toHaveAttribute(
+      "src",
+      /\/rails\/active_storage\/blobs\/mock-signed-id-\d+\/example\.png/,
+      { timeout: 10_000 },
+    )
+    await editor.flush()
+
+    // Wait for the history collapse to complete
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)))
+
+    // Undo should remove the typed text but preserve the attachment
+    const undoButton = page.getByRole("button", { name: "Undo" })
+    await undoButton.click()
+    await editor.flush()
+
+    await expect(figure).toBeVisible()
+    await expect(editor.content).not.toContainText("hello world")
+  })
+
+  test("node selection does not create an extra undo step", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.send("hello")
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const figure = page.locator("figure.attachment[data-content-type='image/png']")
+    await expect(figure).toBeVisible({ timeout: 10_000 })
+    await editor.flush()
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)))
+
+    // Click to create a node selection, then undo should still remove the attachment.
+    await figure.locator("img").click()
+    await editor.flush()
+
+    await page.getByRole("button", { name: "Undo" }).click()
+    await editor.flush()
+
+    await expect(figure).toHaveCount(0)
+    await expect(editor.content).toContainText("hello")
   })
 
   test("Ctrl+C in caption copies text without losing focus", async ({ page, editor }) => {
@@ -272,7 +388,8 @@ test.describe("Attachments", () => {
     const figure = page.locator("figure.attachment[data-content-type='image/png']")
     await expect(figure).toBeVisible({ timeout: 10_000 })
 
-    const caption = figure.locator("figcaption textarea")
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await figure.locator(".attachment__caption--editable").click()
     await caption.click()
     await caption.pressSequentially("Copy me")
 

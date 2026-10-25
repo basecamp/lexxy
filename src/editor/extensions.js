@@ -18,6 +18,13 @@ export default class Extensions {
 
     this.#clearPreviousExtensionToolbarButtons(toolbar)
     this.#addExtensionToolbarButtons(toolbar)
+    toolbar.requestOverflowRefresh()
+  }
+
+  dispose() {
+    while (this.enabledExtensions.length) {
+      this.enabledExtensions.pop().dispose()
+    }
   }
 
   #clearPreviousExtensionToolbarButtons(toolbar) {

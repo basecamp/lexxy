@@ -92,4 +92,27 @@ describe("adapter registration", () => {
 
     expect(initializedPayloads).toHaveLength(1)
   })
+
+  test("dispatches lexxy:initialize when adapter is registered before first frame", async () => {
+    editorElement = await createTestEditor({ skipTick: true })
+
+    const customAdapter = {
+      frozenLinkKey: null,
+      dispatchEditorInitialized() {},
+      dispatchAttributesChange() {},
+      freeze() {},
+      thaw() {},
+      unlinkFrozenNode() {
+        return false
+      }
+    }
+
+    let initializeFired = 0
+    editorElement.addEventListener("lexxy:initialize", () => initializeFired++)
+
+    editorElement.registerAdapter(customAdapter)
+    await tick()
+
+    expect(initializeFired).toBe(1)
+  })
 })

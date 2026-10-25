@@ -1,4 +1,4 @@
-import { $createParagraphNode, $splitNode, ParagraphNode } from "lexical"
+import { $createParagraphNode, $hasUpdateTag, $splitNode, PASTE_TAG, ParagraphNode } from "lexical"
 import { $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
 import { $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType } from "@lexical/utils"
@@ -17,12 +17,23 @@ export class EarlyEscapeListItemNode extends ListItemNode {
     return super.insertNewAfter(selection, restoreSelection)
   }
 
-  #shouldEscape(selection) {
-    if (!$getNearestNodeOfType(this, QuoteNode)) return false
-    if ($isBlankNode(this)) return true
+  get #isInBlockquote() {
+    return Boolean($getNearestNodeOfType(this, QuoteNode))
+  }
 
-    const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
-    return paragraph && $isBlankNode(paragraph) && $isListItemNode(paragraph.getParent())
+  #shouldEscape(selection) {
+    if (this.#isInPasteOperation() || !this.#isInBlockquote) {
+      return false
+    } else if ($isBlankNode(this)) {
+      return true
+    } else {
+      const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
+      return paragraph && $isBlankNode(paragraph) && $isListItemNode(paragraph.getParent())
+    }
+  }
+
+  #isInPasteOperation() {
+    return $hasUpdateTag(PASTE_TAG)
   }
 
   #escapeFromList() {

@@ -1,6 +1,7 @@
 import { $isRangeSelection, $isTextNode } from "lexical"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 import { createElement } from "./html_helper"
+import { styleResolverRoot } from "./style_resolver_root"
 
 export function isSelectionHighlighted(selection) {
   if (!$isRangeSelection(selection)) return false
@@ -33,6 +34,10 @@ export function getHighlightStyles(selection) {
 export function hasHighlightStyles(cssOrStyles) {
   const styles = typeof cssOrStyles === "string" ? getStyleObjectFromCSS(cssOrStyles) : cssOrStyles
   return !!(styles.color || styles["background-color"])
+}
+
+export function normalizeColorButtons(buttons) {
+  return buttons.map((button) => (typeof button === "string" ? { value: button, label: button } : button))
 }
 
 export function applyCanonicalizers(styles, canonicalizers = []) {
@@ -71,24 +76,37 @@ export class StyleCanonicalizer {
 
   #resolveCannonicalValue(value) {
     let index = this.#computedAllowedValues.indexOf(value)
-    index ||= this.#computedAllowedValues.indexOf(getComputedStyleForProperty(this._property, value))
+    if (index === -1) {
+      index = this.#computedAllowedValues.indexOf(computeStyleValues(this._property, [ value ])[0])
+    }
     return index === -1 ? null : this._allowedValues[index]
   }
 
   get #computedAllowedValues() {
-    return this._computedAllowedValues ||= this._allowedValues.map(
-      value => getComputedStyleForProperty(this._property, value)
-    )
+    return this._computedAllowedValues ||= computeStyleValues(this._property, this._allowedValues)
   }
 }
 
-function getComputedStyleForProperty(property, value) {
-  const style = `${property}: ${value};`
+// Separates DOM writes from layout reads to avoid forced reflows, and attaches
+// resolver elements to a strictly-contained root (outside the normal document
+// flow) so neither the attach nor the detach invalidate styles on the rest of
+// the page. Without containment, appending to `document.body` triggered a
+// page-wide style recalc on every canonicalization pass.
+function computeStyleValues(property, values) {
+  const fragment = document.createDocumentFragment()
 
-  // the element has to be attached to the DOM have computed styles
-  const element = document.body.appendChild(createElement("span", { style: "display: none;" + style }))
-  const computedStyle = window.getComputedStyle(element).getPropertyValue(property)
-  element.remove()
+  const elements = values.map(value => {
+    const element = createElement("span", { style: `display: none; ${property}: ${value};` })
+    fragment.appendChild(element)
+    return element
+  })
 
-  return computedStyle
+  styleResolverRoot().appendChild(fragment)
+
+  const computed = elements.map(element =>
+    window.getComputedStyle(element).getPropertyValue(property)
+  )
+
+  elements.forEach(element => element.remove())
+  return computed
 }

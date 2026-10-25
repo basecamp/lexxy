@@ -2,13 +2,13 @@ import { configure, Extension } from "lexxy"
 
 class ToolbarButtonExtension extends Extension {
   initializeToolbar(toolbar) {
-    const spacer = toolbar.querySelector(".lexxy-editor__toolbar-spacer")
+    const pushRight = toolbar.querySelector(".lexxy-editor__toolbar-button--push-right")
     const button = document.createElement("button")
     button.type = "button"
     button.name = "custom-extension-button"
     button.className = "lexxy-editor__toolbar-button"
     button.textContent = "Custom"
-    spacer.insertAdjacentElement("beforebegin", button)
+    pushRight.insertAdjacentElement("beforebegin", button)
   }
 }
 

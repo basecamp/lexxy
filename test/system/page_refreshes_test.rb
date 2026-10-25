@@ -5,9 +5,7 @@ class PageRefreshesTest < ApplicationSystemTestCase
     visit edit_post_path(posts(:empty), refresh: true)
 
     find_editor.send "Hello"
-    click_on "Update Post"
-
-    wait_for_editor
+    wait_for_editor_to_reinitialize { click_on "Update Post" }
 
     # Prompt is only opened if trigger follows a space or newline
     find_editor.send "\n"

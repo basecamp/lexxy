@@ -36,6 +36,42 @@ test.describe("Code block navigation", () => {
     })
   })
 
+  test("pressing Enter twice exits code block when last line contains only whitespace", async ({ editor }) => {
+    // Create a code block and type content with a whitespace-only last line
+    await editor.click()
+    await editor.send("```")
+    await editor.send("Enter")
+    await editor.flush()
+
+    // Type some content, then a new line with only spaces
+    await editor.send("hello")
+    await editor.send("Enter")
+    await editor.send("   ")
+    await editor.flush()
+
+    // First Enter: clears the whitespace-only line, cursor lands on an empty last line
+    await editor.send("Enter")
+    await editor.flush()
+
+    // Still inside the code block — no paragraphs should exist at all
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code")).toContainText("hello")
+      await expect(content.locator("p:not(.provisional-paragraph)")).toHaveCount(0)
+    })
+
+    // Second Enter: cursor is on an empty last line, so it escapes the code block
+    await editor.send("Enter")
+    await editor.flush()
+
+    await editor.send("outside text")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code")).toContainText("hello")
+      await expect(content.locator("code")).not.toContainText("outside text")
+      await expect(content.locator("p").filter({ hasText: "outside text" })).toHaveCount(1)
+    })
+  })
+
   test("code block content is preserved after inserting paragraph before it", async ({ editor }) => {
     await editor.setValue("<pre><code>line one\nline two</code></pre>")
 
@@ -51,6 +87,42 @@ test.describe("Code block navigation", () => {
     await assertEditorContent(editor, async (content) => {
       await expect(content.locator("code")).toContainText("line one")
       await expect(content.locator("code")).toContainText("line two")
+    })
+  })
+})
+
+test.describe("Code block conversion", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await page.waitForSelector("lexxy-toolbar[connected]")
+  })
+
+  test("converts a selection spanning a paragraph and a quote", async ({ page, editor }) => {
+    await editor.setValue("<p>before</p><blockquote><p>quoted</p></blockquote>")
+    await editor.selectAll()
+
+    await page.getByRole("button", { name: "Code" }).click()
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code")).toContainText("before")
+      await expect(content.locator("code")).toContainText("quoted")
+      await expect(content.locator("blockquote")).toHaveCount(0)
+    })
+  })
+
+  test("converts a selection spanning a nested list", async ({ page, editor }) => {
+    await editor.setValue("<ul><li>item one<ul><li>nested</li></ul></li></ul>")
+    await editor.selectAll()
+
+    await page.getByRole("button", { name: "Code" }).click()
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code")).toContainText("item one")
+      await expect(content.locator("code")).toContainText("nested")
+      await expect(content.locator("li")).toHaveCount(0)
     })
   })
 })

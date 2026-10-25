@@ -1,25 +1,47 @@
-import { marked } from "marked"
-import { isUrl } from "../helpers/string_helper"
-import { nextFrame } from "../helpers/timing_helpers"
+import { isAutolinkableURL } from "../helpers/string_helper"
+import { parsePastedMarkdown } from "../helpers/markdown_helper"
+import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
-import { $getSelection, $isRangeSelection, PASTE_TAG } from "lexical"
+import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $onUpdate, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
 import { $insertDataTransferForRichText } from "@lexical/clipboard"
+import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
+import { ListenerBin } from "../helpers/listener_helper"
+import NodeInserter from "./contents/node_inserter"
+import NestedBlockNodeInserter from "./contents/node_inserter/nested_block_node_inserter"
 
 export default class Clipboard {
+  #listeners = new ListenerBin()
+
   constructor(editorElement) {
     this.editorElement = editorElement
     this.editor = editorElement.editor
     this.contents = editorElement.contents
+
+    this.#registerPasteCommands()
+  }
+
+  dispose() {
+    this.editorElement = null
+    this.editor = null
+    this.contents = null
+
+    this.#listeners.dispose()
   }
 
   paste(event) {
     const clipboardData = event.clipboardData
 
-    if (!clipboardData || this.#isPastingIntoCodeBlock()) return false
+    if (!clipboardData) return false
+
+    if (this.#isPastingIntoCodeBlock()) {
+      this.#pastePlainTextIntoCodeBlock(clipboardData)
+      event.preventDefault()
+      return true
+    }
 
     if (this.#isPlainTextOrURLPasted(clipboardData)) {
-      this.#pastePlainText(clipboardData)
+      this.#pastePlainTextOrURL(clipboardData)
       event.preventDefault()
       return true
     }
@@ -27,6 +49,30 @@ export default class Clipboard {
     const handled = this.#handlePastedFiles(clipboardData)
     if (handled) event.preventDefault()
     return handled
+  }
+
+  #registerPasteCommands() {
+    this.#listeners.track(
+      this.editor.registerCommand(PASTE_COMMAND, this.paste.bind(this), COMMAND_PRIORITY_NORMAL),
+      this.editor.registerCommand(
+        SELECTION_INSERT_CLIPBOARD_NODES_COMMAND,
+        (payload) => this.#handleParsedClipboardNodes(payload),
+        COMMAND_PRIORITY_NORMAL
+      )
+    )
+  }
+
+  #handleParsedClipboardNodes({ nodes, selection }) {
+    const url = $bareUrlFromSingleLink(nodes)
+    if (url && $isRangeSelection(selection)) {
+      this.#insertSingleLinkAt(selection, url)
+      return true
+    }
+
+    if (NestedBlockNodeInserter.handles(selection)) {
+      new NestedBlockNodeInserter(selection).insertNodes(nodes)
+      return true
+    }
   }
 
   #isPlainTextOrURLPasted(clipboardData) {
@@ -38,10 +84,34 @@ export default class Clipboard {
     return types.length === 1 && types[0] === "text/plain"
   }
 
+  // Browsers expose a copied URL in several shapes:
+  //   Safari          [ text/plain, text/uri-list ]
+  //   App ShareSheet  [ text/uri-list ]
+  //   Chromium macOS  [ text/plain, text/html, (?:text/link-preview) ]
   #isOnlyURLPasted(clipboardData) {
-    // Safari URLs are copied as a text/plain + text/uri-list object
+    if (this.#isLexicalClipboardData(clipboardData)) return false
+
     const types = Array.from(clipboardData.types)
-    return types.length === 2 && types.includes("text/uri-list") && types.includes("text/plain")
+    if (types.includes("text/uri-list")) {
+      return types.every(type => type === "text/plain" || type === "text/uri-list")
+    }
+
+    if (clipboardData.files.length) return false
+
+    const text = clipboardData.getData("text/plain").trim()
+    if (!isAutolinkableURL(text)) return false
+
+    const html = clipboardData.getData("text/html")
+    return !html || this.#htmlIsBareLinkToURL(html, text)
+  }
+
+  #htmlIsBareLinkToURL(html, url) {
+    const doc = parseHtml(html)
+    if (doc.body.textContent.trim() !== url) return false
+
+    const links = doc.body.querySelectorAll("a")
+    if (links.length === 0) return true
+    return links.length === 1 && links[0].getAttribute("href") === url
   }
 
   #isPastingIntoCodeBlock() {
@@ -65,20 +135,57 @@ export default class Clipboard {
     return result
   }
 
-  #pastePlainText(clipboardData) {
-    const item = clipboardData.items[0]
+  #pastePlainTextIntoCodeBlock(clipboardData) {
+    const text = clipboardData.getData("text/plain")
+    if (!text) return
+
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if ($isRangeSelection(selection)) selection.insertRawText(text)
+    }, { tag: PASTE_TAG })
+  }
+
+  #pastePlainTextOrURL(clipboardData) {
+    const item = this.#plainTextOrURLItem(clipboardData)
     item.getAsString((text) => {
-      if (isUrl(text) && this.contents.hasSelectedText()) {
-        this.contents.createLinkWithSelectedText(text)
-      } else if (isUrl(text)) {
-        const nodeKey = this.contents.createLink(text)
-        this.#dispatchLinkInsertEvent(nodeKey, { url: text })
+      const url = text.trim()
+      if (isAutolinkableURL(url)) {
+        this.#pasteURL(url)
       } else if (this.editorElement.supportsMarkdown) {
         this.#pasteMarkdown(text)
       } else {
         this.#pasteRichText(clipboardData)
       }
     })
+  }
+
+  #plainTextOrURLItem(clipboardData) {
+    const items = Array.from(clipboardData.items)
+    return items.find((item) => item.type === "text/plain") || items.find((item) => item.type === "text/uri-list")
+  }
+
+  #pasteURL(url) {
+    if (this.contents.hasSelectedText()) {
+      this.contents.createLinkWithSelectedText(url)
+    } else {
+      const nodeKey = this.contents.createLink(url)
+      this.#dispatchLinkInsertEvent(nodeKey, { url })
+    }
+  }
+
+  #insertSingleLinkAt(selection, url) {
+    if (!$isRangeSelection(selection)) return
+
+    if (!selection.isCollapsed()) {
+      $toggleLink(null)
+      $toggleLink(url)
+      return
+    }
+
+    const linkNode = $createLinkNode(url).append($createTextNode(url))
+    NodeInserter.for(selection).insertNodes([ linkNode ])
+
+    $onUpdate(() => this.#dispatchLinkInsertEvent(linkNode.getKey(), { url }))
   }
 
   #dispatchLinkInsertEvent(nodeKey, payload) {
@@ -94,16 +201,44 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
-    const html = marked(text, { breaks: true })
-    const doc = parseHtml(html)
-    const detail = Object.freeze({
-      markdown: text,
-      document: doc,
-      addBlockSpacing: () => addBlockSpacing(doc)
-    })
+    if (!text) return
 
-    dispatch(this.editorElement, "lexxy:insert-markdown", detail)
-    this.contents.insertDOM(doc, { tag: PASTE_TAG })
+    const html = parsePastedMarkdown(text)
+    const doc = parseHtml(html)
+
+    if (this.#isPlainTextWithoutMarkdown(doc) || this.#renderedNothing(doc)) {
+      this.contents.insertText(text, { tag: PASTE_TAG })
+    } else {
+      const detail = Object.freeze({
+        markdown: text,
+        document: doc,
+        addBlockSpacing: () => addBlockSpacing(doc)
+      })
+
+      dispatch(this.editorElement, "lexxy:insert-markdown", detail)
+      this.contents.insertDOM(doc, { tag: PASTE_TAG })
+    }
+  }
+
+  // Markdown conversion collapses runs of whitespace and unescapes backslashes,
+  // silently corrupting plain text such as Windows/UNC file paths. When the text
+  // carries no Markdown structure, paste it verbatim instead. A path that wrapped
+  // across lines renders as a single paragraph with <br> line breaks (marked runs
+  // with breaks: true), which is still plain text we should preserve untouched.
+  #isPlainTextWithoutMarkdown(doc) {
+    const elements = Array.from(doc.body.children)
+    if (elements.length !== 1) return false
+
+    const paragraph = elements[0]
+    return paragraph.nodeName === "P"
+      && Array.from(paragraph.childNodes).every((node) => node.nodeType === Node.TEXT_NODE || node.nodeName === "BR")
+  }
+
+  // Markdown constructs that carry no output of their own, such as footnote and
+  // link reference definitions or HTML comments, leave marked with an empty
+  // document. Inserting that discards the paste, so keep the raw text instead.
+  #renderedNothing(doc) {
+    return doc.body.children.length === 0 && doc.body.textContent.trim() === ""
   }
 
   #pasteRichText(clipboardData) {
@@ -114,46 +249,51 @@ export default class Clipboard {
   }
 
   #handlePastedFiles(clipboardData) {
-    if (!this.editorElement.supportsAttachments) return false
+    if (this.editorElement.supportsAttachments) {
+      const html = clipboardData.getData("text/html")
+      const files = clipboardData.files
+      const copiedImage = files.length && this.#copiedImage(html)
 
-    const html = clipboardData.getData("text/html")
-    const files = clipboardData.files
-
-    if (files.length && this.#isCopiedImageHTML(html)) {
-      this.#uploadFilesPreservingScroll(files)
-      return true
+      if (copiedImage) {
+        this.#uploadFilesPreservingScroll(files, copiedImage.getAttribute("alt"))
+        return true
+      } else if (html && !this.#isLexicalClipboardData(clipboardData)) {
+        this.contents.insertHtml(html, { tag: PASTE_TAG })
+        return true
+      } else if (files.length) {
+        this.#uploadFilesPreservingScroll(files)
+        return true
+      } else {
+        return false
+      }
+    } else {
+      return false
     }
-
-    if (html && !this.#isLexicalClipboardData(clipboardData)) {
-      this.contents.insertHtml(html, { tag: PASTE_TAG })
-      return true
-    }
-
-    if (files.length) {
-      this.#uploadFilesPreservingScroll(files)
-      return true
-    }
-
-    return false
   }
 
   #isLexicalClipboardData(clipboardData) {
     return Array.from(clipboardData.types).includes("application/x-lexical-editor")
   }
 
-  #isCopiedImageHTML(html) {
-    if (!html) return false
+  #copiedImage(html) {
+    if (html) {
+      const doc = parseHtml(html)
+      const elementChildren = Array.from(doc.body.children)
 
-    const doc = parseHtml(html)
-    const elementChildren = Array.from(doc.body.children)
-
-    return elementChildren.length === 1 && elementChildren[0].tagName === "IMG"
+      if (elementChildren.length === 1 && elementChildren[0].tagName === "IMG") {
+        return elementChildren[0]
+      } else {
+        return null
+      }
+    } else {
+      return null
+    }
   }
 
-  #uploadFilesPreservingScroll(files) {
+  #uploadFilesPreservingScroll(files, altText) {
     this.#preservingScrollPosition(() => {
       if (files.length) {
-        this.contents.uploadFiles(files, { selectLast: true })
+        this.contents.uploadFiles(files, { selectLast: true, altText })
       }
     })
   }
@@ -170,4 +310,26 @@ export default class Clipboard {
     window.scrollTo(scrollX, scrollY)
     this.editor.focus()
   }
+}
+
+function $bareUrlFromSingleLink(nodes) {
+  if (nodes.length !== 1) return null
+
+  const node = nodes[0]
+  if ($isLinkNode(node)) return $bareUrlFromLink(node)
+
+  if ($isParagraphNode(node)) {
+    const children = node.getChildren()
+    if (children.length === 1 && $isLinkNode(children[0])) {
+      return $bareUrlFromLink(children[0])
+    }
+  }
+
+  return null
+}
+
+function $bareUrlFromLink(linkNode) {
+  const url = linkNode.getURL()
+  if (!url) return null
+  return linkNode.getTextContent() === url ? url : null
 }

@@ -19,8 +19,9 @@ import {
 } from "@lexical/table"
 
 import { upcaseFirst } from "../../helpers/string_helper"
-import { nextFrame } from "../../helpers/timing_helpers"
+import { nextFrame } from "../../helpers/timing_helper"
 import { ListenerBin } from "../../helpers/listener_helper"
+import { $isProvisionalParagraphNode } from "../../nodes/provisional_paragraph_node"
 
 export class TableController {
   #listeners = new ListenerBin()
@@ -123,6 +124,8 @@ export class TableController {
 
     this.currentCellKey = cellNode?.getKey() ?? null
     this.currentTableNodeKey = tableNode?.getKey() ?? null
+
+    return tableNode
   }
 
   executeTableCommand(command, customIndex = null) {
@@ -269,6 +272,11 @@ export class TableController {
   }
 
   #deleteRowAndSelectNextNode() {
+    if (this.tableRows?.length === 1) {
+      this.#removeTableAndSelectNextParagraph()
+      return
+    }
+
     const tableNode = this.currentTableNode
     this.executeTableCommand({ action: "delete", childType: "row" })
 
@@ -280,6 +288,24 @@ export class TableController {
         const newParagraph = $createParagraphNode()
         this.currentTableNode.insertAfter(newParagraph)
         newParagraph.selectStart()
+      }
+    })
+  }
+
+  // Deleting a table's only row removes the table, so leave the caret in the
+  // paragraph after it, or in a new paragraph where the table was.
+  #removeTableAndSelectNextParagraph() {
+    const tableNode = this.currentTableNode
+
+    this.editor.update(() => {
+      const next = tableNode.getNextSibling()
+      if ($isParagraphNode(next) && !$isProvisionalParagraphNode(next)) {
+        tableNode.remove()
+        next.selectStart()
+      } else {
+        const paragraph = $createParagraphNode()
+        tableNode.replace(paragraph)
+        paragraph.selectStart()
       }
     })
   }

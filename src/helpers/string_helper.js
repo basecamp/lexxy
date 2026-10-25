@@ -2,13 +2,8 @@ export function dasherize(value) {
   return value.replace(/([A-Z])/g, (_, char) => `-${char.toLowerCase()}`)
 }
 
-export function isUrl(string) {
-  try {
-    new URL(string)
-    return true
-  } catch {
-    return false
-  }
+export function isAutolinkableURL(string) {
+  return /^(?:[a-z0-9]+:\/\/|www\.)[^\s]+$/i.test(string)
 }
 
 export function isPath(string) {
@@ -19,6 +14,7 @@ export function normalizeFilteredText(string) {
   return string
     .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove diacritics
+    .replace(/[’ʼ‘]/g, "'")
 }
 
 export function filterMatchPosition(text, potentialMatch) {
@@ -27,7 +23,7 @@ export function filterMatchPosition(text, potentialMatch) {
 
   if (!normalizedMatch) return 0
 
-  const match = normalizedText.match(new RegExp(`(?:^|\\b)${escapeForRegExp(normalizedMatch)}`))
+  const match = normalizedText.match(new RegExp(`(?<![\\p{L}\\p{N}])${escapeForRegExp(normalizedMatch)}`, "u"))
   return match ? match.index : -1
 }
 

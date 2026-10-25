@@ -25,3 +25,12 @@ export class ListenerBin {
     }
   }
 }
+
+export function handlingDefault(handler) {
+  return event => {
+    const handled = handler(event)
+    if (handled) event.preventDefault()
+    return handled
+  }
+}
+

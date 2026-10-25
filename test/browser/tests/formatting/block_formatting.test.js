@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
-import { HELLO_EVERYONE, clickToolbarButton } from "../../helpers/toolbar.js"
+import { HELLO_EVERYONE, clickToolbarButton, openToolbarDropdown } from "../../helpers/toolbar.js"
 
 test.describe("Block formatting", () => {
   test.beforeEach(async ({ page }) => {
@@ -14,15 +14,15 @@ test.describe("Block formatting", () => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
 
-    await clickToolbarButton(page, "setFormatHeadingLarge")
+    await clickToolbarButton(page, "heading-large")
     await assertEditorHtml(editor, "<h2>Hello everyone</h2>")
 
     await editor.select("everyone")
-    await clickToolbarButton(page, "setFormatHeadingMedium")
+    await clickToolbarButton(page, "heading-medium")
     await assertEditorHtml(editor, "<h3>Hello everyone</h3>")
 
     await editor.select("everyone")
-    await clickToolbarButton(page, "setFormatHeadingSmall")
+    await clickToolbarButton(page, "heading-small")
     await assertEditorHtml(editor, "<h4>Hello everyone</h4>")
 
     await editor.select("everyone")
@@ -34,14 +34,14 @@ test.describe("Block formatting", () => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
     await page.getByRole("button", { name: "Bullet list" }).click()
-    await assertEditorHtml(editor, "<ul><li>Hello everyone</li></ul>")
+    await assertEditorHtml(editor, '<ul><li value="1">Hello everyone</li></ul>')
   })
 
   test("toggle bullet list off", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
     await page.getByRole("button", { name: "Bullet list" }).click()
-    await assertEditorHtml(editor, "<ul><li>Hello everyone</li></ul>")
+    await assertEditorHtml(editor, '<ul><li value="1">Hello everyone</li></ul>')
 
     await editor.select("everyone")
     await page.getByRole("button", { name: "Bullet list" }).click()
@@ -52,7 +52,7 @@ test.describe("Block formatting", () => {
     await editor.setValue("<p>Alpha</p><p>Bravo</p><p>Charlie</p>")
     await editor.selectAll()
     await page.getByRole("button", { name: "Bullet list" }).click()
-    await assertEditorHtml(editor, "<ul><li>Alpha</li><li>Bravo</li><li>Charlie</li></ul>")
+    await assertEditorHtml(editor, '<ul><li value="1">Alpha</li><li value="2">Bravo</li><li value="3">Charlie</li></ul>')
 
     await editor.selectAll()
     await page.getByRole("button", { name: "Bullet list" }).click()
@@ -70,14 +70,14 @@ test.describe("Block formatting", () => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
     await page.getByRole("button", { name: "Numbered list" }).click()
-    await assertEditorHtml(editor, "<ol><li>Hello everyone</li></ol>")
+    await assertEditorHtml(editor, '<ol><li value="1">Hello everyone</li></ol>')
   })
 
   test("toggle numbered list off", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
     await page.getByRole("button", { name: "Numbered list" }).click()
-    await assertEditorHtml(editor, "<ol><li>Hello everyone</li></ol>")
+    await assertEditorHtml(editor, '<ol><li value="1">Hello everyone</li></ol>')
 
     await editor.select("everyone")
     await page.getByRole("button", { name: "Numbered list" }).click()
@@ -88,11 +88,21 @@ test.describe("Block formatting", () => {
     await editor.setValue("<p>Alpha</p><p>Bravo</p><p>Charlie</p>")
     await editor.selectAll()
     await page.getByRole("button", { name: "Numbered list" }).click()
-    await assertEditorHtml(editor, "<ol><li>Alpha</li><li>Bravo</li><li>Charlie</li></ol>")
+    await assertEditorHtml(editor, '<ol><li value="1">Alpha</li><li value="2">Bravo</li><li value="3">Charlie</li></ol>')
 
     await editor.selectAll()
     await page.getByRole("button", { name: "Numbered list" }).click()
     await assertEditorHtml(editor, "<p>Alpha</p><p>Bravo</p><p>Charlie</p>")
+  })
+
+  test("ordered list exports li value attribute", async ({ editor }) => {
+    await editor.setValue("<ol><li>First</li><li>Second</li></ol>")
+    await assertEditorHtml(editor, '<ol><li value="1">First</li><li value="2">Second</li></ol>')
+  })
+
+  test("nested ordered list numbering is calculated correctly", async ({ editor }) => {
+    await editor.setValue('<ol><li>First</li><li><ol><li>Nested</li></ol></li><li>Second</li></ol>')
+    await assertEditorHtml(editor, '<ol><li value=\"1\">First<ol><li value=\"1\">Nested</li></ol></li><li value=\"2\">Second</li></ol>')
   })
 
   test("insert quote without selection", async ({ page, editor }) => {
@@ -144,12 +154,123 @@ test.describe("Block formatting", () => {
     )
   })
 
-  test("quote soft-break lines splits them into separate paragraphs in the blockquote", async ({
+  test("quote only the selected line when browser selection uses paragraph offsets", async ({
     page,
     editor,
   }) => {
-    // Selecting two soft-break lines and quoting should split them into
-    // separate paragraphs inside the blockquote, not merge them into one.
+    await editor.setValue("<p>First line<br>Second line<br>Third line</p>")
+
+    await editor.content.evaluate((el) => {
+      const paragraph = el.querySelector("p")
+      const range = document.createRange()
+      range.setStart(paragraph, 2)
+      range.setEnd(paragraph, 3)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
+    })
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>First line</p><blockquote><p>Second line</p></blockquote><p>Third line</p>",
+    )
+  })
+
+  test("quote wraps only the current line when cursor is collapsed at end of a middle line", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>aaaa<br>bbbb<br>cccc</p>")
+
+    await editor.content.evaluate((el) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      let bbbb
+      let node
+      while ((node = walker.nextNode())) {
+        if (node.nodeValue === "bbbb") bbbb = node
+      }
+      const range = document.createRange()
+      range.setStart(bbbb, 4)
+      range.setEnd(bbbb, 4)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
+    })
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>aaaa</p><blockquote><p>bbbb</p></blockquote><p>cccc</p>",
+    )
+  })
+
+  test("quote wraps only the current line when cursor is collapsed at end of first line", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>aaaa<br>bbbb<br>cccc</p>")
+
+    await editor.content.evaluate((el) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      let aaaa
+      let node
+      while ((node = walker.nextNode())) {
+        if (node.nodeValue === "aaaa") aaaa = node
+      }
+      const range = document.createRange()
+      range.setStart(aaaa, 4)
+      range.setEnd(aaaa, 4)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
+    })
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<blockquote><p>aaaa</p></blockquote><p>bbbb<br>cccc</p>",
+    )
+  })
+
+  test("quote wraps only the current line when cursor is collapsed at start of a middle line", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>aaaa<br>bbbb<br>cccc<br>dddd</p>")
+
+    await editor.content.evaluate((el) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      let bbbb
+      let node
+      while ((node = walker.nextNode())) {
+        if (node.nodeValue === "bbbb") bbbb = node
+      }
+      const range = document.createRange()
+      range.setStart(bbbb, 0)
+      range.setEnd(bbbb, 0)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
+    })
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>aaaa</p><blockquote><p>bbbb</p></blockquote><p>cccc<br>dddd</p>",
+    )
+  })
+
+  test("quote preserves line breaks when entire paragraph with BRs is selected", async ({
+    page,
+    editor,
+  }) => {
+    // When the whole paragraph with BRs is selected, BRs should be preserved
+    // inside the blockquote — not split into separate paragraphs.
     await editor.setValue(
       "<p>Before</p><p>First line<br>Second line</p><p>After</p>",
     )
@@ -174,7 +295,7 @@ test.describe("Block formatting", () => {
 
     await assertEditorHtml(
       editor,
-      "<p>Before</p><blockquote><p>First line</p><p>Second line</p></blockquote><p>After</p>",
+      "<p>Before</p><blockquote><p>First line<br>Second line</p></blockquote><p>After</p>",
     )
   })
 
@@ -183,13 +304,12 @@ test.describe("Block formatting", () => {
     editor,
   }) => {
     // Line one (Shift+Enter) Line two (Enter) Line three (Shift+Enter) Line four
-    // Selecting "Line two" through "Line three" and applying quote should only
-    // quote those two lines, not all four.
+    // Selecting "Line two" through "Line three" should quote only those lines,
+    // not the entire paragraphs.
     await editor.setValue(
       "<p>Line one<br>Line two</p><p>Line three<br>Line four</p>",
     )
 
-    // Select from "Line two" in the first <p> through "Line three" in the second <p>
     await editor.content.evaluate((el) => {
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
       let startNode, endNode
@@ -214,6 +334,50 @@ test.describe("Block formatting", () => {
     )
   })
 
+  test("quote preserves BRs when all text with line breaks is selected", async ({
+    page,
+    editor,
+  }) => {
+    // Selecting all content of a paragraph with BRs and quoting should
+    // preserve the BRs inside the blockquote.
+    await editor.setValue("<p>Line one<br>Line two<br>Line three</p>")
+    await editor.selectAll()
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<blockquote><p>Line one<br>Line two<br>Line three</p></blockquote>",
+    )
+  })
+
+  test("quote does not absorb the paragraph above when the selection anchors at its end", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>ABCD:</p><p>pasted one<br>pasted two</p>")
+
+    await editor.content.evaluate((el) => {
+      const paragraphs = el.querySelectorAll("p")
+      const range = document.createRange()
+      range.setStart(paragraphs[0], paragraphs[0].childNodes.length)
+      const walker = document.createTreeWalker(paragraphs[1], NodeFilter.SHOW_TEXT)
+      let lastTextNode, node
+      while ((node = walker.nextNode())) lastTextNode = node
+      range.setEnd(lastTextNode, lastTextNode.nodeValue.length)
+      const selection = window.getSelection()
+      selection.removeAllRanges()
+      selection.addRange(range)
+    })
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>ABCD:</p><blockquote><p>pasted one<br>pasted two</p></blockquote>",
+    )
+  })
+
   test("bullet list only the selected line from soft line breaks", async ({
     page,
     editor,
@@ -225,7 +389,7 @@ test.describe("Block formatting", () => {
 
     await assertEditorHtml(
       editor,
-      "<p>First line</p><ul><li>Second line</li></ul><p>Third line</p>",
+      '<p>First line</p><ul><li value="1">Second line</li></ul><p>Third line</p>',
     )
   })
 
@@ -240,7 +404,22 @@ test.describe("Block formatting", () => {
 
     await assertEditorHtml(
       editor,
-      "<p>First line</p><ol><li>Second line</li></ol><p>Third line</p>",
+      '<p>First line</p><ol><li value="1">Second line</li></ol><p>Third line</p>',
+    )
+  })
+
+  test("bullet list explodes BRs in middle paragraphs of a multi-paragraph selection", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>aa<br>bb</p><p>cc<br>dd</p><p>ee<br>ff</p>")
+    await editor.selectAll()
+
+    await page.getByRole("button", { name: "Bullet list" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<ul><li value="1">aa</li><li value="2">bb</li><li value="3">cc</li><li value="4">dd</li><li value="5">ee</li><li value="6">ff</li></ul>',
     )
   })
 
@@ -255,7 +434,7 @@ test.describe("Block formatting", () => {
 
     await assertEditorHtml(
       editor,
-      "<ul><li>First item<br>continuation</li></ul>",
+      '<ul><li value="1">First item<br>continuation</li></ul>',
     )
   })
 
@@ -264,21 +443,13 @@ test.describe("Block formatting", () => {
     await editor.select("everyone")
     await editor.flush()
 
-    // Open the link dropdown programmatically to avoid focus/selection loss
-    // that occurs with a real click on the summary element
-    await page.evaluate(() => {
-      const details = document.querySelector(
-        "details:has(summary[name='link'])",
-      )
-      details.open = true
-      details.dispatchEvent(new Event("toggle"))
-    })
+    await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-link-dropdown input[type='url']").first()
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await input.fill("https://37signals.com")
     await page
-      .locator("lexxy-link-dropdown button[value='link']")
+      .locator("lexxy-link-dropdown [data-dropdown-panel] button[value='link']")
       .first()
       .click()
 
@@ -286,6 +457,27 @@ test.describe("Block formatting", () => {
       editor,
       '<p>Hello <a href="https://37signals.com">everyone</a></p>',
     )
+  })
+
+  test("links to a relative path but not a bare domain", async ({ page, editor }) => {
+    await editor.setValue(HELLO_EVERYONE)
+    await editor.select("everyone")
+    await editor.flush()
+
+    await openToolbarDropdown(page, "link")
+
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
+    const linkButton = page.locator("lexxy-link-dropdown [data-dropdown-panel] button[value='link']").first()
+    await expect(input).toBeVisible({ timeout: 2_000 })
+
+    await input.fill("37signals.com")
+    await linkButton.click()
+    await expect(input).toBeVisible()
+    expect(await input.evaluate((el) => el.validity.patternMismatch)).toBe(true)
+
+    await input.fill(" /about ")
+    await linkButton.click()
+    await assertEditorHtml(editor, '<p>Hello <a href="/about">everyone</a></p>')
   })
 
   test("pressing Enter in link URL input links selection without submitting form", async ({
@@ -304,15 +496,9 @@ test.describe("Block formatting", () => {
     await editor.select("everyone")
     await editor.flush()
 
-    await page.evaluate(() => {
-      const details = document.querySelector(
-        "details:has(summary[name='link'])",
-      )
-      details.open = true
-      details.dispatchEvent(new Event("toggle"))
-    })
+    await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-link-dropdown input[type='url']").first()
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await input.fill("https://37signals.com")
     await input.press("Enter")
@@ -336,17 +522,140 @@ test.describe("Block formatting", () => {
     await editor.select("everyone")
     await editor.flush()
 
-    await page.evaluate(() => {
-      const details = document.querySelector(
-        "details:has(summary[name='link'])",
-      )
-      details.open = true
-      details.dispatchEvent(new Event("toggle"))
-    })
+    await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-link-dropdown input[type='url']").first()
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await expect(input).toHaveValue("https://37signals.com")
+  })
+
+  test("editing an existing link with a collapsed caret replaces its URL", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      '<p>Hello <a href="https://37signals.com">everyone</a></p>',
+    )
+    await editor.placeCaretInside("everyone", 4)
+    await editor.flush()
+
+    await openToolbarDropdown(page, "link")
+
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
+    await expect(input).toHaveValue("https://37signals.com")
+    await input.fill("https://example.com")
+    await page
+      .locator("lexxy-link-dropdown [data-dropdown-panel] button[value='link']")
+      .first()
+      .click()
+
+    await assertEditorHtml(
+      editor,
+      '<p>Hello <a href="https://example.com">everyone</a></p>',
+    )
+  })
+
+  test("editing an existing link with the caret at its trailing edge replaces its URL", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      '<p>Hello <a href="https://37signals.com">everyone</a> bye</p>',
+    )
+    await editor.placeCaretInside("everyone", "everyone".length)
+    await editor.flush()
+
+    await openToolbarDropdown(page, "link")
+
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
+    await expect(input).toBeVisible({ timeout: 2_000 })
+    await input.fill("https://example.com")
+    await page
+      .locator("lexxy-link-dropdown [data-dropdown-panel] button[value='link']")
+      .first()
+      .click()
+
+    await assertEditorHtml(
+      editor,
+      '<p>Hello <a href="https://example.com">everyone</a> bye</p>',
+    )
+  })
+
+  test("typing after editing a link at its trailing edge doesn't extend the link", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      '<p>Hello <a href="https://37signals.com">everyone</a> bye</p>',
+    )
+    await editor.placeCaretInside("everyone", "everyone".length)
+    await editor.flush()
+
+    await openToolbarDropdown(page, "link")
+
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
+    await expect(input).toBeVisible({ timeout: 2_000 })
+    await input.fill("https://example.com")
+    await page
+      .locator("lexxy-link-dropdown [data-dropdown-panel] button[value='link']")
+      .first()
+      .click()
+
+    await page.keyboard.type("!")
+
+    await assertEditorHtml(
+      editor,
+      '<p>Hello <a href="https://example.com">everyone</a>! bye</p>',
+    )
+  })
+
+  test("unlinking with the caret at a link's trailing edge removes the link", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      '<p>Hello <a href="https://37signals.com">everyone</a> bye</p>',
+    )
+    await editor.placeCaretInside("everyone", "everyone".length)
+    await editor.flush()
+
+    await openToolbarDropdown(page, "link")
+    await page
+      .locator("lexxy-link-dropdown [data-dropdown-panel] button[value='unlink']")
+      .first()
+      .click()
+
+    await assertEditorHtml(editor, "<p>Hello everyone bye</p>")
+  })
+
+  test("link dialog shows existing URL when the caret is at the link's trailing edge", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      '<p>Hello <a href="https://37signals.com">everyone</a> bye</p>',
+    )
+    await editor.placeCaretInside("everyone", "everyone".length)
+    await editor.flush()
+
+    await openToolbarDropdown(page, "link")
+
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
+    await expect(input).toBeVisible({ timeout: 2_000 })
+    await expect(input).toHaveValue("https://37signals.com")
+  })
+
+  test("the Link button is pressed when the caret is at a link's trailing edge", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      '<p>Hello <a href="https://37signals.com">everyone</a> bye</p>',
+    )
+    await editor.placeCaretInside("everyone", "everyone".length)
+    await editor.flush()
+
+    await expect(page.getByRole("button", { name: "Link" }).first()).toHaveAttribute("aria-pressed", "true")
   })
 
   test("link dialog shows empty input when no link is selected", async ({
@@ -357,16 +666,128 @@ test.describe("Block formatting", () => {
     await editor.select("everyone")
     await editor.flush()
 
-    await page.evaluate(() => {
-      const details = document.querySelector(
-        "details:has(summary[name='link'])",
-      )
-      details.open = true
-      details.dispatchEvent(new Event("toggle"))
-    })
+    await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-link-dropdown input[type='url']").first()
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await expect(input).toHaveValue("")
   })
+
+  test("traps Tab at both link dialog boundaries and leaves the inner tab order to the browser", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(HELLO_EVERYONE)
+    await editor.select("everyone")
+    await editor.flush()
+    await openToolbarDropdown(page, "link")
+
+    const dialog = page.getByRole("dialog", { name: "Link" })
+    const input = dialog.getByRole("textbox")
+    const link = dialog.getByRole("button", { name: "Link", exact: true })
+    const unlink = dialog.getByRole("button", { name: "Unlink", exact: true })
+
+    await expect(input).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(link).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(unlink).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(input).toBeFocused()
+
+    await page.keyboard.press("Shift+Tab")
+    await expect(unlink).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(link).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(input).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(unlink).toBeFocused()
+  })
+})
+
+test.describe("Blockquote selection matrix", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await page.waitForSelector("lexxy-toolbar[connected]")
+  })
+
+  async function selectRange(editor, anchor, focus) {
+    await editor.content.evaluate((el, args) => {
+      function resolve(spec) {
+        const target = el.querySelector(spec.selector)
+        if (spec.kind === "para") {
+          return [target, spec.childIndex]
+        }
+        const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT)
+        return [walker.nextNode(), spec.offset]
+      }
+      const [aNode, aOff] = resolve(args.anchor)
+      const [fNode, fOff] = resolve(args.focus)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.setBaseAndExtent(aNode, aOff, fNode, fOff)
+    }, { anchor, focus })
+  }
+
+  const t = (selector, offset) => ({ kind: "text", selector, offset })
+  const p = (selector, childIndex) => ({ kind: "para", selector, childIndex })
+
+  const PLAIN = "<p>aaaa<br><br>bbbb</p>"
+  const LINK = '<p><a href="https://example.com/">aaaa</a><br><br><a href="https://example.com/">bbbb</a></p>'
+
+  const PLAIN_AAAA = 'p > span:nth-of-type(1)'
+  const PLAIN_BBBB = 'p > span:nth-of-type(2)'
+  const A1 = 'p > a:nth-of-type(1)'
+  const A2 = 'p > a:nth-of-type(2)'
+
+  const A = '<a href="https://example.com/">aaaa</a>'
+  const B = '<a href="https://example.com/">bbbb</a>'
+
+  const cases = [
+    { name: "01. <p>|aaaa|<br><br>bbbb</p>",                     html: PLAIN, anchor: t(PLAIN_AAAA, 0), focus: t(PLAIN_AAAA, 4), expected: "<blockquote><p>aaaa</p></blockquote><p><br>bbbb</p>" },
+    { name: "02. <p>|aaaa<br>|<br>bbbb</p>",                     html: PLAIN, anchor: t(PLAIN_AAAA, 0), focus: p("p", 2),        expected: "<blockquote><p>aaaa<br></p></blockquote><p>bbbb</p>" },
+    { name: "03. <p>|aaaa<br><br>|bbbb</p>",                     html: PLAIN, anchor: t(PLAIN_AAAA, 0), focus: t(PLAIN_BBBB, 0), expected: "<blockquote><p>aaaa<br></p></blockquote><p>bbbb</p>" },
+    { name: "04. <p>|aaaa<br><br>bbbb|</p>",                     html: PLAIN, anchor: t(PLAIN_AAAA, 0), focus: t(PLAIN_BBBB, 4), expected: "<blockquote><p>aaaa<br><br>bbbb</p></blockquote>" },
+    { name: "05. <p>aaaa|<br>|<br>bbbb</p>",                     html: PLAIN, anchor: t(PLAIN_AAAA, 4), focus: p("p", 2),        expected: "<p>aaaa</p><blockquote><p><br></p></blockquote><p>bbbb</p>" },
+    { name: "06. <p>aaaa|<br><br>|bbbb</p>",                     html: PLAIN, anchor: t(PLAIN_AAAA, 4), focus: t(PLAIN_BBBB, 0), expected: "<p>aaaa</p><blockquote><p><br></p></blockquote><p>bbbb</p>" },
+    { name: "07. <p>aaaa|<br><br>bbbb|</p>",                     html: PLAIN, anchor: t(PLAIN_AAAA, 4), focus: t(PLAIN_BBBB, 4), expected: "<p>aaaa</p><blockquote><p><br>bbbb</p></blockquote>" },
+    { name: "08. <p>aaaa<br>|<br>|bbbb</p>",                     html: PLAIN, anchor: p("p", 2),        focus: t(PLAIN_BBBB, 0), expected: "<p>aaaa</p><blockquote><p><br></p></blockquote><p>bbbb</p>" },
+    { name: "09. <p>aaaa<br>|<br>bbbb|</p>",                     html: PLAIN, anchor: p("p", 2),        focus: t(PLAIN_BBBB, 4), expected: "<p>aaaa</p><blockquote><p><br>bbbb</p></blockquote>" },
+    { name: "10. <p>aaaa<br><br>|bbbb|</p>",                     html: PLAIN, anchor: t(PLAIN_BBBB, 0), focus: t(PLAIN_BBBB, 4), expected: "<p>aaaa<br></p><blockquote><p>bbbb</p></blockquote>" },
+
+    { name: "11. <p>|<a>aaaa</a>|<br><br><a>bbbb</a></p>",       html: LINK,  anchor: p("p", 0),    focus: p("p", 1),    expected: `<blockquote><p>${A}</p></blockquote><p><br>${B}</p>` },
+    { name: "12. <p>|<a>aaaa</a><br>|<br><a>bbbb</a></p>",       html: LINK,  anchor: p("p", 0),    focus: p("p", 2),    expected: `<blockquote><p>${A}<br></p></blockquote><p>${B}</p>` },
+    { name: "13. <p>|<a>aaaa</a><br><br>|<a>bbbb</a></p>",       html: LINK,  anchor: p("p", 0),    focus: p("p", 3),    expected: `<blockquote><p>${A}<br></p></blockquote><p>${B}</p>` },
+    { name: "14. <p>|<a>aaaa</a><br><br><a>|bbbb</a></p>",       html: LINK,  anchor: p("p", 0),    focus: t(A2, 0),     expected: `<blockquote><p>${A}<br></p></blockquote><p>${B}</p>` },
+    { name: "15. <p>|<a>aaaa</a><br><br><a>bbbb|</a></p>",       html: LINK,  anchor: p("p", 0),    focus: t(A2, 4),     expected: `<blockquote><p>${A}<br><br>${B}</p></blockquote>` },
+    { name: "16. <p><a>aaaa|</a><br>|<br><a>bbbb</a></p>",       html: LINK,  anchor: t(A1, 4),     focus: p("p", 2),    expected: `<p>${A}</p><blockquote><p><br></p></blockquote><p>${B}</p>` },
+    { name: "17. <p><a>aaaa|</a><br><br>|<a>bbbb</a></p>",       html: LINK,  anchor: t(A1, 4),     focus: p("p", 3),    expected: `<p>${A}</p><blockquote><p><br></p></blockquote><p>${B}</p>` },
+    { name: "18. <p><a>aaaa|</a><br><br><a>|bbbb</a></p>",       html: LINK,  anchor: t(A1, 4),     focus: t(A2, 0),     expected: `<p>${A}</p><blockquote><p><br></p></blockquote><p>${B}</p>` },
+    { name: "19. <p><a>aaaa|</a><br><br><a>bbbb|</a></p>",       html: LINK,  anchor: t(A1, 4),     focus: t(A2, 4),     expected: `<p>${A}</p><blockquote><p><br>${B}</p></blockquote>` },
+    { name: "20. <p><a>aaaa</a>|<br>|<br><a>bbbb</a></p>",       html: LINK,  anchor: p("p", 1),    focus: p("p", 2),    expected: `<p>${A}</p><blockquote><p><br></p></blockquote><p>${B}</p>` },
+    { name: "21. <p><a>aaaa</a>|<br><br>|<a>bbbb</a></p>",       html: LINK,  anchor: p("p", 1),    focus: p("p", 3),    expected: `<p>${A}</p><blockquote><p><br></p></blockquote><p>${B}</p>` },
+    { name: "22. <p><a>aaaa</a>|<br><br><a>|bbbb</a></p>",       html: LINK,  anchor: p("p", 1),    focus: t(A2, 0),     expected: `<p>${A}</p><blockquote><p><br></p></blockquote><p>${B}</p>` },
+    { name: "23. <p><a>aaaa</a>|<br><br><a>bbbb|</a></p>",       html: LINK,  anchor: p("p", 1),    focus: t(A2, 4),     expected: `<p>${A}</p><blockquote><p><br>${B}</p></blockquote>` },
+    { name: "24. <p><a>aaaa</a><br>|<br>|<a>bbbb</a></p>",       html: LINK,  anchor: p("p", 2),    focus: p("p", 3),    expected: `<p>${A}</p><blockquote><p><br></p></blockquote><p>${B}</p>` },
+    { name: "25. <p><a>aaaa</a><br>|<br><a>|bbbb</a></p>",       html: LINK,  anchor: p("p", 2),    focus: t(A2, 0),     expected: `<p>${A}</p><blockquote><p><br></p></blockquote><p>${B}</p>` },
+    { name: "26. <p><a>aaaa</a><br>|<br><a>bbbb|</a></p>",       html: LINK,  anchor: p("p", 2),    focus: t(A2, 4),     expected: `<p>${A}</p><blockquote><p><br>${B}</p></blockquote>` },
+  ]
+
+  for (const c of cases) {
+    test(c.name, async ({ page, editor }) => {
+      await editor.setValue(c.html)
+      await selectRange(editor, c.anchor, c.focus)
+      await page.getByRole("button", { name: "Quote" }).click()
+      await assertEditorHtml(editor, c.expected)
+    })
+
+    test(c.name + " reversed", async ({ page, editor }) => {
+      await editor.setValue(c.html)
+      await selectRange(editor, c.focus, c.anchor)
+      await page.getByRole("button", { name: "Quote" }).click()
+      await assertEditorHtml(editor, c.expected)
+    })
+  }
 })

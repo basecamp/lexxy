@@ -11,50 +11,40 @@ test.describe("Link opener", () => {
     await editor.flush()
   })
 
-  test("holding modifier makes links non-editable", async ({ page, editor }) => {
+  test("modifier+click opens the link in a new tab", async ({ editor, context }) => {
     const anchor = editor.content.locator("a")
 
-    await expect(anchor).not.toHaveAttribute("contenteditable")
-    await page.keyboard.down(modifier)
-    await expect(anchor).toHaveAttribute("contenteditable", "false")
-    await page.keyboard.up(modifier)
-    await expect(anchor).not.toHaveAttribute("contenteditable")
+    const [newPage] = await Promise.all([
+      context.waitForEvent("page"),
+      anchor.click({ modifiers: [modifier] }),
+    ])
+
+    await newPage.waitForLoadState("load")
+    expect(newPage.url()).toBe("https://example.com/")
   })
 
-  test("holding modifier sets target and rel on links", async ({ page, editor }) => {
+  test("plain click does not open the link", async ({ editor, context }) => {
     const anchor = editor.content.locator("a")
 
-    await page.keyboard.down(modifier)
-    await expect(anchor).toHaveAttribute("target", "_blank")
-    await expect(anchor).toHaveAttribute("rel", "noopener noreferrer")
-    await page.keyboard.up(modifier)
-    await expect(anchor).not.toHaveAttribute("target")
-    await expect(anchor).not.toHaveAttribute("rel")
+    await anchor.click()
+    const newPage = await context.waitForEvent("page", { timeout: 200 }).catch(() => null)
+
+    expect(newPage).toBeNull()
   })
 
-  test("applies to all links in the editor", async ({ editor, page }) => {
-    await editor.setValue(
-      '<p><a href="https://a.com">first</a> and <a href="https://b.com">second</a></p>',
-    )
-    await editor.flush()
-
-    const anchors = editor.content.locator("a")
-
+  test("holding modifier sets data-links-openable on the editor", async ({ page, editor }) => {
+    await expect(editor.locator).not.toHaveAttribute("data-links-openable")
     await page.keyboard.down(modifier)
-    await expect(anchors.nth(0)).toHaveAttribute("contenteditable", "false")
-    await expect(anchors.nth(1)).toHaveAttribute("contenteditable", "false")
+    await expect(editor.locator).toHaveAttribute("data-links-openable")
     await page.keyboard.up(modifier)
-    await expect(anchors.nth(0)).not.toHaveAttribute("contenteditable")
-    await expect(anchors.nth(1)).not.toHaveAttribute("contenteditable")
+    await expect(editor.locator).not.toHaveAttribute("data-links-openable")
   })
 
-  test("clears link attributes on window blur", async ({ page, editor }) => {
+  test("does not set contenteditable on links when modifier is held", async ({ page, editor }) => {
     const anchor = editor.content.locator("a")
 
     await page.keyboard.down(modifier)
-    await expect(anchor).toHaveAttribute("contenteditable", "false")
-
-    await page.evaluate(() => window.dispatchEvent(new Event("blur")))
     await expect(anchor).not.toHaveAttribute("contenteditable")
+    await page.keyboard.up(modifier)
   })
 })

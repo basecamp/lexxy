@@ -1,6 +1,8 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
+import { startMonitoringConsole } from "../../helpers/assertions.js"
+import { assertGalleryWithImages, selectGalleryAtOffset, selectGalleryImage, uploadStandaloneAfter } from "../../helpers/gallery_test_helpers.js"
 
 test.describe("Gallery", () => {
   test.beforeEach(async ({ page }) => {
@@ -196,6 +198,32 @@ test.describe("Gallery", () => {
     await assertGalleryWithImages(editor, 2)
   })
 
+  test("shift+enter inside a gallery does not throw any errors", async ({
+    page,
+    editor,
+    browserName,
+  }) => {
+    startMonitoringConsole(page)
+
+    await editor.uploadFile([
+      "test/fixtures/files/example.png",
+      "test/fixtures/files/example2.png",
+    ])
+
+    await assertGalleryWithImages(editor, 2)
+
+    await selectGalleryAtOffset(page, editor, 1)
+    await editor.send("Shift+Enter")
+
+    await editor.content.click()
+    await page.waitForTimeout(200)
+
+    // FIXME Firefox logs image-corruption console errors that trip the monitor
+    if (browserName !== "firefox") {
+      expect(page).toHaveNoErrors()
+    }
+  })
+
   test("enter in middle of gallery splits it and backspace joins them", async ({
     page,
     editor,
@@ -217,6 +245,31 @@ test.describe("Gallery", () => {
     await editor.send("Backspace")
 
     await assertGalleryCount(page, 1)
+  })
+
+  test("delete at gallery end absorbs next gallery", async ({
+    page,
+    editor,
+  }) => {
+    await editor.uploadFile([
+      "test/fixtures/files/example.png",
+      "test/fixtures/files/example2.png",
+      "test/fixtures/files/example.png",
+      "test/fixtures/files/example2.png",
+    ])
+
+    await assertGalleryWithImages(editor, 4)
+
+    await selectGalleryAtOffset(page, editor, 2)
+    await editor.send("Enter")
+
+    await assertGalleryCount(page, 2)
+
+    await selectGalleryAtOffset(page, editor, 2, 0)
+    await editor.send("Delete")
+
+    await assertGalleryCount(page, 1)
+    await assertGalleryWithImages(editor, 4)
   })
 
   test("backspace at gallery start absorbs previous image", async ({
@@ -251,42 +304,16 @@ test.describe("Gallery", () => {
       "test/fixtures/files/example2.png",
     ])
 
-    await editor.send("Enter")
+    await assertGalleryWithImages(editor, 2)
 
-    await editor.uploadFile("test/fixtures/files/example.png")
-
+    await uploadStandaloneAfter(editor, "image_gallery", "test/fixtures/files/example.png")
     await assertGalleryWithImages(editor, 2)
     await expect(page.locator("figure.attachment--preview")).toHaveCount(3)
 
-    await selectGalleryAtOffset(page, editor, 2)
+    await selectGalleryNode(editor)
     await editor.send("Delete")
 
     await assertGalleryWithImages(editor, 3)
-  })
-
-  test("delete at gallery end absorbs next gallery", async ({
-    page,
-    editor,
-  }) => {
-    await editor.uploadFile([
-      "test/fixtures/files/example.png",
-      "test/fixtures/files/example2.png",
-    ])
-
-    await editor.send("Enter")
-
-    await editor.uploadFile([
-      "test/fixtures/files/example.png",
-      "test/fixtures/files/example2.png",
-    ])
-
-    await assertGalleryCount(page, 2)
-
-    await selectGalleryAtOffset(page, editor, 2, 0)
-    await editor.send("Delete")
-
-    await assertGalleryCount(page, 1)
-    await assertGalleryWithImages(editor, 4)
   })
 
   test("backspace at gallery start with empty paragraph above removes paragraph", async ({
@@ -353,6 +380,25 @@ test.describe("Gallery", () => {
       page.locator(".attachment-gallery.attachment-gallery--2"),
     ).toBeVisible()
   })
+
+  test("gallery with a nbsp child does not throw any errors", async ({
+    page,
+    editor,
+  }) => {
+    startMonitoringConsole(page)
+
+    // Value must contain two mentions before the &nbsp; to trigger the bug
+    await editor.setValue(`<div class="attachment-gallery attachment-gallery--2">
+      <action-text-attachment sgid="abc" content="Mention" content-type="application/vnd.basecamp.mention"></action-text-attachment>
+      <action-text-attachment sgid="abc" content="Mention" content-type="application/vnd.basecamp.mention"></action-text-attachment>
+      &nbsp;
+      </div>`)
+
+    await editor.content.click()
+    await page.waitForTimeout(200)
+
+    expect(page).toHaveNoErrors()
+  })
 })
 
 // --- Helpers ---
@@ -363,23 +409,12 @@ async function assertAttachmentVisible(page, contentType) {
   ).toBeVisible({ timeout: 10_000 })
 }
 
-async function assertGalleryWithImages(editor, count) {
-  const gallery = editor.content.locator(".attachment-gallery").first()
-  await expect(gallery).toBeVisible({ timeout: 10_000 })
-  await expect(gallery.locator("figure.attachment")).toHaveCount(count)
-}
-
 async function assertNoGallery(page) {
   await expect(page.locator(".attachment-gallery")).toHaveCount(0)
 }
 
 async function assertGalleryCount(page, count) {
   await expect(page.locator(".attachment-gallery")).toHaveCount(count)
-}
-
-async function selectGalleryImage(page, index, galleryIndex = 0) {
-  const gallery = page.locator(".attachment-gallery").nth(galleryIndex)
-  await gallery.locator("figure.attachment img").nth(index).click()
 }
 
 async function assertGalleryImageSelected(page, index, galleryIndex = 0) {
@@ -394,13 +429,14 @@ async function selectAttachment(page) {
   await expect(page.locator("figure.attachment")).toHaveClass(/node--selected/)
 }
 
-// Mirrors Ruby helper: select image and use arrow keys to position cursor at offset
-async function selectGalleryAtOffset(page, editor, offset, galleryIndex = 0) {
-  if (offset === 0) {
-    await selectGalleryImage(page, 0, galleryIndex)
-    await editor.send("ArrowLeft")
-  } else {
-    await selectGalleryImage(page, offset - 1, galleryIndex)
-    await editor.send("ArrowRight")
-  }
+async function selectGalleryNode(editor, galleryIndex = 0) {
+  await editor.locator.evaluate((el, idx) => {
+    return new Promise((resolve) => {
+      el.editor.update(() => {
+        const root = el.editor.getEditorState()._nodeMap.get("root")
+        const galleries = root.getChildren().filter((c) => c.getType() === "image_gallery")
+        if (galleries[idx]) galleries[idx].select()
+      }, { onUpdate: resolve })
+    })
+  }, galleryIndex)
 }
