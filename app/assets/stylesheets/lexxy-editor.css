@@ -506,7 +506,9 @@
       position: relative;
       margin-inline-end: calc(var(--lexxy-toolbar-spacing) + 1px);
 
-      &:after {
+      /* A dropdown trigger's chevron already takes :after */
+      &:not(.lexxy-editor__toolbar-button--chevron):after,
+      &.lexxy-editor__toolbar-button--chevron:before {
         background-color: var(--lexxy-color-ink-lighter);
         block-size: var(--lexxy-toolbar-icon-size);
         content: "";

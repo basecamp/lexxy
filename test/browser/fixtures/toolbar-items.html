@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — Toolbar items</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <form>
+    <div class="body">
+      <lexxy-editor id="compact" class="lexxy-content" preset="compact"></lexxy-editor>
+      <lexxy-editor id="override" class="lexxy-content" preset="compact" toolbar='{"items":["italic","~","redo"]}'></lexxy-editor>
+      <lexxy-editor id="attachments-disabled" class="lexxy-content" attachments="false" toolbar='{"items":["image","file","bold"]}'></lexxy-editor>
+      <lexxy-editor id="images-only" class="lexxy-content" toolbar='{"items":["image","file","bold"],"upload":"image"}'></lexxy-editor>
+    </div>
+  </form>
+
+  <script type="module">
+    import { configure } from "lexxy"
+
+    configure({
+      compact: {
+        toolbar: {
+          items: [
+            "bold",
+            "italic",
+            "|",
+            { name: "insert", icon: "table", label: "Insert", items: [ "table", "divider", "|", "strikethrough" ] },
+            "link",
+            "~",
+            "undo",
+            "redo"
+          ]
+        }
+      }
+    })
+  </script>
+</body>
+</html>

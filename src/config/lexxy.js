@@ -1,4 +1,5 @@
 import Configuration from "./configuration"
+import { defaultToolbarItems } from "./toolbar"
 
 const global = new Configuration({
   attachmentTagName: "action-text-attachment",
@@ -15,38 +16,8 @@ const presets = new Configuration({
     permittedAttachmentTypes: null,
     richText: true,
     toolbar: {
-      items: [
-        "image",
-        "file",
-        "|",
-        "bold",
-        "italic",
-        { name: "format", icon: "heading", label: "Text formatting", items: [
-            "paragraph",
-            "heading-large",
-            "heading-medium",
-            "heading-small",
-            "|",
-            "strikethrough",
-            "underline",
-          ]
-        },
-        { name: "lists", icon: "ul", label: "Lists", items: [
-            "unordered-list",
-            "ordered-list",
-          ]
-        },
-        "highlight",
-        "link",
-        "quote",
-        "code",
-        "|",
-        "table",
-        "divider",
-        "~",
-        "undo",
-        "redo",
-      ]
+      items: defaultToolbarItems,
+      upload: "both"
     },
     headings: [ "h2", "h3", "h4" ],
     highlight: {

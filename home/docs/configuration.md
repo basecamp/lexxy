@@ -65,7 +65,8 @@ Override individual options on a single editor with element attributes. These ta
 
 Editors support the following options, configurable using presets and element attributes:
 
-- `toolbar`: Pass `false` to disable the toolbar entirely, pass the ID of a `<lexxy-toolbar>` element to use as an external toolbar, or pass an object to configure individual toolbar buttons. By default, the toolbar is bootstrapped and displayed above the editor.
+- `toolbar`: Pass `false` to disable the toolbar entirely, pass the ID of a `<lexxy-toolbar>` element to use as an external toolbar, or pass an object to configure the default toolbar. By default, the toolbar is bootstrapped and displayed above the editor.
+  - `toolbar.items`: Which items the toolbar shows, and in what order: buttons, dropdowns, dropdown groups, separators and spacers. See [Toolbar](toolbar.html).
   - `toolbar.upload`: Control which upload button(s) appear in the toolbar. Accepts `"file"`, `"image"`, or `"both"` (default). The image button restricts the file picker to images and videos (`accept="image/*,video/*"`), which triggers the native photo/video picker on iOS and Android. The file button opens an unrestricted file picker.
 - `attachments`: Pass `false` to disable attachments completely. By default, attachments are supported, including paste and drag & drop support. For finer-grained control — keeping attachments enabled while restricting which content types are accepted — use `permittedAttachmentTypes`.
 - `markdown`: Pass `false` to disable Markdown support.

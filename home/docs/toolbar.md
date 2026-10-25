@@ -2,25 +2,29 @@
 title: Toolbar
 layout: default
 parent: Configuration
-nav_order: 2
+nav_order: 4
 ---
 
-# Toolbar Customization
+# Toolbar
 
-The toolbar layout is fully configurable through the `toolbar.items` array. Each entry defines a button, dropdown group, separator, or spacer.
+The `toolbar.items` option sets which items the default toolbar shows, and in what order. Each entry is a button, a dropdown, a dropdown group, a separator, or a spacer.
 
-## Item types
+Items only arrange the toolbar. Whether a feature is available at all is up to its own option, such as `attachments`, and the toolbar config can't turn it back on: with `attachments: false`, the `image` and `file` buttons stay hidden even when they're listed in `items`.
 
-| Entry | Description |
-|-------|-------------|
-| `"bold"` | A button name from the built-in registry (see below) |
-| `{ name, icon, label, items }` | A dropdown group containing child items |
-| `"|"` | A visual group separator — adds a border after the preceding item |
-| `"~"` | A flexible spacer — pushes subsequent items to the right edge |
+## Entries
+
+| Entry | What it adds |
+|-------|--------------|
+| `"bold"` | A button or dropdown from the list below |
+| `{ name, icon, label, items }` | A dropdown group: a menu with the given items |
+| `"\|"` | A separator: it ends the group of items before it |
+| `"~"` | A spacer: it pushes the items after it to the end of the toolbar |
+
+The toolbar always ends with its overflow menu, which holds the buttons that don't fit.
+
+An unknown entry raises an error when the editor builds its toolbar, so a typo shows up right away.
 
 ## Default items
-
-This is the default toolbar configuration:
 
 ```js
 toolbar: {
@@ -30,69 +34,76 @@ toolbar: {
     "|",
     "bold",
     "italic",
-    { name: "format", icon: "heading", label: "Text formatting", items: [
-        "paragraph",
-        "heading-large",
-        "heading-medium",
-        "heading-small",
-        "|",
-        "strikethrough",
-        "underline",
-      ]
-    },
-    { name: "lists", icon: "ul", label: "Lists", items: [
-        "unordered-list",
-        "ordered-list",
-      ]
-    },
+    "strikethrough",
+    "underline",
+    "|",
+    { name: "format", icon: "heading", label: "Text formatting", items: [ "paragraph", "headings", "|", "clear-formatting" ] },
     "highlight",
     "link",
+    "|",
     "quote",
     "code",
+    "unordered-list",
+    "ordered-list",
     "|",
     "table",
     "divider",
     "~",
     "undo",
-    "redo",
+    "redo"
   ]
 }
 ```
 
-## Available items
+## Buttons and dropdowns
 
-| Name | Icon | Description |
-|------|------|-------------|
-| `image` | image | Upload images |
-| `file` | attachment | Upload files |
-| `bold` | bold | Bold formatting |
-| `italic` | italic | Italic formatting |
-| `paragraph` | paragraph | Normal text (typically inside a format dropdown) |
-| `heading-large` | h2 | Large heading |
-| `heading-medium` | h3 | Medium heading |
-| `heading-small` | h4 | Small heading |
-| `strikethrough` | strikethrough | Strikethrough text |
-| `underline` | underline | Underline text |
-| `unordered-list` | ul | Bullet list |
-| `ordered-list` | ol | Numbered list |
-| `highlight` | highlight | Color highlight picker |
-| `link` | link | Insert/edit link |
-| `quote` | quote | Block quote |
-| `code` | code | Code block |
-| `table` | table | Insert table |
-| `divider` | hr | Horizontal divider |
-| `undo` | undo | Undo |
-| `redo` | redo | Redo |
+| Name | Adds |
+|------|------|
+| `image` | Upload images and videos |
+| `file` | Upload files |
+| `bold` | Bold |
+| `italic` | Italic |
+| `strikethrough` | Strikethrough |
+| `underline` | Underline |
+| `clear-formatting` | Clear formatting |
+| `highlight` | The color highlight dropdown |
+| `link` | The link dropdown |
+| `quote` | Quote |
+| `code` | Code |
+| `unordered-list` | Bullet list |
+| `ordered-list` | Numbered list |
+| `table` | Insert a table |
+| `divider` | Insert a divider |
+| `undo` | Undo |
+| `redo` | Redo |
+
+## Dropdown groups
+
+A dropdown group is an object:
+
+- `name`: the name of its toolbar button.
+- `icon`: the icon of its toolbar button. One of `bold`, `italic`, `strikethrough`, `underline`, `heading`, `paragraph`, `clearFormatting`, `highlight`, `link`, `quote`, `code`, `ul`, `ol`, `image`, `attachment`, `table`, `hr`, `undo` and `redo`.
+- `label`: its accessible name, shown as the button's tooltip.
+- `items`: the items of its menu.
+
+A group's menu takes any button from the list above, plus `"|"` for a separator and two items that only go in a group:
+
+- `paragraph`: turn the block back into a normal paragraph.
+- `headings`: one item per heading level in the [`headings` option](configuration.html#editor-options).
+
+The `highlight` and `link` dropdowns, and other groups, can't go inside a group.
+
+The group's button shows as pressed while one of its items is active.
 
 ## Examples
 
-### Minimal toolbar
+### A smaller toolbar for a preset
 
 ```js
 Lexxy.configure({
   compact: {
     toolbar: {
-      items: ["bold", "italic", "link", "|", "undo", "redo"]
+      items: [ "bold", "italic", "link", "~", "undo", "redo" ]
     }
   }
 })
@@ -102,72 +113,31 @@ Lexxy.configure({
 <lexxy-editor preset="compact"></lexxy-editor>
 ```
 
-### Without attachments
-
-Omit `image` and `file` to remove upload buttons:
+### Your own dropdown group
 
 ```js
 toolbar: {
   items: [
     "bold",
     "italic",
-    { name: "format", icon: "heading", label: "Text formatting", items: [
-        "paragraph", "heading-large", "heading-medium", "heading-small",
-        "|", "strikethrough", "underline",
-      ]
-    },
+    { name: "insert", icon: "table", label: "Insert", items: [ "table", "divider", "|", "quote", "code" ] },
     "link",
-    "quote",
-    "code",
     "~",
     "undo",
-    "redo",
+    "redo"
   ]
 }
 ```
 
-### Custom dropdown groups
+### One editor
 
-Create your own dropdown groupings:
-
-```js
-toolbar: {
-  items: [
-    "bold",
-    "italic",
-    { name: "insert", icon: "table", label: "Insert", items: [
-        "table",
-        "divider",
-        "code",
-        "quote",
-      ]
-    },
-    "link",
-    "~",
-    "undo",
-    "redo",
-  ]
-}
-```
-
-### Per-editor override
-
-Override the toolbar for a specific editor using the HTML attribute:
+The `toolbar` attribute overrides the preset's items on one editor:
 
 ```html
-<lexxy-editor toolbar='{"items":["bold","italic","link"]}'></lexxy-editor>
+<lexxy-editor toolbar='{"items": ["bold", "italic", "link"]}'></lexxy-editor>
 ```
 
-### Disabling the toolbar
+## Other toolbar options
 
-Pass `false` to hide the toolbar entirely:
-
-```html
-<lexxy-editor toolbar="false"></lexxy-editor>
-```
-
-## Separators and spacers
-
-Use `"|"` between items to create visual groups. The separator renders as a thin vertical line (top-level) or a horizontal line (inside dropdowns).
-
-Use `"~"` to insert a flexible spacer that pushes all following items to the right edge of the toolbar. This is typically used before undo/redo.
+- `toolbar.upload`: which upload buttons show, out of the ones in `items`. Accepts `"file"`, `"image"`, or `"both"` (default).
+- Pass `toolbar: false` to remove the toolbar, or the ID of a `<lexxy-toolbar>` element to use your own toolbar markup instead. `toolbar.items` only applies to the default toolbar.

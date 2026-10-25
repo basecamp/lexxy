@@ -9,11 +9,16 @@ import {
 import { getNonce } from "../helpers/csp_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { handleRollingTabIndex, isKeyboardActivation } from "../helpers/accessibility_helper"
-import ToolbarIcons from "./toolbar_icons"
-import { generateDomId, isActiveAndVisible } from "../helpers/html_helper"
+import { isActiveAndVisible } from "../helpers/html_helper"
+import { buildToolbarTemplate } from "./toolbar_template"
 
 export class LexicalToolbarElement extends HTMLElement {
   static observedAttributes = [ "connected" ]
+
+  static buildTemplate(items) {
+    return buildToolbarTemplate(items)
+  }
+
   #listeners = new ListenerBin()
   #refreshToolbarAF = null
 
@@ -56,8 +61,8 @@ export class LexicalToolbarElement extends HTMLElement {
 
   configure(config) {
     if (typeof config === "object" && config !== null) {
-      for (const [ button, value ] of Object.entries(config)) {
-        this.setAttribute(`data-${button}`, value)
+      for (const [ option, value ] of Object.entries(config)) {
+        if (option !== "items") this.setAttribute(`data-${option}`, value)
       }
     }
   }
@@ -253,6 +258,16 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("code", isInCode)
 
     this.#setButtonPressed("table", isInTable)
+
+    this.#updateGroupStates({ isInHeading })
+  }
+
+  #updateGroupStates({ isInHeading }) {
+    this.querySelectorAll(":scope > [data-toolbar-group]").forEach((group) => {
+      const hasPressedItem = group.panel.querySelector("[aria-pressed='true']") != null
+      const hasActiveHeading = isInHeading && group.querySelector("lexxy-heading-dropdown") != null
+      group.trigger.ariaPressed = hasPressedItem || hasActiveHeading
+    })
   }
 
   #setButtonPressed(name, isPressed) {
@@ -376,115 +391,6 @@ export class LexicalToolbarElement extends HTMLElement {
 
   get #toolbarItems() {
     return Array.from(this.querySelectorAll(":scope > *:not(.lexxy-editor__toolbar-overflow)"))
-  }
-
-  static get defaultTemplate() {
-    const linkInputId = generateDomId("lexxy-link-url")
-
-    return `
-      <button class="lexxy-editor__toolbar-button" type="button" name="image" data-command="uploadImage" data-prevent-overflow="true" title="Add images and video">
-        ${ToolbarIcons.image}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="file" data-command="uploadFile" title="Upload files">
-        ${ToolbarIcons.attachment}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="Bold">
-        ${ToolbarIcons.bold}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="italic" data-command="italic" title="Italic">
-      ${ToolbarIcons.italic}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="strikethrough" data-command="strikethrough" title="Strikethrough">
-        ${ToolbarIcons.strikethrough}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="underline" data-command="underline" title="Underline">
-        ${ToolbarIcons.underline}
-      </button>
-
-      <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-dropdown">
-        <button data-dropdown-trigger class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="format" title="Text formatting" aria-haspopup="menu" aria-expanded="false">
-          ${ToolbarIcons.heading}
-        </button>
-        <div data-dropdown-panel role="menu" aria-label="Text formatting" class="lexxy-editor__toolbar-dropdown-list" hidden>
-          <button type="button" name="paragraph" data-command="setFormatParagraph" title="Paragraph" role="menuitemradio">
-            ${ToolbarIcons.paragraph} <span>Normal</span>
-          </button>
-          <lexxy-heading-dropdown>
-            <div class="lexxy-heading-options"></div>
-          </lexxy-heading-dropdown>
-          <div class="lexxy-editor__toolbar-separator" role="separator"></div>
-          <button type="button" name="clear-formatting" data-command="clearFormatting" title="Clear formatting" role="menuitem">
-            ${ToolbarIcons.clearFormatting} <span>Clear formatting</span>
-          </button>
-        </div>
-      </lexxy-toolbar-dropdown>
-
-      <lexxy-highlight-dropdown class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--highlight">
-        <button data-dropdown-trigger class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--chevron" type="button" name="highlight" title="Color highlight" aria-haspopup="menu" aria-expanded="false">
-          ${ToolbarIcons.highlight}
-        </button>
-        <div data-dropdown-panel role="menu" aria-label="Color highlight" hidden>
-          <div class="lexxy-highlight-colors"></div>
-          <button data-command="removeHighlight" type="button" class="lexxy-editor__toolbar-button lexxy-editor__toolbar-dropdown-reset" role="menuitem">Remove all coloring</button>
-        </div>
-      </lexxy-highlight-dropdown>
-
-      <lexxy-link-dropdown class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-dropdown--link">
-        <button data-dropdown-trigger class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="link" title="Link" data-hotkey="cmd+k ctrl+k" aria-haspopup="dialog" aria-expanded="false">
-          ${ToolbarIcons.link}
-        </button>
-        <div data-dropdown-panel role="dialog" aria-label="Link" hidden>
-          <input type="text" inputmode="url" autocapitalize="off" spellcheck="false" pattern="[a-zA-Z][a-zA-Z0-9+.\\-]*:.+|[\\/#].*" title="A full URL, or a path such as /about" placeholder="Enter a URL…" class="input" id="${linkInputId}">
-          <div class="lexxy-editor__toolbar-dropdown-actions">
-            <button type="button" class="lexxy-editor__toolbar-button" value="link">Link</button>
-            <button type="button" class="lexxy-editor__toolbar-button" value="unlink">Unlink</button>
-          </div>
-        </div>
-      </lexxy-link-dropdown>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="quote" data-command="insertQuoteBlock" title="Quote">
-        ${ToolbarIcons.quote}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="code" data-command="insertCodeBlock" title="Code">
-        ${ToolbarIcons.code}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="unordered-list" data-command="insertUnorderedList" title="Bullet list">
-        ${ToolbarIcons.ul}
-      </button>
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-group-end" type="button" name="ordered-list" data-command="insertOrderedList" title="Numbered list">
-        ${ToolbarIcons.ol}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="table" data-command="insertTable" title="Insert a table">
-        ${ToolbarIcons.table}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="divider" data-command="insertHorizontalDivider" title="Insert a divider">
-        ${ToolbarIcons.hr}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button lexxy-editor__toolbar-button--push-right" type="button" name="undo" data-command="undo" title="Undo" aria-disabled="true">
-        ${ToolbarIcons.undo}
-      </button>
-
-      <button class="lexxy-editor__toolbar-button" type="button" name="redo" data-command="redo" title="Redo" aria-disabled="true">
-        ${ToolbarIcons.redo}
-      </button>
-
-      <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-dropdown lexxy-editor__toolbar-button--push-right lexxy-editor__toolbar-overflow">
-        <button data-dropdown-trigger class="lexxy-editor__toolbar-button" type="button" title="More options" aria-haspopup="menu" aria-expanded="false">
-          ${ToolbarIcons.overflow}
-        </button>
-        <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-overflow-menu" aria-label="More options" hidden></div>
-      </lexxy-toolbar-dropdown>
-    `
   }
 }
 

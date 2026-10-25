@@ -13,6 +13,7 @@ import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transf
 import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_tag_handler"
 
 import theme from "../config/theme"
+import { defaultToolbarItems } from "../config/toolbar"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import CaptionEditor from "../editor/attachments/caption_editor"
 import { UploadRequests } from "../editor/attachments/upload_requests"
@@ -827,10 +828,10 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #createDefaultToolbar() {
-    const items = this.config.get("toolbar.items")
     const toolbar = createElement("lexxy-toolbar")
-    toolbar.appendChild(LexicalToolbar.buildTemplate(items))
+    toolbar.append(LexicalToolbar.buildTemplate(this.config.get("toolbar.items") ?? defaultToolbarItems))
     toolbar.setAttribute("data-attachments", this.supportsAttachments) // Drives toolbar CSS styles
+    toolbar.configure(this.config.get("toolbar"))
     this.prepend(toolbar)
     return toolbar
   }
