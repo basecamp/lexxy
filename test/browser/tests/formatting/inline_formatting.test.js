@@ -186,6 +186,30 @@ test.describe("Inline formatting", () => {
     await assertEditorHtml(editor, "<p><strong>ab</strong> cd</p>")
   })
 
+  test("applying code to a backward selection that ends at the end of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p><strong>ab</strong> cd</p>")
+    await selectBetween(editor, { text: " cd", offset: 3 }, { text: "ab", offset: 2 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><strong>ab</strong><code> cd</code></p>")
+  })
+
+  test("applying code to a selection that ends at the start of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>ab <strong>cd</strong></p>")
+    await selectBetween(editor, { text: "ab ", offset: 0 }, { text: "cd", offset: 0 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><code>ab </code><strong>cd</strong></p>")
+  })
+
   test("toggle code for block", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.click()
@@ -252,17 +276,13 @@ test.describe("Inline formatting", () => {
   })
 })
 
-async function selectBetween(editor, start, end) {
-  await editor.content.evaluate((el, { start, end }) => {
+async function selectBetween(editor, anchor, focus) {
+  await editor.content.evaluate((el, { anchor, focus }) => {
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
     const textNodes = []
     while (walker.nextNode()) textNodes.push(walker.currentNode)
-    const range = document.createRange()
-    range.setStart(textNodes.find((node) => node.nodeValue === start.text), start.offset)
-    range.setEnd(textNodes.find((node) => node.nodeValue === end.text), end.offset)
-    const selection = window.getSelection()
-    selection.removeAllRanges()
-    selection.addRange(range)
-  }, { start, end })
+    const find = (text) => textNodes.find((node) => node.nodeValue === text)
+    window.getSelection().setBaseAndExtent(find(anchor.text), anchor.offset, find(focus.text), focus.offset)
+  }, { anchor, focus })
   await editor.flush()
 }
