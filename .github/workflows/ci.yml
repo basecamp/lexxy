@@ -21,13 +21,13 @@ jobs:
           persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
         with:
           ruby-version: .ruby-version
           bundler-cache: true
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: 'yarn'
@@ -57,7 +57,7 @@ jobs:
         uses: rhysd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12
 
       - name: Run zizmor
-        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
+        uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
         with:
           advanced-security: false
 
@@ -74,7 +74,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: 'yarn'
@@ -108,20 +108,28 @@ jobs:
       - name: Install packages
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config google-chrome-stable mupdf build-essential ffmpeg groff libreoffice-writer libreoffice-impress libreoffice-calc mupdf-tools libvips zip
 
+      - name: Remove runner's ChromeDriver
+        run: |
+          chrome_driver_path="$(command -v chromedriver || true)"
+          if [ -n "$chrome_driver_path" ]; then
+            "$chrome_driver_path" --version
+            sudo rm "$chrome_driver_path"
+          fi
+
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
         with:
           ruby-version: .ruby-version
           bundler-cache: true
           cache-version: ${{ matrix.name }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: 'yarn'
@@ -140,7 +148,7 @@ jobs:
           bin/rails test:all
 
       - name: Keep screenshots from failed system tests
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: screenshots-${{ matrix.name }}
@@ -153,6 +161,13 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
+    # Playwright's own image ships every browser and every system library they
+    # need, so this job never runs apt-get. Keep the tag (and its digest) in step
+    # with the @playwright/test version in yarn.lock: when a bump needs different
+    # browser builds, Playwright refuses to launch and names the image to move to.
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d
+      options: --user 1001
     strategy:
       fail-fast: false
       matrix:
@@ -164,7 +179,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: 'yarn'
@@ -172,39 +187,16 @@ jobs:
       - name: Install JavaScript dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Get Playwright version
-        id: playwright-version
-        run: echo "version=$(npx playwright --version)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ matrix.browser }}-${{ steps.playwright-version.outputs.version }}
-
-      - name: Install Playwright browser
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install ${{ matrix.browser }}
-
-      # apt-get on the hosted runners stalls for tens of minutes when its mirror
-      # is degraded, so bound each attempt and retry: apt keeps the .debs it
-      # already fetched, so retries make forward progress.
-      - name: Install Playwright system deps
-        run: |
-          for attempt in 1 2 3; do
-            timeout 10m npx playwright install-deps ${{ matrix.browser }} && exit 0
-            echo "::warning::playwright install-deps stalled on attempt $attempt, retrying"
-          done
-          exit 1
-
       - name: Run Playwright tests
         run: yarn test:browser:${{ matrix.browser }}
 
       - name: Keep Playwright report
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: playwright-report-${{ matrix.browser }}
-          path: ${{ github.workspace }}/test/browser/playwright-report/
+          # Relative, not ${{ github.workspace }}: in a container job that expression
+          # is the host path, which does not exist inside the container, and
+          # if-no-files-found: ignore would hide the empty upload.
+          path: test/browser/playwright-report/
           if-no-files-found: ignore

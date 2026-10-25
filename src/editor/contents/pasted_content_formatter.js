@@ -19,6 +19,7 @@ export default class PastedContentFormatter {
   format() {
     this.#inlinePreservableStyles()
     this.#stripStyleElements()
+    this.#stripInterchangeNewlines()
     this.#unwrapPlaceholderAnchors()
     this.#stripTableCellColorStyles()
     new OfficeFormatter(this.doc).format()
@@ -52,6 +53,35 @@ export default class PastedContentFormatter {
     for (const style of this.doc.querySelectorAll("style")) {
       style.remove()
     }
+  }
+
+  // Chrome and Safari append <br class="Apple-interchange-newline"> when the
+  // copied selection ends at a line end (Google Docs does this on every copy).
+  // It marks the end of the selection, not a line the author wrote, so left in
+  // place it pastes as an extra empty paragraph. Only the trailing marker goes:
+  // one at the start of the fragment is a real line boundary.
+  #stripInterchangeNewlines() {
+    for (const br of this.doc.querySelectorAll("br.Apple-interchange-newline")) {
+      if (this.#isAtEndOfBody(br)) {
+        br.remove()
+      }
+    }
+  }
+
+  #isAtEndOfBody(node) {
+    for (let current = node; current && current !== this.doc.body; current = current.parentNode) {
+      for (let sibling = current.nextSibling; sibling; sibling = sibling.nextSibling) {
+        if (!this.#isIgnorableTrailingNode(sibling)) return false
+      }
+    }
+    return true
+  }
+
+  #isIgnorableTrailingNode(node) {
+    if (node.nodeType === Node.COMMENT_NODE) {
+      return true
+    }
+    return node.nodeType === Node.TEXT_NODE && node.textContent.trim() === ""
   }
 
   // Anchors with non-meaningful hrefs (e.g. "#", "") appear in content copied
