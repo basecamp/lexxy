@@ -1,4 +1,4 @@
-import { $getRoot } from "lexical"
+import { $getRoot, $isTextNode } from "lexical"
 import { defineElements } from "../../../../src/elements/index"
 import { NativeAdapter } from "../../../../src/editor/adapters/native_adapter"
 
@@ -8,6 +8,7 @@ function ensureElementsRegistered() {
   if (elementsRegistered) return
   elementsRegistered = true
   stubElementInternals()
+  stubResizeObserver()
   defineElements()
 }
 
@@ -22,6 +23,15 @@ function stubElementInternals() {
       Object.defineProperty(internals, "labels", { get: () => [] })
     }
     return internals
+  }
+}
+
+// jsdom doesn't implement ResizeObserver
+function stubResizeObserver() {
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
   }
 }
 
@@ -84,6 +94,13 @@ export function selectEnd(editorElement) {
   editorElement.editor.update(() => {
     $getRoot().selectEnd()
   })
+}
+
+export function selectFirstText(editorElement, offset = 0) {
+  editorElement.editor.update(() => {
+    const text = $getRoot().getFirstDescendant()
+    if ($isTextNode(text)) text.select(offset, offset)
+  }, { discrete: true })
 }
 
 export function captureEvent(element, eventName, fn) {
