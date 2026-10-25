@@ -1,7 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
-import { HELLO_EVERYONE } from "../../helpers/toolbar.js"
+import { HELLO_EVERYONE, focusedName } from "../../helpers/toolbar.js"
 
 test.describe("Toolbar", () => {
   test.beforeEach(async ({ page }) => {
@@ -19,31 +19,31 @@ test.describe("Toolbar", () => {
 
   test("attachments icon display", async ({ page }) => {
     await expect(
-      page.locator("lexxy-toolbar button[name=upload]"),
+      page.locator("lexxy-toolbar button[name=image]"),
     ).toBeVisible()
 
     await page.goto("/attachments-disabled.html")
     await page.waitForSelector("lexxy-toolbar[connected]")
     await expect(
-      page.locator("lexxy-toolbar button[name=upload]"),
+      page.locator("lexxy-toolbar button[name=image]"),
     ).toBeHidden()
 
     await page.goto("/attachments-enabled.html")
     await page.waitForSelector("lexxy-toolbar[connected]")
     await expect(
-      page.locator("lexxy-toolbar button[name=upload]"),
+      page.locator("lexxy-toolbar button[name=image]"),
     ).toBeVisible()
 
     await page.goto("/")
     await page.waitForSelector("lexxy-toolbar[connected]")
     await expect(
-      page.locator("lexxy-toolbar button[name=upload]"),
+      page.locator("lexxy-toolbar button[name=image]"),
     ).toBeVisible()
 
     await page.goto("/attachments-invalid.html")
     await page.waitForSelector("lexxy-toolbar[connected]")
     await expect(
-      page.locator("lexxy-toolbar button[name=upload]"),
+      page.locator("lexxy-toolbar button[name=image]"),
     ).toBeVisible()
   })
 
@@ -53,16 +53,13 @@ test.describe("Toolbar", () => {
     const boldButton = page.locator("lexxy-toolbar button[name='bold']")
     await boldButton.focus()
 
-    const focusedName = () =>
-      page.evaluate(() => document.activeElement?.getAttribute("name"))
-
-    await expect.poll(focusedName).toBe("bold")
+    await expect.poll(() => focusedName(page)).toBe("bold")
 
     await page.keyboard.press("ArrowRight")
-    await expect.poll(focusedName).toBe("italic")
+    await expect.poll(() => focusedName(page)).toBe("italic")
 
     await page.keyboard.press("ArrowLeft")
-    await expect.poll(focusedName).toBe("bold")
+    await expect.poll(() => focusedName(page)).toBe("bold")
   })
 
   test("undo and redo commands", async ({ page, editor }) => {
@@ -71,7 +68,7 @@ test.describe("Toolbar", () => {
 
     // Undo until the undo button is disabled (editor is back to initial state)
     const undoButton = page.getByRole("button", { name: "Undo" })
-    while (await undoButton.evaluate((el) => !el.disabled)) {
+    while (await undoButton.evaluate((element) => element.ariaDisabled !== "true")) {
       await undoButton.click()
       await editor.flush()
     }
@@ -79,11 +76,148 @@ test.describe("Toolbar", () => {
 
     // Redo until the redo button is disabled
     const redoButton = page.getByRole("button", { name: "Redo" })
-    while (await redoButton.evaluate((el) => !el.disabled)) {
+    while (await redoButton.evaluate((element) => element.ariaDisabled !== "true")) {
       await redoButton.click()
       await editor.flush()
     }
     await assertEditorHtml(editor, "<p>Hello World</p>")
+  })
+
+  test("overflow compaction keeps upload button visible", async ({ page }) => {
+    const toolbar = page.locator("lexxy-toolbar")
+    const uploadButton = toolbar.locator(":scope > button[name=image]")
+    const overflowMenu = toolbar.locator(".lexxy-editor__toolbar-overflow-menu")
+
+    // Shrink the viewport until the toolbar overflows
+    const originalSize = page.viewportSize()
+    await page.setViewportSize({ width: 300, height: originalSize.height })
+
+    // Wait for the toolbar to enter overflow state
+    await expect(toolbar).toHaveAttribute("overflowing", "")
+
+    // The upload button must remain a direct child of the toolbar (not moved to overflow menu)
+    await expect(uploadButton).toBeVisible()
+    await expect(uploadButton).toHaveCount(1)
+
+    // Other buttons should have been moved into the overflow menu
+    const overflowedButtons = overflowMenu.locator("button")
+    await expect(overflowedButtons.first()).toBeAttached()
+
+    // The upload button must not appear inside the overflow menu
+    await expect(overflowMenu.locator("button[name=image]")).toHaveCount(0)
+
+    // Upload button should be clickable (not obscured)
+    await expect(uploadButton).toBeEnabled()
+
+    // Restore viewport and verify overflow is resolved
+    await page.setViewportSize(originalSize)
+    await expect(toolbar).not.toHaveAttribute("overflowing")
+  })
+
+  test("requestOverflowRefresh() recalculates after a toolbar button is injected asynchronously", async ({ page }) => {
+    const toolbar = page.locator("lexxy-toolbar")
+    const overflowMenu = toolbar.locator(".lexxy-editor__toolbar-overflow-menu")
+
+    const originalSize = page.viewportSize()
+    await page.setViewportSize({ width: 300, height: originalSize.height })
+    await expect(toolbar).toHaveAttribute("overflowing", "")
+
+    // Simulate an extension that appends a toolbar button after overflow has
+    // already been computed, then asks the toolbar to recalculate.
+    await page.evaluate(async () => {
+      const tb = document.querySelector("lexxy-toolbar")
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      const button = document.createElement("button")
+      button.type = "button"
+      button.name = "async-injected"
+      button.className = "lexxy-editor__toolbar-button"
+      button.textContent = "X"
+      tb.insertBefore(button, tb.querySelector(".lexxy-editor__toolbar-overflow"))
+      tb.requestOverflowRefresh()
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    })
+
+    const injected = page.locator("button[name='async-injected']")
+    await expect(injected).toHaveCount(1)
+    // Reindex assigns a data-position so the button participates in subsequent
+    // reset/compact cycles instead of drifting to position 999.
+    await expect(injected).toHaveAttribute("data-position", /\d+/)
+    // No room at width=300, so the new button must end up in the overflow menu.
+    await expect(overflowMenu.locator("button[name='async-injected']")).toHaveCount(1)
+
+    // Restoring viewport pulls it back to the toolbar.
+    await page.setViewportSize(originalSize)
+    await expect(toolbar).not.toHaveAttribute("overflowing")
+    await expect(overflowMenu.locator("button[name='async-injected']")).toHaveCount(0)
+    await expect(toolbar.locator(":scope > button[name='async-injected']")).toHaveCount(1)
+  })
+
+  test("overflow compaction accounts for injected buttons that cannot overflow", async ({ page }) => {
+    const toolbar = page.locator("lexxy-toolbar")
+    const overflowMenu = toolbar.locator(".lexxy-editor__toolbar-overflow-menu")
+
+    const originalSize = page.viewportSize()
+    await page.setViewportSize({ width: 360, height: originalSize.height })
+
+    await page.evaluate(async () => {
+      const tb = document.querySelector("lexxy-toolbar")
+      const overflow = tb.querySelector(".lexxy-editor__toolbar-overflow")
+
+      for (const index of [ 1, 2 ]) {
+        const button = document.createElement("button")
+        button.type = "button"
+        button.name = `fixed-injected-${index}`
+        button.className = "lexxy-editor__toolbar-button"
+        button.dataset.preventOverflow = "true"
+        button.textContent = `${index}`
+        tb.insertBefore(button, overflow)
+      }
+
+      tb.requestOverflowRefresh()
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    })
+
+    await expect(toolbar).toHaveAttribute("overflowing", "")
+    await expect(overflowMenu.locator("button[name^='fixed-injected-']")).toHaveCount(0)
+
+    await expect.poll(async () => {
+      return await toolbar.evaluate((tb) => {
+        const toolbarRect = tb.getBoundingClientRect()
+        const style = window.getComputedStyle(tb)
+        const contentLeft = toolbarRect.left + parseFloat(style.paddingLeft)
+        const contentRight = toolbarRect.right - parseFloat(style.paddingRight)
+        const items = Array.from(tb.children).filter((item) => item.getClientRects().length > 0)
+
+        return items.every((item) => {
+          const rect = item.getBoundingClientRect()
+          return rect.left >= contentLeft && rect.right <= contentRight
+        })
+      })
+    }).toBe(true)
+
+    await page.setViewportSize(originalSize)
+  })
+
+  test("image button opens file picker restricted to images and videos", async ({ page }) => {
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      page.locator("lexxy-toolbar button[name='image']").click(),
+    ])
+
+    // The file input created by the image button should only accept images and videos
+    const accept = await page.locator("lexxy-editor input[type='file']").getAttribute("accept")
+    expect(accept).toBe("image/*,video/*")
+  })
+
+  test("file button opens file picker with no type restriction", async ({ page }) => {
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent("filechooser"),
+      page.locator("lexxy-toolbar button[name='file']").click(),
+    ])
+
+    // The file input created by the file button should accept all file types
+    const accept = await page.locator("lexxy-editor input[type='file']").getAttribute("accept")
+    expect(accept).toBeNull()
   })
 
   test("external toolbar", async ({ page }) => {

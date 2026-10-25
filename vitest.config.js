@@ -9,6 +9,6 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    exclude: ["**/browser/**", "**/node_modules/**"],
+    exclude: ["**/browser/**", "**/vendor/**", "**/node_modules/**"],
   },
 })

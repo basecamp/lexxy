@@ -1,5 +1,6 @@
 import { defineExtension } from "lexical"
-import { CodeNode, normalizeCodeLang } from "@lexical/code"
+import { CodeNode } from "@lexical/code"
+import { normalizeCodeLanguage } from "@lexical/code-prism"
 import { extendConversion, extendTextNodeConversion } from "../helpers/lexical_helper"
 import { $applyHighlightStyle } from "./highlight_extension"
 import LexxyExtension from "./lexxy_extension"
@@ -22,7 +23,7 @@ export class TrixContentExtension extends LexxyExtension {
             priority: 1
           }),
           span: (element) => onlyStyledElements(element, {
-            conversion: extendTextNodeConversion("mark", $applyHighlightStyle),
+            conversion: extendTextNodeConversion("span", $applyHighlightStyle),
             priority: 1
           }),
           strong: (element) => onlyStyledElements(element, {
@@ -58,6 +59,6 @@ function onlyPreLanguageElements(element, conversion) {
 }
 
 function $applyLanguage(conversionOutput, element) {
-  const language = normalizeCodeLang(element.getAttribute(TRIX_LANGUAGE_ATTR))
+  const language = normalizeCodeLanguage(element.getAttribute(TRIX_LANGUAGE_ATTR))
   conversionOutput.node.setLanguage(language)
 }

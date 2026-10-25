@@ -7,9 +7,20 @@ export class EditorHandle {
     this.content = this.locator.locator(".lexxy-editor__content")
   }
 
+  // The element turns [connected] as soon as connectedCallback runs, but it
+  // mounts Lexical onto its content element on the next animation frame. Until
+  // then the editor ignores input and its DOM is still being rebuilt, so wait
+  // for the mount too.
   async waitForConnected() {
     await this.locator.waitFor({ state: "attached" })
     await this.page.waitForSelector(`${this.selector}[connected]`)
+
+    const element = await this.locator.elementHandle()
+    await this.page.waitForFunction((el) => {
+      const root = el.editor?.getRootElement()
+      return root != null && root === el.editorContentElement
+    }, element)
+    await element.dispose()
   }
 
   async value() {
@@ -36,6 +47,10 @@ export class EditorHandle {
     await this.content.focus()
   }
 
+  async isFocused() {
+    return this.content.evaluate((element) => document.activeElement === element)
+  }
+
   async click() {
     await this.content.click()
   }
@@ -45,10 +60,11 @@ export class EditorHandle {
   async send(...keys) {
     await this.#ensureFirstInteraction()
     for (const key of keys) {
-      if (this.#isSpecialKey(key)) {
-        await this.content.press(key)
+      const translated = this.#translateKey(key)
+      if (this.#isSpecialKey(translated)) {
+        await this.content.press(translated)
       } else {
-        await this.content.pressSequentially(key)
+        await this.content.pressSequentially(translated)
       }
       await this.flush()
     }
@@ -72,6 +88,7 @@ export class EditorHandle {
         }
       }
     }, text)
+    await this.flush()
   }
 
   async selectAll() {
@@ -83,12 +100,50 @@ export class EditorHandle {
       sel.removeAllRanges()
       sel.addRange(range)
     })
+    await this.flush()
   }
 
-  async paste(text, { html, files = [] } = {}) {
+  // Collapses the caret inside the first text node containing `text`, `offset`
+  // characters past its start.
+  async placeCaretInside(text, offset) {
+    await this.#ensureFirstInteraction()
+    await this.content.evaluate((el, { text, offset }) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      let node
+      while ((node = walker.nextNode())) {
+        const index = node.nodeValue.indexOf(text)
+        if (index !== -1) {
+          const range = document.createRange()
+          range.setStart(node, index + offset)
+          range.collapse(true)
+          const sel = window.getSelection()
+          sel.removeAllRanges()
+          sel.addRange(range)
+          break
+        }
+      }
+    }, { text, offset })
+    await this.flush()
+  }
+
+  // Selects the first block container (a quote) at an element point — a selection
+  // state mouse/keyboard can't produce, since Lexical normalizes DOM selections to leaves.
+  async placeCaretOnQuoteElement() {
+    await this.locator.evaluate((el) => {
+      return new Promise((resolve) => {
+        el.editor.update(() => {
+          const editorState = el.editor._pendingEditorState
+          const quote = editorState._nodeMap.get(editorState._nodeMap.get("root").__first)
+          quote.select(1, 1)
+        }, { onUpdate: resolve })
+      })
+    })
+  }
+
+  async paste(text, { html, files = [], uriList, lexical } = {}) {
     await this.#ensureFirstInteraction()
     await this.content.evaluate(
-      (el, { text, html, files }) => {
+      (el, { text, html, files, uriList, lexical }) => {
         const buildFiles = () => {
           return files.map(({ base64, name, type }) => {
             const binary = atob(base64)
@@ -124,14 +179,17 @@ export class EditorHandle {
             cancelable: true,
             clipboardData: new DataTransfer(),
           })
-          event.clipboardData.setData("text/plain", text)
+          if (typeof text === "string") event.clipboardData.setData("text/plain", text)
           if (html) event.clipboardData.setData("text/html", html)
+          if (uriList) event.clipboardData.setData("text/uri-list", uriList)
+          if (lexical) event.clipboardData.setData("application/x-lexical-editor", lexical)
         }
 
         el.dispatchEvent(event)
       },
-      { text, html, files },
+      { text, html, files, uriList, lexical },
     )
+    await this.flush()
   }
 
   async sendTab({ shift = false } = {}) {
@@ -149,18 +207,26 @@ export class EditorHandle {
     }, shift)
   }
 
-  async uploadFile(filePath) {
+  async uploadFile(filePath, { via = "image" } = {}) {
     const [fileChooser] = await Promise.all([
       this.page.waitForEvent("filechooser"),
-      this.locator.locator("lexxy-toolbar button[name='upload']").click(),
+      this.locator.locator(`lexxy-toolbar button[name='${via}']`).click(),
     ])
     await fileChooser.setFiles(filePath)
   }
 
   async clickToolbarButton(command, toolbarSelector = "lexxy-toolbar") {
-    await this.page
-      .locator(`${toolbarSelector} [data-command="${command}"]`)
-      .click()
+    const toolbar = this.page.locator(toolbarSelector)
+
+    if (this.#isFormatDropdownCommand(command)) {
+      await toolbar.locator("button[name='format']").click()
+    }
+
+    if (command.startsWith(EditorHandle.#HEADING_BUTTON_PREFIX)) {
+      await toolbar.locator(`[name='${command}']`).click()
+    } else {
+      await toolbar.locator(`[data-command="${command}"]`).click()
+    }
   }
 
   async flush() {
@@ -187,17 +253,27 @@ export class EditorHandle {
 
   async openTableRowMenu() {
     await this.locator
-      .locator("lexxy-table-tools .lexxy-table-control--row details")
+      .locator("lexxy-table-tools .lexxy-table-control--row [data-dropdown-trigger]")
       .click()
   }
 
   async openTableColumnMenu() {
     await this.locator
-      .locator("lexxy-table-tools .lexxy-table-control--column details")
+      .locator("lexxy-table-tools .lexxy-table-control--column [data-dropdown-trigger]")
       .click()
   }
 
   // Private
+
+  // Heading buttons and Paragraph/Clear formatting live inside the "format"
+  // dropdown panel, which is hidden until its trigger is clicked.
+  static #HEADING_BUTTON_PREFIX = "heading-"
+  static #FORMAT_DROPDOWN_COMMANDS = new Set([ "setFormatParagraph", "clearFormatting" ])
+
+  #isFormatDropdownCommand(command) {
+    return EditorHandle.#FORMAT_DROPDOWN_COMMANDS.has(command) ||
+      command.startsWith(EditorHandle.#HEADING_BUTTON_PREFIX)
+  }
 
   #firstInteraction = false
 
@@ -208,9 +284,20 @@ export class EditorHandle {
       )
       if (!isActive) {
         await this.content.click()
+        // Let Lexical pick up the selection the click placed before acting on it.
+        await this.flush()
       }
       this.#firstInteraction = true
     }
+  }
+
+  // On macOS, Home/End scroll the page instead of moving the cursor.
+  // Translate to Meta+Arrow equivalents so tests work cross-platform.
+  #translateKey(key) {
+    if (process.platform !== "darwin") return key
+    return key
+      .replace(/\bHome\b/, "Meta+ArrowLeft")
+      .replace(/\bEnd\b/, "Meta+ArrowRight")
   }
 
   #isSpecialKey(key) {

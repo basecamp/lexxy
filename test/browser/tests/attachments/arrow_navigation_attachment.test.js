@@ -130,4 +130,73 @@ test.describe("Arrow key navigation near attachments", () => {
     expect(value).toContain("First paragraph")
     expect(value).toContain("X")
   })
+
+  test("up arrow selects attachment when cursor is mid-word on the first line of a paragraph below it", async ({ page, editor }) => {
+    // Bug #871: image only selected when cursor at offset 0, skipped when mid-word
+    await editor.setValue(
+      "<p>Top paragraph</p>" +
+        '<action-text-attachment content-type="image/png" url="/test.png" filename="test.png" filesize="1024" width="100" height="100"></action-text-attachment>' +
+        "<p>Bottom paragraph</p>",
+    )
+    await editor.flush()
+
+    // Place cursor at offset 6 in "Bottom paragraph" (after "Bottom")
+    await editor.content.evaluate((el) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      let node
+      while ((node = walker.nextNode())) {
+        if (node.textContent === "Bottom paragraph") break
+      }
+      if (node) {
+        const range = document.createRange()
+        range.setStart(node, 6)
+        range.collapse(true)
+        const sel = window.getSelection()
+        sel.removeAllRanges()
+        sel.addRange(range)
+      }
+    })
+    await editor.flush()
+
+    // Press up arrow — should select the attachment above
+    await editor.send("ArrowUp")
+
+    const attachmentSelected = await page
+      .locator("figure.attachment.node--selected")
+      .count()
+    expect(attachmentSelected).toBe(1)
+  })
+
+  test("down arrow selects attachment when cursor is mid-word on the last line of a paragraph above it", async ({ page, editor }) => {
+    // Bug #871: symmetric case for down arrow
+    await editor.setValue(
+      "<p>Top paragraph</p>" +
+        '<action-text-attachment content-type="image/png" url="/test.png" filename="test.png" filesize="1024" width="100" height="100"></action-text-attachment>' +
+        "<p>Bottom paragraph</p>",
+    )
+    await editor.flush()
+
+    // Place cursor at offset 3 in "Top paragraph" (after "Top")
+    await editor.content.evaluate((el) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      const firstText = walker.nextNode()
+      if (firstText) {
+        const range = document.createRange()
+        range.setStart(firstText, 3)
+        range.collapse(true)
+        const sel = window.getSelection()
+        sel.removeAllRanges()
+        sel.addRange(range)
+      }
+    })
+    await editor.flush()
+
+    // Press down arrow — should select the attachment below
+    await editor.send("ArrowDown")
+
+    const attachmentSelected = await page
+      .locator("figure.attachment.node--selected")
+      .count()
+    expect(attachmentSelected).toBe(1)
+  })
 })

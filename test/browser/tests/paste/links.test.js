@@ -32,6 +32,64 @@ test.describe("Paste — Links", () => {
     )
   })
 
+  test("creates a link when pasting a solo text/uri-list payload (App ShareSheet)", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello everyone</p>")
+
+    await editor.paste(null, { uriList: "https://37signals.com" })
+
+    await assertEditorHtml(
+      editor,
+      '<p>Hello everyone<a href="https://37signals.com">https://37signals.com</a></p>',
+    )
+  })
+
+  test("creates a link when pasting text/uri-list with a text/plain companion (Safari)", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello everyone</p>")
+
+    await editor.paste("https://37signals.com", { uriList: "https://37signals.com" })
+
+    await assertEditorHtml(
+      editor,
+      '<p>Hello everyone<a href="https://37signals.com">https://37signals.com</a></p>',
+    )
+  })
+
+  test("creates a link when pasting text/plain + text/html of the same bare URL (Chromium on macOS address bar)", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello everyone</p>")
+
+    await editor.paste("https://37signals.com", { html: "https://37signals.com" })
+
+    await assertEditorHtml(
+      editor,
+      '<p>Hello everyone<a href="https://37signals.com">https://37signals.com</a></p>',
+    )
+  })
+
+  test("does not autolink when text/html carries more than the bare URL", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello everyone</p>")
+
+    await editor.paste("https://37signals.com", {
+      html: '<p>Read <a href="https://37signals.com">our blog</a></p>',
+    })
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator('a[href="https://37signals.com"]')).toHaveText("our blog")
+    })
+  })
+
+  test("keeps the real target when text/html is an anchor whose href differs from its text", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello everyone</p>")
+
+    await editor.paste("https://37signals.com", {
+      html: '<a href="https://evil.example.com">https://37signals.com</a>',
+    })
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator('a[href="https://evil.example.com"]')).toHaveCount(1)
+      await expect(content.locator('a[href="https://37signals.com"]')).toHaveCount(0)
+    })
+  })
+
   test("create links when pasting URLs keeps formatting", async ({
     page,
     editor,
@@ -47,6 +105,45 @@ test.describe("Paste — Links", () => {
       '<p>Hello <a href="https://37signals.com"><strong>everyone</strong></a></p>',
     )
   })
+
+  const thingsThatMightBeURIs = [
+    [ "https://example.com/", true ],
+    [ "http://example.com/", true ],
+    [ "https://user:pass@example.com/", true ],
+    [ "www.example.com", true, "https://www.example.com" ],
+    [ "HTTPS://example.com/", true ],
+    [ "Http://example.com/", true ],
+    [ "WWW.example.com", true, "https://WWW.example.com" ],
+    [ "example.com", false ],
+
+    [ "http::parser", false ],
+    [ "https::client", false ],
+    [ "mailto::linker", false ],
+    [ "ftp::client", false ],
+
+    [ "Nokogiri::HTML", false ],
+    [ "Net::HTTP", false ],
+    [ "Foo::Bar::Baz", false ],
+
+    [ "port:8080", false ],
+    [ "key:value", false ],
+    [ "time:9:00", false ],
+  ]
+
+  for (const [ text, shouldLink, expectedHref = text ] of thingsThatMightBeURIs) {
+    test(`'${text}' ${shouldLink ? "is" : "is not"} auto-linked when pasted as plain text`, async ({ editor }) => {
+      await editor.paste(text)
+
+      await assertEditorContent(editor, async (content) => {
+        if (shouldLink) {
+          await expect(content.locator(`a[href="${expectedHref}"]`)).toHaveText(text)
+        } else {
+          await expect(content).toContainText(text)
+          await expect(content.locator("a")).toHaveCount(0)
+        }
+      })
+    })
+  }
 
   test("merge adjacent links when pasting URL over multiple words", async ({
     page,

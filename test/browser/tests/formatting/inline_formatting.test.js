@@ -1,7 +1,11 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
-import { HELLO_EVERYONE, placeCaretAtEndOfInlineCode } from "../../helpers/toolbar.js"
+import {
+  HELLO_EVERYONE,
+  clickToolbarButton,
+  placeCaretAtEndOfInlineCode,
+} from "../../helpers/toolbar.js"
 
 test.describe("Inline formatting", () => {
   test.beforeEach(async ({ page }) => {
@@ -27,8 +31,22 @@ test.describe("Inline formatting", () => {
   test("strikethrough", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
-    await page.getByRole("button", { name: "Strikethrough" }).click()
+    await clickToolbarButton(page, "strikethrough")
     await assertEditorHtml(editor, "<p>Hello <s>everyone</s></p>")
+  })
+
+  test("underline via keyboard shortcut", async ({ page, editor }) => {
+    await editor.setValue(HELLO_EVERYONE)
+    await editor.select("everyone")
+
+    const modifier = process.platform === "darwin" ? "Meta" : "Control"
+    await editor.content.press(`${modifier}+u`)
+    await assertEditorHtml(editor, "<p>Hello <u>everyone</u></p>")
+  })
+
+  test("underline round-trips through setValue/value", async ({ editor }) => {
+    await editor.setValue("<p>Hello <u>everyone</u></p>")
+    await assertEditorHtml(editor, "<p>Hello <u>everyone</u></p>")
   })
 
   test("toggle code for selected words", async ({ page, editor }) => {
@@ -78,6 +96,120 @@ test.describe("Inline formatting", () => {
     await expect(codeButton).toHaveAttribute("aria-pressed", "false")
   })
 
+  test("deleting all inline code text clears the code format", async ({ page, editor }) => {
+    await editor.setValue("<p><code>hello</code></p>")
+
+    const codeButton = page.getByRole("button", { name: "Code" })
+
+    // Select the code text and verify code button is active
+    await editor.select("hello")
+    await expect(codeButton).toHaveAttribute("aria-pressed", "true")
+
+    // Delete the selected code text
+    await editor.send("Backspace")
+
+    // The code button should no longer be active
+    await expect(codeButton).toHaveAttribute("aria-pressed", "false")
+
+    // Typing new text should NOT be code-formatted
+    await editor.send("world")
+    await assertEditorHtml(editor, "<p>world</p>")
+  })
+
+  test("applying code to text with mixed formatting produces a single code element", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      "<p>Hello <strong>bold</strong> and <em>italic</em> world</p>",
+    )
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+    await assertEditorHtml(editor, "<p><code>Hello bold and italic world</code></p>")
+  })
+
+  test("applying code to partial selection across mixed formats merges selected text and preserves surrounding formatting", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(
+      "<p>Hello <strong>bold text</strong> and <em>italic text</em> world</p>",
+    )
+
+    // Select "bold text and italic" — a partial selection spanning mixed formats
+    await editor.content.evaluate((el) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+      let startNode, endNode
+      let node
+      while ((node = walker.nextNode())) {
+        if (node.nodeValue.includes("bold text")) startNode = node
+        if (node.nodeValue.includes("italic text")) endNode = node
+      }
+      const range = document.createRange()
+      range.setStart(startNode, 0)
+      range.setEnd(endNode, "italic".length)
+      const sel = window.getSelection()
+      sel.removeAllRanges()
+      sel.addRange(range)
+    })
+    await editor.flush()
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>Hello <code>bold text and italic</code><em> text</em> world</p>",
+    )
+  })
+
+  test("applying code to a selection that starts at the end of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p><strong>ab</strong> cd</p>")
+    await selectBetween(editor, { text: "ab", offset: 2 }, { text: " cd", offset: 3 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><strong>ab</strong><code> cd</code></p>")
+  })
+
+  test("removing code from a selection that starts at the end of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p><strong>ab</strong><code> cd</code></p>")
+    await selectBetween(editor, { text: "ab", offset: 2 }, { text: " cd", offset: 3 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><strong>ab</strong> cd</p>")
+  })
+
+  test("applying code to a backward selection that ends at the end of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p><strong>ab</strong> cd</p>")
+    await selectBetween(editor, { text: " cd", offset: 3 }, { text: "ab", offset: 2 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><strong>ab</strong><code> cd</code></p>")
+  })
+
+  test("applying code to a selection that ends at the start of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>ab <strong>cd</strong></p>")
+    await selectBetween(editor, { text: "ab ", offset: 0 }, { text: "cd", offset: 0 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><code>ab </code><strong>cd</strong></p>")
+  })
+
   test("toggle code for block", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.click()
@@ -91,4 +223,66 @@ test.describe("Inline formatting", () => {
     await page.getByRole("button", { name: "Code" }).click()
     await assertEditorHtml(editor, "<p>Hello everyone</p>")
   })
+
+  test("selecting multiple lines and toggling code block creates a single code block", async ({ page, editor }) => {
+    await editor.send("Line one")
+    await editor.send("Enter")
+    await editor.send("Line two")
+    await editor.send("Enter")
+    await editor.send("Line three")
+
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<pre data-language="plain" data-highlight-language="plain">Line one<br>Line two<br>Line three</pre>',
+    )
+  })
+
+  test("toggling off a multi-line code block restores separate paragraphs", async ({ page, editor }) => {
+    await editor.send("Line one")
+    await editor.send("Enter")
+    await editor.send("Line two")
+    await editor.send("Enter")
+    await editor.send("Line three")
+
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<pre data-language="plain" data-highlight-language="plain">Line one<br>Line two<br>Line three</pre>',
+    )
+
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>Line one</p><p>Line two</p><p>Line three</p>",
+    )
+  })
+
+  test("toggling code block on a blockquote with multiple paragraphs preserves all lines", async ({ page, editor }) => {
+    await editor.setValue("<blockquote><p>Line one</p><p>Line two</p></blockquote>")
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<blockquote><pre data-language="plain" data-highlight-language="plain">Line one<br>Line two</pre></blockquote>',
+    )
+  })
 })
+
+async function selectBetween(editor, anchor, focus) {
+  await editor.content.evaluate((el, { anchor, focus }) => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    const textNodes = []
+    while (walker.nextNode()) textNodes.push(walker.currentNode)
+    const find = (text) => textNodes.find((node) => node.nodeValue === text)
+    window.getSelection().setBaseAndExtent(find(anchor.text), anchor.offset, find(focus.text), focus.offset)
+  }, { anchor, focus })
+  await editor.flush()
+}

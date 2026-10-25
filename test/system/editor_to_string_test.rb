@@ -12,7 +12,8 @@ class EditorValueMethodsTest < ApplicationSystemTestCase
 
     assert_editor_plain_text "\n\n[example.png]\n\n"
 
-    find("figcaption textarea").click.send_keys("Example Image")
+    find("figcaption").click
+    find("textarea[aria-label='Image caption']").send_keys("Example Image")
     find_editor.click
 
     assert_editor_plain_text "\n\n[Example Image]\n\n"
@@ -22,7 +23,7 @@ class EditorValueMethodsTest < ApplicationSystemTestCase
     find_editor.send "1"
     click_on_prompt "Peter Johnson"
 
-    assert_editor_plain_text "Peter Johnson\u2060"
+    assert_editor_plain_text "Peter Johnson"
   end
 
   test "toString with mixed content includes all text" do

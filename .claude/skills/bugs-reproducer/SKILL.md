@@ -2,7 +2,7 @@
 name: bugs-reproducer
 description: |
   Bug reproduction for the Lexxy rich text editor. Core editing bugs use
-  Playwright (Selenium fallback); system-level bugs use Capybara. All local.
+  Playwright (real-browser fallback); system-level bugs use Capybara. All local.
 disable-model-invocation: true
 ---
 
@@ -13,7 +13,7 @@ Reproduce bugs in Lexxy — a rich text editor built on [Lexical](https://lexica
 ```
 BUG REPORT → CLASSIFY → REPRODUCE → DIAGNOSE → FIX → VERIFY
                           ^^^^^^^^^
-                          core editing bug → Playwright (Selenium fallback)
+                          core editing bug → Playwright (real-browser fallback)
                           system-level bug → Capybara
 ```
 
@@ -68,15 +68,15 @@ Playwright runs against a Vite dev server serving static HTML fixtures from `tes
 
 Playwright tests run across **Chromium, Firefox, and WebKit**, giving cross-browser coverage locally without external services. Start with one browser for fast iteration, then confirm across available browsers once the reproduction is solid.
 
-**Note:** WebKit may not launch on Arch Linux due to ABI-incompatible system libraries (see `docs/development.md`). Use Chromium and Firefox locally; WebKit coverage is guaranteed by CI.
+**Note:** WebKit may not launch on Arch Linux due to ABI-incompatible system libraries (see `home/docs/development.md`). Use Chromium and Firefox locally; WebKit coverage is guaranteed by CI.
 
-**Fallback:** if Playwright can't trigger the bug after 3 attempts (e.g., needs real OS-level events), fall back to Selenium WebDriver scripts.
+**Fallback:** if Playwright can't trigger the bug after 3 attempts (e.g., needs real OS-level events), drive a real browser with whatever automation tool you have available and judge best (see 4c).
 
 ### 2. System-level bugs → Capybara (`test/system/`)
 
 Bugs involving anything outside the editor's JS layer: Action Text rendering and persistence, ActiveStorage uploads, Trix ↔ Lexxy conversion, form submission, SGID resolution, prompt/mention resolution with Rails-backed data, gallery display after save, page refreshes (Turbo), authenticated storage, and any scenario where data must survive a save/load roundtrip.
 
-Capybara tests run against the dummy Rails app (`test/dummy/`) using `selenium_chrome_headless`. Stay in Capybara for all attempts — Selenium scripts add nothing over Capybara for Rails integration bugs.
+Capybara tests run against the dummy Rails app (`test/dummy/`) using `selenium_chrome_headless`. Stay in Capybara for all attempts — driving a browser by hand adds nothing over Capybara for Rails integration bugs.
 
 ## Extending the Test Suite
 
@@ -102,12 +102,47 @@ The **action under test** — the interaction you're trying to reproduce — mus
 
 | For the action under test | Use | Don't use |
 |--------------------------|-----|-----------|
-| Type text | `editor.send("text")` (PW) / `element.sendKeys("text")` (Selenium) | `editor.setValue("text")` |
-| Press Enter | `editor.send("Enter")` (PW) / `element.sendKeys(Key.RETURN)` (Selenium) | `dispatchEvent(new KeyboardEvent(...))` |
-| Focus an element | `editor.click()` (PW) / `element.click()` (Selenium) | `element.focus()` |
+| Type text | `editor.send("text")` or real key input | `editor.setValue("text")` |
+| Press Enter | `editor.send("Enter")` or a real key press | `dispatchEvent(new KeyboardEvent(...))` |
+| Focus an element | `editor.click()` or a real click | `element.focus()` |
 | Click a toolbar button | `editor.clickToolbarButton("bold")` or `click_on "Bold"` | Direct command dispatch |
 
 **`executeScript` / `evaluate` is primarily for reading** — inspecting DOM state, checking cursor position, reading scroll offsets. Narrow setup exceptions exist (e.g., programmatic DOM manipulation when real interaction would destroy required preconditions), but never use it to produce the action under test.
+
+## Non-Negotiable: Read Every Screenshot
+
+**After taking any screenshot, read it and describe what you actually see — not what you expect to see.** The screenshot is ground truth. DOM/CSS inspection is supporting evidence; it explains what the screenshot shows, it does not override it.
+
+This skill gets invoked repeatedly in bug-fix loops where an agent or human is iterating on a fix. Screenshot validation during those loops is just as critical as during initial reproduction — it's the quality gate that prevents wasted iterations on visually broken fixes.
+
+### After each screenshot, check:
+
+- **What's actually visible?** Describe the layout, element positions, and content you see.
+- **Does it match expectations?** Compare explicitly against the expected state.
+- **Any visual anomalies?** Unexpected scrollbars, overflow, clipping, empty space, misalignment, elements pushed out of position.
+- **Something looks off?** Stop and investigate before proceeding. Do not assume it's fine.
+
+### Fix validation is especially skeptical
+
+When testing a proposed fix or change, the screenshot is the only evidence that matters:
+
+- Don't assume the fix worked because the code looks right.
+- Compare the screenshot against both the original bug state AND the expected fixed state.
+- A fix that introduces new visual problems (layout shifts, unexpected scrollbars, misplaced elements, large empty areas) is not a fix.
+
+### The anti-pattern this prevents
+
+| | |
+|---|---|
+| **WRONG** | Take screenshot → assume it confirms expectations → move on |
+| **RIGHT** | Take screenshot → read it → describe what's actually visible → compare against expected state → flag any anomaly |
+
+### When screenshots matter vs. when they don't
+
+Not every reproduction needs screenshots. The test: **if a human would ask "what did it look like?", screenshots are required.**
+
+- **Visual bugs** (layout, rendering, toolbar state, cursor position, formatting appearance): `page.screenshot()` → **read and describe it** before proceeding. The screenshot is the evidence.
+- **Diagnostic bugs** (DOM state, console errors, wrong HTML output, event ordering): capture the relevant diagnostic data (editor HTML, console output, Lexical state). Screenshots are optional when they wouldn't change the reader's conclusion.
 
 ## Non-Negotiable: Persevere
 
@@ -141,9 +176,9 @@ One test is one attempt. Different attempts vary the **setup**: content volume, 
 
 Label each attempt (v1, v2, v3...) and log which dimensions it covers.
 
-**For core editing bugs (Playwright path):** after 3 failed attempts, consider switching to Selenium if the bug might require real OS-level events that Playwright's synthetic event model doesn't trigger. Continue the 8-attempt minimum across both methods.
+**For core editing bugs (Playwright path):** after 3 failed attempts, consider the real-browser fallback (4c) if the bug might require real OS-level events that Playwright's synthetic event model doesn't trigger. Continue the 8-attempt minimum across both methods.
 
-**For system-level bugs (Capybara path):** stay in Capybara for all attempts. The Rails integration is the point — Selenium scripts against the sandbox app add nothing over Capybara.
+**For system-level bugs (Capybara path):** stay in Capybara for all attempts. The Rails integration is the point — driving the sandbox app by hand adds nothing over Capybara.
 
 ## Procedure
 
@@ -155,7 +190,7 @@ Extract from the bug report:
 - Which Lexxy layer is likely involved (editor core, specific node type, extension, paste, toolbar, prompt, Action Text integration)
 - Whether the bug involves persistence (save/load) or is purely client-side
 
-**Choose the test suite first.** Refer to the decision guide in "Choosing the Right Test Suite" above. This determines whether you write Playwright tests, Capybara system tests, or (as a last resort) Selenium scripts. Getting this wrong wastes attempts.
+**Choose the test suite first.** Refer to the decision guide in "Choosing the Right Test Suite" above. This determines whether you write Playwright tests, Capybara system tests, or (as a last resort) a real-browser reproduction. Getting this wrong wastes attempts.
 
 ### 2. Plan Reproduction
 
@@ -176,23 +211,30 @@ Extract from the bug report:
 
 The Playwright config starts its own Vite dev server automatically when you run the tests. No manual setup required.
 
-**For Capybara tests or Selenium scripts** (needs Rails):
+**For Capybara tests** (needs Rails): Capybara boots its own Rails server, but it loads the built `app/assets/javascript/lexxy.js`. Run `bin/dev` in the worktree (as below) so the watcher keeps it current, or rebuild with `yarn build` after every `src/` change.
+
+**For the real-browser fallback** (needs the dummy app): run it from your worktree on a port of your own (see AGENTS.md, "Worktrees", for `bin/setup` and seeding):
+
+`bin/dev` force-kills whatever listens on its port, so check the port is free first, and pick another if this prints anything:
 
 ```bash
-# Check if the dev server is running
-curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:3000/ || echo "not running"
+curl -s -o /dev/null -m 2 http://localhost:<port>/; [ $? -eq 7 ] || echo "port <port> is taken, pick another"
+```
 
-# If not running:
-cd ~/Work/basecamp/lexxy
-bin/setup   # installs deps, creates DB — idempotent, safe to re-run
-bin/dev &
+Then start the server:
 
-# Wait for server (up to 30s):
-for i in $(seq 1 30); do
-  curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:3000/ 2>/dev/null && break
+```bash
+mkdir -p tmp
+PORT=<port> bin/dev > tmp/dev-<port>.log 2>&1 &
+echo $! > tmp/dev-<port>.pid
+for i in $(seq 1 60); do
+  curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ 2>/dev/null | grep -q 200 && break
   sleep 1
 done
+curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ | grep -q 200 || tail -30 tmp/dev-<port>.log
 ```
+
+Before testing, wait for the JS build to finish: `tmp/dev-<port>.log` shows rollup's "waiting for changes". When you're done, `kill "$(cat tmp/dev-<port>.pid)"` (foreman stops its children).
 
 ### 4a. Reproduce with Playwright (preferred)
 
@@ -250,10 +292,15 @@ yarn test:browser:headed -- test/browser/tests/<file>.test.js
 Playwright automatically captures screenshots on failure, traces on first retry, and videos on first retry. For explicit evidence during reproduction:
 
 ```javascript
+// Visual bugs: screenshot at each decisive step — then READ it
 await page.screenshot({ path: "/tmp/bug-step-1.png" })
+
+// Diagnostic bugs: editor state is the evidence
 const html = await editor.innerHTML()
 console.log("Editor HTML:", html)
 ```
+
+**For visual bugs, take and read screenshots at each step** — a screenshot without analysis is not evidence. See [Non-Negotiable: Read Every Screenshot](#non-negotiable-read-every-screenshot). For diagnostic bugs where HTML output or console evidence suffices, capture that instead.
 
 ### 4b. Reproduce with Capybara (for Rails integration bugs)
 
@@ -269,61 +316,42 @@ bin/rails test test/system/<file>.rb
 bin/rails test:all
 ```
 
-### 4c. Reproduce with Selenium (fallback)
+**Testing Action Text rendered output (non-editor view):**
 
-If Playwright doesn't reproduce after 3+ attempts and the bug might require real OS-level events, fall back to Selenium WebDriver `.mjs` scripts.
+The dummy app (`test/dummy/`) has a `Post` model with `has_rich_text :body`. Use the posts CRUD to test the full save → render round-trip:
 
-**Ensure prerequisites:**
+1. Visit `edit_post_path(posts(:empty))` (or `:hello_world` for pre-existing content)
+2. Compose content in the editor (use `find_editor`, toolbar helpers, etc.)
+3. `click_on "Update Post"` — saves via Action Text and redirects to the show page
+4. Assert against the **rendered** HTML on the show page (not the editor)
 
-```bash
-ls /tmp/node_modules/selenium-webdriver >/dev/null 2>&1 || {
-  cd /tmp && npm install selenium-webdriver
-}
-which chromedriver >/dev/null 2>&1 || echo "Install chromedriver"
+The show page renders `@post.body` inside a `data-controller="code-highlight"` div, which invokes `highlightCode()` from Lexxy via a Stimulus controller. This is the same function apps use to apply Prism syntax highlighting to rendered Action Text content.
+
+Key distinction: bugs that only appear in the **rendered view** (after save, outside the editor) are different from editor bugs. The rendered view runs through Action Text sanitization (Loofah) and then client-side Prism highlighting — both can strip or transform HTML that the editor preserved. Test these by asserting on the show page DOM, not the editor.
+
+```ruby
+# Example: test that highlights survive rendering
+test "highlights preserved in rendered view" do
+  visit edit_post_path(posts(:empty))
+  find_editor.send "some text"
+  find_editor.select "some"
+  apply_highlight_option "background-color", 1
+  click_on "Update Post"
+
+  # Now on the show page — assert against rendered Action Text output
+  assert_selector "mark[style*='background-color']", text: "some"
+end
 ```
 
-**Script pattern** — write `.mjs` scripts in `/tmp/`:
+Fixtures in `test/fixtures/posts.yml` and `test/fixtures/action_text/rich_texts.yml` provide pre-seeded post data.
 
-```javascript
-import webdriver from '/tmp/node_modules/selenium-webdriver/index.js';
-import chrome from '/tmp/node_modules/selenium-webdriver/chrome.js';
-import fs from 'fs';
+### 4c. Reproduce in a real browser (fallback)
 
-async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-async function screenshot(driver, name) {
-  const data = await driver.takeScreenshot();
-  fs.writeFileSync(`/tmp/${name}.png`, Buffer.from(data, 'base64'));
-}
+If Playwright doesn't reproduce after 3+ attempts and the bug might require real OS-level events, drive a real browser against the dummy app (`http://lexxy.localhost:<port>`) with whatever automation tool you have available and judge best.
 
-const options = new chrome.Options();
-options.addArguments('--headless=new', '--no-sandbox', '--window-size=1280,900');
-const driver = await new webdriver.Builder()
-  .forBrowser('chrome').setChromeOptions(options).build();
+The rules above still hold: the action under test goes through real input (typing, key presses, clicks), page scripts only read state, and you take a screenshot after each step and read it. Capture the editor's value (`document.querySelector("lexxy-editor").value`) as evidence.
 
-try {
-  await driver.get('http://lexxy.localhost:3000');
-  await driver.wait(webdriver.until.elementLocated(
-    webdriver.By.css('lexxy-editor[connected]')
-  ), 10000);
-
-  const content = await driver.findElement(
-    webdriver.By.css('.lexxy-editor__content')
-  );
-  await content.click();
-
-  // Reproduction steps here — screenshot after each
-  await content.sendKeys('Hello there');
-  await screenshot(driver, 'step-1');
-
-  // Inspect via executeScript (read only)
-  const html = await driver.executeScript(
-    'return document.querySelector("lexxy-editor").value'
-  );
-  console.log('Editor value:', html);
-} finally {
-  await driver.quit();
-}
-```
+A reproduction here is evidence, not a regression test. Once the bug reproduces, write a Playwright or Capybara test that fails for the same reason before moving on to the fix. If no such test can trigger it, say so in the verdict with the justification AGENTS.md step 2 asks for.
 
 ### 5. Render Verdict
 
@@ -340,19 +368,19 @@ try {
 
 **Bug:** <title>
 **Confidence:** High / Medium / Low
-**Method:** Playwright / Capybara / Selenium
-**Browsers tested:** Chromium, Firefox, WebKit (via Playwright) / Chrome (via Selenium)
+**Method:** Playwright / Capybara / Real browser (<tool>)
+**Browsers tested:** Chromium, Firefox, WebKit (via Playwright) / <browser> (real-browser fallback)
 **Attempts:** <n> attempts, <n> successful reproductions
 
 **Lexxy subsystem:** <node type / extension / clipboard / selection / toolbar / Action Text>
 
 **Steps Executed:**
-1. <step> — [evidence]
-2. <step> — [evidence]
-3. <step> — bug manifests here
+1. <step> — observed: <describe what evidence shows>
+2. <step> — observed: <describe what evidence shows>
+3. <step> — observed: <describe what evidence shows> ← bug manifests here
 
 **Evidence Summary:**
-- <what was observed>
+- <what was actually observed — actual vs expected>
 - <DOM/Lexical state if inspected>
 - <console errors if present>
 
@@ -371,7 +399,7 @@ When reproduced via Playwright, **keep the test file** in `test/browser/tests/`.
 test/browser/tests/bug_<short_description>.test.js
 ```
 
-When reproduced via Capybara, keep the test in `test/system/`. When reproduced via Selenium, keep the script in `/tmp/` and note the path in the verdict.
+When reproduced via Capybara, keep the test in `test/system/`. When reproduced in a real browser, note the tool, the steps and the evidence paths in the verdict, and write the Playwright or Capybara test.
 
 ## Common Bug Patterns in Lexxy
 
@@ -383,11 +411,15 @@ These are areas where bugs tend to cluster, based on the architecture:
 
 **Gallery transforms** — `ImageGalleryNode` auto-collapses adjacent images, splits around non-image children, and unwraps when left with a single child. The transform runs per-pass, so multiple non-images embedded may need multiple passes.
 
+**Mid-update editor reads** — `editor.read()` (and anything that calls it: `el.value`, `#readSanitizedEditorValue`, `isEmpty`) commits the in-flight update when called inside an `editor.update()` callback, which silently skips all node transforms for that update. Bugs manifest as transform-derived state missing after load or setValue — list item numbering, list merging, gallery collapse, provisional paragraphs — while the same content behaves correctly when produced by editing. Some call sites are protected only by the `cachedValue` being warm, so reproductions may need a cold cache (fresh connect, initial `value` attribute).
+
+**Sanitizer allowlist round-trip drift** — Editor HTML passes through two attribute allowlists: DOMPurify when computing the form value (global `ALLOWED_HTML_ATTRIBUTES` plus per-tag `allowedElements` in `src/config/dom_purify.js` and extensions) and Loofah on save (`lib/lexxy/engine.rb`). Lexical sometimes splits state across attributes asymmetrically — e.g. ordered lists import only `ol[start]` but export both `ol[start]` and `li[value]` — so an allowlist that keeps the cosmetic attribute while stripping the semantic one breaks silently on the *next* edit, not the current one. Reproduce with a full round trip (load → read value, or edit → save → re-edit), and check both allowlists whenever a new node type or attribute is added.
+
 **Paste handling edge cases** — The clipboard handler has separate code paths for: only plain text, HTML with attachments, URLs (including Safari's `text/uri-list`), markdown, files, and content inside code blocks (bypasses Lexxy entirely). Bugs often appear at the boundary between these paths. Cross-app paste (Trix → Lexxy) is a key variant: Trix stores raw HTML in the `content` attribute of `<action-text-attachment>`, while Lexxy stores JSON-stringified HTML. Any code that parses `content` must handle both formats.
 
 **Soft line break selections** — `Shift+Enter` produces `LineBreakNode`s inside a single paragraph. Formatting actions that work on top-level elements can accidentally treat multiple visible lines as one block, so reproduce selection bugs with real soft line breaks (or `<br>` setup) whenever the report mentions composer line breaks.
 
-**Mixed clipboard payload precedence** — Some apps copy the same image as both an HTML `<img>` snippet and a real file. Reproductions need to exercise both payloads together because browsers may expose them differently, and Lexxy should prefer the upload path when attachments are supported.
+**Mixed clipboard payload precedence** — Some apps copy the same image as both an HTML `<img>` snippet and a real file. Reproductions need to exercise both payloads together because browsers may expose them differently, and Lexxy should prefer the upload path when attachments are supported. Choosing the file bytes must not discard descriptions carried by the parallel HTML representation; verify metadata after upload completion as well as during import.
 
 **Highlight style sync** — The `HighlightExtension` keeps Lexical's `highlight` format bit in sync with inline CSS styles. Two TextNode transforms run on every mutation: one for sync, one for canonical palette enforcement. Infinite loop risk if the sync logic disagrees with Lexical's internal state.
 
@@ -397,8 +429,16 @@ These are areas where bugs tend to cluster, based on the architecture:
 
 **Upload lifecycle** — `ActionTextAttachmentUploadNode.createDOM()` starts the upload as a side effect. Lexical can call `createDOM()` multiple times (history restore). Guard logic prevents re-upload but can falsely block.
 
+**Controls inside decorator nodes** — A focusable control with `aria-hidden` can disappear from assistive technology even with `tabindex="-1"`, and a control nested in the editor’s textbox can lose its native focus announcement. Exercise both pointer and keyboard entry, inspect the accessibility tree, and verify that leaving the control saves its value and restores the correct editor selection. Hidden controls outside the contenteditable avoid nesting, but need tests for positioning, gallery reflow and cleanup when their attachment disappears. Browser accessibility snapshots do not replace testing actual speech with VoiceOver or NVDA.
+
+**Temporary accessibility hints** — Cursor navigation temporarily changes `alt` and `aria-hidden` on attachment content. Teardown must preserve attributes supplied by the host application and undo only the temporary changes. Test both initially visible and initially hidden labels as the caret approaches, selects, and leaves an attachment.
+
+**Host and textbox attribute synchronization** — The form-associated `<lexxy-editor>` and its inner contenteditable expose different parts of the control's state. Attributes copied only at initialization can leave assistive technology with stale names, descriptions, or validation states. Test additions and removals after connection, defaults derived from editing modes and form constraints, explicit application overrides, and reconnection. Updating one attribute must not clear temporary ARIA state owned by prompts.
+
 **Toolbar focus after commands** — Clicking a toolbar button with the mouse moves focus to the button. If focus isn't returned to the editor, keyboard shortcuts like Ctrl+Z go to the browser instead of Lexical. The toolbar calls `editor.focus()` after mouse-click commands to prevent this.
 
-**External drag-and-drop** — When files are dragged from the OS file manager, the browser does NOT update the DOM selection to the drop coordinates. The drag caret is purely visual. Drop handlers must use `document.caretRangeFromPoint(event.clientX, event.clientY)` to determine the correct insertion point. Playwright's synthetic DragEvent DOES move the DOM selection, masking this class of bugs. To reproduce, intercept the drop event, restore the stale DOM selection, and call the drop logic with the event coordinates.
+**Nested keyboard handlers** — Shared popovers can intercept keys intended for their containing toolbar even when their panels are closed. Focus restoration flags retained from a previous opening can make identical keypresses behave differently depending on interaction history. Exercise closed triggers both before and after opening their panels, and distinguish the main toolbar from contextual toolbars that explicitly return focus to the editor.
 
-**Inline decorator node rendering** — Custom inline decorator nodes (e.g., mentions via `CustomActionTextAttachmentNode`) render as custom elements with `contenteditable="false"`. CSS `display: inline-flex` (or `inline-block`, `inline-grid`) on these elements creates an atomic inline box, which introduces line-break opportunities at element boundaries. This means punctuation immediately following the element (e.g., a comma after `@Name`) can wrap to the next line on its own. The fix is to use `display: inline` and ensure no child elements use atomic inline display modes that would propagate up. Additionally, any text nodes injected around the decorator (e.g., space characters from `importDOM`) can create additional soft-wrap opportunities -- use word joiners (`U+2060`) instead of spaces to suppress them.
+**Focus cleanup that starts an editor update** — Lexical command listeners run inside updates, including `BLUR_COMMAND`. DOM-only cleanup registered as a blur command can trigger reconciliation and steal focus back from a toolbar button. A delayed `selectionchange` can similarly reconcile a stale editor range after focus has moved to a button or link, not just a text field. Reproduce with native Tab/Shift+Tab from an empty editor and observe focus after pending updates settle. Contextual toolbars can also leave a roving `tabindex="0"` behind after Escape; test reverse tabbing from sibling controls after navigating the toolbar with arrow keys.
+
+**External drag-and-drop** — When files are dragged from the OS file manager, the browser does NOT update the DOM selection to the drop coordinates. The drag caret is purely visual. Drop handlers must use `document.caretRangeFromPoint(event.clientX, event.clientY)` to determine the correct insertion point. Playwright's synthetic DragEvent DOES move the DOM selection, masking this class of bugs. To reproduce, intercept the drop event, restore the stale DOM selection, and call the drop logic with the event coordinates.

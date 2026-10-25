@@ -1,9 +1,10 @@
-import { $getNodeByKey, $getState, $hasUpdateTag, $setState, COMMAND_PRIORITY_NORMAL, PASTE_TAG, TextNode, createCommand, createState, defineExtension } from "lexical"
+import { $getNodeByKey, $getState, $hasUpdateTag, $isElementNode, $isTextNode, $setState, COMMAND_PRIORITY_NORMAL, PASTE_TAG, TextNode, createCommand, createState, defineExtension } from "lexical"
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty, $patchStyleText, getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
-import { $isCodeHighlightNode, $isCodeNode, CodeHighlightNode } from "@lexical/code"
+import { $createCodeHighlightNode, $createCodeNode, $isCodeHighlightNode, $isCodeNode, CodeHighlightNode } from "@lexical/code"
 import { extendTextNodeConversion } from "../helpers/lexical_helper"
-import { StyleCanonicalizer, applyCanonicalizers, hasHighlightStyles } from "../helpers/format_helper"
+import { segmentTextByRanges } from "../helpers/text_range_helper"
+import { StyleCanonicalizer, applyCanonicalizers, hasHighlightStyles, normalizeColorButtons } from "../helpers/format_helper"
 import { RichTextExtension } from "@lexical/rich-text"
 import LexxyExtension from "./lexxy_extension"
 import { mergeRegister } from "@lexical/utils"
@@ -15,6 +16,12 @@ export const BLANK_STYLES = { "color": null, "background-color": null }
 const hasPastedStylesState = createState("hasPastedStyles", {
   parse: (value) => value || false
 })
+
+// Stores pending highlight ranges extracted during HTML import, keyed by CodeNode key.
+// The highlight-preserving tokenizer consumes this map when the code retokenizer
+// first tokenizes the block. Scoped per editor instance so entries don't leak
+// across editors or outlive a torn-down editor.
+const pendingCodeHighlights = new WeakMap()
 
 export class HighlightExtension extends LexxyExtension {
   get enabled() {
@@ -37,6 +44,11 @@ export class HighlightExtension extends LexxyExtension {
       register(editor, config) {
         // keep the ref to the canonicalizers for optimized css conversion
         const canonicalizers = buildCanonicalizers(config)
+
+        // Register the <pre> converter directly in the conversion cache so it
+        // coexists with other extensions' "pre" converters (the extension-level
+        // html.import uses Object.assign, which means only one "pre" per key).
+        $registerPreConversion(editor)
 
         return mergeRegister(
           editor.registerCommand(TOGGLE_HIGHLIGHT_COMMAND, (styles) => $toggleSelectionStyles(editor, styles), COMMAND_PRIORITY_NORMAL),
@@ -73,11 +85,219 @@ function $markConversion() {
   }
 }
 
+// Register a custom <pre> converter directly in the editor's HTML conversion
+// cache. We can't use the extension-level html.import because Object.assign
+// merges all extensions' converters by tag, and a later extension (e.g.
+// TrixContentExtension) would overwrite ours.
+function $registerPreConversion(editor) {
+  if (!editor._htmlConversions) return
+
+  let preEntries = editor._htmlConversions.get("pre")
+  if (!preEntries) {
+    preEntries = []
+    editor._htmlConversions.set("pre", preEntries)
+  }
+  preEntries.push($preConversionWithHighlightsFactory(editor))
+}
+
+// Returns a <pre> converter factory scoped to a specific editor instance.
+// The factory extracts highlight ranges from <mark> elements before the code
+// retokenizer can destroy them. The ranges are stored in pendingCodeHighlights
+// and restored by the highlight-preserving tokenizer during retokenization.
+function $preConversionWithHighlightsFactory(editor) {
+  return function $preConversionWithHighlights(domNode) {
+    const highlights = extractHighlightRanges(domNode)
+    if (highlights.length === 0) return null
+
+    return {
+      conversion: (domNode) => {
+        const language = domNode.getAttribute("data-language")
+        const codeNode = $createCodeNode(language)
+        $getPendingHighlights(editor).set(codeNode.getKey(), highlights)
+        return { node: codeNode }
+      },
+      priority: 2
+    }
+  }
+}
+
+// Walk the DOM tree inside a <pre> element and build a list of
+// { start, end, style } ranges for every <mark> element found.
+function extractHighlightRanges(preElement) {
+  const ranges = []
+  const codeElement = preElement.querySelector("code") || preElement
+
+  let offset = 0
+
+  function walk(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      offset += node.textContent.length
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      // <br> maps to a LineBreakNode (1 character) in Lexical
+      if (node.tagName === "BR") {
+        offset += 1
+        return
+      }
+
+      const isMark = node.tagName === "MARK"
+      const start = offset
+
+      for (const child of node.childNodes) {
+        walk(child)
+      }
+
+      if (isMark) {
+        const style = extractHighlightStyleFromElement(node)
+        if (style) {
+          ranges.push({ start, end: offset, style })
+        }
+      }
+    }
+  }
+
+  for (const child of codeElement.childNodes) {
+    walk(child)
+  }
+
+  return ranges
+}
+
+function $getPendingHighlights(editor) {
+  let map = pendingCodeHighlights.get(editor)
+  if (!map) {
+    map = new Map()
+    pendingCodeHighlights.set(editor, map)
+  }
+  return map
+}
+
+function extractHighlightStyleFromElement(element) {
+  const styles = {}
+  if (element.style?.color) styles.color = element.style.color
+  if (element.style?.backgroundColor) styles["background-color"] = element.style.backgroundColor
+  const css = getCSSFromStyleObject(styles)
+  return css.length > 0 ? css : null
+}
+
+// Recover the highlight ranges to reapply after a retokenization: the ranges
+// staged during HTML import, or the ones read from the children the fresh
+// tokens are about to replace.
+export function $takeHighlightRanges(editor, codeNode) {
+  const pending = $getPendingHighlights(editor)
+  const key = codeNode.getKey()
+
+  if (pending.has(key)) {
+    const highlights = pending.get(key)
+    pending.delete(key)
+    return highlights
+  } else if (codeNode.getChildren().some($isCodeHighlightNode)) {
+    return $extractHighlightRangesFromCodeNode(codeNode)
+  } else {
+    // A block that was never tokenized has only plain text children. Styles
+    // on those come from import paths that didn't stage ranges (e.g. colored
+    // spans in Trix HTML), and the first tokenization discards them.
+    return []
+  }
+}
+
+export function $applyHighlightRangesToTokens(tokens, highlights) {
+  if (highlights.length === 0) return tokens
+
+  const styledTokens = []
+  let offset = 0
+
+  for (const token of tokens) {
+    if ($isCodeHighlightNode(token)) {
+      styledTokens.push(...$splitTokenAtHighlightBoundaries(token, offset, highlights))
+    } else {
+      styledTokens.push(token)
+    }
+    offset += token.getTextContentSize()
+  }
+
+  return styledTokens
+}
+
+// Split a token into segments at highlight boundaries, styling the covered
+// segments. We can't use TextNode.splitText() because the fresh tokens aren't
+// attached to the tree yet, so we create CodeHighlightNode replacements.
+function $splitTokenAtHighlightBoundaries(token, tokenStart, highlights) {
+  const text = token.getTextContent()
+  const segments = segmentTextByRanges(text, tokenStart, highlights)
+
+  if (segments.length === 1) {
+    const [ segment ] = segments
+    if (segment.range) {
+      $applyHighlightStyleToToken(token, segment.range.style)
+    }
+    return [ token ]
+  } else {
+    return segments.map((segment) => {
+      const segmentToken = $createCodeHighlightNode(text.slice(segment.start, segment.end), token.getHighlightType())
+      if (segment.range) {
+        $applyHighlightStyleToToken(segmentToken, segment.range.style)
+      }
+      return segmentToken
+    })
+  }
+}
+
+function $applyHighlightStyleToToken(token, style) {
+  token.setStyle(style)
+  $setCodeHighlightFormat(token, true)
+}
+
+function $buildChildRanges(codeNode) {
+  const childRanges = []
+  let charOffset = 0
+
+  function walk(node) {
+    for (const child of node.getChildren()) {
+      if ($isElementNode(child)) {
+        // e.g. a LinkNode awaiting its first retokenization
+        walk(child)
+      } else if ($isCodeHighlightNode(child) || $isTextNode(child)) {
+        const text = child.getTextContent()
+        childRanges.push({ node: child, start: charOffset, end: charOffset + text.length })
+        charOffset += text.length
+      } else {
+        // LineBreakNode - counts as 1 character (\n)
+        charOffset += 1
+      }
+    }
+  }
+
+  walk(codeNode)
+
+  return childRanges
+}
+
+// Extract highlight ranges from the Lexical node tree of a CodeNode.
+// This mirrors extractHighlightRanges (which works on DOM elements during
+// HTML import) but reads from live CodeHighlightNode children instead.
+function $extractHighlightRangesFromCodeNode(codeNode) {
+  const ranges = []
+  const childRanges = $buildChildRanges(codeNode)
+
+  for (const { node, start, end } of childRanges) {
+    const style = node.getStyle()
+    if (style && hasHighlightStyles(style)) {
+      ranges.push({ start, end, style })
+    }
+  }
+
+  return ranges
+}
+
 function buildCanonicalizers(config) {
   return [
-    new StyleCanonicalizer("color", [ ...config.buttons.color, ...config.permit.color ]),
-    new StyleCanonicalizer("background-color", [ ...config.buttons["background-color"], ...config.permit["background-color"] ])
+    new StyleCanonicalizer("color", [ ...colorValues(config.buttons.color), ...config.permit.color ]),
+    new StyleCanonicalizer("background-color", [ ...colorValues(config.buttons["background-color"]), ...config.permit["background-color"] ])
   ]
+}
+
+function colorValues(buttons) {
+  return normalizeColorButtons(buttons).map((button) => button.value)
 }
 
 function $toggleSelectionStyles(editor, styles) {
@@ -100,15 +320,23 @@ function $toggleSelectionStyles(editor, styles) {
 function $selectionIsInCodeBlock(selection) {
   const nodes = selection.getNodes()
   return nodes.some((node) => {
-    const parent = $isCodeHighlightNode(node) ? node.getParent() : node
-    return $isCodeNode(parent)
+    // A text node inside a code block may be either a CodeHighlightNode
+    // (after retokenization) or a plain TextNode (after splitText or before
+    // the retokenizer has run). Check the parent in both cases.
+    if ($isCodeHighlightNode(node) || $isTextNode(node)) {
+      return $isCodeNode(node.getParent())
+    }
+    return $isCodeNode(node)
   })
 }
 
 function $patchCodeHighlightStyles(editor, selection, patch) {
-  // Capture selection state and node keys before the nested update
+  // Capture selection state and node keys before the nested update.
+  // Accept both CodeHighlightNode and TextNode children of a CodeNode
+  // because splitText creates TextNode instances and the retokenizer
+  // may not have converted them back to CodeHighlightNodes yet.
   const nodeKeys = selection.getNodes()
-    .filter((node) => $isCodeHighlightNode(node))
+    .filter((node) => ($isCodeHighlightNode(node) || $isTextNode(node)) && $isCodeNode(node.getParent()))
     .map((node) => ({
       key: node.getKey(),
       startOffset: $getNodeSelectionOffsets(node, selection)[0],
@@ -116,15 +344,13 @@ function $patchCodeHighlightStyles(editor, selection, patch) {
       textSize: node.getTextContentSize()
     }))
 
-  // Use skipTransforms to prevent the code highlighting system from
-  // re-tokenizing and wiping out the style changes we apply.
-  // Use discrete to force a synchronous commit, ensuring the changes
-  // are committed before editor.focus() triggers a second update cycle
-  // that would re-run transforms and wipe out the styles.
+  // Use skipTransforms so the retokenizer doesn't rebuild the block in the
+  // middle of the toggle, and discrete to force a synchronous commit so the
+  // styles are in place before editor.focus() triggers a second update cycle.
   editor.update(() => {
     for (const { key, startOffset, endOffset, textSize } of nodeKeys) {
       const node = $getNodeByKey(key)
-      if (!node || !$isCodeHighlightNode(node)) continue
+      if (!node) continue
 
       const parent = node.getParent()
       if (!$isCodeNode(parent)) continue

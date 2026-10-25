@@ -24,6 +24,34 @@ test.describe("Color highlighter", () => {
     )
   })
 
+  test("an applied color is exposed as a checked menuitemcheckbox", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello everyone</p>")
+    await editor.select("everyone")
+    await applyHighlightOption(page, "color", 1)
+    await editor.flush()
+
+    await editor.select("everyone")
+    await page.locator("[name='highlight']").click()
+
+    const textColors = page.locator("lexxy-highlight-dropdown [role='group'][aria-label='Text color']")
+    const colorButton = textColors.locator(".lexxy-highlight-button[data-style='color']").first()
+    await expect(colorButton).toHaveAttribute("role", "menuitemcheckbox")
+    await expect(colorButton).toHaveAttribute("aria-checked", "true")
+    await expect(colorButton).toHaveAttribute("aria-label", "Yellow")
+  })
+
+  test("string color options have accessible names", async ({ page }) => {
+    await page.goto("/highlight-string-buttons.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await page.locator("[name='highlight']").click()
+
+    const textColor = page.locator("lexxy-highlight-dropdown [role='group'][aria-label='Text color'] button")
+    const backgroundColor = page.locator("lexxy-highlight-dropdown [role='group'][aria-label='Background color'] button")
+
+    await expect(textColor).toHaveAttribute("aria-label", "red")
+    await expect(backgroundColor).toHaveAttribute("aria-label", "yellow")
+  })
+
   test("color highlighting text in a plain-text code block", async ({ page, editor }) => {
     await editor.setValue('<pre data-language="plain"><code>some log output</code></pre>')
     await expect(page.locator("select[name=lexxy-code-language]")).toHaveValue("plain")
@@ -37,6 +65,51 @@ test.describe("Color highlighter", () => {
     })
   })
 
+  test("highlight in a code block survives setValue round-trip", async ({ page, editor }) => {
+    await editor.setValue('<pre data-language="plain"><code>some log output</code></pre>')
+    await editor.select("log output")
+    await applyHighlightOption(page, "background-color", 1)
+    await editor.flush()
+
+    const html = await editor.value()
+
+    // Reload the HTML into the editor (simulating save → re-edit).
+    // Poll until the mutation listener has re-applied highlights after retokenization.
+    await editor.setValue(html)
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toContainText("log output")
+    }).toPass({ timeout: 5_000 })
+  })
+
+  test("highlight in a multiline code block survives round-trip", async ({ page, editor }) => {
+    const html = '<pre data-language="plain"><code>line one<br>line <mark style="background-color: var(--highlight-bg-1);">two</mark><br>line three</code></pre>'
+    await editor.setValue(html)
+    await editor.flush()
+
+    const savedHtml = await editor.value()
+    await editor.setValue(savedHtml)
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toContainText("two")
+    }).toPass({ timeout: 5_000 })
+  })
+
+  test("multiple disjoint highlights in a code block survive round-trip", async ({ page, editor }) => {
+    const html = '<pre data-language="plain"><code><mark style="color: var(--highlight-1);">first</mark> gap <mark style="background-color: var(--highlight-bg-2);">second</mark></code></pre>'
+    await editor.setValue(html)
+    await editor.flush()
+
+    const savedHtml = await editor.value()
+    await editor.setValue(savedHtml)
+    await expect(async () => {
+      await editor.flush()
+      await expect(editor.content.locator("code mark")).toHaveCount(2)
+      await expect(editor.content.locator("code mark").nth(0)).toContainText("first")
+      await expect(editor.content.locator("code mark").nth(1)).toContainText("second")
+    }).toPass({ timeout: 5_000 })
+  })
+
   test("removing highlight from text in a plain-text code block", async ({ page, editor }) => {
     await editor.setValue('<pre data-language="plain"><code>some log output</code></pre>')
     await expect(page.locator("select[name=lexxy-code-language]")).toHaveValue("plain")
@@ -46,6 +119,7 @@ test.describe("Color highlighter", () => {
     await editor.flush()
 
     await assertEditorContent(editor, async (content) => {
+      await expect(content).toContainText("some log output")
       await expect(content.locator("code mark")).toContainText("log output")
     })
 
@@ -54,6 +128,7 @@ test.describe("Color highlighter", () => {
     await editor.flush()
 
     await assertEditorContent(editor, async (content) => {
+      await expect(content).toContainText("some log output")
       await expect(content.locator("code mark")).toHaveCount(0)
     })
   })
