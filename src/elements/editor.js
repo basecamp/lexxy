@@ -497,9 +497,17 @@ export class LexicalEditorElement extends HTMLElement {
     return nodes
   }
 
-  // A restored Turbo snapshot already carries the content element; Lexical empties it on mount.
+  // A restored Turbo snapshot already carries the content element. Empty it right away:
+  // Lexical only does on mount, a frame later, and the cached content would flash meanwhile.
   #findOrCreateEditorContentElement() {
-    return this.querySelector(":scope > .lexxy-editor__content") ?? this.#createEditorContentElement()
+    const cachedContentElement = this.querySelector(":scope > .lexxy-editor__content")
+
+    if (cachedContentElement) {
+      cachedContentElement.replaceChildren()
+      return cachedContentElement
+    } else {
+      return this.#createEditorContentElement()
+    }
   }
 
   #createEditorContentElement() {

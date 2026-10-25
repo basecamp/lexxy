@@ -9,6 +9,8 @@ const cacheAndRestoreSnapshot = (page) => page.evaluate(async () => {
 
   const snapshot = document.body.cloneNode(true)
   document.body.replaceWith(snapshot)
+
+  return snapshot.querySelector(".lexxy-editor__content").textContent
 })
 
 test.describe("Turbo caching", () => {
@@ -21,7 +23,7 @@ test.describe("Turbo caching", () => {
     await editor.focus()
     await editor.send("Hello")
 
-    await cacheAndRestoreSnapshot(page)
+    expect(await cacheAndRestoreSnapshot(page)).toEqual("")
 
     const editorElement = page.locator("lexxy-editor")
     await expect(editorElement.locator(".lexxy-editor__content[data-lexical-editor]")).toHaveCount(1)
@@ -33,5 +35,32 @@ test.describe("Turbo caching", () => {
     await editor.send("Restored")
 
     expect(await editor.plainTextValue()).toEqual("Restored")
+  })
+})
+
+test.describe("Turbo caching without navigating", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/mentions.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+  })
+
+  test("prompts keep opening", async ({ page, editor }) => {
+    await page.evaluate(() => document.dispatchEvent(new Event("turbo:before-cache")))
+
+    await editor.send("@")
+    await expect(page.locator(".lexxy-prompt-menu--visible")).toBeVisible({ timeout: 5_000 })
+  })
+
+  test("an open prompt closes and opens again on the next trigger", async ({ page, editor }) => {
+    await editor.send("@")
+    await expect(page.locator(".lexxy-prompt-menu--visible")).toBeVisible({ timeout: 5_000 })
+
+    await page.evaluate(() => document.dispatchEvent(new Event("turbo:before-cache")))
+    await expect(page.locator(".lexxy-prompt-menu")).toHaveCount(0)
+    await expect(editor.content).not.toHaveAttribute("aria-controls")
+
+    await editor.send("Backspace")
+    await editor.send("@")
+    await expect(page.locator(".lexxy-prompt-menu--visible")).toBeVisible({ timeout: 5_000 })
   })
 })
