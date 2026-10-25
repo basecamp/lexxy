@@ -152,6 +152,24 @@ test("highlightCode stops on a connected root that is detached while it yields",
   expect(countHighlighted(pending)).toBe(0)
 })
 
+test("highlightCode highlights a pending block moved to a new root and highlighted there", async () => {
+  const oldRoot = document.createElement("div")
+  const blocks = appendBlocks(8, oldRoot)
+  document.body.appendChild(oldRoot)
+  advanceClockPerCall(5)
+
+  const firstRun = highlightCode(oldRoot)
+  const moved = blocks.filter(pre => pre.dataset.highlighted !== "true")
+  const newRoot = document.createElement("div")
+  moved.forEach(pre => newRoot.appendChild(pre))
+  document.body.appendChild(newRoot)
+
+  await Promise.all([ firstRun, highlightCode(newRoot) ])
+
+  expect(moved.length).toBeGreaterThan(0)
+  expect(countHighlighted(moved)).toBe(moved.length)
+})
+
 test("highlightCode highlights a root that was never connected", async () => {
   const root = document.createElement("div")
   const blocks = appendBlocks(8, root)

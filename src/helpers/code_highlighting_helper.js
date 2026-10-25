@@ -17,10 +17,10 @@ let drained = Promise.resolve()
 let slice = null
 
 export function highlightCode(root = document) {
+  // The latest call's root wins: a block moved to a new root mid-run must be
+  // judged against that root, not the one it was first queued under.
   for (const preElement of root.querySelectorAll("pre[data-language]:not([data-highlighted])")) {
-    if (!queue.has(preElement)) {
-      queue.set(preElement, { root, rootWasConnected: root.isConnected })
-    }
+    queue.set(preElement, { root, rootWasConnected: root.isConnected })
   }
 
   // A running loop picks up the new entries: Map iteration visits entries
@@ -32,12 +32,14 @@ export function highlightCode(root = document) {
 async function drainQueue() {
   draining = true
   try {
-    for (const [ preElement, entry ] of queue) {
+    for (const preElement of queue.keys()) {
       if (sliceExhausted()) {
         await yieldToEventLoop()
         startSlice()
       }
 
+      // Read the entry after yielding: a call made meanwhile may have replaced it.
+      const entry = queue.get(preElement)
       queue.delete(preElement)
       if (hasLeftRoot(preElement, entry)) continue
 
