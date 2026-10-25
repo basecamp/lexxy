@@ -1,5 +1,6 @@
-import { $isDecoratorNode, $isRangeSelection, $splitNode } from "lexical"
+import { $isDecoratorNode, $isElementNode, $isRangeSelection, $isRootOrShadowRoot, $splitNode } from "lexical"
 import { $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
+import { $isQuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $isBlankNode } from "../../../helpers/lexical_helper"
 import BaseNodeInserter from "./base_node_inserter"
@@ -31,15 +32,18 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
     // very corruption we are avoiding. The block must land at the list's level.
     const anchorNode = this.selection.anchor.getNode()
     const outerList = this.#outermostList(anchorNode)
-    const topItem = this.#topLevelItemFor(anchorNode, outerList)
 
-    // A blank top-level bullet is just the insertion point (e.g. the user pressed
-    // Enter to leave the list); break out of it entirely. A bullet with content —
-    // including one wrapping a nested list — splits so its content stays in the list.
-    const splitAfterItem = $isBlankNode(topItem) ? topItem.getPreviousSibling() : topItem
-    const splitIndex = splitAfterItem ? splitAfterItem.getIndexWithinParent() + 1 : 0
-    const [ listBefore, listAfter ] = $splitNode(outerList, splitIndex)
-    if ($isBlankNode(topItem)) { topItem.remove() }
+    // removeText() can relocate the anchor before we read it back — clean out
+    // of the list when the removed range spanned it. With no list left to
+    // split, default insertion applies.
+    if (!outerList) {
+      this.selection.insertNodes(nodes)
+      return
+    }
+
+    const topItem = this.#topLevelItemFor(anchorNode, outerList)
+    const [ listBefore, listAfter ] = this.#split(outerList, this.#splitIndexFor(topItem))
+    if (topItem && $isBlankNode(topItem)) { topItem.remove() }
 
     let anchor = listBefore ?? listAfter
     for (const node of nodes) {
@@ -52,6 +56,31 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
     nodes.at(-1).selectNext()
   }
 
+  // A blank top-level bullet is just the insertion point (e.g. the user pressed
+  // Enter to leave the list); break out of it entirely. A bullet with content —
+  // including one wrapping a nested list — splits so its content stays in the
+  // list. With no top-level bullet at all — removeText() relocated the anchor
+  // onto the list node itself — the anchor offset is the boundary between items.
+  #splitIndexFor(topItem) {
+    if (!topItem) return this.selection.anchor.offset
+
+    const splitAfterItem = $isBlankNode(topItem) ? topItem.getPreviousSibling() : topItem
+    return splitAfterItem ? splitAfterItem.getIndexWithinParent() + 1 : 0
+  }
+
+  // $splitNode splits every ancestor up to the root, so a list inside a quote
+  // splits the quote too. Given an index past the last child, it moves the whole
+  // list into the second half, which would put the block before the list; split
+  // the parent after the list instead.
+  #split(node, index) {
+    const parent = node.getParent()
+    if (index < node.getChildrenSize() || $isRootOrShadowRoot(parent)) {
+      return $splitNode(node, index)
+    } else {
+      return this.#split(parent, node.getIndexWithinParent() + 1)
+    }
+  }
+
   #outermostList(node) {
     return [ node, ...node.getParents() ].reverse().find($isListNode)
   }
@@ -62,8 +91,12 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
     )
   }
 
-  #removeEmptyList(list) {
-    if ($isListNode(list) && list.isEmpty()) list.remove()
+  // For a list inside a quote, each half is a quote holding a list.
+  #removeEmptyList(node) {
+    if ($isElementNode(node)) {
+      node.getChildren().forEach(child => this.#removeEmptyList(child))
+      if (($isListNode(node) || $isQuoteNode(node)) && node.isEmpty()) node.remove()
+    }
   }
 
   // Only block decorator nodes (image/file attachments) are intercepted. A list

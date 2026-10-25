@@ -2,6 +2,10 @@ require "lexxy/version"
 
 module Lexxy
   class << self
+    def supports_alternative_text?
+      ActionText::Attachment::ATTRIBUTES.include?("alt")
+    end
+
     # Check for ActionText::Editor with block-children support (rails/rails#56926)
     def supports_editor_adapter?
       !!(defined?(ActionText::Editor) && ActionText::Editor.instance_method(:editor_tag).parameters.assoc(:block))

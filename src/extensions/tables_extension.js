@@ -1,15 +1,19 @@
-import { COMMAND_PRIORITY_NORMAL, defineExtension } from "lexical"
-import { $getSelection, $isRangeSelection } from "lexical"
+import { COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_NORMAL, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
+import { $getNodeByKey, $getPreviousSelection, $getSelection, $isRangeSelection, $setSelection } from "lexical"
 import {
   $deleteTableColumnAtSelection,
   $deleteTableRowAtSelection,
   $findTableNode,
   $insertTableColumnAtSelection,
   $insertTableRowAtSelection,
+  $isTableNode,
+  $isTableSelection,
   TableCellHeaderStates,
   TableCellNode,
   TableNode,
   TableRowNode,
+  getTableElement,
+  getTableObserverFromTableElement,
   registerTablePlugin,
   registerTableSelectionObserver,
   setScrollableTablesActive
@@ -54,6 +58,11 @@ export class TablesExtension extends LexxyExtension {
               return registerTableSelectionObserver(editor, true)
             }
           }),
+
+          editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
+            $keepTableSelectionWhileDragging(editor)
+            return false
+          }, COMMAND_PRIORITY_CRITICAL),
 
           // A table in Lexxy is a Lexxy table: cell shading can't be set in the
           // editor, so any cell background only ever comes from foreign content
@@ -132,4 +141,21 @@ export class TablesExtension extends LexxyExtension {
       }
     })
   }
+}
+
+// WebKit drops a collapsed caret into the cell under the pointer while a drag
+// selects cells. Since Lexical 0.52 that range clears the table observer, anchor
+// cell included, so the drag re-anchors on the cell it just entered and loses the
+// cells before it. Keep the table selection until the drag ends.
+function $keepTableSelectionWhileDragging(editor) {
+  const selection = $getSelection()
+  const previousSelection = $getPreviousSelection()
+  if (!$isTableSelection(previousSelection) || !$isRangeSelection(selection) || !selection.isCollapsed()) return
+
+  const tableNode = $getNodeByKey(previousSelection.tableKey)
+  if (!$isTableNode(tableNode) || !tableNode.isParentOf(selection.anchor.getNode())) return
+
+  const tableElement = getTableElement(tableNode, editor.getElementByKey(tableNode.getKey()))
+  const observer = tableElement && getTableObserverFromTableElement(tableElement)
+  if (observer?.isSelecting) $setSelection(previousSelection.clone())
 }

@@ -152,4 +152,18 @@ test.describe("Removing list formatting from a single item", () => {
       "<ol><li value=\"1\">First item</li></ol><p>Second item</p><ol><li value=\"1\">Third item</li></ol>",
     )
   })
+
+  test("backspace at the start of a list item merges it into the previous one", async ({ editor }) => {
+    await editor.setValue("<ul><li value=\"1\">One</li><li value=\"2\">Two</li><li value=\"3\">Three</li></ul>")
+    await editor.flush()
+
+    await editor.content.locator("ul li").nth(1).click()
+    await editor.send("Home")
+    await editor.send("Backspace")
+    await editor.flush()
+    await editor.send("X")
+    await editor.flush()
+
+    await assertEditorHtml(editor, "<ul><li value=\"1\">OneXTwo</li><li value=\"2\">Three</li></ul>")
+  })
 })
