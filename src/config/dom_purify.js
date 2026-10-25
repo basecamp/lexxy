@@ -140,6 +140,25 @@ function stimulusAttributeFilterHook(_currentNode, hookEvent) {
 
 DOMPurify.addHook("uponSanitizeAttribute", stimulusAttributeFilterHook)
 
+// Attributes that run script whatever their value, so no extension can allow
+// them. An extension's allowedElements admits attributes by name through
+// ADD_ATTR, and DOMPurify honours that even for an event handler: declaring
+// `{ tag: "p", attributes: [ "onclick" ] }` would keep `onclick="…"` from stored
+// content. DOMPurify's URI check doesn't help, because a script body such as
+// `alert(1)` reads as a relative URL. `srcdoc` is a whole HTML document, scripts
+// included, so it is refused for the same reason.
+//
+// URL-bearing attributes (href, src, srcset, formaction, ping, …) are not on this
+// list: DOMPurify validates their values against its URI allowlist, so
+// `javascript:` stays refused on them.
+function scriptAttributeFilterHook(_currentNode, hookEvent) {
+  if (/^on/.test(hookEvent.attrName) || hookEvent.attrName === "srcdoc") {
+    hookEvent.keepAttr = false
+  }
+}
+
+DOMPurify.addHook("uponSanitizeAttribute", scriptAttributeFilterHook)
+
 DOMPurify.addHook("uponSanitizeElement", (node, data) => {
   if (data.tagName === "strong" || data.tagName === "em") {
     node.removeAttribute("class")
