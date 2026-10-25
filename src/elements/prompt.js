@@ -337,31 +337,37 @@ export class LexicalPromptElement extends HTMLElement {
 
     const forceTop = this.verticalDirection === "top"
     const forceBottom = this.verticalDirection === "bottom"
-    const overflowsViewport = popoverRect.bottom > this.#availableBottom()
 
-    if (!forceBottom && (forceTop || overflowsViewport)) {
+    if (!forceBottom && (forceTop || this.#fitsBetterAbove(popoverRect))) {
       this.#setPopoverOffsetY(contentRect.height - y + fontSize)
       this.popoverElement.toggleAttribute("data-clipped-at-bottom", true)
     }
   }
 
-  // The bottom edge the menu must stay within: the tightest clipping bound among the
-  // editor and its ancestors — the smallest bottom of any element whose computed
-  // `overflow-y` is not `visible` — capped by the window. This flips the menu above the
-  // cursor when a scroll container or modal would clip it; with no clipping ancestor it
-  // returns `window.innerHeight`, leaving an unclipped editor anchored below as before.
-  #availableBottom() {
-    let bottom = window.innerHeight
-    let node = this.#editorElement
+  #fitsBetterAbove(popoverRect) {
+    const { top, bottom } = this.#visibleBounds()
+    const overflowsBelow = popoverRect.bottom > bottom
+    const roomAbove = popoverRect.top - top
+    const roomBelow = bottom - popoverRect.top
 
-    while (node && node !== document.body && node !== document.documentElement) {
+    return overflowsBelow && roomAbove > roomBelow
+  }
+
+  // A scroll container or modal around the editor clips the menu before the window does,
+  // so the visible area is the window narrowed by every clipping ancestor.
+  #visibleBounds() {
+    let top = 0
+    let bottom = window.innerHeight
+
+    for (let node = this.#editorElement; node && node !== document.body; node = node.parentElement) {
       if (getComputedStyle(node).overflowY !== "visible") {
-        bottom = Math.min(bottom, node.getBoundingClientRect().bottom)
+        const rect = node.getBoundingClientRect()
+        top = Math.max(top, rect.top)
+        bottom = Math.min(bottom, rect.bottom)
       }
-      node = node.parentElement
     }
 
-    return bottom
+    return { top, bottom }
   }
 
   #setPopoverOffsetX(value) {

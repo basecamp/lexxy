@@ -49,4 +49,20 @@ test.describe("Prompt popover inside a clipping container", () => {
     await expect(popover).toBeVisible({ timeout: 5_000 })
     await expect(popover).not.toHaveAttribute("data-clipped-at-bottom", "")
   })
+
+  test("stays below the cursor when the scroll container has even less room above it", async ({ page }) => {
+    await page.evaluate(() => {
+      document.querySelector(".filler").remove()
+      document.querySelector(".scroll-container").style.blockSize = "110px"
+    })
+
+    const editor = new EditorHandle(page, "lexxy-editor")
+    await editor.waitForConnected()
+
+    await editor.send("@")
+
+    const popover = page.locator(".lexxy-prompt-menu--visible")
+    await expect(popover).toBeVisible({ timeout: 5_000 })
+    await expect(popover).not.toHaveAttribute("data-clipped-at-bottom", "")
+  })
 })
