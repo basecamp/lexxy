@@ -9,7 +9,7 @@ export function $filterDisallowedCode(nodes, editorElement) {
 
   if (!editorElement.supportsCodeBlocks) {
     nodes = nodes.flatMap(node => $isCodeNode(node) ? $convertCodeNodeToParagraphs(node) : node)
-    $descendantsOf(nodes).filter($isCodeNode).forEach($replaceCodeNodeWithParagraphs)
+    nodes.forEach($replaceNestedCodeNodes)
   }
 
   if (!editorElement.supportsInlineCode) {
@@ -51,6 +51,19 @@ function $appendCodeChild(node, paragraphs) {
     paragraphs.at(-1).append(text)
   } else {
     paragraphs.at(-1).append(node)
+  }
+}
+
+// Only the outermost code node is converted: it takes any code nested inside it along.
+function $replaceNestedCodeNodes(node) {
+  if (!$isElementNode(node)) return
+
+  for (const child of node.getChildren()) {
+    if ($isCodeNode(child)) {
+      $replaceCodeNodeWithParagraphs(child)
+    } else {
+      $replaceNestedCodeNodes(child)
+    }
   }
 }
 

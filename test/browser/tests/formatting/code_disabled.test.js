@@ -136,6 +136,17 @@ test.describe("Code blocks and inline code both disabled", () => {
     await assertEditorHtml(editor, '<p>Hello world</p><p>one</p><p><a href="https://example.com/">two</a></p>')
   })
 
+  test("code nested inside code in a list is reduced to plain text", async ({ page, editor }) => {
+    await page.goto("/code-all-false.html")
+    await editor.waitForConnected()
+
+    await editor.setValue("<ul><li><pre>outer<pre>inner</pre></pre></li></ul>")
+
+    await expect(editor.content.locator("pre, code")).toHaveCount(0)
+    const text = await editor.plainTextValue()
+    for (const word of [ "outer", "inner" ]) expect(text).toContain(word)
+  })
+
   test("the editor connects without console errors", async ({ page, editor }) => {
     startMonitoringConsole(page)
 
