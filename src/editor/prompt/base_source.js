@@ -1,6 +1,9 @@
 import { createElement, generateDomId, parseHtml } from "../../helpers/html_helper"
+import { filterMatchPosition } from "../../helpers/string_helper"
 
 export default class BaseSource {
+  candidatePromptItems = []
+
   // Template method to override
   async buildListItems(filter = "") {
     return Promise.resolve([])
@@ -11,7 +14,21 @@ export default class BaseSource {
     return null
   }
 
+  listItemMatches(listItem, filter) {
+    const promptItem = this.promptItemFor(listItem)
+    return !!promptItem && this.matchPosition(promptItem, filter) >= 0
+  }
+
+  // Checks every candidate, not just the rendered list items, which are capped.
+  anyCandidateMatches(filter) {
+    return this.candidatePromptItems.some(promptItem => this.matchPosition(promptItem, filter) >= 0)
+  }
+
   // Protected
+
+  matchPosition(promptItem, filter) {
+    return filterMatchPosition(this.#searchableText(promptItem), filter)
+  }
 
   buildListItemElementFor(promptItemElement) {
     const template = promptItemElement.querySelector("template[type='menu']")
@@ -31,5 +48,9 @@ export default class BaseSource {
     } catch (error) {
       return Promise.reject(error)
     }
+  }
+
+  #searchableText(promptItem) {
+    return promptItem.getAttribute("search") ?? promptItem.querySelector("template[type='menu']").content.textContent
   }
 }

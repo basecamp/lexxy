@@ -133,6 +133,17 @@ test.describe("Heading format", () => {
     await assertEditorHtml(editor, "<h3>Lexxy</h3>")
   })
 
+  test("clicking a heading beyond the built-in presets applies its own tag", async ({ page, editor }) => {
+    await recreateEditorWithHeadings(page, [ "h1", "h2", "h3", "h4", "h5", "h6" ])
+    await editor.waitForConnected()
+
+    await editor.setValue("<p>Lexxy</p>")
+    await editor.select("Lexxy")
+
+    await clickToolbarButton(page, "heading-6")
+    await assertEditorHtml(editor, "<h6>Lexxy</h6>")
+  })
+
   test("heading inside blockquote shows heading button as active, not paragraph", async ({ page, editor }) => {
     await editor.setValue("<p>Lexxy</p>")
     await editor.select("Lexxy")

@@ -68,7 +68,7 @@ export default class CaptionEditor {
   }
 
   #handleKeydown(event) {
-    if (!event.isComposing && [ "Enter", "Escape" ].includes(event.key)) {
+    if (!this.#isComposing(event) && [ "Enter", "Escape" ].includes(event.key)) {
       event.preventDefault()
       const key = this.#nodeKey
       this.#input.blur()
@@ -89,6 +89,12 @@ export default class CaptionEditor {
       }, { tag: HISTORY_MERGE_TAG })
     }
     event.stopPropagation()
+  }
+
+  // Safari ends the composition before the keydown that confirms it, so only
+  // keyCode 229 ("Process") tells that Enter apart from a real one.
+  #isComposing(event) {
+    return event.isComposing || event.keyCode === 229
   }
 
   #updatePosition() {

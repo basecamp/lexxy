@@ -2,7 +2,6 @@ import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdat
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
-import { $getNearestNodeOfType } from "@lexical/utils"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
@@ -19,7 +18,7 @@ import CaptionEditor from "../editor/attachments/caption_editor"
 import { UploadRequests } from "../editor/attachments/upload_requests"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
-import { createElement, dispatch, generateDomId, parseHtml } from "../helpers/html_helper"
+import { createElement, dispatch, generateDomId, parseHtml, stripTrailingCodeBlockNewlines } from "../helpers/html_helper"
 import { isAttachmentSpacerTextNode, isEditorFocused } from "../helpers/lexical_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
@@ -273,6 +272,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   $generateNodesFromDOM(doc, { editor = this.editor } = {}) {
+    stripTrailingCodeBlockNewlines(doc)
     let nodes = $generateLexicalNodesFromDOM(editor, doc)
     if ($hasUpdateTag(PASTE_TAG)) nodes = $convertInlineImageDataURIs(nodes, this)
     return filterDisallowedAttachmentNodes(nodes, this)
@@ -390,7 +390,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #readSanitizedEditorValue() {
     return this.editor?.read(() => {
-      return this.sanitizer.sanitize($generateHtmlFromNodes(this.editor, null))
+      return this.sanitizer.sanitize(withoutLexicalExportArtifacts($generateHtmlFromNodes(this.editor, null)))
     }) ?? null
   }
 
@@ -430,7 +430,6 @@ export class LexicalEditorElement extends HTMLElement {
     this.#registerFileAcceptFilter()
     this.#attachDebugHooks()
     this.#attachToolbar()
-    this.#resetBeforeTurboCaches()
     this.#observeAriaAttributes()
 
     this.#setInternalFormValue(this.value, { suppressEvent: true })
@@ -448,6 +447,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #createEditor() {
+    this.#removeCachedEditorContentElement()
     this.editorContentElement ||= this.#createEditorContentElement()
     this.appendChild(this.editorContentElement)
 
@@ -496,6 +496,12 @@ export class LexicalEditorElement extends HTMLElement {
     }
 
     return nodes
+  }
+
+  // A restored Turbo snapshot carries the content element the cached page had built,
+  // with its stale content and state. Start from a fresh one instead.
+  #removeCachedEditorContentElement() {
+    this.querySelector(":scope > .lexxy-editor__content")?.remove()
   }
 
   #createEditorContentElement() {
@@ -602,18 +608,6 @@ export class LexicalEditorElement extends HTMLElement {
       .clear()
       .selectEnd()
       .insertNodes(this.#parseHtmlIntoLexicalNodes(html, { editor }))
-  }
-
-  #resetBeforeTurboCaches() {
-    this.#listeners.track(
-      registerEventListener(document, "turbo:before-cache", this.#handleTurboBeforeCache)
-    )
-  }
-
-  #handleTurboBeforeCache = (event) => {
-    if (!this.closest("[data-turbo-permanent]")) {
-      this.#reset()
-    }
   }
 
   #synchronizeWithChanges() {
@@ -865,9 +859,6 @@ export class LexicalEditorElement extends HTMLElement {
       const format = this.selection.getFormat()
       if (Object.keys(format).length === 0) return
 
-      const anchorNode = selection.anchor.getNode()
-      const linkNode = $getNearestNodeOfType(anchorNode, LinkNode)
-
       attributes = {
         bold: { active: format.isBold, enabled: true },
         italic: { active: format.isItalic, enabled: true },
@@ -883,7 +874,7 @@ export class LexicalEditorElement extends HTMLElement {
         redo: { active: false, enabled: this.canRedo }
       }
 
-      linkHref = linkNode ? linkNode.getURL() : null
+      linkHref = this.selection.linkUrl
       highlight = format.isHighlight ? getHighlightStyles(selection) : null
       headingTag = format.headingTag ?? null
     })
@@ -1025,4 +1016,23 @@ function $getReadableTextContent(node) {
   }
 
   return node.getTextContent()
+}
+
+// Lexical's HTML export (as of 0.52) writes two things Lexxy has never stored:
+// a marked terminator <br> after a block's trailing line break, mirroring the one
+// the reconciler adds to the live DOM, and block indentation as
+// data-lexical-indent, which Lexxy's content styles don't render. Drop both so
+// the value keeps the format it has always had.
+//
+// List items are the exception: they keep the terminator as a plain <br>, the
+// way Trix stores them. A <br> that ends a block renders nothing and is dropped
+// on import, so without it a Shift+Enter at the end of an item would vanish from
+// the rendered content and from the editor on reload.
+const LEXICAL_EXPORT_ARTIFACTS = / data-lexical-indent="\d+"|<br data-lexical-managed-linebreak="true">/g
+const LIST_ITEM_MANAGED_LINE_BREAK = /<br data-lexical-managed-linebreak="true"><\/li>/g
+
+function withoutLexicalExportArtifacts(html) {
+  return html
+    .replace(LIST_ITEM_MANAGED_LINE_BREAK, "<br></li>")
+    .replace(LEXICAL_EXPORT_ARTIFACTS, "")
 }
