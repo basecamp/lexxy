@@ -11,7 +11,7 @@ class LinkedAttachmentRoundTripTest < ApplicationSystemTestCase
     attach_file file_fixture("example.png") do
       click_on "Upload files"
     end
-    assert_selector "figure.attachment img"
+    assert_selector "figure.attachment img[src*='/rails/active_storage']"
 
     link_selected_image
 
