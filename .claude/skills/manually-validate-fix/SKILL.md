@@ -7,24 +7,24 @@ argument-hint: <pr-number>
 
 # Fix Manual Validation
 
-Validate a bug-fix PR by testing like a human — reproduce the bug in production (broken), confirm the fix works locally (working). Uses a single Selenium WebDriver script run against both environments.
+Validate a bug-fix PR by testing like a human — reproduce the bug in production (broken), confirm the fix works locally (working). Drives a real browser through the same steps in both environments, with whatever automation tool you have available and judge best.
 
 ```
-PR → UNDERSTAND BUG → PLAN REPRODUCTION → WRITE SCRIPT → RUN vs PRODUCTION (bug)
-                                                        → RUN vs LOCAL (fix)
-                                                        → VERDICT → label PR
+PR → UNDERSTAND BUG → PLAN REPRODUCTION → RUN vs PRODUCTION (bug)
+                                        → RUN vs LOCAL (fix)
+                                        → VERDICT → label PR
 ```
 
 ## Environments
 
 | Environment | URL | Runs | Expected |
 |---|---|---|---|
-| **Production** | `https://basecamp.github.io/lexxy/try-it.html` | Latest released version (CDN) | Bug reproduces |
-| **Local** | `http://lexxy.localhost:3000` | Current branch with the fix | Bug does NOT reproduce |
+| **Production** | `https://lexxy.dev/sandbox/` | Latest released version (CDN) | Bug reproduces |
+| **Local** | `http://lexxy.localhost:<port>` | The PR's branch, checked out in its worktree | Bug does NOT reproduce |
 
 ### Production page
 
-The try-it page loads Lexxy from jsDelivr CDN. After JS executes:
+The sandbox loads the latest released Lexxy from esm.sh (`@37signals/lexxy@latest`). After JS executes:
 
 - `<lexxy-editor>` with toolbar, emoji prompt on `:` trigger
 - `data-direct-upload-url` and `data-blob-url-template` are set but uploads go to a service worker (no real backend)
@@ -32,7 +32,7 @@ The try-it page loads Lexxy from jsDelivr CDN. After JS executes:
 
 ### Local sandbox
 
-`http://lexxy.localhost:3000` runs the Rails dummy app:
+`http://lexxy.localhost:<port>` runs the Rails dummy app from the PR's worktree. Pick a port of your own (`3000` is often taken by another app) and use it everywhere below:
 
 - Root (`/sandbox`) — editor with `@` mention and `:` emoji prompts, template switcher
 - Posts CRUD (`/posts`) — full Action Text form, all features
@@ -65,129 +65,63 @@ Write a concrete step-by-step plan:
 4. What the broken behavior looks like
 5. What the fixed behavior looks like
 
-The plan must map directly to WebDriver actions.
+Each step must be a real browser interaction: typing, a key press, a click.
 
-### 3. Ensure Selenium is Available
+### 3. Choose How to Drive the Browser
 
-```bash
-ls /tmp/node_modules/selenium-webdriver >/dev/null 2>&1 || {
-  cd /tmp && npm install selenium-webdriver
-}
-which chromedriver >/dev/null 2>&1 || echo "ERROR: Install chromedriver"
-```
+Use whatever browser automation tool you have available and judge best. Whatever you pick must:
 
-### 4. Write the Validation Script
+- Send real input for the action under test: typing, key presses, clicks. Page scripts are for reading state only, never for producing the action under test.
+- Wait for the editor to be ready (`lexxy-editor[connected]`) before interacting. Production loads from a CDN, so allow extra time there.
+- Pace the input. Lexical picks up selection changes asynchronously, so a shortcut sent straight after a burst of keys can act on a stale selection. Pause briefly between steps.
+- Take screenshots at key steps, named by environment and step, and read each one.
+- Read the editor's value (`document.querySelector("lexxy-editor").value`) as evidence.
 
-Write a single `.mjs` script in `/tmp/` that accepts a URL argument and runs the reproduction steps. The same script runs against both environments — only the URL changes.
+### 4. Make the Steps Repeatable
 
-**Script skeleton:**
+The steps must be identical in both environments; only the URL changes. The two pages preload different sample content, so start from a known state, for example by selecting all and deleting before the first step. If your tool runs scripts, write one that takes the URL as an argument. Otherwise, write the steps down and follow them exactly both times.
 
-```javascript
-import webdriver from '/tmp/node_modules/selenium-webdriver/index.js'
-import chrome from '/tmp/node_modules/selenium-webdriver/chrome.js'
-import { Key } from '/tmp/node_modules/selenium-webdriver/lib/input.js'
-import fs from 'fs'
-
-const BASE_URL = process.argv[2]
-if (!BASE_URL) {
-  console.error('Usage: node script.mjs <url>')
-  process.exit(1)
-}
-
-const ENV = BASE_URL.includes('github.io') ? 'production' : 'local'
-
-async function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
-
-async function screenshot(driver, name) {
-  const data = await driver.takeScreenshot()
-  fs.writeFileSync(`/tmp/validation-${ENV}-${name}.png`, Buffer.from(data, 'base64'))
-  console.log(`Screenshot: /tmp/validation-${ENV}-${name}.png`)
-}
-
-const options = new chrome.Options()
-options.addArguments('--headless=new', '--no-sandbox', '--window-size=1280,900')
-const driver = await new webdriver.Builder()
-  .forBrowser('chrome').setChromeOptions(options).build()
-
-try {
-  // Navigate and wait for editor
-  await driver.get(BASE_URL)
-  await driver.wait(
-    webdriver.until.elementLocated(webdriver.By.css('lexxy-editor[connected]')),
-    15000
-  )
-  const content = await driver.findElement(webdriver.By.css('.lexxy-editor__content'))
-  await content.click()
-  await sleep(300)
-
-  // ===== REPRODUCTION STEPS HERE =====
-  // Use real browser interactions:
-  //   content.sendKeys('text')        — type text
-  //   content.sendKeys(Key.RETURN)    — press Enter
-  //   content.sendKeys(Key.BACK_SPACE) — press Backspace
-  //   content.click()                 — click to focus
-  //   driver.findElement(...).click() — click toolbar buttons
-  //   driver.executeScript(...)       — read DOM state (not for actions)
-
-  // ===== COLLECT EVIDENCE =====
-  await screenshot(driver, 'result')
-
-  const html = await driver.executeScript(
-    'return document.querySelector("lexxy-editor").value'
-  )
-  console.log(`[${ENV}] Editor value:`, html)
-
-  // ===== ASSERT =====
-  // Check whether the bug manifests or not.
-  // Print a clear PASS/FAIL line:
-  //   PASS = behavior is correct (expected for local)
-  //   FAIL = bug manifests (expected for production)
-  // Example:
-  //   const bugPresent = html.includes('<some-broken-markup>')
-  //   console.log(`[${ENV}] Bug present: ${bugPresent}`)
-
-} finally {
-  await driver.quit()
-}
-```
-
-**Key rules for the script:**
-- All interactions go through real browser events (`sendKeys`, `click`). No programmatic shortcuts.
-- `executeScript` is for reading state only — never for producing the action under test.
-- Screenshots at key steps, named by environment and step.
-- Clear console output showing what happened in each environment.
+For each run, record a clear line: **PASS** when the behavior is correct (expected for local) or **FAIL** when the bug manifests (expected for production).
 
 ### 5. Ensure Local Server is Running
 
-```bash
-curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:3000/ 2>/dev/null | grep -q 200 || {
-  echo "Starting local server..."
-  cd ~/Work/basecamp/lexxy && bin/dev &
-  for i in $(seq 1 30); do
-    curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:3000/ 2>/dev/null | grep -q 200 && break
-    sleep 1
-  done
-}
-```
+Run the server from the worktree that has the PR's branch checked out (see AGENTS.md, "Worktrees", for `bin/setup` and seeding a fresh one).
 
-Verify the right branch is checked out:
+If no worktree has it, make one: `git fetch origin pull/<number>/head && git worktree add ../lexxy-pr-<number> FETCH_HEAD`.
 
 ```bash
-cd ~/Work/basecamp/lexxy && git branch --show-current
-# Must match the PR's head branch
+cd <pr-worktree>
+git log -1 --format=%H   # must match the PR's head commit: gh pr view <number> --json headRefOid
+git status --porcelain   # must print nothing
 ```
+
+A server already answering on a port may be serving another checkout, so start your own rather than reusing one. `bin/dev` force-kills whatever listens on its port, so check the port is free first, and pick another if this prints anything:
+
+```bash
+curl -s -o /dev/null -m 2 http://localhost:<port>/; [ $? -eq 7 ] || echo "port <port> is taken, pick another"
+```
+
+Then start the server:
+
+```bash
+mkdir -p tmp
+PORT=<port> bin/dev > tmp/dev-<port>.log 2>&1 &
+echo $! > tmp/dev-<port>.pid
+for i in $(seq 1 60); do
+  curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ 2>/dev/null | grep -q 200 && break
+  sleep 1
+done
+curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ | grep -q 200 || tail -30 tmp/dev-<port>.log
+```
+
+Before testing, wait for the JS build to finish: `tmp/dev-<port>.log` shows rollup's "waiting for changes". When you're done, `kill "$(cat tmp/dev-<port>.pid)"` (foreman stops its children).
 
 ### 6. Run Against Both Environments
 
-```bash
-# Production — expect the bug
-node /tmp/validate-fix-<pr>.mjs "https://basecamp.github.io/lexxy/try-it.html"
+1. **Production** — `https://lexxy.dev/sandbox/`: expect the bug.
+2. **Local** — `http://lexxy.localhost:<port>`: expect the fix.
 
-# Local — expect the fix
-node /tmp/validate-fix-<pr>.mjs "http://lexxy.localhost:3000"
-```
-
-Review screenshots and console output from both runs.
+Review the screenshots and editor values from both runs.
 
 ### 7. Render Verdict
 
@@ -205,11 +139,11 @@ Review screenshots and console output from both runs.
 **PR:** #<number> — <title>
 **Bug:** <one-line description>
 
-**Production** (https://basecamp.github.io/lexxy/try-it.html):
+**Production** (https://lexxy.dev/sandbox/):
 - <what happened>
 - Evidence: <screenshot paths>
 
-**Local** (http://lexxy.localhost:3000):
+**Local** (http://lexxy.localhost:<port>):
 - <what happened>
 - Evidence: <screenshot paths>
 
@@ -246,7 +180,7 @@ EOF
 ## Important Notes
 
 - **Test like a human.** Every interaction goes through real browser events.
-- **One script, two URLs.** The reproduction is identical in both environments.
+- **Same steps, two URLs.** The reproduction is identical in both environments.
 - **Evidence is mandatory.** Screenshots + editor state for both runs.
 - **Don't touch the code.** This skill validates only — no source modifications.
-- **Production may be slow.** CDN version loads from jsDelivr. Allow extra wait time.
+- **Production may be slow.** CDN version loads from esm.sh. Allow extra wait time.

@@ -115,7 +115,7 @@ test.describe("Toolbar keyboard navigation", () => {
   test("Escape returns focus to the editor when the dropdown was opened from the editor", async ({ page, editor }) => {
     await editor.focus()
     await page.keyboard.press("Control+k")
-    await expect(page.locator("lexxy-link-dropdown input[type='url']")).toBeFocused()
+    await expect(page.locator("lexxy-link-dropdown input")).toBeFocused()
 
     await page.keyboard.press("Escape")
     await expect.poll(() => editor.isFocused()).toBe(true)

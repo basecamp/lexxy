@@ -681,7 +681,7 @@
         gap: var(--lexxy-toolbar-spacing);
       }
 
-      input[type="url"] {
+      input {
         background-color: var(--lexxy-color-canvas);
         border: 1px solid var(--lexxy-color-ink-lighter);
         border-radius: var(--lexxy-radius);
