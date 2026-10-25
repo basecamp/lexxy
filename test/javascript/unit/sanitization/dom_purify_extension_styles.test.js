@@ -36,7 +36,13 @@ describe("dom_purify — extension allowed styles", () => {
 
   test("matches declared values and property names case-insensitively", () => {
     expect(styleOf(sanitizeWith([ TEXT_ALIGN ], '<p style="TEXT-ALIGN: Center">x</p>')))
-      .toBe("text-align: Center;")
+      .toBe("text-align: center;")
+  })
+
+  test("keeps the declared spelling of a value, never the content's", () => {
+    const animation = { property: "animation-name", values: [ "FadeIn" ] }
+
+    expect(styleOf(sanitizeWith([ animation ], '<p style="animation-name: fadein">x</p>'))).toBe("animation-name: FadeIn;")
   })
 
   test("drops a declared property whose value is not in its set", () => {

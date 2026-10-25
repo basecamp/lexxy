@@ -40,7 +40,7 @@ const FORBIDDEN_STYLE_PROPERTIES = new Set([
 // Families named by what they take, so a vendor alias or a new longhand is
 // refused without being listed: -webkit-clip-path, -webkit-mask-box-image-source,
 // mask-border, -webkit-backdrop-filter, the offset shorthand of offset-path.
-const FORBIDDEN_STYLE_PROPERTY_PATTERN = /image|mask|filter|clip-path|shape-outside|^offset|marker|binding|reflect/
+const FORBIDDEN_STYLE_PROPERTY_PATTERN = /image|mask|filter|clip-path|shape-outside|^offset|marker|binding|reflect|behavior/
 
 // color and background-color are governed by the built-in rule (and the
 // highlight extension's canonicalization), so an extension can neither redeclare
@@ -103,14 +103,20 @@ export function isSafeBuiltInStyleValue(value) {
   return isStructurallySafe(String(value))
 }
 
-export function isAllowedStyle(policy, property, value) {
+// The value to keep for an extension property, or null to drop it.
+export function allowedStyleValue(policy, property, value) {
   const acceptors = policy?.get(property)
-  if (!acceptors) return false
+  if (!acceptors) return null
 
   const candidate = String(value).trim()
-  if (candidate === "" || !isStructurallySafe(candidate) || EXTENSION_ONLY_UNSAFE_STYLE_VALUE.test(candidate)) return false
+  if (candidate === "" || !isStructurallySafe(candidate) || EXTENSION_ONLY_UNSAFE_STYLE_VALUE.test(candidate)) return null
 
-  return acceptors.some(accepts => accepts(candidate))
+  for (const accept of acceptors) {
+    const accepted = accept(candidate)
+    if (accepted !== null) return accepted
+  }
+
+  return null
 }
 
 function isStructurallySafe(value) {
@@ -139,19 +145,26 @@ function isBalanced(value) {
   return quote === null && expected.length === 0
 }
 
+// An acceptor returns the value to keep, or null.
+//
+// A fixed list matches case-insensitively, since CSS keywords are, but keeps the
+// declared spelling rather than the content's: some values are case-sensitive
+// (an animation name, a font family), and the output must always be one the
+// extension declared.
+//
 // A validator is called during sanitizing and must be pure: in particular it must
 // not sanitize anything itself, which would swap the policy in use mid-call.
 function acceptorFor(declaration) {
   if (Array.isArray(declaration?.values) && declaration.values.length) {
-    const values = new Set(declaration.values.map(value => String(value).trim().toLowerCase()))
-    return candidate => values.has(candidate.toLowerCase())
+    const values = new Map(declaration.values.map(value => String(value).trim()).map(value => [ value.toLowerCase(), value ]))
+    return candidate => values.get(candidate.toLowerCase()) ?? null
   } else if (typeof declaration?.validate === "function") {
     const validate = declaration.validate
     return candidate => {
       try {
-        return validate(candidate) === true
+        return validate(candidate) === true ? candidate : null
       } catch {
-        return false
+        return null
       }
     }
   } else {

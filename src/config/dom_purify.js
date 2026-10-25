@@ -1,7 +1,7 @@
 import createDOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 import { URI_BEARING_ATTACHMENT_ATTRIBUTES, allowedUriRegexp, attachmentUriFilterHook } from "../helpers/sanitization_helper"
-import { DEFAULT_ALLOWED_STYLE_PROPERTIES, buildStylePolicy, isAllowedStyle, isSafeBuiltInStyleValue } from "./style_policy"
+import { DEFAULT_ALLOWED_STYLE_PROPERTIES, allowedStyleValue, buildStylePolicy, isSafeBuiltInStyleValue } from "./style_policy"
 
 // Lexxy's own DOMPurify instance, deliberately not the shared default export.
 //
@@ -121,8 +121,9 @@ function styleFilterHook(_currentNode, hookEvent, config) {
     for (const property in styles) {
       if (DEFAULT_ALLOWED_STYLE_PROPERTIES.includes(property)) {
         if (isSafeBuiltInStyleValue(styles[property])) sanitizedStyles[property] = styles[property]
-      } else if (isAllowedStyle(extensionStylePolicy, property.toLowerCase(), styles[property])) {
-        sanitizedStyles[property.toLowerCase()] = styles[property].trim()
+      } else {
+        const value = allowedStyleValue(extensionStylePolicy, property.toLowerCase(), styles[property])
+        if (value !== null) sanitizedStyles[property.toLowerCase()] = value
       }
     }
 
