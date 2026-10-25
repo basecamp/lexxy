@@ -12,8 +12,8 @@ class SanitizerListsTest < ActiveSupport::TestCase
   test "allows the markup Lexxy produces" do
     lists = sanitizer_lists_for_app(configuration: rails_without_lexxy)
 
-    assert_includes lists["tags"], "table"
-    assert_includes lists["attributes"], "data-language"
+    assert_includes lists["assigned_tags"], "table"
+    assert_includes lists["assigned_attributes"], "data-language"
   end
 
   test "adds the markup Lexxy produces to the lists an application sets" do
