@@ -1,5 +1,5 @@
 import Lexxy from "../config/lexxy"
-import { $createTextNode, DecoratorNode } from "lexical"
+import { $createTextNode, DecoratorNode, isInlineDomNode } from "lexical"
 
 import EditorSanitizer from "../editor/sanitizer"
 import { createElement, extractPlainTextFromHtml } from "../helpers/html_helper"
@@ -27,10 +27,8 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
         return {
           conversion: (attachment) => {
-            // Lexical strips the whitespace bordering an inline decorator on import, even
-            // inside a sibling's inline format (<strong>Link: </strong>), so restore it.
             const nodes = []
-            if (endsWithCollapsibleSpace(attachment.previousSibling) && !followsAttachmentAcrossSpace(attachment)) {
+            if (endsWithStrippedSpace(attachment)) {
               nodes.push($createTextNode(" "))
             }
 
@@ -43,7 +41,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
               contentType: attachment.getAttribute("content-type")
             }))
 
-            if (startsWithCollapsibleSpace(attachment.nextSibling)) {
+            if (startsWithStrippedSpace(attachment)) {
               nodes.push($createTextNode(" "))
             }
 
@@ -214,22 +212,67 @@ export function $isCustomActionTextAttachmentNode(node) {
   return node instanceof CustomActionTextAttachmentNode
 }
 
-// ASCII whitespace only: NBSP survives Lexical's import, so restoring it would double it.
-function endsWithCollapsibleSpace(node) {
-  return isTextOrElement(node) && /[ \t\r\n]$/.test(node.textContent)
+// Lexical collapses whitespace on import the way browsers do, but treats an inline
+// decorator as a line boundary, so the space between text and an attachment is
+// dropped. These helpers mirror its rules ($convertTextDOMNode and findTextInLine)
+// to restore exactly the spaces it dropped. ASCII whitespace only: Lexical keeps NBSP.
+function endsWithStrippedSpace(attachment) {
+  const text = textInLine(attachment, false)
+  return /[ \t\r\n]$/.test(text?.data) && isTrailingSpaceStripped(text) && !isRestoredBetweenAttachments(text)
 }
 
-function startsWithCollapsibleSpace(node) {
-  return isTextOrElement(node) && /^[ \t\r\n]/.test(node.textContent)
+function startsWithStrippedSpace(attachment) {
+  const text = textInLine(attachment, true)
+  return /^[ \t\r\n]/.test(text?.data) && isLeadingSpaceStripped(text)
 }
 
-function isTextOrElement(node) {
-  return node?.nodeType === Node.TEXT_NODE || node?.nodeType === Node.ELEMENT_NODE
+function isTrailingSpaceStripped(text) {
+  let next = text
+  while ((next = textInLine(next, true))) {
+    if (/[^ \t\r\n]/.test(next.data)) return false
+  }
+  return true
 }
 
-// The attachment before already restored the space between the two.
-function followsAttachmentAcrossSpace(attachment) {
-  const space = attachment.previousSibling
-  const previous = space.previousSibling
-  return /^[ \t\r\n]+$/.test(space.textContent) && previous?.nodeName === attachment.nodeName && previous.hasAttribute("content")
+function isLeadingSpaceStripped(text) {
+  const previous = textInLine(text, false)
+  return !previous || /[ \t\r\n]$/.test(previous.data)
+}
+
+// Whitespace alone between two attachments was already restored by the first one.
+function isRestoredBetweenAttachments(text) {
+  return /^[ \t\r\n]+$/.test(text.data) && isCustomAttachment(leafInLine(text, false))
+}
+
+function textInLine(node, forward) {
+  let leaf = node
+  while ((leaf = leafInLine(leaf, forward))?.nodeType === Node.TEXT_NODE) {
+    if (leaf.data) return leaf
+  }
+  return null
+}
+
+// Returns the next text node in the line, or the line break, block or inline
+// decorator that ends it. Comments and empty inline elements are skipped.
+function leafInLine(node, forward) {
+  while (true) {
+    let sibling
+    while ((sibling = forward ? node.nextSibling : node.previousSibling) === null) {
+      node = node.parentElement
+      if (node === null) return null
+    }
+
+    node = sibling
+    if (node.nodeType === Node.ELEMENT_NODE && !isInlineDomNode(node)) return node
+
+    while (forward ? node.firstChild : node.lastChild) {
+      node = forward ? node.firstChild : node.lastChild
+    }
+
+    if (node.nodeType === Node.TEXT_NODE || node.nodeName === "BR") return node
+  }
+}
+
+function isCustomAttachment(node) {
+  return node?.localName === CustomActionTextAttachmentNode.TAG_NAME && node.hasAttribute("content")
 }

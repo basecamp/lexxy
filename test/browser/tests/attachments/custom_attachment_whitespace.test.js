@@ -43,4 +43,32 @@ test.describe("Whitespace around custom attachments", () => {
 
     expect(await editor.value()).toContain("</bc-attachment> <bc-attachment")
   })
+
+  test("keeps a single space between adjacent attachments when one is wrapped in a format", async ({ editor }) => {
+    await editor.setValue(`<p><strong>${mention} </strong>${mention}</p>`)
+    await editor.flush()
+
+    expect(await editor.value()).toMatch(/<\/bc-attachment><strong> <\/strong><bc-attachment/)
+  })
+
+  test("does not add a space across a line break", async ({ editor }) => {
+    await editor.setValue(`<p><strong>Hello <br></strong>${mention}<strong><br> there</strong></p>`)
+    await editor.flush()
+
+    expect(await editor.value()).toMatch(/<br><bc-attachment [^>]*><\/bc-attachment><br>/)
+  })
+
+  test("ignores the label of an adjacent attachment", async ({ editor }) => {
+    await editor.setValue(`<p>${mention.replace("></bc-attachment>", ">Alice </bc-attachment>")}${mention.replace("></bc-attachment>", "> Bob</bc-attachment>")}</p>`)
+    await editor.flush()
+
+    expect(await editor.value()).toMatch(/<\/bc-attachment><bc-attachment/)
+  })
+
+  test("restores the space when the attachment is wrapped in a format", async ({ editor }) => {
+    await editor.setValue(`<p>Hello <em>${mention}</em> there</p>`)
+    await editor.flush()
+
+    expect(await editor.value()).toMatch(/^<p>Hello <bc-attachment [^>]*><\/bc-attachment><em> <\/em>there<\/p>$/)
+  })
 })
