@@ -1,4 +1,4 @@
-import { $caretFromPoint, $createLineBreakNode, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
+import { $caretFromPoint, $createLineBreakNode, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode, isLastChildInBlockNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
@@ -128,42 +128,19 @@ export function extendConversion(nodeKlass, conversionName, callback = (output =
 }
 
 // Lexical drops a <br> that ends a block element on import, treating it as
-// contenteditable filler. A line break at the end of a list item is real content
-// the user added with Shift+Enter, so keep it. A <br> that is a list item's only
-// child stays subject to the default filler rules.
+// contenteditable filler. At the end of a list item, after its content, that
+// <br> is a line break the user added with Shift+Enter, so keep it. A <br> that
+// is the item's only child stays filler.
 export function importListItemTrailingLineBreak(domNode) {
-  if (isTrailingLineBreakAfterListItemContent(domNode)) {
+  if (isListItemTrailingLineBreak(domNode)) {
     return { conversion: () => ({ node: $createLineBreakNode() }), priority: 1 }
+  } else {
+    return null
   }
-
-  return null
 }
 
-function isTrailingLineBreakAfterListItemContent(domNode) {
-  const parent = domNode.parentElement
-  if (parent === null || parent.tagName !== "LI" || domNode.nextSibling !== null) {
-    return false
-  }
-
-  return hasListItemContentBefore(domNode)
-}
-
-function hasListItemContentBefore(domNode) {
-  let sibling = domNode.previousSibling
-  while (sibling !== null) {
-    if (isListItemContent(sibling)) {
-      return true
-    }
-    sibling = sibling.previousSibling
-  }
-  return false
-}
-
-function isListItemContent(node) {
-  if (node.nodeType === Node.TEXT_NODE) {
-    return node.textContent.trim() !== ""
-  }
-  return node.nodeType === Node.ELEMENT_NODE && node.tagName !== "BR"
+export function isListItemTrailingLineBreak(domNode) {
+  return domNode.parentElement?.tagName === "LI" && isLastChildInBlockNode(domNode)
 }
 
 export function $isCursorOnLastLine(selection) {

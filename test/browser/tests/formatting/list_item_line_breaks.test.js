@@ -51,4 +51,14 @@ test.describe("Line breaks inside list items", () => {
 
     await assertEditorHtml(editor, "<ul><li value=\"1\"></li><li value=\"2\">Second</li></ul>")
   })
+
+  test("pasting a list keeps a line break inside an item and drops the trailing filler", async ({ editor }) => {
+    await editor.setValue("<p></p>")
+    await editor.focus()
+
+    await editor.paste("ignored", { html: "<ul><li>First<br>line</li><li>Second<br></li></ul>" })
+    await editor.flush()
+
+    await assertEditorHtml(editor, "<ul><li value=\"1\">First<br>line</li><li value=\"2\">Second</li></ul>")
+  })
 })
