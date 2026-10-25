@@ -9,3 +9,9 @@ hello_james:
   name: body
   body:
     <p>Hello <%= ActionText::FixtureSet.attachment("people", :james) %></p>
+
+linked_code:
+  record: linked_code (Post)
+  name: body
+  body:
+    <pre data-language="javascript">const a = 1<br>see <a href="https://example.com/">the docs</a> here</pre>

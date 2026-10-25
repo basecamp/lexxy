@@ -1,5 +1,5 @@
-import { marked } from "marked"
 import { isAutolinkableURL } from "../helpers/string_helper"
+import { parsePastedMarkdown } from "../helpers/markdown_helper"
 import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
@@ -8,6 +8,7 @@ import { $insertDataTransferForRichText } from "@lexical/clipboard"
 import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
 import { ListenerBin } from "../helpers/listener_helper"
 import NodeInserter from "./contents/node_inserter"
+import NestedBlockNodeInserter from "./contents/node_inserter/nested_block_node_inserter"
 
 export default class Clipboard {
   #listeners = new ListenerBin()
@@ -65,6 +66,11 @@ export default class Clipboard {
     const url = $bareUrlFromSingleLink(nodes)
     if (url && $isRangeSelection(selection)) {
       this.#insertSingleLinkAt(selection, url)
+      return true
+    }
+
+    if (NestedBlockNodeInserter.handles(selection)) {
+      new NestedBlockNodeInserter(selection).insertNodes(nodes)
       return true
     }
   }
@@ -195,10 +201,12 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
-    const html = marked(text, { breaks: true })
+    if (!text) return
+
+    const html = parsePastedMarkdown(text)
     const doc = parseHtml(html)
 
-    if (this.#isPlainTextWithoutMarkdown(doc)) {
+    if (this.#isPlainTextWithoutMarkdown(doc) || this.#renderedNothing(doc)) {
       this.contents.insertText(text, { tag: PASTE_TAG })
     } else {
       const detail = Object.freeze({
@@ -226,6 +234,13 @@ export default class Clipboard {
       && Array.from(paragraph.childNodes).every((node) => node.nodeType === Node.TEXT_NODE || node.nodeName === "BR")
   }
 
+  // Markdown constructs that carry no output of their own, such as footnote and
+  // link reference definitions or HTML comments, leave marked with an empty
+  // document. Inserting that discards the paste, so keep the raw text instead.
+  #renderedNothing(doc) {
+    return doc.body.children.length === 0 && doc.body.textContent.trim() === ""
+  }
+
   #pasteRichText(clipboardData) {
     this.editor.update(() => {
       const selection = $getSelection()
@@ -234,46 +249,51 @@ export default class Clipboard {
   }
 
   #handlePastedFiles(clipboardData) {
-    if (!this.editorElement.supportsAttachments) return false
+    if (this.editorElement.supportsAttachments) {
+      const html = clipboardData.getData("text/html")
+      const files = clipboardData.files
+      const copiedImage = files.length && this.#copiedImage(html)
 
-    const html = clipboardData.getData("text/html")
-    const files = clipboardData.files
-
-    if (files.length && this.#isCopiedImageHTML(html)) {
-      this.#uploadFilesPreservingScroll(files)
-      return true
+      if (copiedImage) {
+        this.#uploadFilesPreservingScroll(files, copiedImage.getAttribute("alt"))
+        return true
+      } else if (html && !this.#isLexicalClipboardData(clipboardData)) {
+        this.contents.insertHtml(html, { tag: PASTE_TAG })
+        return true
+      } else if (files.length) {
+        this.#uploadFilesPreservingScroll(files)
+        return true
+      } else {
+        return false
+      }
+    } else {
+      return false
     }
-
-    if (html && !this.#isLexicalClipboardData(clipboardData)) {
-      this.contents.insertHtml(html, { tag: PASTE_TAG })
-      return true
-    }
-
-    if (files.length) {
-      this.#uploadFilesPreservingScroll(files)
-      return true
-    }
-
-    return false
   }
 
   #isLexicalClipboardData(clipboardData) {
     return Array.from(clipboardData.types).includes("application/x-lexical-editor")
   }
 
-  #isCopiedImageHTML(html) {
-    if (!html) return false
+  #copiedImage(html) {
+    if (html) {
+      const doc = parseHtml(html)
+      const elementChildren = Array.from(doc.body.children)
 
-    const doc = parseHtml(html)
-    const elementChildren = Array.from(doc.body.children)
-
-    return elementChildren.length === 1 && elementChildren[0].tagName === "IMG"
+      if (elementChildren.length === 1 && elementChildren[0].tagName === "IMG") {
+        return elementChildren[0]
+      } else {
+        return null
+      }
+    } else {
+      return null
+    }
   }
 
-  #uploadFilesPreservingScroll(files) {
+  #uploadFilesPreservingScroll(files, altText) {
     this.#preservingScrollPosition(() => {
       if (files.length) {
-        this.contents.uploadFiles(files, { selectLast: true })
+        this.contents.uploadFiles(files, { selectLast: true, altText })
       }
     })
   }
