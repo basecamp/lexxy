@@ -694,7 +694,7 @@ export class LexicalEditorElement extends HTMLElement {
         registerList(this.editor)
       )
       this.#registerTableComponents()
-      this.#registerCodeLanguagePicker()
+      if (this.supportsCodeBlocks) this.#registerCodeLanguagePicker()
       if (this.supportsAttachments) {
         this.#registerAttachmentToolbar()
       }
@@ -722,7 +722,8 @@ export class LexicalEditorElement extends HTMLElement {
     return [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ].filter(transformer => !excluded.has(transformer))
   }
 
-  // Code nodes stay registered even when code blocks are disabled
+  // Code nodes stay registered even when code blocks are disabled, because other
+  // extensions register transforms against them. Turn each one into paragraphs.
   #registerCodeBlockStripper() {
     return this.editor.registerNodeTransform(CodeNode, (node) => {
       const paragraphs = node.getTextContent().split("\n").map((line) => {
@@ -736,9 +737,8 @@ export class LexicalEditorElement extends HTMLElement {
     })
   }
 
-  // Inline code is a text format rather than a node, so strip the format from
-  // any imported or pasted content. Runs on load and paste; a no-op for
-  // unformatted text.
+  // Inline code is a text format rather than a node, so clear the format from
+  // every text node that gets it: loaded, pasted or typed content alike.
   #registerInlineCodeStripper() {
     return this.editor.registerNodeTransform(TextNode, (node) => {
       if (node.hasFormat("code")) node.toggleFormat("code")

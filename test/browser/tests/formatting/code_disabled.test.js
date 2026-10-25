@@ -98,6 +98,37 @@ test.describe("Code blocks and inline code both disabled", () => {
     await expect(page.locator("lexxy-toolbar button[name='code']")).toBeHidden()
   })
 
+  test("pasted HTML code is reduced to plain text", async ({ page, editor }) => {
+    await page.goto("/code-all-false.html")
+    await editor.waitForConnected()
+
+    await editor.paste("first\nsecond", { html: "<pre><code>first\nsecond</code></pre><p>Hello <code>world</code></p>" })
+
+    await expect(editor.content.locator("pre, code")).toHaveCount(0)
+    const text = await editor.plainTextValue()
+    for (const word of [ "first", "second", "Hello", "world" ]) expect(text).toContain(word)
+  })
+
+  test("pasted Markdown code is reduced to plain text", async ({ page, editor }) => {
+    await page.goto("/code-all-false.html")
+    await editor.waitForConnected()
+
+    await editor.paste("```\nfirst\nsecond\n```\n\nHello `world`")
+
+    await expect(editor.content.locator("pre, code")).toHaveCount(0)
+    const text = await editor.plainTextValue()
+    for (const word of [ "first", "second", "Hello", "world" ]) expect(text).toContain(word)
+  })
+
+  test("a loaded multi-line code block keeps every line", async ({ page, editor }) => {
+    await page.goto("/code-all-false.html")
+    await editor.waitForConnected()
+
+    await editor.setValue('<pre data-language="plain">one<br>two<br><br>four</pre>')
+
+    await assertEditorHtml(editor, "<p>one</p><p>two</p><p><br></p><p>four</p>")
+  })
+
   test("the editor connects without console errors", async ({ page, editor }) => {
     startMonitoringConsole(page)
 
