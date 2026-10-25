@@ -102,6 +102,8 @@ export class CommandDispatcher {
 
   dispatchLink(url) {
     this.editor.update(() => {
+      this.selection.placeCursorInsideAdjacentLink()
+
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
@@ -120,6 +122,8 @@ export class CommandDispatcher {
 
   dispatchUnlink() {
     this.editor.update(() => {
+      this.selection.placeCursorInsideAdjacentLink()
+
       // Let adapters signal whether unlink should target a frozen link key.
       if (this.editorElement.adapter.unlinkFrozenNode?.()) {
         return
