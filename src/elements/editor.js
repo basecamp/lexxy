@@ -298,6 +298,10 @@ export class LexicalEditorElement extends HTMLElement {
     return this.config.get("attachments")
   }
 
+  get supportsRemoteImages() {
+    return this.config.get("remoteImages")
+  }
+
   get supportsMarkdown() {
     return this.supportsRichText && this.config.get("markdown")
   }

@@ -13,6 +13,7 @@ const presets = new Configuration({
     markdown: true,
     multiLine: true,
     permittedAttachmentTypes: null,
+    remoteImages: true,
     richText: true,
     toolbar: {
       upload: "both"
