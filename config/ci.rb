@@ -1,9 +1,4 @@
 # Run using bin/ci
-require "etc"
-
-def arch_linux?
-  Etc.uname[:release].match?(/arch/)
-end
 
 CI.run do
   step "Style: Ruby", "bin/rubocop -f github"
@@ -15,12 +10,10 @@ CI.run do
   step "Tests: Rails (prepare)", "env RAILS_ENV=test bin/rails db:test:prepare"
   step "Tests: Rails (run)", "env RAILS_ENV=test bin/rails test:all -d"
 
-  if arch_linux?
-    step "Tests: checking for chromium on arch", %([[ -f "/usr/bin/chromium"]] && echo "local chromium found")
-    step "Tests: checking for firefox on arch", %([[ -f "/usr/bin/firefox"]] && echo "local firefox found")
-  else
-    step "Tests: Playwright (install)", "npx playwright install --with-deps chromium" unless ArchSystem
-  end
+  # --with-deps installs the browser's system libraries with apt-get, so it fails on
+  # Linux distributions without it, like Arch. Skip it there.
+  apt_less_linux = RUBY_PLATFORM.include?("linux") && !system("command -v apt-get > /dev/null")
+  step "Tests: Playwright (install)", "npx playwright install #{"--with-deps " unless apt_less_linux}chromium"
   step "Tests: Playwright (run)", "yarn test:browser:chromium"
 
   unless success?
