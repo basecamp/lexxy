@@ -2,6 +2,7 @@ import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
 import { HELLO_EVERYONE, focusedName } from "../../helpers/toolbar.js"
+import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
 
 test.describe("Toolbar", () => {
   test.beforeEach(async ({ page }) => {
@@ -220,28 +221,21 @@ test.describe("Toolbar", () => {
     expect(accept).toBeNull()
   })
 
-  test("dropdown stays open during editor updates that do not change the selection", async ({ page, editor }) => {
-    await editor.setValue(HELLO_EVERYONE)
+  test("dropdown stays open while an upload progresses", async ({ page, editor }) => {
+    await page.goto("/attachments.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+    const uploads = await mockActiveStorageUploads(page, { delayDirectUploadResponse: true })
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+    const figure = page.locator("figure.attachment")
+    await expect(figure.locator("progress")).toBeVisible({ timeout: 10_000 })
 
     const formatPanel = page.locator("lexxy-toolbar-dropdown.lexxy-editor__toolbar-dropdown [data-dropdown-panel]").first()
-
     await page.locator("lexxy-toolbar button[name='format']").click()
     await expect(formatPanel).toBeVisible()
 
-    // Simulate an upload-driven update: content mutates but the selection is untouched,
-    // the same way upload progress / placeholder mutations fire while a dropdown is open.
-    await page.evaluate(async () => {
-      const element = document.querySelector("lexxy-editor")
-      await new Promise((resolve) => {
-        element.editor.update(() => {
-          const editorState = element.editor._pendingEditorState
-          const root = editorState._nodeMap.get("root")
-          const paragraph = editorState._nodeMap.get(root.__first)
-          const textNode = editorState._nodeMap.get(paragraph.__first)
-          textNode.setTextContent("Hello everyone uploading…")
-        }, { onUpdate: resolve })
-      })
-    })
+    await uploads.releaseDirectUploadResponses()
+    await expect(figure.locator("progress")).toHaveCount(0, { timeout: 10_000 })
 
     await expect(formatPanel).toBeVisible()
   })
@@ -255,6 +249,18 @@ test.describe("Toolbar", () => {
     await expect(formatPanel).toBeVisible()
 
     await editor.select("everyone")
+
+    await expect(formatPanel).toBeHidden()
+  })
+
+  test("choosing a heading closes the format dropdown", async ({ page, editor }) => {
+    await editor.setValue("<p>Lexxy</p>")
+    await editor.select("Lexxy")
+
+    const formatPanel = page.locator("lexxy-toolbar-dropdown.lexxy-editor__toolbar-dropdown [data-dropdown-panel]").first()
+
+    await page.locator("lexxy-toolbar button[name='format']").click()
+    await page.locator("lexxy-toolbar button[name='heading-large']").click()
 
     await expect(formatPanel).toBeHidden()
   })
