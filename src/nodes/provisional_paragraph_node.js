@@ -1,8 +1,10 @@
-import { $createParagraphNode, $getSelection, $isElementNode, $isRootOrShadowRoot, ParagraphNode } from "lexical"
+import { $createParagraphNode, $getSelection, $isDecoratorNode, $isElementNode, $isRangeSelection, $isRootOrShadowRoot, ParagraphNode } from "lexical"
+import { $isBlockContainer } from "../helpers/lexical_helper"
+import { $isImageGalleryNode } from "./image_gallery_node"
 
 export class ProvisionalParagraphNode extends ParagraphNode {
   $config() {
-    return this.config("provisonal_paragraph", {
+    return this.config("provisional_paragraph", {
       extends: ParagraphNode,
       importDOM: () => null,
       $transform: (node) => {
@@ -13,8 +15,8 @@ export class ProvisionalParagraphNode extends ParagraphNode {
   }
 
   static neededBetween(nodeBefore, nodeAfter) {
-    return !$isSelectableElement(nodeBefore, "next")
-      && !$isSelectableElement(nodeAfter, "previous")
+    return !$offersCaretAtEdge(nodeBefore, "previous", nodeAfter)
+      && !$offersCaretAtEdge(nodeAfter, "next", nodeBefore)
   }
 
   createDOM(editor) {
@@ -45,7 +47,27 @@ export class ProvisionalParagraphNode extends ParagraphNode {
   // https://github.com/facebook/lexical/blob/f1e4f66014377b1f2595aec2b0ee17f5b7ef4dfc/packages/lexical/src/LexicalNode.ts#L646
   isSelected(selection = null) {
     const targetSelection = selection || $getSelection()
-    return targetSelection?.getNodes().some(node => node.is(this) || this.isParentOf(node))
+    if (!targetSelection) return false
+
+    if (targetSelection.getNodes().some(node => node.is(this) || this.isParentOf(node))) return true
+
+    // A collapsed range selection on the parent element at an offset adjacent to
+    // this node means the caret is visually at this paragraph's position. Treat it
+    // as selected so the paragraph is visible and the caret renders correctly.
+    //
+    // Both the offset matching our index (cursor just before us) and index + 1
+    // (cursor just after us) count, because the provisional paragraph is an
+    // invisible spacer: the browser resolves both offsets to the same visual spot.
+    if ($isRangeSelection(targetSelection) && targetSelection.isCollapsed()) {
+      const { anchor } = targetSelection
+      const parent = this.getParent()
+      if (parent && anchor.getNode().is(parent) && anchor.type === "element") {
+        const index = this.getIndexWithinParent()
+        return anchor.offset === index || anchor.offset === index + 1
+      }
+    }
+
+    return false
   }
 
   removeUnlessRequired(self = this.getLatest()) {
@@ -77,6 +99,28 @@ export function $isProvisionalParagraphNode(node) {
   return node instanceof ProvisionalParagraphNode
 }
 
-function $isSelectableElement(node, direction) {
-  return $isElementNode(node) && (direction === "next" ? node.canInsertTextBefore() : node.canInsertTextAfter())
+// `direction` points from the gap into the node: "next" asks about a node's leading edge,
+// "previous" about its trailing one. A block container — a quote holding paragraphs, a list
+// holding items — holds no caret at that edge either, but it only earns a spacer when a decorator
+// sits across the gap. Anywhere else its edge is already reachable, and a spacer there would
+// widen what Select All covers.
+function $offersCaretAtEdge(node, direction, opposite) {
+  return $isElementNode(node)
+    && $acceptsTextAtEdge(node, direction)
+    && !($isDecoratorNode(opposite) && $holdsOnlyBlocks(node, direction))
+}
+
+// A gallery is a block container as well, but its attachments report themselves inline — they
+// only do so to satisfy Lexical's rule that the root holds no inline nodes — so the generic
+// check can't see it.
+function $holdsOnlyBlocks(node, direction) {
+  return $isImageGalleryNode(node) || $isBlockContainer(node, direction)
+}
+
+function $acceptsTextAtEdge(node, direction) {
+  if (direction === "next") {
+    return node.canInsertTextBefore()
+  } else {
+    return node.canInsertTextAfter()
+  }
 }

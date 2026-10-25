@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — Configure right after the import</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module">
+    import * as Lexxy from "lexxy"
+    Lexxy.configure({ default: { attachments: false } })
+
+    // Microtasks run before the browser can paint; the next task may come after a paint.
+    queueMicrotask(() => window.definedBeforeNextTask = customElements.get("lexxy-editor") !== undefined)
+  </script>
+</head>
+<body>
+  <form>
+    <div class="body">
+      <lexxy-editor class="lexxy-content" placeholder="Write something..."></lexxy-editor>
+    </div>
+  </form>
+</body>
+</html>

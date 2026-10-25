@@ -1,21 +1,28 @@
 import {
-  $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
-  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_LOW, DELETE_CHARACTER_COMMAND, DecoratorNode,
-  KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, SELECTION_CHANGE_COMMAND, isDOMNode
+  $addUpdateTag, $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $hasUpdateTag, $isDecoratorNode, $isElementNode,
+  $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_LOW,
+  DELETE_CHARACTER_COMMAND, HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_BACKSPACE_COMMAND,
+  SELECTION_CHANGE_COMMAND, SKIP_DOM_SELECTION_TAG, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
-import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
+import { $getListDepth, $isListItemNode, ListItemNode, ListNode } from "@lexical/list"
 import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
-import { nextFrame } from "../helpers/timing_helpers"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
-import { $createNodeSelectionWith, getListType } from "../helpers/lexical_helper"
-import { LinkNode } from "@lexical/link"
-import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text"
+import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } from "../helpers/lexical_helper"
+import { $isLinkNode, LinkNode } from "@lexical/link"
+import { $isHeadingNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { ListenerBin, handlingDefault, registerEventListener } from "../helpers/listener_helper"
+
+// The tag editor.focus() adds to its update. Lexical types it, but doesn't export it.
+const FOCUS_TAG = "focus"
+
 
 export default class Selection {
+  #listeners = new ListenerBin()
+
   constructor(editorElement) {
     this.editorElement = editorElement
     this.editorContentElement = editorElement.editorContentElement
@@ -25,12 +32,7 @@ export default class Selection {
     this.#listenForNodeSelections()
     this.#processSelectionChangeCommands()
     this.#containEditorFocus()
-  }
-
-  set current(selection) {
-    this.editor.update(() => {
-      this.#syncSelectedClasses()
-    })
+    this.#clearStaleInlineCodeFormat()
   }
 
   get hasNodeSelection() {
@@ -41,14 +43,14 @@ export default class Selection {
   }
 
   get cursorPosition() {
-    let position = { x: 0, y: 0 }
+    let position = null
 
     this.editor.getEditorState().read(() => {
       const range = this.#getValidSelectionRange()
       if (!range) return
 
       const rect = this.#getReliableRectFromRange(range)
-      if (!rect) return
+      if (this.#isRectUnreliable(rect)) return
 
       position = this.#calculateCursorPosition(rect, range)
     })
@@ -89,32 +91,6 @@ export default class Selection {
     return { node: null, offset: 0 }
   }
 
-  preservingSelection(fn) {
-    let selectionState = null
-
-    this.editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (selection && $isRangeSelection(selection)) {
-        selectionState = {
-          anchor: { key: selection.anchor.key, offset: selection.anchor.offset },
-          focus: { key: selection.focus.key, offset: selection.focus.offset }
-        }
-      }
-    })
-
-    fn()
-
-    if (selectionState) {
-      this.editor.update(() => {
-        const selection = $getSelection()
-        if (selection && $isRangeSelection(selection)) {
-          selection.anchor.set(selectionState.anchor.key, selectionState.anchor.offset, "text")
-          selection.focus.set(selectionState.focus.key, selectionState.focus.offset, "text")
-        }
-      })
-    }
-  }
-
   getFormat() {
     const selection = $getSelection()
     if (!$isRangeSelection(selection)) return {}
@@ -124,25 +100,41 @@ export default class Selection {
 
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
     const listType = getListType(anchorNode)
+    const headingNode = this.#getNearestHeadingNode(anchorNode)
 
     return {
       isBold: selection.hasFormat("bold"),
       isItalic: selection.hasFormat("italic"),
       isStrikethrough: selection.hasFormat("strikethrough"),
+      isUnderline: selection.hasFormat("underline"),
       isHighlight: isSelectionHighlighted(selection),
-      isInLink: $getNearestNodeOfType(anchorNode, LinkNode) !== null,
+      isInLink: this.linkUrl !== null,
       isInQuote: $isQuoteNode(topLevelElement),
-      isInHeading: $isHeadingNode(topLevelElement),
-      isInCode: selection.hasFormat("code") || $getNearestNodeOfType(anchorNode, CodeNode) !== null,
+      isInHeading: headingNode !== null,
+      isInCode: this.#isInCode(selection, anchorNode),
+      headingTag: headingNode?.getTag() ?? null,
       isInList: listType !== null,
       listType,
       isInTable: $getTableCellNodeFromLexicalNode(anchorNode) !== null
     }
   }
 
+  get linkUrl() {
+    return this.linkAtCursor?.getURL() ?? null
+  }
+
+  get linkAtCursor() {
+    const anchorNode = $getSelection()?.anchor?.getNode()
+    return $getNearestNodeOfType(anchorNode, LinkNode) ?? this.#linkEndingAtCursor()
+  }
+
   nearestNodeOfType(nodeType) {
     const anchorNode = $getSelection()?.anchor?.getNode()
     return $getNearestNodeOfType(anchorNode, nodeType)
+  }
+
+  placeCursorInsideAdjacentLink() {
+    this.#linkEndingAtCursor()?.selectEnd()
   }
 
   get hasSelectedWordsInSingleLine() {
@@ -161,6 +153,15 @@ export default class Selection {
     const anchorElement = anchorNode.getTopLevelElement()
     if (!anchorElement) return false
 
+    // When anchor and focus are in different block-level children of the same
+    // top-level element (e.g. two paragraphs inside a blockquote), this is a
+    // multi-line selection, not a single-line one.
+    const anchorBlock = $isElementNode(anchorNode) ? anchorNode : anchorNode.getParent()
+    const focusBlock = $isElementNode(focusNode) ? focusNode : focusNode.getParent()
+    if (anchorBlock !== focusBlock && anchorBlock !== anchorElement) {
+      return false
+    }
+
     const nodes = selection.getNodes()
     for (const node of nodes) {
       if ($isLineBreakNode(node)) {
@@ -175,6 +176,10 @@ export default class Selection {
     return this.nearestNodeOfType(ListItemNode)
   }
 
+  get isInsideBlockQuote() {
+    return this.nearestNodeOfType(QuoteNode)
+  }
+
   get isIndentedList() {
     const closestListNode = this.nearestNodeOfType(ListNode)
     return closestListNode && ($getListDepth(closestListNode) > 1)
@@ -185,13 +190,25 @@ export default class Selection {
   }
 
   get isTableCellSelected() {
+    const selection = $getSelection()
+    const { anchor, focus } = selection
+    if (!$isRangeSelection(selection) || anchor.key !== focus.key) return false
+
     return this.nearestNodeOfType(TableCellNode) !== null
   }
 
   get isOnPreviewableImage() {
-    const selection = $getSelection()
-    const firstNode = selection?.getNodes().at(0)
-    return $isActionTextAttachmentNode(firstNode) && firstNode.isPreviewableImage
+    return this.previewableImageNode != null
+  }
+
+  get previewableImageNode() {
+    const firstNode = $getSelection()?.getNodes().at(0)
+    return $isActionTextAttachmentNode(firstNode) && firstNode.isPreviewableImage ? firstNode : null
+  }
+
+  get isAtNodeStart() {
+    const { anchorNode, offset } = this.#getCollapsedSelectionData()
+    return anchorNode && offset === 0
   }
 
   get nodeAfterCursor() {
@@ -214,7 +231,12 @@ export default class Selection {
     if (!anchorNode) return null
 
     if ($isTextNode(anchorNode)) {
-      return this.#getNextNodeFromTextEnd(anchorNode)
+      if (offset === anchorNode.getTextContentSize()) return this.#getNextNodeFromTextEnd(anchorNode)
+      if (this.#isCursorOnLastVisualLineOfBlock(anchorNode)) {
+        const topLevelElement = anchorNode.getTopLevelElement()
+        return topLevelElement ? topLevelElement.getNextSibling() : null
+      }
+      return null
     }
 
     if ($isElementNode(anchorNode)) {
@@ -244,7 +266,12 @@ export default class Selection {
     if (!anchorNode) return null
 
     if ($isTextNode(anchorNode)) {
-      return this.#getPreviousNodeFromTextStart(anchorNode)
+      if (offset === 0) return this.#getPreviousNodeFromTextStart(anchorNode)
+      if (this.#isCursorOnFirstVisualLineOfBlock(anchorNode)) {
+        const topLevelElement = anchorNode.getTopLevelElement()
+        return topLevelElement ? topLevelElement.getPreviousSibling() : null
+      }
+      return null
     }
 
     if ($isElementNode(anchorNode)) {
@@ -252,6 +279,77 @@ export default class Selection {
     }
 
     return this.#findPreviousSiblingUp(anchorNode)
+  }
+
+  dispose() {
+    this.editorElement = null
+    this.editorContentElement = null
+    this.editor = null
+    this.previouslySelectedKeys = null
+
+    this.#listeners.dispose()
+  }
+
+  // Lexical resolves a caret sitting at a link's trailing edge to the start of the
+  // node that follows it, so a cursor that looks like it's on the link lands outside.
+  #linkEndingAtCursor() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null
+
+    const { anchor } = selection
+    if (anchor.type !== "text" || anchor.offset !== 0) return null
+
+    const previousSibling = anchor.getNode().getPreviousSibling()
+    if (!$isLinkNode(previousSibling)) return null
+
+    return previousSibling
+  }
+
+  // When all inline code text is deleted, Lexical's selection retains the stale
+  // code format flag. Verify the flag is backed by actual code-formatted content:
+  // a code block ancestor or a text node that carries the code format.
+  #isInCode(selection, anchorNode) {
+    if ($getNearestNodeOfType(anchorNode, CodeNode) !== null) return true
+    if (!selection.hasFormat("code")) return false
+
+    return $isTextNode(anchorNode) && anchorNode.hasFormat("code")
+  }
+
+  // After deleting all inline code text, Lexical preserves the code format on
+  // the selection even though no code-formatted content remains. This listener
+  // detects that stale state and clears it so newly typed text won't be
+  // code-formatted.
+  #clearStaleInlineCodeFormat() {
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState, tags }) => {
+      if (tags.has("history-merge") || tags.has("skip-dom-selection")) return
+
+      let isStale = false
+
+      editorState.read(() => {
+        const selection = $getSelection()
+        if (!$isRangeSelection(selection) || !selection.isCollapsed()) return
+        if (!selection.hasFormat("code")) return
+
+        const anchorNode = selection.anchor.getNode()
+        if (this.#isInCode(selection, anchorNode)) return
+
+        isStale = true
+      })
+
+      if (isStale) {
+        setTimeout(() => {
+          this.editor.update(() => {
+            const selection = $getSelection()
+            if (!$isRangeSelection(selection) || !selection.hasFormat("code")) return
+
+            const anchorNode = selection.anchor.getNode()
+            if (this.#isInCode(selection, anchorNode)) return
+
+            selection.toggleFormat("code")
+          })
+        }, 0)
+      }
+    }))
   }
 
   get #currentlySelectedKeys() {
@@ -270,65 +368,107 @@ export default class Selection {
   }
 
   #processSelectionChangeCommands() {
-    this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, this.#selectPreviousNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#selectNextNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_UP_COMMAND, this.#selectPreviousTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
-    this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, this.#selectNextTopLevelNode.bind(this), COMMAND_PRIORITY_LOW)
+    this.#listeners.track(
+      this.editor.registerCommand(KEY_ARROW_LEFT_COMMAND, handlingDefault(this.#selectPreviousNode.bind(this)), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, handlingDefault(this.#selectNextNode.bind(this)), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_UP_COMMAND, handlingDefault(this.#selectPreviousTopLevelNode.bind(this)), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, handlingDefault(this.#selectNextTopLevelNode.bind(this)), COMMAND_PRIORITY_LOW),
 
-    this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW)
+      this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_BACKSPACE_COMMAND, this.#handleBackspaceAtListItemStart.bind(this), COMMAND_PRIORITY_LOW),
 
-    this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
-      this.current = $getSelection()
-    }, COMMAND_PRIORITY_LOW)
+      // DOM work: runs after reconciliation, so newly created nodes have elements
+      this.editor.registerUpdateListener(({ editorState }) => {
+        editorState.read(() => this.#syncSelectedClasses())
+      }),
+
+      this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
+        this.#preserveFocusOutsideEditor()
+        return false
+      }, COMMAND_PRIORITY_CRITICAL)
+    )
+  }
+
+  // Selection changes can arrive after Tab moves focus to a toolbar or another field.
+  // Reconciling that stale selection would pull focus back into the editor.
+  //
+  // Since Lexical 0.52 the notification runs inside the pending update itself,
+  // so it also sees updates that ask to focus the editor (editor.focus(), as
+  // toolbar commands do). Those must still reconcile the DOM selection.
+  #preserveFocusOutsideEditor() {
+    if (this.#isAnotherElementFocused && !$hasUpdateTag(FOCUS_TAG)) {
+      $addUpdateTag(SKIP_DOM_SELECTION_TAG)
+    }
+  }
+
+  get #isAnotherElementFocused() {
+    const rootElement = this.editor.getRootElement()
+    const activeElement = rootElement?.ownerDocument.activeElement
+
+    return activeElement && activeElement !== rootElement.ownerDocument.body && !rootElement.contains(activeElement)
   }
 
   #listenForNodeSelections() {
-    this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
+    this.#listeners.track(this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
       if (!isDOMNode(target)) return false
 
       const targetNode = $getNearestNodeFromDOMNode(target)
       return $isDecoratorNode(targetNode) && this.#selectInLexical(targetNode)
-    }, COMMAND_PRIORITY_LOW)
+    }, COMMAND_PRIORITY_LOW))
 
-    this.editor.getRootElement().addEventListener("lexxy:internal:move-to-next-line", (event) => {
-      this.#selectOrAppendNextLine()
-    })
+    this.#listeners.track(
+      this.editor.registerRootListener((rootElement) => {
+        if (rootElement) {
+          return registerEventListener(rootElement, "lexxy:internal:move-to-next-line", () => this.#selectOrAppendNextLine())
+        }
+      })
+    )
   }
 
   #containEditorFocus() {
     // Workaround for a bizarre Chrome bug where the cursor abandons the editor to focus on not-focusable elements
     // above when navigating UP/DOWN when Lexical shows its fake cursor on custom decorator nodes.
-    this.editorContentElement.addEventListener("keydown", (event) => {
-      if (event.key === "ArrowUp") {
-        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
+    this.#listeners.track(
+      this.editor.registerRootListener((rootElement) => {
+        if (rootElement) {
+          const handler = (event) => this.#handleArrowKeyOnLexicalCursor(event)
+          rootElement.addEventListener("keydown", handler, true)
+          return () => rootElement.removeEventListener("keydown", handler, true)
+        }
+      })
+    )
+  }
 
-        if (lexicalCursor) {
-          let currentElement = lexicalCursor.previousElementSibling
-          while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
-            currentElement = currentElement.previousElementSibling
-          }
+  #handleArrowKeyOnLexicalCursor(event) {
+    if (event.key === "ArrowUp") {
+      const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
 
-          if (!currentElement) {
-            event.preventDefault()
-          }
+      if (lexicalCursor) {
+        let currentElement = lexicalCursor.previousElementSibling
+        while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
+          currentElement = currentElement.previousElementSibling
+        }
+
+        if (!currentElement) {
+          event.preventDefault()
         }
       }
+    }
 
-      if (event.key === "ArrowDown") {
-        const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
+    if (event.key === "ArrowDown") {
+      const lexicalCursor = this.editor.getRootElement().querySelector("[data-lexical-cursor]")
 
-        if (lexicalCursor) {
-          let currentElement = lexicalCursor.nextElementSibling
-          while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
-            currentElement = currentElement.nextElementSibling
-          }
+      if (lexicalCursor) {
+        let currentElement = lexicalCursor.nextElementSibling
+        while (currentElement && currentElement.hasAttribute("data-lexical-cursor")) {
+          currentElement = currentElement.nextElementSibling
+        }
 
-          if (!currentElement) {
-            event.preventDefault()
-          }
+        if (!currentElement) {
+          event.preventDefault()
         }
       }
-    }, true)
+    }
   }
 
   #syncSelectedClasses() {
@@ -357,45 +497,65 @@ export default class Selection {
     }
   }
 
-  async #selectPreviousNode() {
-    if (this.hasNodeSelection) {
-      return await this.#withCurrentNode((currentNode) => currentNode.selectPrevious())
-    } else {
-      return this.#selectInLexical(this.nodeBeforeCursor)
-    }
-  }
+  #selectPreviousNode(event) {
+    if (event.shiftKey) {
+      return this.#withCurrentNodeSelectionNode((currentNode) => {
+        const selection = this.#rangeSelectDecorator(currentNode, "forward")
 
-  async #selectNextNode() {
-    if (this.hasNodeSelection) {
-      return await this.#withCurrentNode((currentNode) => currentNode.selectNext(0, 0))
-    } else {
-      return this.#selectInLexical(this.nodeAfterCursor)
-    }
-  }
-
-  async #selectPreviousTopLevelNode() {
-    if (this.hasNodeSelection) {
-      return await this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectPrevious())
-    } else {
-      return this.#selectInLexical(this.topLevelNodeBeforeCursor)
-    }
-  }
-
-  async #selectNextTopLevelNode() {
-    if (this.hasNodeSelection) {
-      return await this.#withCurrentNode((currentNode) => currentNode.getTopLevelElement().selectNext(0, 0))
-    } else {
-      return this.#selectInLexical(this.topLevelNodeAfterCursor)
-    }
-  }
-
-  async #withCurrentNode(fn) {
-    await nextFrame()
-    if (this.hasNodeSelection) {
-      this.editor.update(() => {
-        fn($getSelection().getNodes()[0])
-        this.editor.focus()
+        // Can't rely on native pass-through with Playwright on firefox
+        selection.modify("extend", true, "character")
+        return true
       })
+    } else {
+      return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.selectPrevious())
+        || this.#selectInLexical(this.nodeBeforeCursor)
+    }
+  }
+
+  #selectNextNode(event) {
+    if (event.shiftKey) {
+      return this.#withCurrentNodeSelectionNode((currentNode) => {
+        const selection = this.#rangeSelectDecorator(currentNode, "forward")
+
+        // Can't rely on native pass-through with Playwright on firefox
+        selection.modify("extend", false, "character")
+        return true
+      })
+    } else {
+      return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.selectNext(0, 0))
+        || this.#selectInLexical(this.nodeAfterCursor)
+    }
+  }
+
+  #selectPreviousTopLevelNode() {
+    return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.getTopLevelElement().selectPrevious())
+      || this.#selectInLexical(this.topLevelNodeBeforeCursor)
+  }
+
+  #selectNextTopLevelNode() {
+    return this.#withCurrentNodeSelectionNode((currentNode) => currentNode.getTopLevelElement().selectNext(0, 0))
+      || this.#selectInLexical(this.topLevelNodeAfterCursor)
+  }
+
+  // hasNodeSelection reads the committed state, while $getSelection() resolves
+  // against the pending one — so the selection here can be missing, no longer a
+  // NodeSelection, or reference a node that no longer exists (empty editor,
+  // just-deleted node, decorator boundary). Only invoke the callback when a
+  // node actually resolves; returning false lets the callers fall back —
+  // #selectInLexical for plain arrows, native pass-through for shift-arrows.
+  #withCurrentNodeSelectionNode(fn) {
+    const selection = this.hasNodeSelection ? $getSelection() : null
+    const currentNode = $isNodeSelection(selection) ? selection.getNodes()[0] : undefined
+
+    return currentNode ? fn(currentNode) : false
+  }
+
+  #rangeSelectDecorator(node, direction = "forward") {
+    if ($isDecoratorNode(node)) {
+        const [ anchorOffset, focusOffset ] = direction === "forward" ? [ 0, 1 ] : [ 1, 0 ]
+        const indexAtNode = node.getIndexWithinParent()
+
+        return node.getParent().select(indexAtNode + anchorOffset, indexAtNode + focusOffset)
     }
   }
 
@@ -433,6 +593,24 @@ export default class Selection {
     return anchorNode.getTopLevelElement()
   }
 
+  #getNearestHeadingNode(anchorNode) {
+    const topLevelElement = anchorNode.getTopLevelElementOrThrow()
+
+    let headingNode = $isHeadingNode(topLevelElement) ? topLevelElement : null
+    if (!headingNode) {
+      let current = anchorNode.getParent()
+      while (current) {
+        if ($isHeadingNode(current)) {
+          headingNode = current
+          break
+        }
+        current = current.getParent()
+      }
+    }
+
+    return headingNode
+  }
+
   #moveToOrCreateNextLine(topLevelElement) {
     const nextSibling = topLevelElement.getNextSibling()
 
@@ -452,6 +630,7 @@ export default class Selection {
 
   #selectInLexical(node) {
     if ($isDecoratorNode(node)) {
+      $addUpdateTag(HISTORY_MERGE_TAG)
       const selection = $createNodeSelectionWith(node)
       $setSelection(selection)
       return selection
@@ -460,14 +639,133 @@ export default class Selection {
     }
   }
 
+  // Since Lexical 0.48, the list extension handles Backspace at the start of a
+  // list item itself, before DELETE_CHARACTER_COMMAND is dispatched: it turns the
+  // item into a paragraph and splits the list around it. Keep Lexxy's behavior:
+  // nested items outdent, empty items are removed as below, and a top-level item
+  // that follows another one merges into it, as plain deletion does.
+  #handleBackspaceAtListItemStart(event) {
+    const listItem = this.#listItemWithCaretAtStart()
+    if (!listItem || listItem.getIndent() > 0) return false
+
+    if (this.#removeEmptyListItem()) {
+      event?.preventDefault()
+      return true
+    } else if (listItem.getPreviousSibling()) {
+      event?.preventDefault()
+      return this.editor.dispatchCommand(DELETE_CHARACTER_COMMAND, true)
+    } else {
+      return false
+    }
+  }
+
+  #listItemWithCaretAtStart() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.offset !== 0) return null
+
+    let node = selection.anchor.getNode()
+    while (node && !$isListItemNode(node)) {
+      if (node.getPreviousSibling()) return null
+      node = node.getParent()
+    }
+    return node
+  }
+
   #selectDecoratorNodeBeforeDeletion(backwards) {
+    if (backwards && this.#removeEmptyListItem()) return true
+
     const node = backwards ? this.nodeBeforeCursor : this.nodeAfterCursor
     if (!$isDecoratorNode(node)) return false
+
+    if (this.#collapseListItemToParagraph(node)) return true
 
     this.#removeEmptyElementAnchorNode()
 
     const selection = this.#selectInLexical(node)
     return Boolean(selection)
+  }
+
+  // When backspace is pressed on an empty list item that has siblings,
+  // handle the deletion appropriately:
+  //
+  // - Middle/end items (has previous sibling): remove the empty item and
+  //   place the cursor at the end of the previous sibling. Without this,
+  //   Lexical's default collapseAtStart converts the empty item into a
+  //   paragraph above the list, causing the cursor to jump away.
+  //
+  // - First item (no previous sibling): convert to a paragraph above the
+  //   list, matching the standard "unwrap list formatting" behavior that
+  //   users expect from pressing backspace at the start of a list item.
+  //   Inside a blockquote we instead just remove the empty item and move
+  //   the cursor into the next one — stranding a paragraph there would
+  //   leave the blank line the user is trying to close.
+  //
+  // When the empty item is the last/only one in the list, we return false
+  // and let Lexical's default (convert to paragraph) provide the standard
+  // "exit list" behavior.
+  #removeEmptyListItem() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+
+    const anchorNode = selection.anchor.getNode()
+    const listItem = $getNearestNodeOfType(anchorNode, ListItemNode)
+    if (!listItem) return false
+
+    if (!$isListItemStructurallyEmpty(listItem)) return false
+
+    const nextSibling = listItem.getNextSibling()
+    if (!nextSibling) return false
+
+    const previousSibling = listItem.getPreviousSibling()
+    const listNode = $getNearestNodeOfType(listItem, ListNode)
+    if (!listNode) return false
+
+    if (previousSibling) {
+      previousSibling.selectEnd()
+      listItem.remove()
+    } else if ($isQuoteNode(listNode.getParent())) {
+      nextSibling.selectStart()
+      listItem.remove()
+    } else {
+      const paragraph = $createParagraphNode()
+      listNode.insertBefore(paragraph)
+      listItem.remove()
+      paragraph.selectStart()
+    }
+
+    return true
+  }
+
+  // When the cursor is inside a list item, collapse the list item into a
+  // paragraph instead of selecting the decorator. This lets the user
+  // delete a list that immediately follows an attachment without the
+  // attachment becoming selected. Only applies when the decorator is
+  // outside the list item (e.g. a block attachment before the list),
+  // not when it's an inline mention inside the list item.
+  #collapseListItemToParagraph(decoratorNode) {
+    const anchorNode = $getSelection()?.anchor?.getNode()
+    const listItem = anchorNode && $getNearestNodeOfType(anchorNode, ListItemNode)
+    if (!listItem) return false
+
+    if (listItem.isParentOf(decoratorNode)) return false
+
+    const listNode = $getNearestNodeOfType(listItem, ListNode)
+    if (!listNode) return false
+
+    const paragraph = $createParagraphNode()
+    const children = listItem.getChildren()
+    children.forEach(child => paragraph.append(child))
+
+    if (listNode.getChildrenSize() === 1) {
+      listNode.insertBefore(paragraph)
+      listNode.remove()
+    } else {
+      listNode.insertBefore(paragraph)
+      listItem.remove()
+    }
+
+    paragraph.selectStart()
+    return true
   }
 
   #removeEmptyElementAnchorNode(anchor = $getSelection()?.anchor) {
@@ -576,8 +874,12 @@ export default class Selection {
   }
 
   #getNextNodeFromTextEnd(anchorNode) {
-    if (anchorNode.getNextSibling() instanceof DecoratorNode) {
-      return anchorNode.getNextSibling()
+    const nextSibling = anchorNode.getNextSibling()
+    if ($isDecoratorNode(nextSibling)) {
+      return nextSibling
+    }
+    if (nextSibling != null) {
+      return null
     }
     const parent = anchorNode.getParent()
     return parent ? parent.getNextSibling() : null
@@ -598,11 +900,15 @@ export default class Selection {
   }
 
   #getPreviousNodeFromTextStart(anchorNode) {
-    if (anchorNode.getPreviousSibling() instanceof DecoratorNode) {
-      return anchorNode.getPreviousSibling()
+    const previousSibling = anchorNode.getPreviousSibling()
+    if ($isDecoratorNode(previousSibling)) {
+      return previousSibling
+    }
+    if (previousSibling != null) {
+      return null
     }
     const parent = anchorNode.getParent()
-    return parent.getPreviousSibling()
+    return parent ? parent.getPreviousSibling() : null
   }
 
   #getNodeBeforeElementNode(anchorNode, offset) {
@@ -626,5 +932,62 @@ export default class Selection {
       current = current.getParent()
     }
     return current ? current.getPreviousSibling() : null
+  }
+
+  #isCursorOnFirstVisualLineOfBlock(anchorNode) {
+    return this.#isCursorOnEdgeLineOfBlock(anchorNode, "first")
+  }
+
+  #isCursorOnLastVisualLineOfBlock(anchorNode) {
+    return this.#isCursorOnEdgeLineOfBlock(anchorNode, "last")
+  }
+
+  // Check whether the cursor sits on the first or last visual line of its
+  // top-level block by comparing the Y position of the cursor with the Y
+  // position of the block's start (first line) or end (last line).
+  #isCursorOnEdgeLineOfBlock(anchorNode, edge) {
+    const topLevelElement = anchorNode.getTopLevelElement()
+    if (!topLevelElement) return false
+
+    const domElement = this.editor.getElementByKey(topLevelElement.getKey())
+    if (!domElement) return false
+
+    const nativeSelection = window.getSelection()
+    if (!nativeSelection?.rangeCount) return false
+
+    const cursorRect = this.#getReliableRectFromRange(nativeSelection.getRangeAt(0))
+    if (!cursorRect || this.#isRectUnreliable(cursorRect)) return false
+
+    const edgeRect = this.#getEdgeCharRect(domElement, edge)
+    if (!edgeRect || this.#isRectUnreliable(edgeRect)) return false
+
+    const tolerance = edgeRect.height > 0 ? edgeRect.height * 0.5 : 5
+    return Math.abs(cursorRect.top - edgeRect.top) < tolerance
+  }
+
+  // Get a reliable bounding rect for the first or last character in a DOM
+  // element by creating a non-collapsed range around it.
+  #getEdgeCharRect(element, edge) {
+    const walker = document.createTreeWalker(element, 4 /* NodeFilter.SHOW_TEXT */)
+    let textNode
+
+    if (edge === "first") {
+      textNode = walker.nextNode()
+    } else {
+      while (walker.nextNode()) textNode = walker.currentNode
+    }
+
+    if (!textNode || textNode.length === 0) return null
+
+    const range = document.createRange()
+    if (edge === "first") {
+      range.setStart(textNode, 0)
+      range.setEnd(textNode, 1)
+    } else {
+      range.setStart(textNode, textNode.length - 1)
+      range.setEnd(textNode, textNode.length)
+    }
+
+    return range.getBoundingClientRect()
   }
 }

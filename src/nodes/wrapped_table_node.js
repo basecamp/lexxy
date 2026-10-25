@@ -10,6 +10,14 @@ export class WrappedTableNode extends TableNode {
     return super.importDOM()
   }
 
+  canInsertTextBefore() {
+    return false
+  }
+
+  canInsertTextAfter() {
+    return false
+  }
+
   exportDOM(editor) {
     const superExport = super.exportDOM(editor)
 

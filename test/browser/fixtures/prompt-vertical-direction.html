@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test - Prompt vertical direction</title>
+  <link rel="stylesheet" href="/styles.css">
+
+  <style>
+    body {
+      margin: 0;
+    }
+
+    .body {
+      inline-size: 360px;
+      position: absolute;
+    }
+
+    .body[data-editor="top"] {
+      inset-block-start: 160px;
+      inset-inline-start: 20px;
+    }
+
+    .body[data-editor="bottom"] {
+      inset-block-start: 250px;
+      inset-inline-start: 20px;
+    }
+
+    lexxy-editor {
+      border: 1px solid #ccc;
+      display: block;
+    }
+
+    .lexxy-editor__content {
+      min-block-size: 64px;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+  <form>
+    <div class="body" data-editor="top">
+      <lexxy-editor class="lexxy-content" placeholder="Top prompt">
+        <lexxy-prompt trigger="@" name="mention" vertical-direction="top">
+          <lexxy-prompt-item search="Alice" sgid="test-sgid-alice">
+            <template type="menu">
+              <span class="person person--prompt-item">Alice</span>
+            </template>
+            <template type="editor">
+              <span class="person person--inline">Alice</span>
+            </template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="Zacharias" sgid="test-sgid-zacharias">
+            <template type="menu">
+              <span class="person person--prompt-item">Zacharias</span>
+            </template>
+            <template type="editor">
+              <span class="person person--inline">Zacharias</span>
+            </template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="Sam" sgid="test-sgid-sam">
+            <template type="menu">
+              <span class="person person--prompt-item">Sam</span>
+            </template>
+            <template type="editor">
+              <span class="person person--inline">Sam</span>
+            </template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="Taylor" sgid="test-sgid-taylor">
+            <template type="menu">
+              <span class="person person--prompt-item">Taylor</span>
+            </template>
+            <template type="editor">
+              <span class="person person--inline">Taylor</span>
+            </template>
+          </lexxy-prompt-item>
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+
+    <div class="body" data-editor="bottom">
+      <lexxy-editor class="lexxy-content" placeholder="Bottom prompt">
+        <lexxy-prompt trigger="@" name="mention" vertical-direction="bottom">
+          <lexxy-prompt-item search="Alice" sgid="test-sgid-alice">
+            <template type="menu">
+              <span class="person person--prompt-item">Alice</span>
+            </template>
+            <template type="editor">
+              <span class="person person--inline">Alice</span>
+            </template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="Zacharias" sgid="test-sgid-zacharias">
+            <template type="menu">
+              <span class="person person--prompt-item">Zacharias</span>
+            </template>
+            <template type="editor">
+              <span class="person person--inline">Zacharias</span>
+            </template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="Sam" sgid="test-sgid-sam">
+            <template type="menu">
+              <span class="person person--prompt-item">Sam</span>
+            </template>
+            <template type="editor">
+              <span class="person person--inline">Sam</span>
+            </template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="Taylor" sgid="test-sgid-taylor">
+            <template type="menu">
+              <span class="person person--prompt-item">Taylor</span>
+            </template>
+            <template type="editor">
+              <span class="person person--inline">Taylor</span>
+            </template>
+          </lexxy-prompt-item>
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+  </form>
+
+  <script type="module" src="/editor.js"></script>
+</body>
+</html>
