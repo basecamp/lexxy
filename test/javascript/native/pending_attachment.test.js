@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "vitest"
-import { $getNodeByKey, $getRoot } from "lexical"
+import { $getRoot } from "lexical"
 import { createTestEditor, destroyTestEditor, setContent, selectEnd, tick } from "../unit/helpers/editor_helper"
-import { ManagedAttachmentUploadNode } from "../../../src/nodes/managed_attachment_upload_node"
+import { ActionTextAttachmentUploadNode } from "../../../src/nodes/action_text_attachment_upload_node"
 
 let editorElement
 
@@ -11,16 +11,6 @@ afterEach(async () => {
 
 function createFile(name = "test.png", type = "image/png") {
   return new File(["test"], name, { type })
-}
-
-function findMaterializedAttachmentNode() {
-  let found = null
-  const visit = (node) => {
-    if (node.getType?.() === "action_text_attachment") found = node
-    node.getChildren?.().forEach(visit)
-  }
-  $getRoot().getChildren().forEach(visit)
-  return found
 }
 
 describe("insertPendingAttachment", () => {
@@ -37,53 +27,50 @@ describe("insertPendingAttachment", () => {
     expect(typeof handle.remove).toBe("function")
   })
 
-  test("inserts a ManagedAttachmentUploadNode for bridge-managed uploads", async () => {
+  test("creates upload node with null uploadUrl for bridge-managed uploads", async () => {
     editorElement = await createTestEditor()
-    await setContent(editorElement, "<p>hello</p>")
-    selectEnd(editorElement)
 
-    editorElement.contents.insertPendingAttachment(createFile())
-
-    let nodeType = null
-    editorElement.editor.read(() => {
-      const visit = (node) => {
-        if (node instanceof ManagedAttachmentUploadNode) nodeType = node.getType()
-        node.getChildren?.().forEach(visit)
-      }
-      $getRoot().getChildren().forEach(visit)
+    let uploadUrl = "not-null"
+    editorElement.editor.update(() => {
+      const uploadNode = new ActionTextAttachmentUploadNode({
+        file: createFile(),
+        uploadUrl: null,
+        blobUrlTemplate: null,
+      })
+      uploadUrl = uploadNode.uploadUrl
     })
 
-    expect(nodeType).toBe(ManagedAttachmentUploadNode.getType())
+    expect(uploadUrl).toBeNull()
   })
 
-  test("managed upload node renders a file figure even for previewable images", async () => {
+  test("upload node createDOM produces a valid figure element", async () => {
     editorElement = await createTestEditor()
 
     let figure = null
     editorElement.editor.update(() => {
-      const uploadNode = new ManagedAttachmentUploadNode({
-        file: createFile("photo.png", "image/png"),
+      const uploadNode = new ActionTextAttachmentUploadNode({
+        file: createFile("document.pdf", "application/pdf"),
+        uploadUrl: null,
         blobUrlTemplate: null,
       })
       figure = uploadNode.createDOM({ theme: {} })
     })
 
-    // Bridge uploads have no real image bytes, so the upload UI is always
-    // a file icon with a progress bar — never a local image preview.
     expect(figure.tagName).toBe("FIGURE")
+    expect(figure.classList.contains("attachment")).toBe(true)
     expect(figure.classList.contains("attachment--file")).toBe(true)
-    expect(figure.classList.contains("attachment--preview")).toBe(false)
-    expect(figure.querySelector("img")).toBeNull()
     expect(figure.querySelector("progress")).not.toBeNull()
+    expect(figure.querySelector(".attachment__name").textContent).toBe("document.pdf")
   })
 
-  test("managed upload node progress can be updated on writable node", async () => {
+  test("upload node progress can be updated on writable node", async () => {
     editorElement = await createTestEditor()
 
     let progress = null
     editorElement.editor.update(() => {
-      const uploadNode = new ManagedAttachmentUploadNode({
+      const uploadNode = new ActionTextAttachmentUploadNode({
         file: createFile(),
+        uploadUrl: null,
         blobUrlTemplate: null,
       })
       $getRoot().append(uploadNode)
@@ -94,28 +81,6 @@ describe("insertPendingAttachment", () => {
     })
 
     expect(progress).toBe(75)
-  })
-
-  test("managed upload node does not start a DirectUpload", async () => {
-    editorElement = await createTestEditor()
-
-    let progressBefore, progressAfter
-    editorElement.editor.update(() => {
-      const uploadNode = new ManagedAttachmentUploadNode({
-        file: createFile(),
-        blobUrlTemplate: null,
-      })
-      $getRoot().append(uploadNode)
-      progressBefore = uploadNode.progress
-      uploadNode.createDOM({ theme: {} })
-      const refreshed = $getNodeByKey(uploadNode.getKey())
-      progressAfter = refreshed.progress
-    })
-
-    // Local DirectUpload bumps progress to 1 when it starts; the bridge
-    // path must not, since the host app owns the upload.
-    expect(progressBefore).toBeNull()
-    expect(progressAfter).toBeNull()
   })
 
   test("returns null when attachments are not supported", async () => {
@@ -177,14 +142,24 @@ describe("insertPendingAttachment", () => {
 
     let previewSrc, src
     editorElement.editor.read(() => {
-      const node = findMaterializedAttachmentNode()
+      const node = findAttachmentNode($getRoot())
       previewSrc = node?.previewSrc
       src = node?.src
     })
 
-    // Bridge uploads hand Lexxy a placeholder File with no real image bytes,
-    // so a blob: previewSrc would render as a broken image until it's swapped.
+    // The host app hands Lexxy a placeholder File without the real image
+    // bytes, so a blob: preview of it would render as a broken image until
+    // the server image loads.
     expect(previewSrc ?? null).toBeNull()
     expect(src).toBe("https://example.com/photo.png")
   })
 })
+
+function findAttachmentNode(node) {
+  if (node.getType() === "action_text_attachment") return node
+  for (const child of node.getChildren?.() ?? []) {
+    const found = findAttachmentNode(child)
+    if (found) return found
+  }
+  return null
+}

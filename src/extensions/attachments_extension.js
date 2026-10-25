@@ -4,7 +4,6 @@ import { mergeRegister } from "@lexical/utils"
 import { $findOrCreateGalleryForImage, $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
 import { $isActionTextAttachmentNode, ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node.js"
-import { ManagedAttachmentUploadNode } from "../nodes/managed_attachment_upload_node.js"
 import { $isProvisionalParagraphNode } from "../nodes/provisional_paragraph_node"
 import { AttachmentDragAndDrop } from "../editor/attachments/drag_and_drop"
 import { AttachmentFakeSelection } from "../editor/attachments/fake_selection"
@@ -36,7 +35,6 @@ export class AttachmentsExtension extends LexxyExtension {
       nodes: [
         ActionTextAttachmentNode,
         ActionTextAttachmentUploadNode,
-        ManagedAttachmentUploadNode,
         ImageGalleryNode
       ],
       register: (editor) => {
@@ -44,14 +42,12 @@ export class AttachmentsExtension extends LexxyExtension {
         const keyboardMove = new AttachmentKeyboardMove(editor)
         const fakeSelection = new AttachmentFakeSelection(editor)
         const customAttachmentLabels = new CustomAttachmentLabels(editor)
-        const handleUploadMutations = this.#handleUploadMutations.bind(this)
 
         return mergeRegister(
           editor.registerNodeTransform(ActionTextAttachmentNode, $extractAttachmentFromParagraph),
           editor.registerCommand(DELETE_CHARACTER_COMMAND, $collapseIntoGallery, COMMAND_PRIORITY_NORMAL),
           editor.registerCommand(KEY_TAB_COMMAND, $focusCaptionFromSelectedAttachment, COMMAND_PRIORITY_HIGH),
-          editor.registerMutationListener(ActionTextAttachmentUploadNode, handleUploadMutations),
-          editor.registerMutationListener(ManagedAttachmentUploadNode, handleUploadMutations),
+          editor.registerMutationListener(ActionTextAttachmentUploadNode, this.#handleUploadMutations.bind(this)),
           () => dragAndDrop.destroy(),
           () => keyboardMove.destroy(),
           () => fakeSelection.destroy(),

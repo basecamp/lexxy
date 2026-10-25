@@ -16,7 +16,6 @@ import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
 import { $findMatchingParent, $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
-import { $createManagedAttachmentUploadNode } from "../nodes/managed_attachment_upload_node"
 import NodeInserter from "./contents/node_inserter"
 import PastedContentFormatter from "./contents/pasted_content_formatter"
 import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
@@ -334,8 +333,9 @@ export default class Contents {
   }
 
   $createPendingUploadNode(file) {
-    return $createManagedAttachmentUploadNode({
+    return $createActionTextAttachmentUploadNode({
       file,
+      uploadUrl: null,
       blobUrlTemplate: this.editorElement.blobUrlTemplate,
       contentType: file.type,
     })
