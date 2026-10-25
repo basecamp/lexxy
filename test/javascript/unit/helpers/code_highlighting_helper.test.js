@@ -121,6 +121,28 @@ test("highlightElement keeps color highlights on the right text when code is ind
   expect(mark.getAttribute("style")).toContain("background-color: yellow")
 })
 
+test("highlightElement keeps links on the right text", () => {
+  const pre = appendPre("linked", "javascript", "const a = 1<br>see <a href=\"https://example.com/\">the docs</a> here")
+  document.body.appendChild(pre)
+
+  highlightElement(pre)
+
+  const anchors = Array.from(pre.querySelectorAll("a[href='https://example.com/']"))
+  expect(anchors.map((anchor) => anchor.textContent).join("")).toBe("the docs")
+  expect(pre.textContent).toBe("const a = 1\nsee the docs here")
+})
+
+test("highlightElement keeps a link overlapping a color highlight", () => {
+  const pre = appendPre("linkmark", "ruby", "def <a href=\"https://example.com/\"><mark style=\"background-color: yellow;\">hello</mark></a>")
+  document.body.appendChild(pre)
+
+  highlightElement(pre)
+
+  const anchors = Array.from(pre.querySelectorAll("a[href='https://example.com/']"))
+  expect(anchors.map((anchor) => anchor.textContent).join("")).toBe("hello")
+  expect(pre.querySelector("mark").textContent).toBe("hello")
+})
+
 function appendPre(id, language, code) {
   const pre = document.createElement("pre")
   pre.id = id

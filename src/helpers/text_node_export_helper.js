@@ -1,3 +1,5 @@
+import { $getCodeLink } from "./code_link_helper"
+
 // Custom TextNode exportDOM that avoids redundant wrapping.
 //
 // Lexical's built-in TextNode.exportDOM() calls createDOM() which produces semantic tags
@@ -11,6 +13,30 @@
 //
 // Any <span> elements produced by createDOM() are unwrapped, since they only carry
 // editor classes that aren't meaningful in exported HTML.
+
+// A CodeHighlightNode exports like any other text node, plus an <a> wrapper
+// when it carries link state — that's how a link survives inside a code
+// block, whose retokenizer would destroy an actual LinkNode child.
+export function exportCodeHighlightNodeDOM(editor, codeHighlightNode) {
+  const output = exportTextNodeDOM(editor, codeHighlightNode)
+  const link = $getCodeLink(codeHighlightNode)
+
+  if (link) {
+    return { element: wrapWithAnchor(output.element, link) }
+  } else {
+    return output
+  }
+}
+
+function wrapWithAnchor(element, link) {
+  const anchor = document.createElement("a")
+  anchor.setAttribute("href", link.url)
+  if (link.target) anchor.setAttribute("target", link.target)
+  if (link.rel) anchor.setAttribute("rel", link.rel)
+  if (link.title) anchor.setAttribute("title", link.title)
+  anchor.appendChild(element)
+  return anchor
+}
 
 export function exportTextNodeDOM(editor, textNode) {
   const element = textNode.createDOM(editor._config, editor)

@@ -1,7 +1,9 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
-import { assertEditorContent, assertEditorTableStructure } from "../../helpers/assertions.js"
+import { assertEditorContent, assertEditorHtml, assertEditorTableStructure, startMonitoringConsole } from "../../helpers/assertions.js"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
+
+const ONE_EMPTY_ROW_TABLE = `<figure class="lexxy-content__table-wrapper"><table><tbody><tr><td><p></p></td><td><p></p></td></tr></tbody></table></figure>`
 
 test.describe("Tables — Structure", () => {
   test.beforeEach(async ({ page }) => {
@@ -96,6 +98,54 @@ test.describe("Tables — Structure", () => {
     expect(errors.filter((e) => e.includes("#148"))).toHaveLength(0)
   })
 
+  test("Enter in the only row's empty first cell removes the table and moves to the paragraph after it", async ({ page, editor }) => {
+    startMonitoringConsole(page)
+    await editor.setValue(`<p>before</p>${ONE_EMPTY_ROW_TABLE}<p>after</p>`)
+    await placeCaretInFirstCell(editor)
+
+    await page.keyboard.press("Enter")
+    await page.keyboard.type("x")
+
+    expect(page).toHaveNoErrors()
+    await assertEditorHtml(editor, "<p>before</p><p>xafter</p>")
+  })
+
+  test("Enter in the only row's empty first cell of a last-block table leaves a paragraph in its place", async ({ page, editor }) => {
+    startMonitoringConsole(page)
+    await editor.setValue(`<p>before</p>${ONE_EMPTY_ROW_TABLE}`)
+    await placeCaretInFirstCell(editor)
+
+    await page.keyboard.press("Enter")
+    await page.keyboard.type("x")
+
+    expect(page).toHaveNoErrors()
+    await assertEditorHtml(editor, "<p>before</p><p>x</p>")
+  })
+
+  test("Enter in the only row's empty first cell of a table on its own leaves a paragraph in its place", async ({ page, editor }) => {
+    startMonitoringConsole(page)
+    await editor.setValue(ONE_EMPTY_ROW_TABLE)
+    await placeCaretInFirstCell(editor)
+
+    await page.keyboard.press("Enter")
+    await page.keyboard.type("x")
+
+    expect(page).toHaveNoErrors()
+    await assertEditorHtml(editor, "<p>x</p>")
+  })
+
+  test("Enter in the only row's empty first cell of a table in a quote leaves a paragraph in the quote", async ({ page, editor }) => {
+    startMonitoringConsole(page)
+    await editor.setValue(`<p>before</p><blockquote>${ONE_EMPTY_ROW_TABLE}</blockquote><p>after</p>`)
+    await placeCaretInFirstCell(editor)
+
+    await page.keyboard.press("Enter")
+    await page.keyboard.type("x")
+
+    expect(page).toHaveNoErrors()
+    await assertEditorHtml(editor, "<p>before</p><blockquote><p>x</p></blockquote><p>after</p>")
+  })
+
   test("table is wrapped in figure.table-wrapper", async ({
     page,
     editor,
@@ -176,3 +226,17 @@ test.describe("Tables with attachments", () => {
     ).toHaveCount(0)
   })
 })
+
+async function placeCaretInFirstCell(editor) {
+  await editor.focus()
+  await editor.content.evaluate((el) => {
+    const range = document.createRange()
+    range.setStart(el.querySelector("td p"), 0)
+    range.collapse(true)
+    const selection = window.getSelection()
+    selection.removeAllRanges()
+    selection.addRange(range)
+  })
+  await editor.flush()
+  await expect.poll(() => editor.content.evaluate(() => !!window.getSelection().anchorNode?.parentElement?.closest("td"))).toBe(true)
+}

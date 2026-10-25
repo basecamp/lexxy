@@ -5,7 +5,7 @@
     integrity="sha384-1HqQCBRmuWjIkPPC3Mr/vhQzt3WGxR1Cdv57xUsHhXz0Vzj2X/kiR4NLSWv30wGW" crossorigin="anonymous"></script>
 <% end %>
 
-<%= form_with model: post, url: (post.persisted? ? trix_post_path(post) : trix_posts_path), data: { turbo: false } do |form| %>
+<%= form_with model: post, url: (post.persisted? ? trix_post_path(post) : trix_posts_path) do |form| %>
   <div class="title">
     <%= form.text_field :title, placeholder: "Post title", "aria-label": "Post title" %>
   </div>
