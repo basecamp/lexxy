@@ -20,6 +20,13 @@ test("matches across a hyphenated name", () => {
   expect(filterMatchPosition(name, "Pierre")).toBe(name.indexOf("Pierre"))
 })
 
+test("matches other apostrophes against a straight one", () => {
+  const name = "Anne-Marie O'Connor"
+  expect(filterMatchPosition(name, "O’Connor")).toBe(name.indexOf("O'Connor"))
+  expect(filterMatchPosition(name, "OʼConnor")).toBe(name.indexOf("O'Connor"))
+  expect(filterMatchPosition(name, "O‘Connor")).toBe(name.indexOf("O'Connor"))
+})
+
 test("does not match mid-word", () => {
   expect(filterMatchPosition("Ковальчук", "вальчук")).toBe(-1)
   expect(filterMatchPosition("Fried", "ried")).toBe(-1)
