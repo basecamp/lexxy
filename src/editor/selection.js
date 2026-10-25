@@ -119,13 +119,13 @@ export default class Selection {
     }
   }
 
+  get linkUrl() {
+    return this.#linkAtCursor()?.getURL() ?? null
+  }
+
   nearestNodeOfType(nodeType) {
     const anchorNode = $getSelection()?.anchor?.getNode()
     return $getNearestNodeOfType(anchorNode, nodeType)
-  }
-
-  get linkUrl() {
-    return this.#linkAtCursor()?.getURL() ?? null
   }
 
   placeCursorInsideAdjacentLink() {

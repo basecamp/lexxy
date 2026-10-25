@@ -55,7 +55,7 @@ export class LinkDropdown extends ToolbarDropdown {
   }
 
   get #selectedLinkUrl() {
-    return this.editor.read(() => this.editorElement.selection.linkUrl ?? "")
+    return this.editor.getEditorState().read(() => this.editorElement.selection.linkUrl ?? "")
   }
 }
 

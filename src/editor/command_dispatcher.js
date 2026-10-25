@@ -128,6 +128,7 @@ export class CommandDispatcher {
       }
 
       this.selection.placeCursorInsideAdjacentLink()
+
       $toggleLink(null)
     })
   }
