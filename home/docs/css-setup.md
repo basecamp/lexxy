@@ -44,7 +44,9 @@ All of Lexxy's color styles are defined as CSS variables in `app/stylesheets/lex
 
 ### Text size
 
-Content inherits its font size from the surrounding page, and headings are sized relative to it. To change the size of the editor and rendered content, set `--lexxy-text-size`, for example `--lexxy-text-size: 1.125rem`. Headings scale with it. Captions, file icons and the editor's menus use `--lexxy-text-small` (`0.875rem` by default), which you can set separately.
+Content inherits its font size from the surrounding page, and headings are sized relative to it. To change the text size of the editor and rendered content, set `--lexxy-text-size` on `:root` or on any ancestor, for example `--lexxy-text-size: 1.125rem`. Headings and the toolbar scale with it. Use `rem` or `px`: an `em` value compounds when one rich text body is nested inside another.
+
+Captions, file icons and the editor's menus and dialogs use `--lexxy-text-small` (`0.875rem` by default), which you can set separately. Spacing uses `--lexxy-content-margin`.
 
 ## Rendered Action Text content
 
