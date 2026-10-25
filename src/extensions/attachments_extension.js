@@ -1,13 +1,17 @@
-import { $getSelection, $isDecoratorNode, $isParagraphNode, $splitNode, COMMAND_PRIORITY_NORMAL, DELETE_CHARACTER_COMMAND, defineExtension } from "lexical"
+import { $getSelection, $getSiblingCaret, $isDecoratorNode, $isParagraphNode, $splitNode, COMMAND_PRIORITY_HIGH, COMMAND_PRIORITY_NORMAL, DELETE_CHARACTER_COMMAND, KEY_TAB_COMMAND, defineExtension } from "lexical"
 import { mergeRegister } from "@lexical/utils"
 
 import { $findOrCreateGalleryForImage, $isImageGalleryNode, ImageGalleryNode } from "../nodes/image_gallery_node"
-import { ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { $isActionTextAttachmentNode, ActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node.js"
+import { $isProvisionalParagraphNode } from "../nodes/provisional_paragraph_node"
 import { AttachmentDragAndDrop } from "../editor/attachments/drag_and_drop"
+import { AttachmentFakeSelection } from "../editor/attachments/fake_selection"
+import { AttachmentKeyboardMove } from "../editor/attachments/keyboard_move"
+import { CustomAttachmentLabels } from "../editor/attachments/custom_attachment_labels"
+import { $isAtNodeEdge, $singleSelectedNode } from "../helpers/lexical_helper"
 
 import LexxyExtension from "./lexxy_extension"
-import { $isAtNodeEdge } from "../helpers/lexical_helper.js"
 
 const ATTACHMENT_ATTRIBUTES = [ "alt", "caption", "content", "content-type", "data-direct-upload-id",
   "data-sgid", "filename", "filesize", "height", "presentation", "previewable", "sgid", "url", "width" ]
@@ -33,12 +37,19 @@ export class AttachmentsExtension extends LexxyExtension {
       ],
       register: (editor) => {
         const dragAndDrop = new AttachmentDragAndDrop(editor)
+        const keyboardMove = new AttachmentKeyboardMove(editor)
+        const fakeSelection = new AttachmentFakeSelection(editor)
+        const customAttachmentLabels = new CustomAttachmentLabels(editor)
 
         return mergeRegister(
           editor.registerNodeTransform(ActionTextAttachmentNode, $extractAttachmentFromParagraph),
           editor.registerCommand(DELETE_CHARACTER_COMMAND, $collapseIntoGallery, COMMAND_PRIORITY_NORMAL),
+          editor.registerCommand(KEY_TAB_COMMAND, $focusCaptionFromSelectedAttachment, COMMAND_PRIORITY_HIGH),
           editor.registerMutationListener(ActionTextAttachmentUploadNode, this.#handleUploadMutations.bind(this)),
-          () => dragAndDrop.destroy()
+          () => dragAndDrop.destroy(),
+          () => keyboardMove.destroy(),
+          () => fakeSelection.destroy(),
+          () => customAttachmentLabels.destroy()
         )
       }
     })
@@ -124,12 +135,50 @@ function $collapseAtGalleryEdge(anchor, backwards) {
   const anchorNode = anchor.getNode()
   if (!$isImageGalleryNode(anchorNode)) return false
 
+  const direction = $directionFor(backwards)
+  const spacer = $spacerBeside(anchorNode, direction)
+  const sibling = $adjacentSibling(spacer ?? anchorNode, direction)
   const isAtGalleryEdge = $isAtNodeEdge(anchor, backwards)
-  const sibling = backwards ? anchorNode.getPreviousSibling() : anchorNode.getNextSibling()
 
   if (isAtGalleryEdge && anchorNode.collapseWith(sibling, backwards)) {
+    if (spacer) spacer.remove()
     const selectionOffset = backwards ? 1 : anchorNode.getChildrenSize() - 1
     anchorNode.select(selectionOffset, selectionOffset)
+    return true
+  } else {
+    return false
+  }
+}
+
+// The caret slot between a gallery and an adjacent attachment is invisible, so a merge gesture
+// has to reach across it and take it along. Only that slot: a paragraph the user left there is
+// content, and reaching across it would merge and delete in a single keystroke.
+function $spacerBeside(node, direction) {
+  const sibling = $adjacentSibling(node, direction)
+
+  if ($isProvisionalParagraphNode(sibling)) {
+    return sibling
+  } else {
+    return null
+  }
+}
+
+function $adjacentSibling(node, direction) {
+  return $getSiblingCaret(node, direction).getNodeAtCaret()
+}
+
+function $directionFor(backwards) {
+  if (backwards) {
+    return "previous"
+  } else {
+    return "next"
+  }
+}
+
+function $focusCaptionFromSelectedAttachment(event) {
+  const node = $singleSelectedNode()
+  if (!event.shiftKey && $isActionTextAttachmentNode(node) && node.focusCaption()) {
+    event.preventDefault()
     return true
   } else {
     return false

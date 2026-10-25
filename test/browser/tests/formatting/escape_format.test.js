@@ -115,6 +115,30 @@ test.describe("Escape format", () => {
     )
   })
 
+  test("insert paragraph without a selection", async ({ editor }) => {
+    await editor.setValue("<blockquote><p>Quoted</p></blockquote>")
+
+    await editor.locator.evaluate(async (el) => {
+      const { $setSelection, INSERT_PARAGRAPH_COMMAND } = await import("/@id/lexical")
+      el.editor.update(() => $setSelection(null))
+      el.editor.dispatchCommand(INSERT_PARAGRAPH_COMMAND, undefined)
+    })
+
+    await assertEditorHtml(editor, "<blockquote><p>Quoted</p></blockquote>")
+  })
+
+  test("insert paragraph with a node selection", async ({ editor }) => {
+    await editor.setValue("<blockquote><p>Quoted</p></blockquote><hr>")
+    await editor.content.locator("figure.horizontal-divider").click()
+
+    await editor.locator.evaluate(async (el) => {
+      const { INSERT_PARAGRAPH_COMMAND } = await import("/@id/lexical")
+      el.editor.dispatchCommand(INSERT_PARAGRAPH_COMMAND, undefined)
+    })
+
+    await assertEditorHtml(editor, "<blockquote><p>Quoted</p></blockquote><hr>")
+  })
+
   test("exit code block by pressing Enter on empty last line", async ({ page, editor }) => {
     await editor.setValue("<pre><code>line one</code></pre>")
     await editor.click()

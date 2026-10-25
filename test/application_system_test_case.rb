@@ -6,6 +6,9 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
 
   Capybara.app_host = "http://lexxy.localhost"
 
+  # Some controls are named with aria-label rather than a visible <label>.
+  Capybara.enable_aria_label = true
+
   include ConsoleHelper
 
   # When Chrome crashes mid-test, Capybara's reset! fails because it tries to

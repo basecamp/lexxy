@@ -15,6 +15,7 @@ import * as Lexxy from "lexxy"
 
 {: .important }
 Call `Lexxy.configure` immediately after your import statement. Editor elements are registered after the import's call stack completes, so configuration must happen synchronously to take effect.
+Make every `Lexxy.configure` call there: once Lexxy is configured right after the import, it registers the editor elements before the page is drawn, and a later call won't reach the editors already on the page.
 
 ## Ways to configure
 
