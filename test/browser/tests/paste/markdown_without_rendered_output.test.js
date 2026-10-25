@@ -1,5 +1,5 @@
 import { test } from "../../test_helper.js"
-import { assertEditorPlainText } from "../../helpers/assertions.js"
+import { assertEditorHtml, assertEditorPlainText } from "../../helpers/assertions.js"
 
 test.describe("Paste — Markdown that renders to nothing", () => {
   test.beforeEach(async ({ page, editor }) => {
@@ -29,5 +29,14 @@ test.describe("Paste — Markdown that renders to nothing", () => {
     await editor.paste(text)
 
     await assertEditorPlainText(editor, text)
+  })
+
+  test("an empty paste leaves the selection alone", async ({ editor }) => {
+    await editor.send("Hello everyone")
+    await editor.select("everyone")
+
+    await editor.paste("")
+
+    await assertEditorHtml(editor, "<p>Hello everyone</p>")
   })
 })

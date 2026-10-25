@@ -195,6 +195,8 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
+    if (!text) return
+
     const html = parsePastedMarkdown(text)
     const doc = parseHtml(html)
 
