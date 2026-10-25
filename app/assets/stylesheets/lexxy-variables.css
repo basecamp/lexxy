@@ -72,6 +72,7 @@
   /* Typography */
   --lexxy-font-base: system-ui, sans-serif;
   --lexxy-font-mono: ui-monospace, "Menlo", "Monaco", Consolas, monospace;
+  --lexxy-text-size: 1em;
   --lexxy-text-small: 0.875rem;
   --lexxy-content-margin: 1rem;
 
