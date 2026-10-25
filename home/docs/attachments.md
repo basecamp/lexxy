@@ -21,6 +21,20 @@ If you override attachment partials, pass the description to `image_tag`:
 - `app/views/active_storage/blobs/_blob.html.erb`: `alt: blob.try(:alt)`.
 - `app/views/action_text/attachables/_remote_image.html.erb`: `alt: remote_image.try(:alt)`.
 
+## Links
+
+Select an image and use the toolbar's link button to link it. Lexxy stores the URL in the attachment's `href` attribute, which Action Text already preserves. Other attachment types can't be linked.
+
+Rendering the link is up to your blob partial. To make a linked image clickable, wrap it in a link to the attachment's `href`:
+
+```erb
+<%# app/views/active_storage/blobs/_blob.html.erb %>
+<% href = blob.try(:node)&.[]("href").presence %>
+<%= link_to_if href, image_tag(blob.representation(resize_to_limit: [ 1024, 768 ]), alt: blob.try(:alt)), href %>
+```
+
+Action Text sanitizes the rendered content, so an unsafe URL such as `javascript:` is dropped.
+
 ## Upload response
 
 After a Direct Upload completes, Lexxy reads the following fields from the blob JSON returned by the upload endpoint:

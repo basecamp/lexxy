@@ -3,7 +3,7 @@ import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
 import { openToolbarDropdown } from "../../helpers/toolbar.js"
 
-const URL_INPUT = "lexxy-link-dropdown [data-dropdown-panel] input[type='url']"
+const URL_INPUT = "lexxy-link-dropdown [data-dropdown-panel] input"
 
 function attachment(href = null) {
   const hrefAttribute = href ? ` href="${href}"` : ""
@@ -85,6 +85,21 @@ test.describe("Linking attachments", () => {
     await linkTo(page, "https://example.com")
 
     expect(await editor.value()).not.toContain("href")
+  })
+
+  test("a javascript: link on a selected image is not exported", async ({ page, editor }) => {
+    await editor.setValue(attachment())
+    await selectAttachment(page)
+
+    await linkTo(page, "javascript:alert(1)")
+
+    await assertEditorHtml(editor, exportedAttachment())
+  })
+
+  test("a javascript: href on a loaded image is dropped", async ({ editor }) => {
+    await editor.setValue(attachment("javascript:alert(1)"))
+
+    await assertEditorHtml(editor, exportedAttachment())
   })
 
   test("an image in a gallery can be linked", async ({ page, editor }) => {
