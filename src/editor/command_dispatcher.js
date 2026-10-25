@@ -122,12 +122,12 @@ export class CommandDispatcher {
 
   dispatchUnlink() {
     this.editor.update(() => {
+      this.selection.placeCursorInsideAdjacentLink()
+
       // Let adapters signal whether unlink should target a frozen link key.
       if (this.editorElement.adapter.unlinkFrozenNode?.()) {
         return
       }
-
-      this.selection.placeCursorInsideAdjacentLink()
 
       $toggleLink(null)
     })
