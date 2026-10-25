@@ -15,6 +15,16 @@ class TurboCachingTest < ApplicationSystemTestCase
     assert_editor_plain_text "Hello world"
   end
 
+  test "prompts keep opening after an in-page anchor navigation" do
+    visit edit_post_path(posts(:empty))
+    assert_mounted_editor
+
+    page.execute_script("window.location.hash = 'comments'")
+
+    find_editor.send "1"
+    assert_selector ".lexxy-prompt-menu--visible"
+  end
+
   test "editor is restored intact from the Turbo page cache" do
     visit edit_post_path(posts(:empty))
     assert_mounted_editor
