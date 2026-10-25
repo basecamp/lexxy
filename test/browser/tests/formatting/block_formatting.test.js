@@ -445,7 +445,7 @@ test.describe("Block formatting", () => {
 
     await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input[type='url']").first()
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await input.fill("https://37signals.com")
     await page
@@ -457,6 +457,27 @@ test.describe("Block formatting", () => {
       editor,
       '<p>Hello <a href="https://37signals.com">everyone</a></p>',
     )
+  })
+
+  test("links to a relative path but not a bare domain", async ({ page, editor }) => {
+    await editor.setValue(HELLO_EVERYONE)
+    await editor.select("everyone")
+    await editor.flush()
+
+    await openToolbarDropdown(page, "link")
+
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
+    const linkButton = page.locator("lexxy-link-dropdown [data-dropdown-panel] button[value='link']").first()
+    await expect(input).toBeVisible({ timeout: 2_000 })
+
+    await input.fill("37signals.com")
+    await linkButton.click()
+    await expect(input).toBeVisible()
+    expect(await input.evaluate((el) => el.validity.patternMismatch)).toBe(true)
+
+    await input.fill(" /about ")
+    await linkButton.click()
+    await assertEditorHtml(editor, '<p>Hello <a href="/about">everyone</a></p>')
   })
 
   test("pressing Enter in link URL input links selection without submitting form", async ({
@@ -477,7 +498,7 @@ test.describe("Block formatting", () => {
 
     await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input[type='url']").first()
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await input.fill("https://37signals.com")
     await input.press("Enter")
@@ -503,7 +524,7 @@ test.describe("Block formatting", () => {
 
     await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input[type='url']").first()
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await expect(input).toHaveValue("https://37signals.com")
   })
@@ -518,9 +539,41 @@ test.describe("Block formatting", () => {
 
     await openToolbarDropdown(page, "link")
 
-    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input[type='url']").first()
+    const input = page.locator("lexxy-link-dropdown [data-dropdown-panel] input").first()
     await expect(input).toBeVisible({ timeout: 2_000 })
     await expect(input).toHaveValue("")
+  })
+
+  test("traps Tab at both link dialog boundaries and leaves the inner tab order to the browser", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue(HELLO_EVERYONE)
+    await editor.select("everyone")
+    await editor.flush()
+    await openToolbarDropdown(page, "link")
+
+    const dialog = page.getByRole("dialog", { name: "Link" })
+    const input = dialog.getByRole("textbox")
+    const link = dialog.getByRole("button", { name: "Link", exact: true })
+    const unlink = dialog.getByRole("button", { name: "Unlink", exact: true })
+
+    await expect(input).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(link).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(unlink).toBeFocused()
+    await page.keyboard.press("Tab")
+    await expect(input).toBeFocused()
+
+    await page.keyboard.press("Shift+Tab")
+    await expect(unlink).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(link).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(input).toBeFocused()
+    await page.keyboard.press("Shift+Tab")
+    await expect(unlink).toBeFocused()
   })
 })
 

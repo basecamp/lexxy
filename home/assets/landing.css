@@ -299,21 +299,25 @@ a:not(.btn) {
   margin-inline: 2.5rem;
   padding-block: 7% 2%;
   position: relative;
-  overflow: hidden;
   text-align: center;
   text-wrap: pretty;
 
+  /* Clips its own artwork instead of the hero clipping it, so the editor's
+     popups and dialogs can extend past the hero's bottom edge */
   .hero--bg {
-    inset-block-end: -3rem;
+    inset-block-end: 0;
     inset-inline: 0;
     opacity: 0.05;
+    overflow: hidden;
     pointer-events: none;
     position: absolute;
     z-index: 0;
 
     svg {
+      display: block;
       fill: transparent;
       stroke: var(--button-text);
+      translate: 0 3rem;
     }
   }
 
