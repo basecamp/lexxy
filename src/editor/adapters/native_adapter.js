@@ -113,7 +113,7 @@ export class NativeAdapter {
 
   #findLastTextDescendant(nodes) {
     for (let index = nodes.length - 1; index >= 0; index--) {
-      const node = nodes
+      const node = nodes[index]
       if ($isTextNode(node)) return node
       if ($isElementNode(node)) {
         const nestedTextNode = this.#findLastTextDescendant(node.getChildren())

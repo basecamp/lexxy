@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "vitest"
-import { $createLineBreakNode, $createParagraphNode, $createRangeSelection, $getRoot, $setSelection } from "lexical"
+import { $createLineBreakNode, $createParagraphNode, $createRangeSelection, $getRoot, $getSelection, $setSelection } from "lexical"
 import { LinkNode } from "@lexical/link"
 import { createTestEditorWithNativeAdapter, destroyTestEditor, selectAll, setContent, tick } from "../unit/helpers/editor_helper"
 import { captureAttributesChange } from "./helpers/attributes_capture"
@@ -120,6 +120,23 @@ describe("freeze, thaw, unlink", () => {
 
     expect(editorElement.value).not.toContain("<a ")
     expect(editorElement.adapter.frozenLinkKey).toBeNull()
+  })
+
+  test("unlinkFrozenNode selects the former link text so it can be re-linked", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p>Hello <a href='https://example.com'><strong>bold</strong> and plain</a> bye</p>")
+    editorElement.editor.update(() => {
+      $getRoot().getFirstChild().getChildAtIndex(1).getFirstChild().select(1, 1)
+    }, { discrete: true })
+    editorElement.freezeSelection()
+    editorElement.thawSelection()
+
+    editorElement.editor.update(() => {
+      editorElement.adapter.unlinkFrozenNode()
+    }, { discrete: true })
+
+    const selectedText = editorElement.editor.getEditorState().read(() => $getSelection().getTextContent())
+    expect(selectedText).toBe("bold and plain")
   })
 
   test("unlinkFrozenNode returns false when no frozen link key exists", async () => {
