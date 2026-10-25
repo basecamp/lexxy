@@ -22,7 +22,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return null
   }
 
-  constructor(node, key) {
+  constructor(node = {}, key) {
     const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError, fileName, contentType } = node
     super({ ...node, contentType: file?.type ?? contentType }, key)
     this.file = file ?? null
@@ -41,9 +41,9 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     // This side-effect is trigged on DOM load to fire only once and avoid multiple
     // uploads through cloning. The upload is guarded from restarting in case the
     // node is reloaded from saved state such as from history.
-    this.$startUploadIfNeeded()
+    this.#startUploadIfNeeded()
 
-    const canPreviewFile = this.canPreviewFileLocally
+    const canPreviewFile = this.isPreviewableAttachment && this.canPreviewFileLocally
     const figure = this.createAttachmentFigure(canPreviewFile)
 
     if (canPreviewFile) {
@@ -63,6 +63,11 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   updateDOM(prevNode, dom) {
     if (this.uploadError !== prevNode.uploadError) return true
+
+    const image = dom.querySelector("img")
+    if (image && prevNode.altText !== this.altText) {
+      image.alt = this.altText
+    }
 
     if (prevNode.progress !== this.progress) {
       const progress = dom.querySelector("progress")
@@ -92,12 +97,19 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     }
   }
 
+  // Bridge-managed uploads (no uploadUrl) and restored or remote instances
+  // (no local File) don't have file data to preview, so they show the file
+  // icon during upload and the server URL once uploaded.
+  get canPreviewFileLocally() {
+    return this.uploadUrl != null && this.file != null
+  }
+
   get #uploadStarted() {
     return this.progress !== null
   }
 
   #createDOMForImage() {
-    return createElement("img")
+    return createElement("img", { alt: this.altText })
   }
 
   #createDOMForFile() {
@@ -114,9 +126,12 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     const figcaption = createElement("figcaption", { className: "attachment__caption" })
 
     const nameSpan = createElement("span", { className: "attachment__name", textContent: this.caption || this.fileName || "" })
-    const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.file?.size) })
     figcaption.appendChild(nameSpan)
-    figcaption.appendChild(sizeSpan)
+
+    if (this.file) {
+      const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.file.size) })
+      figcaption.appendChild(sizeSpan)
+    }
 
     return figcaption
   }
@@ -135,12 +150,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return Boolean(this.width && this.height)
   }
 
-  get canPreviewFileLocally() {
-    return this.isPreviewableAttachment
-  }
-
-  async $startUploadIfNeeded() {
+  async #startUploadIfNeeded() {
     if (this.#uploadStarted) return
+    if (!this.uploadUrl) return // Bridge-managed upload — skip DirectUpload
+    if (!this.file) return // Restored or remote instance — no local File to upload
 
     this.#setUploadStarted()
 
@@ -152,6 +165,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     this.#dispatchEvent("lexxy:upload-start", { file: this.file })
 
     upload.create((error, blob) => {
+      this.#forgetUploadRequest()
+
       if (error) {
         this.#dispatchEvent("lexxy:upload-end", { file: this.file, error })
         this.#handleUploadError(error)
@@ -174,10 +189,24 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       directUploadWillStoreFileWithXHR: (request) => {
         if (shouldAuthenticateUploads) request.withCredentials = true
 
+        this.#rememberUploadRequest(request)
+
         const uploadProgressHandler = (event) => this.#handleUploadProgress(event, request)
         request.upload.addEventListener("progress", uploadProgressHandler)
       }
     }
+  }
+
+  #forgetUploadRequest() {
+    this.#editorElement?.uploadRequests.forget(this.getKey())
+  }
+
+  #rememberUploadRequest(request) {
+    this.#editorElement?.uploadRequests.track(this.getKey(), request)
+  }
+
+  get #editorElement() {
+    return this.editor.getRootElement()?.closest("lexxy-editor")
   }
 
   #setUploadStarted() {
@@ -205,16 +234,12 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   $showUploadedAttachment(blob) {
-    const previewSrc = this.$buildPreviewSrcForBlob(blob)
+    const previewSrc = this.isPreviewableImage && this.canPreviewFileLocally ? URL.createObjectURL(this.file) : null
 
     const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
     this.replaceAndRewriteHistory(replacementNode)
 
     return replacementNode.getKey()
-  }
-
-  $buildPreviewSrcForBlob(_blob) {
-    return this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
   }
 
   #toActionTextAttachmentNodeWith(blob, previewSrc) {
@@ -249,11 +274,11 @@ class AttachmentNodeConversion {
     const { blob } = this
     return {
       sgid: blob.attachable_sgid,
-      altText: blob.filename,
       contentType: blob.content_type,
       fileName: blob.filename,
       fileSize: blob.byte_size,
       previewable: blob.previewable,
+      previewStatusUrl: blob.preview_status_url
     }
   }
 

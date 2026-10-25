@@ -48,7 +48,7 @@ test.describe("Horizontal divider", () => {
     await assertEditorHtml(editor, "<p>Text before</p><p>Text after</p>")
   })
 
-  test("delete horizontal divider with the delete button", async ({
+  test("delete horizontal divider with the toolbar button", async ({
     page,
     editor,
   }) => {
@@ -60,11 +60,10 @@ test.describe("Horizontal divider", () => {
       .locator("figure.horizontal-divider")
       .click()
 
-    await expect(
-      editor.locator.locator("lexxy-node-delete-button"),
-    ).toBeVisible()
-    await editor.locator
-      .locator("lexxy-node-delete-button button[aria-label='Remove']")
+    const toolbar = editor.locator.locator("lexxy-attachment-toolbar")
+    await expect(toolbar).toBeVisible()
+    await toolbar
+      .locator("button[aria-label='Remove']")
       .click()
 
     await assertEditorContent(editor, async (content) => {
@@ -73,6 +72,19 @@ test.describe("Horizontal divider", () => {
       ).toHaveCount(0)
     })
     await assertEditorHtml(editor, "<p>Text before</p><p>Text after</p>")
+  })
+
+  test("insert horizontal divider at start of heading", async ({ page, editor }) => {
+    await editor.setValue("<h2>Heading</h2>")
+    await editor.content.locator("h2").click()
+    await editor.send("Home")
+
+    await page.getByRole("button", { name: "Insert a divider" }).click()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("figure.horizontal-divider hr")).toBeVisible()
+    })
+    await assertEditorHtml(editor, "<h2><br></h2><hr><h2>Heading</h2>")
   })
 
   test("horizontal divider with surrounding content", async ({
@@ -91,6 +103,33 @@ test.describe("Horizontal divider", () => {
       editor,
       "<p>Before divider</p><hr><p>After divider</p>",
     )
+  })
+
+  test("undo typing next to a horizontal divider removes the whole run", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello</p><hr>")
+    await editor.content.locator("p").first().click()
+    await editor.send("End")
+    await editor.send(" world")
+
+    await page.getByRole("button", { name: "Undo" }).click()
+
+    await assertEditorHtml(editor, "<p>Hello</p><hr>")
+  })
+
+  test("the paragraph after a trailing divider shows only while the caret is in it", async ({ editor }) => {
+    await editor.setValue("<p>Hello</p><hr>")
+    const provisionalParagraph = editor.content.locator("p.provisional-paragraph")
+
+    await editor.content.locator("p").first().click()
+    await expect(provisionalParagraph).toContainClass("hidden")
+
+    await editor.send("ArrowDown")
+    await editor.send("ArrowDown")
+    await expect(provisionalParagraph).not.toContainClass("hidden")
+
+    await editor.send("ArrowUp")
+    await editor.send("ArrowUp")
+    await expect(provisionalParagraph).toContainClass("hidden")
   })
 })
 

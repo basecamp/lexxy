@@ -1,4 +1,4 @@
-import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
+import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
@@ -21,6 +21,35 @@ export function $createNodeSelectionWith(...nodes) {
   return selection
 }
 
+export function $singleSelectedNode() {
+  const selection = $getSelection()
+  if ($isNodeSelection(selection)) {
+    const nodes = selection.getNodes()
+    if (nodes.length === 1) {
+      return nodes[0]
+    } else {
+      return null
+    }
+  } else {
+    return null
+  }
+}
+
+export function $selectedLabelledDecoratorNode() {
+  const node = $singleSelectedNode()
+  if (typeof node?.label === "string") {
+    return { key: node.getKey(), label: node.label }
+  } else {
+    return null
+  }
+}
+
+export function registerLabelledDecoratorSelection(editor, onChange) {
+  return editor.registerUpdateListener(({ editorState }) => {
+    onChange(editorState.read($selectedLabelledDecoratorNode))
+  })
+}
+
 export function $isShadowRoot(node) {
   return $isElementNode(node) && $isRootOrShadowRoot(node) && !$isRootNode(node)
 }
@@ -32,14 +61,22 @@ export function $isSafeForRoot(node) {
 export function $makeSafeForRoot(node) {
   if ($isSafeForRoot(node)) {
     return node
-  } else {
+  } else if (node.getParent()) {
     return $wrapNodeInElement(node, () => node.createParentElementNode())
+  } else {
+    // Detached nodes (e.g. clipboard nodes being inserted) can't be `replace`d in place,
+    // so append them into a fresh required parent instead.
+    return node.createParentElementNode().append(node)
   }
 }
 
 export function getListType(node) {
   const list = $getNearestNodeOfType(node, ListNode)
   return list?.getListType() ?? null
+}
+
+export function announceFromEditor(editor, message) {
+  editor.getRootElement()?.closest("lexxy-editor")?.announce(message)
 }
 
 export function isEditorFocused(editor) {
@@ -64,14 +101,14 @@ export function extendTextNodeConversion(conversionName, ...callbacks) {
     ...conversionOutput,
     forChild: (lexicalNode, parentNode) => {
       const originalForChild = conversionOutput?.forChild ?? (x => x)
-      let childNode = originalForChild(lexicalNode, parentNode)
-
+      const childNode = originalForChild(lexicalNode, parentNode)
 
       if ($isTextNode(childNode)) {
-        childNode = callbacks.reduce(
+        return callbacks.reduce(
           (childNode, callback) => callback(childNode, element) ?? childNode,
           childNode
         )
+      } else {
         return childNode
       }
     }
@@ -148,6 +185,39 @@ export function $isListItemStructurallyEmpty(listItem) {
   return true
 }
 
+// Returns the document text up to `offset` inside `targetNode`. Non-inline
+// element siblings are joined with `\n\n`, matching Lexical's own
+// ElementNode.getTextContent behavior.
+export function $textBeforeOffset(targetNode, offset) {
+  const parts = []
+  let done = false
+
+  function visit(node) {
+    if (done) return
+    if (node === targetNode) {
+      parts.push(node.getTextContent().slice(0, offset))
+      done = true
+      return
+    }
+    if ($isElementNode(node)) {
+      const children = node.getChildren()
+      for (let i = 0; i < children.length; i++) {
+        visit(children[i])
+        if (done) return
+        const child = children[i]
+        if ($isElementNode(child) && !child.isInline() && i < children.length - 1) {
+          parts.push("\n\n")
+        }
+      }
+    } else {
+      parts.push(node.getTextContent())
+    }
+  }
+
+  visit($getRoot())
+  return parts.join("")
+}
+
 export function isAttachmentSpacerTextNode(node, previousNode, index, childCount) {
   return $isTextNode(node)
     && node.getTextContent() === " "
@@ -188,8 +258,9 @@ export function $splitSelectedParagraphsAtInnerLineBreaks(selection) {
   }
 }
 
-export function $expandSelectionToLineBreaksAndSplitAtEdges(selection) {
+export function $expandSelectionToLineBreaksAndSplitAtEdges(selection, fallbackAncestor = (node) => node.getTopLevelElement()) {
   $ensureForwardRangeSelection(selection)
+  $shrinkSelectionPastBlockEdges(selection)
 
   const focusCaret = $caretFromPoint(selection.focus, "next")
   const anchorCaret = $caretFromPoint(selection.anchor, "previous")
@@ -208,8 +279,8 @@ export function $expandSelectionToLineBreaksAndSplitAtEdges(selection) {
   const focusOuter = focusBrCaret && $splitAroundLineBreak(focusBrCaret)
   const anchorOuter = anchorBrCaret && $splitAroundLineBreak(anchorBrCaret)
 
-  const innerStart = anchorOuter?.getNextSibling() ?? selection.anchor.getNode().getTopLevelElement()
-  const innerEnd = focusOuter?.getPreviousSibling() ?? selection.focus.getNode().getTopLevelElement()
+  const innerStart = anchorOuter?.getNextSibling() ?? fallbackAncestor(selection.anchor.getNode())
+  const innerEnd = focusOuter?.getPreviousSibling() ?? fallbackAncestor(selection.focus.getNode())
   if (!innerStart || !innerEnd) return
 
   $setSelectionFromCaretRange($getCaretRange(
@@ -219,6 +290,67 @@ export function $expandSelectionToLineBreaksAndSplitAtEdges(selection) {
       "next",
     ),
   ))
+}
+
+// A selection whose anchor sits at the very end of one block while its focus
+// lives in a later block (e.g. selecting a pasted paragraph when the browser
+// anchors at the end of the line above) contributes nothing from the anchor's
+// block. Pull each endpoint that is flush against a block edge into the block
+// that actually holds the selected content, so we don't wrap the empty edge
+// block too.
+function $shrinkSelectionPastBlockEdges(selection) {
+  if (selection.isCollapsed()) return
+
+  const anchorBlock = selection.anchor.getNode().getTopLevelElement()
+  const focusBlock = selection.focus.getNode().getTopLevelElement()
+  if (!anchorBlock || !focusBlock || anchorBlock.is(focusBlock)) return
+
+  if ($isAtBlockEnd(selection.anchor, anchorBlock)) {
+    const nextBlock = $nearestElementSibling(anchorBlock, "next")
+    if (nextBlock) selection.anchor.set(nextBlock.getKey(), 0, "element")
+  }
+
+  if ($isAtBlockStart(selection.focus, focusBlock)) {
+    const previousBlock = $nearestElementSibling(focusBlock, "previous")
+    if (previousBlock) selection.focus.set(previousBlock.getKey(), previousBlock.getChildrenSize(), "element")
+  }
+
+  // Shrinking moves the endpoints toward each other, so they can cross when
+  // both were flush against block edges; callers assume a forward selection.
+  $ensureForwardRangeSelection(selection)
+}
+
+// Top-level decorator blocks (attachments, horizontal dividers) can't hold a
+// selection point, so walk past them to the nearest element sibling. Returns
+// null when no element sibling exists in that direction.
+function $nearestElementSibling(block, direction) {
+  let sibling = block
+  do {
+    sibling = direction === "next" ? sibling.getNextSibling() : sibling.getPreviousSibling()
+  } while (sibling && !$isElementNode(sibling))
+  return sibling
+}
+
+function $isAtBlockEnd(point, block) {
+  return $isAtBlockBoundary($caretFromPoint(point, "next"), block)
+}
+
+function $isAtBlockStart(point, block) {
+  return $isAtBlockBoundary($caretFromPoint(point, "previous"), block)
+}
+
+// A text point sitting mid-node still has content ahead of it in the caret's
+// direction, even though that content is not a sibling node. $getNodeAtCaret
+// only sees siblings, so check the text edge before walking the block.
+function $isAtBlockBoundary(caret, block) {
+  if ($isTextPointCaret(caret) && $isExtendableTextPointCaret(caret)) return false
+
+  let cursor = $normalizeCaret(caret)
+  while (cursor && block.isParentOf(cursor.origin)) {
+    if (cursor.getNodeAtCaret()) return false
+    cursor = cursor.getParentCaret()
+  }
+  return true
 }
 
 function $getCaretAtLineBreakBoundary(caret, skipInwardEdge = false) {
@@ -315,3 +447,52 @@ function $splitAroundLineBreak(lineBreakCaret) {
   return outer
 }
 
+// A container of blocks — a quote holding paragraphs, a list holding items — has no caret
+// position of its own at `direction`'s edge: the nearest one belongs to the child block
+// inside it, which reads as being within the container rather than beside it.
+export function $isBlockContainer(node, direction = "next") {
+  if (!$isElementNode(node)) return false
+
+  const edgeChild = $getChildCaret(node, direction).getNodeAtCaret()
+  return ($isElementNode(edgeChild) || $isDecoratorNode(edgeChild)) && !edgeChild.isInline()
+}
+
+// Lexical's RangeSelection.insertNodes/insertLineBreak require every selection point to have a
+// block ancestor with inline children. An element point on a container of block nodes — e.g. a
+// quote holding paragraphs — has none, so Lexical throws invariant #211 or #212. This detects
+// such a point so callers can descend it to a leaf before inserting.
+export function $isPointOnBlockContainer(point) {
+  return point.type === "element" && $isBlockContainer(point.getNode())
+}
+
+export function $hasPointOnBlockContainer(selection) {
+  return $isRangeSelection(selection) &&
+    [ selection.anchor, selection.focus ].some($isPointOnBlockContainer)
+}
+
+// Descend any block-container element point in the selection to a leaf position, so a subsequent
+// Lexical insert (insertNodes, insertLineBreak, INSERT_PARAGRAPH) doesn't throw invariant #211/#212.
+export function $normalizeBlockContainerSelection(selection = $getSelection()) {
+  if (!$hasPointOnBlockContainer(selection)) return false
+
+  $normalizeSelection(selection)
+  return true
+}
+
+export function $consecutiveSiblingGroups(blocks) {
+  const ordered = [ ...blocks ].sort((a, b) => a.getIndexWithinParent() - b.getIndexWithinParent())
+  const groups = []
+
+  for (const block of ordered) {
+    const lastGroup = groups.at(-1)
+    const previous = lastGroup?.at(-1)
+
+    if (previous && previous.getParent().is(block.getParent()) && previous.getNextSibling()?.is(block)) {
+      lastGroup.push(block)
+    } else {
+      groups.push([ block ])
+    }
+  }
+
+  return groups
+}

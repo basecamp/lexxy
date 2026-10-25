@@ -82,11 +82,10 @@ test.describe("Mentions", () => {
     expect(positions.textBottom).toBeGreaterThan(positions.mentionTop)
   })
 
-  test("popover stays within viewport when triggered near right edge", async ({ page, editor }) => {
+  test("popover stays within the editor when triggered near the editor's right edge", async ({ page, editor }) => {
     await page.setViewportSize({ width: 400, height: 600 })
     await editor.locator.evaluate((el) => {
-      el.style.width = "150px"
-      el.style.marginLeft = "auto"
+      el.style.width = "220px"
     })
 
     await editor.send("Some text @")
@@ -98,7 +97,11 @@ test.describe("Mentions", () => {
       const r = el.getBoundingClientRect()
       return { left: r.left, right: r.right }
     })
-    expect(rect.right).toBeLessThanOrEqual(400)
-    expect(rect.left).toBeGreaterThanOrEqual(0)
+    const editorRect = await editor.locator.evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      return { left: r.left, right: r.right }
+    })
+    expect(rect.right).toBeLessThanOrEqual(editorRect.right)
+    expect(rect.left).toBeGreaterThanOrEqual(editorRect.left)
   })
 })

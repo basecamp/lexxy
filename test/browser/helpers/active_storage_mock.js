@@ -1,19 +1,26 @@
 // Mocks the Active Storage direct upload endpoints using Playwright route interception.
 // Returns a handle for asserting that the expected calls were made.
 
-// 1×1 transparent PNG used as a fallback when the fixture file doesn't exist on disk.
-const TRANSPARENT_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==",
+// Fallback preview image. Must be byte-valid — Firefox rejects malformed data and
+// fires <img> onerror, reverting the preview swap to the file icon (a flake). Must
+// also be wider than the figure's min-inline-size (10ch); a sub-figure image leaves
+// the figure chrome on top of the click point, so Firefox reports the figure as
+// intercepting pointer events when tests click the preview img.
+const FALLBACK_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAHgAAABaCAYAAABzAJLvAAAA6ElEQVR4nO3RwQkAIBDAMMe+Ed1KxxBqHvkXumb2oWu9DsBgDMbgTxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcZ3CcwXEGxxkcdwGOw47/2hYVfQAAAABJRU5ErkJggg==",
   "base64"
 )
 
-export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0 } = {}) {
+export async function mockActiveStorageUploads(page, { delayBlobResponses = false, delayDirectUploadResponse = false, uploadDelayMs = 0, holdFileUploads = false, includePreviewStatusUrl = false, previewStatusInitiallyProcessing = true, previewReadyStatus = 410, failBlobResponses = false } = {}) {
   let blobCounter = 0
-  const calls = { blobCreations: [], fileUploads: [] }
+  const calls = { blobCreations: [], fileUploads: [], previewStatusRequests: [], previewUrlRequests: [] }
   const pendingBlobRoutes = []
   const pendingDirectUploadRoutes = []
   let blobsReleased = false
   let directUploadReleased = false
+  let previewProcessing = previewStatusInitiallyProcessing
+
+  calls.markPreviewReady = () => { previewProcessing = false }
 
   // When delayBlobResponses is true, GET /blobs/* requests are held until
   // calls.releaseBlobResponses() is called. This lets tests assert the local
@@ -66,6 +73,9 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
           attachable_sgid: `mock-sgid-${blobId}`,
           previewable: previewable || undefined,
           url: previewable ? `/rails/active_storage/blobs/${signedId}/previews/full` : undefined,
+          preview_status_url: previewable && includePreviewStatusUrl
+            ? `/rails/active_storage/blobs/${signedId}/preview_status`
+            : undefined,
           direct_upload: {
             url: `/rails/active_storage/disk/${signedId}`,
             headers: { "Content-Type": blob.content_type },
@@ -87,21 +97,29 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
     if (request.method() !== "GET") return route.fallback()
 
     const url = new URL(request.url())
+    if (url.pathname.includes("/previews/")) {
+      calls.previewUrlRequests.push(request.url())
+    }
     const filename = decodeURIComponent(url.pathname.split("/").pop())
     const blob = calls.blobCreations.find(b => b.filename === filename)
     const contentType = blob?.content_type || "application/octet-stream"
 
     const fulfill = async () => {
-      // Serve the fixture file if it exists, otherwise return a 1×1 transparent PNG.
+      if (failBlobResponses) {
+        await route.fulfill({ status: 500 })
+        return
+      }
+
+      // Serve the fixture file if it exists, otherwise the small FALLBACK_PNG.
       // The fixture file is only needed when delayBlobResponses is true (preview swap test).
-      // For other tests, always serve the tiny PNG to avoid layout shifts from full-size
-      // images that can break position-dependent tests like drag and drop.
+      // The fallback keeps full-size images out of other tests to avoid layout shifts
+      // that can break position-dependent tests like drag and drop.
       const fs = await import("fs")
       const fixturePath = `test/fixtures/files/${filename}`
       if (delayBlobResponses && fs.existsSync(fixturePath)) {
         await route.fulfill({ status: 200, contentType, path: fixturePath })
       } else {
-        await route.fulfill({ status: 200, contentType: "image/png", body: TRANSPARENT_PNG })
+        await route.fulfill({ status: 200, contentType: "image/png", body: FALLBACK_PNG })
       }
     }
 
@@ -109,6 +127,28 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
       pendingBlobRoutes.push(fulfill)
     } else {
       await fulfill()
+    }
+  })
+
+  // GET /rails/active_storage/blobs/*/preview_status — status endpoint Lexxy
+  // polls when the host opts into deferred preview rendering. 200 = still
+  // processing, 410 (or any non-2xx) = ready. Registered after the general
+  // blobs route so it takes precedence (Playwright matches routes in reverse
+  // registration order).
+  await page.route("**/rails/active_storage/blobs/*/preview_status", async (route) => {
+    if (route.request().method() !== "GET") return route.fallback()
+
+    calls.previewStatusRequests.push(route.request().url())
+
+    if (previewProcessing) {
+      await route.fulfill({ status: 200 })
+    } else {
+      await route.fulfill({
+        status: previewReadyStatus,
+        headers: previewReadyStatus >= 300 && previewReadyStatus < 400
+          ? { Location: "/rails/active_storage/blobs/elsewhere/previews/full" }
+          : {}
+      })
     }
   })
 
@@ -121,6 +161,11 @@ export async function mockActiveStorageUploads(page, { delayBlobResponses = fals
       url: request.url(),
       contentType: request.headers()["content-type"],
     })
+
+    // When holdFileUploads is true, the PUT is never fulfilled, keeping the
+    // upload in flight. This lets tests assert that trashing an attachment
+    // aborts the connection (Playwright reports an aborted request as failed).
+    if (holdFileUploads) return
 
     if (uploadDelayMs > 0) {
       await page.waitForTimeout(uploadDelayMs)

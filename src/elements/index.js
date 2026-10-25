@@ -1,11 +1,13 @@
 import Toolbar from "./toolbar"
 import ToolbarDropdown from "./toolbar_dropdown"
+import HeadingDropdown from "./dropdown/heading"
 import HighlightDropdown from "./dropdown/highlight"
 import LinkDropdown from "./dropdown/link"
 import Editor from "./editor"
+import LiveRegion from "./live_region"
 import Prompt from "./prompt"
 import CodeLanguagePicker from "./code_language_picker"
-import NodeDeleteButton from "./node_delete_button"
+import AttachmentToolbar from "./attachment_toolbar"
 import TableTools from "./table/table_tools"
 
 export function defineElements() {
@@ -13,6 +15,7 @@ export function defineElements() {
     // Toolbar must be registered BEFORE Editor
     "lexxy-toolbar": Toolbar,
     "lexxy-toolbar-dropdown": ToolbarDropdown,
+    "lexxy-heading-dropdown": HeadingDropdown,
     "lexxy-highlight-dropdown": HighlightDropdown,
     "lexxy-link-dropdown": LinkDropdown,
 
@@ -21,7 +24,8 @@ export function defineElements() {
     // Prompt must be registered AFTER Editor
     "lexxy-prompt": Prompt,
     "lexxy-code-language-picker": CodeLanguagePicker,
-    "lexxy-node-delete-button": NodeDeleteButton,
+    "lexxy-live-region": LiveRegion,
+    "lexxy-attachment-toolbar": AttachmentToolbar,
     "lexxy-table-tools": TableTools
   }
 

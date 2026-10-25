@@ -90,3 +90,39 @@ test.describe("Code block navigation", () => {
     })
   })
 })
+
+test.describe("Code block conversion", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await page.waitForSelector("lexxy-toolbar[connected]")
+  })
+
+  test("converts a selection spanning a paragraph and a quote", async ({ page, editor }) => {
+    await editor.setValue("<p>before</p><blockquote><p>quoted</p></blockquote>")
+    await editor.selectAll()
+
+    await page.getByRole("button", { name: "Code" }).click()
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code")).toContainText("before")
+      await expect(content.locator("code")).toContainText("quoted")
+      await expect(content.locator("blockquote")).toHaveCount(0)
+    })
+  })
+
+  test("converts a selection spanning a nested list", async ({ page, editor }) => {
+    await editor.setValue("<ul><li>item one<ul><li>nested</li></ul></li></ul>")
+    await editor.selectAll()
+
+    await page.getByRole("button", { name: "Code" }).click()
+    await editor.flush()
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("code")).toContainText("item one")
+      await expect(content.locator("code")).toContainText("nested")
+      await expect(content.locator("li")).toHaveCount(0)
+    })
+  })
+})
