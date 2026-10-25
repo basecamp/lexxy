@@ -1,3 +1,4 @@
+import { $getNodeByKey } from "lexical"
 import Lexxy from "../config/lexxy"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
 import { createElement, dispatch } from "../helpers/html_helper"
@@ -232,10 +233,16 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   $showUploadedAttachment(blob) {
     const previewSrc = this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
 
-    const replacementNode = this.#toActionTextAttachmentNodeWith(this.getLatest(), blob, previewSrc)
+    const replacementNode = this.#toActionTextAttachmentNodeWith(this.#latest, blob, previewSrc)
     this.replaceAndRewriteHistory(replacementNode, (uploadNode) => this.#toActionTextAttachmentNodeWith(uploadNode, blob, previewSrc))
 
     return replacementNode.getKey()
+  }
+
+  // The node the upload started from, as edited since. It is gone when the
+  // attachment was removed mid-upload, and only history entries still hold it.
+  get #latest() {
+    return $getNodeByKey(this.getKey()) ?? this
   }
 
   #toActionTextAttachmentNodeWith(uploadNode, blob, previewSrc) {
