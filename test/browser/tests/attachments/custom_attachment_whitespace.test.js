@@ -71,4 +71,32 @@ test.describe("Whitespace around custom attachments", () => {
 
     expect(await editor.value()).toMatch(/^<p>Hello <bc-attachment [^>]*><\/bc-attachment><em> <\/em>there<\/p>$/)
   })
+
+  test("keeps a single space between attachments when it is split across formats", async ({ editor }) => {
+    await editor.setValue(`<p>${mention}<strong> </strong><em> </em>${mention}</p>`)
+    await editor.flush()
+
+    expect(await editor.value()).toMatch(/<\/bc-attachment>(<strong> <\/strong>| )<bc-attachment/)
+  })
+
+  test("ignores whitespace between paragraphs", async ({ editor }) => {
+    await editor.setValue(`<p>before</p>\n<p>${mention}</p>\n<p>after</p>`)
+    await editor.flush()
+
+    expect(await editor.value()).toMatch(/<p><bc-attachment [^>]*><\/bc-attachment><\/p>/)
+  })
+
+  test("does not add a space next to an adjacent wrapped attachment", async ({ editor }) => {
+    await editor.setValue(`<p>Hi <strong>${mention}</strong>${mention}<em>${mention}</em> there</p>`)
+    await editor.flush()
+
+    expect(await editor.value()).toMatch(/^<p>Hi (<bc-attachment [^>]*><\/bc-attachment>){3}<em> <\/em>there<\/p>$/)
+  })
+
+  test("keeps the space after a wrapped attachment that follows text", async ({ editor }) => {
+    await editor.setValue(`<p><mark>Hi${mention}</mark> ${mention}</p>`)
+    await editor.flush()
+
+    expect(await editor.value()).toMatch(/<\/bc-attachment> <bc-attachment/)
+  })
 })

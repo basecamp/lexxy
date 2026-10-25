@@ -214,47 +214,73 @@ export function $isCustomActionTextAttachmentNode(node) {
 
 // Lexical collapses whitespace on import the way browsers do, but treats an inline
 // decorator as a line boundary, so the space between text and an attachment is
-// dropped. These helpers mirror its rules ($convertTextDOMNode and findTextInLine)
-// to restore exactly the spaces it dropped. ASCII whitespace only: Lexical keeps NBSP.
+// dropped. Restore exactly the spaces it drops, following its rules in
+// $convertTextDOMNode. ASCII whitespace only: Lexical keeps NBSP.
 function endsWithStrippedSpace(attachment) {
-  const text = textInLine(attachment, false)
-  return /[ \t\r\n]$/.test(text?.data) && isTrailingSpaceStripped(text) && !isRestoredBetweenAttachments(text)
+  const text = textBeside(attachment, false)
+  return /[ \t\r\n]$/.test(text?.data) && isTrailingSpaceStripped(text) && !isRestoredByPreviousAttachment(text)
 }
 
 function startsWithStrippedSpace(attachment) {
-  const text = textInLine(attachment, true)
+  const text = textBeside(attachment, true)
   return /^[ \t\r\n]/.test(text?.data) && isLeadingSpaceStripped(text)
 }
 
 function isTrailingSpaceStripped(text) {
   let next = text
-  while ((next = textInLine(next, true))) {
+  while ((next = lexicalTextInLine(next, true))) {
     if (/[^ \t\r\n]/.test(next.data)) return false
   }
   return true
 }
 
 function isLeadingSpaceStripped(text) {
-  const previous = textInLine(text, false)
+  const previous = lexicalTextInLine(text, false)
   return !previous || /[ \t\r\n]$/.test(previous.data)
 }
 
 // Whitespace alone between two attachments was already restored by the first one.
-function isRestoredBetweenAttachments(text) {
-  return /^[ \t\r\n]+$/.test(text.data) && isCustomAttachment(leafInLine(text, false))
-}
-
-function textInLine(node, forward) {
-  let leaf = node
-  while ((leaf = leafInLine(leaf, forward))?.nodeType === Node.TEXT_NODE) {
-    if (leaf.data) return leaf
+function isRestoredByPreviousAttachment(text) {
+  let leaf = text
+  while (/^[ \t\r\n]+$/.test(leaf?.data)) {
+    leaf = leafBeside(leaf, false)
   }
-  return null
+  return isCustomAttachment(leaf) && startsWithStrippedSpace(leaf)
 }
 
-// Returns the next text node in the line, or the line break, block or inline
-// decorator that ends it. Comments and empty inline elements are skipped.
-function leafInLine(node, forward) {
+function textBeside(node, forward) {
+  const leaf = leafBeside(node, forward)
+  if (leaf?.nodeType === Node.TEXT_NODE) {
+    return leaf
+  } else {
+    return null
+  }
+}
+
+// The text next to a node within its line, or the line break, block or other
+// attachment that comes first. Comments and empty inline elements are skipped.
+function leafBeside(node, forward) {
+  while (true) {
+    let sibling
+    while ((sibling = forward ? node.nextSibling : node.previousSibling) === null) {
+      node = node.parentElement
+      if (node === null || !isInlineDomNode(node)) return null
+    }
+
+    node = sibling
+    while (isInlineDomNode(node) && (forward ? node.firstChild : node.lastChild)) {
+      node = forward ? node.firstChild : node.lastChild
+    }
+
+    if ((node.nodeType === Node.TEXT_NODE && node.data) || (node.nodeType === Node.ELEMENT_NODE && !isInlineDomNode(node))) {
+      return node
+    }
+  }
+}
+
+// Lexical's findTextInLine, which decides what its own text conversion strips. Unlike
+// leafBeside, it only stops at a decorator met as a sibling and descends through any other.
+function lexicalTextInLine(node, forward) {
   while (true) {
     let sibling
     while ((sibling = forward ? node.nextSibling : node.previousSibling) === null) {
@@ -263,13 +289,17 @@ function leafInLine(node, forward) {
     }
 
     node = sibling
-    if (node.nodeType === Node.ELEMENT_NODE && !isInlineDomNode(node)) return node
+    if (node.nodeType === Node.ELEMENT_NODE && !isInlineDomNode(node)) return null
 
     while (forward ? node.firstChild : node.lastChild) {
       node = forward ? node.firstChild : node.lastChild
     }
 
-    if (node.nodeType === Node.TEXT_NODE || node.nodeName === "BR") return node
+    if (node.nodeType === Node.TEXT_NODE && node.data) {
+      return node
+    } else if (node.nodeName === "BR") {
+      return null
+    }
   }
 }
 
