@@ -245,8 +245,7 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#setButtonPressed("format", isInHeading)
     this.#setButtonChecked("paragraph", !isInHeading)
 
-    this.querySelector("lexxy-heading-dropdown")
-      ?.updateActiveHeading(headingTag)
+    this.querySelectorAll("lexxy-heading-dropdown").forEach((dropdown) => dropdown.updateActiveHeading(headingTag))
 
     this.#setButtonPressed("lists", isInList)
     this.#setButtonPressed("unordered-list", isInList && listType === "bullet")
@@ -271,22 +270,25 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #setButtonPressed(name, isPressed) {
-    const button = this.querySelector(`[name="${name}"]`)
-    if (button?.getAttribute("role") === "menuitemcheckbox") {
-      button.ariaChecked = isPressed
-    } else if (button) {
-      button.ariaPressed = isPressed
-    }
+    this.#buttonsNamed(name).forEach((button) => {
+      if (button.getAttribute("role") === "menuitemcheckbox") {
+        button.ariaChecked = isPressed
+      } else {
+        button.ariaPressed = isPressed
+      }
+    })
   }
 
   #setButtonChecked(name, isChecked) {
-    const button = this.querySelector(`[name="${name}"]`)
-    if (button) button.ariaChecked = isChecked
+    this.#buttonsNamed(name).forEach((button) => { button.ariaChecked = isChecked })
   }
 
   #setButtonDisabled(name, isDisabled) {
-    const button = this.querySelector(`[name="${name}"]`)
-    if (button) button.ariaDisabled = isDisabled
+    this.#buttonsNamed(name).forEach((button) => { button.ariaDisabled = isDisabled })
+  }
+
+  #buttonsNamed(name) {
+    return this.querySelectorAll(`[name="${name}"]`)
   }
 
   #refreshOverflow() {

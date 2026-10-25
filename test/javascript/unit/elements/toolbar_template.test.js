@@ -99,6 +99,10 @@ test("dropdowns can't go inside a dropdown group", () => {
   expect(() => build([ { name: "more", label: "More", items: [ { name: "nested", label: "Nested", items: [] } ] } ])).toThrow(/can't go in a dropdown group/)
 })
 
+test("a group can't take the name of a toolbar item", () => {
+  expect(() => build([ { name: "undo", label: "Undo", items: [ "undo" ] } ])).toThrow(/group name "undo" is taken/)
+})
+
 test("an unknown item fails loudly", () => {
   expect(() => build([ "bolt" ])).toThrow(/Unknown toolbar item "bolt"/)
 })

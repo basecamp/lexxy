@@ -77,6 +77,18 @@ test.describe("Toolbar items", () => {
     await expect(toolbar.locator("[name=bold]")).toHaveAttribute("tabindex", "0")
   })
 
+  test("an item listed twice keeps both copies up to date", async ({ page }) => {
+    const editor = new EditorHandle(page, "#repeated-item")
+    await editor.waitForConnected()
+    const undoButtons = page.locator("#repeated-item lexxy-toolbar [name=undo]")
+    await expect(undoButtons).toHaveCount(2)
+
+    await editor.send("Hello")
+
+    await expect(undoButtons.nth(0)).toHaveAttribute("aria-disabled", "false")
+    await expect(undoButtons.nth(1)).toHaveAttribute("aria-disabled", "false")
+  })
+
   test("a disabled feature stays hidden even when its items are configured", async ({ page }) => {
     const toolbar = page.locator("#attachments-disabled lexxy-toolbar")
 

@@ -18,7 +18,7 @@ Items only arrange the toolbar. Whether a feature is available at all is up to i
 | `"bold"` | A button or dropdown from the list below |
 | `{ name, icon, label, items }` | A dropdown group: a menu with the given items |
 | `"\|"` | A separator: it ends the group of items before it |
-| `"~"` | A spacer: it pushes the items after it to the end of the toolbar |
+| `"~"` | A spacer: it pushes the items after it to the end of the toolbar. It moves the item right after it, so put it before an item that's always shown |
 
 The toolbar always ends with its overflow menu, which holds the buttons that don't fit.
 
@@ -81,7 +81,7 @@ toolbar: {
 
 A dropdown group is an object:
 
-- `name`: the name of its toolbar button.
+- `name`: the name of its toolbar button. It can't be the name of a toolbar item.
 - `icon`: the icon of its toolbar button. One of `bold`, `italic`, `strikethrough`, `underline`, `heading`, `paragraph`, `clearFormatting`, `highlight`, `link`, `quote`, `code`, `ul`, `ol`, `image`, `attachment`, `table`, `hr`, `undo` and `redo`.
 - `label`: its accessible name, shown as the button's tooltip.
 - `items`: the items of its menu.

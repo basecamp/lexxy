@@ -84,6 +84,10 @@ function toolbarButton(name, { command, icon, title, preventOverflow, disabled }
 }
 
 function groupDropdown({ name, icon, label, items }) {
+  if (name in BUTTONS || name in MENU_ITEMS || name in DROPDOWNS) {
+    throw new Error(`The toolbar group name "${name}" is taken by a toolbar item. Pick another name.`)
+  }
+
   const dropdown = createElement("lexxy-toolbar-dropdown", { className: "lexxy-editor__toolbar-dropdown", "data-toolbar-group": "" })
   const panel = createElement("div", { "data-dropdown-panel": "", role: "menu", "aria-label": label, className: "lexxy-editor__toolbar-dropdown-list", hidden: true })
 
