@@ -29,4 +29,18 @@ test.describe("Whitespace around custom attachments", () => {
 
     expect(await editor.value()).toContain("<strong>Link:&nbsp;&nbsp;</strong><bc-attachment")
   })
+
+  test("ignores comments next to an attachment", async ({ editor }) => {
+    await editor.setValue(`<p>Hi<!-- note -->${mention}<!-- note -->there</p>`)
+    await editor.flush()
+
+    expect(await editor.value()).toMatch(/<p>Hi<bc-attachment [^>]*><\/bc-attachment>there<\/p>/)
+  })
+
+  test("keeps a single space between adjacent attachments", async ({ editor }) => {
+    await editor.setValue(`<p>${mention} ${mention}</p>`)
+    await editor.flush()
+
+    expect(await editor.value()).toContain("</bc-attachment> <bc-attachment")
+  })
 })

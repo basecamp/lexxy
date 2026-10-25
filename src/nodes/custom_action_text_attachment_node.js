@@ -27,11 +27,10 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
         return {
           conversion: (attachment) => {
-            // Preserve the space Lexical strips next to the attachment. ASCII only:
-            // \s also matches NBSP, which Lexical keeps, so it would add a phantom space.
+            // Lexical strips the whitespace bordering an inline decorator on import, even
+            // inside a sibling's inline format (<strong>Link: </strong>), so restore it.
             const nodes = []
-            const previousSibling = attachment.previousSibling
-            if (previousSibling && /[ \t\r\n]$/.test(previousSibling.textContent)) {
+            if (endsWithCollapsibleSpace(attachment.previousSibling) && !followsAttachmentAcrossSpace(attachment)) {
               nodes.push($createTextNode(" "))
             }
 
@@ -44,8 +43,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
               contentType: attachment.getAttribute("content-type")
             }))
 
-            const nextSibling = attachment.nextSibling
-            if (nextSibling && /^[ \t\r\n]/.test(nextSibling.textContent)) {
+            if (startsWithCollapsibleSpace(attachment.nextSibling)) {
               nodes.push($createTextNode(" "))
             }
 
@@ -214,4 +212,24 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
 export function $isCustomActionTextAttachmentNode(node) {
   return node instanceof CustomActionTextAttachmentNode
+}
+
+// ASCII whitespace only: NBSP survives Lexical's import, so restoring it would double it.
+function endsWithCollapsibleSpace(node) {
+  return isTextOrElement(node) && /[ \t\r\n]$/.test(node.textContent)
+}
+
+function startsWithCollapsibleSpace(node) {
+  return isTextOrElement(node) && /^[ \t\r\n]/.test(node.textContent)
+}
+
+function isTextOrElement(node) {
+  return node?.nodeType === Node.TEXT_NODE || node?.nodeType === Node.ELEMENT_NODE
+}
+
+// The attachment before already restored the space between the two.
+function followsAttachmentAcrossSpace(attachment) {
+  const space = attachment.previousSibling
+  const previous = space.previousSibling
+  return /^[ \t\r\n]+$/.test(space.textContent) && previous?.nodeName === attachment.nodeName && previous.hasAttribute("content")
 }
