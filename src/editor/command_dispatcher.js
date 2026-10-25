@@ -22,7 +22,7 @@ import { $createAutoLinkNode, $toggleLink, LinkNode } from "@lexical/link"
 import { $getNearestNodeOfType, $insertNodeToNearestRoot } from "@lexical/utils"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
-import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { $isLinkableAttachmentNode } from "../nodes/action_text_attachment_node"
 import { createElement } from "../helpers/html_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import { $normalizeBlockContainerSelection, getListType } from "../helpers/lexical_helper"
@@ -467,7 +467,7 @@ export class CommandDispatcher {
 
 function $setHrefOnSelectedImages(selection, href) {
   for (const node of selection.getNodes()) {
-    if ($isActionTextAttachmentNode(node) && node.isPreviewableImage) node.getWritable().href = href
+    if ($isLinkableAttachmentNode(node)) node.getWritable().href = href
   }
 }
 

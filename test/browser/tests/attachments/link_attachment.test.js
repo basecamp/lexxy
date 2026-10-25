@@ -11,6 +11,10 @@ function attachment(href = null) {
   return `<action-text-attachment${hrefAttribute} content-type="image/png" url="/test.png" filename="test.png" filesize="1024" width="100" height="100"></action-text-attachment>`
 }
 
+function pdf(href) {
+  return `<action-text-attachment href="${href}" content-type="application/pdf" url="/test.pdf" filename="test.pdf" filesize="1024"></action-text-attachment>`
+}
+
 function exportedAttachment(href = null) {
   const hrefAttribute = href ? ` href="${href}"` : ""
   return `<action-text-attachment${hrefAttribute} url="/test.png" alt="" caption="" content-type="image/png" filename="test.png" filesize="1024" width="100" height="100" presentation="gallery"></action-text-attachment>`
@@ -77,22 +81,65 @@ test.describe("Linking attachments", () => {
     await expect(linkButton).toHaveAttribute("aria-pressed", "true")
   })
 
-  test("only images can be linked", async ({ page, editor }) => {
-    const pdf = '<action-text-attachment content-type="application/pdf" url="/test.pdf" filename="test.pdf" filesize="1024"></action-text-attachment>'
-    await editor.setValue(pdf)
+  test("the link button is disabled while only a file is selected", async ({ page, editor }) => {
+    const linkButton = page.locator("button[name='link']")
+    await editor.setValue(`<p>Text</p>${pdf("https://example.com")}`)
+
     await page.locator("figure.attachment").click()
     await expect(page.locator("figure.attachment")).toHaveClass(/node--selected/)
+    await expect(linkButton).toHaveAttribute("aria-disabled", "true")
+    await expect(linkButton).toHaveAttribute("aria-pressed", "false")
 
+    await linkButton.dispatchEvent("click")
+    await expect(page.locator(URL_INPUT).first()).toBeHidden()
+
+    await page.keyboard.press("ArrowUp")
+    await expect(page.locator("figure.attachment")).not.toHaveClass(/node--selected/)
+    await expect(linkButton).toHaveAttribute("aria-disabled", "false")
+  })
+
+  test("the link button follows the selected image", async ({ page, editor }) => {
+    const linkButton = page.locator("button[name='link']")
+    await editor.setValue(`<div class="attachment-gallery">${attachment("https://example.com")}${attachment()}</div>`)
+    const images = page.locator(".attachment-gallery figure.attachment img")
+
+    await images.first().click()
+    await expect(linkButton).toHaveAttribute("aria-pressed", "true")
+
+    await images.last().click()
+    await expect(linkButton).toHaveAttribute("aria-pressed", "false")
+  })
+
+  test("unlinking a selected image unpresses the link button", async ({ page, editor }) => {
+    const linkButton = page.locator("button[name='link']")
+    await editor.setValue(attachment("https://example.com"))
+    await selectAttachment(page)
+    await expect(linkButton).toHaveAttribute("aria-pressed", "true")
+
+    await openToolbarDropdown(page, "link")
+    await page.locator("lexxy-link-dropdown [data-dropdown-panel] button[value='unlink']").first().click()
+
+    await expect(page.locator("figure.attachment")).toHaveClass(/node--selected/)
+    await expect(linkButton).toHaveAttribute("aria-pressed", "false")
+  })
+
+  test("linking an image can be undone", async ({ page, editor }) => {
+    await editor.setValue(attachment())
+    await selectAttachment(page)
     await linkTo(page, "https://example.com")
+    await assertEditorHtml(editor, exportedAttachment("https://example.com"))
 
-    expect(await editor.value()).not.toContain("href")
+    await page.getByRole("button", { name: "Undo" }).click()
+
+    await assertEditorHtml(editor, exportedAttachment())
   })
 
   test("a javascript: link on a selected image is not exported", async ({ page, editor }) => {
-    await editor.setValue(attachment())
+    await editor.setValue(attachment("https://example.com"))
     await selectAttachment(page)
 
     await linkTo(page, "javascript:alert(1)")
+    await expect(page.locator("button[name='link']")).toHaveAttribute("aria-pressed", "true")
 
     await assertEditorHtml(editor, exportedAttachment())
   })

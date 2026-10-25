@@ -226,6 +226,8 @@ export class LexicalToolbarElement extends HTMLElement {
   #updateButtonStates() {
     const selection = $getSelection()
 
+    this.#setButtonDisabled("link", $isNodeSelection(selection) && !this.selection.hasLinkableAttachment)
+
     if ($isNodeSelection(selection)) {
       this.#setButtonPressed("link", this.selection.isInLink)
     } else if ($isRangeSelection(selection)) {

@@ -452,3 +452,9 @@ export function $createActionTextAttachmentNode(...args) {
 export function $isActionTextAttachmentNode(node) {
   return node instanceof ActionTextAttachmentNode
 }
+
+// Only images can carry a link: Action Text keeps an attachment's `href`, and a
+// host's blob partial can wrap the image in it.
+export function $isLinkableAttachmentNode(node) {
+  return $isActionTextAttachmentNode(node) && node.isPreviewableImage
+}

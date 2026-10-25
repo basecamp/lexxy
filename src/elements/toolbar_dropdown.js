@@ -80,7 +80,7 @@ export class ToolbarDropdown extends HTMLElement {
   #handleTriggerClick = (event) => {
     if (this.isOpen) {
       this.close({ focusEditor: false })
-    } else {
+    } else if (this.trigger.ariaDisabled !== "true") {
       this.#shouldReturnFocusToTrigger = this.#isOpenedFromHost(event)
       this.host?.closeDropdowns({ except: this })
       this.open()

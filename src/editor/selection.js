@@ -13,7 +13,7 @@ import { getNonce } from "../helpers/csp_helper"
 import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } from "../helpers/lexical_helper"
 import { LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
-import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { $isActionTextAttachmentNode, $isLinkableAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ListenerBin, handlingDefault, registerEventListener } from "../helpers/listener_helper"
 
 export default class Selection {
@@ -123,10 +123,15 @@ export default class Selection {
     const { node } = this.selectedNodeWithOffset()
 
     if ($isActionTextAttachmentNode(node)) {
-      return node.href
+      return $isLinkableAttachmentNode(node) ? node.href : null
     } else {
       return $getNearestNodeOfType(node, LinkNode)?.getURL() ?? null
     }
+  }
+
+  get hasLinkableAttachment() {
+    const selection = $getSelection()
+    return $isNodeSelection(selection) && selection.getNodes().some($isLinkableAttachmentNode)
   }
 
   nearestNodeOfType(nodeType) {
