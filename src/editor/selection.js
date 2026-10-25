@@ -349,29 +349,25 @@ export default class Selection {
       }, COMMAND_PRIORITY_LOW),
 
       this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
-        this.#preserveFocusOfOtherFields()
+        this.#preserveFocusOutsideEditor()
         return false
       }, COMMAND_PRIORITY_CRITICAL)
     )
   }
 
-  // Firefox (152+) keeps window.getSelection() anchored inside the editor after focus
-  // moves to another field, and fires document selectionchange for every keystroke
-  // typed there. Lexical reads that stale selection, reconciles, and pulls focus back
-  // into the editor — stealing it mid-typing. When another text-entry field owns focus,
-  // tag the update so Lexical leaves the DOM selection (and with it, focus) alone.
-  #preserveFocusOfOtherFields() {
-    if (this.#anotherFieldIsFocused) {
+  // Selection changes can arrive after Tab moves focus to a toolbar or another field.
+  // Reconciling that stale selection would pull focus back into the editor.
+  #preserveFocusOutsideEditor() {
+    if (this.#isAnotherElementFocused) {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
     }
   }
 
-  get #anotherFieldIsFocused() {
+  get #isAnotherElementFocused() {
     const rootElement = this.editor.getRootElement()
     const activeElement = rootElement?.ownerDocument.activeElement
 
-    return activeElement && !rootElement.contains(activeElement) &&
-      (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA" || activeElement.isContentEditable)
+    return activeElement && activeElement !== rootElement.ownerDocument.body && !rootElement.contains(activeElement)
   }
 
   #listenForNodeSelections() {

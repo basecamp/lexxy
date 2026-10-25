@@ -15,4 +15,13 @@ There are scenarios where you want to query the server for filtering, instead of
 </lexxy-prompt>
 ```
 
+Lexxy sends the search text in the `filter` query parameter, for example `/people?filter=sutko`. To use a different parameter name, set `filter-param`:
+
+```erb
+<lexxy-prompt trigger="@" src="<%= people_path %>" name="mention" remote-filtering filter-param="query">
+</lexxy-prompt>
+```
+
+This sends requests such as `/people?query=sutko`. Existing query parameters in `src` are preserved. Omitting `filter-param` or setting it to an empty string uses `filter`.
+
 By default, the `SPACE` key will select the current item in the prompt. If you want to allow spaces in the search query, you can add the `supports-space-in-searches` attribute to the prompt. This can be handy to search by full names in combination with remote filtering.

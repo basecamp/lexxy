@@ -45,7 +45,7 @@ module EditorHelper
   def assert_image_figure_attachment(content_type: "image/png", caption:)
     assert_figure_attachment(content_type: content_type) do
       assert_selector("img[src*='/rails/active_storage']")
-      assert_selector "figcaption textarea[placeholder='#{caption}']"
+      assert_selector "figcaption", text: caption
     end
   end
 
