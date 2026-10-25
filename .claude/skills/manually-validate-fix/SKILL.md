@@ -20,7 +20,7 @@ PR → UNDERSTAND BUG → PLAN REPRODUCTION → WRITE SCRIPT → RUN vs PRODUCTI
 | Environment | URL | Runs | Expected |
 |---|---|---|---|
 | **Production** | `https://lexxy.dev/sandbox/` | Latest released version (CDN) | Bug reproduces |
-| **Local** | `http://lexxy.localhost:3000` | Current branch with the fix | Bug does NOT reproduce |
+| **Local** | `http://lexxy.localhost:<port>` | The PR's branch, checked out in its worktree | Bug does NOT reproduce |
 
 ### Production page
 
@@ -32,7 +32,7 @@ The sandbox loads the latest released Lexxy from esm.sh (`@37signals/lexxy@lates
 
 ### Local sandbox
 
-`http://lexxy.localhost:3000` runs the Rails dummy app:
+`http://lexxy.localhost:<port>` runs the Rails dummy app from the PR's worktree. Pick a port of your own (`3000` is often taken by another app) and use it everywhere below:
 
 - Root (`/sandbox`) — editor with `@` mention and `:` emoji prompts, template switcher
 - Posts CRUD (`/posts`) — full Action Text form, all features
@@ -159,23 +159,19 @@ try {
 
 ### 5. Ensure Local Server is Running
 
-```bash
-curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:3000/ 2>/dev/null | grep -q 200 || {
-  echo "Starting local server..."
-  cd ~/Work/basecamp/lexxy && bin/dev &
-  for i in $(seq 1 30); do
-    curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:3000/ 2>/dev/null | grep -q 200 && break
-    sleep 1
-  done
-}
-```
-
-Verify the right branch is checked out:
+Run the server from the worktree that has the PR's branch checked out (see AGENTS.md, "Worktrees", for `bin/setup` and seeding a fresh one):
 
 ```bash
-cd ~/Work/basecamp/lexxy && git branch --show-current
-# Must match the PR's head branch
+cd <pr-worktree>
+git log -1 --format=%H   # must match the PR's head commit: gh pr view <number> --json headRefOid
+PORT=<port> bin/dev > /tmp/lexxy-dev-<port>.log 2>&1 &
+for i in $(seq 1 60); do
+  curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ 2>/dev/null | grep -q 200 && break
+  sleep 1
+done
 ```
+
+A server already answering on the port may be serving another checkout, so start your own rather than reusing one. Stop it when you're done.
 
 ### 6. Run Against Both Environments
 
@@ -184,7 +180,7 @@ cd ~/Work/basecamp/lexxy && git branch --show-current
 node /tmp/validate-fix-<pr>.mjs "https://lexxy.dev/sandbox/"
 
 # Local — expect the fix
-node /tmp/validate-fix-<pr>.mjs "http://lexxy.localhost:3000"
+node /tmp/validate-fix-<pr>.mjs "http://lexxy.localhost:<port>"
 ```
 
 Review screenshots and console output from both runs.
@@ -209,7 +205,7 @@ Review screenshots and console output from both runs.
 - <what happened>
 - Evidence: <screenshot paths>
 
-**Local** (http://lexxy.localhost:3000):
+**Local** (http://lexxy.localhost:<port>):
 - <what happened>
 - Evidence: <screenshot paths>
 
