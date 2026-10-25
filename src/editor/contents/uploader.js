@@ -1,5 +1,5 @@
 import { $getSelection } from "lexical"
-import { ActionTextAttachmentNode } from "../../nodes/action_text_attachment_node"
+import { isPreviewableImage } from "../../helpers/html_helper"
 import { $createImageGalleryNode, $findOrCreateGalleryForImage, ImageGalleryNode } from "../../nodes/image_gallery_node"
 
 export default class Uploader {
@@ -53,7 +53,7 @@ class GalleryUploader extends Uploader {
   static isMultipleImageUpload(files) {
     let imageFileCount = 0
     for (const file of files) {
-      if (ActionTextAttachmentNode.isPreviewableImage(file.type)) imageFileCount++
+      if (isPreviewableImage(file.type)) imageFileCount++
       if (imageFileCount > 1) return true
     }
     return false

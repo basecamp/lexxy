@@ -167,3 +167,70 @@ test.describe("PSD and TIFF attachments", () => {
     })
   })
 })
+
+test.describe("default previewable image types", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/attachments.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+  })
+
+  for (const [ contentType, filename ] of [ [ "image/avif", "photo.avif" ], [ "image/webp", "photo.webp" ], [ "image/jpeg", "photo.jpg" ], [ "image/gif", "photo.gif" ] ]) {
+    test(`${contentType} renders as an image`, async ({ page, editor }) => {
+      await editor.setValue(buildAttachment({ sgid: "sgid", "content-type": contentType, filename, url: `/${filename}` }))
+      await editor.flush()
+
+      const figure = page.locator("figure.attachment")
+      await expect(figure).toHaveClass(/attachment--preview/)
+      await expect(figure.locator("img")).toHaveCount(1)
+    })
+  }
+
+  for (const [ contentType, filename ] of [ [ "image/heic", "photo.heic" ], [ "image/svg+xml", "logo.svg" ] ]) {
+    test(`${contentType} renders as a file attachment`, async ({ page, editor }) => {
+      await editor.setValue(buildAttachment({ sgid: "sgid", "content-type": contentType, filename, url: `/${filename}` }))
+      await editor.flush()
+
+      const figure = page.locator("figure.attachment")
+      await expect(figure).toHaveClass(/attachment--file/)
+      await expect(figure.locator("img")).toHaveCount(0)
+    })
+  }
+
+  test("an imported <img> of unknown type renders as an image", async ({ page, editor }) => {
+    await editor.setValue(`<img src="/rails/active_storage/blobs/abc/photo">`)
+    await editor.flush()
+
+    const figure = page.locator("figure.attachment")
+    await expect(figure).toHaveClass(/attachment--preview/)
+    await expect(figure.locator("img")).toHaveCount(1)
+  })
+})
+
+test.describe("custom attachmentPreviewablePattern", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/attachments-previewable-pattern.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await mockActiveStorageUploads(page)
+  })
+
+  test("TIFF matching the pattern renders as an image and joins the gallery", async ({ page, editor }) => {
+    await editor.uploadFile([
+      "test/fixtures/files/example.png",
+      "test/fixtures/files/example.tif",
+    ])
+
+    const gallery = page.locator(".attachment-gallery")
+    await expect(gallery).toBeVisible()
+    await expect(gallery.locator("figure.attachment")).toHaveCount(2)
+    await expect(gallery.locator("figure.attachment--tif")).toHaveClass(/attachment--preview/)
+  })
+
+  test("JPEG not matching the pattern renders as a file attachment", async ({ page, editor }) => {
+    await editor.setValue(buildAttachment({ sgid: "sgid", "content-type": "image/jpeg", filename: "photo.jpg", url: "/photo.jpg" }))
+    await editor.flush()
+
+    const figure = page.locator("figure.attachment")
+    await expect(figure).toHaveClass(/attachment--file/)
+    await expect(figure.locator("img")).toHaveCount(0)
+  })
+})

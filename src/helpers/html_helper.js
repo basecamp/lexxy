@@ -1,3 +1,5 @@
+import Lexxy from "../config/lexxy"
+
 export function createElement(name, properties, content = "") {
   const element = document.createElement(name)
   for (const [ key, value ] of Object.entries(properties || {})) {
@@ -26,6 +28,11 @@ export function createAttachmentFigure(contentType, isPreviewable, fileName) {
     className: `attachment attachment--${isPreviewable ? "preview" : "file"} attachment--${extension}`,
     "data-content-type": contentType
   })
+}
+
+// "image/*" is what Lexxy assigns to imported <img> elements, whose actual type is unknown.
+export function isPreviewableImage(contentType) {
+  return contentType === "image/*" || !!contentType?.match(Lexxy.global.get("attachmentPreviewablePattern"))
 }
 
 export function dispatchCustomEvent(element, name, detail) {

@@ -1,12 +1,10 @@
 import Lexxy from "../config/lexxy"
 import { $getEditor, $getNearestRootOrShadowRoot, DecoratorNode } from "lexical"
-import { createAttachmentFigure, createElement } from "../helpers/html_helper"
+import { createAttachmentFigure, createElement, isPreviewableImage } from "../helpers/html_helper"
 import { bytesToHumanSize, extractFileName } from "../helpers/storage_helper"
 import { parseBoolean } from "../helpers/string_helper"
 import { REWRITE_HISTORY_COMMAND } from "../extensions/rewritable_history_extension"
 
-// Common image types from default config.variable_content_types
-const DEFAULT_PREVIEWABLE_PATTERN = /^image(\/(avif|hei[cf]|gif|png|jpeg|webp)|$)/
 const INITIAL_PREVIEW_POLL_DELAY_MS = 3000
 const MAX_PREVIEW_POLL_DELAY_MS = 120000
 const MAX_PREVIEW_POLL_ATTEMPTS = 20
@@ -80,14 +78,6 @@ export class ActionTextAttachmentNode extends DecoratorNode {
         }
       }
     }
-  }
-
-  static isPreviewableImage(contentType) {
-    return contentType.match(this.PREVIEWABLE_PATTERN)
-  }
-
-  static get PREVIEWABLE_PATTERN() {
-    return Lexxy.global.get("attachmentPreviewablePattern") || DEFAULT_PREVIEWABLE_PATTERN
   }
 
   static get TAG_NAME() {
@@ -228,7 +218,7 @@ export class ActionTextAttachmentNode extends DecoratorNode {
   }
 
   get isPreviewableImage() {
-    return this.constructor.isPreviewableImage(this.contentType)
+    return isPreviewableImage(this.contentType)
   }
 
   get isVideo() {

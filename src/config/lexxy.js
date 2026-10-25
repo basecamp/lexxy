@@ -3,6 +3,8 @@ import Configuration from "./configuration"
 const global = new Configuration({
   attachmentTagName: "action-text-attachment",
   attachmentContentTypeNamespace: "actiontext",
+  // Image types every modern browser renders natively
+  attachmentPreviewablePattern: /^image\/(avif|gif|jpe?g|png|webp)$/i,
   authenticatedUploads: false,
   extensions: []
 })

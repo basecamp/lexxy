@@ -98,8 +98,8 @@ Global options apply to all editors in your app and are configured using `Lexxy.
 
 - `attachmentTagName`: The tag name used for [Action Text custom attachments](https://guides.rubyonrails.org/action_text_overview.html#signed-globalid). By default, they will be rendered as `action-text-attachment` tags.
 - `attachmentContentTypeNamespace`: The default content_type namespace for prompts. The default is `actiontext` which will result in `application/vnd.actiontext.[type]`.
-- `attachmentPreviewablePattern`: A RegExp identifying which content types are previewable images, and therefore valid gallery children. For other file types, the server can return `{ previewable: true }` in a blob's attributes to show a preview. The default is `/^image(\/(avif|hei[cf]|gif|png|jpeg|webp)|$)/`
-- `authenticatedUploads`: will set `withCredentials: true` for ActiveStorage upload requests if you are using authenticated upload contollers. Be sure to set cookie domain and server CORS/CSRF options accordingly.
+- `attachmentPreviewablePattern`: A RegExp matching the image content types the browser can display. Matching attachments render as images and can join galleries; other images, such as PSD or TIFF, render as file attachments. The default is `/^image\/(avif|gif|jpe?g|png|webp)$/i`. HEIC and HEIF are left out because only Safari displays them. The server can still show a preview for any file by returning `previewable: true` in the blob's attributes, but only matching images join galleries.
+- `authenticatedUploads`: will set `withCredentials: true` for ActiveStorage upload requests if you are using authenticated upload controllers. Be sure to set cookie domain and server CORS/CSRF options accordingly.
 
 Some options, like `attachmentTagName`, can only be set globally:
 
