@@ -2,7 +2,7 @@
 name: bugs-reproducer
 description: |
   Bug reproduction for the Lexxy rich text editor. Core editing bugs use
-  Playwright (Selenium fallback); system-level bugs use Capybara. All local.
+  Playwright (real-browser fallback); system-level bugs use Capybara. All local.
 disable-model-invocation: true
 ---
 
@@ -13,7 +13,7 @@ Reproduce bugs in Lexxy — a rich text editor built on [Lexical](https://lexica
 ```
 BUG REPORT → CLASSIFY → REPRODUCE → DIAGNOSE → FIX → VERIFY
                           ^^^^^^^^^
-                          core editing bug → Playwright (Selenium fallback)
+                          core editing bug → Playwright (real-browser fallback)
                           system-level bug → Capybara
 ```
 
@@ -70,13 +70,13 @@ Playwright tests run across **Chromium, Firefox, and WebKit**, giving cross-brow
 
 **Note:** WebKit may not launch on Arch Linux due to ABI-incompatible system libraries (see `home/docs/development.md`). Use Chromium and Firefox locally; WebKit coverage is guaranteed by CI.
 
-**Fallback:** if Playwright can't trigger the bug after 3 attempts (e.g., needs real OS-level events), fall back to Selenium WebDriver scripts.
+**Fallback:** if Playwright can't trigger the bug after 3 attempts (e.g., needs real OS-level events), drive a real browser with whatever automation tool you have available and judge best (see 4c).
 
 ### 2. System-level bugs → Capybara (`test/system/`)
 
 Bugs involving anything outside the editor's JS layer: Action Text rendering and persistence, ActiveStorage uploads, Trix ↔ Lexxy conversion, form submission, SGID resolution, prompt/mention resolution with Rails-backed data, gallery display after save, page refreshes (Turbo), authenticated storage, and any scenario where data must survive a save/load roundtrip.
 
-Capybara tests run against the dummy Rails app (`test/dummy/`) using `selenium_chrome_headless`. Stay in Capybara for all attempts — Selenium scripts add nothing over Capybara for Rails integration bugs.
+Capybara tests run against the dummy Rails app (`test/dummy/`) using `selenium_chrome_headless`. Stay in Capybara for all attempts — driving a browser by hand adds nothing over Capybara for Rails integration bugs.
 
 ## Extending the Test Suite
 
@@ -102,9 +102,9 @@ The **action under test** — the interaction you're trying to reproduce — mus
 
 | For the action under test | Use | Don't use |
 |--------------------------|-----|-----------|
-| Type text | `editor.send("text")` (PW) / `element.sendKeys("text")` (Selenium) | `editor.setValue("text")` |
-| Press Enter | `editor.send("Enter")` (PW) / `element.sendKeys(Key.RETURN)` (Selenium) | `dispatchEvent(new KeyboardEvent(...))` |
-| Focus an element | `editor.click()` (PW) / `element.click()` (Selenium) | `element.focus()` |
+| Type text | `editor.send("text")` or real key input | `editor.setValue("text")` |
+| Press Enter | `editor.send("Enter")` or a real key press | `dispatchEvent(new KeyboardEvent(...))` |
+| Focus an element | `editor.click()` or a real click | `element.focus()` |
 | Click a toolbar button | `editor.clickToolbarButton("bold")` or `click_on "Bold"` | Direct command dispatch |
 
 **`executeScript` / `evaluate` is primarily for reading** — inspecting DOM state, checking cursor position, reading scroll offsets. Narrow setup exceptions exist (e.g., programmatic DOM manipulation when real interaction would destroy required preconditions), but never use it to produce the action under test.
@@ -176,9 +176,9 @@ One test is one attempt. Different attempts vary the **setup**: content volume, 
 
 Label each attempt (v1, v2, v3...) and log which dimensions it covers.
 
-**For core editing bugs (Playwright path):** after 3 failed attempts, consider switching to Selenium if the bug might require real OS-level events that Playwright's synthetic event model doesn't trigger. Continue the 8-attempt minimum across both methods.
+**For core editing bugs (Playwright path):** after 3 failed attempts, consider the real-browser fallback (4c) if the bug might require real OS-level events that Playwright's synthetic event model doesn't trigger. Continue the 8-attempt minimum across both methods.
 
-**For system-level bugs (Capybara path):** stay in Capybara for all attempts. The Rails integration is the point — Selenium scripts against the sandbox app add nothing over Capybara.
+**For system-level bugs (Capybara path):** stay in Capybara for all attempts. The Rails integration is the point — driving the sandbox app by hand adds nothing over Capybara.
 
 ## Procedure
 
@@ -190,7 +190,7 @@ Extract from the bug report:
 - Which Lexxy layer is likely involved (editor core, specific node type, extension, paste, toolbar, prompt, Action Text integration)
 - Whether the bug involves persistence (save/load) or is purely client-side
 
-**Choose the test suite first.** Refer to the decision guide in "Choosing the Right Test Suite" above. This determines whether you write Playwright tests, Capybara system tests, or (as a last resort) Selenium scripts. Getting this wrong wastes attempts.
+**Choose the test suite first.** Refer to the decision guide in "Choosing the Right Test Suite" above. This determines whether you write Playwright tests, Capybara system tests, or (as a last resort) a real-browser reproduction. Getting this wrong wastes attempts.
 
 ### 2. Plan Reproduction
 
@@ -211,23 +211,30 @@ Extract from the bug report:
 
 The Playwright config starts its own Vite dev server automatically when you run the tests. No manual setup required.
 
-**For Capybara tests or Selenium scripts** (needs Rails):
+**For Capybara tests** (needs Rails): Capybara boots its own Rails server, but it loads the built `app/assets/javascript/lexxy.js`. Run `bin/dev` in the worktree (as below) so the watcher keeps it current, or rebuild with `yarn build` after every `src/` change.
+
+**For the real-browser fallback** (needs the dummy app): run it from your worktree on a port of your own (see AGENTS.md, "Worktrees", for `bin/setup` and seeding):
+
+`bin/dev` force-kills whatever listens on its port, so check the port is free first, and pick another if this prints anything:
 
 ```bash
-# Check if the dev server is running
-curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:3000/ || echo "not running"
+curl -s -o /dev/null -m 2 http://localhost:<port>/; [ $? -eq 7 ] || echo "port <port> is taken, pick another"
+```
 
-# If not running:
-cd ~/Work/basecamp/lexxy
-bin/setup   # installs deps, creates DB — idempotent, safe to re-run
-bin/dev &
+Then start the server:
 
-# Wait for server (up to 30s):
-for i in $(seq 1 30); do
-  curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:3000/ 2>/dev/null && break
+```bash
+mkdir -p tmp
+PORT=<port> bin/dev > tmp/dev-<port>.log 2>&1 &
+echo $! > tmp/dev-<port>.pid
+for i in $(seq 1 60); do
+  curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ 2>/dev/null | grep -q 200 && break
   sleep 1
 done
+curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ | grep -q 200 || tail -30 tmp/dev-<port>.log
 ```
+
+Before testing, wait for the JS build to finish: `tmp/dev-<port>.log` shows rollup's "waiting for changes". When you're done, `kill "$(cat tmp/dev-<port>.pid)"` (foreman stops its children).
 
 ### 4a. Reproduce with Playwright (preferred)
 
@@ -338,62 +345,13 @@ end
 
 Fixtures in `test/fixtures/posts.yml` and `test/fixtures/action_text/rich_texts.yml` provide pre-seeded post data.
 
-### 4c. Reproduce with Selenium (fallback)
+### 4c. Reproduce in a real browser (fallback)
 
-If Playwright doesn't reproduce after 3+ attempts and the bug might require real OS-level events, fall back to Selenium WebDriver `.mjs` scripts.
+If Playwright doesn't reproduce after 3+ attempts and the bug might require real OS-level events, drive a real browser against the dummy app (`http://lexxy.localhost:<port>`) with whatever automation tool you have available and judge best.
 
-**Ensure prerequisites:**
+The rules above still hold: the action under test goes through real input (typing, key presses, clicks), page scripts only read state, and you take a screenshot after each step and read it. Capture the editor's value (`document.querySelector("lexxy-editor").value`) as evidence.
 
-```bash
-ls /tmp/node_modules/selenium-webdriver >/dev/null 2>&1 || {
-  cd /tmp && npm install selenium-webdriver
-}
-which chromedriver >/dev/null 2>&1 || echo "Install chromedriver"
-```
-
-**Script pattern** — write `.mjs` scripts in `/tmp/`:
-
-```javascript
-import webdriver from '/tmp/node_modules/selenium-webdriver/index.js';
-import chrome from '/tmp/node_modules/selenium-webdriver/chrome.js';
-import fs from 'fs';
-
-async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-async function screenshot(driver, name) {
-  const data = await driver.takeScreenshot();
-  fs.writeFileSync(`/tmp/${name}.png`, Buffer.from(data, 'base64'));
-}
-
-const options = new chrome.Options();
-options.addArguments('--headless=new', '--no-sandbox', '--window-size=1280,900');
-const driver = await new webdriver.Builder()
-  .forBrowser('chrome').setChromeOptions(options).build();
-
-try {
-  await driver.get('http://lexxy.localhost:3000');
-  await driver.wait(webdriver.until.elementLocated(
-    webdriver.By.css('lexxy-editor[connected]')
-  ), 10000);
-
-  const content = await driver.findElement(
-    webdriver.By.css('.lexxy-editor__content')
-  );
-  await content.click();
-
-  // Reproduction steps here — capture evidence after each
-  await content.sendKeys('Hello there');
-  await screenshot(driver, 'step-1');
-  // READ the screenshot: describe what's visible, compare against expected state
-
-  // Inspect via executeScript (read only)
-  const html = await driver.executeScript(
-    'return document.querySelector("lexxy-editor").value'
-  );
-  console.log('Editor value:', html);
-} finally {
-  await driver.quit();
-}
-```
+A reproduction here is evidence, not a regression test. Once the bug reproduces, write a Playwright or Capybara test that fails for the same reason before moving on to the fix. If no such test can trigger it, say so in the verdict with the justification AGENTS.md step 2 asks for.
 
 ### 5. Render Verdict
 
@@ -410,8 +368,8 @@ try {
 
 **Bug:** <title>
 **Confidence:** High / Medium / Low
-**Method:** Playwright / Capybara / Selenium
-**Browsers tested:** Chromium, Firefox, WebKit (via Playwright) / Chrome (via Selenium)
+**Method:** Playwright / Capybara / Real browser (<tool>)
+**Browsers tested:** Chromium, Firefox, WebKit (via Playwright) / <browser> (real-browser fallback)
 **Attempts:** <n> attempts, <n> successful reproductions
 
 **Lexxy subsystem:** <node type / extension / clipboard / selection / toolbar / Action Text>
@@ -441,7 +399,7 @@ When reproduced via Playwright, **keep the test file** in `test/browser/tests/`.
 test/browser/tests/bug_<short_description>.test.js
 ```
 
-When reproduced via Capybara, keep the test in `test/system/`. When reproduced via Selenium, keep the script in `/tmp/` and note the path in the verdict.
+When reproduced via Capybara, keep the test in `test/system/`. When reproduced in a real browser, note the tool, the steps and the evidence paths in the verdict, and write the Playwright or Capybara test.
 
 ## Common Bug Patterns in Lexxy
 
