@@ -11,6 +11,7 @@ module Lexxy
       options[:value] ||= value
       options[:class] ||= "lexxy-content"
       options[:data] ||= {}
+      options[:data][:action_text_supports_alt] = Lexxy.supports_alternative_text?
       options[:data][:direct_upload_url] ||= main_app.rails_direct_uploads_url
       options[:data][:blob_url_template] ||= main_app.rails_service_blob_url(":signed_id", ":filename")
 
@@ -37,6 +38,7 @@ module Lexxy
               if node["url"].blank?
                 attachment = ActionText::Attachment.from_node(node)
                 node["content"] = render_action_text_attachment(attachment).to_json
+                node["content-type"] ||= attachment.content_type
               end
               node
             end

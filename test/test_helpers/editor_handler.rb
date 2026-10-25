@@ -136,8 +136,10 @@ class EditorHandler
     execute_script "this.focus()"
   end
 
-  def paste(text, html: nil)
+  def paste(text, html: nil, lexical: nil)
     simulate_first_interaction_if_needed
+
+    lexical = lexical.to_json unless lexical.nil? || lexical.is_a?(String)
 
     content_element.execute_script <<~JS
       const pasteEvent = new ClipboardEvent("paste", {
@@ -147,6 +149,7 @@ class EditorHandler
       })
       pasteEvent.clipboardData.setData("text/plain", #{text.to_json})
       #{"pasteEvent.clipboardData.setData(\"text/html\", `#{html}`)" if html}
+      #{"pasteEvent.clipboardData.setData(\"application/x-lexical-editor\", #{lexical.to_json})" if lexical}
       this.dispatchEvent(pasteEvent)
     JS
   end
@@ -156,7 +159,11 @@ class EditorHandler
   end
 
   def toggle_command(command, toolbar_selector = "lexxy-toolbar")
-    find("#{toolbar_selector} [data-command=\"#{command}\"]").click
+    button = find("#{toolbar_selector} [data-command=\"#{command}\"]", visible: :all)
+    if button.matches_css?(".lexxy-editor__toolbar-overflow-menu *")
+      find("#{toolbar_selector} .lexxy-editor__toolbar-overflow [data-dropdown-trigger]").click
+    end
+    button.click
   end
 
   def inner_html

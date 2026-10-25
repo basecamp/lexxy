@@ -1,4 +1,6 @@
-// Custom TextNode exportDOM that avoids redundant bold/italic wrapping.
+import { $getCodeLink } from "./code_link_helper"
+
+// Custom TextNode exportDOM that avoids redundant wrapping.
 //
 // Lexical's built-in TextNode.exportDOM() calls createDOM() which produces semantic tags
 // like <strong> for bold and <em> for italic, then unconditionally wraps the result
@@ -8,6 +10,33 @@
 // This custom export skips <b> when <strong> is already present and <i> when <em> is
 // already present, while preserving <s> and <u> wrappers which have no semantic equivalents
 // in createDOM's output.
+//
+// Any <span> elements produced by createDOM() are unwrapped, since they only carry
+// editor classes that aren't meaningful in exported HTML.
+
+// A CodeHighlightNode exports like any other text node, plus an <a> wrapper
+// when it carries link state — that's how a link survives inside a code
+// block, whose retokenizer would destroy an actual LinkNode child.
+export function exportCodeHighlightNodeDOM(editor, codeHighlightNode) {
+  const output = exportTextNodeDOM(editor, codeHighlightNode)
+  const link = $getCodeLink(codeHighlightNode)
+
+  if (link) {
+    return { element: wrapWithAnchor(output.element, link) }
+  } else {
+    return output
+  }
+}
+
+function wrapWithAnchor(element, link) {
+  const anchor = document.createElement("a")
+  anchor.setAttribute("href", link.url)
+  if (link.target) anchor.setAttribute("target", link.target)
+  if (link.rel) anchor.setAttribute("rel", link.rel)
+  if (link.title) anchor.setAttribute("title", link.title)
+  anchor.appendChild(element)
+  return anchor
+}
 
 export function exportTextNodeDOM(editor, textNode) {
   const element = textNode.createDOM(editor._config, editor)
@@ -36,7 +65,7 @@ export function exportTextNodeDOM(editor, textNode) {
     result = wrapWith(result, "u")
   }
 
-  return { element: result }
+  return { element: unwrapSpans(result) }
 }
 
 function containsTag(element, tagName) {
@@ -50,4 +79,14 @@ function wrapWith(element, tag) {
   const wrapper = document.createElement(tag)
   wrapper.appendChild(element)
   return wrapper
+}
+
+function unwrapSpans(element) {
+  if (element.tagName === "SPAN") return element.firstChild
+
+  for (const span of element.querySelectorAll("span")) {
+    span.replaceWith(...span.childNodes)
+  }
+
+  return element
 }

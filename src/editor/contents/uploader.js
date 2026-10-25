@@ -1,19 +1,18 @@
 import { $getSelection } from "lexical"
 import { isPreviewableImage } from "../../helpers/html_helper"
-import { $createActionTextAttachmentUploadNode } from "../../nodes/action_text_attachment_upload_node"
 import { $createImageGalleryNode, $findOrCreateGalleryForImage, ImageGalleryNode } from "../../nodes/image_gallery_node"
-import { $getNearestNodeOfType } from "@lexical/utils"
 
 export default class Uploader {
   #files
 
-  static for(editorElement, files) {
+  static for(editorElement, files, options = {}) {
     const UploaderKlass = GalleryUploader.handle(editorElement, files) ? GalleryUploader : Uploader
-    return new UploaderKlass(editorElement, files)
+    return new UploaderKlass(editorElement, files, options)
   }
 
-  constructor(editorElement, files) {
+  constructor(editorElement, files, options = {}) {
     this.#files = files
+    this.options = options
 
     this.editorElement = editorElement
     this.contents = editorElement.contents
@@ -30,24 +29,17 @@ export default class Uploader {
   }
 
   $createUploadNodes() {
-    this.nodes = this.files.map(file =>
-      $createActionTextAttachmentUploadNode({
-        ...this.#nodeUrlProperties,
-        file: file,
-        contentType: file.type
-      })
-    )
+    this.nodes = this.files.map(file => this.#createUploadNode(file))
+  }
+
+  #createUploadNode(file) {
+    return this.options.pending
+      ? this.contents.$createPendingUploadNode(file)
+      : this.contents.$createUploadNode(file)
   }
 
   $insertUploadNodes() {
-    this.nodes.forEach(this.contents.insertAtCursor)
-  }
-
-  get #nodeUrlProperties() {
-    return {
-      uploadUrl: this.editorElement.directUploadUrl,
-      blobUrlTemplate: this.editorElement.blobUrlTemplate
-    }
+    this.contents.insertAtCursor(...this.nodes)
   }
 }
 
@@ -55,10 +47,10 @@ class GalleryUploader extends Uploader {
   #gallery
 
   static handle(editorElement, files) {
-    return this.#isMultipleImageUpload(files) || this.#gallerySelection(editorElement.selection)
+    return this.isMultipleImageUpload(files) || this.gallerySelection(editorElement.selection)
   }
 
-  static #isMultipleImageUpload(files) {
+  static isMultipleImageUpload(files) {
     let imageFileCount = 0
     for (const file of files) {
       if (isPreviewableImage(file.type)) imageFileCount++
@@ -67,11 +59,12 @@ class GalleryUploader extends Uploader {
     return false
   }
 
-  static #gallerySelection(selection) {
-    if (selection.isOnPreviewableImage) return true
+  static gallerySelection(selection) {
+    return selection.isOnPreviewableImage || this.selectionIsAfterGalleryEdge(selection)
+  }
 
-    const { node: selectedNode } = selection.selectedNodeWithOffset()
-    return $getNearestNodeOfType(selectedNode, ImageGalleryNode) !== null
+  static selectionIsAfterGalleryEdge(selection) {
+    return selection.isAtNodeStart && ImageGalleryNode.canCollapseWith(selection.nodeBeforeCursor)
   }
 
   $insertUploadNodes() {
@@ -82,11 +75,20 @@ class GalleryUploader extends Uploader {
 
   #findOrCreateGallery() {
     if (this.selection.isOnPreviewableImage) {
-      this.#gallery = $findOrCreateGalleryForImage(this.#selectedNode)
+      // Resolve from the previewable image itself (the selection's first node), not from
+      // #selectedNode (the anchor) — those differ when the selection runs from an image
+      // into following text, and the anchor text node can't join a gallery (returns null).
+      this.#gallery = $findOrCreateGalleryForImage(this.selection.previewableImageNode)
+    } else if (this.#selectionIsAfterGalleryEdge) {
+      this.#gallery = $findOrCreateGalleryForImage(this.selection.nodeBeforeCursor)
     } else {
       this.#gallery = $createImageGalleryNode()
       this.contents.insertAtCursor(this.#gallery)
     }
+  }
+
+  get #selectionIsAfterGalleryEdge() {
+    return this.constructor.selectionIsAfterGalleryEdge(this.selection)
   }
 
   get #selectedNode() {
@@ -95,6 +97,8 @@ class GalleryUploader extends Uploader {
   }
 
   get #galleryInsertPosition() {
+    if (this.#selectionIsAfterGalleryEdge) return this.#gallery.getChildrenSize()
+
     const anchor = $getSelection()?.anchor
     const galleryHasElementSelection = anchor?.getNode().is(this.#gallery)
     if (galleryHasElementSelection) return anchor.offset
