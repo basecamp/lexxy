@@ -13,6 +13,8 @@ class SanitizerListsTest < ActiveSupport::TestCase
     lists = sanitizer_lists_for_app(configuration: rails_without_lexxy)
 
     assert_includes lists["assigned_tags"], "table"
+    assert_includes lists["assigned_tags"], "s"
+    assert_includes lists["assigned_tags"], "u"
     assert_includes lists["assigned_attributes"], "data-language"
   end
 
