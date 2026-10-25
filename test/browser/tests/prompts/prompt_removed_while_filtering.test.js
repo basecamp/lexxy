@@ -78,4 +78,25 @@ test.describe("Prompt removed while a filter is pending", () => {
 
     expect(errors).toEqual([])
   })
+
+  test("prompt leaving the editor while its first items are loading", async ({ page, editor }) => {
+    const errors = collectPageErrors(page)
+    let fulfillRequest
+    await page.route("**/prompt-items**", async (route) => {
+      await new Promise((resolve) => { fulfillRequest = resolve })
+      await route.fulfill({ contentType: "text/html", body: PROMPT_ITEMS_HTML })
+    })
+    await page.goto("/prompt-hash-deferred.html")
+    await editor.waitForConnected()
+
+    await editor.send("#")
+    await expect.poll(() => fulfillRequest).toBeDefined()
+
+    await page.locator("lexxy-prompt").evaluate((el) => el.remove())
+    fulfillRequest()
+    await page.waitForTimeout(200)
+
+    expect(errors).toEqual([])
+    await expect(page.locator(".lexxy-prompt-menu")).toHaveCount(0)
+  })
 })
