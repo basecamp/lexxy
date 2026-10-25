@@ -211,17 +211,25 @@ Extract from the bug report:
 
 The Playwright config starts its own Vite dev server automatically when you run the tests. No manual setup required.
 
-**For Capybara tests** (needs Rails): Capybara boots its own server, so there is nothing to start.
+**For Capybara tests** (needs Rails): Capybara boots its own Rails server, but it loads the built `app/assets/javascript/lexxy.js`. Run `bin/dev` in the worktree (as below) so the watcher keeps it current, or rebuild with `yarn build` after every `src/` change.
 
 **For the real-browser fallback** (needs the dummy app): run it from your worktree on a port of your own (see AGENTS.md, "Worktrees", for `bin/setup` and seeding):
 
 ```bash
-PORT=<port> bin/dev > /tmp/lexxy-dev-<port>.log 2>&1 &
+# bin/dev force-kills whatever listens on its port, so pick a free one: this must print nothing
+lsof -ti tcp:<port> -sTCP:LISTEN
+
+mkdir -p tmp
+PORT=<port> bin/dev > tmp/dev-<port>.log 2>&1 &
+DEV_PID=$!
 for i in $(seq 1 60); do
   curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ 2>/dev/null | grep -q 200 && break
   sleep 1
 done
+curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ | grep -q 200 || tail -30 tmp/dev-<port>.log
 ```
+
+Before testing, wait for the JS build to finish: `tmp/dev-<port>.log` shows rollup's "waiting for changes". When you're done, `kill $DEV_PID` (foreman stops its children).
 
 ### 4a. Reproduce with Playwright (preferred)
 
@@ -338,7 +346,7 @@ If Playwright doesn't reproduce after 3+ attempts and the bug might require real
 
 The rules above still hold: the action under test goes through real input (typing, key presses, clicks), page scripts only read state, and you take a screenshot after each step and read it. Capture the editor's value (`document.querySelector("lexxy-editor").value`) as evidence.
 
-A reproduction here is evidence, not a regression test. Once the bug reproduces, write a Playwright or Capybara test that fails for the same reason before moving on to the fix.
+A reproduction here is evidence, not a regression test. Once the bug reproduces, write a Playwright or Capybara test that fails for the same reason before moving on to the fix. If no such test can trigger it, say so in the verdict with the justification AGENTS.md step 2 asks for.
 
 ### 5. Render Verdict
 

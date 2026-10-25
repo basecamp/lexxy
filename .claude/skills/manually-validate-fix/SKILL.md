@@ -79,25 +79,39 @@ Use whatever browser automation tool you have available and judge best. Whatever
 
 ### 4. Make the Steps Repeatable
 
-The steps must be identical in both environments; only the URL changes. If your tool runs scripts, write one that takes the URL as an argument. Otherwise, write the steps down and follow them exactly both times.
+The steps must be identical in both environments; only the URL changes. The two pages preload different sample content, so start from a known state, for example by selecting all and deleting before the first step. If your tool runs scripts, write one that takes the URL as an argument. Otherwise, write the steps down and follow them exactly both times.
 
 For each run, record a clear line: **PASS** when the behavior is correct (expected for local) or **FAIL** when the bug manifests (expected for production).
 
 ### 5. Ensure Local Server is Running
 
-Run the server from the worktree that has the PR's branch checked out (see AGENTS.md, "Worktrees", for `bin/setup` and seeding a fresh one):
+Run the server from the worktree that has the PR's branch checked out (see AGENTS.md, "Worktrees", for `bin/setup` and seeding a fresh one).
+
+If no worktree has it, make one: `git worktree add ../lexxy-pr-<number> origin/<headRefName>`.
 
 ```bash
 cd <pr-worktree>
 git log -1 --format=%H   # must match the PR's head commit: gh pr view <number> --json headRefOid
-PORT=<port> bin/dev > /tmp/lexxy-dev-<port>.log 2>&1 &
+git status --porcelain   # must print nothing
+```
+
+A server already answering on a port may be serving another checkout, so start your own rather than reusing one:
+
+```bash
+# bin/dev force-kills whatever listens on its port, so pick a free one: this must print nothing
+lsof -ti tcp:<port> -sTCP:LISTEN
+
+mkdir -p tmp
+PORT=<port> bin/dev > tmp/dev-<port>.log 2>&1 &
+DEV_PID=$!
 for i in $(seq 1 60); do
   curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ 2>/dev/null | grep -q 200 && break
   sleep 1
 done
+curl -s -o /dev/null -w "%{http_code}" http://lexxy.localhost:<port>/ | grep -q 200 || tail -30 tmp/dev-<port>.log
 ```
 
-A server already answering on the port may be serving another checkout, so start your own rather than reusing one. Stop it when you're done.
+Before testing, wait for the JS build to finish: `tmp/dev-<port>.log` shows rollup's "waiting for changes". When you're done, `kill $DEV_PID` (foreman stops its children).
 
 ### 6. Run Against Both Environments
 
