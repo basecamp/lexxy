@@ -9,6 +9,7 @@ class AttachmentPreviewableTypesRoundTripTest < ApplicationSystemTestCase
     attach_file [ file_fixture("example.png"), file_fixture("example2.png"), file_fixture("example.tif") ] do
       click_on "Upload files"
     end
+    assert_no_selector "figure.attachment progress"
     assert_selector ".attachment-gallery figure.attachment--preview", count: 2
     assert_no_selector ".attachment-gallery figure.attachment--tif"
     assert_selector "figure.attachment--tif.attachment--file"
