@@ -24,13 +24,13 @@ for pidfile in tmp/pids/server.pid test/dummy/tmp/pids/server.pid; do
   fi
 done
 
-# Kill anything still listening on port 3000
-port_pid=$(lsof -ti tcp:3000 2>/dev/null)
+port="${PORT:-3000}"
+
+# Kill anything still listening on our port
+port_pid=$(lsof -ti tcp:"$port" -sTCP:LISTEN 2>/dev/null)
 if [ -n "$port_pid" ]; then
-  echo "Killing process on port 3000 (PID: $port_pid)..."
+  echo "Killing process on port $port (PID: $port_pid)..."
   kill -9 $port_pid 2>/dev/null
 fi
-
-port="${PORT:-3000}"
 
 exec foreman start -f Procfile.dev -p "$port" "$@"
