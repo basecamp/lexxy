@@ -390,7 +390,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #readSanitizedEditorValue() {
     return this.editor?.read(() => {
-      return this.sanitizer.sanitize($generateHtmlFromNodes(this.editor, null))
+      return this.sanitizer.sanitize(withoutManagedLineBreaks($generateHtmlFromNodes(this.editor, null)))
     }) ?? null
   }
 
@@ -1022,4 +1022,13 @@ function $getReadableTextContent(node) {
   }
 
   return node.getTextContent()
+}
+
+// Since 0.52, Lexical's HTML export appends a marked terminator <br> after a
+// block's trailing line break, mirroring the one the reconciler adds to the live
+// DOM. Drop it so the value keeps the format Lexxy has always stored.
+const MANAGED_LINE_BREAK = /<br data-lexical-managed-linebreak="true">/g
+
+function withoutManagedLineBreaks(html) {
+  return html.replace(MANAGED_LINE_BREAK, "")
 }

@@ -1,7 +1,7 @@
 import {
-  $addUpdateTag, $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
+  $addUpdateTag, $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $hasUpdateTag, $isDecoratorNode, $isElementNode,
   $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_LOW,
-  DELETE_CHARACTER_COMMAND, HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
+  DELETE_CHARACTER_COMMAND, HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_BACKSPACE_COMMAND,
   SELECTION_CHANGE_COMMAND, SKIP_DOM_SELECTION_TAG, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
@@ -15,6 +15,10 @@ import { LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ListenerBin, handlingDefault, registerEventListener } from "../helpers/listener_helper"
+
+// The tag editor.focus() adds to its update. Lexical types it, but doesn't export it.
+const FOCUS_TAG = "focus"
+
 
 export default class Selection {
   #listeners = new ListenerBin()
@@ -343,10 +347,14 @@ export default class Selection {
       this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, handlingDefault(this.#selectNextTopLevelNode.bind(this)), COMMAND_PRIORITY_LOW),
 
       this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW),
+      // Since 0.52, the list extension collapses a list item on Backspace before
+      // DELETE_CHARACTER_COMMAND is dispatched, so empty items are handled here first.
+      this.editor.registerCommand(KEY_BACKSPACE_COMMAND, this.#removeEmptyListItemOnBackspace.bind(this), COMMAND_PRIORITY_LOW),
 
-      this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
-        this.#syncSelectedClasses()
-      }, COMMAND_PRIORITY_LOW),
+      // DOM work: runs after reconciliation, so newly created nodes have elements
+      this.editor.registerUpdateListener(({ editorState }) => {
+        editorState.read(() => this.#syncSelectedClasses())
+      }),
 
       this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
         this.#preserveFocusOutsideEditor()
@@ -357,8 +365,12 @@ export default class Selection {
 
   // Selection changes can arrive after Tab moves focus to a toolbar or another field.
   // Reconciling that stale selection would pull focus back into the editor.
+  //
+  // Since Lexical 0.52 the notification runs inside the pending update itself,
+  // so it also sees updates that ask to focus the editor (editor.focus(), as
+  // toolbar commands do). Those must still reconcile the DOM selection.
   #preserveFocusOutsideEditor() {
-    if (this.#isAnotherElementFocused) {
+    if (this.#isAnotherElementFocused && !$hasUpdateTag(FOCUS_TAG)) {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
     }
   }
@@ -599,6 +611,13 @@ export default class Selection {
     } else {
       return false
     }
+  }
+
+  #removeEmptyListItemOnBackspace(event) {
+    if (!this.#removeEmptyListItem()) return false
+
+    event?.preventDefault()
+    return true
   }
 
   #selectDecoratorNodeBeforeDeletion(backwards) {

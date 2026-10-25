@@ -72,7 +72,7 @@ export default class Contents {
     if (!$isRangeSelection(selection)) return
 
     $expandSelectionToLineBreaksAndSplitAtEdges(selection, (node) => $getNearestBlockElementAncestorOrThrow(node))
-    $setBlocksType(selection, () => $createParagraphNode())
+    this.#withoutIndentsFromUnwrappedLists(() => $setBlocksType(selection, () => $createParagraphNode()))
   }
 
   applyHeadingFormat(tag) {
@@ -491,6 +491,27 @@ export default class Contents {
       this.#splitParagraphsAtLineBreaksUnlessInsideList()
       this.editor.dispatchCommand(command)
     }
+  }
+
+  // Since 0.52, Lexical carries a list item's nesting depth over as the indent of
+  // the paragraph that replaces it. Lexxy has no paragraph indentation, so unwrapping a
+  // nested list gives flat paragraphs, as it always has. Paragraphs indented
+  // before the command keep their indent.
+  #withoutIndentsFromUnwrappedLists(callback) {
+    const indentedBefore = new Set(this.#indentedParagraphsInSelection().map(paragraph => paragraph.getKey()))
+
+    callback()
+
+    for (const paragraph of this.#indentedParagraphsInSelection()) {
+      if (!indentedBefore.has(paragraph.getKey())) paragraph.setIndent(0)
+    }
+  }
+
+  #indentedParagraphsInSelection() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection)) return []
+
+    return this.#blockLevelElementsInSelection(selection).filter(block => $isParagraphNode(block) && block.getIndent() > 0)
   }
 
   #insertListInsideQuote(listType) {

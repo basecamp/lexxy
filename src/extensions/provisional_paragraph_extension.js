@@ -1,4 +1,4 @@
-import { $addUpdateTag, $getRoot, $getSelection, $isRootOrShadowRoot, COMMAND_PRIORITY_HIGH, HISTORY_MERGE_TAG, RootNode, SELECTION_CHANGE_COMMAND, defineExtension } from "lexical"
+import { $getRoot, $getSelection, $isRootOrShadowRoot, RootNode, defineExtension } from "lexical"
 import { $descendantsMatching, $firstToLastIterator, $insertFirst, mergeRegister } from "@lexical/utils"
 import { $isProvisionalParagraphNode, ProvisionalParagraphNode } from "../nodes/provisional_paragraph_node"
 import LexxyExtension from "./lexxy_extension"
@@ -17,7 +17,9 @@ export class ProvisionalParagraphExtension extends LexxyExtension {
           // they are required and their visible/hidden status
           editor.registerNodeTransform(RootNode, $insertRequiredProvisionalParagraphs),
           editor.registerNodeTransform(RootNode, $removeUnneededProvisionalParagraphs),
-          editor.registerCommand(SELECTION_CHANGE_COMMAND, $markStaleProvisionalParagraphsDirty, COMMAND_PRIORITY_HIGH)
+          editor.registerUpdateListener(({ editorState }) => {
+            editorState.read(() => $syncProvisionalParagraphsVisibility(editor))
+          })
         )
       }
     })
@@ -54,12 +56,14 @@ function $removeUnneededProvisionalParagraphs(rootNode) {
   }
 }
 
-function $markStaleProvisionalParagraphsDirty() {
-  // Selection-driven visibility updates must not become standalone undo steps.
-  $addUpdateTag(HISTORY_MERGE_TAG)
-
+// Visibility follows the selection, which can move without any node changing.
+// Toggle the class on the committed DOM rather than marking nodes dirty: an edit
+// made in response to a selection change joins the update that moved it (Lexical
+// 0.52), so it would leak into history or merge with the triggering edit.
+function $syncProvisionalParagraphsVisibility(editor) {
   for (const provisionalParagraph of $getAllProvisionalParagraphs()) {
-    if (provisionalParagraph.hasStaleVisibility) provisionalParagraph.markDirty()
+    const dom = editor.getElementByKey(provisionalParagraph.getKey())
+    dom?.classList.toggle("hidden", !provisionalParagraph.isSelected())
   }
 }
 
