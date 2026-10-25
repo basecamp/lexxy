@@ -47,9 +47,9 @@ get allowedElements() {
 }
 ```
 
-Declared attributes apply only to editors where your extension is enabled. Some can't be declared at all: event handlers (`onclick` and every other `on…` attribute) and `srcdoc` run script whatever their value, so Lexxy always drops them. URL attributes such as `href`, `src`, `srcset` or `formaction` can be declared, and their values still go through DOMPurify's URL check, so `javascript:` URLs are dropped.
+Declared attributes apply only to editors where your extension is enabled. Some can't be declared at all, because they run script or load markup whatever their value: event handlers (`onclick` and every other `on…` attribute), `srcdoc`, `patchsrc`, and `for` on anything but a `<label>` or `<output>`. Neither can the elements `script`, `style`, `link`, `meta` and `base`. URL attributes such as `href`, `src` or `formaction` can be declared, and DOMPurify still checks their values, so a value starting with `javascript:` is dropped.
 
-This governs Lexxy's sanitizing in the browser. When the content is rendered, Action Text sanitizes it again on the server, with your application's allowlist, and drops any attribute that isn't on it. Lexxy adds the attributes its own elements need. If yours need more, add them in an initializer:
+This governs Lexxy's sanitizing in the browser. When the content is rendered, Action Text sanitizes it again on the server, with your application's allowlist, and drops any attribute that isn't on it. If your elements need attributes that the server drops, add them in an initializer:
 
 ```ruby
 # config/initializers/action_text.rb
@@ -59,7 +59,7 @@ ActiveSupport.on_load(:action_text_content) do
 end
 ```
 
-The server's allowlist is app-wide: it applies to all rich text, whichever editor wrote it.
+The server's allowlist is app-wide: it applies to every element in all rich text, whichever editor wrote it. Lexxy's limits don't apply there, so never add event handlers or other attributes from the list above to it.
 
 ### URI-safe schemes
 

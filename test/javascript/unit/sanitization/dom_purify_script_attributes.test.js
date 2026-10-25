@@ -33,6 +33,26 @@ describe("dom_purify — attributes extensions can't allow", () => {
     expect(out).toBe('<iframe src="https://example.com/embed"></iframe>')
   })
 
+  test("drops patchsrc, and for outside a label or an output", () => {
+    const out = sanitizeWith(
+      [ { tag: "div", attributes: [ "patchsrc", "for" ] }, { tag: "template", attributes: [ "for" ] }, { tag: "label", attributes: [ "for" ] } ],
+      '<div patchsrc="https://example.com/x.html" for="t">a</div><template for="t"></template><label for="name">b</label>'
+    )
+
+    expect(out).toBe('<div>a</div><template></template><label for="name">b</label>')
+  })
+
+  test("drops elements that act on the page, even when declared", () => {
+    const out = sanitizeWith(
+      [ "p", "script", "style", "link", "meta", { tag: "base", attributes: [ "href" ] } ],
+      '<p>x</p><script>alert(1)</script><style>body { display: none }</style>' +
+        '<link rel="stylesheet" href="https://example.com/x.css"><meta http-equiv="refresh" content="0;url=https://example.com">' +
+        '<base href="https://example.com/">'
+    )
+
+    expect(out).toBe("<p>x</p>")
+  })
+
   test("keeps URL-bearing attributes subject to the URI check", () => {
     const allowed = [
       { tag: "a", attributes: [ "ping" ] },
