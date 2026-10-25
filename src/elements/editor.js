@@ -447,7 +447,8 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #createEditor() {
-    this.editorContentElement ||= this.#findOrCreateEditorContentElement()
+    this.#removeCachedEditorContentElement()
+    this.editorContentElement ||= this.#createEditorContentElement()
     this.appendChild(this.editorContentElement)
 
     const editor = buildEditorFromExtensions({
@@ -497,17 +498,10 @@ export class LexicalEditorElement extends HTMLElement {
     return nodes
   }
 
-  // A restored Turbo snapshot already carries the content element. Empty it right away:
-  // Lexical only does on mount, a frame later, and the cached content would flash meanwhile.
-  #findOrCreateEditorContentElement() {
-    const cachedContentElement = this.querySelector(":scope > .lexxy-editor__content")
-
-    if (cachedContentElement) {
-      cachedContentElement.replaceChildren()
-      return cachedContentElement
-    } else {
-      return this.#createEditorContentElement()
-    }
+  // A restored Turbo snapshot carries the content element the cached page had built,
+  // with its stale content and state. Start from a fresh one instead.
+  #removeCachedEditorContentElement() {
+    this.querySelector(":scope > .lexxy-editor__content")?.remove()
   }
 
   #createEditorContentElement() {
