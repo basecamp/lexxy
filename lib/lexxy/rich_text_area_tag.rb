@@ -25,7 +25,7 @@ module Lexxy
       # Temporary: we need to *adaptarize* action text
       def render_custom_attachments_in(value)
         if value.respond_to?(:body)
-          if html = editable_html_from(value).presence
+          if html = value.body&.to_html.presence
             self.prefix_partial_path_with_controller_namespace = false if respond_to?(:prefix_partial_path_with_controller_namespace=)
             ActionText::Fragment.wrap(html).replace(ActionText::Attachment.tag_name) do |node|
               if node["url"].blank?
@@ -38,16 +38,6 @@ module Lexxy
           end
         else
           value
-        end
-      end
-
-      # Prefer the stored HTML as is. An encrypted body (has_rich_text encrypted: true)
-      # stores ciphertext, so read the decrypted body instead.
-      def editable_html_from(rich_text)
-        if rich_text.try(:encrypted_attribute?, :body)
-          rich_text.body&.to_html
-        else
-          rich_text.body_before_type_cast
         end
       end
   end
