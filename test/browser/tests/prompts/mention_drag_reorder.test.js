@@ -28,6 +28,19 @@ test.describe("Mention drag reorder", () => {
     const textPosition = value.indexOf("says hello")
     expect(mentionPosition).toBeGreaterThan(textPosition)
   })
+
+  test("a mention can be dragged between two adjacent mentions with no spaces", async ({ editor }) => {
+    await editor.setValue(threeAdjacentMentions())
+    await editor.flush()
+
+    await expect(editor.content.locator("action-text-attachment")).toHaveCount(3)
+    expect(sgidOrder(await editor.value())).toEqual([ "zacharias", "alice", "bob" ])
+
+    await dragMentionBeforeSibling(editor, 2, 1)
+    await editor.flush()
+
+    expect(sgidOrder(await editor.value())).toEqual([ "zacharias", "bob", "alice" ])
+  })
 })
 
 async function insertMention(page, editor) {
@@ -42,8 +55,50 @@ async function insertMention(page, editor) {
   await expect(editor.content.locator("action-text-attachment")).toBeVisible({ timeout: 5_000 })
 }
 
+function threeAdjacentMentions() {
+  return `<p>${mentionHtml("zacharias", "Zacharias")}${mentionHtml("alice", "Alice")}${mentionHtml("bob", "Bob")}</p>`
+}
+
+function mentionHtml(sgid, name) {
+  const content = `<span class=&quot;person person--inline&quot;><span class=&quot;person--name&quot;>${name}</span></span>`
+  return `<action-text-attachment sgid="test-sgid-${sgid}" content="${content}" content-type="application/vnd.actiontext.mention"></action-text-attachment>`
+}
+
 async function mentionIsDraggable(mention) {
   return mention.evaluate((el) => el.draggable === true)
+}
+
+function sgidOrder(value) {
+  return [ ...value.matchAll(/sgid="test-sgid-([^"]+)"/g) ].map((match) => match[1])
+}
+
+// Drag the mention at sourceIndex and drop it just before the mention at targetIndex.
+async function dragMentionBeforeSibling(editor, sourceIndex, targetIndex) {
+  await editor.content.evaluate((root, { sourceIndex, targetIndex }) => {
+    const mentions = root.querySelectorAll("action-text-attachment")
+    const source = mentions[sourceIndex]
+    const target = mentions[targetIndex]
+
+    const targetRect = target.getBoundingClientRect()
+    const dropX = targetRect.left + 2
+    const dropY = targetRect.top + targetRect.height / 2
+
+    const dataTransfer = new DataTransfer()
+
+    const dispatch = (type, element, clientX, clientY) => {
+      const event = new DragEvent(type, { bubbles: true, cancelable: true, clientX, clientY })
+      Object.defineProperty(event, "dataTransfer", { value: dataTransfer })
+      element.dispatchEvent(event)
+    }
+
+    const startRect = source.getBoundingClientRect()
+    dispatch("dragstart", source, startRect.left + 2, startRect.top + startRect.height / 2)
+
+    const dropTarget = document.elementFromPoint(dropX, dropY) || root
+    dispatch("dragover", dropTarget, dropX, dropY)
+    dispatch("drop", dropTarget, dropX, dropY)
+    dispatch("dragend", source, dropX, dropY)
+  }, { sourceIndex, targetIndex })
 }
 
 async function dragMentionToEndOfLine(editor) {
