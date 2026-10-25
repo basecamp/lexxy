@@ -47,4 +47,16 @@ class CodeDisabledTest < ApplicationSystemTestCase
     assert_no_match(/<code/, find_editor.value)
     assert_includes find_editor.value, "world"
   end
+
+  test "code saved before the options were turned off loads as plain text" do
+    post = posts(:empty)
+    post.update!(body: "<p>Hello <code>world</code></p><pre>one<br>two</pre>")
+
+    visit edit_post_path(post, code_blocks_disabled: true, inline_code_disabled: true)
+    wait_for_editor
+
+    assert_no_selector "lexxy-editor pre"
+    assert_no_selector "lexxy-editor code"
+    assert_includes find_editor.value, "<p>Hello world</p><p>one</p><p>two</p>"
+  end
 end

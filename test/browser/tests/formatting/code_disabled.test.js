@@ -129,6 +129,13 @@ test.describe("Code blocks and inline code both disabled", () => {
     await assertEditorHtml(editor, "<p>one</p><p>two</p><p><br></p><p>four</p>")
   })
 
+  test("code in the initial value is reduced to plain text, keeping links", async ({ page, editor }) => {
+    await page.goto("/code-all-false-initial-value.html")
+    await editor.waitForConnected()
+
+    await assertEditorHtml(editor, '<p>Hello world</p><p>one</p><p><a href="https://example.com/">two</a></p>')
+  })
+
   test("the editor connects without console errors", async ({ page, editor }) => {
     startMonitoringConsole(page)
 

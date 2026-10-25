@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $createTextNode, $getRoot, $getSelection, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -7,6 +7,7 @@ import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
+import { $filterDisallowedCode, $removeInlineCodeFormat, $replaceCodeNodeWithParagraphs } from "../helpers/code_filter_helper"
 import { $convertInlineImageDataURIs } from "../helpers/inline_image_uri_helper"
 import { CodeHighlightNode, CodeNode } from "@lexical/code"
 import { CODE, INLINE_CODE, TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
@@ -275,7 +276,7 @@ export class LexicalEditorElement extends HTMLElement {
   $generateNodesFromDOM(doc, { editor = this.editor } = {}) {
     let nodes = $generateLexicalNodesFromDOM(editor, doc)
     if ($hasUpdateTag(PASTE_TAG)) nodes = $convertInlineImageDataURIs(nodes, this)
-    return filterDisallowedAttachmentNodes(nodes, this)
+    return $filterDisallowedCode(filterDisallowedAttachmentNodes(nodes, this), this)
   }
 
   get isEmpty() {
@@ -724,25 +725,16 @@ export class LexicalEditorElement extends HTMLElement {
 
   // Code nodes stay registered even when code blocks are disabled, because other
   // extensions register transforms against them. Turn each one into paragraphs.
+  // Imported HTML is already filtered in $generateNodesFromDOM; this catches the
+  // rest, such as Lexical clipboard data.
   #registerCodeBlockStripper() {
-    return this.editor.registerNodeTransform(CodeNode, (node) => {
-      const paragraphs = node.getTextContent().split("\n").map((line) => {
-        const paragraph = $createParagraphNode()
-        if (line.length > 0) paragraph.append($createTextNode(line))
-        return paragraph
-      })
-
-      paragraphs.forEach((paragraph) => node.insertBefore(paragraph))
-      node.remove()
-    })
+    return this.editor.registerNodeTransform(CodeNode, $replaceCodeNodeWithParagraphs)
   }
 
   // Inline code is a text format rather than a node, so clear the format from
-  // every text node that gets it: loaded, pasted or typed content alike.
+  // every text node that gets it: pasted or typed content alike.
   #registerInlineCodeStripper() {
-    return this.editor.registerNodeTransform(TextNode, (node) => {
-      if (node.hasFormat("code")) node.toggleFormat("code")
-    })
+    return this.editor.registerNodeTransform(TextNode, $removeInlineCodeFormat)
   }
 
   #registerTableComponents() {
