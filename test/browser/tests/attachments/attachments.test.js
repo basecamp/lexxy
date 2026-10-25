@@ -149,6 +149,39 @@ test.describe("Attachments", () => {
     await assertEditorValueContains(editor, 'caption="My caption"')
   })
 
+  test("Enter that confirms an IME composition stays in the caption", async ({ page, editor }) => {
+    await mockActiveStorageUploads(page)
+    await editor.uploadFile("test/fixtures/files/example.png")
+
+    const caption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await page.locator("figure.attachment .attachment__caption--editable").click()
+    await expect(caption).toBeVisible({ timeout: 10_000 })
+
+    await caption.click()
+    await caption.pressSequentially("한글")
+
+    // Playwright can't drive a real IME, so replay the events one sends when
+    // Enter confirms the last syllable. Chrome reports the keydown with
+    // isComposing; Safari ends the composition first, leaving only keyCode 229.
+    for (const indicator of [ { isComposing: true }, { keyCode: 229 } ]) {
+      await caption.evaluate((textarea, indicator) => {
+        textarea.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }))
+        if (!indicator.isComposing) textarea.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "글" }))
+        textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, cancelable: true, ...indicator }))
+        if (indicator.isComposing) textarea.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: "글" }))
+      }, indicator)
+      await editor.flush()
+
+      await expect(caption).toBeFocused()
+      await expect(caption).toHaveValue("한글")
+    }
+
+    await caption.press("Enter")
+    await assertEditorHasFocus(editor)
+    await assertEditorValueContains(editor, 'caption="한글"')
+    expect(await editor.value()).not.toContain("<p>한글</p>")
+  })
+
   test("caption saves and editor has focus after click", async ({ page, editor }) => {
     await mockActiveStorageUploads(page)
     await editor.uploadFile("test/fixtures/files/example.png")
