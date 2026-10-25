@@ -34,6 +34,7 @@ Playwright tests in `test/browser/tests/` are grouped into semantic folders:
 | `paste/`       | Markdown conversion, URL/link paste, file/attachment paste, style canonicalization       |
 | `prompts/`     | Prompt popover triggers, mention insertion/deletion, remote-filtering race conditions    |
 | `tables/`      | Structure (create, add/remove rows/columns, delete), headers                             |
+| `styles/`      | Stylesheet cascade: how Lexxy's CSS weighs against host app and consumer rules           |
 
 Single-file tests (`code_highlighting`, `events`) live at the root level.
 
