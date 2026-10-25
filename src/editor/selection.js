@@ -8,7 +8,7 @@ import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, $isListItemNode, ListItemNode, ListNode } from "@lexical/list"
 import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
-import { getHighlightStyles, isSelectionHighlighted } from "../helpers/format_helper"
+import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
 import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } from "../helpers/lexical_helper"
 import { $isLinkNode, LinkNode } from "@lexical/link"
@@ -101,18 +101,14 @@ export default class Selection {
     const topLevelElement = anchorNode.getTopLevelElementOrThrow()
     const listType = getListType(anchorNode)
     const headingNode = this.#getNearestHeadingNode(anchorNode)
-    const linkUrl = this.linkUrl
-    const isHighlight = isSelectionHighlighted(selection)
 
     return {
       isBold: selection.hasFormat("bold"),
       isItalic: selection.hasFormat("italic"),
       isStrikethrough: selection.hasFormat("strikethrough"),
       isUnderline: selection.hasFormat("underline"),
-      isHighlight,
-      highlightStyles: isHighlight ? getHighlightStyles(selection) : null,
-      isInLink: linkUrl !== null,
-      linkUrl,
+      isHighlight: isSelectionHighlighted(selection),
+      isInLink: this.linkUrl !== null,
       isInQuote: $isQuoteNode(topLevelElement),
       isInHeading: headingNode !== null,
       isInCode: this.#isInCode(selection, anchorNode),

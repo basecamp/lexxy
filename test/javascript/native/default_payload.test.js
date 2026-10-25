@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "vitest"
-import { $setSelection } from "lexical"
+import { $createNodeSelection, $getRoot, $setSelection } from "lexical"
+import { HorizontalDividerNode } from "../../../src/nodes/horizontal_divider_node"
 import { createTestEditor, createTestEditorWithNativeAdapter, destroyTestEditor, selectAll, setContent, tick } from "../unit/helpers/editor_helper"
 import { NativeAdapter } from "../../../src/editor/adapters/native_adapter"
 import { captureAttributesChange } from "./helpers/attributes_capture"
@@ -65,6 +66,28 @@ describe("default payload contract", () => {
 
     expect(capture.last).toBeTruthy()
     expect(capture.violations).toEqual([])
+  })
+
+  test("dispatch with a node selection emits the default attributes payload", async () => {
+    editorElement = await createTestEditorWithNativeAdapter()
+    await setContent(editorElement, "<p>before</p><hr><p>after</p>")
+    editorElement.editor.update(() => {
+      const divider = $getRoot().getChildren().find(node => node instanceof HorizontalDividerNode)
+      const selection = $createNodeSelection()
+      selection.add(divider.getKey())
+      $setSelection(selection)
+    }, { discrete: true })
+    capture = captureAttributesChange(editorElement)
+
+    editorElement.dispatchAttributesChange()
+
+    expect(capture.last.attributes).toEqual({
+      ...EXPECTED_DEFAULT_ATTRIBUTES,
+      undo: { active: false, enabled: expect.any(Boolean) },
+      redo: { active: false, enabled: expect.any(Boolean) },
+    })
+    expect(capture.last.link).toBeNull()
+    expect(capture.last.highlight).toBeNull()
   })
 
   test("dispatch with a plain-text RangeSelection emits all attributes inactive but enabled", async () => {

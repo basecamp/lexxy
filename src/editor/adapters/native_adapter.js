@@ -1,8 +1,7 @@
 import { dispatch } from "../../helpers/html_helper"
+import { getHighlightStyles } from "../../helpers/format_helper"
 import { $getNodeByKey, $getSelection, $isElementNode, $isRangeSelection, $isTextNode } from "lexical"
 import { $isLinkNode } from "@lexical/link"
-
-const FORMAT_ATTRIBUTES = [ "bold", "italic", "strikethrough", "code", "highlight", "link", "quote", "heading", "unordered-list", "ordered-list" ]
 
 export class NativeAdapter {
   frozenLinkKey = null
@@ -13,14 +12,7 @@ export class NativeAdapter {
   }
 
   dispatchAttributesChange(editorOrState) {
-    const format = editorOrState.read(() => this.editorElement.selection.getFormat())
-
-    dispatch(this.editorElement, "lexxy:attributes-change", {
-      attributes: this.#attributesFor(format),
-      link: format.linkUrl ? { href: format.linkUrl } : null,
-      highlight: format.highlightStyles ?? null,
-      headingTag: format.headingTag ?? null
-    })
+    dispatch(this.editorElement, "lexxy:attributes-change", editorOrState.read(() => this.#attributesChangeDetail()))
   }
 
   dispatchEditorInitialized(detail) {
@@ -74,28 +66,36 @@ export class NativeAdapter {
     return true
   }
 
+  #attributesChangeDetail() {
+    const { selection } = this.editorElement
+    const format = selection.getFormat()
+    const linkUrl = selection.linkUrl
+
+    return {
+      attributes: this.#attributesFor(format),
+      link: linkUrl ? { href: linkUrl } : null,
+      highlight: format.isHighlight ? getHighlightStyles($getSelection()) : null,
+      headingTag: format.headingTag ?? null
+    }
+  }
+
+  // getFormat() is empty without a range selection, which leaves every format disabled.
   #attributesFor(format) {
-    const history = {
+    const enabled = Object.keys(format).length > 0
+
+    return {
+      bold: { active: Boolean(format.isBold), enabled },
+      italic: { active: Boolean(format.isItalic), enabled },
+      strikethrough: { active: Boolean(format.isStrikethrough), enabled },
+      code: { active: Boolean(format.isInCode), enabled },
+      highlight: { active: Boolean(format.isHighlight), enabled },
+      link: { active: Boolean(format.isInLink), enabled },
+      quote: { active: Boolean(format.isInQuote), enabled },
+      heading: { active: Boolean(format.isInHeading), enabled },
+      "unordered-list": { active: format.listType === "bullet", enabled },
+      "ordered-list": { active: format.listType === "number", enabled },
       undo: { active: false, enabled: this.editorElement.canUndo },
       redo: { active: false, enabled: this.editorElement.canRedo }
-    }
-
-    if (Object.keys(format).length === 0) {
-      return { ...Object.fromEntries(FORMAT_ATTRIBUTES.map(name => [ name, { active: false, enabled: false } ])), ...history }
-    } else {
-      return {
-        bold: { active: format.isBold, enabled: true },
-        italic: { active: format.isItalic, enabled: true },
-        strikethrough: { active: format.isStrikethrough, enabled: true },
-        code: { active: format.isInCode, enabled: true },
-        highlight: { active: format.isHighlight, enabled: true },
-        link: { active: format.isInLink, enabled: true },
-        quote: { active: format.isInQuote, enabled: true },
-        heading: { active: format.isInHeading, enabled: true },
-        "unordered-list": { active: format.listType === "bullet", enabled: true },
-        "ordered-list": { active: format.listType === "number", enabled: true },
-        ...history
-      }
     }
   }
 
