@@ -16,12 +16,7 @@ export async function positionCursorAfterNode(editor, anchorType) {
         const root = el.editor.getEditorState()._nodeMap.get("root")
         for (const child of root.getChildren()) {
           if (child.getType() === type) {
-            const next = child.getNextSibling()
-            if (next?.getType() === "provisonal_paragraph") {
-              next.selectStart()
-            } else {
-              child.selectNext(0, 0)
-            }
+            child.selectNext(0, 0)
             return
           }
         }
@@ -62,8 +57,7 @@ export async function removeBufferParagraphsBetweenImages(editor) {
         const isImageNode = (n) =>
           n?.getType() === "action_text_attachment" || n?.getType() === "image_gallery"
         for (const node of root.getChildren()) {
-          const type = node.getType()
-          if (type !== "paragraph" && type !== "provisonal_paragraph") continue
+          if (node.getType() !== "paragraph") continue
           if (!isImageNode(node.getPreviousSibling()) || !isImageNode(node.getNextSibling())) continue
           if (node.getTextContent().replace(/x/g, "") === "") node.remove()
         }
