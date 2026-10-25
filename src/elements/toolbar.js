@@ -87,8 +87,8 @@ export class LexicalToolbarElement extends HTMLElement {
     if (this.#refreshToolbarAF != null) return
 
     this.#refreshToolbarAF = requestAnimationFrame(() => {
-      this.#refreshOverflow()
       this.#refreshToolbarAF = null
+      this.#refreshOverflow()
     })
   }
 
@@ -271,11 +271,11 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #refreshOverflow() {
-    // The overflow control may be absent when a refresh fires: the toolbar
-    // template can be transiently detached during a Turbo/idiomorph morph, or a
-    // page server-rendered by an older Lexxy may be hydrated by newer JS. Bail
-    // out — setEditor() and the ResizeObserver re-run this once it's in the DOM.
-    if (!this.#overflowMenuButton) return
+    // Toolbar markup supplied by the page (an external toolbar, or a
+    // <lexxy-toolbar> inside the editor) is used as-is, so it may lack the
+    // overflow menu or predate its current markup. Without one there is
+    // nowhere to overflow buttons into.
+    if (!this.#overflowMenuDropdown) return
 
     this.#hideOverflowMenuButton()
     this.#resetToolbarOverflow()

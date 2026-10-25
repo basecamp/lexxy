@@ -199,6 +199,26 @@ test.describe("Toolbar", () => {
     expect(page).toHaveNoErrors()
   })
 
+  test("overflow refresh does not throw when the overflow control has no menu panel", async ({ page }) => {
+    startMonitoringConsole(page)
+
+    const toolbar = page.locator("lexxy-toolbar")
+    await expect(toolbar).toBeVisible()
+
+    // Toolbar markup written against an older Lexxy keeps the overflow control
+    // but has no [data-dropdown-panel] menu inside it.
+    await page.evaluate(async () => {
+      const tb = document.querySelector("lexxy-toolbar")
+      tb.querySelector(".lexxy-editor__toolbar-overflow [data-dropdown-panel]").removeAttribute("data-dropdown-panel")
+      tb.requestOverflowRefresh()
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    })
+
+    expect(page).toHaveNoErrors()
+    await expect(toolbar.locator("button[name='bold']")).toBeVisible()
+  })
+
   test("overflow compaction accounts for injected buttons that cannot overflow", async ({ page }) => {
     const toolbar = page.locator("lexxy-toolbar")
     const overflowMenu = toolbar.locator(".lexxy-editor__toolbar-overflow-menu")
