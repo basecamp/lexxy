@@ -8,6 +8,7 @@ import { $insertDataTransferForRichText } from "@lexical/clipboard"
 import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
 import { ListenerBin } from "../helpers/listener_helper"
 import NodeInserter from "./contents/node_inserter"
+import NestedBlockNodeInserter from "./contents/node_inserter/nested_block_node_inserter"
 
 export default class Clipboard {
   #listeners = new ListenerBin()
@@ -65,6 +66,11 @@ export default class Clipboard {
     const url = $bareUrlFromSingleLink(nodes)
     if (url && $isRangeSelection(selection)) {
       this.#insertSingleLinkAt(selection, url)
+      return true
+    }
+
+    if (NestedBlockNodeInserter.handles(selection)) {
+      new NestedBlockNodeInserter(selection).insertNodes(nodes)
       return true
     }
   }

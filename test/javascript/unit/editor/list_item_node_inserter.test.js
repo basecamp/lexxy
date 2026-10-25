@@ -64,8 +64,11 @@ describe("ListItemNodeInserter with a relocated anchor", () => {
       new ListItemNodeInserter(selection).insertNodes([ attachment ])
     }, { discrete: true })
 
+    // Whether Lexical's default insertion adds a trailing paragraph after the
+    // block varies by version (0.52 no longer does); the attachment placement is
+    // what matters here.
     expect(editorElement.value).toMatch(
-      /^<ul><li[^>]*>One<\/li><\/ul><p[^>]*>After<\/p><action-text-attachment[^>]*><\/action-text-attachment><p[^>]*>(<br>)?<\/p>$/
+      /^<ul><li[^>]*>One<\/li><\/ul><p[^>]*>After<\/p><action-text-attachment[^>]*><\/action-text-attachment>(<p[^>]*>(<br>)?<\/p>)?$/
     )
   })
 })

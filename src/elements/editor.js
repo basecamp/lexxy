@@ -390,7 +390,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #readSanitizedEditorValue() {
     return this.editor?.read(() => {
-      return this.sanitizer.sanitize($generateHtmlFromNodes(this.editor, null))
+      return this.sanitizer.sanitize(withoutLexicalExportArtifacts($generateHtmlFromNodes(this.editor, null)))
     }) ?? null
   }
 
@@ -1022,4 +1022,15 @@ function $getReadableTextContent(node) {
   }
 
   return node.getTextContent()
+}
+
+// Lexical's HTML export (as of 0.52) writes two things Lexxy has never stored:
+// a marked terminator <br> after a block's trailing line break, mirroring the one
+// the reconciler adds to the live DOM, and block indentation as
+// data-lexical-indent, which Lexxy's content styles don't render. Drop both so
+// the value keeps the format it has always had.
+const LEXICAL_EXPORT_ARTIFACTS = / data-lexical-indent="\d+"|<br data-lexical-managed-linebreak="true">/g
+
+function withoutLexicalExportArtifacts(html) {
+  return html.replace(LEXICAL_EXPORT_ARTIFACTS, "")
 }
