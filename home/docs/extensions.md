@@ -47,6 +47,18 @@ get allowedElements() {
 }
 ```
 
+### URI-safe schemes
+
+Allowing an attribute lets it survive by name, but Lexxy still runs DOMPurify's URL scheme check on its value and drops anything whose scheme it doesn't recognize. If your element carries an identifier that uses a custom scheme — a mention's `gid="gid://…"`, say — declare that scheme in `uriSafeSchemes` so values using it are kept:
+
+```js
+get allowedElements() {
+  return [ { tag: "bc-mention", attributes: [ "gid" ], uriSafeSchemes: [ "gid" ] } ]
+}
+```
+
+This widens the editor's recognized-safe scheme set; it does **not** exempt any attribute from validation. The executable schemes — `javascript:`, `data:`, `vbscript:` and the rest of the `…script:` family — can't be declared this way: they're dropped from the list, so they stay refused on every attribute, including `href` and `object[data]`, and a declared scheme can't smuggle an executable URL through a link or resource attribute. Declare it on the element that needs it for locality, though the scheme is recognized editor-wide once allowed — so use it only for schemes that are inert in the browser, like an identifier scheme (`gid:`).
+
 ## Example
 
 ```js
