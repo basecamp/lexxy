@@ -60,6 +60,7 @@
   "dependencies": {
     "@lexical/clipboard": "^0.52.0",
     "@lexical/code": "^0.52.0",
+    "@lexical/code-prism": "^0.52.0",
     "@lexical/extension": "^0.52.0",
     "@lexical/history": "^0.52.0",
     "@lexical/html": "^0.52.0",

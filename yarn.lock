@@ -381,6 +381,16 @@
     "@lexical/utils" "0.52.0"
     lexical "0.52.0"
 
+"@lexical/code-prism@^0.52.0":
+  version "0.52.0"
+  resolved "https://registry.yarnpkg.com/@lexical/code-prism/-/code-prism-0.52.0.tgz#5c4cf7c6df7b241d007c6f8cac8047b2a26a29bf"
+  integrity sha512-RRAj+RmY4p9W4LMPNJQqw3N9/myrrevG5ptD7PsIrbPb4pbJkHNP8ol5CS8OQ1zelUqROKUfqBmDJsdzfsChGQ==
+  dependencies:
+    "@lexical/code-core" "0.52.0"
+    "@lexical/extension" "0.52.0"
+    lexical "0.52.0"
+    prismjs "^1.30.0"
+
 "@lexical/code@^0.52.0":
   version "0.52.0"
   resolved "https://registry.yarnpkg.com/@lexical/code/-/code-0.52.0.tgz#e66a8178fc2cc06d9bd88f9764c016340c11a117"
