@@ -439,7 +439,7 @@ export class LexicalToolbarElement extends HTMLElement {
           ${ToolbarIcons.link}
         </button>
         <div data-dropdown-panel role="dialog" aria-label="Link" hidden>
-          <input type="text" inputmode="url" autocapitalize="off" spellcheck="false" pattern="[a-zA-Z][a-zA-Z0-9+.\\-]*:.+|[\\/#].*" title="A full URL, or a path such as /about" placeholder="Enter a URL…" class="input" id="${linkInputId}">
+          <input type="text" inputmode="url" autocapitalize="off" spellcheck="false" pattern="[a-zA-Z][a-zA-Z0-9+.\\-]*:\\S+|[\\/#]\\S*" title="A full URL, or a path such as /about" placeholder="Enter a URL…" class="input" id="${linkInputId}">
           <div class="lexxy-editor__toolbar-dropdown-actions">
             <button type="button" class="lexxy-editor__toolbar-button" value="link">Link</button>
             <button type="button" class="lexxy-editor__toolbar-button" value="unlink">Unlink</button>

@@ -475,6 +475,11 @@ test.describe("Block formatting", () => {
     await expect(input).toBeVisible()
     expect(await input.evaluate((el) => el.validity.patternMismatch)).toBe(true)
 
+    await input.fill("https://37 signals.com")
+    await linkButton.click()
+    await expect(input).toBeVisible()
+    expect(await input.evaluate((el) => el.validity.patternMismatch)).toBe(true)
+
     await input.fill(" /about ")
     await linkButton.click()
     await assertEditorHtml(editor, '<p>Hello <a href="/about">everyone</a></p>')
