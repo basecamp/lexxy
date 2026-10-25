@@ -104,6 +104,33 @@ test.describe("Horizontal divider", () => {
       "<p>Before divider</p><hr><p>After divider</p>",
     )
   })
+
+  test("undo typing next to a horizontal divider removes the whole run", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello</p><hr>")
+    await editor.content.locator("p").first().click()
+    await editor.send("End")
+    await editor.send(" world")
+
+    await page.getByRole("button", { name: "Undo" }).click()
+
+    await assertEditorHtml(editor, "<p>Hello</p><hr>")
+  })
+
+  test("the paragraph after a trailing divider shows only while the caret is in it", async ({ editor }) => {
+    await editor.setValue("<p>Hello</p><hr>")
+    const provisionalParagraph = editor.content.locator("p.provisional-paragraph")
+
+    await editor.content.locator("p").first().click()
+    await expect(provisionalParagraph).toContainClass("hidden")
+
+    await editor.send("ArrowDown")
+    await editor.send("ArrowDown")
+    await expect(provisionalParagraph).not.toContainClass("hidden")
+
+    await editor.send("ArrowUp")
+    await editor.send("ArrowUp")
+    await expect(provisionalParagraph).toContainClass("hidden")
+  })
 })
 
 test.describe("Horizontal divider markdown shortcut", () => {

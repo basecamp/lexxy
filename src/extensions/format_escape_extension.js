@@ -67,9 +67,10 @@ function $escapeBeforeBlockquoteStart() {
 }
 
 function $escapeFromBlankBlockquoteParagraph() {
-  const anchorNode = $getSelection().anchor.getNode()
+  const selection = $getSelection()
+  if (!$isRangeSelection(selection)) return false
 
-  const paragraph = $getNearestNodeOfType(anchorNode, ParagraphNode)
+  const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
   if (!paragraph || !$isBlankNode(paragraph)) return false
 
   const blockquote = paragraph.getParent()

@@ -1,5 +1,6 @@
-import { $isDecoratorNode, $isRangeSelection, $splitNode } from "lexical"
+import { $isDecoratorNode, $isElementNode, $isRangeSelection, $isRootOrShadowRoot, $splitNode } from "lexical"
 import { $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
+import { $isQuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $isBlankNode } from "../../../helpers/lexical_helper"
 import BaseNodeInserter from "./base_node_inserter"
@@ -41,7 +42,7 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
     }
 
     const topItem = this.#topLevelItemFor(anchorNode, outerList)
-    const [ listBefore, listAfter ] = $splitNode(outerList, this.#splitIndexFor(topItem))
+    const [ listBefore, listAfter ] = this.#split(outerList, this.#splitIndexFor(topItem))
     if (topItem && $isBlankNode(topItem)) { topItem.remove() }
 
     let anchor = listBefore ?? listAfter
@@ -67,6 +68,19 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
     return splitAfterItem ? splitAfterItem.getIndexWithinParent() + 1 : 0
   }
 
+  // $splitNode splits every ancestor up to the root, so a list inside a quote
+  // splits the quote too. Given an index past the last child, it moves the whole
+  // list into the second half, which would put the block before the list; split
+  // the parent after the list instead.
+  #split(node, index) {
+    const parent = node.getParent()
+    if (index < node.getChildrenSize() || $isRootOrShadowRoot(parent)) {
+      return $splitNode(node, index)
+    } else {
+      return this.#split(parent, node.getIndexWithinParent() + 1)
+    }
+  }
+
   #outermostList(node) {
     return [ node, ...node.getParents() ].reverse().find($isListNode)
   }
@@ -77,8 +91,12 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
     )
   }
 
-  #removeEmptyList(list) {
-    if ($isListNode(list) && list.isEmpty()) list.remove()
+  // For a list inside a quote, each half is a quote holding a list.
+  #removeEmptyList(node) {
+    if ($isElementNode(node)) {
+      node.getChildren().forEach(child => this.#removeEmptyList(child))
+      if (($isListNode(node) || $isQuoteNode(node)) && node.isEmpty()) node.remove()
+    }
   }
 
   // Only block decorator nodes (image/file attachments) are intercepted. A list
