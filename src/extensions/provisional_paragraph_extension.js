@@ -17,7 +17,7 @@ export class ProvisionalParagraphExtension extends LexxyExtension {
           // they are required and their visible/hidden status
           editor.registerNodeTransform(RootNode, $insertRequiredProvisionalParagraphs),
           editor.registerNodeTransform(RootNode, $removeUnneededProvisionalParagraphs),
-          editor.registerCommand(SELECTION_CHANGE_COMMAND, $markAllProvisionalParagraphsDirty, COMMAND_PRIORITY_HIGH)
+          editor.registerCommand(SELECTION_CHANGE_COMMAND, $markStaleProvisionalParagraphsDirty, COMMAND_PRIORITY_HIGH)
         )
       }
     })
@@ -54,12 +54,12 @@ function $removeUnneededProvisionalParagraphs(rootNode) {
   }
 }
 
-function $markAllProvisionalParagraphsDirty() {
+function $markStaleProvisionalParagraphsDirty() {
   // Selection-driven visibility updates must not become standalone undo steps.
   $addUpdateTag(HISTORY_MERGE_TAG)
 
   for (const provisionalParagraph of $getAllProvisionalParagraphs()) {
-    provisionalParagraph.markDirty()
+    if (provisionalParagraph.hasStaleVisibility) provisionalParagraph.markDirty()
   }
 }
 
