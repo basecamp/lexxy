@@ -53,6 +53,12 @@ describe("dom_purify — attributes extensions can't allow", () => {
     expect(out).toBe("<p>x</p>")
   })
 
+  test("drops them in the fallback sanitizer too, which has no allowlist", () => {
+    const out = DOMPurify.sanitize('<div>a<style>* { display: none }</style></div>', buildConfig())
+
+    expect(out).toBe("<div>a</div>")
+  })
+
   test("keeps URL-bearing attributes subject to the URI check", () => {
     const allowed = [
       { tag: "a", attributes: [ "ping" ] },

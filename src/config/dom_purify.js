@@ -99,7 +99,7 @@ const ALLOWED_HTML_ATTRIBUTES = [ "alt", "class", "contenteditable", "href", "sr
 // place while it loads; nothing else here does.
 const DEFAULT_TAG_ATTRIBUTES = { img: [ "width", "height" ] }
 
-// Elements an editor's allowlist can never admit, whatever its extensions declare.
+// Elements no sanitizer of ours admits, whatever an editor's extensions declare.
 // Each acts on the page as soon as it is inserted, or runs script: a <base> or a
 // <meta http-equiv="refresh"> takes effect even through insertAdjacentHTML, which
 // is how attachment content reaches the editor DOM. FORBID_TAGS wins over
@@ -193,7 +193,10 @@ export function buildConfig(allowedElements = null) {
     // wire up arbitrary controllers/actions in the viewer's session. FORBID_ATTR wins over
     // ALLOWED_ATTR/ADD_ATTR/ALLOW_DATA_ATTR in DOMPurify, so this holds even though other
     // data-* attributes (data-language, data-trix-*, etc.) are otherwise allowed through.
-    FORBID_ATTR: [ "data-controller", "data-action" ]
+    FORBID_ATTR: [ "data-controller", "data-action" ],
+    // In the base config rather than the allowlist, so the fallback sanitizer gets
+    // it too: DOMPurify's default tag list includes <style>.
+    FORBID_TAGS: FORBIDDEN_TAGS
   }
 
   // Left out rather than emptied when there is no allowlist, so DOMPurify's own
@@ -265,7 +268,6 @@ function allowlistFor(allowedElements) {
 
   return {
     ALLOWED_TAGS: Object.keys(tagAttributes),
-    FORBID_TAGS: FORBIDDEN_TAGS,
     ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
     ADD_ATTR: (attribute, tag) => tagAttributes[tag]?.includes(attribute),
     uriSafeSchemes
