@@ -11,8 +11,8 @@ export class NativeAdapter {
     this.editorContentElement = editorElement.editorContentElement
   }
 
-  dispatchAttributesChange(editorOrState) {
-    dispatch(this.editorElement, "lexxy:attributes-change", editorOrState.read(() => this.#attributesChangeDetail()))
+  dispatchAttributesChange(editorState) {
+    dispatch(this.editorElement, "lexxy:attributes-change", editorState.read(() => this.#attributesChangeDetail()))
   }
 
   dispatchEditorInitialized(detail) {

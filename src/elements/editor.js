@@ -124,6 +124,7 @@ export class LexicalEditorElement extends HTMLElement {
   disconnectedCallback() {
     this.#initializeEventDispatched = false
     this.#editorInitializedDispatched = false
+    this.currentlyFocused = false
 
     this.#previousInternalFormValue = null
     this.valueBeforeDisconnect = this.value
@@ -327,8 +328,8 @@ export class LexicalEditorElement extends HTMLElement {
     this.adapter.thaw()
   }
 
-  dispatchAttributesChange(editorOrState = this.editor) {
-    this.adapter.dispatchAttributesChange(editorOrState)
+  dispatchAttributesChange(editorState = this.editor.getEditorState()) {
+    this.adapter.dispatchAttributesChange(editorState)
   }
 
   dispatchEditorInitialized() {
@@ -745,7 +746,6 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #registerFocusEvents() {
-    this.currentlyFocused = false
     this.#listeners.track(
       registerEventListener(this, "focusin", this.#handleFocusIn),
       registerEventListener(this, "focusout", this.#handleFocusOut)
