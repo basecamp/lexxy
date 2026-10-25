@@ -1,4 +1,4 @@
-import { $createParagraphNode, $getSelection, $isElementNode, $isRangeSelection, $isRootOrShadowRoot, ParagraphNode } from "lexical"
+import { $createParagraphNode, $getEditor, $getSelection, $isElementNode, $isRangeSelection, $isRootOrShadowRoot, ParagraphNode } from "lexical"
 
 export class ProvisionalParagraphNode extends ParagraphNode {
   $config() {
@@ -78,6 +78,11 @@ export class ProvisionalParagraphNode extends ParagraphNode {
     }
   }
 
+
+  get hasStaleVisibility() {
+    const dom = $getEditor().getElementByKey(this.getKey())
+    return dom !== null && dom.classList.contains("hidden") === this.isSelected()
+  }
 
   get required() {
     return this.isDirectRootChild && ProvisionalParagraphNode.neededBetween(...this.immediateSiblings)
