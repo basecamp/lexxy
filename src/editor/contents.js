@@ -1,6 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $hasUpdateTag,
-  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
   HISTORY_MERGE_TAG, PASTE_TAG,
   SELECTION_INSERT_CLIPBOARD_NODES_COMMAND
 } from "lexical"
@@ -15,7 +15,7 @@ import { $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
-import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
+import { $findMatchingParent, $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
 import PastedContentFormatter from "./contents/pasted_content_formatter"
 import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
@@ -120,14 +120,17 @@ export default class Contents {
       blockElements.forEach(node => this.#unwrapCodeBlock(node))
     } else {
       $expandSelectionToLineBreaksAndSplitAtEdges(selection)
-      const elements = this.#outermostElements(this.#blockLevelElementsInSelection(selection))
-      if (elements.length === 0) return
-
-      const codeNode = $createCodeNode("plain")
-      elements.at(-1).insertAfter(codeNode)
-      codeNode.selectEnd()
-      this.insertAtCursor(...elements)
+      for (const blocks of this.#blockLevelElementRunsInSelection(selection)) {
+        this.#convertToCodeBlock(this.#outermostElements(blocks))
+      }
     }
+  }
+
+  #convertToCodeBlock(elements) {
+    const codeNode = $createCodeNode("plain")
+    elements.at(-1).insertAfter(codeNode)
+    codeNode.selectEnd()
+    this.insertAtCursor(...elements)
   }
 
   toggleBlockquote() {
@@ -544,12 +547,24 @@ export default class Contents {
   }
 
   #blockLevelElementsInSelection(selection) {
-    const blocks = new Set()
+    return this.#blockLevelElementRunsInSelection(selection).flat()
+  }
+
+  // A block decorator directly under the root (an attachment, a divider) has
+  // no block ancestor. It splits the selection into runs, so converting the
+  // blocks around it leaves it in place.
+  #blockLevelElementRunsInSelection(selection) {
+    const runs = [ new Set() ]
     for (const node of selection.getNodes()) {
-      blocks.add($getNearestBlockElementAncestorOrThrow(node))
+      const block = $findMatchingParent(node, (parent) => $isElementNode(parent) && !parent.isInline())
+      if (block) {
+        runs.at(-1).add(block)
+      } else if (runs.at(-1).size > 0) {
+        runs.push(new Set())
+      }
     }
 
-    return Array.from(blocks)
+    return runs.filter((run) => run.size > 0).map((run) => Array.from(run))
   }
 
   #topLevelElementsInSelection(selection) {

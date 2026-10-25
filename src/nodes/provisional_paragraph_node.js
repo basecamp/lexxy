@@ -2,7 +2,7 @@ import { $createParagraphNode, $getSelection, $isElementNode, $isRangeSelection,
 
 export class ProvisionalParagraphNode extends ParagraphNode {
   $config() {
-    return this.config("provisonal_paragraph", {
+    return this.config("provisional_paragraph", {
       extends: ParagraphNode,
       importDOM: () => null,
       $transform: (node) => {
