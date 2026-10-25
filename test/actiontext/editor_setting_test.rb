@@ -46,8 +46,22 @@ class EditorSettingTest < ActiveSupport::TestCase
     RUBY
   end
 
+  test "keeps the options of a Lexxy registration" do
+    configuration = <<~RUBY
+      #{RAILS_WITH_LEXXY}
+      config.action_text.editors[:lexxy] = { toolbar: "custom" }
+    RUBY
+
+    assert_equal "custom", value_in_app(configuration, "Rails.application.config.action_text.editors[:lexxy][:toolbar]")
+    assert_equal "trix", editor_name_for_app(configuration)
+  end
+
   private
     def editor_name_for_app(configuration)
+      value_in_app(configuration, "ActionText::RichText.editor.editor_name")
+    end
+
+    def value_in_app(configuration, expression)
       output, status = Dir.mktmpdir do |root|
         environment = { "DATABASE_URL" => "sqlite3::memory:", "PRIMARY_DATABASE_URL" => nil }
 
@@ -68,11 +82,11 @@ class EditorSettingTest < ActiveSupport::TestCase
           end
 
           Rails.application.initialize!
-          print "editor=\#{ActionText::RichText.editor.editor_name}"
+          print "value=\#{#{expression}}"
         RUBY
       end
 
       assert status.success?, output
-      output[/editor=(\w+)\z/, 1]
+      output[/value=(\w+)\z/, 1]
     end
 end

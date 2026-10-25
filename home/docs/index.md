@@ -87,7 +87,7 @@ Action Text registers Lexxy as one of its editors and chooses the default editor
 config.action_text.editor = :lexxy
 ```
 
-The gem leaves the setting alone whenever Lexxy is already registered as an Action Text editor, whether by Rails or by your application. If your application uses Lexxy through this gem and upgrades to a Rails version that includes Lexxy, but keeps `config.load_defaults` below that version, set the editor as above to keep Lexxy.
+The gem leaves the setting alone whenever Lexxy is already registered as an Action Text editor, whether by Rails or by your application. If your application uses Lexxy through this gem and upgrades to a Rails version that includes Lexxy, but keeps `config.load_defaults` below that version, set the editor as above to keep Lexxy. `config.lexxy.override_action_text_defaults` has no effect on these versions.
 
 #### Rails versions that don't include Lexxy
 
