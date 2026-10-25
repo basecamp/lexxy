@@ -95,9 +95,7 @@ git log -1 --format=%H   # must match the PR's head commit: gh pr view <number> 
 git status --porcelain   # must print nothing
 ```
 
-A server already answering on a port may be serving another checkout, so start your own rather than reusing one:
-
-`bin/dev` force-kills whatever listens on its port, so check the port is free first, and pick another if this prints anything:
+A server already answering on a port may be serving another checkout, so start your own rather than reusing one. `bin/dev` force-kills whatever listens on its port, so check the port is free first, and pick another if this prints anything:
 
 ```bash
 curl -s -o /dev/null -m 2 http://localhost:<port>/; [ $? -eq 7 ] || echo "port <port> is taken, pick another"
