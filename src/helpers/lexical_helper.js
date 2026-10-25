@@ -1,4 +1,4 @@
-import { $caretFromPoint, $createLineBreakNode, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode, isLastChildInBlockNode } from "lexical"
+import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
@@ -125,22 +125,6 @@ export function extendConversion(nodeKlass, conversionName, callback = (output =
 
     return callback(conversionOutput, element) ?? conversionOutput
   }
-}
-
-// Lexical drops a <br> that ends a block element on import, treating it as
-// contenteditable filler. At the end of a list item, after its content, that
-// <br> is a line break the user added with Shift+Enter, so keep it. A <br> that
-// is the item's only child stays filler.
-export function importListItemTrailingLineBreak(domNode) {
-  if (isListItemTrailingLineBreak(domNode)) {
-    return { conversion: () => ({ node: $createLineBreakNode() }), priority: 1 }
-  } else {
-    return null
-  }
-}
-
-export function isListItemTrailingLineBreak(domNode) {
-  return domNode.parentElement?.tagName === "LI" && isLastChildInBlockNode(domNode)
 }
 
 export function $isCursorOnLastLine(selection) {

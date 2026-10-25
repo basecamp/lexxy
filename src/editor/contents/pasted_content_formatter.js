@@ -1,5 +1,4 @@
 import OfficeFormatter from "./pasted_content_formatter/office_formatter"
-import { isListItemTrailingLineBreak } from "../../helpers/lexical_helper"
 
 // Properties worth rescuing from a foreign style sheet before #stripStyleElements
 // drops it, keyed by the elements that carry them. Word and Outlook declare
@@ -28,7 +27,6 @@ export default class PastedContentFormatter {
     this.#nestStrayListChildren()
     this.#stripStrayListChildren()
     this.#replaceGmailEmojiImgTags()
-    this.#stripFillerListItemLineBreaks()
     return this.doc
   }
 
@@ -231,17 +229,6 @@ export default class PastedContentFormatter {
       element.setAttribute("style", declaration)
     } else {
       element.setAttribute("style", `${style.replace(/;\s*$/, "")};${declaration}`)
-    }
-  }
-
-  // Browsers pad copied list items with a filler <br> at the end of each <li>.
-  // The importer keeps a trailing list item <br>, since in a saved value it is a
-  // Shift+Enter line break, so drop the pasted filler before it gets there.
-  #stripFillerListItemLineBreaks() {
-    for (const lineBreak of this.doc.querySelectorAll("li > br")) {
-      if (isListItemTrailingLineBreak(lineBreak)) {
-        lineBreak.remove()
-      }
     }
   }
 

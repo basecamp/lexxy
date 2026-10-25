@@ -16,7 +16,7 @@ test.describe("Line breaks inside list items", () => {
     await editor.send("Shift+Enter")
 
     const saved = await editor.value()
-    expect(saved).toContain("<br>")
+    expect(saved).toBe("<ul><li value=\"1\">First<br><br></li><li value=\"2\">Second</li><li value=\"3\">Third</li></ul>")
 
     await editor.setValue(saved)
     await editor.flush()
@@ -24,25 +24,28 @@ test.describe("Line breaks inside list items", () => {
     await assertEditorHtml(editor, saved)
   })
 
-  test("importing a list item with a trailing line break keeps it", async ({ editor }) => {
-    await editor.setValue("<ul><li value=\"1\">First<br></li><li value=\"2\">Second</li></ul>")
+  test("a Shift+Enter line break in an empty list item survives a value round-trip", async ({ editor }) => {
+    await editor.setValue("<ul><li value=\"1\">First</li></ul>")
     await editor.flush()
 
-    await assertEditorHtml(editor, "<ul><li value=\"1\">First<br></li><li value=\"2\">Second</li></ul>")
+    await editor.placeCaretInside("First", "First".length)
+    await editor.send("Enter")
+    await editor.send("Shift+Enter")
+
+    const saved = await editor.value()
+    expect(saved).toBe("<ul><li value=\"1\">First</li><li value=\"2\"><br><br></li></ul>")
+
+    await editor.setValue(saved)
+    await editor.flush()
+
+    await assertEditorHtml(editor, saved)
   })
 
-  test("importing a list item with a blank line keeps it", async ({ editor }) => {
-    await editor.setValue("<ul><li value=\"1\">First<br><br></li><li value=\"2\">Second</li></ul>")
+  test("a list item saved with a trailing line break loads it once", async ({ editor }) => {
+    await editor.setValue("<ol><li value=\"1\">First<br><br></li><li value=\"2\">Second</li></ol>")
     await editor.flush()
 
-    await assertEditorHtml(editor, "<ul><li value=\"1\">First<br><br></li><li value=\"2\">Second</li></ul>")
-  })
-
-  test("a filler line break preceded only by whitespace is still dropped", async ({ editor }) => {
-    await editor.setValue("<ul><li value=\"1\">\n    <br></li><li value=\"2\">Second</li></ul>")
-    await editor.flush()
-
-    await assertEditorHtml(editor, "<ul><li value=\"1\"></li><li value=\"2\">Second</li></ul>")
+    await assertEditorHtml(editor, "<ol><li value=\"1\">First<br><br></li><li value=\"2\">Second</li></ol>")
   })
 
   test("a filler line break in an empty list item is still dropped", async ({ editor }) => {
@@ -52,13 +55,19 @@ test.describe("Line breaks inside list items", () => {
     await assertEditorHtml(editor, "<ul><li value=\"1\"></li><li value=\"2\">Second</li></ul>")
   })
 
-  test("pasting a list keeps a line break inside an item and drops the trailing filler", async ({ editor }) => {
-    await editor.setValue("<p></p>")
-    await editor.focus()
-
-    await editor.paste("ignored", { html: "<ul><li>First<br>line</li><li>Second<br></li></ul>" })
+  test("a line break inside a nested list item survives a value round-trip", async ({ editor }) => {
+    await editor.setValue("<ul><li value=\"1\">Parent</li><li value=\"2\"><ul><li value=\"1\">Child</li></ul></li></ul>")
     await editor.flush()
 
-    await assertEditorHtml(editor, "<ul><li value=\"1\">First<br>line</li><li value=\"2\">Second</li></ul>")
+    await editor.placeCaretInside("Child", "Child".length)
+    await editor.send("Shift+Enter")
+
+    const saved = await editor.value()
+    expect(saved).toContain("<li value=\"1\">Child<br><br></li>")
+
+    await editor.setValue(saved)
+    await editor.flush()
+
+    await assertEditorHtml(editor, saved)
   })
 })
