@@ -452,13 +452,19 @@ export class LexicalPromptElement extends HTMLElement {
   #completeWithPunctuation(event) {
     const filter = this.#editorContents.textBackUntil(this.trigger)
 
-    if (!this.#selectedListItem) {
+    if (!this.#selectedListItem || this.#isEmptyQueryPunctuation(filter, event.key)) {
       this.#hidePopover()
     } else if (this.#selectedOptionMatches(filter) && !this.source.anyCandidateMatches(filter + event.key)) {
       event.preventDefault()
       event.stopPropagation()
       this.#optionWasSelected(event.key)
     }
+  }
+
+  // Punctuation straight after the trigger is more often an emoticon, as in ":)",
+  // than a pick, so it closes the prompt. A comma still picks, as it always has.
+  #isEmptyQueryPunctuation(filter, key) {
+    return !filter && key !== ","
   }
 
   #selectedOptionMatches(filter) {

@@ -120,13 +120,25 @@ test.describe("Completing punctuation", () => {
     await expect(editor.content.locator("action-text-attachment")).toHaveCount(0)
   })
 
-  test("punctuation right after the trigger selects the focused option", async ({ page, editor }) => {
+  test("a comma right after the trigger selects the focused option", async ({ page, editor }) => {
     await openPrompt(page, editor, "Hi @")
 
-    await editor.send("'")
+    await editor.send(",")
 
-    expect(await editor.plainTextValue()).toBe("Hi Anne-Marie O'Connor'")
+    expect(await editor.plainTextValue()).toBe("Hi Anne-Marie O'Connor,")
   })
+
+  for (const punctuation of [ ")", "'", "." ]) {
+    test(`${punctuation} right after the trigger closes the prompt and keeps the text`, async ({ page, editor }) => {
+      const popover = await openPrompt(page, editor, "Hi @")
+
+      await editor.send(punctuation)
+
+      await expect(popover).not.toBeVisible()
+      await expect(editor.content.locator("action-text-attachment")).toHaveCount(0)
+      expect(await editor.plainTextValue()).toBe(`Hi @${punctuation}`)
+    })
+  }
 
   test("punctuation pressed with a modifier key does not select", async ({ page, editor }) => {
     const popover = await openPrompt(page, editor, "@")
