@@ -15,7 +15,8 @@ export default class BaseSource {
   }
 
   listItemMatches(listItem, filter) {
-    return this.matchPosition(this.promptItemFor(listItem), filter) >= 0
+    const promptItem = this.promptItemFor(listItem)
+    return !!promptItem && this.matchPosition(promptItem, filter) >= 0
   }
 
   // Checks every candidate, not just the rendered list items, which are capped.
