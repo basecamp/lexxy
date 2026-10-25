@@ -120,14 +120,17 @@ export default class Contents {
       blockElements.forEach(node => this.#unwrapCodeBlock(node))
     } else {
       $expandSelectionToLineBreaksAndSplitAtEdges(selection)
-      const elements = this.#outermostElements(this.#blockLevelElementsInSelection(selection))
-      if (elements.length === 0) return
-
-      const codeNode = $createCodeNode("plain")
-      elements.at(-1).insertAfter(codeNode)
-      codeNode.selectEnd()
-      this.insertAtCursor(...elements)
+      for (const blocks of this.#blockLevelElementRunsInSelection(selection)) {
+        this.#convertToCodeBlock(this.#outermostElements(blocks))
+      }
     }
+  }
+
+  #convertToCodeBlock(elements) {
+    const codeNode = $createCodeNode("plain")
+    elements.at(-1).insertAfter(codeNode)
+    codeNode.selectEnd()
+    this.insertAtCursor(...elements)
   }
 
   toggleBlockquote() {
@@ -531,13 +534,24 @@ export default class Contents {
   }
 
   #blockLevelElementsInSelection(selection) {
-    const blocks = new Set()
+    return this.#blockLevelElementRunsInSelection(selection).flat()
+  }
+
+  // A block decorator directly under the root (an attachment, a divider) has
+  // no block ancestor. It splits the selection into runs, so converting the
+  // blocks around it leaves it in place.
+  #blockLevelElementRunsInSelection(selection) {
+    const runs = [ new Set() ]
     for (const node of selection.getNodes()) {
       const block = $findMatchingParent(node, (parent) => $isElementNode(parent) && !parent.isInline())
-      if (block) blocks.add(block)
+      if (block) {
+        runs.at(-1).add(block)
+      } else if (runs.at(-1).size > 0) {
+        runs.push(new Set())
+      }
     }
 
-    return Array.from(blocks)
+    return runs.filter((run) => run.size > 0).map((run) => Array.from(run))
   }
 
   #topLevelElementsInSelection(selection) {

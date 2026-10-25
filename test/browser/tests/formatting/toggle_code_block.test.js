@@ -28,7 +28,7 @@ test.describe("Toggle code block", () => {
     await assertEditorHtml(editor, '<pre data-language="plain" data-highlight-language="plain">item one<br>nested</pre>')
   })
 
-  test("converts a selection spanning an image attachment without throwing", async ({ page, editor }) => {
+  test("converts the blocks around a selected image attachment, leaving it in place", async ({ page, editor }) => {
     startMonitoringConsole(page)
     await editor.setValue(`<p>above</p>${attachmentTag("one", "example.png")}<p>below</p>`)
     await selectFrom(editor, "above", "below")
@@ -37,10 +37,10 @@ test.describe("Toggle code block", () => {
     await editor.flush()
 
     expect(page).toHaveNoErrors()
-    expect(await editor.value()).toMatch(/^<action-text-attachment [^>]*><\/action-text-attachment><pre [^>]*>above<br>below<\/pre>$/)
+    expect(await editor.value()).toMatch(/^<pre [^>]*>above<\/pre><action-text-attachment [^>]*><\/action-text-attachment><pre [^>]*>below<\/pre>$/)
   })
 
-  test("converts a selection spanning a horizontal divider without throwing", async ({ page, editor }) => {
+  test("converts the blocks around a selected horizontal divider, leaving it in place", async ({ page, editor }) => {
     startMonitoringConsole(page)
     await editor.setValue("<p>above</p><hr><p>below</p>")
     await selectFrom(editor, "above", "below")
@@ -49,7 +49,22 @@ test.describe("Toggle code block", () => {
     await editor.flush()
 
     expect(page).toHaveNoErrors()
-    await assertEditorHtml(editor, '<hr><pre data-language="plain" data-highlight-language="plain">above<br>below</pre>')
+    await assertEditorHtml(editor, '<pre data-language="plain" data-highlight-language="plain">above</pre><hr><pre data-language="plain" data-highlight-language="plain">below</pre>')
+  })
+
+  test("toggles the blocks around a selected horizontal divider back to paragraphs", async ({ page, editor }) => {
+    startMonitoringConsole(page)
+    await editor.setValue("<p>above</p><hr><p>below</p>")
+    await selectFrom(editor, "above", "below")
+
+    await editor.clickToolbarButton("insertCodeBlock")
+    await editor.flush()
+    await selectFrom(editor, "above", "below")
+    await editor.clickToolbarButton("insertCodeBlock")
+    await editor.flush()
+
+    expect(page).toHaveNoErrors()
+    await assertEditorHtml(editor, "<p>above</p><hr><p>below</p>")
   })
 })
 
