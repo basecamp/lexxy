@@ -1,35 +1,39 @@
 export const HELLO_EVERYONE = "<p>Hello everyone</p>"
 
+export function focusedName(page) {
+  return page.evaluate(() => document.activeElement?.name)
+}
+
 export async function openFormatDropdown(page) {
-  await page.evaluate(() => {
-    const details = document.querySelector("summary[name='format']").closest("details")
-    details.open = true
-    details.dispatchEvent(new Event("toggle"))
-  })
+  await openToolbarDropdown(page, "format")
 }
 
-export async function clickFormatButton(page, command) {
-  await openFormatDropdown(page)
-  await page.locator(`[data-command='${command}']`).click()
+export async function openToolbarDropdown(page, name) {
+  await page.locator(`button[name='${name}']`).click()
 }
 
-export async function openListsDropdown(page) {
-  await page.evaluate(() => {
-    const details = document.querySelector("summary[name='lists']").closest("details")
-    details.open = true
-    details.dispatchEvent(new Event("toggle"))
-  })
-}
+const FORMAT_DROPDOWN_COMMANDS = new Set([
+  "setFormatParagraph", "clearFormatting"
+])
 
-export async function clickListsButton(page, command) {
-  await openListsDropdown(page)
-  await page.locator(`[data-command='${command}']`).click()
+const HEADING_BUTTON_PREFIX = "heading-"
+
+export async function clickToolbarButton(page, command) {
+  if (FORMAT_DROPDOWN_COMMANDS.has(command) || command.startsWith(HEADING_BUTTON_PREFIX)) {
+    await openFormatDropdown(page)
+  }
+
+  if (command.startsWith(HEADING_BUTTON_PREFIX)) {
+    await page.locator(`[name='${command}']`).click()
+  } else {
+    await page.locator(`[data-command='${command}']`).click()
+  }
 }
 
 export async function applyHighlightOption(page, attribute, buttonIndex) {
   await page.locator("[name='highlight']").click()
   const buttons = page.locator(
-    `lexxy-highlight-dropdown .lexxy-highlight-colors .lexxy-highlight-button[data-style='${attribute}']`,
+    `lexxy-highlight-dropdown [data-dropdown-panel] .lexxy-highlight-colors .lexxy-highlight-button[data-style='${attribute}']`,
   )
   await buttons.nth(buttonIndex - 1).click()
 }

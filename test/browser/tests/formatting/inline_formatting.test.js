@@ -3,7 +3,7 @@ import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
 import {
   HELLO_EVERYONE,
-  clickFormatButton,
+  clickToolbarButton,
   placeCaretAtEndOfInlineCode,
 } from "../../helpers/toolbar.js"
 
@@ -31,7 +31,7 @@ test.describe("Inline formatting", () => {
   test("strikethrough", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.select("everyone")
-    await clickFormatButton(page, "strikethrough")
+    await clickToolbarButton(page, "strikethrough")
     await assertEditorHtml(editor, "<p>Hello <s>everyone</s></p>")
   })
 
@@ -162,6 +162,54 @@ test.describe("Inline formatting", () => {
     )
   })
 
+  test("applying code to a selection that starts at the end of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p><strong>ab</strong> cd</p>")
+    await selectBetween(editor, { text: "ab", offset: 2 }, { text: " cd", offset: 3 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><strong>ab</strong><code> cd</code></p>")
+  })
+
+  test("removing code from a selection that starts at the end of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p><strong>ab</strong><code> cd</code></p>")
+    await selectBetween(editor, { text: "ab", offset: 2 }, { text: " cd", offset: 3 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><strong>ab</strong> cd</p>")
+  })
+
+  test("applying code to a backward selection that ends at the end of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p><strong>ab</strong> cd</p>")
+    await selectBetween(editor, { text: " cd", offset: 3 }, { text: "ab", offset: 2 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><strong>ab</strong><code> cd</code></p>")
+  })
+
+  test("applying code to a selection that ends at the start of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>ab <strong>cd</strong></p>")
+    await selectBetween(editor, { text: "ab ", offset: 0 }, { text: "cd", offset: 0 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><code>ab </code><strong>cd</strong></p>")
+  })
+
   test("toggle code for block", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.click()
@@ -175,4 +223,66 @@ test.describe("Inline formatting", () => {
     await page.getByRole("button", { name: "Code" }).click()
     await assertEditorHtml(editor, "<p>Hello everyone</p>")
   })
+
+  test("selecting multiple lines and toggling code block creates a single code block", async ({ page, editor }) => {
+    await editor.send("Line one")
+    await editor.send("Enter")
+    await editor.send("Line two")
+    await editor.send("Enter")
+    await editor.send("Line three")
+
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<pre data-language="plain" data-highlight-language="plain">Line one<br>Line two<br>Line three</pre>',
+    )
+  })
+
+  test("toggling off a multi-line code block restores separate paragraphs", async ({ page, editor }) => {
+    await editor.send("Line one")
+    await editor.send("Enter")
+    await editor.send("Line two")
+    await editor.send("Enter")
+    await editor.send("Line three")
+
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<pre data-language="plain" data-highlight-language="plain">Line one<br>Line two<br>Line three</pre>',
+    )
+
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<p>Line one</p><p>Line two</p><p>Line three</p>",
+    )
+  })
+
+  test("toggling code block on a blockquote with multiple paragraphs preserves all lines", async ({ page, editor }) => {
+    await editor.setValue("<blockquote><p>Line one</p><p>Line two</p></blockquote>")
+    await editor.selectAll()
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<blockquote><pre data-language="plain" data-highlight-language="plain">Line one<br>Line two</pre></blockquote>',
+    )
+  })
 })
+
+async function selectBetween(editor, anchor, focus) {
+  await editor.content.evaluate((el, { anchor, focus }) => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    const textNodes = []
+    while (walker.nextNode()) textNodes.push(walker.currentNode)
+    const find = (text) => textNodes.find((node) => node.nodeValue === text)
+    window.getSelection().setBaseAndExtent(find(anchor.text), anchor.offset, find(focus.text), focus.offset)
+  }, { anchor, focus })
+  await editor.flush()
+}

@@ -28,7 +28,7 @@ window.lexxyBenchmarks = {
     }
 
     if (scenario.kind === "load") {
-      return measureLoad(scenario.payload, scenario.editorAttributes)
+      return measureLoad(scenario.payload, scenario.editorAttributes, scenario.options)
     }
 
     throw new Error(`Unknown benchmark kind: ${scenario.kind}`)
@@ -40,50 +40,72 @@ async function measureBootstrap(options = {}) {
 
   const editorCount = options.editorCount ?? 1
   const editorAttributes = options.editorAttributes ?? {}
-  const editors = []
-  const initializationPromises = []
+  const timeBudgetMs = options.timeBudgetMs ?? 5_000
 
-  for (let index = 0; index < editorCount; index += 1) {
-    const editorElement = buildEditor(editorAttributes)
-    editors.push(editorElement)
-    initializationPromises.push(waitForEvent(editorElement, "lexxy:initialize"))
-  }
-
+  let opCount = 0
+  let lastEditors = []
   const startTime = performance.now()
-  root.replaceChildren(...editors)
 
-  await Promise.all(initializationPromises)
-  await Promise.all(editors.map(waitForEditorReady))
+  do {
+    const editors = []
+    const initializationPromises = []
+
+    for (let index = 0; index < editorCount; index += 1) {
+      const editorElement = buildEditor(editorAttributes)
+      editors.push(editorElement)
+      initializationPromises.push(waitForEvent(editorElement, "lexxy:initialize"))
+    }
+
+    root.replaceChildren(...editors)
+    await Promise.all(initializationPromises)
+    await Promise.all(editors.map(waitForEditorReady))
+    lastEditors = editors
+    opCount += 1
+  } while (performance.now() - startTime < timeBudgetMs)
+
   const durationMs = performance.now() - startTime
 
   return {
     details: {
       editorCount,
-      renderedNodeCount: editors.reduce((count, editor) => count + editor.querySelectorAll("*").length, 0),
-      toolbarCount: editors.filter((editor) => editor.toolbarElement).length,
+      opCount,
+      perOpDurationMs: durationMs / opCount,
+      renderedNodeCount: lastEditors.reduce((count, editor) => count + editor.querySelectorAll("*").length, 0),
+      timeBudgetMs,
+      toolbarCount: lastEditors.filter((editor) => editor.toolbarElement).length,
     },
     durationMs,
   }
 }
 
-async function measureLoad(payload, editorAttributes = {}) {
+async function measureLoad(payload, editorAttributes = {}, options = {}) {
   await clearRoot()
 
   const editorElement = await createReadyEditor(editorAttributes)
   const { details, html } = buildPayload(payload)
+  const timeBudgetMs = options.timeBudgetMs ?? 5_000
+
+  let opCount = 0
   const startTime = performance.now()
 
-  editorElement.value = html
-  await settleEditor(editorElement)
+  do {
+    editorElement.value = html
+    await settleEditor(editorElement)
+    opCount += 1
+  } while (performance.now() - startTime < timeBudgetMs)
+
   const durationMs = performance.now() - startTime
 
   return {
     details: {
       ...details,
       htmlLength: html.length,
+      opCount,
+      perOpDurationMs: durationMs / opCount,
       renderedNodeCount: editorElement.querySelectorAll("*").length,
       serializedHtmlLength: editorElement.value.length,
       textLength: editorElement.toString().length,
+      timeBudgetMs,
     },
     durationMs,
   }

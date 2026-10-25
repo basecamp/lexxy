@@ -19,9 +19,13 @@ import {
 } from "@lexical/table"
 
 import { upcaseFirst } from "../../helpers/string_helper"
-import { nextFrame } from "../../helpers/timing_helpers"
+import { nextFrame } from "../../helpers/timing_helper"
+import { ListenerBin } from "../../helpers/listener_helper"
+import { $isProvisionalParagraphNode } from "../../nodes/provisional_paragraph_node"
 
 export class TableController {
+  #listeners = new ListenerBin()
+
   constructor(editorElement) {
     this.editor = editorElement.editor
     this.contents = editorElement.contents
@@ -37,7 +41,7 @@ export class TableController {
     this.currentTableNodeKey = null
     this.currentCellKey = null
 
-    this.#unregisterKeyHandlers()
+    this.#listeners.dispose()
   }
 
   get currentCell() {
@@ -120,6 +124,8 @@ export class TableController {
 
     this.currentCellKey = cellNode?.getKey() ?? null
     this.currentTableNodeKey = tableNode?.getKey() ?? null
+
+    return tableNode
   }
 
   executeTableCommand(command, customIndex = null) {
@@ -266,6 +272,11 @@ export class TableController {
   }
 
   #deleteRowAndSelectNextNode() {
+    if (this.tableRows?.length === 1) {
+      this.#removeTableAndSelectNextParagraph()
+      return
+    }
+
     const tableNode = this.currentTableNode
     this.executeTableCommand({ action: "delete", childType: "row" })
 
@@ -277,6 +288,24 @@ export class TableController {
         const newParagraph = $createParagraphNode()
         this.currentTableNode.insertAfter(newParagraph)
         newParagraph.selectStart()
+      }
+    })
+  }
+
+  // Deleting a table's only row removes the table, so leave the caret in the
+  // paragraph after it, or in a new paragraph where the table was.
+  #removeTableAndSelectNextParagraph() {
+    const tableNode = this.currentTableNode
+
+    this.editor.update(() => {
+      const next = tableNode.getNextSibling()
+      if ($isParagraphNode(next) && !$isProvisionalParagraphNode(next)) {
+        tableNode.remove()
+        next.selectStart()
+      } else {
+        const paragraph = $createParagraphNode()
+        tableNode.replace(paragraph)
+        paragraph.selectStart()
       }
     })
   }
@@ -319,16 +348,10 @@ export class TableController {
 
   #registerKeyHandlers() {
     // We can't prevent these externally using regular keydown because Lexical handles it first.
-    this.unregisterBackspaceKeyHandler = this.editor.registerCommand(KEY_BACKSPACE_COMMAND, (event) => this.#handleBackspaceKey(event), COMMAND_PRIORITY_HIGH)
-    this.unregisterEnterKeyHandler = this.editor.registerCommand(KEY_ENTER_COMMAND, (event) => this.#handleEnterKey(event), COMMAND_PRIORITY_HIGH)
-  }
-
-  #unregisterKeyHandlers() {
-    this.unregisterBackspaceKeyHandler?.()
-    this.unregisterEnterKeyHandler?.()
-
-    this.unregisterBackspaceKeyHandler = null
-    this.unregisterEnterKeyHandler = null
+    this.#listeners.track(
+      this.editor.registerCommand(KEY_BACKSPACE_COMMAND, (event) => this.#handleBackspaceKey(event), COMMAND_PRIORITY_HIGH),
+      this.editor.registerCommand(KEY_ENTER_COMMAND, (event) => this.#handleEnterKey(event), COMMAND_PRIORITY_HIGH)
+    )
   }
 
   #handleBackspaceKey(event) {

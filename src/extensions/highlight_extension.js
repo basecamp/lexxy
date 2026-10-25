@@ -1,9 +1,10 @@
-import { $getNodeByKey, $getState, $hasUpdateTag, $setState, COMMAND_PRIORITY_NORMAL, PASTE_TAG, TextNode, createCommand, createState, defineExtension } from "lexical"
+import { $getNodeByKey, $getState, $hasUpdateTag, $isElementNode, $isTextNode, $setState, COMMAND_PRIORITY_NORMAL, PASTE_TAG, TextNode, createCommand, createState, defineExtension } from "lexical"
 import { $getSelection, $isRangeSelection } from "lexical"
 import { $getSelectionStyleValueForProperty, $patchStyleText, getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
-import { $createCodeHighlightNode, $createCodeNode, $isCodeHighlightNode, $isCodeNode, CodeHighlightNode, CodeNode } from "@lexical/code"
+import { $createCodeHighlightNode, $createCodeNode, $isCodeHighlightNode, $isCodeNode, CodeHighlightNode } from "@lexical/code"
 import { extendTextNodeConversion } from "../helpers/lexical_helper"
-import { StyleCanonicalizer, applyCanonicalizers, hasHighlightStyles } from "../helpers/format_helper"
+import { segmentTextByRanges } from "../helpers/text_range_helper"
+import { StyleCanonicalizer, applyCanonicalizers, hasHighlightStyles, normalizeColorButtons } from "../helpers/format_helper"
 import { RichTextExtension } from "@lexical/rich-text"
 import LexxyExtension from "./lexxy_extension"
 import { mergeRegister } from "@lexical/utils"
@@ -17,9 +18,9 @@ const hasPastedStylesState = createState("hasPastedStyles", {
 })
 
 // Stores pending highlight ranges extracted during HTML import, keyed by CodeNode key.
-// After the code retokenizer creates fresh CodeHighlightNodes, a mutation listener
-// reads this map and re-applies the highlight styles. Scoped per editor instance
-// so entries don't leak across editors or outlive a torn-down editor.
+// The highlight-preserving tokenizer consumes this map when the code retokenizer
+// first tokenizes the block. Scoped per editor instance so entries don't leak
+// across editors or outlive a torn-down editor.
 const pendingCodeHighlights = new WeakMap()
 
 export class HighlightExtension extends LexxyExtension {
@@ -54,10 +55,7 @@ export class HighlightExtension extends LexxyExtension {
           editor.registerCommand(REMOVE_HIGHLIGHT_COMMAND, () => $toggleSelectionStyles(editor, BLANK_STYLES), COMMAND_PRIORITY_NORMAL),
           editor.registerNodeTransform(TextNode, $syncHighlightWithStyle),
           editor.registerNodeTransform(CodeHighlightNode, $syncHighlightWithCodeHighlightNode),
-          editor.registerNodeTransform(TextNode, (textNode) => $canonicalizePastedStyles(textNode, canonicalizers)),
-          editor.registerMutationListener(CodeNode, (mutations) => {
-            $applyPendingCodeHighlights(editor, mutations)
-          }, { skipInitialization: true })
+          editor.registerNodeTransform(TextNode, (textNode) => $canonicalizePastedStyles(textNode, canonicalizers))
         )
       }
     })
@@ -105,7 +103,7 @@ function $registerPreConversion(editor) {
 // Returns a <pre> converter factory scoped to a specific editor instance.
 // The factory extracts highlight ranges from <mark> elements before the code
 // retokenizer can destroy them. The ranges are stored in pendingCodeHighlights
-// and applied after retokenization via a mutation listener.
+// and restored by the highlight-preserving tokenizer during retokenization.
 function $preConversionWithHighlightsFactory(editor) {
   return function $preConversionWithHighlights(domNode) {
     const highlights = extractHighlightRanges(domNode)
@@ -181,116 +179,125 @@ function extractHighlightStyleFromElement(element) {
   return css.length > 0 ? css : null
 }
 
-// Called from the CodeNode mutation listener after the retokenizer has
-// replaced TextNodes with fresh CodeHighlightNodes.
-function $applyPendingCodeHighlights(editor, mutations) {
+// Recover the highlight ranges to reapply after a retokenization: the ranges
+// staged during HTML import, or the ones read from the children the fresh
+// tokens are about to replace.
+export function $takeHighlightRanges(editor, codeNode) {
   const pending = $getPendingHighlights(editor)
-  const keysToProcess = []
+  const key = codeNode.getKey()
 
-  for (const [ key, type ] of mutations) {
-    if (type !== "destroyed" && pending.has(key)) {
-      keysToProcess.push(key)
-    }
+  if (pending.has(key)) {
+    const highlights = pending.get(key)
+    pending.delete(key)
+    return highlights
+  } else if (codeNode.getChildren().some($isCodeHighlightNode)) {
+    return $extractHighlightRangesFromCodeNode(codeNode)
+  } else {
+    // A block that was never tokenized has only plain text children. Styles
+    // on those come from import paths that didn't stage ranges (e.g. colored
+    // spans in Trix HTML), and the first tokenization discards them.
+    return []
   }
-
-  if (keysToProcess.length === 0) return
-
-  // Use a deferred update so the retokenizer has finished its
-  // skipTransforms update before we touch the nodes.
-  editor.update(() => {
-    for (const key of keysToProcess) {
-      const highlights = pending.get(key)
-      pending.delete(key)
-      if (!highlights) continue
-
-      const codeNode = $getNodeByKey(key)
-      if (!codeNode || !$isCodeNode(codeNode)) continue
-
-      $applyHighlightRangesToCodeNode(codeNode, highlights)
-    }
-  }, { skipTransforms: true, discrete: true })
 }
 
-// Apply saved highlight ranges to the CodeHighlightNode children
-// of a CodeNode, splitting nodes at range boundaries as needed.
-// We can't use TextNode.splitText() because it creates TextNode
-// instances (not CodeHighlightNodes) for the split parts. Instead,
-// we manually create CodeHighlightNode replacements.
-function $applyHighlightRangesToCodeNode(codeNode, highlights) {
-  if (highlights.length === 0) return
+export function $applyHighlightRangesToTokens(tokens, highlights) {
+  if (highlights.length === 0) return tokens
 
-  for (const { start: hlStart, end: hlEnd, style } of highlights) {
-    // Rebuild the child-to-offset mapping for each highlight range because
-    // earlier ranges may have split nodes, invalidating previous mappings.
-    const childRanges = $buildChildRanges(codeNode)
+  const styledTokens = []
+  let offset = 0
 
-    for (const { node, start: nodeStart, end: nodeEnd } of childRanges) {
-      // Check if this child overlaps with the highlight range
-      const overlapStart = Math.max(hlStart, nodeStart)
-      const overlapEnd = Math.min(hlEnd, nodeEnd)
-
-      if (overlapStart >= overlapEnd) continue
-
-      // Calculate offsets relative to this node
-      const relStart = overlapStart - nodeStart
-      const relEnd = overlapEnd - nodeStart
-      const nodeLength = nodeEnd - nodeStart
-
-      if (relStart === 0 && relEnd === nodeLength) {
-        // Entire node is highlighted - apply style directly
-        node.setStyle(style)
-        $setCodeHighlightFormat(node, true)
-      } else {
-        // Need to split: replace the node with 2 or 3 CodeHighlightNodes
-        const text = node.getTextContent()
-        const highlightType = node.getHighlightType()
-        const replacements = []
-
-        if (relStart > 0) {
-          replacements.push($createCodeHighlightNode(text.slice(0, relStart), highlightType))
-        }
-
-        const styledNode = $createCodeHighlightNode(text.slice(relStart, relEnd), highlightType)
-        styledNode.setStyle(style)
-        $setCodeHighlightFormat(styledNode, true)
-        replacements.push(styledNode)
-
-        if (relEnd < nodeLength) {
-          replacements.push($createCodeHighlightNode(text.slice(relEnd), highlightType))
-        }
-
-        for (const replacement of replacements) {
-          node.insertBefore(replacement)
-        }
-        node.remove()
-      }
+  for (const token of tokens) {
+    if ($isCodeHighlightNode(token)) {
+      styledTokens.push(...$splitTokenAtHighlightBoundaries(token, offset, highlights))
+    } else {
+      styledTokens.push(token)
     }
+    offset += token.getTextContentSize()
   }
+
+  return styledTokens
+}
+
+// Split a token into segments at highlight boundaries, styling the covered
+// segments. We can't use TextNode.splitText() because the fresh tokens aren't
+// attached to the tree yet, so we create CodeHighlightNode replacements.
+function $splitTokenAtHighlightBoundaries(token, tokenStart, highlights) {
+  const text = token.getTextContent()
+  const segments = segmentTextByRanges(text, tokenStart, highlights)
+
+  if (segments.length === 1) {
+    const [ segment ] = segments
+    if (segment.range) {
+      $applyHighlightStyleToToken(token, segment.range.style)
+    }
+    return [ token ]
+  } else {
+    return segments.map((segment) => {
+      const segmentToken = $createCodeHighlightNode(text.slice(segment.start, segment.end), token.getHighlightType())
+      if (segment.range) {
+        $applyHighlightStyleToToken(segmentToken, segment.range.style)
+      }
+      return segmentToken
+    })
+  }
+}
+
+function $applyHighlightStyleToToken(token, style) {
+  token.setStyle(style)
+  $setCodeHighlightFormat(token, true)
 }
 
 function $buildChildRanges(codeNode) {
   const childRanges = []
   let charOffset = 0
 
-  for (const child of codeNode.getChildren()) {
-    if ($isCodeHighlightNode(child)) {
-      const text = child.getTextContent()
-      childRanges.push({ node: child, start: charOffset, end: charOffset + text.length })
-      charOffset += text.length
-    } else {
-      // LineBreakNode, TabNode - count as 1 character each (\n, \t)
-      charOffset += 1
+  function walk(node) {
+    for (const child of node.getChildren()) {
+      if ($isElementNode(child)) {
+        // e.g. a LinkNode awaiting its first retokenization
+        walk(child)
+      } else if ($isCodeHighlightNode(child) || $isTextNode(child)) {
+        const text = child.getTextContent()
+        childRanges.push({ node: child, start: charOffset, end: charOffset + text.length })
+        charOffset += text.length
+      } else {
+        // LineBreakNode - counts as 1 character (\n)
+        charOffset += 1
+      }
     }
   }
+
+  walk(codeNode)
 
   return childRanges
 }
 
+// Extract highlight ranges from the Lexical node tree of a CodeNode.
+// This mirrors extractHighlightRanges (which works on DOM elements during
+// HTML import) but reads from live CodeHighlightNode children instead.
+function $extractHighlightRangesFromCodeNode(codeNode) {
+  const ranges = []
+  const childRanges = $buildChildRanges(codeNode)
+
+  for (const { node, start, end } of childRanges) {
+    const style = node.getStyle()
+    if (style && hasHighlightStyles(style)) {
+      ranges.push({ start, end, style })
+    }
+  }
+
+  return ranges
+}
+
 function buildCanonicalizers(config) {
   return [
-    new StyleCanonicalizer("color", [ ...config.buttons.color, ...config.permit.color ]),
-    new StyleCanonicalizer("background-color", [ ...config.buttons["background-color"], ...config.permit["background-color"] ])
+    new StyleCanonicalizer("color", [ ...colorValues(config.buttons.color), ...config.permit.color ]),
+    new StyleCanonicalizer("background-color", [ ...colorValues(config.buttons["background-color"]), ...config.permit["background-color"] ])
   ]
+}
+
+function colorValues(buttons) {
+  return normalizeColorButtons(buttons).map((button) => button.value)
 }
 
 function $toggleSelectionStyles(editor, styles) {
@@ -313,15 +320,23 @@ function $toggleSelectionStyles(editor, styles) {
 function $selectionIsInCodeBlock(selection) {
   const nodes = selection.getNodes()
   return nodes.some((node) => {
-    const parent = $isCodeHighlightNode(node) ? node.getParent() : node
-    return $isCodeNode(parent)
+    // A text node inside a code block may be either a CodeHighlightNode
+    // (after retokenization) or a plain TextNode (after splitText or before
+    // the retokenizer has run). Check the parent in both cases.
+    if ($isCodeHighlightNode(node) || $isTextNode(node)) {
+      return $isCodeNode(node.getParent())
+    }
+    return $isCodeNode(node)
   })
 }
 
 function $patchCodeHighlightStyles(editor, selection, patch) {
-  // Capture selection state and node keys before the nested update
+  // Capture selection state and node keys before the nested update.
+  // Accept both CodeHighlightNode and TextNode children of a CodeNode
+  // because splitText creates TextNode instances and the retokenizer
+  // may not have converted them back to CodeHighlightNodes yet.
   const nodeKeys = selection.getNodes()
-    .filter((node) => $isCodeHighlightNode(node))
+    .filter((node) => ($isCodeHighlightNode(node) || $isTextNode(node)) && $isCodeNode(node.getParent()))
     .map((node) => ({
       key: node.getKey(),
       startOffset: $getNodeSelectionOffsets(node, selection)[0],
@@ -329,15 +344,13 @@ function $patchCodeHighlightStyles(editor, selection, patch) {
       textSize: node.getTextContentSize()
     }))
 
-  // Use skipTransforms to prevent the code highlighting system from
-  // re-tokenizing and wiping out the style changes we apply.
-  // Use discrete to force a synchronous commit, ensuring the changes
-  // are committed before editor.focus() triggers a second update cycle
-  // that would re-run transforms and wipe out the styles.
+  // Use skipTransforms so the retokenizer doesn't rebuild the block in the
+  // middle of the toggle, and discrete to force a synchronous commit so the
+  // styles are in place before editor.focus() triggers a second update cycle.
   editor.update(() => {
     for (const { key, startOffset, endOffset, textSize } of nodeKeys) {
       const node = $getNodeByKey(key)
-      if (!node || !$isCodeHighlightNode(node)) continue
+      if (!node) continue
 
       const parent = node.getParent()
       if (!$isCodeNode(parent)) continue

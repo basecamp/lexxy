@@ -4,23 +4,26 @@ import {
   $isRangeSelection,
   $isTextNode,
   $setSelection,
-  COMMAND_PRIORITY_LOW,
+  COMMAND_PRIORITY_HIGH,
   COMMAND_PRIORITY_NORMAL,
   FORMAT_TEXT_COMMAND,
   INDENT_CONTENT_COMMAND,
+  INSERT_LINE_BREAK_COMMAND,
+  INSERT_PARAGRAPH_COMMAND,
   KEY_ARROW_RIGHT_COMMAND,
   KEY_TAB_COMMAND,
   OUTDENT_CONTENT_COMMAND,
-  PASTE_COMMAND,
   REDO_COMMAND,
   UNDO_COMMAND
 } from "lexical"
-import { INSERT_ORDERED_LIST_COMMAND, INSERT_UNORDERED_LIST_COMMAND } from "@lexical/list"
-import { $createAutoLinkNode, $toggleLink } from "@lexical/link"
+import { CodeNode } from "@lexical/code"
+import { $createAutoLinkNode, $toggleLink, LinkNode } from "@lexical/link"
+import { $getNearestNodeOfType, $insertNodeToNearestRoot } from "@lexical/utils"
 import { INSERT_TABLE_COMMAND } from "@lexical/table"
 
 import { createElement } from "../helpers/html_helper"
-import { getListType } from "../helpers/lexical_helper"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
+import { $normalizeBlockContainerSelection, getListType } from "../helpers/lexical_helper"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import { REMOVE_HIGHLIGHT_COMMAND, TOGGLE_HIGHLIGHT_COMMAND } from "../extensions/highlight_extension"
 
@@ -37,10 +40,13 @@ const COMMANDS = [
   "setFormatHeadingMedium",
   "setFormatHeadingSmall",
   "setFormatParagraph",
+  "applyHeadingFormat",
+  "clearFormatting",
   "insertUnorderedList",
   "insertOrderedList",
   "insertQuoteBlock",
   "insertCodeBlock",
+  "setCodeLanguage",
   "insertHorizontalDivider",
   "uploadImage",
   "uploadFile",
@@ -53,9 +59,10 @@ const COMMANDS = [
 
 export class CommandDispatcher {
   #selectionBeforeDrag = null
+  #listeners = new ListenerBin()
 
   static configureFor(editorElement) {
-    new CommandDispatcher(editorElement)
+    return new CommandDispatcher(editorElement)
   }
 
   constructor(editorElement) {
@@ -63,15 +70,10 @@ export class CommandDispatcher {
     this.editor = editorElement.editor
     this.selection = editorElement.selection
     this.contents = editorElement.contents
-    this.clipboard = editorElement.clipboard
 
     this.#registerCommands()
     this.#registerKeyboardCommands()
     this.#registerDragAndDropHandlers()
-  }
-
-  dispatchPaste(event) {
-    return this.clipboard.paste(event)
   }
 
   dispatchBold() {
@@ -100,10 +102,14 @@ export class CommandDispatcher {
 
   dispatchLink(url) {
     this.editor.update(() => {
+      this.selection.placeCursorInsideAdjacentLink()
+
       const selection = $getSelection()
       if (!$isRangeSelection(selection)) return
 
-      if (selection.isCollapsed()) {
+      const anchorNode = selection.anchor.getNode()
+
+      if (selection.isCollapsed() && !$getNearestNodeOfType(anchorNode, LinkNode)) {
         const autoLinkNode = $createAutoLinkNode(url)
         const textNode = $createTextNode(url)
         autoLinkNode.append(textNode)
@@ -115,32 +121,41 @@ export class CommandDispatcher {
   }
 
   dispatchUnlink() {
-    this.#toggleLink(null)
+    this.editor.update(() => {
+      this.selection.placeCursorInsideAdjacentLink()
+
+      // Let adapters signal whether unlink should target a frozen link key.
+      if (this.editorElement.adapter.unlinkFrozenNode?.()) {
+        return
+      }
+
+      $toggleLink(null)
+    })
   }
 
   dispatchInsertUnorderedList() {
     const selection = $getSelection()
-    if (!selection) return
+    if (!$isRangeSelection(selection)) return
 
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "bullet") {
       this.contents.applyParagraphFormat()
     } else {
-      this.editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined)
+      this.contents.applyUnorderedListFormat()
     }
   }
 
   dispatchInsertOrderedList() {
     const selection = $getSelection()
-    if (!selection) return
+    if (!$isRangeSelection(selection)) return
 
     const anchorNode = selection.anchor.getNode()
 
     if (this.selection.isInsideList && anchorNode && getListType(anchorNode) === "number") {
       this.contents.applyParagraphFormat()
     } else {
-      this.editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined)
+      this.contents.applyOrderedListFormat()
     }
   }
 
@@ -161,70 +176,97 @@ export class CommandDispatcher {
     if (!$isRangeSelection(selection)) return
 
     if (!selection.isCollapsed()) {
-      const textNodes = selection.getNodes().filter($isTextNode)
-      const applyingCode = !textNodes.every((node) => node.hasFormat("code"))
+      const segments = this.#selectedTextSegments(selection)
+      const applyingCode = !segments.every(({ node }) => node.hasFormat("code"))
 
       if (applyingCode) {
-        this.#stripInlineFormattingFromSelection(selection, textNodes)
+        this.#stripInlineFormattingFromSegments(selection, segments)
       }
     }
 
     this.editor.dispatchCommand(FORMAT_TEXT_COMMAND, "code")
   }
 
-  // Strip all inline formatting (bold, italic, etc.) from the selected text
-  // nodes so that applying code produces a single merged <code> element instead
-  // of one per differently-formatted span.
-  #stripInlineFormattingFromSelection(selection, textNodes) {
-    const isBackward = selection.isBackward()
-    const startPoint = isBackward ? selection.focus : selection.anchor
-    const endPoint = isBackward ? selection.anchor : selection.focus
+  // The text nodes in the selection with the offsets of their selected text.
+  // Nodes the selection only touches at an edge, with no characters selected,
+  // are left out.
+  #selectedTextSegments(selection) {
+    const [ startPoint, endPoint ] = this.#orderedPoints(selection)
+    const textNodes = selection.getNodes().filter($isTextNode)
 
-    for (let i = 0; i < textNodes.length; i++) {
-      const node = textNodes[i]
+    return textNodes.map((node, i) => {
+      const startOffset = i === 0 && startPoint.type === "text" ? startPoint.offset : 0
+      const endOffset = i === textNodes.length - 1 && endPoint.type === "text" ? endPoint.offset : node.getTextContentSize()
+      return { node, startOffset, endOffset }
+    }).filter(({ startOffset, endOffset }) => startOffset !== endOffset)
+  }
+
+  // Strip all inline formatting (bold, italic, etc.) from the selected text so
+  // that applying code produces a single merged <code> element instead of one
+  // per differently-formatted span.
+  #stripInlineFormattingFromSegments(selection, segments) {
+    const [ startPoint, endPoint ] = this.#orderedPoints(selection)
+
+    for (const { node, startOffset, endOffset } of segments) {
       if (node.getFormat() === 0) continue
-
-      const isFirst = i === 0
-      const isLast = i === textNodes.length - 1
-      const startOffset = isFirst && startPoint.type === "text" ? startPoint.offset : 0
-      const endOffset = isLast && endPoint.type === "text" ? endPoint.offset : node.getTextContentSize()
 
       if (startOffset === 0 && endOffset === node.getTextContentSize()) {
         node.setFormat(0)
       } else {
+        const holdsStart = startPoint.type === "text" && startPoint.key === node.getKey()
+        const holdsEnd = endPoint.type === "text" && endPoint.key === node.getKey()
+
         const splits = node.splitText(startOffset, endOffset)
         const target = startOffset === 0 ? splits[0] : splits[1]
         target.setFormat(0)
 
-        if (isFirst && startPoint.type === "text") {
-          startPoint.set(target.getKey(), 0, "text")
-        }
-        if (isLast && endPoint.type === "text") {
-          endPoint.set(target.getKey(), endOffset - startOffset, "text")
-        }
+        if (holdsStart) startPoint.set(target.getKey(), 0, "text")
+        if (holdsEnd) endPoint.set(target.getKey(), endOffset - startOffset, "text")
       }
     }
   }
 
+  #orderedPoints(selection) {
+    return selection.isBackward() ? [ selection.focus, selection.anchor ] : [ selection.anchor, selection.focus ]
+  }
+
+  dispatchSetCodeLanguage(language) {
+    this.editor.update(() => {
+      if (!this.selection.isInsideCodeBlock) return
+
+      const codeNode = this.selection.nearestNodeOfType(CodeNode)
+      if (!codeNode) return
+
+      codeNode.setLanguage(language)
+    })
+  }
+
   dispatchInsertHorizontalDivider() {
-    this.contents.insertAtCursorEnsuringLineBelow(new HorizontalDividerNode())
-    this.editor.focus()
+    $insertNodeToNearestRoot(new HorizontalDividerNode)
   }
 
   dispatchSetFormatHeadingLarge() {
-    this.contents.applyHeadingFormat("h2")
+    this.#applyConfiguredHeadingFormat(0)
   }
 
   dispatchSetFormatHeadingMedium() {
-    this.contents.applyHeadingFormat("h3")
+    this.#applyConfiguredHeadingFormat(1)
   }
 
   dispatchSetFormatHeadingSmall() {
-    this.contents.applyHeadingFormat("h4")
+    this.#applyConfiguredHeadingFormat(2)
   }
 
   dispatchSetFormatParagraph() {
     this.contents.applyParagraphFormat()
+  }
+
+  dispatchApplyHeadingFormat(tag) {
+    this.contents.applyHeadingFormat(tag)
+  }
+
+  dispatchClearFormatting() {
+    this.contents.clearFormatting()
   }
 
   dispatchUploadImage() {
@@ -267,22 +309,39 @@ export class CommandDispatcher {
     this.editor.dispatchCommand(REDO_COMMAND, undefined)
   }
 
+  dispose() {
+    this.#listeners.dispose()
+  }
+
+  #applyConfiguredHeadingFormat(index) {
+    const tag = this.editorElement.config.get("headings")[index]
+    if (tag) this.contents.applyHeadingFormat(tag)
+  }
+
   #registerCommands() {
     for (const command of COMMANDS) {
       const methodName = `dispatch${capitalize(command)}`
       this.#registerCommandHandler(command, 0, this[methodName].bind(this))
     }
-
-    this.#registerCommandHandler(PASTE_COMMAND, COMMAND_PRIORITY_LOW, this.dispatchPaste.bind(this))
   }
 
   #registerCommandHandler(command, priority, handler) {
-    this.editor.registerCommand(command, handler, priority)
+    this.#listeners.track(this.editor.registerCommand(command, handler, priority))
   }
 
   #registerKeyboardCommands() {
-    this.editor.registerCommand(KEY_ARROW_RIGHT_COMMAND, this.#handleArrowRightKey.bind(this), COMMAND_PRIORITY_NORMAL)
-    this.editor.registerCommand(KEY_TAB_COMMAND, this.#handleTabKey.bind(this), COMMAND_PRIORITY_NORMAL)
+    this.#registerCommandHandler(KEY_ARROW_RIGHT_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleArrowRightKey.bind(this))
+    this.#registerCommandHandler(KEY_TAB_COMMAND, COMMAND_PRIORITY_NORMAL, this.#handleTabKey.bind(this))
+
+    // Run before Lexical's built-in insert handlers to descend an element point on a
+    // block container to a leaf, avoiding error #211 on Enter / Shift+Enter in a quote.
+    this.#registerCommandHandler(INSERT_LINE_BREAK_COMMAND, COMMAND_PRIORITY_HIGH, this.#normalizeBlockContainerSelection.bind(this))
+    this.#registerCommandHandler(INSERT_PARAGRAPH_COMMAND, COMMAND_PRIORITY_HIGH, this.#normalizeBlockContainerSelection.bind(this))
+  }
+
+  #normalizeBlockContainerSelection() {
+    $normalizeBlockContainerSelection()
+    return false
   }
 
   #handleArrowRightKey(event) {
@@ -302,10 +361,19 @@ export class CommandDispatcher {
   #registerDragAndDropHandlers() {
     if (this.editorElement.supportsAttachments) {
       this.dragCounter = 0
-      this.editor.getRootElement().addEventListener("dragover", this.#handleDragOver.bind(this))
-      this.editor.getRootElement().addEventListener("drop", this.#handleDrop.bind(this))
-      this.editor.getRootElement().addEventListener("dragenter", this.#handleDragEnter.bind(this))
-      this.editor.getRootElement().addEventListener("dragleave", this.#handleDragLeave.bind(this))
+      this.#listeners.track(
+        this.editor.registerRootListener((rootElement) => {
+          if (rootElement) {
+            const teardowns = [
+              registerEventListener(rootElement, "dragover", this.#handleDragOver.bind(this)),
+              registerEventListener(rootElement, "drop", this.#handleDrop.bind(this)),
+              registerEventListener(rootElement, "dragenter", this.#handleDragEnter.bind(this)),
+              registerEventListener(rootElement, "dragleave", this.#handleDragLeave.bind(this))
+            ]
+            return () => teardowns.forEach((teardown) => teardown())
+          }
+        })
+      )
     }
   }
 
@@ -372,7 +440,7 @@ export class CommandDispatcher {
   }
 
   #isInternalDrag(event) {
-    return event.dataTransfer?.types.includes("application/x-lexxy-node-key")
+    return event.dataTransfer?.types.some((type) => type.startsWith("application/x-lexxy-"))
   }
 
   #handleTabKey(event) {
@@ -397,16 +465,6 @@ export class CommandDispatcher {
     return $isRangeSelection(selection) && selection.isCollapsed()
   }
 
-  // Not using TOGGLE_LINK_COMMAND because it's not handled unless you use React/LinkPlugin
-  #toggleLink(url) {
-    this.editor.update(() => {
-      if (url === null) {
-        $toggleLink(null)
-      } else {
-        $toggleLink(url)
-      }
-    })
-  }
 }
 
 function capitalize(str) {

@@ -11,6 +11,7 @@ import {
 import { $isListItemNode, $isListNode } from "@lexical/list"
 import { $isActionTextAttachmentNode } from "../../nodes/action_text_attachment_node"
 import { $findOrCreateGalleryForImage } from "../../nodes/image_gallery_node"
+import { ListenerBin } from "../../helpers/listener_helper"
 
 const MIME_TYPE = "application/x-lexxy-node-key"
 
@@ -19,21 +20,21 @@ export class AttachmentDragAndDrop {
   #draggedNodeKey = null
   #rafId = null
   #draggingRafId = null
-  #cleanupFns = []
+  #listeners = new ListenerBin()
 
   constructor(editor) {
     this.#editor = editor
 
     // Register Lexical commands at HIGH priority to intercept before the
     // base @lexical/rich-text handlers (which return true and consume the events).
-    this.#cleanupFns.push(
+    this.#listeners.track(
       editor.registerCommand(DRAGSTART_COMMAND, (event) => this.#handleDragStart(event), COMMAND_PRIORITY_HIGH),
       editor.registerCommand(DROP_COMMAND, (event) => this.#handleDrop(event), COMMAND_PRIORITY_HIGH),
     )
 
     // Use a root listener to register DOM-level dragover/dragend handlers
     // (these events need throttled rAF handling that works better as DOM listeners).
-    const unregister = editor.registerRootListener((root, prevRoot) => {
+    this.#listeners.track(editor.registerRootListener((root, prevRoot) => {
       if (prevRoot) {
         prevRoot.removeEventListener("dragover", this.#onDragOver)
         prevRoot.removeEventListener("dragend", this.#onDragEnd)
@@ -42,22 +43,20 @@ export class AttachmentDragAndDrop {
         root.addEventListener("dragover", this.#onDragOver)
         root.addEventListener("dragend", this.#onDragEnd)
       }
-    })
-    this.#cleanupFns.push(unregister)
+    }))
   }
 
   destroy() {
     this.#cleanup()
-    for (const fn of this.#cleanupFns) fn()
-    this.#cleanupFns = []
+    this.#listeners.dispose()
   }
 
   // -- Event handlers --------------------------------------------------------
 
   #handleDragStart(event) {
-    if (event.target.closest("textarea")) return false
+    if (event.target.closest?.("textarea")) return false
 
-    const figure = event.target.closest("figure.attachment[data-lexical-node-key]")
+    const figure = event.target.closest?.("figure.attachment[data-lexical-node-key]")
     if (!figure) return false
 
     this.#draggedNodeKey = figure.dataset.lexicalNodeKey
@@ -278,15 +277,18 @@ export class AttachmentDragAndDrop {
     if (!targetNode || !$isActionTextAttachmentNode(targetNode)) return
     if (draggedNode.is(targetNode)) return
 
+    // Resolve the gallery before detaching: the drop target matches any
+    // previewable attachment, but galleries only accept images, so removing
+    // first deleted PDFs and videos dropped onto another attachment.
+    const gallery = $findOrCreateGalleryForImage(targetNode)
+    if (!gallery) return
+
     draggedNode.remove()
 
-    const gallery = $findOrCreateGalleryForImage(targetNode)
-    if (gallery) {
-      if (position === "before") {
-        targetNode.insertBefore(draggedNode)
-      } else {
-        targetNode.insertAfter(draggedNode)
-      }
+    if (position === "before") {
+      targetNode.insertBefore(draggedNode)
+    } else {
+      targetNode.insertAfter(draggedNode)
     }
   }
 
