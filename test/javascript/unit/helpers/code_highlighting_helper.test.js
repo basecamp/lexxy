@@ -107,6 +107,25 @@ test("highlightCode yields to the event loop while highlighting every block", as
   }
 })
 
+test("highlightCode skips blocks removed from the root while it yields", async () => {
+  const code = Array.from({ length: 30 }, (_line, index) =>
+    `const value_${index} = compute(${index}, "token string", [ 1, 2, 3 ]) // comment ${index}`
+  ).join("<br>")
+
+  const blocks = Array.from({ length: 40 }, (_block, index) => appendPre(`block-${index}`, "javascript", code))
+  blocks.forEach(pre => document.body.appendChild(pre))
+
+  const result = highlightCode()
+  const removed = blocks.filter(pre => pre.dataset.highlighted !== "true")
+  removed.forEach(pre => pre.remove())
+  await result
+
+  expect(removed.length).toBeGreaterThan(0)
+  for (const pre of removed) {
+    expect(pre.dataset.highlighted).toBeUndefined()
+  }
+})
+
 test("highlightElement highlights a single pre element", () => {
   const pre = appendPre("single", "javascript", "const a = 1")
   document.body.appendChild(pre)

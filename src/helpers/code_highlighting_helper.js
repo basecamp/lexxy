@@ -11,6 +11,11 @@ export async function highlightCode(root = document) {
 
   let chunkStart = performance.now()
   for (const preElement of elements) {
+    // A block can leave the root between chunks, e.g. when Turbo swaps the
+    // page mid-run. Skip it rather than spend main-thread time on a page that
+    // is gone.
+    if (!root.contains(preElement)) continue
+
     highlightElement(preElement)
 
     if (performance.now() - chunkStart >= CHUNK_TIME_BUDGET_MS) {
