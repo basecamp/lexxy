@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest"
-import { $getRoot, $setSelection, CONTROLLED_TEXT_INSERTION_COMMAND } from "lexical"
+import { $getRoot, CONTROLLED_TEXT_INSERTION_COMMAND } from "lexical"
 import { createTestEditor, destroyTestEditor, selectFirstText, setContent, tick } from "../helpers/editor_helper"
 
 // macOS "Keyboard > Text Replacements" (and autocorrect) reach the editor as a beforeinput event
@@ -16,15 +16,6 @@ function nodeTypes(editorElement) {
   return editorElement.editor.read(() => $getRoot().getFirstChild().getChildren().map((node) => node.getType()))
 }
 
-function insertTextWithLineBreaks(editorElement, text) {
-  let result
-  editorElement.editor.update(() => {
-    result = editorElement.contents.insertTextWithLineBreaks(text)
-  }, { discrete: true })
-
-  return result
-}
-
 describe("insertReplacementText", () => {
   test("turns a newline into a line break instead of a literal newline", async () => {
     const editorElement = await createTestEditor()
@@ -36,6 +27,21 @@ describe("insertReplacementText", () => {
     expect(nodeTypes(editorElement)).toEqual([ "text", "linebreak", "text" ])
     expect(editorElement.value).toBe("<p>Hello Thanks,<br>Kyle</p>")
     expect(editorElement.value).not.toContain("\n")
+
+    await destroyTestEditor(editorElement)
+  })
+
+  // macOS separates the lines of a multi-line replacement with U+2028 (Option+Return in the
+  // Text Replacements pane), not "\n".
+  test("turns a line separator into a line break", async () => {
+    const editorElement = await createTestEditor()
+    await setContent(editorElement, "<p>Hello</p>")
+    selectFirstText(editorElement, "Hello".length)
+
+    await insertReplacementText(editorElement, " Thanks,\u2028Kyle")
+
+    expect(nodeTypes(editorElement)).toEqual([ "text", "linebreak", "text" ])
+    expect(editorElement.value).toBe("<p>Hello Thanks,<br>Kyle</p>")
 
     await destroyTestEditor(editorElement)
   })
@@ -61,36 +67,6 @@ describe("insertReplacementText", () => {
 
     expect(editorElement.value).toBe("<p>Hello Thanks,<br>Kyle</p>")
     expect(editorElement.value).not.toContain("\r")
-
-    await destroyTestEditor(editorElement)
-  })
-
-  // The return value is the command handler's: true stops Lexical, anything falsy lets it insert
-  // the text normally, so every path that does not convert line breaks has to stay falsy.
-  test("reports whether it converted line breaks", async () => {
-    const editorElement = await createTestEditor()
-    await setContent(editorElement, "<p>Hello</p>")
-    selectFirstText(editorElement, "Hello".length)
-
-    expect(insertTextWithLineBreaks(editorElement, " Thanks,\nKyle")).toBe(true)
-    expect(insertTextWithLineBreaks(editorElement, " there")).toBe(false)
-    expect(insertTextWithLineBreaks(editorElement, null)).toBe(false)
-
-    await destroyTestEditor(editorElement)
-  })
-
-  test("reports false without a range selection", async () => {
-    const editorElement = await createTestEditor()
-    await setContent(editorElement, "<p>Hello</p>")
-
-    let result
-    editorElement.editor.update(() => {
-      $setSelection(null)
-      result = editorElement.contents.insertTextWithLineBreaks(" Thanks,\nKyle")
-    }, { discrete: true })
-
-    expect(result).toBe(false)
-    expect(editorElement.value).toBe("<p>Hello</p>")
 
     await destroyTestEditor(editorElement)
   })
