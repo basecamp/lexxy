@@ -113,6 +113,8 @@ test.describe("Tables: triple-click inside a cell", () => {
     await page.mouse.up({ clickCount: 3 })
     await editor.flush()
 
+    await expect(editor.content.locator("td", { hasText: "Cell A text" }).last()).toHaveClass(/lexxy-content__table-cell--selected/)
+    await expect(editor.content.locator("td", { hasText: "Cell B text" }).last()).toHaveClass(/lexxy-content__table-cell--selected/)
     await expect(editor.content.locator("td", { hasText: "Cell C text" }).last()).not.toHaveClass(/lexxy-content__table-cell--selected/)
   })
 })
