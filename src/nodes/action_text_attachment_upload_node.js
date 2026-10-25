@@ -239,7 +239,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   #toActionTextAttachmentNodeWith(blob, previewSrc) {
-    const conversion = new AttachmentNodeConversion(this, blob, previewSrc)
+    const conversion = new AttachmentNodeConversion(this.getLatest(), blob, previewSrc)
     return conversion.toAttachmentNode()
   }
 

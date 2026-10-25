@@ -2,6 +2,7 @@ import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml } from "../../helpers/assertions.js"
 import { openToolbarDropdown } from "../../helpers/toolbar.js"
+import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
 
 const URL_INPUT = "lexxy-link-dropdown [data-dropdown-panel] input"
 
@@ -109,6 +110,20 @@ test.describe("Linking attachments", () => {
     await linkTo(page, "https://example.com")
 
     await assertEditorHtml(editor, `<div class="attachment-gallery attachment-gallery--2">${exportedAttachment("https://example.com")}${exportedAttachment()}</div>`)
+  })
+
+  test("a link set while an image uploads survives the upload completing", async ({ page, editor }) => {
+    const calls = await mockActiveStorageUploads(page, { delayDirectUploadResponse: true })
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+    await expect(page.locator("figure.attachment progress")).toBeVisible({ timeout: 10_000 })
+    await selectAttachment(page)
+
+    await linkTo(page, "https://example.com")
+    await calls.releaseDirectUploadResponses()
+
+    await expect(page.locator("figure.attachment img")).toHaveAttribute("src", /\/rails\/active_storage\/blobs\//, { timeout: 10_000 })
+    await expect.poll(() => editor.value()).toContain('href="https://example.com"')
   })
 })
 
