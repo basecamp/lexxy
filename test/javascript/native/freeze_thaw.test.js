@@ -130,7 +130,7 @@ describe("freeze, thaw, unlink", () => {
     expect(handled).toBe(false)
   })
 
-  test("unlinkFrozenNode unwraps the link and the next dispatch reports link.active false", async () => {
+  test("unlinkFrozenNode unwraps the link and the next dispatch reports no link", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
     await setContent(editorElement, "<p><a href='https://example.com'>linked</a></p>")
     selectAll(editorElement)
@@ -143,7 +143,8 @@ describe("freeze, thaw, unlink", () => {
 
     expect(editorElement.value).not.toContain("<a ")
     expect(editorElement.adapter.frozenLinkKey).toBeNull()
-    expect(capture.last.link.active).toBe(false)
+    expect(capture.last.attributes.link.active).toBe(false)
+    expect(capture.last.link).toBeNull()
   })
 
   test("unlinkFrozenNode handles links without text descendants", async () => {

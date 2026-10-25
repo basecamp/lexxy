@@ -1,11 +1,15 @@
 import { expect } from "@playwright/test"
 
-// Public NativeAdapter contract. Hard-coded so a regression that drops a key is caught here
+// Public NativeAdapter contract, as the iOS and Android apps decode it. Hard-coded
+// so a regression that drops a key is caught here. Mirrors
+// test/javascript/native/helpers/attributes_capture.js.
 const EXPECTED_ATTRIBUTE_KEYS = [
   "bold",
   "code",
   "heading",
+  "highlight",
   "italic",
+  "link",
   "ordered-list",
   "quote",
   "redo",
@@ -13,7 +17,7 @@ const EXPECTED_ATTRIBUTE_KEYS = [
   "undo",
   "unordered-list",
 ]
-const HEADING_TAGS = [ null, "h2", "h3", "h4" ]
+const HEADING_TAGS = [ "h1", "h2", "h3", "h4", "h5", "h6" ]
 
 // Installs NativeAdapter on the <lexxy-editor> and starts collecting
 // `lexxy:attributes-change` event details into a window-side array. The Node side
@@ -64,35 +68,29 @@ function assertContract(detail) {
   expect(Object.keys(detail.attributes).sort()).toEqual(EXPECTED_ATTRIBUTE_KEYS)
 
   for (const [ key, value ] of Object.entries(detail.attributes)) {
+    expect(Object.keys(value).sort(), `attributes.${key} keys`).toEqual([ "active", "enabled" ])
+    expect(typeof value.active, `attributes.${key}.active`).toBe("boolean")
     expect(typeof value.enabled, `attributes.${key}.enabled`).toBe("boolean")
-    if (key === "heading") {
-      expect([ true, false, null ]).toContain(value.active)
-      expect(HEADING_TAGS).toContain(value.tag)
-    } else {
-      expect(typeof value.active, `attributes.${key}.active`).toBe("boolean")
-    }
   }
 
-  expect(typeof detail.link.active).toBe("boolean")
-  expect(typeof detail.link.enabled).toBe("boolean")
-  if (detail.link.active) {
+  if (detail.attributes.link.active) {
+    expect(Object.keys(detail.link)).toEqual([ "href" ])
     expect(typeof detail.link.href).toBe("string")
     expect(detail.link.href.length).toBeGreaterThan(0)
   } else {
-    expect(detail.link.href).toBeNull()
+    expect(detail.link).toBeNull()
   }
 
-  expect(typeof detail.highlight.active).toBe("boolean")
-  expect(typeof detail.highlight.enabled).toBe("boolean")
-  if (detail.highlight.active) {
-    const hasColor = typeof detail.highlight.color === "string"
-    const hasBg = typeof detail.highlight.backgroundColor === "string"
-    expect(hasColor || hasBg, "highlight active requires color or backgroundColor").toBe(true)
+  if (detail.attributes.highlight.active) {
+    const { color, backgroundColor } = detail.highlight
+    expect(typeof color === "string" || typeof backgroundColor === "string", "highlight requires color or backgroundColor").toBe(true)
   } else {
-    expect(detail.highlight.color).toBeNull()
-    expect(detail.highlight.backgroundColor).toBeNull()
+    expect(detail.highlight).toBeNull()
   }
 
-  expect(HEADING_TAGS).toContain(detail.headingTag)
-  expect(detail.headingTag).toBe(detail.attributes.heading.tag)
+  if (detail.attributes.heading.active) {
+    expect(HEADING_TAGS).toContain(detail.headingTag)
+  } else {
+    expect(detail.headingTag).toBeNull()
+  }
 }

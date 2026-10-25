@@ -1,16 +1,20 @@
 import { expect } from "vitest"
 
-// Public contract — hard-coded so a regression that drops a key (or sneaks one in)
-// is caught here, not silently re-derived from the implementation.
+// Public contract, as the iOS and Android apps decode it. Hard-coded so a
+// regression that drops a key (or sneaks one in) is caught here, not silently
+// re-derived from the implementation.
 //
-// `attributes` carries the toolbar-state map. `link` and `highlight` are
-// dispatched as top-level siblings of `attributes` because they carry extra
-// payload (href, color, backgroundColor) that the rest of the keys don't.
+// `attributes` carries one `{ active, enabled }` toolbar state per button.
+// `link` is `{ href }` or null and `highlight` is `{ color, backgroundColor }`
+// or null: the apps decode `href` as a non-optional string, so a link object
+// without one fails the whole message.
 const EXPECTED_ATTRIBUTE_KEYS = [
   "bold",
   "code",
   "heading",
+  "highlight",
   "italic",
+  "link",
   "ordered-list",
   "quote",
   "redo",
@@ -18,7 +22,7 @@ const EXPECTED_ATTRIBUTE_KEYS = [
   "undo",
   "unordered-list",
 ]
-const HEADING_TAGS = [ null, "h2", "h3", "h4" ]
+const HEADING_TAGS = [ "h1", "h2", "h3", "h4", "h5", "h6" ]
 
 // Wires a listener on `lexxy:attributes-change` that records every event
 // detail and asserts the public contract on each one. Use afterEach to dispose
@@ -61,37 +65,29 @@ function assertContract(detail) {
   expect(Object.keys(detail.attributes).sort(), "attributes keys").toEqual(EXPECTED_ATTRIBUTE_KEYS)
 
   for (const [ key, value ] of Object.entries(detail.attributes)) {
-    expect(value, `attributes.${key}`).toBeTypeOf("object")
+    expect(Object.keys(value).sort(), `attributes.${key} keys`).toEqual([ "active", "enabled" ])
+    expect(value.active, `attributes.${key}.active`).toBeTypeOf("boolean")
     expect(value.enabled, `attributes.${key}.enabled`).toBeTypeOf("boolean")
-
-    if (key === "heading") {
-      expect([ true, false, null ], "attributes.heading.active").toContain(value.active)
-      expect(HEADING_TAGS, "attributes.heading.tag").toContain(value.tag)
-    } else {
-      expect(value.active, `attributes.${key}.active`).toBeTypeOf("boolean")
-    }
   }
 
-  expect(detail.link.active, "link.active").toBeTypeOf("boolean")
-  expect(detail.link.enabled, "link.enabled").toBeTypeOf("boolean")
-  if (detail.link.active) {
-    expect(detail.link.href, "link.href when active").toBeTypeOf("string")
-    expect(detail.link.href.length, "link.href length when active").toBeGreaterThan(0)
+  if (detail.attributes.link.active) {
+    expect(Object.keys(detail.link), "link keys").toEqual([ "href" ])
+    expect(detail.link.href, "link.href").toBeTypeOf("string")
+    expect(detail.link.href.length, "link.href length").toBeGreaterThan(0)
   } else {
-    expect(detail.link.href, "link.href when inactive").toBeNull()
+    expect(detail.link, "link when not in a link").toBeNull()
   }
 
-  expect(detail.highlight.active, "highlight.active").toBeTypeOf("boolean")
-  expect(detail.highlight.enabled, "highlight.enabled").toBeTypeOf("boolean")
-  if (detail.highlight.active) {
-    const hasColor = typeof detail.highlight.color === "string"
-    const hasBg = typeof detail.highlight.backgroundColor === "string"
-    expect(hasColor || hasBg, "highlight active requires color or backgroundColor").toBe(true)
+  if (detail.attributes.highlight.active) {
+    const { color, backgroundColor } = detail.highlight
+    expect(typeof color === "string" || typeof backgroundColor === "string", "highlight requires color or backgroundColor").toBe(true)
   } else {
-    expect(detail.highlight.color, "highlight.color when inactive").toBeNull()
-    expect(detail.highlight.backgroundColor, "highlight.backgroundColor when inactive").toBeNull()
+    expect(detail.highlight, "highlight when not highlighted").toBeNull()
   }
 
-  expect(HEADING_TAGS, "headingTag").toContain(detail.headingTag)
-  expect(detail.headingTag, "headingTag must equal attributes.heading.tag").toBe(detail.attributes.heading.tag)
+  if (detail.attributes.heading.active) {
+    expect(HEADING_TAGS, "headingTag").toContain(detail.headingTag)
+  } else {
+    expect(detail.headingTag, "headingTag when not in a heading").toBeNull()
+  }
 }

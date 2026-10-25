@@ -1,7 +1,7 @@
 export class BrowserAdapter {
   frozenLinkKey = null
 
-  dispatchAttributesChange(editorState) {}
+  dispatchAttributesChange(editorOrState) {}
   dispatchEditorInitialized(detail) {}
   freeze() {}
   thaw() {}

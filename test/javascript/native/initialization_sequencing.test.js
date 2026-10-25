@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "vitest"
-import { createTestEditor, destroyTestEditor } from "../unit/helpers/editor_helper"
+import { createTestEditor, destroyTestEditor, tick } from "../unit/helpers/editor_helper"
 import { NativeAdapter } from "../../../src/editor/adapters/native_adapter"
 import { captureAttributesChange } from "./helpers/attributes_capture"
 
@@ -42,5 +42,27 @@ describe("initialization sequencing", () => {
 
     expect(capture.violations).toEqual([])
     expect(capture.last.attributes).toBeTruthy()
+  })
+
+  test("registering before the first frame dispatches editor-initialized once", async () => {
+    editorElement = await createTestEditor({ skipTick: true })
+    const initialized = []
+    editorElement.addEventListener("lexxy:editor-initialized", (event) => initialized.push(event.detail))
+
+    editorElement.registerAdapter(new NativeAdapter(editorElement))
+    await tick()
+
+    expect(initialized).toHaveLength(1)
+  })
+
+  test("registering before the first frame still dispatches lexxy:initialize", async () => {
+    editorElement = await createTestEditor({ skipTick: true })
+    let initializeFired = 0
+    editorElement.addEventListener("lexxy:initialize", () => initializeFired++)
+
+    editorElement.registerAdapter(new NativeAdapter(editorElement))
+    await tick()
+
+    expect(initializeFired).toBe(1)
   })
 })

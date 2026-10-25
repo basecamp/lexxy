@@ -30,8 +30,8 @@ test.describe("native: format combinations", () => {
 
     const last = await capture.last()
     expect(last.attributes.bold.active).toBe(true)
-    expect(last.link.active).toBe(true)
-    expect(last.link.href).toBe("https://example.com")
+    expect(last.attributes.link.active).toBe(true)
+    expect(last.link).toEqual({ href: "https://example.com" })
   })
 
   test("heading + bold reports both active in a single dispatch", async ({ page, editor }) => {

@@ -9,16 +9,16 @@ const EXPECTED_DEFAULT_ATTRIBUTES = {
   italic:           { active: false, enabled: false },
   strikethrough:    { active: false, enabled: false },
   code:             { active: false, enabled: false },
+  highlight:        { active: false, enabled: false },
+  link:             { active: false, enabled: false },
   quote:            { active: false, enabled: false },
-  heading:          { active: null, enabled: false, tag: null },
+  heading:          { active: false, enabled: false },
   "unordered-list": { active: false, enabled: false },
   "ordered-list":   { active: false, enabled: false },
   undo:             { active: false, enabled: false },
   redo:             { active: false, enabled: false },
 }
 
-const EXPECTED_DEFAULT_LINK = { active: false, enabled: false, href: null }
-const EXPECTED_DEFAULT_HIGHLIGHT = { active: false, enabled: false, color: null, backgroundColor: null }
 const EXPECTED_KEYS = Object.keys(EXPECTED_DEFAULT_ATTRIBUTES).sort()
 
 let editorElement
@@ -40,12 +40,12 @@ describe("default payload contract", () => {
 
     const { attributes, link, highlight, headingTag } = capture.last
     expect(attributes).toEqual(EXPECTED_DEFAULT_ATTRIBUTES)
-    expect(link).toEqual(EXPECTED_DEFAULT_LINK)
-    expect(highlight).toEqual(EXPECTED_DEFAULT_HIGHLIGHT)
+    expect(link).toBeNull()
+    expect(highlight).toBeNull()
     expect(headingTag).toBeNull()
   })
 
-  test("payload always carries every DEFAULT_ATTRIBUTES key", async () => {
+  test("payload always carries every attribute key", async () => {
     editorElement = await createTestEditor()
     capture = captureAttributesChange(editorElement)
     editorElement.registerAdapter(new NativeAdapter(editorElement))
@@ -54,8 +54,6 @@ describe("default payload contract", () => {
 
     for (const detail of capture.events) {
       expect(Object.keys(detail.attributes).sort()).toEqual(EXPECTED_KEYS)
-      expect(detail.link).toBeTruthy()
-      expect(detail.highlight).toBeTruthy()
     }
   })
 
@@ -78,13 +76,12 @@ describe("default payload contract", () => {
     editorElement.dispatchAttributesChange()
 
     const expected = enableAll(EXPECTED_DEFAULT_ATTRIBUTES, {
-      heading: { active: false, enabled: true, tag: null },
-      undo:    { active: false, enabled: expect.any(Boolean) },
-      redo:    { active: false, enabled: expect.any(Boolean) },
+      undo: { active: false, enabled: expect.any(Boolean) },
+      redo: { active: false, enabled: expect.any(Boolean) },
     })
     expect(capture.last.attributes).toEqual(expected)
-    expect(capture.last.link).toEqual({ ...EXPECTED_DEFAULT_LINK, enabled: true })
-    expect(capture.last.highlight).toEqual({ ...EXPECTED_DEFAULT_HIGHLIGHT, enabled: true })
+    expect(capture.last.link).toBeNull()
+    expect(capture.last.highlight).toBeNull()
   })
 })
 

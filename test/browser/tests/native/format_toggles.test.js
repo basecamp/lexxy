@@ -3,6 +3,13 @@ import { expect } from "@playwright/test"
 import { NativeCapture } from "../../helpers/native_capture.js"
 import { clickToolbarButton, HELLO_EVERYONE } from "../../helpers/toolbar.js"
 
+// The native apps invoke heading formats as commands; the web toolbar has no buttons for them.
+function dispatchCommand(page, command) {
+  return page.evaluate((command) => {
+    document.querySelector("lexxy-editor").editor.dispatchCommand(command)
+  }, command)
+}
+
 test.describe("native: format toggle dispatch", () => {
   test.beforeEach(async ({ page, editor }) => {
     await page.goto("/")
@@ -48,18 +55,18 @@ test.describe("native: format toggle dispatch", () => {
     await capture.assertContract()
   })
 
-  test("setFormatHeadingLarge dispatches with heading.active and tag h2", async ({ page, editor }) => {
+  test("setFormatHeadingLarge dispatches with heading.active and headingTag h2", async ({ page, editor }) => {
     const capture = new NativeCapture(page)
     await capture.install()
     await capture.reset()
 
-    await clickToolbarButton(page, "setFormatHeadingLarge")
+    await dispatchCommand(page, "setFormatHeadingLarge")
     await editor.flush()
 
     const last = await capture.last()
     expect(last.attributes.heading.active).toBe(true)
-    expect(last.attributes.heading.tag).toBe("h2")
     expect(last.headingTag).toBe("h2")
+    await capture.assertContract()
   })
 
   test("setFormatHeadingMedium → h3, setFormatHeadingSmall → h4", async ({ page, editor }) => {
@@ -67,11 +74,11 @@ test.describe("native: format toggle dispatch", () => {
     await capture.install()
     await capture.reset()
 
-    await clickToolbarButton(page, "setFormatHeadingMedium")
+    await dispatchCommand(page, "setFormatHeadingMedium")
     await editor.flush()
     expect((await capture.last()).headingTag).toBe("h3")
 
-    await clickToolbarButton(page, "setFormatHeadingSmall")
+    await dispatchCommand(page, "setFormatHeadingSmall")
     await editor.flush()
     expect((await capture.last()).headingTag).toBe("h4")
   })
@@ -81,9 +88,9 @@ test.describe("native: format toggle dispatch", () => {
     await capture.install()
     await capture.reset()
 
-    await clickToolbarButton(page, "setFormatHeadingLarge")
+    await dispatchCommand(page, "setFormatHeadingLarge")
     await editor.flush()
-    await clickToolbarButton(page, "setFormatParagraph")
+    await dispatchCommand(page, "setFormatParagraph")
     await editor.flush()
 
     const last = await capture.last()

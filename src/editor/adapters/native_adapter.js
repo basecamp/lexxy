@@ -2,22 +2,7 @@ import { dispatch } from "../../helpers/html_helper"
 import { $getNodeByKey, $getSelection, $isElementNode, $isRangeSelection, $isTextNode } from "lexical"
 import { $isLinkNode } from "@lexical/link"
 
-const INACTIVE = Object.freeze({ active: false, enabled: false })
-
-export const DEFAULT_ATTRIBUTES = Object.freeze({
-  bold: INACTIVE,
-  italic: INACTIVE,
-  strikethrough: INACTIVE,
-  code: INACTIVE,
-  highlight: Object.freeze({ active: false, enabled: false, color: null, backgroundColor: null }),
-  link: Object.freeze({ active: false, enabled: false, href: null }),
-  quote: INACTIVE,
-  heading: Object.freeze({ active: null, enabled: false, tag: null }),
-  "unordered-list": INACTIVE,
-  "ordered-list": INACTIVE,
-  undo: INACTIVE,
-  redo: INACTIVE
-})
+const FORMAT_ATTRIBUTES = [ "bold", "italic", "strikethrough", "code", "highlight", "link", "quote", "heading", "unordered-list", "ordered-list" ]
 
 export class NativeAdapter {
   frozenLinkKey = null
@@ -27,10 +12,15 @@ export class NativeAdapter {
     this.editorContentElement = editorElement.editorContentElement
   }
 
-  dispatchAttributesChange(editorState) {
-    const { link, highlight, ...attributes } = { ...DEFAULT_ATTRIBUTES, ...this.#computeAttributesPayload(editorState) }
+  dispatchAttributesChange(editorOrState) {
+    const format = editorOrState.read(() => this.editorElement.selection.getFormat())
 
-    dispatch(this.editorElement, "lexxy:attributes-change", { attributes, link, highlight, headingTag: attributes.heading.tag })
+    dispatch(this.editorElement, "lexxy:attributes-change", {
+      attributes: this.#attributesFor(format),
+      link: format.linkUrl ? { href: format.linkUrl } : null,
+      highlight: format.highlightStyles ?? null,
+      headingTag: format.headingTag ?? null
+    })
   }
 
   dispatchEditorInitialized(detail) {
@@ -84,37 +74,29 @@ export class NativeAdapter {
     return true
   }
 
-  #computeAttributesPayload(editorState) {
-    return editorState.read(() => {
-      const format = this.editorElement.selection.getFormat()
-      if (Object.keys(format).length === 0) return DEFAULT_ATTRIBUTES
+  #attributesFor(format) {
+    const history = {
+      undo: { active: false, enabled: this.editorElement.canUndo },
+      redo: { active: false, enabled: this.editorElement.canRedo }
+    }
 
+    if (Object.keys(format).length === 0) {
+      return { ...Object.fromEntries(FORMAT_ATTRIBUTES.map(name => [ name, { active: false, enabled: false } ])), ...history }
+    } else {
       return {
-        ...DEFAULT_ATTRIBUTES,
-
         bold: { active: format.isBold, enabled: true },
         italic: { active: format.isItalic, enabled: true },
         strikethrough: { active: format.isStrikethrough, enabled: true },
         code: { active: format.isInCode, enabled: true },
-        highlight: {
-          active: format.isHighlight,
-          enabled: true,
-          color: format.highlightStyles?.color ?? null,
-          backgroundColor: format.highlightStyles?.backgroundColor ?? null
-        },
-        link: {
-          active: format.isInLink,
-          enabled: true,
-          href: format.linkUrl
-        },
+        highlight: { active: format.isHighlight, enabled: true },
+        link: { active: format.isInLink, enabled: true },
         quote: { active: format.isInQuote, enabled: true },
-        heading: { active: format.isInHeading, enabled: true, tag: format.headingTag },
+        heading: { active: format.isInHeading, enabled: true },
         "unordered-list": { active: format.listType === "bullet", enabled: true },
         "ordered-list": { active: format.listType === "number", enabled: true },
-        undo: { active: false, enabled: this.editorElement.canUndo },
-        redo: { active: false, enabled: this.editorElement.canRedo }
+        ...history
       }
-    })
+    }
   }
 
   #findFirstTextDescendant(nodes) {
