@@ -195,10 +195,12 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
+    if (!text) return
+
     const html = parsePastedMarkdown(text)
     const doc = parseHtml(html)
 
-    if (this.#isPlainTextWithoutMarkdown(doc)) {
+    if (this.#isPlainTextWithoutMarkdown(doc) || this.#renderedNothing(doc)) {
       this.contents.insertText(text, { tag: PASTE_TAG })
     } else {
       const detail = Object.freeze({
@@ -224,6 +226,13 @@ export default class Clipboard {
     const paragraph = elements[0]
     return paragraph.nodeName === "P"
       && Array.from(paragraph.childNodes).every((node) => node.nodeType === Node.TEXT_NODE || node.nodeName === "BR")
+  }
+
+  // Markdown constructs that carry no output of their own, such as footnote and
+  // link reference definitions or HTML comments, leave marked with an empty
+  // document. Inserting that discards the paste, so keep the raw text instead.
+  #renderedNothing(doc) {
+    return doc.body.children.length === 0 && doc.body.textContent.trim() === ""
   }
 
   #pasteRichText(clipboardData) {
