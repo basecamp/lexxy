@@ -15,6 +15,10 @@ test.describe("Dragon NaturallySpeaking support", () => {
     pageErrors = []
     page.on("pageerror", (error) => pageErrors.push(error.message))
 
+    // Dragon runs on Windows, where the extension's line feed is \r\n
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, "appVersion", { get: () => "5.0 (Windows NT 10.0; Win64; x64)" })
+    })
     await page.goto("/")
     await page.waitForSelector("lexxy-editor[connected]")
     await editor.focus()
@@ -45,7 +49,7 @@ test.describe("Dragon NaturallySpeaking support", () => {
     await editor.flush()
 
     expect(await editor.plainTextValue()).toBe("I'm dictating in the main content section")
-    expect(await editor.content.evaluate(() => window.getSelection().toString())).toBe("dictating")
+    expect(await selectedText(editor)).toBe("dictating")
     expect(pageErrors).toEqual([])
   })
 
@@ -109,39 +113,84 @@ test.describe("Dragon NaturallySpeaking support", () => {
     expect(pageErrors).toEqual([])
   })
 
-  // Dragon counts offsets over the whole field, with a newline between blocks,
-  // not relative to the node at the caret. In "First paragraph\nI'm dictating
-  // here", "dictating" sits at global offset 20, four characters into its own
-  // paragraph.
+  // Dragon counts offsets over the whole field the way its web extension
+  // flattens it: a \r\n line feed (\r on macOS) between blocks and for each
+  // <br>, and a "[~]" placeholder for each element it doesn't parse. In
+  // "First paragraph\r\nI'm dictating here", "dictating" sits at offset 21.
   test("selects a word addressed by a global offset across paragraphs", async ({ editor }) => {
     await editor.setValue("<p>First paragraph</p><p>I'm dictating here</p>")
     await editor.select("here")
-    await postMakeChanges(editor, [ 20, 9, -1, 20, 9 ])
+    await postMakeChanges(editor, [ 21, 9, -1, 21, 9 ])
     await editor.flush()
 
-    expect(await editor.content.evaluate(() => window.getSelection().toString())).toBe("dictating")
+    expect(await selectedText(editor)).toBe("dictating")
     expect(pageErrors).toEqual([])
   })
 
   test("replaces a word addressed by a global offset across paragraphs", async ({ editor }) => {
     await editor.setValue("<p>First paragraph</p><p>I'm dictating here</p>")
     await editor.select("here")
-    await postMakeChanges(editor, [ 20, 9, "speaking", 28, 0 ])
+    await postMakeChanges(editor, [ 21, 9, "speaking", 29, 0 ])
+    await editor.send("!")
     await editor.flush()
 
-    expect(await editor.value()).toContain("I'm speaking here")
+    expect(await editor.value()).toContain("I'm speaking! here")
     expect(await editor.value()).toContain("First paragraph")
     expect(pageErrors).toEqual([])
   })
 
-  test("addresses text after a decorator block without breaking", async ({ editor }) => {
-    await editor.setValue("<p>Before</p><hr><p>Dictating here</p>")
-    await editor.select("here")
-    await postMakeChanges(editor, [ 8, 9, -1, 8, 9 ])
+  test("counts a line feed between list items", async ({ editor }) => {
+    await editor.setValue("<ul><li>one apple</li><li>two pears</li></ul>")
+    await postMakeChanges(editor, [ 15, 5, "plums", 20, 0 ])
     await editor.flush()
 
-    expect(await editor.content.evaluate(() => window.getSelection().toString())).toBe("Dictating")
+    expect(await editor.value()).toContain("two plums")
+    expect(await editor.value()).toContain("one apple")
     expect(pageErrors).toEqual([])
+  })
+
+  test("counts a line feed for each line break", async ({ editor }) => {
+    await editor.setValue("<p>line one<br>line two</p>")
+    await postMakeChanges(editor, [ 15, 3, -1, 15, 3 ])
+    await editor.flush()
+
+    expect(await selectedText(editor)).toBe("two")
+    expect(pageErrors).toEqual([])
+  })
+
+  test("counts a placeholder for a decorator block", async ({ editor }) => {
+    await editor.setValue("<p>Before</p><hr><p>Dictating here</p>")
+    await editor.select("here")
+    await postMakeChanges(editor, [ 13, 9, -1, 13, 9 ])
+    await editor.flush()
+
+    expect(await selectedText(editor)).toBe("Dictating")
+    expect(pageErrors).toEqual([])
+  })
+
+  test("counts a placeholder for a highlight", async ({ editor }) => {
+    await editor.setValue("<p>plain <mark style=\"color: var(--highlight-1);\">marked</mark> and after</p>")
+    await postMakeChanges(editor, [ 14, 5, -1, 14, 5 ])
+    await editor.flush()
+
+    expect(await selectedText(editor)).toBe("after")
+    expect(pageErrors).toEqual([])
+  })
+})
+
+test.describe("Dragon NaturallySpeaking support on macOS", () => {
+  test("counts a single carriage return between blocks", async ({ page, editor }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, "appVersion", { get: () => "5.0 (Macintosh; Intel Mac OS X 10_15_7)" })
+    })
+    await page.goto("/")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await editor.focus()
+    await editor.setValue("<p>First paragraph</p><p>I'm dictating here</p>")
+    await postMakeChanges(editor, [ 20, 9, -1, 20, 9 ])
+    await editor.flush()
+
+    expect(await selectedText(editor)).toBe("dictating")
   })
 })
 
@@ -157,4 +206,8 @@ async function postMakeChanges(editor, args) {
       setTimeout(resolve, 0)
     })
   }, args)
+}
+
+function selectedText(editor) {
+  return editor.content.evaluate(() => window.getSelection().toString())
 }
