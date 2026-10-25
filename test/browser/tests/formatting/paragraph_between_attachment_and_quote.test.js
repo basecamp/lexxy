@@ -28,4 +28,14 @@ test.describe("Caret between an attachment and the block container below it", ()
 
     await assertEditorBlocks(editor, [ "action-text-attachment", "p:between", "ul:listed" ])
   })
+
+  test("keeps the unused caret slots out of the saved HTML", async ({ editor }) => {
+    await editor.setValue(`${ATTACHMENT}<blockquote><p>quoted</p></blockquote>${ATTACHMENT}<ul><li>listed</li></ul>`)
+    await editor.flush()
+
+    await editor.content.locator("figure.attachment + p").first().click()
+    await editor.content.locator("blockquote").click()
+
+    await assertEditorBlocks(editor, [ "action-text-attachment", "blockquote:quoted", "action-text-attachment", "ul:listed" ])
+  })
 })

@@ -139,10 +139,7 @@ function $collapseAtGalleryEdge(anchor, backwards) {
 
   const direction = $directionFor(backwards)
   const spacer = $spacerBeside(anchorNode, direction)
-
-  let sibling = $adjacentSibling(anchorNode, direction)
-  if (spacer) sibling = $adjacentSibling(spacer, direction)
-
+  const sibling = $adjacentSibling(spacer ?? anchorNode, direction)
   const isAtGalleryEdge = $isAtNodeEdge(anchor, backwards)
 
   if (isAtGalleryEdge && anchorNode.collapseWith(sibling, backwards)) {
