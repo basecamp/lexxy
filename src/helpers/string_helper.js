@@ -14,6 +14,7 @@ export function normalizeFilteredText(string) {
   return string
     .toLowerCase()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove diacritics
+    .replace(/[’ʼ‘]/g, "'")
 }
 
 export function filterMatchPosition(text, potentialMatch) {
