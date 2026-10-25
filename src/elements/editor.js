@@ -1030,8 +1030,16 @@ function $getReadableTextContent(node) {
 // the reconciler adds to the live DOM, and block indentation as
 // data-lexical-indent, which Lexxy's content styles don't render. Drop both so
 // the value keeps the format it has always had.
+//
+// List items are the exception: they keep the terminator as a plain <br>, the
+// way Trix stores them. A <br> that ends a block renders nothing and is dropped
+// on import, so without it a Shift+Enter at the end of an item would vanish from
+// the rendered content and from the editor on reload.
 const LEXICAL_EXPORT_ARTIFACTS = / data-lexical-indent="\d+"|<br data-lexical-managed-linebreak="true">/g
+const LIST_ITEM_MANAGED_LINE_BREAK = /<br data-lexical-managed-linebreak="true"><\/li>/g
 
 function withoutLexicalExportArtifacts(html) {
-  return html.replace(LEXICAL_EXPORT_ARTIFACTS, "")
+  return html
+    .replace(LIST_ITEM_MANAGED_LINE_BREAK, "<br></li>")
+    .replace(LEXICAL_EXPORT_ARTIFACTS, "")
 }
