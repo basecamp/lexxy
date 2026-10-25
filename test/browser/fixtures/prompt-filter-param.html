@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — Prompt filter parameter</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <form>
+    <div class="body" data-editor="default">
+      <lexxy-editor class="lexxy-content" placeholder="Default filter parameter">
+        <lexxy-prompt trigger="@" name="mention" src="/prompt-items" remote-filtering>
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+
+    <div class="body" data-editor="custom">
+      <lexxy-editor class="lexxy-content" placeholder="Custom filter parameter">
+        <lexxy-prompt trigger="@" name="mention" src="/prompt-items?scope=team" remote-filtering filter-param="query">
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+
+    <div class="body" data-editor="empty">
+      <lexxy-editor class="lexxy-content" placeholder="Empty filter parameter">
+        <lexxy-prompt trigger="@" name="mention" src="/prompt-items" remote-filtering filter-param="">
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+  </form>
+
+  <script type="module" src="/editor.js"></script>
+</body>
+</html>

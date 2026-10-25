@@ -1,4 +1,4 @@
-import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
+import { $caretFromPoint, $createNodeSelection, $createParagraphNode, $findMatchingParent, $getCaretInDirection, $getCaretRange, $getChildCaret, $getCommonAncestor, $getRoot, $getSelection, $getSiblingCaret, $isChildCaret, $isDecoratorNode, $isElementNode, $isExtendableTextPointCaret, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootNode, $isRootOrShadowRoot, $isSiblingCaret, $isTextNode, $isTextPointCaret, $normalizeCaret, $normalizeSelection__EXPERIMENTAL as $normalizeSelection, $rewindSiblingCaret, $setSelectionFromCaretRange, $splitAtPointCaretNext, TextNode } from "lexical"
 import { ListNode } from "@lexical/list"
 import { $getNearestNodeOfType, $lastToFirstIterator } from "@lexical/utils"
 import { $wrapNodeInElement } from "@lexical/utils"
@@ -19,6 +19,35 @@ export function $createNodeSelectionWith(...nodes) {
   const selection = $createNodeSelection()
   nodes.forEach(node => selection.add(node.getKey()))
   return selection
+}
+
+export function $singleSelectedNode() {
+  const selection = $getSelection()
+  if ($isNodeSelection(selection)) {
+    const nodes = selection.getNodes()
+    if (nodes.length === 1) {
+      return nodes[0]
+    } else {
+      return null
+    }
+  } else {
+    return null
+  }
+}
+
+export function $selectedLabelledDecoratorNode() {
+  const node = $singleSelectedNode()
+  if (typeof node?.label === "string") {
+    return { key: node.getKey(), label: node.label }
+  } else {
+    return null
+  }
+}
+
+export function registerLabelledDecoratorSelection(editor, onChange) {
+  return editor.registerUpdateListener(({ editorState }) => {
+    onChange(editorState.read($selectedLabelledDecoratorNode))
+  })
 }
 
 export function $isShadowRoot(node) {
@@ -46,6 +75,10 @@ export function getListType(node) {
   return list?.getListType() ?? null
 }
 
+export function announceFromEditor(editor, message) {
+  editor.getRootElement()?.closest("lexxy-editor")?.announce(message)
+}
+
 export function isEditorFocused(editor) {
   const rootElement = editor.getRootElement()
   return rootElement !== null && rootElement.contains(document.activeElement)
@@ -68,14 +101,14 @@ export function extendTextNodeConversion(conversionName, ...callbacks) {
     ...conversionOutput,
     forChild: (lexicalNode, parentNode) => {
       const originalForChild = conversionOutput?.forChild ?? (x => x)
-      let childNode = originalForChild(lexicalNode, parentNode)
-
+      const childNode = originalForChild(lexicalNode, parentNode)
 
       if ($isTextNode(childNode)) {
-        childNode = callbacks.reduce(
+        return callbacks.reduce(
           (childNode, callback) => callback(childNode, element) ?? childNode,
           childNode
         )
+      } else {
         return childNode
       }
     }
@@ -273,14 +306,29 @@ function $shrinkSelectionPastBlockEdges(selection) {
   if (!anchorBlock || !focusBlock || anchorBlock.is(focusBlock)) return
 
   if ($isAtBlockEnd(selection.anchor, anchorBlock)) {
-    const nextBlock = anchorBlock.getNextSibling()
+    const nextBlock = $nearestElementSibling(anchorBlock, "next")
     if (nextBlock) selection.anchor.set(nextBlock.getKey(), 0, "element")
   }
 
   if ($isAtBlockStart(selection.focus, focusBlock)) {
-    const previousBlock = focusBlock.getPreviousSibling()
+    const previousBlock = $nearestElementSibling(focusBlock, "previous")
     if (previousBlock) selection.focus.set(previousBlock.getKey(), previousBlock.getChildrenSize(), "element")
   }
+
+  // Shrinking moves the endpoints toward each other, so they can cross when
+  // both were flush against block edges; callers assume a forward selection.
+  $ensureForwardRangeSelection(selection)
+}
+
+// Top-level decorator blocks (attachments, horizontal dividers) can't hold a
+// selection point, so walk past them to the nearest element sibling. Returns
+// null when no element sibling exists in that direction.
+function $nearestElementSibling(block, direction) {
+  let sibling = block
+  do {
+    sibling = direction === "next" ? sibling.getNextSibling() : sibling.getPreviousSibling()
+  } while (sibling && !$isElementNode(sibling))
+  return sibling
 }
 
 function $isAtBlockEnd(point, block) {
@@ -399,15 +447,22 @@ function $splitAroundLineBreak(lineBreakCaret) {
   return outer
 }
 
+// A container of blocks — a quote holding paragraphs, a list holding items — has no caret
+// position of its own at `direction`'s edge: the nearest one belongs to the child block
+// inside it, which reads as being within the container rather than beside it.
+export function $isBlockContainer(node, direction = "next") {
+  if (!$isElementNode(node)) return false
+
+  const edgeChild = $getChildCaret(node, direction).getNodeAtCaret()
+  return ($isElementNode(edgeChild) || $isDecoratorNode(edgeChild)) && !edgeChild.isInline()
+}
+
 // Lexical's RangeSelection.insertNodes/insertLineBreak require every selection point to have a
 // block ancestor with inline children. An element point on a container of block nodes — e.g. a
 // quote holding paragraphs — has none, so Lexical throws invariant #211 or #212. This detects
 // such a point so callers can descend it to a leaf before inserting.
 export function $isPointOnBlockContainer(point) {
-  if (point.type !== "element") return false
-
-  const firstChild = point.getNode().getFirstChild()
-  return ($isElementNode(firstChild) || $isDecoratorNode(firstChild)) && !firstChild.isInline()
+  return point.type === "element" && $isBlockContainer(point.getNode())
 }
 
 export function $hasPointOnBlockContainer(selection) {
@@ -441,4 +496,3 @@ export function $consecutiveSiblingGroups(blocks) {
 
   return groups
 }
-

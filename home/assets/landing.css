@@ -44,7 +44,7 @@
   }
 
   /* Editor dark mode colors */
-  lexxy-editor {
+  lexxy-editor, .lexxy-content {
     --lexxy-color-canvas: var(--bg);
 
     --lexxy-color-text: var(--ink);
@@ -175,7 +175,7 @@ a:not(.btn) {
 
 @keyframes logo-scroll {
   0% { background-position: 0 center; }
-  100% { background-position: -1750px center; }
+  100% { background-position: -1945px center; }
 }
 
 
@@ -188,6 +188,29 @@ a:not(.btn) {
   margin-inline: auto;
   max-inline-size: var(--max-width);
   padding-inline: 1.5rem;
+}
+
+.brought-to-you-by {
+  align-items: center;
+  display: flex;
+  gap: 0.2em;
+
+  .brought-to-you-by__37s {
+    block-size: 1.2em;
+    color: var(--ink);
+    inline-size: 1.2em;
+    margin-inline-start: 0.3em;
+    vertical-align: middle;
+  }
+
+  a {
+    font-weight: 700;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 
 
@@ -224,22 +247,13 @@ a:not(.btn) {
       }
     }
   }
-
-  .site-header__37s a {
-    font-weight: 700;
-    text-decoration: none;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
 }
 
 @media screen and (max-width: 800px) {
   .site-header {
     justify-content: center;
 
-    .site-header__37s {
+    .brought-to-you-by {
       display: none;
     }
   }
@@ -285,21 +299,25 @@ a:not(.btn) {
   margin-inline: 2.5rem;
   padding-block: 7% 2%;
   position: relative;
-  overflow: hidden;
   text-align: center;
   text-wrap: pretty;
 
+  /* Clips its own artwork instead of the hero clipping it, so the editor's
+     popups and dialogs can extend past the hero's bottom edge */
   .hero--bg {
-    inset-block-end: -3rem;
+    inset-block-end: 0;
     inset-inline: 0;
     opacity: 0.05;
+    overflow: hidden;
     pointer-events: none;
     position: absolute;
     z-index: 0;
 
     svg {
+      display: block;
       fill: transparent;
       stroke: var(--button-text);
+      translate: 0 3rem;
     }
   }
 
@@ -568,19 +586,132 @@ a:not(.btn) {
     }
   }
 
-  .container {
-    max-width: 60rem;
+  .sandbox__toggle {
+    align-items: center;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: inline-flex;
+    gap: 0.5ch;
+    margin-block-start: 1rem;
+    padding: 0.2em 0.6em;
+    user-select: none;
+
+    input {
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      opacity: 0;
+      position: absolute;
+    }
+
+    &:has(input:focus-visible) {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .sandbox__switch {
+      --switch-spacing: 0.25rem;
+
+      background: var(--ink-light);
+      block-size: calc(var(--switch-spacing) * 5);
+      border-radius: 10rem;
+      inline-size: calc(var(--switch-spacing) * 8);
+      padding: var(--switch-spacing);
+      position: relative;
+      transition: all 0.15s ease-out;
+
+      &:after {
+        background: var(--bg);
+        border-radius: 10rem;
+        content: "";
+        inset-block: var(--switch-spacing);
+        inset-inline-start: var(--switch-spacing);
+        inline-size: calc(var(--switch-spacing) * 3);
+        position: absolute;
+        transition: all 0.15s ease-out;
+      }
+
+      input:checked + & {
+        background: var(--accent);
+
+        &:after {
+          inset-inline-start: calc(var(--switch-spacing) * 4);
+        }
+      }
+    }
+
+    &:hover {
+      .sandbox__switch {
+        background: var(--ink-medium);
+      }
+    }
+  }
+
+  .sandbox__editor {
+    align-items: flex-start;
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    inline-size: 100%;
+    justify-content: center;
   }
 
   lexxy-editor {
     --lexxy-color-canvas: var(--bg);
     --lexxy-editor-rows: 30lh;
     font-size: 1em;
+    inline-size: 100%;
+    margin: 0 auto;
+    max-width: 60rem;
+    min-inline-size: 45%;
 
     lexxy-toolbar {
+      background: var(--bg);
       border-color: var(--ink-lighter);
+      border-start-end-radius: 0.35rem;
+      border-start-start-radius: 0.35rem;
       font-size: 0.8em;
       line-height: 1.25em;
+      inset-block-start: 0;
+      position: sticky;
+      z-index: 10;
+    }
+  }
+
+  .try__output {
+    background: var(--ink-lighter);
+    border-radius: var(--radius);
+    font-size: 0.8em;
+    inline-size: 100%;
+    overflow-x: auto;
+    margin: 0 0;
+    min-inline-size: 45%;
+    padding: 1.5rem;
+    transition: all 0.4s ease-out;
+
+    @starting-style {
+      inline-size: 0;
+      min-inline-size: 0;
+    }
+
+    code {
+      background: transparent;
+      color: var(--ink);
+    }
+  }
+}
+
+@media screen and (max-width: 800px) {
+  .sandbox {
+    .sandbox__editor {
+      flex-direction: column;
+
+      lexxy-editor {
+        --lexxy-editor-rows: 20lh;
+      }
+    }
+
+    .try__output {
+      transition: none;
     }
   }
 }
@@ -607,6 +738,10 @@ a:not(.btn) {
     gap: 0.4rem;
   }
 
+  .brought-to-you-by {
+    display: none;
+  }
+
   .logo {
     block-size: 1.3em;
 
@@ -619,5 +754,10 @@ a:not(.btn) {
 @media screen and (max-width: 800px) {
   .site-footer {
     flex-direction: column;
+    text-align: center;
+
+    .brought-to-you-by {
+      display: flex;
+    }
   }
 }

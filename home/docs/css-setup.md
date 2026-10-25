@@ -15,9 +15,38 @@ For the CSS, you can include it with the standard Rails helper:
 
 You can copy the CSS to your project and adapt it to your needs.
 
+## With JavaScript bundlers
+
+If you're using esbuild, Vite, or any other JavaScript bundler, you can import the CSS via:
+
+```javascript
+import "@37signals/lexxy/stylesheets/lexxy.css"
+```
+
+Or from a bundler-processed CSS file:
+
+```css
+@import "@37signals/lexxy/stylesheets/lexxy.css";
+```
+
+If you only need part of the styles, import the individual files instead:
+
+| Import                                              | Contents                                         |
+|-----------------------------------------------------|--------------------------------------------------|
+| `@37signals/lexxy/stylesheets/lexxy.css`            | Everything: the editor and rendered content      |
+| `@37signals/lexxy/stylesheets/lexxy-content.css`    | Rendered Action Text content, with the variables |
+| `@37signals/lexxy/stylesheets/lexxy-editor.css`     | The editor, with the variables                   |
+| `@37signals/lexxy/stylesheets/lexxy-variables.css`  | The CSS variables only, for theming              |
+
 ## Custom styles and dark mode
 
-All of Lexxy's color styles are defiend as CSS variables in `app/stylesheets/lexxy-variables.css`. This enables a straightforward way to customize Lexxy to match your application's theme. You can see an example implementation of a custom dark mode style in the Sandbox's stylesheet at `test/dummy/app/assets/stylesheets/sandbox.css`.
+All of Lexxy's color styles are defined as CSS variables in `app/stylesheets/lexxy-variables.css`. This enables a straightforward way to customize Lexxy to match your application's theme. You can see an example implementation of a custom dark mode style in the Sandbox's stylesheet at `test/dummy/app/assets/stylesheets/sandbox.css`.
+
+### Text size
+
+Content inherits its font size from the surrounding page, and headings are sized relative to it. To change the text size of the editor and rendered content, set `--lexxy-text-size` on `:root` or on any ancestor, for example `--lexxy-text-size: 1.125rem`. Headings and the toolbar scale with it. Use `rem` or `px`: an `em` value compounds when one rich text body is nested inside another.
+
+Captions, file icons and the editor's menus and dialogs use `--lexxy-text-small` (`0.875rem` by default), which you can set separately. Spacing uses `--lexxy-content-margin`.
 
 ## Rendered Action Text content
 
@@ -57,4 +86,3 @@ If you are importing the npm package and want to split Lexxy from your main bund
 ```javascript
 import { highlightCode } from "@37signals/lexxy/helpers"
 ```
-
