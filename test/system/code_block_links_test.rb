@@ -24,6 +24,7 @@ class CodeBlockLinksTest < ApplicationSystemTestCase
     find_editor.place_cursor_at_end
     find_editor.send "s"
     click_on "Update Post"
+    assert_text "Post was successfully updated."
 
     visit edit_post_path(posts(:linked_code))
     find_editor.place_cursor_at_end

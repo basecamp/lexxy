@@ -1,11 +1,11 @@
 import {
-  $addUpdateTag, $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
+  $addUpdateTag, $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $hasUpdateTag, $isDecoratorNode, $isElementNode,
   $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_LOW,
-  DELETE_CHARACTER_COMMAND, HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
+  DELETE_CHARACTER_COMMAND, HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_BACKSPACE_COMMAND,
   SELECTION_CHANGE_COMMAND, SKIP_DOM_SELECTION_TAG, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
-import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
+import { $getListDepth, $isListItemNode, ListItemNode, ListNode } from "@lexical/list"
 import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
 import { isSelectionHighlighted } from "../helpers/format_helper"
@@ -16,6 +16,10 @@ import { LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ListenerBin, handlingDefault, registerEventListener } from "../helpers/listener_helper"
+
+// The tag editor.focus() adds to its update. Lexical types it, but doesn't export it.
+const FOCUS_TAG = "focus"
+
 
 export default class Selection {
   #listeners = new ListenerBin()
@@ -344,35 +348,37 @@ export default class Selection {
       this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, handlingDefault(this.#selectNextTopLevelNode.bind(this)), COMMAND_PRIORITY_LOW),
 
       this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_BACKSPACE_COMMAND, this.#handleBackspaceAtListItemStart.bind(this), COMMAND_PRIORITY_LOW),
+
+      // DOM work: runs after reconciliation, so newly created nodes have elements
+      this.editor.registerUpdateListener(({ editorState }) => {
+        editorState.read(() => this.#syncSelectedClasses())
+      }),
 
       this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
-        this.#syncSelectedClasses()
-      }, COMMAND_PRIORITY_LOW),
-
-      this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
-        this.#preserveFocusOfOtherFields()
+        this.#preserveFocusOutsideEditor()
         return false
       }, COMMAND_PRIORITY_CRITICAL)
     )
   }
 
-  // Firefox (152+) keeps window.getSelection() anchored inside the editor after focus
-  // moves to another field, and fires document selectionchange for every keystroke
-  // typed there. Lexical reads that stale selection, reconciles, and pulls focus back
-  // into the editor — stealing it mid-typing. When another text-entry field owns focus,
-  // tag the update so Lexical leaves the DOM selection (and with it, focus) alone.
-  #preserveFocusOfOtherFields() {
-    if (this.#anotherFieldIsFocused) {
+  // Selection changes can arrive after Tab moves focus to a toolbar or another field.
+  // Reconciling that stale selection would pull focus back into the editor.
+  //
+  // Since Lexical 0.52 the notification runs inside the pending update itself,
+  // so it also sees updates that ask to focus the editor (editor.focus(), as
+  // toolbar commands do). Those must still reconcile the DOM selection.
+  #preserveFocusOutsideEditor() {
+    if (this.#isAnotherElementFocused && !$hasUpdateTag(FOCUS_TAG)) {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
     }
   }
 
-  get #anotherFieldIsFocused() {
+  get #isAnotherElementFocused() {
     const rootElement = this.editor.getRootElement()
     const activeElement = rootElement?.ownerDocument.activeElement
 
-    return activeElement && !rootElement.contains(activeElement) &&
-      (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA" || activeElement.isContentEditable)
+    return activeElement && activeElement !== rootElement.ownerDocument.body && !rootElement.contains(activeElement)
   }
 
   #listenForNodeSelections() {
@@ -629,6 +635,38 @@ export default class Selection {
     } else {
       return false
     }
+  }
+
+  // Since Lexical 0.48, the list extension handles Backspace at the start of a
+  // list item itself, before DELETE_CHARACTER_COMMAND is dispatched: it turns the
+  // item into a paragraph and splits the list around it. Keep Lexxy's behavior:
+  // nested items outdent, empty items are removed as below, and a top-level item
+  // that follows another one merges into it, as plain deletion does.
+  #handleBackspaceAtListItemStart(event) {
+    const listItem = this.#listItemWithCaretAtStart()
+    if (!listItem || listItem.getIndent() > 0) return false
+
+    if (this.#removeEmptyListItem()) {
+      event?.preventDefault()
+      return true
+    } else if (listItem.getPreviousSibling()) {
+      event?.preventDefault()
+      return this.editor.dispatchCommand(DELETE_CHARACTER_COMMAND, true)
+    } else {
+      return false
+    }
+  }
+
+  #listItemWithCaretAtStart() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.offset !== 0) return null
+
+    let node = selection.anchor.getNode()
+    while (node && !$isListItemNode(node)) {
+      if (node.getPreviousSibling()) return null
+      node = node.getParent()
+    }
+    return node
   }
 
   #selectDecoratorNodeBeforeDeletion(backwards) {
