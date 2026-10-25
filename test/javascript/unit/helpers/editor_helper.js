@@ -8,6 +8,7 @@ function ensureElementsRegistered() {
   if (elementsRegistered) return
   elementsRegistered = true
   stubElementInternals()
+  stubResizeObserver()
   defineElements()
 }
 
@@ -22,6 +23,15 @@ function stubElementInternals() {
       Object.defineProperty(internals, "labels", { get: () => [] })
     }
     return internals
+  }
+}
+
+// jsdom doesn't implement ResizeObserver
+function stubResizeObserver() {
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
   }
 }
 
@@ -91,14 +101,6 @@ export function selectFirstText(editorElement, offset = 0) {
     const text = $getRoot().getFirstDescendant()
     if ($isTextNode(text)) text.select(offset, offset)
   }, { discrete: true })
-}
-
-// Mirrors LexicalToolbarElement#dispatchButtonCommand: toolbar buttons dispatch
-// their command from inside an editor.update() block.
-export function dispatchToolbarCommand(editorElement, command, payload) {
-  editorElement.editor.update(() => {
-    editorElement.editor.dispatchCommand(command, payload)
-  })
 }
 
 export function captureEvent(element, eventName, fn) {

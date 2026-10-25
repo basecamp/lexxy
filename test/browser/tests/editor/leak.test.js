@@ -9,7 +9,7 @@ test.describe("Leak test", () => {
 
   test.beforeEach(async ({ page, editor }) => {
     await page.goto("/")
-    await page.waitForSelector("lexxy-editor[connected]")
+    await editor.waitForConnected()
 
     await editor.focus()
     await editor.setValue(CONTENT)
@@ -20,6 +20,7 @@ test.describe("Leak test", () => {
     await cdp.send("Performance.enable")
 
     const getListenerCount = async () => {
+      await editor.flush()
       await cdp.send("HeapProfiler.collectGarbage")
       const { metrics } = await cdp.send("Performance.getMetrics")
       return metrics.find((m) => m.name === "JSEventListeners")?.value ?? 0
@@ -44,6 +45,7 @@ test.describe("Leak test", () => {
     await cdp.send("Performance.enable")
 
     const getNodeCount = async () => {
+      await editor.flush()
       await cdp.send("HeapProfiler.collectGarbage")
       const { metrics } = await cdp.send("Performance.getMetrics")
       return metrics.find((m) => m.name === "Nodes")?.value ?? 0
