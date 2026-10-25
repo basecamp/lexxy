@@ -1,6 +1,6 @@
 import {
   $createLineBreakNode, $createParagraphNode, $createTextNode, $getNodeByKey, $getRoot, $getSelection, $hasUpdateTag,
-  $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
+  $isElementNode, $isLineBreakNode, $isNodeSelection, $isParagraphNode, $isRangeSelection, $isRootOrShadowRoot, $isTextNode, $setSelection,
   HISTORY_MERGE_TAG, PASTE_TAG,
   SELECTION_INSERT_CLIPBOARD_NODES_COMMAND
 } from "lexical"
@@ -15,7 +15,7 @@ import { $forEachSelectedTextNode, $setBlocksType } from "@lexical/selection"
 import Uploader from "./contents/uploader"
 import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
 import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode } from "../nodes/action_text_attachment_upload_node"
-import { $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
+import { $findMatchingParent, $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
 import PastedContentFormatter from "./contents/pasted_content_formatter"
 import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
@@ -52,26 +52,12 @@ export default class Contents {
   insertText(text, { tag } = {}) {
     this.editor.update(() => {
       const paragraph = $createParagraphNode()
-      text.split("\n").forEach((line, index) => {
+      text.split(/\r\n|\r|\n/).forEach((line, index) => {
         if (index > 0) paragraph.append($createLineBreakNode())
         paragraph.append($createTextNode(line))
       })
       this.insertAtCursor(paragraph)
     }, { tag })
-  }
-
-  // A literal "\n" stays visible in the editor, which Lexical renders with white-space: pre-wrap,
-  // but collapses to a space once serialized to HTML, so it has to become line break nodes.
-  insertTextWithLineBreaks(text) {
-    const normalizedText = text?.replace(/\r\n?/g, "\n")
-    const selection = $getSelection()
-
-    if (normalizedText?.includes("\n") && $isRangeSelection(selection)) {
-      selection.insertRawText(normalizedText)
-      return true
-    } else {
-      return false
-    }
   }
 
   insertAtCursor(...nodes) {
@@ -134,14 +120,17 @@ export default class Contents {
       blockElements.forEach(node => this.#unwrapCodeBlock(node))
     } else {
       $expandSelectionToLineBreaksAndSplitAtEdges(selection)
-      const elements = this.#outermostElements(this.#blockLevelElementsInSelection(selection))
-      if (elements.length === 0) return
-
-      const codeNode = $createCodeNode("plain")
-      elements.at(-1).insertAfter(codeNode)
-      codeNode.selectEnd()
-      this.insertAtCursor(...elements)
+      for (const blocks of this.#blockLevelElementRunsInSelection(selection)) {
+        this.#convertToCodeBlock(this.#outermostElements(blocks))
+      }
     }
+  }
+
+  #convertToCodeBlock(elements) {
+    const codeNode = $createCodeNode("plain")
+    elements.at(-1).insertAfter(codeNode)
+    codeNode.selectEnd()
+    this.insertAtCursor(...elements)
   }
 
   toggleBlockquote() {
@@ -248,13 +237,26 @@ export default class Contents {
   // right before a period, extending across it would glue "." onto everything
   // typed ("B" would query "B."), matching the wrong names or nothing at all.
   // But punctuation joining two word characters is part of a name — "@" before
-  // "Anne-Marie" or "O'Connor" must keep the whole name as the query.
+  // "Anne-Marie" or "O'Connor" must keep the whole name as the query, unless
+  // it starts a possessive: "@" before "Joan's" queries "Joan".
   #isQueryBoundary(fullText, offset) {
     const character = fullText[offset]
-    if (/\s/.test(character)) return true
-    if (!/\p{P}/u.test(character)) return false
 
-    return !(this.#isWordCharacter(fullText[offset - 1]) && this.#isWordCharacter(fullText[offset + 1]))
+    if (/\s/.test(character)) {
+      return true
+    } else if (/\p{P}/u.test(character)) {
+      return this.#startsPossessive(fullText, offset) || !this.#joinsWordCharacters(fullText, offset)
+    } else {
+      return false
+    }
+  }
+
+  #startsPossessive(fullText, offset) {
+    return /^['’]s(?![\p{L}\p{N}])/u.test(fullText.slice(offset))
+  }
+
+  #joinsWordCharacters(fullText, offset) {
+    return this.#isWordCharacter(fullText[offset - 1]) && this.#isWordCharacter(fullText[offset + 1])
   }
 
   #isWordCharacter(character) {
@@ -284,7 +286,7 @@ export default class Contents {
     return result
   }
 
-  replaceTextBackUntil(stringToReplace, replacementNodes) {
+  replaceTextBackUntil(stringToReplace, replacementNodes, { followedBy = "" } = {}) {
     replacementNodes = Array.isArray(replacementNodes) ? replacementNodes : [ replacementNodes ]
 
     const { anchorNode, offset } = this.#getTextAnchorData()
@@ -293,10 +295,10 @@ export default class Contents {
     const lastIndex = this.#findReplacementStart(anchorNode, offset, stringToReplace)
     if (lastIndex === -1) return
 
-    this.#performTextReplacement(anchorNode, lastIndex, stringToReplace, replacementNodes)
+    this.#performTextReplacement(anchorNode, lastIndex, stringToReplace, replacementNodes, followedBy)
   }
 
-  uploadFiles(files, { selectLast } = {}) {
+  uploadFiles(files, { selectLast, altText } = {}) {
     if (!this.editorElement) return // Disposed (e.g. on turbo:before-cache); a late drop can still land here
 
     if (!this.editorElement.supportsAttachments) {
@@ -308,6 +310,10 @@ export default class Contents {
     this.editor.update(() => {
       const uploader = Uploader.for(this.editorElement, validFiles)
       uploader.$uploadFiles()
+
+      if (altText && files.length === 1 && uploader.nodes.length === 1) {
+        uploader.nodes[0].getWritable().altText = altText
+      }
 
       if (selectLast && uploader.nodes?.length) {
         const lastNode = uploader.nodes.at(-1)
@@ -541,12 +547,24 @@ export default class Contents {
   }
 
   #blockLevelElementsInSelection(selection) {
-    const blocks = new Set()
+    return this.#blockLevelElementRunsInSelection(selection).flat()
+  }
+
+  // A block decorator directly under the root (an attachment, a divider) has
+  // no block ancestor. It splits the selection into runs, so converting the
+  // blocks around it leaves it in place.
+  #blockLevelElementRunsInSelection(selection) {
+    const runs = [ new Set() ]
     for (const node of selection.getNodes()) {
-      blocks.add($getNearestBlockElementAncestorOrThrow(node))
+      const block = $findMatchingParent(node, (parent) => $isElementNode(parent) && !parent.isInline())
+      if (block) {
+        runs.at(-1).add(block)
+      } else if (runs.at(-1).size > 0) {
+        runs.push(new Set())
+      }
     }
 
-    return Array.from(blocks)
+    return runs.filter((run) => run.size > 0).map((run) => Array.from(run))
   }
 
   #topLevelElementsInSelection(selection) {
@@ -623,10 +641,10 @@ export default class Contents {
     }
   }
 
-  #performTextReplacement(anchorNode, startIndex, stringToReplace, replacementNodes) {
+  #performTextReplacement(anchorNode, startIndex, stringToReplace, replacementNodes, followedBy) {
     const fullText = anchorNode.getTextContent()
     const textBeforeString = fullText.slice(0, startIndex)
-    const textAfterString = fullText.slice(startIndex + stringToReplace.length)
+    const textAfterString = followedBy + fullText.slice(startIndex + stringToReplace.length)
 
     const textNodeBefore = this.#cloneTextNodeFormatting(anchorNode, textBeforeString)
     const textNodeAfter = this.#cloneTextNodeFormatting(anchorNode, textAfterString || " ")
@@ -637,7 +655,7 @@ export default class Contents {
     lastInsertedNode.insertAfter(textNodeAfter)
 
     this.#appendLineBreakIfNeeded(textNodeAfter.getParentOrThrow())
-    const cursorOffset = textAfterString ? 0 : 1
+    const cursorOffset = textAfterString ? followedBy.length : 1
     textNodeAfter.select(cursorOffset, cursorOffset)
   }
 

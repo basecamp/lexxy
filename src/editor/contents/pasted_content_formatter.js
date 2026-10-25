@@ -1,20 +1,47 @@
 import OfficeFormatter from "./pasted_content_formatter/office_formatter"
 
+// Properties worth rescuing from a foreign style sheet before #stripStyleElements
+// drops it, keyed by the elements that carry them. Word and Outlook declare
+// paragraph spacing in the sheet (p.MsoNormal { margin: 0cm }) and never inline,
+// so once the sheet goes there is nothing left to say how tightly the author's
+// paragraphs sat, and hosts that turn pasted paragraph margins into explicit
+// blank lines read tight Office paragraphs as spaced ones and multiply every
+// line break.
+const PRESERVABLE_STYLES = {
+  p: [ "margin-top", "margin-bottom" ]
+}
+
 export default class PastedContentFormatter {
   constructor(doc) {
     this.doc = doc
   }
 
   format() {
+    this.#inlinePreservableStyles()
     this.#stripStyleElements()
+    this.#stripInterchangeNewlines()
     this.#unwrapPlaceholderAnchors()
     this.#stripTableCellColorStyles()
     new OfficeFormatter(this.doc).format()
     this.#unwrapWrappedListChildren()
     this.#nestStrayListChildren()
     this.#stripStrayListChildren()
+    this.#replaceGmailEmojiImgTags()
     this.#stripFillerListItemLineBreaks()
     return this.doc
+  }
+
+  // Runs before #stripStyleElements, to inline anything we still need
+  // from an external style before we remove it
+  #inlinePreservableStyles() {
+    const rules = this.#styleRules()
+    if (rules.length === 0) return
+
+    for (const [ selector, properties ] of Object.entries(PRESERVABLE_STYLES)) {
+      for (const element of this.doc.querySelectorAll(selector)) {
+        this.#inlineDeclaredStyles(element, properties, rules)
+      }
+    }
   }
 
   // Spreadsheets (e.g. Excel) copy a <style> block whose rules (td { color:
@@ -27,6 +54,35 @@ export default class PastedContentFormatter {
     for (const style of this.doc.querySelectorAll("style")) {
       style.remove()
     }
+  }
+
+  // Chrome and Safari append <br class="Apple-interchange-newline"> when the
+  // copied selection ends at a line end (Google Docs does this on every copy).
+  // It marks the end of the selection, not a line the author wrote, so left in
+  // place it pastes as an extra empty paragraph. Only the trailing marker goes:
+  // one at the start of the fragment is a real line boundary.
+  #stripInterchangeNewlines() {
+    for (const br of this.doc.querySelectorAll("br.Apple-interchange-newline")) {
+      if (this.#isAtEndOfBody(br)) {
+        br.remove()
+      }
+    }
+  }
+
+  #isAtEndOfBody(node) {
+    for (let current = node; current && current !== this.doc.body; current = current.parentNode) {
+      for (let sibling = current.nextSibling; sibling; sibling = sibling.nextSibling) {
+        if (!this.#isIgnorableTrailingNode(sibling)) return false
+      }
+    }
+    return true
+  }
+
+  #isIgnorableTrailingNode(node) {
+    if (node.nodeType === Node.COMMENT_NODE) {
+      return true
+    }
+    return node.nodeType === Node.TEXT_NODE && node.textContent.trim() === ""
   }
 
   // Anchors with non-meaningful hrefs (e.g. "#", "") appear in content copied
@@ -111,6 +167,72 @@ export default class PastedContentFormatter {
     }
   }
 
+  // Read the rules from a sheet we build rather than from this.doc.styleSheets: the
+  // document came from DOMParser, so it has no browsing context, and WebKit leaves
+  // its styleSheets empty. Parsing the text ourselves still expands the shorthands
+  // Word writes (margin: 0cm) into the longhands we ask for.
+  #styleRules() {
+    const css = Array.from(this.doc.querySelectorAll("style"), (style) => style.textContent).join("\n")
+    if (css.trim() === "") return []
+
+    const sheet = new CSSStyleSheet()
+    sheet.replaceSync(css)
+
+    const rules = []
+    for (const rule of sheet.cssRules) {
+      if (rule instanceof CSSStyleRule) {
+        rules.push(rule)
+      }
+    }
+    return rules
+  }
+
+  // A declaration the element already carries inline is the author's own and wins.
+  #inlineDeclaredStyles(element, properties, rules) {
+    for (const property of properties) {
+      if (element.style.getPropertyValue(property) === "") {
+        const value = this.#declaredValue(rules, element, property)
+        if (value) {
+          this.#appendStyleProperty(element, property, value)
+        }
+      }
+    }
+  }
+
+  // Source order alone doesn't decide the cascade, so when the matching rules
+  // disagree we can't say which value wins without resolving specificity. Skip
+  // the property rather than guess: guessing is permanent, since the sheet is
+  // about to go, and skipping only leaves the host on its own default.
+  #declaredValue(rules, element, property) {
+    const declared = new Set()
+    for (const rule of rules) {
+      const value = rule.style.getPropertyValue(property)
+      if (value !== "" && element.matches(rule.selectorText)) {
+        declared.add(value)
+      }
+    }
+
+    if (declared.size === 1) {
+      return declared.values().next().value
+    } else {
+      return null
+    }
+  }
+
+  // Assigning through element.style would reserialize the style attribute and
+  // drop the mso-* declarations Word leaves inline (they aren't valid CSS),
+  // and OfficeFormatter still needs to read mso-list from them. Append to the
+  // attribute instead so the original declarations survive untouched.
+  #appendStyleProperty(element, property, value) {
+    const style = element.getAttribute("style")
+    const declaration = `${property}:${value}`
+    if (style === null || style.trim() === "") {
+      element.setAttribute("style", declaration)
+    } else {
+      element.setAttribute("style", `${style.replace(/;\s*$/, "")};${declaration}`)
+    }
+  }
+
   // Browsers pad copied list items with a filler <br> at the end of each <li>.
   // The editor preserves trailing list item line breaks on import — in saved
   // documents they are real Shift+Enter content — so pasted filler has to be
@@ -136,5 +258,15 @@ export default class PastedContentFormatter {
 
   #containsListItems(node) {
     return node.nodeType === Node.ELEMENT_NODE && node.querySelector("li") !== null
+  }
+
+  // Emoji in gmail: <img data-emoji="😂" class="an1" alt="😂" aria-label="😂" draggable="false" src="https://fonts.gstatic.com/s/e/notoemoji/17.0/1f602/32.png" loading="lazy" style="height: 1.2em; width: 1.2em; vertical-align: middle;">
+  #replaceGmailEmojiImgTags() {
+    for (const emojiImg of this.doc.querySelectorAll("img[data-emoji]")) {
+      const emoji = emojiImg.dataset.emoji
+      if (emoji === emojiImg.alt) {
+        emojiImg.replaceWith(emoji)
+      }
+    }
   }
 }
