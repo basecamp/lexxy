@@ -1,73 +1,105 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
-import { startMonitoringConsole } from "../../helpers/assertions.js"
+import { assertEditorHtml, startMonitoringConsole } from "../../helpers/assertions.js"
 
 const TABLE_HTML =
   '<figure class="lexxy-content__table-wrapper"><table><thead><tr><th>alpha</th><th>beta</th></tr></thead><tbody><tr><td>gamma</td><td>delta</td></tr></tbody></table></figure><p>After table</p>'
 
-const valueOf = async (editor) => {
-  await editor.flush()
-  return editor.value()
-}
+const TABLE_AS_PARAGRAPHS = "<p>alpha</p><p>beta</p><p>gamma</p><p>delta</p><p>After table</p>"
 
-test.describe("Tables disabled", () => {
-  test("the table toolbar button is present by default (regression baseline)", async ({ page }) => {
+test.describe("Tables enabled", () => {
+  test("the table toolbar button is visible", async ({ page }) => {
     await page.goto("/")
     await page.waitForSelector("lexxy-toolbar[connected]")
 
     await expect(page.locator("lexxy-toolbar button[name='table']")).toBeVisible()
   })
+})
 
-  test("the table toolbar button is hidden when tables are disabled", async ({ page }) => {
+test.describe("Tables disabled", () => {
+  test.beforeEach(async ({ page, editor }) => {
     await page.goto("/tables-false.html")
-    await page.waitForSelector("lexxy-editor[connected]")
+    await editor.waitForConnected()
     await page.waitForSelector("lexxy-toolbar[connected]")
+  })
 
+  test("the table toolbar button is hidden", async ({ page }) => {
     await expect(page.locator("lexxy-toolbar button[name='table']")).toBeHidden()
   })
 
-  test("dispatching insertTable does nothing when tables are disabled", async ({ page, editor }) => {
-    await page.goto("/tables-false.html")
-    await editor.waitForConnected()
-
+  test("the insertTable command does nothing", async ({ editor }) => {
     await editor.click()
-    await editor.locator.evaluate((el) => el.editor.update(() => el.editor.dispatchCommand("insertTable")))
+    await editor.locator.evaluate((el) => el.editor.dispatchCommand("insertTable"))
+    await editor.flush()
 
     await expect(editor.content.locator("table")).toHaveCount(0)
-    await expect.poll(() => valueOf(editor)).not.toContain("<table")
   })
 
-  test("the lexxy-table-tools element is not created when tables are disabled", async ({ page, editor }) => {
-    await page.goto("/tables-false.html")
-    await editor.waitForConnected()
-
+  test("the table tools are not created", async ({ editor }) => {
     await expect(editor.locator.locator("lexxy-table-tools")).toHaveCount(0)
   })
 
-  test("loading a table strips it to plain text when tables are disabled", async ({ page, editor }) => {
-    await page.goto("/tables-false.html")
-    await editor.waitForConnected()
-
+  test("setting a value with a table turns each cell into a paragraph", async ({ editor }) => {
     await editor.setValue(TABLE_HTML)
 
-    await expect(editor.content.locator("table")).toHaveCount(0)
-    await expect.poll(() => valueOf(editor)).not.toContain("<table")
-    await expect.poll(() => valueOf(editor)).not.toContain("lexxy-content__table-wrapper")
-    await expect.poll(() => valueOf(editor)).toContain("After table")
-
-    // strip-to-plain-text must preserve the cell content, not drop it
-    const value = await valueOf(editor)
-    for (const cell of [ "alpha", "beta", "gamma", "delta" ]) {
-      expect(value).toContain(cell)
-    }
+    await assertEditorHtml(editor, TABLE_AS_PARAGRAPHS)
   })
 
-  test("editor connects without crashing when tables are disabled", async ({ page }) => {
+  test("captions, nested tables and block content in cells keep their text", async ({ editor }) => {
+    await editor.setValue(
+      "<table><caption>Caption</caption><tr><th><p>one</p><p>two</p></th><td><ul><li>item</li></ul></td></tr>" +
+      "<tr><td>outer<table><tr><th>inner</th><td><strong>bold</strong> text</td></tr></table></td></tr></table>"
+    )
+
+    await assertEditorHtml(editor,
+      '<p>Caption</p><p>one</p><p>two</p><ul><li value="1">item</li></ul><p>outer</p><p>inner</p><p><strong>bold</strong> text</p>'
+    )
+  })
+
+  test("pasted HTML tables turn into paragraphs", async ({ editor }) => {
+    await editor.paste("alpha beta gamma delta After table", { html: TABLE_HTML })
+
+    await assertEditorHtml(editor, TABLE_AS_PARAGRAPHS)
+  })
+
+  test("pasted Markdown tables turn into paragraphs", async ({ editor }) => {
+    await editor.paste("| alpha | beta |\n|---|---|\n| gamma | delta |\n\nAfter table")
+
+    await assertEditorHtml(editor, TABLE_AS_PARAGRAPHS)
+  })
+
+  test("pasted Lexical data with a table turns into paragraphs", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+    await editor.setValue(TABLE_HTML)
+    await editor.flush()
+    const lexical = await editor.locator.evaluate((el) =>
+      JSON.stringify({ namespace: el.editor._config.namespace, nodes: el.editor.getEditorState().toJSON().root.children })
+    )
+
+    await page.goto("/tables-false.html")
+    await editor.waitForConnected()
+    await editor.paste("alpha beta gamma delta After table", { html: TABLE_HTML, lexical })
+
+    await assertEditorHtml(editor, TABLE_AS_PARAGRAPHS)
+  })
+
+  test("the editor connects without console errors", async ({ page, editor }) => {
     startMonitoringConsole(page)
 
     await page.goto("/tables-false.html")
-    await page.waitForSelector("lexxy-editor[connected]")
+    await editor.waitForConnected()
 
     expect(page).toHaveNoErrors()
+  })
+})
+
+test.describe("Tables disabled, with a table in the initial value", () => {
+  test("the table turns into paragraphs, keeping links", async ({ page, editor }) => {
+    await page.goto("/tables-false-initial-value.html")
+    await editor.waitForConnected()
+
+    await expect(editor.content.locator("table")).toHaveCount(0)
+    await assertEditorHtml(editor, '<p>alpha</p><p>beta</p><p>gamma</p><p><a href="https://example.com/">delta</a></p>')
   })
 })

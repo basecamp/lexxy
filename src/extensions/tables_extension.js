@@ -25,14 +25,26 @@ import { mergeRegister } from "@lexical/utils"
 export class TablesExtension extends LexxyExtension {
 
   get enabled() {
-    return this.editorElement.supportsTables
+    return this.editorElement.supportsRichText
   }
 
   get allowedElements() {
-    return [ "figure", "tbody" ]
+    if (this.editorElement.supportsTables) {
+      return [ "figure", "tbody" ]
+    } else {
+      return []
+    }
   }
 
   get lexicalExtension() {
+    if (this.editorElement.supportsTables) {
+      return this.#tablesExtension
+    } else {
+      return this.#tablesDisabledExtension
+    }
+  }
+
+  get #tablesExtension() {
     return defineExtension({
       name: "lexxy/tables",
       nodes: [
@@ -140,6 +152,35 @@ export class TablesExtension extends LexxyExtension {
         )
       }
     })
+  }
+
+  // With no table nodes registered, Lexical imports a table's content as is, and
+  // runs the text of header cells and captions together, since it only treats
+  // <td> as a block. Turn every cell into a block first, so each keeps its text
+  // on its own line. The lookup returns no conversion, so Lexical goes on to
+  // import the table's children.
+  get #tablesDisabledExtension() {
+    return defineExtension({
+      name: "lexxy/tables-disabled",
+      html: {
+        import: {
+          table: (table) => {
+            replaceCellsWithBlocks(table)
+            return null
+          }
+        }
+      }
+    })
+  }
+}
+
+function replaceCellsWithBlocks(table) {
+  const cells = Array.from(table.rows).flatMap(row => Array.from(row.cells))
+
+  for (const cell of [ table.caption, ...cells ].filter(Boolean)) {
+    const block = cell.ownerDocument.createElement("div")
+    block.append(...cell.childNodes)
+    cell.replaceWith(block)
   }
 }
 
