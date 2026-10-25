@@ -29,7 +29,14 @@ Or from a bundler-processed CSS file:
 @import "@37signals/lexxy/stylesheets/lexxy.css";
 ```
 
-If you only need part of the styles, such as rendered content without the editor, you can import the individual files from `@37signals/lexxy/stylesheets/`.
+If you only need part of the styles, import the individual files instead:
+
+| Import                                              | Contents                                         |
+|-----------------------------------------------------|--------------------------------------------------|
+| `@37signals/lexxy/stylesheets/lexxy.css`            | Everything: the editor and rendered content      |
+| `@37signals/lexxy/stylesheets/lexxy-content.css`    | Rendered Action Text content, with the variables |
+| `@37signals/lexxy/stylesheets/lexxy-editor.css`     | The editor, with the variables                   |
+| `@37signals/lexxy/stylesheets/lexxy-variables.css`  | The CSS variables only, for theming              |
 
 ## Custom styles and dark mode
 
