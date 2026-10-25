@@ -3,6 +3,7 @@ import { $getSelectionStyleValueForProperty } from "@lexical/selection"
 import { ToolbarDropdown } from "../toolbar_dropdown"
 import { registerEventListener } from "../../helpers/listener_helper"
 import { createElement } from "../../helpers/html_helper"
+import { normalizeColorButtons } from "../../helpers/format_helper"
 
 const APPLY_HIGHLIGHT_SELECTOR = "button.lexxy-highlight-button"
 const REMOVE_HIGHLIGHT_SELECTOR = "[data-command='removeHighlight']"
@@ -35,27 +36,36 @@ export class HighlightDropdown extends ToolbarDropdown {
 
     const colorGroups = this.editorElement.config.get("highlight.buttons")
 
-    this.#populateButtonGroup("color", colorGroups.color)
-    this.#populateButtonGroup("background-color", colorGroups["background-color"])
+    this.#appendColorGroup("Text color", "color", colorGroups.color)
+    this.#appendColorGroup("Background color", "background-color", colorGroups["background-color"])
 
     const maxNumberOfColors = Math.max(colorGroups.color.length, colorGroups["background-color"].length)
     this.panel.style.setProperty("--max-colors", maxNumberOfColors)
   }
 
-  #populateButtonGroup(attribute, values) {
-    values.forEach((value, index) => {
-      this.#buttonContainer.appendChild(this.#createButton(attribute, value, index))
+  #appendColorGroup(label, attribute, buttons) {
+    const group = createElement("div", {
+      role: "group",
+      class: "lexxy-highlight-colors__group",
+      "aria-label": label
     })
+
+    normalizeColorButtons(buttons).forEach((button, index) => {
+      group.appendChild(this.#createButton(attribute, button, index))
+    })
+
+    this.#buttonContainer.append(group)
   }
 
-  #createButton(attribute, value, index) {
+  #createButton(attribute, button, index) {
     return createElement("button", {
       type: "button",
-      dataset: { value, style: attribute },
-      style: `${attribute}: ${value}`,
+      dataset: { value: button.value, style: attribute },
+      style: `${attribute}: ${button.value}`,
       class: "lexxy-editor__toolbar-button lexxy-highlight-button",
       name: `${attribute}-${index}`,
-      role: "menuitem"
+      role: "menuitemcheckbox",
+      "aria-label": button.label
     })
   }
 
@@ -79,11 +89,7 @@ export class HighlightDropdown extends ToolbarDropdown {
     const backgroundColor = $getSelectionStyleValueForProperty(selection, "background-color", NO_STYLE)
 
     this.#colorButtons.forEach(button => {
-      const matchesSelection = button.dataset.value === textColor || button.dataset.value === backgroundColor
-      const next = matchesSelection.toString()
-      if (button.getAttribute("aria-pressed") !== next) {
-        button.setAttribute("aria-pressed", next)
-      }
+      button.ariaChecked = button.dataset.value === textColor || button.dataset.value === backgroundColor
     })
 
     const hasHighlight = textColor !== NO_STYLE || backgroundColor !== NO_STYLE

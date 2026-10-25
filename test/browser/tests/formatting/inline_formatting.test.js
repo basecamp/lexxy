@@ -162,6 +162,54 @@ test.describe("Inline formatting", () => {
     )
   })
 
+  test("applying code to a selection that starts at the end of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p><strong>ab</strong> cd</p>")
+    await selectBetween(editor, { text: "ab", offset: 2 }, { text: " cd", offset: 3 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><strong>ab</strong><code> cd</code></p>")
+  })
+
+  test("removing code from a selection that starts at the end of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p><strong>ab</strong><code> cd</code></p>")
+    await selectBetween(editor, { text: "ab", offset: 2 }, { text: " cd", offset: 3 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><strong>ab</strong> cd</p>")
+  })
+
+  test("applying code to a backward selection that ends at the end of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p><strong>ab</strong> cd</p>")
+    await selectBetween(editor, { text: " cd", offset: 3 }, { text: "ab", offset: 2 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><strong>ab</strong><code> cd</code></p>")
+  })
+
+  test("applying code to a selection that ends at the start of a bold word leaves the bold word alone", async ({
+    page,
+    editor,
+  }) => {
+    await editor.setValue("<p>ab <strong>cd</strong></p>")
+    await selectBetween(editor, { text: "ab ", offset: 0 }, { text: "cd", offset: 0 })
+
+    await page.getByRole("button", { name: "Code" }).click()
+
+    await assertEditorHtml(editor, "<p><code>ab </code><strong>cd</strong></p>")
+  })
+
   test("toggle code for block", async ({ page, editor }) => {
     await editor.setValue(HELLO_EVERYONE)
     await editor.click()
@@ -227,3 +275,14 @@ test.describe("Inline formatting", () => {
     )
   })
 })
+
+async function selectBetween(editor, anchor, focus) {
+  await editor.content.evaluate((el, { anchor, focus }) => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    const textNodes = []
+    while (walker.nextNode()) textNodes.push(walker.currentNode)
+    const find = (text) => textNodes.find((node) => node.nodeValue === text)
+    window.getSelection().setBaseAndExtent(find(anchor.text), anchor.offset, find(focus.text), focus.offset)
+  }, { anchor, focus })
+  await editor.flush()
+}

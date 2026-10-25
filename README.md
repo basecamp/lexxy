@@ -8,6 +8,7 @@ A modern rich text editor for Rails.
 
 - Built on top of [Lexical](https://lexical.dev), the powerful text editor framework from Meta.
 - Good HTML semantics. Paragraphs are real `<p>` tags, as they should be.
+- Designed with [accessibility](https://lexxy.dev/docs/accessibility.html) in mind.
 - Markdown support: shortcuts, auto-formatting on paste.
 - Real-time code syntax highlighting.
 - Create links by pasting URLs on selected text.
@@ -21,6 +22,7 @@ A modern rich text editor for Rails.
 
 - Bug reports and pull requests are welcome on [GitHub Issues](https://github.com/basecamp/lexxy/issues). Help is especially welcome with [those tagged as "Help Wanted"](https://github.com/basecamp/lexxy/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22help%20wanted%22).
 - For questions and general Lexxy discussion, please use the [Discussions section](https://github.com/basecamp/lexxy/discussions)
+- To build with a development version of Lexical, use `bin/link-to-local-lexical`.
 
 ## License
 

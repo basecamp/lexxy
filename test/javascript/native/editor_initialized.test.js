@@ -20,22 +20,22 @@ describe("editor initialized event", () => {
     expect(event.detail.headingFormats).toBeInstanceOf(Array)
   })
 
-  test("each color entry has name and value properties", async () => {
+  test("each color entry has name, value, and label properties", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
 
     const event = await captureEvent(editorElement, "lexxy:editor-initialized", () => {
       editorElement.dispatchEditorInitialized()
     })
 
-    for (const color of event.detail.highlightColors.colors) {
+    const { colors, backgroundColors } = event.detail.highlightColors
+    for (const color of [ ...colors, ...backgroundColors ]) {
       expect(color).toHaveProperty("name")
       expect(color).toHaveProperty("value")
+      expect(color).toHaveProperty("label")
     }
 
-    for (const color of event.detail.highlightColors.backgroundColors) {
-      expect(color).toHaveProperty("name")
-      expect(color).toHaveProperty("value")
-    }
+    expect(colors[0].label).toBe("Yellow")
+    expect(backgroundColors[0].label).toBe("Yellow")
   })
 
   test("color names correspond to CSS custom properties", async () => {
@@ -56,7 +56,7 @@ describe("editor initialized event", () => {
     }
   })
 
-  test("dispatches heading formats with command and tag", async () => {
+  test("dispatches heading formats with a unique command and tag", async () => {
     editorElement = await createTestEditorWithNativeAdapter()
 
     const event = await captureEvent(editorElement, "lexxy:editor-initialized", () => {
@@ -65,9 +65,25 @@ describe("editor initialized event", () => {
 
     expect(event.detail.headingFormats).toEqual([
       { label: "Normal", command: "setFormatParagraph", tag: null },
-      { label: "Large Heading", command: "applyHeadingFormat", tag: "h2" },
-      { label: "Medium Heading", command: "applyHeadingFormat", tag: "h3" },
-      { label: "Small Heading", command: "applyHeadingFormat", tag: "h4" },
+      { label: "Large Heading", command: "setFormatHeadingLarge", tag: "h2" },
+      { label: "Medium Heading", command: "setFormatHeadingMedium", tag: "h3" },
+      { label: "Small Heading", command: "setFormatHeadingSmall", tag: "h4" },
+    ])
+  })
+
+  test("maps the dedicated commands to the first configured headings", async () => {
+    editorElement = await createTestEditorWithNativeAdapter({ attributes: { headings: '["h1", "h2", "h3", "h4"]' } })
+
+    const event = await captureEvent(editorElement, "lexxy:editor-initialized", () => {
+      editorElement.dispatchEditorInitialized()
+    })
+
+    expect(event.detail.headingFormats).toEqual([
+      { label: "Normal", command: "setFormatParagraph", tag: null },
+      { label: "Large Heading", command: "setFormatHeadingLarge", tag: "h1" },
+      { label: "Medium Heading", command: "setFormatHeadingMedium", tag: "h2" },
+      { label: "Small Heading", command: "setFormatHeadingSmall", tag: "h3" },
+      { label: "Heading 4", command: "applyHeadingFormat", tag: "h4" },
     ])
   })
 })
