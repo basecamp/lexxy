@@ -72,7 +72,7 @@ test.describe("Toolbar", () => {
       await undoButton.click()
       await editor.flush()
     }
-    await assertEditorHtml(editor, "<p><br></p>")
+    await assertEditorHtml(editor, "")
 
     // Redo until the redo button is disabled
     const redoButton = page.getByRole("button", { name: "Redo" })

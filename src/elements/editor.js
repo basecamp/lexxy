@@ -405,7 +405,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #readSanitizedEditorValue() {
     return this.editor?.read(() => {
-      return this.sanitizer.sanitize(withoutLexicalExportArtifacts($generateHtmlFromNodes(this.editor, null)))
+      return withoutEmptyParagraph(this.sanitizer.sanitize(withoutLexicalExportArtifacts($generateHtmlFromNodes(this.editor, null))))
     }) ?? null
   }
 
@@ -612,7 +612,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #loadInitialValue(editor) {
-    const initialHtml = this.valueBeforeDisconnect || this.getAttribute("value") || "<p><br></p>"
+    const initialHtml = this.valueBeforeDisconnect ?? (this.getAttribute("value") || "<p><br></p>")
 
     this.#initialValue = initialHtml
     this.#setEditorHtml(initialHtml, { editor })
@@ -1054,4 +1054,11 @@ function withoutLexicalExportArtifacts(html) {
   return html
     .replace(LIST_ITEM_MANAGED_LINE_BREAK, "<br></li>")
     .replace(LEXICAL_EXPORT_ARTIFACTS, "")
+}
+
+// An empty editor still holds one paragraph, so there is somewhere to type and
+// the toolbar has a block to act on. That paragraph isn't content: like Trix, an
+// empty editor's value is "", so a form submits nothing rather than <p><br></p>.
+function withoutEmptyParagraph(html) {
+  return html === "<p><br></p>" ? "" : html
 }
