@@ -93,7 +93,7 @@ yarn lint
 
 Tests pure JS editing behavior: typing, cursor/selection, formatting, paste handling, toolbar interactions, keyboard shortcuts, node transforms, tables, code blocks, and other client-side interactions. Tests run against a Vite dev server serving static HTML fixtures — no Rails required. Playwright runs across Chromium, Firefox, and WebKit for local cross-browser coverage.
 
-**WebKit on Omarchy/Arch Linux:** Playwright's bundled WebKit binaries are compiled against Ubuntu's system libraries (ICU 74, libjxl 0.8, etc.). Arch ships newer, ABI-incompatible versions of these libraries, so WebKit will fail to launch locally. This is a Playwright limitation — they only build WebKit for Ubuntu. Chromium and Firefox work fine everywhere. Run `yarn test:browser:chromium` or `yarn test:browser:firefox` locally; WebKit coverage is guaranteed by CI which runs on Ubuntu.
+**WebKit on Omarchy/Arch Linux:** Playwright's bundled WebKit binaries are compiled against Ubuntu's system libraries (ICU 74, libjxl 0.8, etc.). Arch ships newer, ABI-incompatible versions of these libraries, so WebKit will fail to launch locally. Chromium and Firefox work fine. To run WebKit, use `yarn test:browser:docker --project=webkit`: it runs the tests inside Playwright's Docker image, the same one CI uses. It takes any `playwright test` arguments, so `yarn test:browser:docker` alone runs every browser, and it needs Docker.
 
 #### Capybara (`test/system/`) — Rails integration
 
