@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { highlightAll } from "lexxy"
+import { highlightCode } from "lexxy"
 
 export default class extends Controller {
   static targets = ["log"]

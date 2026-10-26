@@ -1,5 +1,5 @@
 import { DecoratorNode } from "lexical"
-import { createElement, dispatchCustomEvent } from "../helpers/html_helper"
+import { createElement } from "../helpers/html_helper"
 
 export class HorizontalDividerNode extends DecoratorNode {
   static getType() {
@@ -31,15 +31,11 @@ export class HorizontalDividerNode extends DecoratorNode {
     super(key)
   }
 
+  // The hr already provides separator semantics; a figure boundary would be redundant.
   createDOM() {
-    const figure = createElement("figure", { className: "horizontal-divider" })
-    const hr = createElement("hr")
-
-    figure.addEventListener("click", (event) => {
-      dispatchCustomEvent(figure, "lexxy:internal:select-node", { key: this.getKey() })
-    })
-
-    figure.appendChild(hr)
+    const figure = createElement("figure", { className: "horizontal-divider", role: "presentation" })
+    figure.appendChild(createElement("hr"))
+    figure.dataset.lexicalNodeKey = this.__key
 
     return figure
   }
@@ -48,8 +44,16 @@ export class HorizontalDividerNode extends DecoratorNode {
     return true
   }
 
+  getTextContent() {
+    return "┄\n\n"
+  }
+
   isInline() {
     return false
+  }
+
+  get label() {
+    return "Horizontal divider"
   }
 
   exportDOM() {

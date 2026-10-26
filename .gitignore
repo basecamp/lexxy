@@ -10,3 +10,20 @@
 /test/dummy/tmp/
 /dist/
 /node_modules/
+/app/assets/javascript/
+
+# Claude Code
+/.claude/worktrees/
+
+# Playwright
+/test/browser/test-results/
+/test/browser/playwright-report/
+/test/browser/blob-report/
+
+Gemfile.lock
+
+# Jekyll site
+/home/_site/
+/home/.jekyll-cache/
+/home/.jekyll-metadata
+/home/Gemfile.lock

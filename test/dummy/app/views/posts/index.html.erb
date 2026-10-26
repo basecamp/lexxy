@@ -1,23 +1,16 @@
-<h1>Posts</h1>
+<div class="container">
+  <header>
+    <h1>Posts</h1>
+    <%= link_to "New post", new_post_path, class: "btn btn--primary" %>
+  </header>
 
-<div id="posts">
   <% @posts.each do |post| %>
-    <div id="<%= dom_id post %>">
-      <p>
-        <strong>Title:</strong>
-        <%= post.title %>
-      </p>
+    <article class="post" id="<%= dom_id post %>">
+      <h2><%= link_to(post.title.presence || "Untitled", post) %></h2>
 
-      <p>
-        <strong>Body:</strong>
+      <div data-controller="code-highlight">
         <%= post.body %>
-      </p>
-
-      <p>
-        <%= link_to post.title, post %>
-      </p>
-    </div>
+      </div>
+    </article>
   <% end %>
 </div>
-
-<%= link_to "New post", new_post_path %>

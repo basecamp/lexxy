@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400">
+  <defs>
+    <linearGradient id="grad3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f093fb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f5576c;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="url(#grad3)"/>
+  <g transform="translate(300,200)">
+    <polygon points="-60,-60 60,-60 60,60 -60,60" fill="rgba(255,255,255,0.3)" transform="rotate(45)"/>
+    <polygon points="-40,-40 40,-40 40,40 -40,40" fill="rgba(255,255,255,0.5)" transform="rotate(45)"/>
+    <polygon points="-20,-20 20,-20 20,20 -20,20" fill="rgba(255,255,255,0.7)" transform="rotate(45)"/>
+  </g>
+  <circle cx="150" cy="100" r="30" fill="rgba(255,255,255,0.4)"/>
+  <circle cx="450" cy="100" r="30" fill="rgba(255,255,255,0.4)"/>
+  <circle cx="150" cy="300" r="30" fill="rgba(255,255,255,0.4)"/>
+  <circle cx="450" cy="300" r="30" fill="rgba(255,255,255,0.4)"/>
+</svg>

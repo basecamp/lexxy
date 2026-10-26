@@ -16,6 +16,6 @@ end
 
 module ActiveSupport
   class TestCase
-    include EditorHelper, HtmlHelper
+    include EditorHelper, FocusHelper, HtmlHelper, ToolbarHelper, TrixHelper
   end
 end

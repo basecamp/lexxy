@@ -1,3 +1,3 @@
 module Lexxy
-  VERSION = "0.1.20.beta"
+  VERSION = "1.0.1"
 end

@@ -11,10 +11,28 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_mention_attachment people(:peter)
   end
 
+  test "clicking a prompt option preserves bold formatting around the inserted mention" do
+    start_bold_prompt_insertion
+
+    click_on_prompt "Peter Johnson"
+    find_editor.send " there"
+
+    assert_bold_mention_surrounded_by_bold_text
+  end
+
   test "deferred prompt" do
     find_editor.send "2"
     click_on_prompt "Peter Johnson"
     assert_mention_attachment people(:peter)
+  end
+
+  test "pressing enter to insert a prompt option preserves bold formatting around the inserted mention" do
+    start_bold_prompt_insertion
+
+    find_editor.send :enter
+    find_editor.send " there"
+
+    assert_bold_mention_surrounded_by_bold_text
   end
 
   test "remote filtering prompt with editable-text insertion" do
@@ -32,6 +50,28 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_mention_attachment people(:peter)
   end
 
+  test "comma selects the focused option and preserves the comma" do
+    find_editor.send "1"
+    find_editor.send "peter,"
+    assert_mention_attachment people(:peter)
+
+    find_editor.within_contents do
+      assert_text ","
+    end
+  end
+
+  test "hasOpenPrompt reports correct status" do
+    assert_not find_editor.open_prompt?
+
+    find_editor.send "1"
+
+    wait_until { find_editor.open_prompt? }
+
+    find_editor.send "peter "
+
+    wait_until { !find_editor.open_prompt? }
+  end
+
   test "configure space support in searches" do
     find_editor.send "3"
     find_editor.send "peter johnson"
@@ -43,9 +83,104 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_no_mention_attachments
   end
 
+  test "prompt with multiple attachables" do
+    find_editor.send "group:"
+
+    click_on_prompt "Group 0"
+
+    find_editor.within_contents do
+      assert_selector %(action-text-attachment[content-type="application/vnd.actiontext.group_mention"]), count: 5
+    end
+
+    all("action-text-attachment").map { |el| el["sgid"] }.uniq.size == 5
+  end
+
+  test "multichar prompt preceded by space" do
+    find_editor.send "hello group:"
+
+    within_popover do
+      assert_text "Group 0"
+    end
+  end
+
+  test "multichar prompt not triggered without space" do
+    find_editor.send "hellogroup:"
+
+    assert_no_css ".lexxy-prompt-menu--visible"
+  end
+
+  test "prompt does not trigger inside code block" do
+    find_editor.toggle_command("insertCodeBlock")
+    find_editor.send "1"
+
+    assert_no_css ".lexxy-prompt-menu--visible"
+  end
+
+  test "space support in multichar triggers" do
+    find_editor.send "person:"
+    find_editor.send "peter johnson"
+
+    within_popover do
+      assert_text "Peter Johnson"
+    end
+
+    assert_no_mention_attachments
+  end
+
+  test "prompt arrow key navigation works inside a table cell" do
+    find_editor.toggle_command("insertTable")
+
+    find_editor.send "1"
+
+    wait_until { find_editor.open_prompt? }
+
+    prompt_items = all(".lexxy-prompt-menu__item")
+    assert prompt_items.length >= 2, "Should have at least 2 prompt items to test navigation"
+
+    assert prompt_items[0]["aria-selected"], "First item should be selected initially"
+    refute prompt_items[1]["aria-selected"], "Second item should not be selected initially"
+
+    find_editor.send :arrow_down
+
+    assert find_editor.open_prompt?, "Prompt closed after pressing arrow down. The table plugin intercepted the key event because prompt handlers are not using COMMAND_PRIORITY_CRITICAL."
+
+    prompt_items = all(".lexxy-prompt-menu__item")
+    refute prompt_items[0]["aria-selected"], "First item should not be selected after arrow down"
+    assert prompt_items[1]["aria-selected"], "Second item should be selected after arrow down - prompt handled the arrow key"
+
+    find_editor.send :arrow_up
+
+    assert find_editor.open_prompt?, "Prompt should remain open after arrow up"
+
+    prompt_items = all(".lexxy-prompt-menu__item")
+    assert prompt_items[0]["aria-selected"], "First item should be selected after arrow up"
+    refute prompt_items[1]["aria-selected"], "Second item should not be selected after arrow up"
+  end
+
+  test "global custom content-type of mentions" do
+    visit edit_post_path(posts(:empty), attachment_content_type_namespace: "myapp")
+
+    find_editor.send "1"
+    click_on_prompt "Peter Johnson"
+
+    assert_selector %(action-text-attachment[content-type="application/vnd.myapp.mention"])
+    assert_no_selector %(action-text-attachment[content-type="application/vnd.actiontext.mention"])
+  end
+
   private
-    def click_on_prompt(name)
-      find(".lexxy-prompt-menu__item", text: name).click
+    def start_bold_prompt_insertion
+      find_editor.toggle_command("bold")
+      find_editor.send "Hello 1"
+
+      wait_until { find_editor.open_prompt? }
+    end
+
+    def assert_bold_mention_surrounded_by_bold_text
+      assert_editor_html do
+        assert_selector "p > strong", text: "Hello "
+        assert_selector %(p > action-text-attachment[content-type="application/vnd.actiontext.mention"])
+        assert_selector "p > strong", text: " there"
+      end
     end
 
     def within_popover(&block)

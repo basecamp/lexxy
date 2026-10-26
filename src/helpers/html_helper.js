@@ -1,20 +1,16 @@
-import DOMPurify from "dompurify"
-
-const ALLOWED_HTML_TAGS = [ "a", "action-text-attachment", "b", "blockquote", "br", "code", "em",
-  "figcaption", "figure", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "img", "li", "ol", "p", "pre", "q", "s", "strong", "ul" ]
-
-const ALLOWED_HTML_ATTRIBUTES = [ "alt", "caption", "class", "content", "content-type", "contenteditable",
-  "data-direct-upload-id", "data-sgid", "filename", "filesize", "height", "href", "presentation",
-  "previewable", "sgid", "src", "title", "url", "width" ]
-
-export function createElement(name, properties) {
+export function createElement(name, properties, content = "") {
   const element = document.createElement(name)
   for (const [ key, value ] of Object.entries(properties || {})) {
-    if (key in element) {
+    if (key === "dataset") {
+      Object.entries(value).forEach(([ key, value ]) => (element.dataset[key] = value))
+    } else if (key in element) {
       element[key] = value
-    } else if (value !== null && value !== undefined ) {
+    } else if (value !== null && value !== undefined) {
       element.setAttribute(key, value)
     }
+  }
+  if (content) {
+    element.innerHTML = content
   }
   return element
 }
@@ -44,18 +40,37 @@ export function dispatchCustomEvent(element, name, detail) {
   element.dispatchEvent(event)
 }
 
-export function sanitize(html) {
-  const sanitizedHtml = DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ALLOWED_HTML_TAGS,
-    ALLOWED_ATTR: ALLOWED_HTML_ATTRIBUTES,
-    SAFE_FOR_XML: false // So that it does not stripe attributes that contains serialized HTML (like content)
-  })
-
-  return sanitizedHtml
-}
-
 export function dispatch(element, eventName, detail = null, cancelable = false) {
   return element.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail, cancelable }))
+}
+
+export function addBlockSpacing(doc) {
+  const selector = "body > :not(h1, h2, h3, h4, h5, h6) + *, blockquote > :not(h1, h2, h3, h4, h5, h6) + *"
+  for (const block of doc.querySelectorAll(selector)) {
+    const spacer = doc.createElement("p")
+    spacer.appendChild(doc.createElement("br"))
+    block.before(spacer)
+  }
+}
+
+// A trailing newline before </pre> is presentational: markdown renderers routinely
+// emit one, and the HTML spec similarly disregards a leading newline right after <pre>.
+// Left in place, it imports as a spurious blank last line in the code block. Only a
+// newline that ends the block is stripped; one followed by a <br> is a real line.
+// Blocks highlighted by highlightElement() are skipped: it turns each stored <br>
+// into a newline, so their trailing newline is a real line too.
+export function stripTrailingCodeBlockNewlines(doc) {
+  for (const pre of doc.querySelectorAll("pre:not([data-highlighted])")) {
+    const last = lastDescendantOf(pre)
+    if (last.nodeType === Node.TEXT_NODE && last.nodeValue.endsWith("\n")) {
+      last.nodeValue = last.nodeValue.slice(0, -1)
+    }
+  }
+}
+
+function lastDescendantOf(node) {
+  while (node.lastChild) node = node.lastChild
+  return node
 }
 
 export function generateDomId(prefix) {
@@ -63,4 +78,23 @@ export function generateDomId(prefix) {
   return `${prefix}-${randomPart}`
 }
 
+export function extractPlainTextFromHtml(innerHtml = "") {
+  return parseHtml(innerHtml).body.textContent.trim()
+}
 
+export function isActiveAndVisible(element) {
+  return element && !element.disabled && checkVisibility(element)
+}
+
+// no `checkVisibility` in Safari < 17.4
+// https://developer.mozilla.org/en-US/docs/Web/API/Element/checkVisibility#browser_compatibility
+function checkVisibility(element, options) {
+  if (element.checkVisibility) {
+    return element.checkVisibility(options)
+  } else {
+    if (options) throw new Error("Polyfilled checkVisibility does not support options")
+    // Will not work for body or a fixed position element child of the body
+    // which is OK since that doesn't apply in the toolbar where this is used
+    return Boolean(element.offsetParent)
+  }
+}
