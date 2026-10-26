@@ -2,6 +2,7 @@ import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { assertEditorHtml, startMonitoringConsole } from "../../helpers/assertions.js"
 import { HELLO_EVERYONE, focusedName } from "../../helpers/toolbar.js"
+import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
 
 test.describe("Toolbar", () => {
   test.beforeEach(async ({ page }) => {
@@ -285,6 +286,50 @@ test.describe("Toolbar", () => {
     // The file input created by the file button should accept all file types
     const accept = await page.locator("lexxy-editor input[type='file']").getAttribute("accept")
     expect(accept).toBeNull()
+  })
+
+  test("dropdown stays open while an upload progresses", async ({ page, editor }) => {
+    await page.goto("/attachments.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+    const uploads = await mockActiveStorageUploads(page, { delayDirectUploadResponse: true })
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+    const figure = page.locator("figure.attachment")
+    await expect(figure.locator("progress")).toBeVisible({ timeout: 10_000 })
+
+    const formatPanel = page.locator("lexxy-toolbar-dropdown.lexxy-editor__toolbar-dropdown [data-dropdown-panel]").first()
+    await page.locator("lexxy-toolbar button[name='format']").click()
+    await expect(formatPanel).toBeVisible()
+
+    await uploads.releaseDirectUploadResponses()
+    await expect(figure.locator("progress")).toHaveCount(0, { timeout: 10_000 })
+
+    await expect(formatPanel).toBeVisible()
+  })
+
+  test("dropdown closes when the selection changes", async ({ page, editor }) => {
+    await editor.setValue(HELLO_EVERYONE)
+
+    const formatPanel = page.locator("lexxy-toolbar-dropdown.lexxy-editor__toolbar-dropdown [data-dropdown-panel]").first()
+
+    await page.locator("lexxy-toolbar button[name='format']").click()
+    await expect(formatPanel).toBeVisible()
+
+    await editor.select("everyone")
+
+    await expect(formatPanel).toBeHidden()
+  })
+
+  test("choosing a heading closes the format dropdown", async ({ page, editor }) => {
+    await editor.setValue("<p>Lexxy</p>")
+    await editor.select("Lexxy")
+
+    const formatPanel = page.locator("lexxy-toolbar-dropdown.lexxy-editor__toolbar-dropdown [data-dropdown-panel]").first()
+
+    await page.locator("lexxy-toolbar button[name='format']").click()
+    await page.locator("lexxy-toolbar button[name='heading-large']").click()
+
+    await expect(formatPanel).toBeHidden()
   })
 
   test("external toolbar", async ({ page }) => {
