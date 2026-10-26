@@ -1,5 +1,5 @@
 import Lexxy from "../config/lexxy"
-import { $createTextNode, DecoratorNode } from "lexical"
+import { $createTextNode, DecoratorNode, isInlineDomNode } from "lexical"
 
 import EditorSanitizer from "../editor/sanitizer"
 import { createElement, extractPlainTextFromHtml } from "../helpers/html_helper"
@@ -27,10 +27,8 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
         return {
           conversion: (attachment) => {
-            // Preserve initial space if present since Lexical removes it
             const nodes = []
-            const previousSibling = attachment.previousSibling
-            if (previousSibling && previousSibling.nodeType === Node.TEXT_NODE && /\s$/.test(previousSibling.textContent)) {
+            if (endsWithStrippedSpace(attachment)) {
               nodes.push($createTextNode(" "))
             }
 
@@ -43,8 +41,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
               contentType: attachment.getAttribute("content-type")
             }))
 
-            const nextSibling = attachment.nextSibling
-            if (nextSibling && nextSibling.nodeType === Node.TEXT_NODE && /^\s/.test(nextSibling.textContent)) {
+            if (startsWithStrippedSpace(attachment)) {
               nodes.push($createTextNode(" "))
             }
 
@@ -213,4 +210,99 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
 
 export function $isCustomActionTextAttachmentNode(node) {
   return node instanceof CustomActionTextAttachmentNode
+}
+
+// Lexical collapses whitespace on import the way browsers do, but treats an inline
+// decorator as a line boundary, so the space between text and an attachment is
+// dropped. Restore exactly the spaces it drops, following its rules in
+// $convertTextDOMNode. ASCII whitespace only: Lexical keeps NBSP.
+function endsWithStrippedSpace(attachment) {
+  const text = textBeside(attachment, false)
+  return /[ \t\r\n]$/.test(text?.data) && isTrailingSpaceStripped(text) && !isRestoredByPreviousAttachment(text)
+}
+
+function startsWithStrippedSpace(attachment) {
+  const text = textBeside(attachment, true)
+  return /^[ \t\r\n]/.test(text?.data) && isLeadingSpaceStripped(text)
+}
+
+function isTrailingSpaceStripped(text) {
+  let next = text
+  while ((next = lexicalTextInLine(next, true))) {
+    if (/[^ \t\r\n]/.test(next.data)) return false
+  }
+  return true
+}
+
+function isLeadingSpaceStripped(text) {
+  const previous = lexicalTextInLine(text, false)
+  return !previous || /[ \t\r\n]$/.test(previous.data)
+}
+
+// Whitespace alone between two attachments was already restored by the first one.
+function isRestoredByPreviousAttachment(text) {
+  let leaf = text
+  while (/^[ \t\r\n]+$/.test(leaf?.data)) {
+    leaf = leafBeside(leaf, false)
+  }
+  return isCustomAttachment(leaf) && startsWithStrippedSpace(leaf)
+}
+
+function textBeside(node, forward) {
+  const leaf = leafBeside(node, forward)
+  if (leaf?.nodeType === Node.TEXT_NODE) {
+    return leaf
+  } else {
+    return null
+  }
+}
+
+// The text next to a node within its line, or the line break, block or other
+// attachment that comes first. Comments and empty inline elements are skipped.
+function leafBeside(node, forward) {
+  while (true) {
+    let sibling
+    while ((sibling = forward ? node.nextSibling : node.previousSibling) === null) {
+      node = node.parentElement
+      if (node === null || !isInlineDomNode(node)) return null
+    }
+
+    node = sibling
+    while (isInlineDomNode(node) && (forward ? node.firstChild : node.lastChild)) {
+      node = forward ? node.firstChild : node.lastChild
+    }
+
+    if ((node.nodeType === Node.TEXT_NODE && node.data) || (node.nodeType === Node.ELEMENT_NODE && !isInlineDomNode(node))) {
+      return node
+    }
+  }
+}
+
+// Lexical's findTextInLine, which decides what its own text conversion strips. Unlike
+// leafBeside, it only stops at a decorator met as a sibling and descends through any other.
+function lexicalTextInLine(node, forward) {
+  while (true) {
+    let sibling
+    while ((sibling = forward ? node.nextSibling : node.previousSibling) === null) {
+      node = node.parentElement
+      if (node === null) return null
+    }
+
+    node = sibling
+    if (node.nodeType === Node.ELEMENT_NODE && !isInlineDomNode(node)) return null
+
+    while (forward ? node.firstChild : node.lastChild) {
+      node = forward ? node.firstChild : node.lastChild
+    }
+
+    if (node.nodeType === Node.TEXT_NODE && node.data) {
+      return node
+    } else if (node.nodeName === "BR") {
+      return null
+    }
+  }
+}
+
+function isCustomAttachment(node) {
+  return node?.localName === CustomActionTextAttachmentNode.TAG_NAME && node.hasAttribute("content")
 }

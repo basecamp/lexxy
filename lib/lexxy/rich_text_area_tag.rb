@@ -25,7 +25,7 @@ module Lexxy
       # Temporary: we need to *adaptarize* action text
       def render_custom_attachments_in(value)
         if value.respond_to?(:body)
-          if html = value.body_before_type_cast.presence
+          if html = value.body&.to_html.presence
             self.prefix_partial_path_with_controller_namespace = false if respond_to?(:prefix_partial_path_with_controller_namespace=)
             ActionText::Fragment.wrap(html).replace(ActionText::Attachment.tag_name) do |node|
               if node["url"].blank?
@@ -33,6 +33,7 @@ module Lexxy
                 node["content"] = render_action_text_attachment(attachment).to_json
                 node["content-type"] ||= attachment.content_type
               end
+
               node
             end
           end

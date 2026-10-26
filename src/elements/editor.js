@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -29,7 +29,7 @@ import Clipboard from "../editor/clipboard"
 import EditorSanitizer from "../editor/sanitizer"
 import Extensions from "../editor/extensions"
 import { BrowserAdapter } from "../editor/adapters/browser_adapter"
-import { getHighlightStyles, normalizeColorButtons } from "../helpers/format_helper"
+import { normalizeColorButtons } from "../helpers/format_helper"
 import { styleResolverRoot } from "../helpers/style_resolver_root"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
@@ -61,6 +61,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #initializeEventDispatched = false
   #editorInitializedDispatched = false
+  #focusRequested = false
   #listeners = new ListenerBin()
   #disposables = []
   #historyState = { undo: false, redo: false }
@@ -117,13 +118,16 @@ export class LexicalEditorElement extends HTMLElement {
     requestAnimationFrame(() => {
       this.#mountRoot()
       this.#handleAutofocus()
+      this.#handleRequestedFocus()
       this.#dispatchInitialize()
     })
   }
 
   disconnectedCallback() {
+    this.#focusRequested = false
     this.#initializeEventDispatched = false
     this.#editorInitializedDispatched = false
+    this.currentlyFocused = false
 
     this.#previousInternalFormValue = null
     this.valueBeforeDisconnect = this.value
@@ -316,7 +320,7 @@ export class LexicalEditorElement extends HTMLElement {
     if (!this.editor) return
 
     this.#dispatchEditorInitialized()
-    this.#dispatchAttributesChange()
+    this.dispatchAttributesChange()
   }
 
   freezeSelection() {
@@ -327,8 +331,8 @@ export class LexicalEditorElement extends HTMLElement {
     this.adapter.thaw()
   }
 
-  dispatchAttributesChange() {
-    this.#dispatchAttributesChange()
+  dispatchAttributesChange(editorState = this.editor.getEditorState()) {
+    this.adapter.dispatchAttributesChange(editorState)
   }
 
   dispatchEditorInitialized() {
@@ -345,13 +349,25 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   focus() {
+    if (this.#isRootMounted) {
+      this.#focusEditor()
+    } else if (this.isConnected) {
+      this.#focusRequested = true
+    }
+  }
+
+  get #isRootMounted() {
+    return this.isConnected && !!this.editor?.getRootElement()
+  }
+
+  #focusEditor() {
     // `editor.focus()` commits a reconciler update to position the cursor.
     // Skip if the contenteditable already owns focus — the update would be a
     // no-op but still triggers a full style/layout pass on pages with large
     // DOMs.
-    if (this.#isContentFocused) return
-
-    this.editor.focus(() => this.#onFocus())
+    if (!this.#isContentFocused) {
+      this.editor.focus(() => this.#onFocus())
+    }
   }
 
   get #isContentFocused() {
@@ -611,7 +627,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #synchronizeWithChanges() {
-    this.#listeners.track(this.editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves }) => {
       // Reading the value serializes and sanitizes the whole document. Only
       // invalidate the cache when a node actually changed, so an update that
       // just moved the selection reuses it instead of re-serializing.
@@ -619,7 +635,7 @@ export class LexicalEditorElement extends HTMLElement {
       this.#setInternalFormValue(this.value)
       this.#toggleEmptyStatus()
       this.#requestValidityRefresh()
-      this.#dispatchAttributesChange()
+      this.dispatchAttributesChange(editorState)
     }))
   }
 
@@ -756,7 +772,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #handleFocusIn(event) {
     if (this.#elementInEditorOrToolbar(event.target) && !this.currentlyFocused) {
-      this.#dispatchAttributesChange()
+      this.dispatchAttributesChange()
       dispatch(this, "lexxy:focus")
       this.currentlyFocused = true
     }
@@ -776,6 +792,13 @@ export class LexicalEditorElement extends HTMLElement {
   #onFocus() {
     if (this.isEmpty) {
       this.selection.placeCursorAtTheEnd()
+    }
+  }
+
+  #handleRequestedFocus() {
+    if (this.#focusRequested) {
+      this.#focusRequested = false
+      this.focus()
     }
   }
 
@@ -843,45 +866,7 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #configureSanitizer(editor) {
-    this.sanitizer = EditorSanitizer.register(editor, this.extensions.allowedElements)
-  }
-
-  #dispatchAttributesChange() {
-    let attributes = null
-    let linkHref = null
-    let highlight = null
-    let headingTag = null
-
-    this.editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
-
-      const format = this.selection.getFormat()
-      if (Object.keys(format).length === 0) return
-
-      attributes = {
-        bold: { active: format.isBold, enabled: true },
-        italic: { active: format.isItalic, enabled: true },
-        strikethrough: { active: format.isStrikethrough, enabled: true },
-        code: { active: format.isInCode, enabled: true },
-        highlight: { active: format.isHighlight, enabled: true },
-        link: { active: format.isInLink, enabled: true },
-        quote: { active: format.isInQuote, enabled: true },
-        heading: { active: format.isInHeading, enabled: true },
-        "unordered-list": { active: format.isInList && format.listType === "bullet", enabled: true },
-        "ordered-list": { active: format.isInList && format.listType === "number", enabled: true },
-        undo: { active: false, enabled: this.canUndo },
-        redo: { active: false, enabled: this.canRedo }
-      }
-
-      linkHref = this.selection.linkUrl
-      highlight = format.isHighlight ? getHighlightStyles(selection) : null
-      headingTag = format.headingTag ?? null
-    })
-
-    if (attributes) {
-      this.adapter.dispatchAttributesChange(attributes, linkHref, highlight, headingTag)
-    }
+    this.sanitizer = EditorSanitizer.register(editor, this.extensions.allowedElements, this.extensions.allowedStyles)
   }
 
   #dispatchEditorInitialized() {
