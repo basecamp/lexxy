@@ -31,6 +31,7 @@ Playwright tests in `test/browser/tests/` are grouped into semantic folders:
 | `editor/`      | Core editor API: focus, isEmpty/isBlank, toString, setValue, CSS status classes          |
 | `formatting/`  | Toolbar chrome, inline marks, highlights, block formats, lists, HR, escape, color       |
 | `modes/`       | Plain-text mode, single-line mode                                                       |
+| `native/`      | `lexxy:attributes-change` payloads the NativeAdapter sends to the iOS and Android apps  |
 | `paste/`       | Markdown conversion, URL/link paste, file/attachment paste, style canonicalization       |
 | `prompts/`     | Prompt popover triggers, mention insertion/deletion, remote-filtering race conditions    |
 | `tables/`      | Structure (create, add/remove rows/columns, delete), headers                             |
