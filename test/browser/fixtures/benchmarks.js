@@ -1,4 +1,5 @@
 import "lexxy"
+import { $createRangeSelection, $getRoot, $setSelection } from "lexical"
 
 const root = document.getElementById("benchmark-root")
 const READY_TIMEOUT_MS = 5_000
@@ -31,8 +32,63 @@ window.lexxyBenchmarks = {
       return measureLoad(scenario.payload, scenario.editorAttributes, scenario.options)
     }
 
+    if (scenario.kind === "caret") {
+      return measureCaret(scenario.payload, scenario.editorAttributes, scenario.options)
+    }
+
     throw new Error(`Unknown benchmark kind: ${scenario.kind}`)
   },
+}
+
+// Moving the caret runs the editor's update listener without changing any node,
+// which exercises the value-serialization caching on a large document.
+async function measureCaret(payload, editorAttributes = {}, options = {}) {
+  await clearRoot()
+
+  const editorElement = await createReadyEditor(editorAttributes)
+  const { details, html } = buildPayload(payload)
+  editorElement.value = html
+  await settleEditor(editorElement)
+
+  const timeBudgetMs = options.timeBudgetMs ?? 5_000
+
+  let opCount = 0
+  const startTime = performance.now()
+
+  do {
+    await moveCaret(editorElement, opCount)
+    opCount += 1
+  } while (performance.now() - startTime < timeBudgetMs)
+
+  const durationMs = performance.now() - startTime
+
+  return {
+    details: {
+      ...details,
+      opCount,
+      perOpDurationMs: durationMs / opCount,
+      renderedNodeCount: editorElement.querySelectorAll("*").length,
+      serializedHtmlLength: editorElement.value.length,
+      timeBudgetMs,
+    },
+    durationMs,
+  }
+}
+
+function moveCaret(editorElement, step) {
+  return new Promise((resolve) => {
+    editorElement.editor.update(() => {
+      const textNodes = $getRoot().getAllTextNodes()
+      if (textNodes.length === 0) return
+
+      const node = textNodes[step % textNodes.length]
+      const offset = step % (node.getTextContentSize() + 1)
+      const selection = $createRangeSelection()
+      selection.anchor.set(node.getKey(), offset, "text")
+      selection.focus.set(node.getKey(), offset, "text")
+      $setSelection(selection)
+    }, { onUpdate: resolve })
+  })
 }
 
 async function measureBootstrap(options = {}) {
@@ -116,6 +172,10 @@ function buildPayload(payload) {
     return buildLargeContentPayload(payload)
   }
 
+  if (payload.kind === "paragraphs") {
+    return buildParagraphsPayload(payload)
+  }
+
   if (payload.kind === "table") {
     return buildTablePayload(payload)
   }
@@ -125,6 +185,17 @@ function buildPayload(payload) {
   }
 
   throw new Error(`Unknown payload kind: ${payload.kind}`)
+}
+
+function buildParagraphsPayload({ paragraphs, wordsPerParagraph }) {
+  const html = Array.from({ length: paragraphs }, (_item, index) => {
+    return `<p>${buildPlainSentence(index, wordsPerParagraph)}</p>`
+  }).join("")
+
+  return {
+    details: { paragraphs, wordsPerParagraph },
+    html,
+  }
 }
 
 function buildLargeContentPayload({ listItemsPerSection, paragraphsPerSection, sections, wordsPerParagraph }) {
