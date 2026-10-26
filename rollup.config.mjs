@@ -1,4 +1,6 @@
 import { nodeResolve } from "@rollup/plugin-node-resolve"
+import commonjs from "@rollup/plugin-commonjs"
+import inject from "@rollup/plugin-inject"
 import terser from "@rollup/plugin-terser"
 import gzipPlugin from "rollup-plugin-gzip"
 
@@ -15,7 +17,7 @@ export default [
       {
         file: "./app/assets/javascript/lexxy.js",
         format: "esm",
-        sourcemap: process.env.NODE_ENV === "development" // eslint-disable-line no-undef
+        sourcemap: true
       },
       {
         file: "./app/assets/javascript/lexxy.min.js",
@@ -23,8 +25,17 @@ export default [
         plugins: [ terser() ]
       }
     ],
+    external: [
+      "@rails/activestorage"
+    ],
     plugins: [
       nodeResolve(),
+      commonjs(),
+      // Inject Prism for prismjs language components that expect a global Prism
+      inject({
+        Prism: ["prismjs", "default"],
+        include: "**/prismjs/components/**"
+      }),
       gzipPlugin({
         gzipOptions: { level: 9 }
       }),

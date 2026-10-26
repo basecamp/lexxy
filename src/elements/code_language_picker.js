@@ -1,31 +1,56 @@
-import { $isCodeNode, CODE_LANGUAGE_FRIENDLY_NAME_MAP, normalizeCodeLang } from "@lexical/code"
-import { $getSelection, $isRangeSelection } from "lexical"
-import { createElement } from "../helpers/html_helper"
+import { CodeNode } from "@lexical/code"
+import { CODE_LANGUAGE_FRIENDLY_NAME_MAP, normalizeCodeLanguage } from "@lexical/code-prism"
+import { createElement, dispatch } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
+import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 
-export default class CodeLanguagePicker extends HTMLElement {
+export class CodeLanguagePicker extends HTMLElement {
+  #abortController = null
+  #listeners = new ListenerBin()
+
   connectedCallback() {
     this.editorElement = this.closest("lexxy-editor")
     this.editor = this.editorElement.editor
+    this.classList.add("lexxy-floating-controls")
+    this.#abortController = new AbortController()
+    this.#listeners.track(() => this.#abortController?.abort())
 
     this.#attachLanguagePicker()
+    this.#hide()
     this.#monitorForCodeBlockSelection()
   }
 
+  disconnectedCallback() {
+    this.dispose()
+  }
+
+  dispose() {
+    this.#listeners.dispose()
+  }
+
   #attachLanguagePicker() {
-    this.languagePickerElement = this.#createLanguagePicker()
+    this.languagePickerElement = this.#findLanguagePicker() ?? this.#createLanguagePicker()
 
-    this.languagePickerElement.addEventListener("change", () => {
+    const signal = this.#abortController.signal
+
+    this.#listeners.track(registerEventListener(this.languagePickerElement, "change", () => {
       this.#updateCodeBlockLanguage(this.languagePickerElement.value)
-    })
+    }, { signal }))
 
-    this.languagePickerElement.style.position = "absolute"
+    this.#listeners.track(registerEventListener(this.languagePickerElement, "mousedown", (event) => {
+      this.#dispatchOpenEvent(event)
+    }, { signal }))
+
     this.languagePickerElement.setAttribute("nonce", getNonce())
-    this.editorElement.appendChild(this.languagePickerElement)
+    this.appendChild(this.languagePickerElement)
+  }
+
+  #findLanguagePicker() {
+    return this.querySelector("select")
   }
 
   #createLanguagePicker() {
-    const selectElement = createElement("select", { hidden: true, className: "lexxy-code-language-picker", "aria-label": "Pick a language…", name: "lexxy-code-language" })
+    const selectElement = createElement("select", { className: "lexxy-code-language-picker", "aria-label": "Pick a language…", name: "lexxy-code-language" })
 
     for (const [ value, label ] of Object.entries(this.#languages)) {
       const option = document.createElement("option")
@@ -40,20 +65,35 @@ export default class CodeLanguagePicker extends HTMLElement {
   get #languages() {
     const languages = { ...CODE_LANGUAGE_FRIENDLY_NAME_MAP }
 
-    if (!languages.ruby) languages.ruby = "Ruby"
-    if (!languages.php) languages.php = "PHP"
-    if (!languages.go) languages.go = "Go"
-    if (!languages.bash) languages.bash = "Bash"
-    if (!languages.json) languages.json = "JSON"
-    if (!languages.diff) languages.diff = "Diff"
+    languages.ruby ||= "Ruby"
+    languages.php ||= "PHP"
+    languages.go ||= "Go"
+    languages.bash ||= "Bash"
+    languages.json ||= "JSON"
+    languages.diff ||= "Diff"
+    languages.kotlin ||= "Kotlin"
 
-    const sortedEntries = Object.entries(languages)
-      .sort(([ , a ], [ , b ]) => a.localeCompare(b))
 
     // Place the "plain" entry first, then the rest of language sorted alphabetically
-    const plainIndex = sortedEntries.findIndex(([ key ]) => key === "plain")
-    const plainEntry = sortedEntries.splice(plainIndex, 1)[0]
-    return Object.fromEntries([ plainEntry, ...sortedEntries ])
+    delete languages.plain
+    const sortedEntries = Object.entries(languages)
+      .sort((a, b) => a[1].localeCompare(b[1]))
+    return { plain: "Plain text", ...Object.fromEntries(sortedEntries) }
+  }
+
+  #dispatchOpenEvent(event) {
+    const handled = !dispatch(this.editorElement, "lexxy:code-language-picker-open", {
+      languages: this.#bridgeLanguages,
+      currentLanguage: this.languagePickerElement.value
+    }, true)
+
+    if (handled) {
+      event.preventDefault()
+    }
+  }
+
+  get #bridgeLanguages() {
+    return Object.entries(this.#languages).map(([ key, name ]) => ({ key, name }))
   }
 
   #updateCodeBlockLanguage(language) {
@@ -67,49 +107,34 @@ export default class CodeLanguagePicker extends HTMLElement {
   }
 
   #monitorForCodeBlockSelection() {
-    this.editor.registerUpdateListener(() => {
-      this.editor.getEditorState().read(() => {
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
         const codeNode = this.#getCurrentCodeNode()
 
         if (codeNode) {
           this.#codeNodeWasSelected(codeNode)
         } else {
-          this.#hideLanguagePicker()
+          this.#hide()
         }
       })
-    })
+    }))
   }
 
   #getCurrentCodeNode() {
-    const selection = $getSelection()
-
-    if (!$isRangeSelection(selection)) {
-      return null
-    }
-
-    const anchorNode = selection.anchor.getNode()
-    const parentNode = anchorNode.getParent()
-
-    if ($isCodeNode(anchorNode)) {
-      return anchorNode
-    } else if ($isCodeNode(parentNode)) {
-      return parentNode
-    }
-
-    return null
+    return this.editorElement.selection.nearestNodeOfType(CodeNode)
   }
 
   #codeNodeWasSelected(codeNode) {
     const language = codeNode.getLanguage()
 
     this.#updateLanguagePickerWith(language)
-    this.#showLanguagePicker()
+    this.#show()
     this.#positionLanguagePicker(codeNode)
   }
 
   #updateLanguagePickerWith(language) {
     if (this.languagePickerElement && language) {
-      const normalizedLanguage = normalizeCodeLang(language)
+      const normalizedLanguage = normalizeCodeLanguage(language)
       this.languagePickerElement.value = normalizedLanguage
     }
   }
@@ -121,17 +146,19 @@ export default class CodeLanguagePicker extends HTMLElement {
     const codeRect = codeElement.getBoundingClientRect()
     const editorRect = this.editorElement.getBoundingClientRect()
     const relativeTop = codeRect.top - editorRect.top
+    const relativeRight = editorRect.right - codeRect.right
 
-    this.languagePickerElement.style.top = `${relativeTop}px`
+    this.style.top = `${relativeTop}px`
+    this.style.right = `${relativeRight}px`
   }
 
-  #showLanguagePicker() {
-    this.languagePickerElement.hidden = false
+  #show() {
+    this.hidden = false
   }
 
-  #hideLanguagePicker() {
-    this.languagePickerElement.hidden = true
+  #hide() {
+    this.hidden = true
   }
 }
 
-customElements.define("lexxy-code-language-picker", CodeLanguagePicker)
+export default CodeLanguagePicker

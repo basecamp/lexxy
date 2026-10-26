@@ -1,0 +1,508 @@
+<h3>Code Blocks Example</h3>
+<p>Here are code examples for all supported languages:</p>
+
+<h4>Plain Text</h4>
+<pre data-language="plain" data-highlight-language="plain">
+This is plain text without any syntax highlighting.
+You can use it for notes, documentation, or any unformatted content.
+
+No special formatting or highlighting will be applied.</pre>
+
+<p><br/></p>
+
+<h4>Bash</h4>
+<pre data-language="bash" data-highlight-language="bash">
+#!/bin/bash
+
+greet() {
+    local name=$1
+    echo "Hello, $name!"
+}
+
+name="Kate"
+greet "$name"
+
+# Process files
+for file in *.txt; do
+    if [ -f "$file" ]; then
+        echo "Processing $file"
+    fi
+done</pre>
+
+<p><br/></p>
+
+<h4>C</h4>
+<pre data-language="c" data-highlight-language="c">
+#include &lt;stdio.h&gt;
+
+struct Person {
+    char name[50];
+    int age;
+};
+
+void greet(struct Person *p) {
+    printf("Hello, %s! You are %d years old.\n", p-&gt;name, p-&gt;age);
+}
+
+int main() {
+    struct Person person = {"Frank", 35};
+    greet(&amp;person);
+    return 0;
+}</pre>
+
+<p><br/></p>
+
+<h4>C-like</h4>
+<pre data-language="clike" data-highlight-language="clike">
+// C-like syntax example
+int calculate(int a, int b) {
+    if (a &gt; b) {
+        return a * 2;
+    } else {
+        return b + 1;
+    }
+}
+
+void process() {
+    int result = calculate(5, 3);
+    printf("Result: %d\n", result);
+}</pre>
+
+<p><br/></p>
+
+<h4>C++</h4>
+<pre data-language="cpp" data-highlight-language="cpp">
+#include &lt;iostream&gt;
+#include &lt;string&gt;
+
+class Person {
+private:
+    std::string name;
+    int age;
+
+public:
+    Person(const std::string&amp; name, int age) : name(name), age(age) {}
+    
+    void introduce() const {
+        std::cout &lt;&lt; "Hi, I'm " &lt;&lt; name &lt;&lt; " and I'm " &lt;&lt; age &lt;&lt; " years old." &lt;&lt; std::endl;
+    }
+};
+
+int main() {
+    Person person("Grace", 29);
+    person.introduce();
+    return 0;
+}</pre>
+
+<p><br/></p>
+
+<h4>CSS</h4>
+<pre data-language="css" data-highlight-language="css">
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+h1 {
+    color: #333;
+    font-size: 2em;
+    font-weight: bold;
+}
+
+.button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.button:hover {
+    background-color: #0056b3;
+}</pre>
+
+<p><br/></p>
+
+<h4>Diff</h4>
+<pre data-language="diff" data-highlight-language="diff">
+--- a/src/main.js
++++ b/src/main.js
+@@ -1,5 +1,6 @@
+ function greet(name) {
+-  console.log("Hello, " + name);
++  const message = `Hello, ${name}!`;
++  console.log(message);
+ }
+ 
+-greet("World");
++greet("World");
++console.log("Done!");</pre>
+
+<p><br/></p>
+
+<h4>Go</h4>
+<pre data-language="go" data-highlight-language="go">
+package main
+
+import "fmt"
+
+type Person struct {
+    Name string
+    Age  int
+}
+
+func (p Person) Introduce() string {
+    return fmt.Sprintf("Hi, I'm %s and I'm %d years old.", p.Name, p.Age)
+}
+
+func main() {
+    person := Person{Name: "Jack", Age: 33}
+    fmt.Println(person.Introduce())
+}</pre>
+
+<p><br/></p>
+
+<h4>HTML</h4>
+<pre data-language="html" data-highlight-language="html">
+&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;Sample Page&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;div class="container"&gt;
+        &lt;h1&gt;Welcome&lt;/h1&gt;
+        &lt;p&gt;This is a sample HTML snippet.&lt;/p&gt;
+    &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+
+<p><br/></p>
+
+<h4>Java</h4>
+<pre data-language="java" data-highlight-language="java">
+public class Person {
+    private String name;
+    private int age;
+
+    public Person(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public String introduce() {
+        return "Hi, I'm " + name + " and I'm " + age + " years old.";
+    }
+
+    public static void main(String[] args) {
+        Person person = new Person("Eve", 27);
+        System.out.println(person.introduce());
+    }
+}</pre>
+
+<p><br/></p>
+
+<h4>JavaScript</h4>
+<pre data-language="javascript" data-highlight-language="javascript">
+function greet(name) {
+  console.log(`Hello, ${name}!`);
+}
+
+const user = { name: "Alice", age: 30 };
+greet(user.name);
+
+// Arrow functions
+const add = (a, b) => a + b;
+console.log(add(5, 3));</pre>
+
+<p><br/></p>
+
+<h4>JSON</h4>
+<pre data-language="json" data-highlight-language="json">
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Alice",
+      "email": "alice@example.com",
+      "active": true
+    },
+    {
+      "id": 2,
+      "name": "Bob",
+      "email": "bob@example.com",
+      "active": false
+    }
+  ],
+  "metadata": {
+    "total": 2,
+    "page": 1,
+    "per_page": 10
+  }
+}</pre>
+
+<p><br/></p>
+
+<h4>Markdown</h4>
+<pre data-language="markdown" data-highlight-language="markdown">
+# Heading 1
+
+## Heading 2
+
+This is a paragraph with **bold** and *italic* text.
+
+- List item 1
+- List item 2
+- List item 3
+
+```javascript
+function example() {
+  return "code block";
+}
+```
+
+[Link text](https://example.com)</pre>
+
+<p><br/></p>
+
+<h4>Objective-C</h4>
+<pre data-language="objectivec" data-highlight-language="objectivec">
+#import &lt;Foundation/Foundation.h&gt;
+
+@interface Person : NSObject
+
+@property (nonatomic, strong) NSString *name;
+@property (nonatomic, assign) NSInteger age;
+
+- (instancetype)initWithName:(NSString *)name age:(NSInteger)age;
+- (NSString *)introduce;
+
+@end
+
+@implementation Person
+
+- (instancetype)initWithName:(NSString *)name age:(NSInteger)age {
+    self = [super init];
+    if (self) {
+        _name = name;
+        _age = age;
+    }
+    return self;
+}
+
+- (NSString *)introduce {
+    return [NSString stringWithFormat:@"Hi, I'm %@ and I'm %ld years old.", self.name, (long)self.age];
+}
+
+@end</pre>
+
+<p><br/></p>
+
+<h4>PHP</h4>
+<pre data-language="php" data-highlight-language="php">
+&lt;?php
+class Person {
+    private $name;
+    private $age;
+
+    public function __construct($name, $age) {
+        $this-&gt;name = $name;
+        $this-&gt;age = $age;
+    }
+
+    public function introduce() {
+        return "Hi, I'm {$this-&gt;name} and I'm {$this-&gt;age} years old.";
+    }
+}
+
+$person = new Person("Iris", 26);
+echo $person-&gt;introduce();
+?&gt;</pre>
+
+<p><br/></p>
+
+<h4>PowerShell</h4>
+<pre data-language="powershell" data-highlight-language="powershell">
+function Greet-Person {
+    param(
+        [string]$Name,
+        [int]$Age
+    )
+    
+    return "Hi, I'm $Name and I'm $Age years old."
+}
+
+$person = @{
+    Name = "Liam"
+    Age = 34
+}
+
+$message = Greet-Person -Name $person.Name -Age $person.Age
+Write-Host $message
+
+# Process files
+Get-ChildItem -Path "C:\Temp" -Filter "*.txt" | ForEach-Object {
+    Write-Host "Processing $($_.Name)"
+}</pre>
+
+<p><br/></p>
+
+<h4>Python</h4>
+<pre data-language="python" data-highlight-language="python">
+def greet(name: str) -> str:
+    return f"Hello, {name}!"
+
+class Person:
+    def __init__(self, name: str, age: int):
+        self.name = name
+        self.age = age
+    
+    def introduce(self) -> str:
+        return f"Hi, I'm {self.name} and I'm {self.age} years old."
+
+person = Person("Charlie", 28)
+print(person.introduce())</pre>
+
+<p><br/></p>
+
+<h4>Ruby</h4>
+<pre data-language="ruby" data-highlight-language="ruby">
+class Person
+  attr_accessor :name, :age
+
+  def initialize(name, age)
+    @name = name
+    @age = age
+  end
+
+  def introduce
+    "Hi, I'm #{@name} and I'm #{@age} years old."
+  end
+end
+
+person = Person.new("Diana", 32)
+puts person.introduce</pre>
+
+<p><br/></p>
+
+<h4>Rust</h4>
+<pre data-language="rust" data-highlight-language="rust">
+struct Person {
+    name: String,
+    age: u32,
+}
+
+impl Person {
+    fn new(name: String, age: u32) -> Self {
+        Person { name, age }
+    }
+
+    fn introduce(&amp;self) -> String {
+        format!("Hi, I'm {} and I'm {} years old.", self.name, self.age)
+    }
+}
+
+fn main() {
+    let person = Person::new("Maya".to_string(), 30);
+    println!("{}", person.introduce());
+}</pre>
+
+<p><br/></p>
+
+<h4>SQL</h4>
+<pre data-language="sql" data-highlight-language="sql">
+SELECT 
+    u.id,
+    u.name,
+    u.email,
+    COUNT(o.id) as order_count
+FROM users u
+LEFT JOIN orders o ON u.id = o.user_id
+WHERE u.active = TRUE
+GROUP BY u.id, u.name, u.email
+HAVING COUNT(o.id) &gt; 0
+ORDER BY order_count DESC
+LIMIT 10;
+
+INSERT INTO users (name, email, created_at)
+VALUES ('New User', 'user@example.com', NOW());</pre>
+
+<p><br/></p>
+
+<h4>Swift</h4>
+<pre data-language="swift" data-highlight-language="swift">
+struct Person {
+    let name: String
+    let age: Int
+    
+    func introduce() -> String {
+        return "Hi, I'm \(name) and I'm \(age) years old."
+    }
+}
+
+let person = Person(name: "Noah", age: 28)
+print(person.introduce())
+
+// Using classes
+class Employee: Person {
+    let department: String
+    
+    init(name: String, age: Int, department: String) {
+        self.department = department
+        super.init(name: name, age: age)
+    }
+}</pre>
+
+<p><br/></p>
+
+<h4>TypeScript</h4>
+<pre data-language="typescript" data-highlight-language="typescript">
+interface User {
+  name: string;
+  age: number;
+}
+
+function greet(user: User): string {
+  return `Hello, ${user.name}!`;
+}
+
+const user: User = { name: "Bob", age: 25 };
+console.log(greet(user));
+
+class Person implements User {
+  constructor(public name: string, public age: number) {}
+  
+  introduce(): string {
+    return `Hi, I'm ${this.name} and I'm ${this.age} years old.`;
+  }
+}</pre>
+
+<p><br/></p>
+
+<h4>XML</h4>
+<pre data-language="xml" data-highlight-language="xml">
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;users&gt;
+    &lt;user id="1" active="true"&gt;
+        &lt;name&gt;Alice&lt;/name&gt;
+        &lt;email&gt;alice@example.com&lt;/email&gt;
+        &lt;profile&gt;
+            &lt;age&gt;30&lt;/age&gt;
+            &lt;city&gt;New York&lt;/city&gt;
+        &lt;/profile&gt;
+    &lt;/user&gt;
+    &lt;user id="2" active="false"&gt;
+        &lt;name&gt;Bob&lt;/name&gt;
+        &lt;email&gt;bob@example.com&lt;/email&gt;
+        &lt;profile&gt;
+            &lt;age&gt;25&lt;/age&gt;
+            &lt;city&gt;San Francisco&lt;/city&gt;
+        &lt;/profile&gt;
+    &lt;/user&gt;
+&lt;/users&gt;</pre>
+
+<p><br/></p>

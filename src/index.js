@@ -1,24 +1,35 @@
-// Manual highlighting mode to prevent invocation on every page. See https://prismjs.com/docs/prism
-// This must happen before importing any Prism components
-window.Prism = window.Prism || {}
-Prism.manual = true
-
+import "./config/prism"
 import "./config/dom_purify"
 
-import "./elements/toolbar"
+import { defineElements } from "./elements/index"
 
-// Additional Prism languages need to be imported before the editor is loaded, otherwise they are not highlighted on inital load
-import "prismjs/components/prism-ruby"
-import "prismjs/components/prism-php"
-import "prismjs/components/prism-go"
-import "prismjs/components/prism-bash"
-import "prismjs/components/prism-json"
-import "prismjs/components/prism-diff"
+import Lexxy from "./config/lexxy"
 
-import "./elements/editor"
-import "./elements/dropdown/link"
-import "./elements/dropdown/highlight"
-import "./elements/prompt"
-import "./elements/code_language_picker"
+export * from "./nodes"
+export * from "./commands"
+export { highlightCode, highlightElement } from "./helpers/code_highlighting_helper"
+export { NativeAdapter } from "./editor/adapters/native_adapter"
+// So a consumer registering the exported attachment nodes in its own Lexical
+// editor can declare an allowlist for them, rather than taking the default.
+export { default as EditorSanitizer } from "./editor/sanitizer"
 
-export { highlightAll } from "./helpers/code_highlighting_helper"
+let configured = false
+
+export function configure(config) {
+  Lexxy.configure(config)
+  configured = true
+}
+export { default as Extension } from "./extensions/lexxy_extension"
+export * as Lexical from "lexical"
+
+// Define the elements after the current call stack, so a configure() call right after the import comes first. When
+// it did, define them in a microtask: it runs before the browser can paint, so editors already on the page don't show
+// up empty for a frame. Otherwise wait for the next task, for a configure() call from a later module script or after
+// an await.
+queueMicrotask(() => {
+  if (configured) {
+    defineElements()
+  } else {
+    setTimeout(defineElements, 0)
+  }
+})

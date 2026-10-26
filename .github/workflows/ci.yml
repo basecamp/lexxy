@@ -5,23 +5,31 @@ on:
   push:
     branches: [ main ]
 
+permissions: {}
+
 jobs:
   lint:
+    permissions:
+      contents: read
+    name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
         with:
-          ruby-version: ruby-3.3.7
+          ruby-version: .ruby-version
           bundler-cache: true
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'yarn'
 
       - name: Install JavaScript dependencies
@@ -30,43 +38,165 @@ jobs:
       - name: Lint Ruby code for consistent style
         run: bin/rubocop -f github
 
-      - name: Lint JavaScript code for consistent style
+      - name: Lint JavaScript code for consistent style and browser support
         run: yarn lint
 
-  test:
+  lint-actions:
+    name: GitHub Actions audit
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
 
-    # services:
-    #  redis:
-    #    image: redis
-    #    ports:
-    #      - 6379:6379
-    #    options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run actionlint
+        uses: rhysd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca # v1.7.12
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
+        with:
+          advanced-security: false
+
+  js-unit-tests:
+    name: JS unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: 'yarn'
+
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run JavaScript tests
+        run: yarn test
+
+  rails-system-tests:
+    name: Rails system tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: "Rails 8.1 (no adapter)"
+            use_legacy_rails: "true"
+          - name: "Rails main (with adapter)"
+            use_legacy_rails: ""
+
+    env:
+      USE_RAILS_WITHOUT_ACTION_TEXT_ADAPTER: ${{ matrix.use_legacy_rails }}
+
     steps:
       - name: Install packages
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config google-chrome-stable mupdf build-essential ffmpeg groff libreoffice-writer libreoffice-impress libreoffice-calc mupdf-tools libvips zip
 
+      - name: Remove runner's ChromeDriver
+        run: |
+          chrome_driver_path="$(command -v chromedriver || true)"
+          if [ -n "$chrome_driver_path" ]; then
+            "$chrome_driver_path" --version
+            sudo rm "$chrome_driver_path"
+          fi
+
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
         with:
-          ruby-version: ruby-3.3.7
+          ruby-version: .ruby-version
           bundler-cache: true
+          cache-version: ${{ matrix.name }}
 
-      - name: Run tests
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: 'yarn'
+
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build JavaScript assets
+        run: yarn build
+
+      - name: Run Rails tests
         env:
           RAILS_ENV: test
-          # REDIS_URL: redis://localhost:6379/0
         run: |
           bin/rails db:test:prepare
           bin/rails test:all
 
       - name: Keep screenshots from failed system tests
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
-          name: screenshots
+          name: screenshots-${{ matrix.name }}
           path: ${{ github.workspace }}/test/dummy/tmp/screenshots
+          if-no-files-found: ignore
+
+  browser-test:
+    name: Browser tests (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    # Playwright's own image ships every browser and every system library they
+    # need, so this job never runs apt-get. Keep the tag (and its digest) in step
+    # with the @playwright/test version in yarn.lock: when a bump needs different
+    # browser builds, Playwright refuses to launch and names the image to move to.
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble@sha256:6446946a1d9fd62d9ae501312a2d76a43ee688542b21622056a372959b65d63d
+      options: --user 1001
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: 'yarn'
+
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run Playwright tests
+        run: yarn test:browser:${{ matrix.browser }}
+
+      - name: Keep Playwright report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: playwright-report-${{ matrix.browser }}
+          # Relative, not ${{ github.workspace }}: in a container job that expression
+          # is the host path, which does not exist inside the container, and
+          # if-no-files-found: ignore would hide the empty upload.
+          path: test/browser/playwright-report/
           if-no-files-found: ignore

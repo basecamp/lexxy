@@ -8,10 +8,38 @@ class EditorHandler
     @selector = selector
   end
 
+  def value
+    evaluate_script "this.value"
+  end
+
   def value=(value)
     editor_element.set value
-    page.execute_script("arguments[0].value = '#{value}'", editor_element)
-    sleep 0.1
+    editor_element.execute_script "this.value = `#{value}`"
+  end
+
+  def plain_text_value
+    evaluate_script "this.toString()"
+  end
+
+  def empty?
+    evaluate_script "this.isEmpty"
+  end
+
+  def blank?
+    evaluate_script "this.isBlank"
+  end
+
+  def has_node_selection?
+    evaluate_script "this.selection.hasNodeSelection"
+  end
+
+  def open_prompt?
+    evaluate_script "this.hasOpenPrompt"
+  end
+
+  def click
+    # Proper usage is a click on the content element rather than on the editor
+    content_element.click
   end
 
   def send(*keys)
@@ -19,24 +47,24 @@ class EditorHandler
     content_element.send_keys *keys
   end
 
-  def send_key(key)
+  def send_key(key, ctrl: false)
     simulate_first_interaction_if_needed
 
-    page.execute_script <<~JS, content_element
+    content_element.execute_script <<~JS
       const event = new KeyboardEvent('keydown', {
         bubbles: true,
         cancelable: true,
         key: "#{key}",
-        keyCode: 46
+        ctrlKey: #{ctrl}
       });
-      arguments[0].dispatchEvent(event);
+      this.dispatchEvent(event);
     JS
   end
 
   def send_tab(shift: false)
     simulate_first_interaction_if_needed
 
-    page.execute_script <<~JS, content_element
+    content_element.execute_script <<~JS
       const event = new KeyboardEvent('keydown', {
         bubbles: true,
         cancelable: true,
@@ -45,16 +73,15 @@ class EditorHandler
         keyCode: 9,
         shiftKey: #{shift}
       });
-      arguments[0].dispatchEvent(event);
+      this.dispatchEvent(event);
     JS
-    sleep 0.1
   end
 
   def select(text)
     simulate_first_interaction_if_needed
 
-    page.execute_script <<~JS, editor_element
-      const editable = arguments[0]
+    execute_script <<~JS
+      const editable = this
       const walker = document.createTreeWalker(editable, NodeFilter.SHOW_TEXT)
       let node
 
@@ -71,38 +98,59 @@ class EditorHandler
         }
       }
     JS
-    sleep 0.1
+  end
+
+  def place_cursor_at_end
+    simulate_first_interaction_if_needed
+
+    page.execute_script <<~JS
+      const lexxy = document.querySelector('lexxy-editor')
+      lexxy.selection.placeCursorAtTheEnd()
+    JS
+    flush_lexical_updates
+  end
+
+  def flush_lexical_updates
+    page.evaluate_async_script <<~JS
+      const [ done ] = arguments
+      const editor = document.querySelector('lexxy-editor').editor
+      editor.update(() => null, {
+        onUpdate: () => requestAnimationFrame(done)
+      });
+    JS
   end
 
   def select_all
     simulate_first_interaction_if_needed
-    page.execute_script <<~JS, content_element
-      const editable = arguments[0]
+    content_element.execute_script <<~JS
+      const editable = this
       const range = document.createRange()
       range.selectNodeContents(editable)
       const sel = window.getSelection()
       sel.removeAllRanges()
       sel.addRange(range)
     JS
-    sleep 0.1
   end
 
   def focus
-    page.execute_script <<~JS, editor_element
-      arguments[0].focus()
-    JS
+    execute_script "this.focus()"
   end
 
-  def paste(text)
-    page.execute_script <<~JS, content_element
-      arguments[0].focus()
+  def paste(text, html: nil, lexical: nil)
+    simulate_first_interaction_if_needed
+
+    lexical = lexical.to_json unless lexical.nil? || lexical.is_a?(String)
+
+    content_element.execute_script <<~JS
       const pasteEvent = new ClipboardEvent("paste", {
         bubbles: true,
         cancelable: true,
         clipboardData: new DataTransfer()
       })
-      pasteEvent.clipboardData.setData("text/plain", "#{text}")
-      arguments[0].dispatchEvent(pasteEvent)
+      pasteEvent.clipboardData.setData("text/plain", #{text.to_json})
+      #{"pasteEvent.clipboardData.setData(\"text/html\", `#{html}`)" if html}
+      #{"pasteEvent.clipboardData.setData(\"application/x-lexical-editor\", #{lexical.to_json})" if lexical}
+      this.dispatchEvent(pasteEvent)
     JS
   end
 
@@ -111,11 +159,19 @@ class EditorHandler
   end
 
   def toggle_command(command, toolbar_selector = "lexxy-toolbar")
-    find("#{toolbar_selector} [data-command=\"#{command}\"]").click
+    button = find("#{toolbar_selector} [data-command=\"#{command}\"]", visible: :all)
+    if button.matches_css?(".lexxy-editor__toolbar-overflow-menu *")
+      find("#{toolbar_selector} .lexxy-editor__toolbar-overflow [data-dropdown-trigger]").click
+    end
+    button.click
   end
 
   def inner_html
     content_element.native.attribute("innerHTML")
+  end
+
+  def content_element
+    editor_element.find(".lexxy-editor__content")
   end
 
   private
@@ -123,15 +179,19 @@ class EditorHandler
       page.find(selector)
     end
 
-    def content_element
-      editor_element.find(".lexxy-editor__content")
-    end
-
     def simulate_first_interaction_if_needed
       # Adding text or selecting text will not work otherwise
-      unless @first_interaction_simulated
+      unless @first_interaction_simulated || content_element_active?
         content_element.click
         @first_interaction_simulated = true
       end
+    end
+
+    def content_element_active?
+      active_element == content_element
+    end
+
+    def active_element
+      page.evaluate_script "document.activeElement"
     end
 end

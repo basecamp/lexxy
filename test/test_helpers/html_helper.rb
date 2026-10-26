@@ -1,7 +1,9 @@
 module HtmlHelper
   def assert_equal_html(expected, actual)
-    normalized_expected = Nokogiri::HTML.fragment(expected).to_html.strip
-    normalized_actual = Nokogiri::HTML.fragment(actual).to_html.strip
-    assert_equal normalized_expected, normalized_actual
+    assert_equal normalize_html(expected), normalize_html(actual)
+  end
+
+  def normalize_html(html)
+    Nokogiri::HTML.fragment(html).to_html.strip
   end
 end

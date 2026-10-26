@@ -1,6 +1,6 @@
 require "application_system_test_case"
 
-class ActionTextLoadTest < ApplicationSystemTestCase
+class FormTest < ApplicationSystemTestCase
   test "can create new records" do
     visit posts_path
     click_on "New post"
@@ -11,8 +11,9 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     click_on "Create Post"
     click_on "Edit this post"
+    wait_for_editor
 
-    assert_equal_html "<p>Hello</p><p>there</p>", find_editor.value
+    assert_editor_html "<p>Hello</p><p>there</p>"
   end
 
   test "edit existing records" do
@@ -23,8 +24,10 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     find_editor.send "there"
 
     click_on "Update Post"
+    click_on "Edit this post"
+    wait_for_editor
 
-    assert_equal_html "<p>Hello</p><p>there</p>", find_editor.value
+    assert_editor_html "<p>Hello</p><p>there</p>"
   end
 
   test "resets editor to initial state when empty" do
@@ -37,9 +40,9 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     click_on "Create Post"
     click_on "Edit this post"
+    wait_for_editor
 
-
-    assert_equal_html "<p><br></p><p>That</p>", find_editor.value
+    assert_editor_html "<p>That</p>"
   end
 
   test "resets editor to initial state when form is reset" do
@@ -49,7 +52,7 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     click_on "Reset"
 
-    assert_equal_html "<p>Hello everyone</p>", find_editor.value
+    assert_editor_html "<p>Hello everyone</p>"
   end
 
   test "supports required field" do
@@ -62,11 +65,11 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     assert_current_path new_post_path
   end
 
-  test "Clearing value of editor doesn't add trailing markup" do
+  test "Clearing value of editor keeps an empty paragraph" do
     visit edit_post_path(posts(:hello_world))
 
-    find_editor.value =  ""
+    find_editor.value = ""
 
-    assert_equal_html "", find_editor.value
+    assert_editor_html "<p><br></p>"
   end
 end
