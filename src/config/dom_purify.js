@@ -100,6 +100,13 @@ const ALLOWED_HTML_ATTRIBUTES = [ "alt", "class", "contenteditable", "href", "sr
 // place while it loads; nothing else here does.
 const DEFAULT_TAG_ATTRIBUTES = { img: [ "width", "height" ] }
 
+// Elements no sanitizer of ours admits, whatever an editor's extensions declare.
+// Each acts on the page as soon as it is inserted, or runs script: a <base> or a
+// <meta http-equiv="refresh"> takes effect even through insertAdjacentHTML, which
+// is how attachment content reaches the editor DOM. FORBID_TAGS wins over
+// ALLOWED_TAGS in DOMPurify, so declaring one in allowedElements has no effect.
+const FORBIDDEN_TAGS = [ "base", "link", "meta", "script", "style" ]
+
 // The key buildConfig stores an editor's extension style policy under. DOMPurify
 // ignores config keys it doesn't know, and hands the parsed config to every hook
 // as its third argument (a typed, documented part of the hook signature), so the
@@ -155,6 +162,34 @@ function stimulusAttributeFilterHook(_currentNode, hookEvent) {
 
 DOMPurify.addHook("uponSanitizeAttribute", stimulusAttributeFilterHook)
 
+// Attributes that run script or load markup whatever their value, so no extension
+// can allow them. An extension's allowedElements admits attributes by name through
+// ADD_ATTR, and DOMPurify honours that even for an event handler: declaring
+// `{ tag: "p", attributes: [ "onclick" ] }` would keep `onclick="…"` from stored
+// content. DOMPurify's URI check doesn't help, because a script body such as
+// `alert(1)` reads as a relative URL. `srcdoc` is a whole HTML document, scripts
+// included.
+//
+// `patchsrc` fetches remote markup into the page, and `for` outside a label or an
+// output links an element to a patch target. DOMPurify refuses both only under
+// SAFE_FOR_XML, which buildConfig turns off, so they are refused here instead.
+//
+// URL-bearing attributes (href, src, srcset, formaction, ping, …) are not on this
+// list: DOMPurify checks their values against its URI allowlist, so a value
+// starting with `javascript:` is refused on them.
+const FOR_ATTRIBUTE_TAGS = [ "label", "output" ]
+
+function scriptAttributeFilterHook(currentNode, hookEvent) {
+  const name = hookEvent.attrName
+
+  if (/^on/.test(name) || name === "srcdoc" || name === "patchsrc" ||
+      (name === "for" && !FOR_ATTRIBUTE_TAGS.includes(currentNode.nodeName.toLowerCase()))) {
+    hookEvent.keepAttr = false
+  }
+}
+
+DOMPurify.addHook("uponSanitizeAttribute", scriptAttributeFilterHook)
+
 DOMPurify.addHook("uponSanitizeElement", (node, data) => {
   if (data.tagName === "strong" || data.tagName === "em") {
     node.removeAttribute("class")
@@ -175,6 +210,9 @@ export function buildConfig(allowedElements = null, allowedStyles = []) {
     // ALLOWED_ATTR/ADD_ATTR/ALLOW_DATA_ATTR in DOMPurify, so this holds even though other
     // data-* attributes (data-language, data-trix-*, etc.) are otherwise allowed through.
     FORBID_ATTR: [ "data-controller", "data-action" ],
+    // In the base config rather than the allowlist, so the fallback sanitizer gets
+    // it too: DOMPurify's default tag list includes <style>.
+    FORBID_TAGS: FORBIDDEN_TAGS,
     [EXTENSION_STYLE_POLICY]: buildStylePolicy(allowedStyles)
   }
 

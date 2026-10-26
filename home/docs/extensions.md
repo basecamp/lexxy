@@ -47,6 +47,20 @@ get allowedElements() {
 }
 ```
 
+Declared attributes apply only to editors where your extension is enabled. Some can't be declared at all, because they run script or load markup whatever their value: event handlers (`onclick` and every other `on…` attribute), `srcdoc`, `patchsrc`, and `for` on anything but a `<label>` or `<output>`. Neither can the elements `script`, `style`, `link`, `meta` and `base`. URL attributes such as `href`, `src` or `formaction` can be declared, and DOMPurify still checks their values, so a value starting with `javascript:` is dropped.
+
+This governs Lexxy's sanitizing in the browser. When the content is rendered, Action Text sanitizes it again on the server, with your application's allowlist, and drops any attribute that isn't on it. If your elements need attributes that the server drops, add them in an initializer:
+
+```ruby
+# config/initializers/action_text.rb
+ActiveSupport.on_load(:action_text_content) do
+  allowed_attributes = Class.new.include(ActionText::ContentHelper).new.sanitizer_allowed_attributes
+  ActionText::ContentHelper.allowed_attributes = allowed_attributes + %w[ data-id ]
+end
+```
+
+The server's allowlist is app-wide: it applies to every element in all rich text, whichever editor wrote it. Lexxy's limits don't apply there, so never add event handlers or other attributes from the list above to it.
+
 ### URI-safe schemes
 
 Allowing an attribute lets it survive by name, but Lexxy still runs DOMPurify's URL scheme check on its value and drops anything whose scheme it doesn't recognize. If your element carries an identifier that uses a custom scheme — a mention's `gid="gid://…"`, say — declare that scheme in `uriSafeSchemes` so values using it are kept:
