@@ -49,8 +49,10 @@ module Lexxy
 
       initializer "lexxy.initialize" do |app|
         app.config.to_prepare do
-          ActionText::TagHelper.prepend(Lexxy::TagHelper)
-          ActionView::Helpers::FormHelper.prepend(Lexxy::FormHelper)
+          # This runs again on every reload, and on recent Rubies prepending a module into a
+          # module again adds another copy to the classes that include it.
+          ActionText::TagHelper.prepend(Lexxy::TagHelper) unless ActionText::TagHelper.include?(Lexxy::TagHelper)
+          ActionView::Helpers::FormHelper.prepend(Lexxy::FormHelper) unless ActionView::Helpers::FormHelper.include?(Lexxy::FormHelper)
           ActionView::Helpers::FormBuilder.prepend(Lexxy::FormBuilder)
           ActionView::Helpers::Tags::ActionText.prepend(Lexxy::ActionTextTag)
 
