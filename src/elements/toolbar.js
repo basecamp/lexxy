@@ -87,8 +87,8 @@ export class LexicalToolbarElement extends HTMLElement {
     if (this.#refreshToolbarAF != null) return
 
     this.#refreshToolbarAF = requestAnimationFrame(() => {
-      this.#refreshOverflow()
       this.#refreshToolbarAF = null
+      this.#refreshOverflow()
     })
   }
 
@@ -271,6 +271,12 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #refreshOverflow() {
+    // Toolbar markup supplied by the page (an external toolbar, or a
+    // <lexxy-toolbar> inside the editor) is used as-is, so it may lack the
+    // overflow menu or predate its current markup. Without one there is
+    // nowhere to overflow buttons into.
+    if (!this.#overflowMenuDropdown) return
+
     this.#hideOverflowMenuButton()
     this.#resetToolbarOverflow()
     this.#reindexToolbarItems()
