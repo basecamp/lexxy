@@ -122,4 +122,44 @@ describe("insertPendingAttachment", () => {
 
     expect(editorElement.value).not.toContain("action-text-attachment")
   })
+
+  test("bridge-materialized image points at the server url, not a local blob preview", async () => {
+    editorElement = await createTestEditor()
+    await setContent(editorElement, "<p>hello</p>")
+    selectEnd(editorElement)
+
+    const handle = editorElement.contents.insertPendingAttachment(createFile("photo.png", "image/png"))
+    handle.setAttributes({
+      attachable_sgid: "sgid://app/ActiveStorage::Blob/1",
+      filename: "photo.png",
+      content_type: "image/png",
+      byte_size: 4,
+      previewable: true,
+      url: "https://example.com/photo.png",
+      signed_id: "signed-id"
+    })
+    await tick()
+
+    let previewSrc, src
+    editorElement.editor.read(() => {
+      const node = findAttachmentNode($getRoot())
+      previewSrc = node?.previewSrc
+      src = node?.src
+    })
+
+    // The host app hands Lexxy a placeholder File without the real image
+    // bytes, so a blob: preview of it would render as a broken image until
+    // the server image loads.
+    expect(previewSrc ?? null).toBeNull()
+    expect(src).toBe("https://example.com/photo.png")
+  })
 })
+
+function findAttachmentNode(node) {
+  if (node.getType() === "action_text_attachment") return node
+  for (const child of node.getChildren?.() ?? []) {
+    const found = findAttachmentNode(child)
+    if (found) return found
+  }
+  return null
+}

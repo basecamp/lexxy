@@ -73,6 +73,17 @@ export async function destroyTestEditor(element) {
   await tick()
 }
 
+// Detaches and re-attaches the element, as a restored native composer does.
+export async function recreateEditor(element) {
+  const placeholder = document.createComment("recreating editor")
+  element.replaceWith(placeholder)
+  await tick()
+  placeholder.replaceWith(element)
+  await tick()
+  await tick()
+  return element
+}
+
 export async function setContent(editorElement, html) {
   editorElement.value = html
   await tick()
