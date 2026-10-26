@@ -830,6 +830,9 @@ export class LexicalEditorElement extends HTMLElement {
 
   #attachToolbar() {
     if (this.#hasToolbar) {
+      // When Turbo renders a page, or HTML is inserted, the browser upgrades the new elements in document order, so
+      // a toolbar nested in the editor or placed after it isn't upgraded yet when the editor connects
+      customElements.upgrade(this.toolbarElement)
       this.toolbarElement.setEditor(this)
       if (typeof this.toolbarElement.dispose === "function") {
         this.#disposables.push(this.toolbarElement)
