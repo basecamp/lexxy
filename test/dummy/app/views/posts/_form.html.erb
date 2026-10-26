@@ -19,26 +19,46 @@
   </script>
 <% end %>
 
+<% if params.key?("allow_text_align") %>
+  <script type="module">
+    import * as Lexxy from "lexxy"
+
+    class TextAlignStylesExtension extends Lexxy.Extension {
+      get allowedStyles() {
+        return [ { property: "text-align", values: [ "left", "center", "right", "justify" ] } ]
+      }
+    }
+
+    Lexxy.configure({ global: { extensions: [ TextAlignStylesExtension ] }})
+  </script>
+<% end %>
+
+<% if params.key?("add-block-spacing") %>
+  <script type="module">
+    document.addEventListener("lexxy:insert-markdown", (event) => {
+      event.detail.addBlockSpacing()
+    })
+  </script>
+<% end %>
+
 <%= form_with model: post, data: { controller: "events-logger file-acceptance unfurl-link",
   file_acceptance_type_value: params[:attachment_type],
-  action: "lexxy:focus->events-logger#log lexxy:blur->events-logger#log lexxy:change->events-logger#log lexxy:insert-link->events-logger#log lexxy:insert-link->unfurl-link#unfurl lexxy:file-accept->file-acceptance#acceptFile" } do |form| %>
-  <div>
-    <%= form.label :title, style: "display: block" %>
-    <%= form.text_field :title %>
+  action: "lexxy:focus->events-logger#log lexxy:blur->events-logger#log lexxy:change->events-logger#log lexxy:insert-link->events-logger#log lexxy:insert-link->unfurl-link#unfurl lexxy:insert-markdown->events-logger#log lexxy:file-accept->file-acceptance#acceptFile lexxy:upload-start->events-logger#log lexxy:upload-progress->events-logger#log lexxy:upload-end->events-logger#log"  } do |form| %>
+  <div class="title">
+    <%= form.text_field :title, placeholder: "Post title", "aria-label": "Post title" %>
   </div>
 
-  <div>
+  <div class="body">
     <% if params[:toolbar_external] %>
       <lexxy-toolbar id="external_toolbar">
         <button class="lexxy-editor__toolbar-button" type="button" name="bold" data-command="bold" title="Bold">bold</button>
-        <details class="lexxy-editor__toolbar-overflow">
-          <summary class="lexxy-editor__toolbar-button" aria-label="Show more toolbar buttons">•••</summary>
-          <div class="lexxy-editor__toolbar-overflow-menu" aria-label="More toolbar buttons"></div>
-        </details>
+        <lexxy-toolbar-dropdown class="lexxy-editor__toolbar-overflow">
+          <button class="lexxy-editor__toolbar-button" type="button" data-dropdown-trigger aria-haspopup="menu" aria-expanded="false" aria-label="More options">•••</button>
+          <div data-dropdown-panel role="menu" class="lexxy-editor__toolbar-overflow-menu" aria-label="More options" hidden></div>
+        </lexxy-toolbar-dropdown>
       </lexxy-toolbar>
     <% end %>
 
-    <%= form.label :body, style: "display: block" %>
     <%= form.rich_text_area :body, placeholder: "Write something...",
           autofocus: params[:autofocus] ? "true" : nil,
           attachments: (params[:attachments_disabled] != "true"),
@@ -70,11 +90,11 @@
     <% end %>
   </div>
 
-  <div>
-    <button type="reset">Reset</button>
+  <div class="actions">
+    <button type="reset" class="btn">Reset</button>
     <%= form.submit %>
   </div>
 
-  <div id="events" data-events-logger-target="log">
+  <div class="events" data-events-logger-target="log">
   </div>
 <% end %>

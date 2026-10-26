@@ -1,3 +1,5 @@
+import { defineExtension } from "lexical"
+
 export default class LexxyExtension {
   #editorElement
 
@@ -22,7 +24,25 @@ export default class LexxyExtension {
     return null
   }
 
-  initializeToolbar(_lexxyToolbar) {
+  get allowedElements() {
+    return []
+  }
 
+  get allowedStyles() {
+    return []
+  }
+
+  defineExtension(...args) {
+    return defineExtension(...args)
+  }
+
+  initializeToolbar(_lexxyToolbar) {
+  }
+
+  setEditorValidity(flags, message) {
+    this.editorElement.setElementValidity(this, flags, message)
+  }
+
+  dispose() {
   }
 }
