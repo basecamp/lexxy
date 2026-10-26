@@ -1,7 +1,8 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
-import { assertEditorHtml } from "../../helpers/assertions.js"
+import { assertEditorHtml, startMonitoringConsole } from "../../helpers/assertions.js"
 import { HELLO_EVERYONE, focusedName } from "../../helpers/toolbar.js"
+import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
 
 test.describe("Toolbar", () => {
   test.beforeEach(async ({ page }) => {
@@ -152,6 +153,73 @@ test.describe("Toolbar", () => {
     await expect(toolbar.locator(":scope > button[name='async-injected']")).toHaveCount(1)
   })
 
+  test("overflow refresh does not throw when the overflow control is absent from the DOM", async ({ page }) => {
+    startMonitoringConsole(page)
+
+    const toolbar = page.locator("lexxy-toolbar")
+    await expect(toolbar).toBeVisible()
+
+    // Reproduces the production rAF crash: when the overflow control is not in
+    // the DOM at the moment a refresh fires — e.g. a Turbo/idiomorph morph that
+    // transiently detaches the toolbar template, or a server/client template
+    // mismatch during a deploy — #refreshOverflow used to dereference a null
+    // overflow element inside requestAnimationFrame and throw.
+    await page.evaluate(async () => {
+      const tb = document.querySelector("lexxy-toolbar")
+      window.detachedOverflowControl = tb.querySelector(".lexxy-editor__toolbar-overflow")
+      window.detachedOverflowControl.remove()
+      tb.requestOverflowRefresh()
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    })
+
+    expect(page).toHaveNoErrors()
+
+    // The rest of the toolbar keeps rendering and stays interactive.
+    await expect(toolbar.locator("button[name='bold']")).toBeVisible()
+
+    // Bailing out leaves the toolbar able to refresh again: the crash used to
+    // escape the animation frame before the pending-frame handle was cleared,
+    // so every later requestOverflowRefresh() returned early and the toolbar
+    // stayed stale for good once the control came back.
+    await page.evaluate(async () => {
+      const tb = document.querySelector("lexxy-toolbar")
+      tb.appendChild(window.detachedOverflowControl)
+      tb.requestOverflowRefresh()
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    })
+
+    const originalSize = page.viewportSize()
+    await page.setViewportSize({ width: 300, height: originalSize.height })
+    await expect(toolbar).toHaveAttribute("overflowing", "")
+    await expect(toolbar.locator(".lexxy-editor__toolbar-overflow-menu > button")).not.toHaveCount(0)
+
+    await page.setViewportSize(originalSize)
+    await expect(toolbar).not.toHaveAttribute("overflowing")
+    expect(page).toHaveNoErrors()
+  })
+
+  test("overflow refresh does not throw when the overflow control has no menu panel", async ({ page }) => {
+    startMonitoringConsole(page)
+
+    const toolbar = page.locator("lexxy-toolbar")
+    await expect(toolbar).toBeVisible()
+
+    // Toolbar markup written against an older Lexxy keeps the overflow control
+    // but has no [data-dropdown-panel] menu inside it.
+    await page.evaluate(async () => {
+      const tb = document.querySelector("lexxy-toolbar")
+      tb.querySelector(".lexxy-editor__toolbar-overflow [data-dropdown-panel]").removeAttribute("data-dropdown-panel")
+      tb.requestOverflowRefresh()
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+      await new Promise((resolve) => requestAnimationFrame(resolve))
+    })
+
+    expect(page).toHaveNoErrors()
+    await expect(toolbar.locator("button[name='bold']")).toBeVisible()
+  })
+
   test("overflow compaction accounts for injected buttons that cannot overflow", async ({ page }) => {
     const toolbar = page.locator("lexxy-toolbar")
     const overflowMenu = toolbar.locator(".lexxy-editor__toolbar-overflow-menu")
@@ -218,6 +286,50 @@ test.describe("Toolbar", () => {
     // The file input created by the file button should accept all file types
     const accept = await page.locator("lexxy-editor input[type='file']").getAttribute("accept")
     expect(accept).toBeNull()
+  })
+
+  test("dropdown stays open while an upload progresses", async ({ page, editor }) => {
+    await page.goto("/attachments.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+    const uploads = await mockActiveStorageUploads(page, { delayDirectUploadResponse: true })
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+    const figure = page.locator("figure.attachment")
+    await expect(figure.locator("progress")).toBeVisible({ timeout: 10_000 })
+
+    const formatPanel = page.locator("lexxy-toolbar-dropdown.lexxy-editor__toolbar-dropdown [data-dropdown-panel]").first()
+    await page.locator("lexxy-toolbar button[name='format']").click()
+    await expect(formatPanel).toBeVisible()
+
+    await uploads.releaseDirectUploadResponses()
+    await expect(figure.locator("progress")).toHaveCount(0, { timeout: 10_000 })
+
+    await expect(formatPanel).toBeVisible()
+  })
+
+  test("dropdown closes when the selection changes", async ({ page, editor }) => {
+    await editor.setValue(HELLO_EVERYONE)
+
+    const formatPanel = page.locator("lexxy-toolbar-dropdown.lexxy-editor__toolbar-dropdown [data-dropdown-panel]").first()
+
+    await page.locator("lexxy-toolbar button[name='format']").click()
+    await expect(formatPanel).toBeVisible()
+
+    await editor.select("everyone")
+
+    await expect(formatPanel).toBeHidden()
+  })
+
+  test("choosing a heading closes the format dropdown", async ({ page, editor }) => {
+    await editor.setValue("<p>Lexxy</p>")
+    await editor.select("Lexxy")
+
+    const formatPanel = page.locator("lexxy-toolbar-dropdown.lexxy-editor__toolbar-dropdown [data-dropdown-panel]").first()
+
+    await page.locator("lexxy-toolbar button[name='format']").click()
+    await page.locator("lexxy-toolbar button[name='heading-large']").click()
+
+    await expect(formatPanel).toBeHidden()
   })
 
   test("external toolbar", async ({ page }) => {
