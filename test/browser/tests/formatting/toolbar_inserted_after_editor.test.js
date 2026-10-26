@@ -32,16 +32,21 @@ for (const [ description, markup ] of Object.entries(layouts)) {
     await page.goto("/")
     await editor.waitForConnected()
 
-    const errors = []
-    page.on("pageerror", (error) => errors.push(error.message))
+    // Errors thrown by the elements' callbacks are reported synchronously while the body is inserted
+    const errors = await page.evaluate((html) => {
+      const errors = []
+      const collect = (event) => errors.push(event.message)
+      window.addEventListener("error", collect)
 
-    await page.evaluate((html) => {
       const body = new DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body
       document.body.replaceWith(document.adoptNode(body))
+
+      window.removeEventListener("error", collect)
+      return errors
     }, markup)
 
-    await editor.waitForConnected()
     expect(errors).toEqual([])
+    await editor.waitForConnected()
     await expect(page.locator("lexxy-toolbar")).toHaveCount(1)
     await expect(page.locator("lexxy-toolbar[connected]")).toBeVisible()
 
