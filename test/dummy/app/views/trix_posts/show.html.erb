@@ -1,0 +1,17 @@
+<div class="container">
+  <% if notice.present? %>
+    <p class="notice"><%= notice %></p>
+  <% end %>
+
+  <header>
+    <h1><%= @post.title.presence || "Untitled" %></h1>
+    <div class="actions">
+      <%= link_to "Edit with Trix", edit_trix_post_path(@post), class: "btn" %>
+      <%= link_to "Edit with Lexxy", edit_post_path(@post), class: "btn" %>
+    </div>
+  </header>
+
+  <article class="post" id="<%= dom_id @post %>">
+    <%= @post.body %>
+  </article>
+</div>

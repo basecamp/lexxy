@@ -1,0 +1,9 @@
+<div class="container">
+  <%= link_to "Edit in Lexxy", edit_post_path(@post), class: "btn" %>
+
+  <h1>Editing post (Trix)</h1>
+
+  <article class="post">
+    <%= render "form", post: @post %>
+  </article>
+</div>

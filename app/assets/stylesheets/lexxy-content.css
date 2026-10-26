@@ -5,6 +5,7 @@
 
 :where(.lexxy-content) {
   color: var(--lexxy-color-ink);
+  font-size: var(--lexxy-text-size);
 
   h1, h2, h3, h4, h5, h6 {
     display: block;
@@ -12,15 +13,18 @@
     hyphens: auto;
     margin-block: 0 var(--lexxy-content-margin);
     overflow-wrap: break-word;
-    text-wrap: balance;
+
+    @supports (text-wrap: balance) {
+      text-wrap: balance;
+    }
   }
 
-  h1 { font-size: 2rem; }
-  h2 { font-size: 1.5rem; }
-  h3 { font-size: 1.25rem; }
-  h4 { font-size: 1rem; }
-  h5 { font-size: 0.875rem; }
-  h6 { font-size: 0.75rem; }
+  h1 { font-size: 2em; }
+  h2 { font-size: 1.5em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1em; }
+  h5 { font-size: 0.875em; }
+  h6 { font-size: 0.75em; }
 
   p,
   ul,
@@ -28,33 +32,42 @@
   dl,
   blockquote,
   figure,
-  .attachment {
+  :where(.attachment),
+  :where(.attachment-gallery) {
     margin-block: 0 var(--lexxy-content-margin);
+    position: relative;
 
     &:not(lexxy-editor &) {
       overflow-wrap: break-word;
-      text-wrap: pretty;
+
+      @supports (text-wrap: pretty) {
+        text-wrap: pretty;
+      }
     }
   }
 
-  .lexxy-content__italic {
+  :where(.lexxy-content__italic) {
     font-style: italic;
   }
 
-  .lexxy-content__bold {
+  :where(.lexxy-content__bold) {
     font-weight: bold;
   }
 
-  .lexxy-content__strikethrough {
+  :where(.lexxy-content__strikethrough) {
     text-decoration: line-through;
   }
 
-  .lexxy-content__underline {
+  :where(.lexxy-content__underline) {
     text-decoration: underline;
   }
 
+  :where(.lexxy-content__strikethrough.lexxy-content__underline) {
+    text-decoration: line-through underline;
+  }
+
   mark,
-  .lexxy-content__highlight {
+  :where(.lexxy-content__highlight) {
     background-color: transparent;
     color: inherit;
   }
@@ -64,6 +77,12 @@
     font-style: italic;
     margin: var(--lexxy-content-margin) 0;
     padding: 0.5lh 2ch;
+
+    em,
+    i,
+    :where(.lexxy-content__italic) {
+      font-style: normal;
+    }
 
     p:last-child {
       margin-block-end: 0;
@@ -108,15 +127,18 @@
       hyphens: none;
       margin-block: 0 var(--lexxy-content-margin);
       overflow-x: auto;
+      overflow-wrap: break-word;
       padding: 1ch;
       tab-size: 2;
-      text-wrap: nowrap;
       white-space: pre;
-      word-break: break-word;
+
+      @supports (text-wrap: nowrap) {
+        text-wrap: nowrap;
+      }
     }
   }
 
-  ol, ul {
+  ol, ul:not(:where(.lexxy-prompt-menu)) {
     margin-inline-start: calc(var(--lexxy-content-margin) * 1.5);
     padding: 0;
   }
@@ -129,7 +151,7 @@
     list-style-type: decimal;
   }
 
-  li.lexxy-nested-listitem {
+  li:where(.lexxy-nested-listitem) {
     list-style-type: none;
 
     ol, ul {
@@ -137,82 +159,103 @@
     }
   }
 
+  hr {
+    border: 0;
+    border-block-end: 1px solid currentColor;
+    inline-size: 20%;
+    margin: calc(0.5em + var(--lexxy-content-margin)) 0;
+  }
+
+  .horizontal-divider {
+    margin: 0;
+    padding: calc(0.5em + var(--lexxy-content-margin)) 0;
+
+    hr {
+      margin: 0;
+    }
+  }
+
+  /* Kept at class specificity so it still outweighs the element margin rules above. */
+  *:has(+ .horizontal-divider) {
+    margin-block-end: 0;
+  }
+
   > :last-child {
     margin-block-end: 0;
   }
 
   /* Keywords and attributes */
-  .code-token__attr,
-  .token.attr-name,
-  .token.atrule,
-  .token.attr,
-  .token.keyword {
+  :where(.code-token__attr),
+  :where(.token.attr-name),
+  :where(.token.atrule),
+  :where(.token.attr),
+  :where(.token.keyword) {
     color: var(--lexxy-color-code-token-att);
   }
 
   /* Constants, booleans, numbers, properties, tags */
-  .code-token__property,
-  .token.boolean,
-  .token.constant,
-  .token.number,
-  .token.property,
-  .token.symbol,
-  .token.tag {
+  :where(.code-token__property),
+  :where(.token.boolean),
+  :where(.token.constant),
+  :where(.token.number),
+  :where(.token.property),
+  :where(.token.symbol),
+  :where(.token.tag) {
     color: var(--lexxy-color-code-token-property);
   }
 
   /* Strings, selectors, and built-in constructs */
-  .code-token__selector,
-  .token.attr-value,
-  .token.builtin,
-  .token.char,
-  .token.inserted,
-  .token.line,
-  .token.selector,
-  .token.string {
+  :where(.code-token__selector),
+  :where(.token.attr-value),
+  :where(.token.builtin),
+  :where(.token.char),
+  :where(.token.inserted),
+  :where(.token.line),
+  :where(.token.selector),
+  :where(.token.string) {
     color: var(--lexxy-color-code-token-selector);
   }
 
   /* Comments and meta information */
-  .code-token__comment,
-  .token.cdata,
-  .token.comment,
-  .token.doctype,
-  .token.prolog {
+  :where(.code-token__comment),
+  :where(.token.cdata),
+  :where(.token.comment),
+  :where(.token.doctype),
+  :where(.token.prolog) {
     color: var(--lexxy-color-code-token-comment);
     font-style: italic;
   }
 
   /* Operators and symbolic entities */
-  .code-token__operator,
-  .token.deleted,
-  .token.entity,
-  .token.operator,
-  .token.url,
-  code[data-language="diff"] .code-token__operator + .code-token__selector {
+  :where(.code-token__operator),
+  :where(.token.deleted),
+  :where(.token.entity),
+  :where(.token.operator),
+  :where(.token.url),
+  code[data-language="diff"] :where(.code-token__operator) + :where(.code-token__selector) {
     color: var(--lexxy-color-code-token-operator);
   }
 
   /* Functions and class names */
-  .code-token__function,
-  .token.class,
-  .token.class-name,
-  .token.function {
+  :where(.code-token__function),
+  :where(.token.class),
+  :where(.token.class-name),
+  :where(.token.function) {
     color: var(--lexxy-color-code-token-function);
   }
 
   /* Variables, regex, namespaces, important */
-  .code-token__variable,
-  .token.important,
-  .token.namespace,
-  .token.regex,
-  .token.variable {
+  :where(.code-token__variable),
+  :where(.token.important),
+  :where(.token.namespace),
+  :where(.token.regex),
+  :where(.token.variable) {
     color: var(--lexxy-color-code-token-variable);
   }
 
   /* Punctuation */
-  .code-token__punctuation,
-  .token.punctuation {
+  :where(.code-token__punctuation),
+  :where(.token.punctuation) {
     color: var(--lexxy-color-code-token-punctuation);
   }
 
@@ -237,215 +280,251 @@
       padding: 1ch;
       text-align: start;
       word-break: normal;
-      
+
       *:last-child {
         margin-block-end: 0;
       }
 
-      &.lexxy-content__table-cell--header {
+      &:where(.lexxy-content__table-cell--header) {
         background-color: var(--lexxy-color-table-header-bg);
         font-weight: bold;
       }
 
       *:is(code, pre) {
         hyphens: auto;
-        text-wrap: wrap;
         white-space: pre-wrap;
+
+        @supports (text-wrap: wrap) {
+          text-wrap: wrap;
+        }
       }
     }
   }
-}
 
-/* Attachments
-/* ------------------------------------------------------------------------ */
 
-:where(.attachment) {
-  block-size: auto;
-  display: block;
-  inline-size: fit-content;
-  position: relative;
-  margin-inline: auto;
-  max-inline-size: 100%;
-  text-align: center;
+  /* Attachments
+  /* ------------------------------------------------------------------------ */
 
-  :where(progress) {
-    inline-size: 100%;
-    margin: auto;
-  }
-}
-
-:where(.attachment__caption) {
-  color: var(--lexxy-color-text-subtle);
-  font-size: var(--lexxy-text-small);
-
-  textarea {
-    background: var(--lexxy-color-canvas);
-    border: none;
-    color: inherit;
-    font-family: inherit;
-    inline-size: 100%;
-    max-inline-size: 100%;
-    resize: none;
+  p:has(:where(.attachment)) {
     text-align: center;
-
-    &:focus {
-      outline: none;
-    }
-
-    @supports (field-sizing: content) {
-      field-sizing: content;
-      inline-size: auto;
-      min-inline-size: 20ch;
-    }
   }
-}
 
-:where(.attachment__icon) {
-  aspect-ratio: 4/5;
-  background-color: color-mix(var(--lexxy-attachment-icon-color), transparent 90%);
-  block-size: 3lh;
-  border: 2px solid var(--lexxy-attachment-icon-color);
-  border-block-start-width: 1ch;
-  border-radius: var(--lexxy-radius);
-  box-sizing: border-box;
-  color: var(--lexxy-attachment-icon-color);
-  display: grid;
-  font-size: var(--lexxy-text-small);
-  font-weight: bold;
-  inline-size: auto;
-  place-content: center;
-  text-transform: uppercase;
-}
+  :where(.attachment) {
+    --lexxy-attachment-gap: 0.75ch;
 
-:where(.attachment--preview) {
-  border-radius: var(--lexxy-radius);
-
-  img, video {
     block-size: auto;
+    box-sizing: border-box;
+    border-radius: var(--lexxy-radius);
     display: block;
+    inline-size: fit-content;
     margin-inline: auto;
     max-inline-size: 100%;
-    user-select: none;
+    min-inline-size: 10ch;
+    padding: var(--lexxy-attachment-gap);
+    position: relative;
+    text-align: center;
   }
 
-  > a {
+  /* Element weight, so a bare `figure { margin: 0 }` reset loaded before Lexxy doesn't uncenter attachments. */
+  figure:where(.attachment) {
+    margin-inline: auto;
+  }
+
+  :where(.attachment__caption) {
+    color: var(--lexxy-color-text-subtle);
+    display: block;
+    font-size: var(--lexxy-text-small);
+    padding: 1ch;
+  }
+
+  :where(.attachment__icon) {
+    aspect-ratio: 4/5;
+    background-color: color-mix(var(--lexxy-attachment-icon-color), transparent 90%);
+    block-size: 3lh;
+    border: 1px solid var(--lexxy-attachment-icon-color);
+    border-block-start-width: 1.5ch;
+    border-radius: var(--lexxy-radius);
+    box-sizing: border-box;
+    color: var(--lexxy-attachment-icon-color);
+    display: grid;
+    font-size: var(--lexxy-text-small);
+    font-weight: bold;
+    inline-size: auto;
+    overflow: hidden;
+    place-content: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* Kept at class specificity so it still outweighs the `a:has(img)` rule above. */
+  .attachment--preview > a {
     display: block;
   }
 
-  .attachment__caption {
-    margin-block-start: 1ch;
+  :where(.attachment--preview) {
+    img, video {
+      border-radius: var(--lexxy-radius);
+      block-size: auto;
+      display: block;
+      margin-inline: auto;
+      max-inline-size: 100%;
+      -webkit-user-select: none;
+
+      @supports (user-select: none) {
+        user-select: none;
+      }
+    }
+
+    :where(.attachment__caption) {
+      padding-block-end: 0.5ch;
+    }
   }
-}
 
-:where(.attachment--file) {
-  --lexxy-attachment-icon-color: var(--lexxy-color-text-subtle);
+  :where(.attachment--file) {
+    --lexxy-attachment-icon-color: var(--lexxy-color-text-subtle);
 
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1ch;
-  inline-size: auto;
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    inline-size: auto;
 
-  .attachment__caption {
-    display: grid;
-    flex: 1;
-    text-align: start;
+    :where(.attachment__caption) {
+      display: grid;
+      flex: 1;
+      text-align: start;
+    }
+
+    :where(.attachment__name) {
+      color: var(--lexxy-color-ink);
+      font-weight: bold;
+    }
   }
 
-  .attachment__name {
-    color: var(--lexxy-color-ink);
-    font-weight: bold;
+  :where(.attachment--psd),
+  :where(.attachment--key),
+  :where(.attachment--sketch),
+  :where(.attachment--ai),
+  :where(.attachment--eps),
+  :where(.attachment--indd),
+  :where(.attachment--svg),
+  :where(.attachment--ppt),
+  :where(.attachment--pptx) {
+    --lexxy-attachment-icon-color: var(--lexxy-color-red);
   }
-}
 
-:where(
-  .attachment--psd,
-  .attachment--key,
-  .attachment--sketch,
-  .attachment--ai,
-  .attachment--eps,
-  .attachment--indd,
-  .attachment--svg,
-  .attachment--ppt,
-  .attachment--pptx
-) {
-  --lexxy-attachment-icon-color: var(--lexxy-color-red);
-}
+  :where(.attachment--css),
+  :where(.attachment--php),
+  :where(.attachment--json),
+  :where(.attachment--htm),
+  :where(.attachment--html),
+  :where(.attachment--rb),
+  :where(.attachment--erb),
+  :where(.attachment--ts),
+  :where(.attachment--js) {
+    --lexxy-attachment-icon-color: var(--lexxy-color-purple);
+  }
 
-:where(
-  .attachment--css,
-  .attachment--php,
-  .attachment--json,
-  .attachment--htm,
-  .attachment--html,
-  .attachment--rb,
-  .attachment--erb,
-  .attachment--ts,
-  .attachment--js
-) {
-  --lexxy-attachment-icon-color: var(--lexxy-color-purple);
-}
+  :where(.attachment--txt),
+  :where(.attachment--pages),
+  :where(.attachment--rtf),
+  :where(.attachment--md),
+  :where(.attachment--doc),
+  :where(.attachment--docx) {
+    --lexxy-attachment-icon-color: var(--lexxy-color-blue);
+  }
 
-:where(
-  .attachment--txt,
-  .attachment--pages,
-  .attachment--rtf,
-  .attachment--md,
-  .attachment--doc,
-  .attachment--docx
-) {
-  --lexxy-attachment-icon-color: var(--lexxy-color-blue);
-}
+  :where(.attachment--csv),
+  :where(.attachment--numbers),
+  :where(.attachment--xls),
+  :where(.attachment--xlsx) {
+    --lexxy-attachment-icon-color: var(--lexxy-color-green);
+  }
 
-:where(
-  .attachment--csv,
-  .attachment--numbers,
-  .attachment--xls,
-  .attachment--xlsx
-) {
-  --lexxy-attachment-icon-color: var(--lexxy-color-green);
-}
+  :where(.attachment--error) {
+    padding-block: 2ch;
+  }
 
-/* Horizontal divider */
-:where(.horizontal-divider) {
-  margin: 0;
-  margin-block-end: .5em;
-  padding: 1.5em 0 .5em;
 
-  hr {
-    border: 0;
-    border-block-end: 1px solid currentColor;
-    inline-size: 20%;
+  /* Image galleries */
+  /* ------------------------------------------------------------------------ */
+
+  :where(.attachment-gallery) {
+    display: block;
+    text-align: center;
+
+    :where(.attachment) {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 0;
+      inline-size: calc(33.333% - 0.8ch);
+      vertical-align: top;
+
+      :where(.attachment__caption) {
+        padding-block-end: 1ch;
+      }
+    }
+
+    &:where(.attachment-gallery--2),
+    &:where(.attachment-gallery--4) {
+      :where(.attachment) {
+        inline-size: calc(50% - 0.8ch);
+      }
+    }
+  }
+
+
+  /* Custom attachments such as mentions, etc. */
+  /* ------------------------------------------------------------------------ */
+
+  action-text-attachment[content-type^="application/vnd.actiontext"] {
+    --lexxy-attachment-bg-color: transparent;
+    --lexxy-attachment-image-size: 1em;
+    --lexxy-attachment-text-color: currentColor;
+
+    align-items: center;
+    background: var(--lexxy-attachment-bg-color);
+    border-radius: var(--lexxy-radius);
+    color: var(--lexxy-attachment-text-color);
+    display: inline-flex;
+    gap: 0.25ch;
     margin: 0;
-  }
-}
+    padding: 0;
+    position: relative;
+    white-space: normal;
 
-/* Custom attachments such as mentions, etc. */
-:where(action-text-attachment[content-type^="application/vnd.actiontext"]) {
-  --lexxy-attachment-bg-color: transparent;
-  --lexxy-attachment-image-size: 1em;
-  --lexxy-attachment-text-color: currentColor;
+    /* Gecko drops the whole selection when a drag crosses a contenteditable="false"
+       island unless it is selectable as a single unit. Editor-only: the rendered
+       view has no contenteditable and must keep normal text selection. */
+    lexxy-editor & {
+      -webkit-user-select: all;
 
-  align-items: center;
-  background: var(--lexxy-attachment-bg-color);
-  border-radius: var(--lexxy-radius);
-  box-shadow: -0.25ch 0 0 var(--lexxy-attachment-bg-color), 0.5ch 0 0 var(--lexxy-attachment-bg-color);
-  color: var(--lexxy-attachment-text-color);
-  display: inline-flex;
-  gap: 0.25ch;
-  margin: 0;
-  padding: 0;
-  position: relative;
-  white-space: normal;
+      @supports (user-select: all) {
+        user-select: all;
+      }
+    }
 
-  img {
-    block-size: var(--lexxy-attachment-image-size);
-    border-radius: 50%;
-    inline-size: var(--lexxy-attachment-image-size);
+    img {
+      block-size: var(--lexxy-attachment-image-size);
+      border-radius: 50%;
+      inline-size: var(--lexxy-attachment-image-size);
+    }
   }
 
-  &.node--selected {
-    --lexxy-attachment-bg-color: var(--lexxy-color-accent-dark);
-    --lexxy-attachment-text-color: var(--lexxy-color-ink-inverted);
+
+  /* Horizontal divider */
+  /* ------------------------------------------------------------------------ */
+
+  /* Kept at class specificity: the editor renders the divider as a figure, and this must outweigh the figure margin rule above. */
+  .horizontal-divider {
+    margin: 0;
+    margin-block-end: .5em;
+    padding: 1.5em 0 .5em;
+
+    hr {
+      border: 0;
+      border-block-end: 1px solid currentColor;
+      inline-size: 20%;
+      margin: 0;
+    }
   }
 }

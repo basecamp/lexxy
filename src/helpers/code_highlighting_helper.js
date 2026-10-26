@@ -1,25 +1,176 @@
-import { createElement } from "./html_helper"
-import Prism from "prismjs"
+import Prism from "../config/prism"
 
-export function highlightCode() {
-  const elements = document.querySelectorAll("pre[data-language]")
+export function highlightCode(root = document) {
+  const elements = root.querySelectorAll("pre[data-language]:not([data-highlighted])")
 
   elements.forEach(preElement => {
     highlightElement(preElement)
   })
 }
 
-function highlightElement(preElement) {
+export function highlightElement(preElement) {
+  if (preElement.dataset.highlighted === "true") return
+
   const language = preElement.getAttribute("data-language")
-  let code = preElement.innerHTML.replace(/<br\s*\/?>/gi, "\n")
 
   const grammar = Prism.languages?.[language]
   if (!grammar) return
 
-  // unescape HTML entities in the code block
-  code = new DOMParser().parseFromString(code, "text/html").body.textContent || ""
+  // Read the source text and the <mark> and <a> ranges in a single walk,
+  // before Prism rewrites the element. Sharing one traversal keeps the range
+  // offsets aligned with the code string and preserves leading whitespace —
+  // deriving either of them separately (e.g. textContent through DOMParser)
+  // collapses leading whitespace and shifts every range, re-indenting the
+  // rendered block.
+  const { code, highlights, links } = extractCodeAndMarkup(preElement)
 
   const highlightedHtml = Prism.highlight(code, grammar, language)
-  const codeElement = createElement("code", { "data-language": language, innerHTML: highlightedHtml })
-  preElement.replaceWith(codeElement)
+  preElement.innerHTML = highlightedHtml
+
+  if (highlights.length > 0) {
+    applyHighlightRanges(preElement, highlights)
+  }
+
+  if (links.length > 0) {
+    applyLinkRanges(preElement, links)
+  }
+
+  preElement.dataset.highlighted = "true"
+}
+
+// Walk the <pre> once, building Prism's source text and the <mark> and <a>
+// ranges together: a text node contributes its text verbatim, a <br>
+// contributes a newline, and a <mark> or <a> records the slice of code it
+// covers. Because all outputs come from the same walk, every range offset is
+// just a position in `code` — so the markup can't drift out of sync with the
+// source, and the block's leading whitespace survives (HTML parsing would
+// collapse it).
+function extractCodeAndMarkup(preElement) {
+  const root = preElement.querySelector("code") || preElement
+  const highlights = []
+  const links = []
+  let code = ""
+
+  function walk(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      code += node.textContent
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.tagName === "BR") {
+        code += "\n"
+      } else if (node.tagName === "MARK") {
+        const start = code.length
+        for (const child of node.childNodes) {
+          walk(child)
+        }
+        const style = extractStyle(node)
+        if (style) {
+          highlights.push({ start, end: code.length, style })
+        }
+      } else if (node.tagName === "A" && node.getAttribute("href")) {
+        const start = code.length
+        for (const child of node.childNodes) {
+          walk(child)
+        }
+        links.push({ start, end: code.length, attributes: linkAttributes(node) })
+      } else {
+        for (const child of node.childNodes) {
+          walk(child)
+        }
+      }
+    }
+  }
+
+  for (const child of root.childNodes) {
+    walk(child)
+  }
+
+  return { code, highlights, links }
+}
+
+function linkAttributes(element) {
+  const attributes = { href: element.getAttribute("href") }
+  for (const name of [ "target", "rel", "title" ]) {
+    if (element.getAttribute(name)) {
+      attributes[name] = element.getAttribute(name)
+    }
+  }
+  return attributes
+}
+
+function extractStyle(element) {
+  const parts = []
+  if (element.style?.color) parts.push(`color: ${element.style.color};`)
+  if (element.style?.backgroundColor) parts.push(`background-color: ${element.style.backgroundColor};`)
+  return parts.length > 0 ? parts.join(" ") : null
+}
+
+// Wrap character ranges in <mark> or <a> elements within a Prism-highlighted
+// DOM tree. Each range is applied independently, re-collecting text nodes
+// each time to account for splits from previous ranges.
+function applyHighlightRanges(element, highlights) {
+  for (const { start, end, style } of highlights) {
+    wrapRange(element, start, end, () => {
+      const mark = document.createElement("mark")
+      mark.setAttribute("style", style)
+      return mark
+    })
+  }
+}
+
+function applyLinkRanges(element, links) {
+  for (const { start, end, attributes } of links) {
+    wrapRange(element, start, end, () => {
+      const anchor = document.createElement("a")
+      for (const [ name, value ] of Object.entries(attributes)) {
+        anchor.setAttribute(name, value)
+      }
+      return anchor
+    })
+  }
+}
+
+function wrapRange(container, rangeStart, rangeEnd, createWrapper) {
+  const textNodes = collectTextNodes(container)
+
+  // Process in reverse so DOM mutations don't shift earlier text node offsets
+  for (let i = textNodes.length - 1; i >= 0; i--) {
+    const { node, start: nodeStart, end: nodeEnd } = textNodes[i]
+    const overlapStart = Math.max(rangeStart, nodeStart)
+    const overlapEnd = Math.min(rangeEnd, nodeEnd)
+    if (overlapStart >= overlapEnd) continue
+
+    const relStart = overlapStart - nodeStart
+    const relEnd = overlapEnd - nodeStart
+    const text = node.textContent
+    const parent = node.parentNode
+
+    const wrapper = createWrapper()
+    wrapper.textContent = text.slice(relStart, relEnd)
+
+    if (relEnd < text.length) {
+      parent.insertBefore(document.createTextNode(text.slice(relEnd)), node.nextSibling)
+    }
+    parent.insertBefore(wrapper, node.nextSibling)
+
+    if (relStart > 0) {
+      node.textContent = text.slice(0, relStart)
+    } else {
+      parent.removeChild(node)
+    }
+  }
+}
+
+function collectTextNodes(root) {
+  const nodes = []
+  let offset = 0
+  const walker = document.createTreeWalker(root, 4 /* NodeFilter.SHOW_TEXT */)
+
+  let node
+  while ((node = walker.nextNode())) {
+    const length = node.textContent.length
+    nodes.push({ node, start: offset, end: offset + length })
+    offset += length
+  }
+
+  return nodes
 }

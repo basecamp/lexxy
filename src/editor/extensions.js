@@ -13,17 +13,58 @@ export default class Extensions {
   }
 
   initializeToolbars() {
-    if (this.#lexxyToolbar) {
-      this.enabledExtensions.forEach(ext => ext.initializeToolbar(this.#lexxyToolbar))
+    const toolbar = this.#lexxyToolbar
+    if (!toolbar) return
+
+    this.#clearPreviousExtensionToolbarButtons(toolbar)
+    this.#addExtensionToolbarButtons(toolbar)
+    toolbar.requestOverflowRefresh()
+  }
+
+  dispose() {
+    while (this.enabledExtensions.length) {
+      this.enabledExtensions.pop().dispose()
     }
+  }
+
+  #clearPreviousExtensionToolbarButtons(toolbar) {
+    toolbar.querySelectorAll("[data-lexxy-extension]").forEach(el => el.remove())
+  }
+
+  #addExtensionToolbarButtons(toolbar) {
+    this.enabledExtensions.forEach(ext => {
+      const childrenBefore = new Set(toolbar.children)
+      ext.initializeToolbar(toolbar)
+      for (const child of toolbar.children) {
+        if (!childrenBefore.has(child)) {
+          child.setAttribute("data-lexxy-extension", "")
+        }
+      }
+    })
+  }
+
+  get allowedElements() {
+    return this.enabledExtensions.flatMap(ext => ext.allowedElements)
+  }
+
+  get allowedStyles() {
+    return this.enabledExtensions.flatMap(ext => ext.allowedStyles)
   }
 
   get #lexxyToolbar() {
     return this.lexxyElement.toolbar
   }
 
+  get #baseExtensions() {
+    return this.lexxyElement.baseExtensions
+  }
+
+  get #configuredExtensions() {
+    return Lexxy.global.get("extensions")
+  }
+
   #initializeExtensions() {
-    const extensionDefinitions = Lexxy.global.get("extensions")
+    const extensionDefinitions = this.#baseExtensions.concat(this.#configuredExtensions)
 
     return extensionDefinitions.map(
       extension => new extension(this.lexxyElement)
