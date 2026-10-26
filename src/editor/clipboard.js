@@ -7,6 +7,7 @@ import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $o
 import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
 import { ListenerBin } from "../helpers/listener_helper"
 import NodeInserter from "./contents/node_inserter"
+import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
 import NestedBlockNodeInserter from "./contents/node_inserter/nested_block_node_inserter"
 
 export default class Clipboard {
@@ -62,6 +63,10 @@ export default class Clipboard {
   }
 
   #handleParsedClipboardNodes({ nodes, selection }) {
+    // Lexical inserts this same array when no handler claims the command, and nodes it rebuilt
+    // from another editor's clipboard JSON haven't been through the import filter yet.
+    nodes.splice(0, nodes.length, ...filterDisallowedAttachmentNodes(nodes, this.editorElement))
+
     const url = $bareUrlFromSingleLink(nodes)
     if (url && $isRangeSelection(selection)) {
       this.#insertSingleLinkAt(selection, url)

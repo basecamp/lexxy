@@ -13,6 +13,7 @@ const presets = new Configuration({
     markdown: true,
     multiLine: true,
     permittedAttachmentTypes: null,
+    remoteImages: true,
     richText: true,
     uploadsBusyMessage: "Please wait for all files to upload",
     toolbar: {
