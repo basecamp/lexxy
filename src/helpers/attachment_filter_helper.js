@@ -32,5 +32,5 @@ function isRemoteImage(node) {
   return node instanceof ActionTextAttachmentNode &&
          !(node instanceof ActionTextAttachmentUploadNode) &&
          !node.sgid &&
-         node.contentType.startsWith("image/")
+         /^image(\/|$)/.test(node.contentType)
 }
