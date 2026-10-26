@@ -43,10 +43,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     // node is reloaded from saved state such as from history.
     this.#startUploadIfNeeded()
 
-    // Bridge-managed uploads (uploadUrl is null) and restored or remote
-    // instances (no local File) don't have file data to show an image
-    // preview, so always show the file icon during upload.
-    const canPreviewFile = this.isPreviewableAttachment && this.uploadUrl != null && this.file != null
+    const canPreviewFile = this.isPreviewableAttachment && this.#canPreviewLocally
     const figure = this.createAttachmentFigure(canPreviewFile)
 
     if (canPreviewFile) {
@@ -98,6 +95,14 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       height: this.height,
       uploadError: this.uploadError
     }
+  }
+
+  // Bridge-managed uploads (no uploadUrl) get a placeholder File without the
+  // real bytes, and restored or remote instances have no File at all. Neither
+  // can be previewed locally: they show the file icon during upload and the
+  // server image once uploaded, never a broken blob: preview.
+  get #canPreviewLocally() {
+    return this.uploadUrl != null && this.file != null
   }
 
   get #uploadStarted() {
@@ -230,7 +235,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   $showUploadedAttachment(blob) {
-    const previewSrc = this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
+    const previewSrc = this.isPreviewableImage && this.#canPreviewLocally ? URL.createObjectURL(this.file) : null
 
     const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
     this.replaceAndRewriteHistory(replacementNode)
