@@ -1,7 +1,11 @@
 Rails.application.routes.draw do
   root "sandbox#show"
+
   resources :posts, :people, :groups
+  resources :trix_posts
+
   get "sandbox", to: "sandbox#show"
+  get "sandbox/:template", to: "sandbox#show"
   resources :demo_contents, only: :show
 
   # Host-constrained direct uploads route

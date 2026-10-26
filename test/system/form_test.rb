@@ -1,6 +1,6 @@
 require "application_system_test_case"
 
-class ActionTextLoadTest < ApplicationSystemTestCase
+class FormTest < ApplicationSystemTestCase
   test "can create new records" do
     visit posts_path
     click_on "New post"
@@ -11,6 +11,7 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     click_on "Create Post"
     click_on "Edit this post"
+    wait_for_editor
 
     assert_editor_html "<p>Hello</p><p>there</p>"
   end
@@ -23,6 +24,8 @@ class ActionTextLoadTest < ApplicationSystemTestCase
     find_editor.send "there"
 
     click_on "Update Post"
+    click_on "Edit this post"
+    wait_for_editor
 
     assert_editor_html "<p>Hello</p><p>there</p>"
   end
@@ -37,7 +40,7 @@ class ActionTextLoadTest < ApplicationSystemTestCase
 
     click_on "Create Post"
     click_on "Edit this post"
-
+    wait_for_editor
 
     assert_editor_html "<p>That</p>"
   end

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lexxy Test — Prompt only-at</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <form>
+    <div class="body" data-editor="start-of-input">
+      <lexxy-editor class="lexxy-content" placeholder="Bots prompt">
+        <lexxy-prompt trigger="!" name="bot" only-at="^">
+          <lexxy-prompt-item search="opus" sgid="test-sgid-opus">
+            <template type="menu">
+              <span class="bot bot--prompt-item">opus</span>
+            </template>
+            <template type="editor">
+              <span class="bot bot--inline">opus</span>
+            </template>
+          </lexxy-prompt-item>
+          <lexxy-prompt-item search="haiku" sgid="test-sgid-haiku">
+            <template type="menu">
+              <span class="bot bot--prompt-item">haiku</span>
+            </template>
+            <template type="editor">
+              <span class="bot bot--inline">haiku</span>
+            </template>
+          </lexxy-prompt-item>
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+
+    <div class="body" data-editor="anywhere">
+      <lexxy-editor class="lexxy-content" placeholder="Hashtag prompt">
+        <lexxy-prompt trigger="#" name="tag" only-at=".*">
+          <lexxy-prompt-item search="bug" sgid="test-sgid-bug">
+            <template type="menu">
+              <span class="tag tag--prompt-item">bug</span>
+            </template>
+            <template type="editor">
+              <span class="tag tag--inline">bug</span>
+            </template>
+          </lexxy-prompt-item>
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+
+    <div class="body" data-editor="default">
+      <lexxy-editor class="lexxy-content" placeholder="Mention prompt">
+        <lexxy-prompt trigger="@" name="mention">
+          <lexxy-prompt-item search="alice" sgid="test-sgid-alice">
+            <template type="menu">
+              <span class="person person--prompt-item">Alice</span>
+            </template>
+            <template type="editor">
+              <span class="person person--inline">Alice</span>
+            </template>
+          </lexxy-prompt-item>
+        </lexxy-prompt>
+      </lexxy-editor>
+    </div>
+
+  </form>
+
+  <script type="module" src="/editor.js"></script>
+</body>
+</html>

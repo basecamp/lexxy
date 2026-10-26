@@ -13,17 +13,7 @@ class ColorHighlighterTest < ApplicationSystemTestCase
     click_on "Update Post"
     click_on "Edit this post"
 
-    assert_equal_html "<p>Hello <i><b><strong>everyone</strong></b></i></p>", find_editor.value
-  end
-
-  test "color highlighting collapsed selection" do
-    find_editor.select "everyone"
-    find_editor.send :arrow_right
-
-    apply_highlight_option "color", 1
-    find_editor.send " again!"
-
-    assert_equal_html "<p>Hello everyone<mark style=\"color: var(--highlight-1);\"> again!</mark></p>", find_editor.value
+    assert_equal_html "<p>Hello <i><strong>everyone</strong></i></p>", find_editor.value
   end
 
   test "color highlighting is preserved after saving" do

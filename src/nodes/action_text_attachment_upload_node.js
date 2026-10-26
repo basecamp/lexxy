@@ -1,7 +1,6 @@
 import Lexxy from "../config/lexxy"
-import { SILENT_UPDATE_TAGS } from "../helpers/lexical_helper"
 import { ActionTextAttachmentNode } from "./action_text_attachment_node"
-import { createElement } from "../helpers/html_helper"
+import { createElement, dispatch } from "../helpers/html_helper"
 import { loadFileIntoImage } from "../helpers/upload_helper"
 import { bytesToHumanSize } from "../helpers/storage_helper"
 
@@ -23,10 +22,11 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return null
   }
 
-  constructor(node, key) {
-    const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError } = node
-    super({ ...node, contentType: file.type }, key)
-    this.file = file
+  constructor(node = {}, key) {
+    const { file, uploadUrl, blobUrlTemplate, progress, width, height, uploadError, fileName, contentType } = node
+    super({ ...node, contentType: file?.type ?? contentType }, key)
+    this.file = file ?? null
+    this.fileName = file?.name ?? fileName
     this.uploadUrl = uploadUrl
     this.blobUrlTemplate = blobUrlTemplate
     this.progress = progress ?? null
@@ -36,16 +36,20 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   createDOM() {
-    if (this.uploadError) return this.#createDOMForError()
+    if (this.uploadError) return this.createDOMForError()
 
     // This side-effect is trigged on DOM load to fire only once and avoid multiple
     // uploads through cloning. The upload is guarded from restarting in case the
     // node is reloaded from saved state such as from history.
     this.#startUploadIfNeeded()
 
-    const figure = this.createAttachmentFigure()
+    // Bridge-managed uploads (uploadUrl is null) and restored or remote
+    // instances (no local File) don't have file data to show an image
+    // preview, so always show the file icon during upload.
+    const canPreviewFile = this.isPreviewableAttachment && this.uploadUrl != null && this.file != null
+    const figure = this.createAttachmentFigure(canPreviewFile)
 
-    if (this.isPreviewableAttachment) {
+    if (canPreviewFile) {
       const img = figure.appendChild(this.#createDOMForImage())
 
       // load file locally to set dimensions and prevent vertical shifting
@@ -63,6 +67,11 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   updateDOM(prevNode, dom) {
     if (this.uploadError !== prevNode.uploadError) return true
 
+    const image = dom.querySelector("img")
+    if (image && prevNode.altText !== this.altText) {
+      image.alt = this.altText
+    }
+
     if (prevNode.progress !== this.progress) {
       const progress = dom.querySelector("progress")
       progress.value = this.progress ?? 0
@@ -72,8 +81,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   exportDOM() {
-    const img = document.createElement("img")
-    return { element: img }
+    return { element: null }
   }
 
   exportJSON() {
@@ -81,6 +89,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       ...super.exportJSON(),
       type: "action_text_attachment_upload",
       version: 1,
+      fileName: this.fileName,
+      contentType: this.contentType,
       uploadUrl: this.uploadUrl,
       blobUrlTemplate: this.blobUrlTemplate,
       progress: this.progress,
@@ -94,15 +104,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return this.progress !== null
   }
 
-  #createDOMForError() {
-    const figure = this.createAttachmentFigure()
-    figure.classList.add("attachment--error")
-    figure.appendChild(createElement("div", { innerText: `Error uploading ${this.file?.name ?? "file"}` }))
-    return figure
-  }
-
   #createDOMForImage() {
-    return createElement("img")
+    return createElement("img", { alt: this.altText })
   }
 
   #createDOMForFile() {
@@ -112,16 +115,19 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   }
 
   #getFileExtension() {
-    return this.file.name.split(".").pop().toLowerCase()
+    return (this.fileName || "").split(".").pop().toLowerCase()
   }
 
   #createCaption() {
     const figcaption = createElement("figcaption", { className: "attachment__caption" })
 
-    const nameSpan = createElement("span", { className: "attachment__name", textContent: this.file.name || "" })
-    const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.file.size) })
+    const nameSpan = createElement("span", { className: "attachment__name", textContent: this.caption || this.fileName || "" })
     figcaption.appendChild(nameSpan)
-    figcaption.appendChild(sizeSpan)
+
+    if (this.file) {
+      const sizeSpan = createElement("span", { className: "attachment__size", textContent: bytesToHumanSize(this.file.size) })
+      figcaption.appendChild(sizeSpan)
+    }
 
     return figcaption
   }
@@ -133,11 +139,7 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
   #setDimensionsFromImage({ width, height }) {
     if (this.#hasDimensions) return
 
-    this.editor.update(() => {
-      const writable = this.getWritable()
-      writable.width = width
-      writable.height = height
-    }, { tag: SILENT_UPDATE_TAGS })
+    this.patchAndRewriteHistory({ width, height })
   }
 
   get #hasDimensions() {
@@ -146,6 +148,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
   async #startUploadIfNeeded() {
     if (this.#uploadStarted) return
+    if (!this.uploadUrl) return // Bridge-managed upload — skip DirectUpload
+    if (!this.file) return // Restored or remote instance — no local File to upload
 
     this.#setUploadStarted()
 
@@ -153,11 +157,20 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
 
     const upload = new DirectUpload(this.file, this.uploadUrl, this)
     upload.delegate = this.#createUploadDelegate()
+
+    this.#dispatchEvent("lexxy:upload-start", { file: this.file })
+
     upload.create((error, blob) => {
+      this.#forgetUploadRequest()
+
       if (error) {
+        this.#dispatchEvent("lexxy:upload-end", { file: this.file, error })
         this.#handleUploadError(error)
       } else {
-        this.#showUploadedAttachment(blob)
+        this.#dispatchEvent("lexxy:upload-end", { file: this.file, error: null })
+        this.editor.update(() => {
+          this.$showUploadedAttachment(blob)
+        })
       }
     })
   }
@@ -172,56 +185,84 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
       directUploadWillStoreFileWithXHR: (request) => {
         if (shouldAuthenticateUploads) request.withCredentials = true
 
-        const uploadProgressHandler = (event) => this.#handleUploadProgress(event)
+        this.#rememberUploadRequest(request)
+
+        const uploadProgressHandler = (event) => this.#handleUploadProgress(event, request)
         request.upload.addEventListener("progress", uploadProgressHandler)
       }
     }
+  }
+
+  #forgetUploadRequest() {
+    this.#editorElement?.uploadRequests.forget(this.getKey())
+  }
+
+  #rememberUploadRequest(request) {
+    this.#editorElement?.uploadRequests.track(this.getKey(), request)
+  }
+
+  get #editorElement() {
+    return this.editor.getRootElement()?.closest("lexxy-editor")
   }
 
   #setUploadStarted() {
     this.#setProgress(1)
   }
 
-  #handleUploadProgress(event) {
-    this.#setProgress(Math.round(event.loaded / event.total * 100))
+  #handleUploadProgress(event, request) {
+    const progress = Math.round(event.loaded / event.total * 100)
+    try {
+      this.#setProgress(progress)
+      this.#dispatchEvent("lexxy:upload-progress", { file: this.file, progress })
+    } catch {
+      request.abort()
+    }
   }
 
   #setProgress(progress) {
-    this.editor.update(() => {
-      this.getWritable().progress = progress
-    }, { tag: SILENT_UPDATE_TAGS })
+    this.patchAndRewriteHistory({ progress })
   }
 
   #handleUploadError(error) {
     console.warn(`Upload error for ${this.file?.name ?? "file"}: ${error}`)
-    this.editor.update(() => {
-      this.getWritable().uploadError = true
-    }, { tag: SILENT_UPDATE_TAGS })
+
+    this.patchAndRewriteHistory({ uploadError: true })
   }
 
-  async #showUploadedAttachment(blob) {
-    this.editor.update(() => {
-      this.replace(this.#toActionTextAttachmentNodeWith(blob))
-    }, { tag: SILENT_UPDATE_TAGS })
+  $showUploadedAttachment(blob) {
+    const previewSrc = this.isPreviewableImage && this.file ? URL.createObjectURL(this.file) : null
+
+    const replacementNode = this.#toActionTextAttachmentNodeWith(blob, previewSrc)
+    this.replaceAndRewriteHistory(replacementNode)
+
+    return replacementNode.getKey()
   }
 
-  #toActionTextAttachmentNodeWith(blob) {
-    const conversion = new AttachmentNodeConversion(this, blob)
+  #toActionTextAttachmentNodeWith(blob, previewSrc) {
+    const conversion = new AttachmentNodeConversion(this, blob, previewSrc)
     return conversion.toAttachmentNode()
+  }
+
+  #dispatchEvent(name, detail) {
+    const figure = this.editor.getElementByKey(this.getKey())
+    if (figure) dispatch(figure, name, detail)
   }
 }
 
 class AttachmentNodeConversion {
-  constructor(uploadNode, blob) {
+  constructor(uploadNode, blob, previewSrc) {
     this.uploadNode = uploadNode
     this.blob = blob
+    this.previewSrc = previewSrc
   }
 
   toAttachmentNode() {
     return new ActionTextAttachmentNode({
       ...this.uploadNode,
       ...this.#propertiesFromBlob,
-      src: this.#src
+      src: this.#src,
+      previewSrc: this.previewSrc,
+      pendingPreview: this.blob.previewable && !this.uploadNode.isPreviewableImage
     })
   }
 
@@ -229,11 +270,11 @@ class AttachmentNodeConversion {
     const { blob } = this
     return {
       sgid: blob.attachable_sgid,
-      altText: blob.filename,
       contentType: blob.content_type,
       fileName: blob.filename,
       fileSize: blob.byte_size,
       previewable: blob.previewable,
+      previewStatusUrl: blob.preview_status_url
     }
   }
 
@@ -246,4 +287,8 @@ class AttachmentNodeConversion {
       .replace(":signed_id", this.blob.signed_id)
       .replace(":filename", encodeURIComponent(this.blob.filename))
   }
+}
+
+export function $createActionTextAttachmentUploadNode(...args) {
+  return new ActionTextAttachmentUploadNode(...args)
 }
