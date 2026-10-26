@@ -1,4 +1,5 @@
 import "lexxy"
+import "lexxy/dragon"
 import { NativeAdapter } from "lexxy"
 import "./events_logger.js"
 
