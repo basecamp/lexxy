@@ -144,6 +144,7 @@ export class LexicalToolbarElement extends HTMLElement {
       this.editor.dispatchCommand(command, payload)
     }, { tag: shouldKeepToolbarFocus ? SKIP_DOM_SELECTION_TAG : undefined })
 
+    if (this.#belongsToDropdown(button)) this.closeDropdowns()
     if (!shouldKeepToolbarFocus) this.editor.focus()
   }
 
@@ -207,12 +208,21 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
-      editorState.read(() => {
-        this.#updateButtonStates()
-        this.closeDropdowns()
-      })
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState, prevEditorState }) => {
+      editorState.read(() => this.#updateButtonStates())
+      if (this.#selectionChanged(editorState, prevEditorState)) this.closeDropdowns()
     }))
+  }
+
+  #selectionChanged(editorState, prevEditorState) {
+    const selection = editorState.read($getSelection)
+    const previousSelection = prevEditorState.read($getSelection)
+
+    if (selection === null || previousSelection === null) {
+      return selection !== previousSelection
+    } else {
+      return !selection.is(previousSelection)
+    }
   }
 
   #monitorHistoryChanges() {
