@@ -4,7 +4,6 @@ import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
 import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $onUpdate, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
-import { $insertDataTransferForRichText } from "@lexical/clipboard"
 import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
 import { ListenerBin } from "../helpers/listener_helper"
 import NodeInserter from "./contents/node_inserter"
@@ -149,12 +148,12 @@ export default class Clipboard {
     const item = this.#plainTextOrURLItem(clipboardData)
     item.getAsString((text) => {
       const url = text.trim()
-      if (isAutolinkableURL(url)) {
+      if (this.editorElement.supportsRichText && isAutolinkableURL(url)) {
         this.#pasteURL(url)
       } else if (this.editorElement.supportsMarkdown) {
         this.#pasteMarkdown(text)
       } else {
-        this.#pasteRichText(clipboardData)
+        this.contents.insertText(text, { tag: PASTE_TAG })
       }
     })
   }
@@ -239,13 +238,6 @@ export default class Clipboard {
   // document. Inserting that discards the paste, so keep the raw text instead.
   #renderedNothing(doc) {
     return doc.body.children.length === 0 && doc.body.textContent.trim() === ""
-  }
-
-  #pasteRichText(clipboardData) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      $insertDataTransferForRichText(clipboardData, selection, this.editor)
-    }, { tag: PASTE_TAG })
   }
 
   #handlePastedFiles(clipboardData) {
