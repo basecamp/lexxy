@@ -6,9 +6,10 @@ import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
 import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
+import { $filterDisallowedCode, $removeInlineCodeFormat, $replaceCodeNodeWithParagraphs } from "../helpers/code_filter_helper"
 import { $convertInlineImageDataURIs } from "../helpers/inline_image_uri_helper"
 import { CodeHighlightNode, CodeNode } from "@lexical/code"
-import { TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
+import { CODE, INLINE_CODE, TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transformer"
 import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_tag_handler"
 
@@ -279,7 +280,7 @@ export class LexicalEditorElement extends HTMLElement {
     stripTrailingCodeBlockNewlines(doc)
     let nodes = $generateLexicalNodesFromDOM(editor, doc)
     if ($hasUpdateTag(PASTE_TAG)) nodes = $convertInlineImageDataURIs(nodes, this)
-    return filterDisallowedAttachmentNodes(nodes, this)
+    return $filterDisallowedCode(filterDisallowedAttachmentNodes(nodes, this), this)
   }
 
   get isEmpty() {
@@ -300,6 +301,14 @@ export class LexicalEditorElement extends HTMLElement {
 
   get supportsAttachments() {
     return this.config.get("attachments")
+  }
+
+  get supportsCodeBlocks() {
+    return this.supportsRichText && this.config.get("codeBlocks")
+  }
+
+  get supportsInlineCode() {
+    return this.supportsRichText && this.config.get("inlineCode")
   }
 
   get supportsRemoteImages() {
@@ -623,7 +632,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#setEditorHtml(initialHtml, { editor })
   }
 
-  #setEditorHtml(html, { editor = this.editor } = { }) {
+  #setEditorHtml(html, { editor = this.editor } = {}) {
     $getRoot()
       .clear()
       .selectEnd()
@@ -703,12 +712,14 @@ export class LexicalEditorElement extends HTMLElement {
         registerList(this.editor)
       )
       this.#registerTableComponents()
-      this.#registerCodeLanguagePicker()
+      if (this.supportsCodeBlocks) this.#registerCodeLanguagePicker()
       if (this.supportsAttachments) {
         this.#registerAttachmentToolbar()
       }
+      if (!this.supportsCodeBlocks) registered.push(this.#registerCodeBlockStripper())
+      if (!this.supportsInlineCode) registered.push(this.#registerInlineCodeStripper())
       if (this.supportsMarkdown) {
-        const transformers = [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ]
+        const transformers = this.#markdownTransformers()
         registered.push(
           registerMarkdownShortcuts(this.editor, transformers),
           registerMarkdownLeadingTagHandler(this.editor, transformers)
@@ -719,6 +730,28 @@ export class LexicalEditorElement extends HTMLElement {
     }
 
     this.#listeners.track(...registered)
+  }
+
+  #markdownTransformers() {
+    const excluded = new Set()
+    if (!this.supportsCodeBlocks) excluded.add(CODE)
+    if (!this.supportsInlineCode) excluded.add(INLINE_CODE)
+
+    return [ ...TRANSFORMERS, HORIZONTAL_DIVIDER ].filter(transformer => !excluded.has(transformer))
+  }
+
+  // Code nodes stay registered even when code blocks are disabled, because other
+  // extensions register transforms against them. Turn each one into paragraphs.
+  // Imported HTML is already filtered in $generateNodesFromDOM; this catches the
+  // rest, such as Lexical clipboard data.
+  #registerCodeBlockStripper() {
+    return this.editor.registerNodeTransform(CodeNode, $replaceCodeNodeWithParagraphs)
+  }
+
+  // Inline code is a text format rather than a node, so clear the format from
+  // every text node that gets it: pasted or typed content alike.
+  #registerInlineCodeStripper() {
+    return this.editor.registerNodeTransform(TextNode, $removeInlineCodeFormat)
   }
 
   #registerTableComponents() {
@@ -863,6 +896,8 @@ export class LexicalEditorElement extends HTMLElement {
     const toolbar = createElement("lexxy-toolbar")
     toolbar.innerHTML = LexicalToolbar.defaultTemplate
     toolbar.setAttribute("data-attachments", this.supportsAttachments) // Drives toolbar CSS styles
+    toolbar.setAttribute("data-code-blocks", this.supportsCodeBlocks)
+    toolbar.setAttribute("data-inline-code", this.supportsInlineCode)
     toolbar.configure(this.config.get("toolbar"))
     this.prepend(toolbar)
     return toolbar

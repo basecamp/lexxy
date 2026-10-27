@@ -10,6 +10,8 @@ const global = new Configuration({
 const presets = new Configuration({
   default: {
     attachments: true,
+    codeBlocks: true,
+    inlineCode: true,
     markdown: true,
     multiLine: true,
     permittedAttachmentTypes: null,
