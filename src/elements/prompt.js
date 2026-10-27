@@ -502,13 +502,20 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   #moveSelectionDown() {
-    const nextIndex = this.#selectedIndex + 1
-    if (nextIndex < this.#listItemElements.length) this.#selectOption(this.#listItemElements[nextIndex], { scrollIntoView: true })
+    this.#moveSelectionBy(1)
   }
 
   #moveSelectionUp() {
-    const previousIndex = this.#selectedIndex - 1
-    if (previousIndex >= 0) this.#selectOption(this.#listItemElements[previousIndex], { scrollIntoView: true })
+    this.#moveSelectionBy(-1)
+  }
+
+  #moveSelectionBy(offset) {
+    const items = this.#listItemElements
+
+    if (items.length > 0) {
+      const index = (this.#selectedIndex + offset + items.length) % items.length
+      this.#selectOption(items[index], { scrollIntoView: true })
+    }
   }
 
   get #selectedIndex() {
