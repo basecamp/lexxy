@@ -4,9 +4,11 @@ import { HistoryExtension } from "@lexical/history"
 import LexxyExtension from "./lexxy_extension"
 import { isEditorFocused } from "../helpers/lexical_helper"
 
-// Payload: Record<nodeKey, { patch?, replace? }>
+// Payload: Record<nodeKey, { patch?, replace?, replaceInHistory? }>
 //   - patch: plain object, shallow-merged into the existing node's properties
 //   - replace: a LexicalNode instance that replaces the node
+//   - replaceInHistory: builds each history entry's replacement from the node
+//     that entry holds, so edits made between entries survive; defaults to replace
 export const REWRITE_HISTORY_COMMAND = createCommand("REWRITE_HISTORY_COMMAND")
 
 export class RewritableHistoryExtension extends LexxyExtension {
@@ -66,14 +68,14 @@ export class RewritableHistoryExtension extends LexxyExtension {
 
       const editorState = entry.editorState = safeCloneEditorState(entry.editorState)
 
-      for (const [ nodeKey, { patch, replace } ] of Object.entries(rewrites)) {
+      for (const [ nodeKey, { patch, replace, replaceInHistory } ] of Object.entries(rewrites)) {
         const node = editorState._nodeMap.get(nodeKey)
         if (!node) continue
 
         if (patch) {
           this.#patchNodeInEditorState(editorState, node, patch)
         } else if (replace) {
-          this.#replaceNodeInEditorState(editorState, node, replace)
+          this.#replaceNodeInEditorState(editorState, node, replaceInHistory?.(node) ?? replace)
         }
       }
     }

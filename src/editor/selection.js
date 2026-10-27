@@ -13,7 +13,7 @@ import { getNonce } from "../helpers/csp_helper"
 import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } from "../helpers/lexical_helper"
 import { $isLinkNode, LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
-import { $isActionTextAttachmentNode } from "../nodes/action_text_attachment_node"
+import { $isActionTextAttachmentNode, $isLinkableAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ListenerBin, handlingDefault, registerEventListener } from "../helpers/listener_helper"
 
 // The tag editor.focus() adds to its update. Lexical types it, but doesn't export it.
@@ -108,7 +108,7 @@ export default class Selection {
       isStrikethrough: selection.hasFormat("strikethrough"),
       isUnderline: selection.hasFormat("underline"),
       isHighlight: isSelectionHighlighted(selection),
-      isInLink: this.linkUrl !== null,
+      isInLink: this.isInLink,
       isInQuote: $isQuoteNode(topLevelElement),
       isInHeading: headingNode !== null,
       isInCode: this.#isInCode(selection, anchorNode),
@@ -119,13 +119,28 @@ export default class Selection {
     }
   }
 
+  get isInLink() {
+    return this.linkUrl !== null
+  }
+
   get linkUrl() {
-    return this.linkAtCursor?.getURL() ?? null
+    const { node } = this.selectedNodeWithOffset()
+
+    if ($isActionTextAttachmentNode(node)) {
+      return $isLinkableAttachmentNode(node) ? node.href : null
+    } else {
+      return this.linkAtCursor?.getURL() ?? null
+    }
   }
 
   get linkAtCursor() {
     const anchorNode = $getSelection()?.anchor?.getNode()
     return $getNearestNodeOfType(anchorNode, LinkNode) ?? this.#linkEndingAtCursor()
+  }
+
+  get hasLinkableAttachment() {
+    const selection = $getSelection()
+    return $isNodeSelection(selection) && selection.getNodes().some($isLinkableAttachmentNode)
   }
 
   nearestNodeOfType(nodeType) {

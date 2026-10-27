@@ -1,5 +1,6 @@
 import {
   $getSelection,
+  $isNodeSelection,
   $isRangeSelection,
   CAN_REDO_COMMAND,
   CAN_UNDO_COMMAND,
@@ -234,8 +235,17 @@ export class LexicalToolbarElement extends HTMLElement {
 
   #updateButtonStates() {
     const selection = $getSelection()
-    if (!$isRangeSelection(selection)) return
 
+    this.#setButtonDisabled("link", $isNodeSelection(selection) && !this.selection.hasLinkableAttachment)
+
+    if ($isNodeSelection(selection)) {
+      this.#setButtonPressed("link", this.selection.isInLink)
+    } else if ($isRangeSelection(selection)) {
+      this.#updateFormatButtonStates(selection)
+    }
+  }
+
+  #updateFormatButtonStates(selection) {
     const anchorNode = selection.anchor.getNode()
     if (!anchorNode.getParent()) { return }
 
