@@ -1,4 +1,4 @@
-import { expect, test } from "vitest"
+import { expect, test, vi } from "vitest"
 import { createElement } from "../helpers/dom_helper"
 import EditorConfiguration from "src/editor/configuration"
 import { configure } from "src/index"
@@ -35,4 +35,16 @@ test("overrides defaults", () => {
   const element = createElement("<lexxy-editor rich-text='false'></lexxy-editor>")
   const config = new EditorConfiguration(element)
   expect(config.get("richText")).toBe(false)
+})
+
+test("unknown preset falls back to defaults with a warning", () => {
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+  const element = createElement("<lexxy-editor preset='missing' rich-text='false'></lexxy-editor>")
+  const config = new EditorConfiguration(element)
+
+  expect(config.get("attachments")).toBe(true)
+  expect(config.get("richText")).toBe(false)
+  expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown Lexxy preset "missing"'))
+
+  warn.mockRestore()
 })

@@ -1,6 +1,7 @@
 import createDOMPurify from "dompurify"
 import { getCSSFromStyleObject, getStyleObjectFromCSS } from "@lexical/selection"
 import { URI_BEARING_ATTACHMENT_ATTRIBUTES, allowedUriRegexp, attachmentUriFilterHook } from "../helpers/sanitization_helper"
+import { DEFAULT_ALLOWED_STYLE_PROPERTIES, allowedStyleValue, buildStylePolicy, isSafeBuiltInStyleValue } from "./style_policy"
 
 // Lexxy's own DOMPurify instance, deliberately not the shared default export.
 //
@@ -99,16 +100,37 @@ const ALLOWED_HTML_ATTRIBUTES = [ "alt", "class", "contenteditable", "href", "sr
 // place while it loads; nothing else here does.
 const DEFAULT_TAG_ATTRIBUTES = { img: [ "width", "height" ] }
 
-const ALLOWED_STYLE_PROPERTIES = [ "color", "background-color" ]
+// Elements no sanitizer of ours admits, whatever an editor's extensions declare.
+// Each acts on the page as soon as it is inserted, or runs script: a <base> or a
+// <meta http-equiv="refresh"> takes effect even through insertAdjacentHTML, which
+// is how attachment content reaches the editor DOM. FORBID_TAGS wins over
+// ALLOWED_TAGS in DOMPurify, so declaring one in allowedElements has no effect.
+const FORBIDDEN_TAGS = [ "base", "link", "meta", "script", "style" ]
 
-function styleFilterHook(_currentNode, hookEvent) {
+// The key buildConfig stores an editor's extension style policy under. DOMPurify
+// ignores config keys it doesn't know, and hands the parsed config to every hook
+// as its third argument (a typed, documented part of the hook signature), so the
+// policy travels with each sanitize() call. That is what keeps it per editor: the
+// hook itself is shared by every editor on the page, the config is not. A call
+// without the key — any sanitize that didn't come from buildConfig — gets only the
+// built-in properties, so a missing policy fails closed.
+const EXTENSION_STYLE_POLICY = "LEXXY_EXTENSION_STYLE_POLICY"
+
+function styleFilterHook(_currentNode, hookEvent, config) {
   if (hookEvent.attrName === "style" && hookEvent.attrValue) {
-    const styles = { ...getStyleObjectFromCSS(hookEvent.attrValue) }
+    // Line breaks become spaces before parsing: Lexical runs a string across one
+    // and the browser doesn't, and the values serialized back must read the same
+    // to both. See config/style_policy.
+    const styles = { ...getStyleObjectFromCSS(hookEvent.attrValue.replace(/[\n\r\f]/g, " ")) }
+    const extensionStylePolicy = config?.[EXTENSION_STYLE_POLICY]
     const sanitizedStyles = { }
 
     for (const property in styles) {
-      if (ALLOWED_STYLE_PROPERTIES.includes(property)) {
-        sanitizedStyles[property] = styles[property]
+      if (DEFAULT_ALLOWED_STYLE_PROPERTIES.includes(property)) {
+        if (isSafeBuiltInStyleValue(styles[property])) sanitizedStyles[property] = styles[property]
+      } else {
+        const value = allowedStyleValue(extensionStylePolicy, property.toLowerCase(), styles[property])
+        if (value !== null) sanitizedStyles[property.toLowerCase()] = value
       }
     }
 
@@ -140,6 +162,34 @@ function stimulusAttributeFilterHook(_currentNode, hookEvent) {
 
 DOMPurify.addHook("uponSanitizeAttribute", stimulusAttributeFilterHook)
 
+// Attributes that run script or load markup whatever their value, so no extension
+// can allow them. An extension's allowedElements admits attributes by name through
+// ADD_ATTR, and DOMPurify honours that even for an event handler: declaring
+// `{ tag: "p", attributes: [ "onclick" ] }` would keep `onclick="…"` from stored
+// content. DOMPurify's URI check doesn't help, because a script body such as
+// `alert(1)` reads as a relative URL. `srcdoc` is a whole HTML document, scripts
+// included.
+//
+// `patchsrc` fetches remote markup into the page, and `for` outside a label or an
+// output links an element to a patch target. DOMPurify refuses both only under
+// SAFE_FOR_XML, which buildConfig turns off, so they are refused here instead.
+//
+// URL-bearing attributes (href, src, srcset, formaction, ping, …) are not on this
+// list: DOMPurify checks their values against its URI allowlist, so a value
+// starting with `javascript:` is refused on them.
+const FOR_ATTRIBUTE_TAGS = [ "label", "output" ]
+
+function scriptAttributeFilterHook(currentNode, hookEvent) {
+  const name = hookEvent.attrName
+
+  if (/^on/.test(name) || name === "srcdoc" || name === "patchsrc" ||
+      (name === "for" && !FOR_ATTRIBUTE_TAGS.includes(currentNode.nodeName.toLowerCase()))) {
+    hookEvent.keepAttr = false
+  }
+}
+
+DOMPurify.addHook("uponSanitizeAttribute", scriptAttributeFilterHook)
+
 DOMPurify.addHook("uponSanitizeElement", (node, data) => {
   if (data.tagName === "strong" || data.tagName === "em") {
     node.removeAttribute("class")
@@ -150,7 +200,8 @@ export { DOMPurify }
 
 // Called with no allowedElements for a sanitizer that has no allowlist to apply,
 // which is not the same thing as an empty one — see EditorSanitizer's fallback.
-export function buildConfig(allowedElements = null) {
+// allowedStyles are the extensions' style declarations; see config/style_policy.
+export function buildConfig(allowedElements = null, allowedStyles = []) {
   const config = {
     ADD_URI_SAFE_ATTR: [ "caption", "filename", ...URI_BEARING_ATTACHMENT_ATTRIBUTES ],
     SAFE_FOR_XML: false, // So that it does not strip attributes that contains serialized HTML (like content)
@@ -158,7 +209,11 @@ export function buildConfig(allowedElements = null) {
     // wire up arbitrary controllers/actions in the viewer's session. FORBID_ATTR wins over
     // ALLOWED_ATTR/ADD_ATTR/ALLOW_DATA_ATTR in DOMPurify, so this holds even though other
     // data-* attributes (data-language, data-trix-*, etc.) are otherwise allowed through.
-    FORBID_ATTR: [ "data-controller", "data-action" ]
+    FORBID_ATTR: [ "data-controller", "data-action" ],
+    // In the base config rather than the allowlist, so the fallback sanitizer gets
+    // it too: DOMPurify's default tag list includes <style>.
+    FORBID_TAGS: FORBIDDEN_TAGS,
+    [EXTENSION_STYLE_POLICY]: buildStylePolicy(allowedStyles)
   }
 
   // Left out rather than emptied when there is no allowlist, so DOMPurify's own

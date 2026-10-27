@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Runs the Playwright browser tests inside Playwright's Docker image, the one CI uses,
+# which ships every browser along with the system libraries it needs. Use it where a
+# browser won't launch natively, like WebKit on Arch Linux. Arguments go to `playwright test`:
+#
+#   bin/playwright-docker --project=webkit
+#   bin/playwright-docker --project=webkit test/browser/tests/tables
+#
+# It runs the host's node_modules inside a Linux container, so it is for Linux hosts.
+# The HTML report is written but never served from the container; open it on the host with
+# `npx playwright show-report test/browser/playwright-report`.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+# The image must match the installed Playwright, or it refuses to launch its browsers.
+version=$(node -p 'require("@playwright/test/package.json").version')
+
+tty=""
+if [ -t 1 ]; then tty="-t"; fi
+
+exec docker run --rm --init --ipc=host ${tty:+"$tty"} \
+  --user "$(id -u):$(id -g)" -e HOME=/tmp -e CI -e VITE_PORT -e PLAYWRIGHT_HTML_OPEN=never \
+  -v "$PWD:/work" -w /work \
+  "mcr.microsoft.com/playwright:v${version}-noble" \
+  npx playwright test --config test/browser/playwright.config.js "$@"
