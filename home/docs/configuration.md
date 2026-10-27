@@ -73,7 +73,9 @@ Editors support the following options, configurable using presets and element at
 - `markdown`: Pass `false` to disable Markdown support.
 - `multiLine`: Pass `false` to force single line editing.
 - `permittedAttachmentTypes`: Restrict the editor to a specific allowlist of attachment content types. Unset (the default) permits any content type. Example: `<lexxy-editor permitted-attachment-types="application/vnd.basecamp.mention application/vnd.basecamp.opengraph-embed"></lexxy-editor>`.
+- `remoteImages`: Pass `false` to drop images that aren't uploads, such as an `<img>` pasted from a web page, which would otherwise be hotlinked from its URL. An image counts as an upload when it carries an `sgid`. Remote images are dropped on paste and when the editor loads content, so saving removes any already in the saved content. Image files and `data:` URI images pasted into the editor still upload. This is an editor behavior, not a security control: enforce the same rule on the server if you rely on it. Example: `<lexxy-editor remote-images="false"></lexxy-editor>`.
 - `richText`: Pass `false` to disable rich text editing.
+- `uploadsBusyMessage`: The form validation message shown while attachments are still uploading (the editor reports itself invalid until every upload finishes). Defaults to `"Please wait for all files to upload"`. Override it to localize the message, e.g. `<lexxy-editor uploads-busy-message="Espera a que se suban todos los archivos"></lexxy-editor>`.
 - `headings`: Pass an array of heading tags to configure which heading levels are available in the toolbar dropdown. Defaults to `["h2", "h3", "h4"]`. Pass an empty array to remove all heading options; the formatting dropdown still offers "Normal" and "Clear formatting".
 
   ```js

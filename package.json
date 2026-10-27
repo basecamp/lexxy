@@ -7,6 +7,7 @@
   "exports": {
     ".": "./dist/lexxy.esm.js",
     "./helpers": "./dist/lexxy_helpers.esm.js",
+    "./dragon": "./dist/lexxy_dragon.esm.js",
     "./stylesheets/*": "./dist/stylesheets/*"
   },
   "files": [
@@ -50,6 +51,7 @@
     "test:browser:chromium": "npx playwright test --config test/browser/playwright.config.js --project=chromium",
     "test:browser:firefox": "npx playwright test --config test/browser/playwright.config.js --project=firefox",
     "test:browser:webkit": "npx playwright test --config test/browser/playwright.config.js --project=webkit",
+    "test:browser:docker": "bin/playwright-docker",
     "test:browser:headed": "npx playwright test --config test/browser/playwright.config.js --headed",
     "test:browser:debug": "npx playwright test --config test/browser/playwright.config.js --debug",
     "prepare": "rollup -c rollup.config.npm.mjs",

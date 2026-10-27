@@ -294,6 +294,10 @@ export class LexicalPromptElement extends HTMLElement {
 
   #clearSelection() {
     this.#clearListItemSelection()
+    this.#clearEditorAssociation()
+  }
+
+  #clearEditorAssociation() {
     this.#editorContentElement.removeAttribute("aria-controls")
     this.#editorContentElement.removeAttribute("aria-activedescendant")
     this.#editorContentElement.removeAttribute("aria-haspopup")
@@ -367,11 +371,18 @@ export class LexicalPromptElement extends HTMLElement {
 
   // The popover is appended to the <lexxy-editor> subtree, so Turbo serializes it
   // into the page cache. Removing it before caching prevents an orphaned, unmanaged
-  // popover from being restored on history back/forward.
+  // popover from being restored on history back/forward. Turbo also caches without
+  // navigating (on a same-page anchor), so the prompt must stay armed afterwards.
   #removePopoverBeforeTurboCaches() {
     this.#globalListeners.track(
-      registerEventListener(document, "turbo:before-cache", () => this.#removePopover())
+      registerEventListener(document, "turbo:before-cache", this.#closeBeforeTurboCaches)
     )
+  }
+
+  #closeBeforeTurboCaches = () => {
+    this.#clearEditorAssociation()
+    this.#removePopover()
+    this.#addTriggerListener()
   }
 
   #removePopover() {
@@ -593,7 +604,7 @@ export class LexicalPromptElement extends HTMLElement {
     popoverContainer.style.position = "absolute"
     popoverContainer.setAttribute("nonce", getNonce())
     popoverContainer.append(...listItems)
-    this.#globalListeners.track(registerEventListener(popoverContainer, "click", this.#handlePopoverClick))
+    popoverContainer.addEventListener("click", this.#handlePopoverClick)
     this.#editorElement.appendChild(popoverContainer)
     return popoverContainer
   }

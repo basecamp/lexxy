@@ -121,6 +121,7 @@ export class HeadingDropdown extends HTMLElement {
 
         event.preventDefault()
         this.#editor.dispatchCommand(HeadingDropdown.commandFor(index), button.dataset.heading)
+        this.#toolbar.closeDropdowns()
         this.#editor.focus()
       }))
     })

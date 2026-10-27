@@ -81,6 +81,24 @@ module EditorHelper
     assert_css "lexxy-toolbar[connected]" if has_css?("lexxy-toolbar")
   end
 
+  # A Turbo page refresh morphs the editor in place: the morph strips its
+  # connected attribute, and the editor reconnects a frame later with a new
+  # content element. Until the refresh lands, the old editor still matches
+  # wait_for_editor, so keys typed then go to the editor about to be replaced.
+  # Wait for the reconnected editor to initialize instead.
+  def wait_for_editor_to_reinitialize
+    page.execute_script <<~JS
+      document.addEventListener("lexxy:initialize", () => {
+        document.documentElement.toggleAttribute("data-lexxy-reinitialized", true)
+      }, { once: true })
+    JS
+
+    yield
+
+    assert_css "html[data-lexxy-reinitialized]", visible: :all
+    wait_for_editor
+  end
+
   def click_table_handler_button(aria_label)
     find("lexxy-table-tools button[aria-label='#{aria_label}']").click
   end

@@ -5,6 +5,7 @@
 
 :where(.lexxy-content) {
   color: var(--lexxy-color-ink);
+  font-size: var(--lexxy-text-size);
 
   h1, h2, h3, h4, h5, h6 {
     display: block;
@@ -18,12 +19,12 @@
     }
   }
 
-  h1 { font-size: 2rem; }
-  h2 { font-size: 1.5rem; }
-  h3 { font-size: 1.25rem; }
-  h4 { font-size: 1rem; }
-  h5 { font-size: 0.875rem; }
-  h6 { font-size: 0.75rem; }
+  h1 { font-size: 2em; }
+  h2 { font-size: 1.5em; }
+  h3 { font-size: 1.25em; }
+  h4 { font-size: 1em; }
+  h5 { font-size: 0.875em; }
+  h6 { font-size: 0.75em; }
 
   p,
   ul,
@@ -76,6 +77,12 @@
     font-style: italic;
     margin: var(--lexxy-content-margin) 0;
     padding: 0.5lh 2ch;
+
+    em,
+    i,
+    :where(.lexxy-content__italic) {
+      font-style: normal;
+    }
 
     p:last-child {
       margin-block-end: 0;
@@ -484,6 +491,17 @@
     padding: 0;
     position: relative;
     white-space: normal;
+
+    /* Gecko drops the whole selection when a drag crosses a contenteditable="false"
+       island unless it is selectable as a single unit. Editor-only: the rendered
+       view has no contenteditable and must keep normal text selection. */
+    lexxy-editor & {
+      -webkit-user-select: all;
+
+      @supports (user-select: all) {
+        user-select: all;
+      }
+    }
 
     img {
       block-size: var(--lexxy-attachment-image-size);

@@ -1,7 +1,7 @@
 import { dispatch } from "../../helpers/html_helper"
+import { getHighlightStyles } from "../../helpers/format_helper"
 import { $getNodeByKey, $getSelection, $isElementNode, $isRangeSelection, $isTextNode } from "lexical"
-import { $isLinkNode, LinkNode } from "@lexical/link"
-import { $getNearestNodeOfType } from "@lexical/utils"
+import { $isLinkNode } from "@lexical/link"
 
 export class NativeAdapter {
   frozenLinkKey = null
@@ -11,13 +11,8 @@ export class NativeAdapter {
     this.editorContentElement = editorElement.editorContentElement
   }
 
-  dispatchAttributesChange(attributes, linkHref, highlight, headingTag) {
-    dispatch(this.editorElement, "lexxy:attributes-change", {
-      attributes,
-      link: linkHref ? { href: linkHref } : null,
-      highlight,
-      headingTag
-    })
+  dispatchAttributesChange(editorState) {
+    dispatch(this.editorElement, "lexxy:attributes-change", editorState.read(() => this.#attributesChangeDetail()))
   }
 
   dispatchEditorInitialized(detail) {
@@ -27,13 +22,9 @@ export class NativeAdapter {
   freeze() {
     let frozenLinkKey = null
     this.editorElement.editor?.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection)) return
+      if (!$isRangeSelection($getSelection())) return
 
-      const linkNode = $getNearestNodeOfType(selection.anchor.getNode(), LinkNode)
-      if (linkNode) {
-        frozenLinkKey = linkNode.getKey()
-      }
+      frozenLinkKey = this.editorElement.selection.linkAtCursor?.getKey() ?? null
     })
 
     this.frozenLinkKey = frozenLinkKey
@@ -73,6 +64,39 @@ export class NativeAdapter {
 
     this.frozenLinkKey = null
     return true
+  }
+
+  #attributesChangeDetail() {
+    const { selection } = this.editorElement
+    const format = selection.getFormat()
+    const linkUrl = selection.linkUrl
+
+    return {
+      attributes: this.#attributesFor(format),
+      link: linkUrl ? { href: linkUrl } : null,
+      highlight: format.isHighlight ? getHighlightStyles($getSelection()) : null,
+      headingTag: format.headingTag ?? null
+    }
+  }
+
+  // getFormat() is empty without a range selection, which leaves every format disabled.
+  #attributesFor(format) {
+    const enabled = Object.keys(format).length > 0
+
+    return {
+      bold: { active: Boolean(format.isBold), enabled },
+      italic: { active: Boolean(format.isItalic), enabled },
+      strikethrough: { active: Boolean(format.isStrikethrough), enabled },
+      code: { active: Boolean(format.isInCode), enabled },
+      highlight: { active: Boolean(format.isHighlight), enabled },
+      link: { active: Boolean(format.isInLink), enabled },
+      quote: { active: Boolean(format.isInQuote), enabled },
+      heading: { active: Boolean(format.isInHeading), enabled },
+      "unordered-list": { active: format.listType === "bullet", enabled },
+      "ordered-list": { active: format.listType === "number", enabled },
+      undo: { active: false, enabled: this.editorElement.canUndo },
+      redo: { active: false, enabled: this.editorElement.canRedo }
+    }
   }
 
   #findFirstTextDescendant(nodes) {

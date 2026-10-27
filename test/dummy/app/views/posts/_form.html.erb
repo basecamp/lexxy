@@ -19,6 +19,20 @@
   </script>
 <% end %>
 
+<% if params.key?("allow_text_align") %>
+  <script type="module">
+    import * as Lexxy from "lexxy"
+
+    class TextAlignStylesExtension extends Lexxy.Extension {
+      get allowedStyles() {
+        return [ { property: "text-align", values: [ "left", "center", "right", "justify" ] } ]
+      }
+    }
+
+    Lexxy.configure({ global: { extensions: [ TextAlignStylesExtension ] }})
+  </script>
+<% end %>
+
 <% if params.key?("add-block-spacing") %>
   <script type="module">
     document.addEventListener("lexxy:insert-markdown", (event) => {
