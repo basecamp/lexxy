@@ -17,6 +17,7 @@ const presets = new Configuration({
     permittedAttachmentTypes: null,
     remoteImages: true,
     richText: true,
+    tables: true,
     uploadsBusyMessage: "Please wait for all files to upload",
     toolbar: {
       upload: "both"

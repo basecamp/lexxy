@@ -327,6 +327,10 @@ export class LexicalEditorElement extends HTMLElement {
     return this.config.get("richText")
   }
 
+  get supportsTables() {
+    return this.supportsRichText && this.config.get("tables")
+  }
+
   registerAdapter(adapter) {
     this.adapter = adapter
 
@@ -711,7 +715,7 @@ export class LexicalEditorElement extends HTMLElement {
         registerRichText(this.editor),
         registerList(this.editor)
       )
-      this.#registerTableComponents()
+      if (this.supportsTables) this.#registerTableComponents()
       if (this.supportsCodeBlocks) this.#registerCodeLanguagePicker()
       if (this.supportsAttachments) {
         this.#registerAttachmentToolbar()
@@ -896,6 +900,7 @@ export class LexicalEditorElement extends HTMLElement {
     const toolbar = createElement("lexxy-toolbar")
     toolbar.innerHTML = LexicalToolbar.defaultTemplate
     toolbar.setAttribute("data-attachments", this.supportsAttachments) // Drives toolbar CSS styles
+    toolbar.setAttribute("data-tables", this.supportsTables)
     toolbar.setAttribute("data-code-blocks", this.supportsCodeBlocks)
     toolbar.setAttribute("data-inline-code", this.supportsInlineCode)
     toolbar.configure(this.config.get("toolbar"))
