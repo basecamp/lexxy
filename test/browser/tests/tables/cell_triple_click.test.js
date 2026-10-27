@@ -87,12 +87,15 @@ test.describe("Tables: triple-click inside a cell", () => {
     await editor.setValue(tableWith([ "<p>First cell</p>", gallery ]))
     await editor.flush()
 
-    await editor.content.locator("td img").first().click({ clickCount: 3 })
+    // Scoped to attachment images: since Lexical 0.52 a cell ending in a block
+    // decorator also holds invisible <img data-lexical-decorator-boundary> anchors
+    const images = editor.content.locator("td figure.attachment img")
+    await images.first().click({ clickCount: 3 })
     await editor.flush()
     await page.keyboard.press("Delete")
     await editor.flush()
 
-    await expect(editor.content.locator("td img")).toHaveCount(1)
+    await expect(images).toHaveCount(1)
   })
 
   test("keeps a cell selection made by triple-click-dragging across a nested table", async ({ page, editor }) => {

@@ -28,6 +28,10 @@ export default class LexxyExtension {
     return []
   }
 
+  get allowedStyles() {
+    return []
+  }
+
   defineExtension(...args) {
     return defineExtension(...args)
   }

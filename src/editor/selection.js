@@ -1,20 +1,24 @@
 import {
-  $addUpdateTag, $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $isDecoratorNode, $isElementNode,
+  $addUpdateTag, $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $hasUpdateTag, $isDecoratorNode, $isElementNode,
   $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_LOW,
-  DELETE_CHARACTER_COMMAND, HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND,
+  DELETE_CHARACTER_COMMAND, HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_BACKSPACE_COMMAND,
   SELECTION_CHANGE_COMMAND, SKIP_DOM_SELECTION_TAG, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
-import { $getListDepth, ListItemNode, ListNode } from "@lexical/list"
+import { $getListDepth, $isListItemNode, ListItemNode, ListNode } from "@lexical/list"
 import { $getTableCellNodeFromLexicalNode, TableCellNode } from "@lexical/table"
 import { CodeNode } from "@lexical/code"
 import { isSelectionHighlighted } from "../helpers/format_helper"
 import { getNonce } from "../helpers/csp_helper"
 import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } from "../helpers/lexical_helper"
-import { LinkNode } from "@lexical/link"
+import { $isLinkNode, LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode, $isLinkableAttachmentNode } from "../nodes/action_text_attachment_node"
 import { ListenerBin, handlingDefault, registerEventListener } from "../helpers/listener_helper"
+
+// The tag editor.focus() adds to its update. Lexical types it, but doesn't export it.
+const FOCUS_TAG = "focus"
+
 
 export default class Selection {
   #listeners = new ListenerBin()
@@ -125,8 +129,13 @@ export default class Selection {
     if ($isActionTextAttachmentNode(node)) {
       return $isLinkableAttachmentNode(node) ? node.href : null
     } else {
-      return $getNearestNodeOfType(node, LinkNode)?.getURL() ?? null
+      return this.linkAtCursor?.getURL() ?? null
     }
+  }
+
+  get linkAtCursor() {
+    const anchorNode = $getSelection()?.anchor?.getNode()
+    return $getNearestNodeOfType(anchorNode, LinkNode) ?? this.#linkEndingAtCursor()
   }
 
   get hasLinkableAttachment() {
@@ -137,6 +146,10 @@ export default class Selection {
   nearestNodeOfType(nodeType) {
     const anchorNode = $getSelection()?.anchor?.getNode()
     return $getNearestNodeOfType(anchorNode, nodeType)
+  }
+
+  placeCursorInsideAdjacentLink() {
+    this.#linkEndingAtCursor()?.selectEnd()
   }
 
   get hasSelectedWordsInSingleLine() {
@@ -292,6 +305,21 @@ export default class Selection {
     this.#listeners.dispose()
   }
 
+  // Lexical resolves a caret sitting at a link's trailing edge to the start of the
+  // node that follows it, so a cursor that looks like it's on the link lands outside.
+  #linkEndingAtCursor() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null
+
+    const { anchor } = selection
+    if (anchor.type !== "text" || anchor.offset !== 0) return null
+
+    const previousSibling = anchor.getNode().getPreviousSibling()
+    if (!$isLinkNode(previousSibling)) return null
+
+    return previousSibling
+  }
+
   // When all inline code text is deleted, Lexical's selection retains the stale
   // code format flag. Verify the flag is backed by actual code-formatted content:
   // a code block ancestor or a text node that carries the code format.
@@ -362,10 +390,12 @@ export default class Selection {
       this.editor.registerCommand(KEY_ARROW_DOWN_COMMAND, handlingDefault(this.#selectNextTopLevelNode.bind(this)), COMMAND_PRIORITY_LOW),
 
       this.editor.registerCommand(DELETE_CHARACTER_COMMAND, this.#selectDecoratorNodeBeforeDeletion.bind(this), COMMAND_PRIORITY_LOW),
+      this.editor.registerCommand(KEY_BACKSPACE_COMMAND, this.#handleBackspaceAtListItemStart.bind(this), COMMAND_PRIORITY_LOW),
 
-      this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
-        this.#syncSelectedClasses()
-      }, COMMAND_PRIORITY_LOW),
+      // DOM work: runs after reconciliation, so newly created nodes have elements
+      this.editor.registerUpdateListener(({ editorState }) => {
+        editorState.read(() => this.#syncSelectedClasses())
+      }),
 
       this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
         this.#preserveFocusOutsideEditor()
@@ -376,8 +406,12 @@ export default class Selection {
 
   // Selection changes can arrive after Tab moves focus to a toolbar or another field.
   // Reconciling that stale selection would pull focus back into the editor.
+  //
+  // Since Lexical 0.52 the notification runs inside the pending update itself,
+  // so it also sees updates that ask to focus the editor (editor.focus(), as
+  // toolbar commands do). Those must still reconcile the DOM selection.
   #preserveFocusOutsideEditor() {
-    if (this.#isAnotherElementFocused) {
+    if (this.#isAnotherElementFocused && !$hasUpdateTag(FOCUS_TAG)) {
       $addUpdateTag(SKIP_DOM_SELECTION_TAG)
     }
   }
@@ -618,6 +652,38 @@ export default class Selection {
     } else {
       return false
     }
+  }
+
+  // Since Lexical 0.48, the list extension handles Backspace at the start of a
+  // list item itself, before DELETE_CHARACTER_COMMAND is dispatched: it turns the
+  // item into a paragraph and splits the list around it. Keep Lexxy's behavior:
+  // nested items outdent, empty items are removed as below, and a top-level item
+  // that follows another one merges into it, as plain deletion does.
+  #handleBackspaceAtListItemStart(event) {
+    const listItem = this.#listItemWithCaretAtStart()
+    if (!listItem || listItem.getIndent() > 0) return false
+
+    if (this.#removeEmptyListItem()) {
+      event?.preventDefault()
+      return true
+    } else if (listItem.getPreviousSibling()) {
+      event?.preventDefault()
+      return this.editor.dispatchCommand(DELETE_CHARACTER_COMMAND, true)
+    } else {
+      return false
+    }
+  }
+
+  #listItemWithCaretAtStart() {
+    const selection = $getSelection()
+    if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.offset !== 0) return null
+
+    let node = selection.anchor.getNode()
+    while (node && !$isListItemNode(node)) {
+      if (node.getPreviousSibling()) return null
+      node = node.getParent()
+    }
+    return node
   }
 
   #selectDecoratorNodeBeforeDeletion(backwards) {

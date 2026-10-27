@@ -14,12 +14,14 @@
     article figure { padding: 0px; }
     article figcaption { padding: 0px; }
     article span { font-style: normal; }
+    article em { font-style: italic; }
   </style>
 </head>
 <body>
   <article>
     <div class="lexxy-content" id="overridden">
       <p><span class="lexxy-content__italic" id="overridden-italic">Italic</span></p>
+      <blockquote><p>Quoted <em class="lexxy-content__italic" id="overridden-quoted-italic">emphasis</em></p></blockquote>
 
       <figure class="attachment attachment--preview attachment--jpg" id="overridden-figure">
         <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="" id="overridden-image">
@@ -30,6 +32,7 @@
 
   <div class="lexxy-content" id="untouched">
     <p><span class="lexxy-content__italic" id="untouched-italic">Italic</span></p>
+    <blockquote><p>Quoted <em class="lexxy-content__italic" id="untouched-quoted-italic">emphasis</em></p></blockquote>
 
     <figure class="attachment attachment--preview attachment--jpg" id="untouched-figure">
       <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="" id="untouched-image">

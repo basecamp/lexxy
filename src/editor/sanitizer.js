@@ -55,8 +55,8 @@ export default class EditorSanitizer {
     return this.#fallback ||= new EditorSanitizer()
   }
 
-  static register(editor, allowedElements = []) {
-    const sanitizer = new EditorSanitizer(this.#allowedElementsFor(editor, allowedElements))
+  static register(editor, allowedElements = [], allowedStyles = []) {
+    const sanitizer = new EditorSanitizer(this.#allowedElementsFor(editor, allowedElements), allowedStyles)
     this.#instances.set(editor, sanitizer)
 
     return sanitizer
@@ -80,8 +80,8 @@ export default class EditorSanitizer {
 
   #config
 
-  constructor(allowedElements = null) {
-    this.#config = buildConfig(allowedElements)
+  constructor(allowedElements = null, allowedStyles = []) {
+    this.#config = buildConfig(allowedElements, allowedStyles)
   }
 
   // safeForXml opts into DOMPurify's mXSS-safe mode, for a caller re-inflating

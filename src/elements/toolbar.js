@@ -88,8 +88,8 @@ export class LexicalToolbarElement extends HTMLElement {
     if (this.#refreshToolbarAF != null) return
 
     this.#refreshToolbarAF = requestAnimationFrame(() => {
-      this.#refreshOverflow()
       this.#refreshToolbarAF = null
+      this.#refreshOverflow()
     })
   }
 
@@ -145,6 +145,7 @@ export class LexicalToolbarElement extends HTMLElement {
       this.editor.dispatchCommand(command, payload)
     }, { tag: shouldKeepToolbarFocus ? SKIP_DOM_SELECTION_TAG : undefined })
 
+    if (this.#belongsToDropdown(button)) this.closeDropdowns()
     if (!shouldKeepToolbarFocus) this.editor.focus()
   }
 
@@ -208,12 +209,21 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #monitorSelectionChanges() {
-    this.#listeners.track(this.editor.registerUpdateListener(({ editorState }) => {
-      editorState.read(() => {
-        this.#updateButtonStates()
-        this.closeDropdowns()
-      })
+    this.#listeners.track(this.editor.registerUpdateListener(({ editorState, prevEditorState }) => {
+      editorState.read(() => this.#updateButtonStates())
+      if (this.#selectionChanged(editorState, prevEditorState)) this.closeDropdowns()
     }))
+  }
+
+  #selectionChanged(editorState, prevEditorState) {
+    const selection = editorState.read($getSelection)
+    const previousSelection = prevEditorState.read($getSelection)
+
+    if (selection === null || previousSelection === null) {
+      return selection !== previousSelection
+    } else {
+      return !selection.is(previousSelection)
+    }
   }
 
   #monitorHistoryChanges() {
@@ -281,6 +291,12 @@ export class LexicalToolbarElement extends HTMLElement {
   }
 
   #refreshOverflow() {
+    // Toolbar markup supplied by the page (an external toolbar, or a
+    // <lexxy-toolbar> inside the editor) is used as-is, so it may lack the
+    // overflow menu or predate its current markup. Without one there is
+    // nowhere to overflow buttons into.
+    if (!this.#overflowMenuDropdown) return
+
     this.#hideOverflowMenuButton()
     this.#resetToolbarOverflow()
     this.#reindexToolbarItems()

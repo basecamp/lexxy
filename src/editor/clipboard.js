@@ -4,10 +4,11 @@ import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
 import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $onUpdate, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
-import { $insertDataTransferForRichText } from "@lexical/clipboard"
 import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
 import { ListenerBin } from "../helpers/listener_helper"
 import NodeInserter from "./contents/node_inserter"
+import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
+import NestedBlockNodeInserter from "./contents/node_inserter/nested_block_node_inserter"
 
 export default class Clipboard {
   #listeners = new ListenerBin()
@@ -45,6 +46,12 @@ export default class Clipboard {
       return true
     }
 
+    if (this.#isUnregisteredLexicalDataWithHtml(clipboardData)) {
+      this.contents.insertHtml(clipboardData.getData("text/html"), { tag: PASTE_TAG })
+      event.preventDefault()
+      return true
+    }
+
     const handled = this.#handlePastedFiles(clipboardData)
     if (handled) event.preventDefault()
     return handled
@@ -62,9 +69,18 @@ export default class Clipboard {
   }
 
   #handleParsedClipboardNodes({ nodes, selection }) {
+    // Lexical inserts this same array when no handler claims the command, and nodes it rebuilt
+    // from another editor's clipboard JSON haven't been through the import filter yet.
+    nodes.splice(0, nodes.length, ...filterDisallowedAttachmentNodes(nodes, this.editorElement))
+
     const url = $bareUrlFromSingleLink(nodes)
     if (url && $isRangeSelection(selection)) {
       this.#insertSingleLinkAt(selection, url)
+      return true
+    }
+
+    if (NestedBlockNodeInserter.handles(selection)) {
+      new NestedBlockNodeInserter(selection).insertNodes(nodes)
       return true
     }
   }
@@ -108,6 +124,27 @@ export default class Clipboard {
     return links.length === 1 && links[0].getAttribute("href") === url
   }
 
+  // Lexical data copied from an editor with more features than this one, such as
+  // a table copied into an editor with tables disabled, has nodes this editor
+  // doesn't register. Lexical would log an error before falling back to the HTML,
+  // so paste the HTML straight away.
+  #isUnregisteredLexicalDataWithHtml(clipboardData) {
+    return clipboardData.getData("text/html") && this.#hasUnregisteredLexicalNodes(clipboardData)
+  }
+
+  #hasUnregisteredLexicalNodes(clipboardData) {
+    try {
+      const { nodes } = JSON.parse(clipboardData.getData("application/x-lexical-editor"))
+      return nodes.some(node => !this.#isRegisteredSerializedNode(node))
+    } catch {
+      return false
+    }
+  }
+
+  #isRegisteredSerializedNode({ type, children = [] }) {
+    return this.editor._nodes.has(type) && children.every(child => this.#isRegisteredSerializedNode(child))
+  }
+
   #isPastingIntoCodeBlock() {
     let result = false
 
@@ -143,12 +180,12 @@ export default class Clipboard {
     const item = this.#plainTextOrURLItem(clipboardData)
     item.getAsString((text) => {
       const url = text.trim()
-      if (isAutolinkableURL(url)) {
+      if (this.editorElement.supportsRichText && isAutolinkableURL(url)) {
         this.#pasteURL(url)
       } else if (this.editorElement.supportsMarkdown) {
         this.#pasteMarkdown(text)
       } else {
-        this.#pasteRichText(clipboardData)
+        this.contents.insertText(text, { tag: PASTE_TAG })
       }
     })
   }
@@ -195,10 +232,12 @@ export default class Clipboard {
   }
 
   #pasteMarkdown(text) {
+    if (!text) return
+
     const html = parsePastedMarkdown(text)
     const doc = parseHtml(html)
 
-    if (this.#isPlainTextWithoutMarkdown(doc)) {
+    if (this.#isPlainTextWithoutMarkdown(doc) || this.#renderedNothing(doc)) {
       this.contents.insertText(text, { tag: PASTE_TAG })
     } else {
       const detail = Object.freeze({
@@ -226,11 +265,11 @@ export default class Clipboard {
       && Array.from(paragraph.childNodes).every((node) => node.nodeType === Node.TEXT_NODE || node.nodeName === "BR")
   }
 
-  #pasteRichText(clipboardData) {
-    this.editor.update(() => {
-      const selection = $getSelection()
-      $insertDataTransferForRichText(clipboardData, selection, this.editor)
-    }, { tag: PASTE_TAG })
+  // Markdown constructs that carry no output of their own, such as footnote and
+  // link reference definitions or HTML comments, leave marked with an empty
+  // document. Inserting that discards the paste, so keep the raw text instead.
+  #renderedNothing(doc) {
+    return doc.body.children.length === 0 && doc.body.textContent.trim() === ""
   }
 
   #handlePastedFiles(clipboardData) {

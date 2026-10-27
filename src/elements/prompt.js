@@ -211,8 +211,11 @@ export class LexicalPromptElement extends HTMLElement {
 
   async #showPopover() {
     const showId = ++this.showPopoverId
-    this.popoverElement ??= await this.#buildPopover()
-    if (this.showPopoverId !== showId) return
+    if (!this.popoverElement) {
+      const listItems = await this.source.buildListItems()
+      if (this.showPopoverId !== showId) return
+      this.popoverElement = this.#buildPopover(listItems)
+    }
 
     this.#resetPopoverPosition()
     await this.#filterOptions()
@@ -291,6 +294,10 @@ export class LexicalPromptElement extends HTMLElement {
 
   #clearSelection() {
     this.#clearListItemSelection()
+    this.#clearEditorAssociation()
+  }
+
+  #clearEditorAssociation() {
     this.#editorContentElement.removeAttribute("aria-controls")
     this.#editorContentElement.removeAttribute("aria-activedescendant")
     this.#editorContentElement.removeAttribute("aria-haspopup")
@@ -364,14 +371,22 @@ export class LexicalPromptElement extends HTMLElement {
 
   // The popover is appended to the <lexxy-editor> subtree, so Turbo serializes it
   // into the page cache. Removing it before caching prevents an orphaned, unmanaged
-  // popover from being restored on history back/forward.
+  // popover from being restored on history back/forward. Turbo also caches without
+  // navigating (on a same-page anchor), so the prompt must stay armed afterwards.
   #removePopoverBeforeTurboCaches() {
     this.#globalListeners.track(
-      registerEventListener(document, "turbo:before-cache", () => this.#removePopover())
+      registerEventListener(document, "turbo:before-cache", this.#closeBeforeTurboCaches)
     )
   }
 
+  #closeBeforeTurboCaches = () => {
+    this.#clearEditorAssociation()
+    this.#removePopover()
+    this.#addTriggerListener()
+  }
+
   #removePopover() {
+    this.showPopoverId++
     this.#popoverListeners.dispose()
     this.popoverElement?.remove()
     this.popoverElement = null
@@ -383,8 +398,12 @@ export class LexicalPromptElement extends HTMLElement {
       return
     }
 
+    if (!this.popoverElement) return
+
+    const showId = this.showPopoverId
     if (this.#editorContents.containsTextBackUntil(this.trigger)) {
       await this.#showFilteredOptions()
+      if (this.showPopoverId !== showId) return
 
       // Re-check after async operation — the trigger may have been consumed
       // (e.g. markdown heading shortcut converted "# " to h1 during the fetch)
@@ -394,6 +413,7 @@ export class LexicalPromptElement extends HTMLElement {
       }
 
       await nextFrame()
+      if (this.showPopoverId !== showId) return
       this.#positionPopover()
     } else {
       this.#hidePopover()
@@ -482,13 +502,20 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   #moveSelectionDown() {
-    const nextIndex = this.#selectedIndex + 1
-    if (nextIndex < this.#listItemElements.length) this.#selectOption(this.#listItemElements[nextIndex], { scrollIntoView: true })
+    this.#moveSelectionBy(1)
   }
 
   #moveSelectionUp() {
-    const previousIndex = this.#selectedIndex - 1
-    if (previousIndex >= 0) this.#selectOption(this.#listItemElements[previousIndex], { scrollIntoView: true })
+    this.#moveSelectionBy(-1)
+  }
+
+  #moveSelectionBy(offset) {
+    const items = this.#listItemElements
+
+    if (items.length > 0) {
+      const index = (this.#selectedIndex + offset + items.length) % items.length
+      this.#selectOption(items[index], { scrollIntoView: true })
+    }
   }
 
   get #selectedIndex() {
@@ -578,13 +605,13 @@ export class LexicalPromptElement extends HTMLElement {
     return this.#editorElement.editorContentElement
   }
 
-  async #buildPopover() {
+  #buildPopover(listItems) {
     const popoverContainer = createElement("ul", { role: "listbox", id: generateDomId("prompt-popover") }) // Avoiding [popover] due to not being able to position at an arbitrary X, Y position.
     popoverContainer.classList.add("lexxy-prompt-menu")
     popoverContainer.style.position = "absolute"
     popoverContainer.setAttribute("nonce", getNonce())
-    popoverContainer.append(...await this.source.buildListItems())
-    this.#globalListeners.track(registerEventListener(popoverContainer, "click", this.#handlePopoverClick))
+    popoverContainer.append(...listItems)
+    popoverContainer.addEventListener("click", this.#handlePopoverClick)
     this.#editorElement.appendChild(popoverContainer)
     return popoverContainer
   }

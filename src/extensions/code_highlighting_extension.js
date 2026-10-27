@@ -1,5 +1,5 @@
 import { defineExtension } from "lexical"
-import { PrismTokenizer, registerCodeHighlighting } from "@lexical/code"
+import { PrismTokenizer, registerCodeHighlighting } from "@lexical/code-prism"
 import { $applyHighlightRangesToTokens, $takeHighlightRanges } from "./highlight_extension"
 import { $applyLinkRangesToTokens, $extractLinkRangesFromCodeNode } from "../helpers/code_link_helper"
 import LexxyExtension from "./lexxy_extension"

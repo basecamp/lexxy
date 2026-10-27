@@ -104,6 +104,8 @@ export class CommandDispatcher {
 
   dispatchLink(url) {
     this.editor.update(() => {
+      this.selection.placeCursorInsideAdjacentLink()
+
       const selection = $getSelection()
 
       if ($isNodeSelection(selection)) {
@@ -116,6 +118,8 @@ export class CommandDispatcher {
 
   dispatchUnlink() {
     this.editor.update(() => {
+      this.selection.placeCursorInsideAdjacentLink()
+
       // Let adapters signal whether unlink should target a frozen link key.
       if (this.editorElement.adapter.unlinkFrozenNode?.()) {
         return
@@ -162,10 +166,20 @@ export class CommandDispatcher {
   }
 
   dispatchInsertCodeBlock() {
-    if (this.selection.hasSelectedWordsInSingleLine) {
+    if (this.#shouldToggleInlineCode()) {
       this.#toggleInlineCode()
-    } else {
+    } else if (this.editorElement.supportsCodeBlocks) {
       this.contents.toggleCodeBlock()
+    }
+  }
+
+  #shouldToggleInlineCode() {
+    if (!this.editorElement.supportsInlineCode) {
+      return false
+    } else if (!this.editorElement.supportsCodeBlocks) {
+      return true
+    } else {
+      return this.selection.hasSelectedWordsInSingleLine
     }
   }
 

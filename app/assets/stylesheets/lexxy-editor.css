@@ -457,6 +457,14 @@
     display: none;
   }
 
+  &[data-tables="false"] button[name="table"] {
+    display: none;
+  }
+
+  &[data-code-blocks="false"][data-inline-code="false"] button[name="code"] {
+    display: none;
+  }
+
   &[data-upload="file"] button[name="image"] {
     display: none;
   }
@@ -1105,6 +1113,11 @@
   overflow: auto;
   padding: var(--lexxy-prompt-padding);
   position: absolute;
+  scroll-padding-block: calc(var(--lexxy-prompt-avatar-size) + var(--lexxy-prompt-padding) * 3);
+  /* eslint-disable-next-line css/use-baseline */
+  scrollbar-color: var(--lexxy-color-ink-light) transparent;
+  /* eslint-disable-next-line css/use-baseline */
+  scrollbar-width: thin;
   visibility: hidden;
   z-index: var(--lexxy-z-popup);
 
