@@ -172,6 +172,29 @@ test.describe("Prompt popover inside a clipping container", () => {
     const popover = await openPrompt(page)
     await expect(popover).not.toHaveAttribute("data-clipped-at-bottom", "")
   })
+
+  test("ignores clipping ancestors outside a modal dialog that holds a fixed-position container", async ({ page }) => {
+    await page.evaluate(() => {
+      const form = document.querySelector("form")
+      form.style.transform = "translateZ(0)"
+      form.style.overflow = "hidden"
+      form.style.blockSize = "100px"
+
+      const container = document.querySelector(".scroll-container")
+      container.style.position = "fixed"
+      container.style.insetBlockStart = "0"
+      container.style.overflow = "visible"
+      container.style.blockSize = "auto"
+
+      const dialog = document.createElement("dialog")
+      dialog.append(container)
+      form.append(dialog)
+      dialog.showModal()
+    })
+
+    const popover = await openPrompt(page)
+    await expect(popover).not.toHaveAttribute("data-clipped-at-bottom", "")
+  })
 })
 
 async function openPrompt(page) {

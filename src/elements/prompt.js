@@ -374,9 +374,9 @@ export class LexicalPromptElement extends HTMLElement {
           top = Math.max(top, scrollport.top)
           bottom = Math.min(bottom, scrollport.bottom)
         }
-
-        if (node.matches(":modal, :popover-open")) break
       }
+
+      if (node.matches(":modal, :popover-open")) break
     }
 
     return { top, bottom }
