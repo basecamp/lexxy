@@ -357,6 +357,7 @@ export class LexicalPromptElement extends HTMLElement {
   // window does, so the visible area is the window narrowed by every clipping ancestor. A fixed
   // ancestor escapes the clipping of everything up to its containing block: the window, or the
   // nearest ancestor that a transform, filter or containment makes contain fixed descendants.
+  // A top-layer ancestor, such as a modal dialog, escapes everything outside it.
   #visibleBounds() {
     let top = 0
     let bottom = window.innerHeight
@@ -368,11 +369,13 @@ export class LexicalPromptElement extends HTMLElement {
       if (style.display !== "contents" && (!escapingToContainingBlock || containsFixedDescendants(style))) {
         escapingToContainingBlock = style.position === "fixed"
 
-        if (style.overflowY !== "visible") {
+        if (clipsDescendants(style)) {
           const scrollport = scrollportBounds(node)
           top = Math.max(top, scrollport.top)
           bottom = Math.min(bottom, scrollport.bottom)
         }
+
+        if (node.matches(":modal, :popover-open")) break
       }
     }
 
@@ -659,6 +662,10 @@ export class LexicalPromptElement extends HTMLElement {
 
 export default LexicalPromptElement
 
+function clipsDescendants(style) {
+  return style.overflowY !== "visible" || /paint|strict|content/.test(style.contain) || style.contentVisibility === "auto"
+}
+
 // The bounding rect is in viewport coordinates, already scaled by any transform, while
 // clientTop and clientHeight are untransformed layout sizes, so they're scaled to match.
 function scrollportBounds(element) {
@@ -674,5 +681,6 @@ function containsFixedDescendants(style) {
     .some(value => value && value !== "none") ||
     /transform|translate|rotate|scale|perspective|filter/.test(style.willChange) ||
     /paint|layout|strict|content/.test(style.contain) ||
-    /size/.test(style.containerType)
+    /size/.test(style.containerType) ||
+    style.contentVisibility === "auto"
 }

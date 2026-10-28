@@ -124,6 +124,54 @@ test.describe("Prompt popover inside a clipping container", () => {
     const popover = await openPrompt(page)
     await expect(popover).toHaveAttribute("data-clipped-at-bottom", "")
   })
+
+  test("treats paint containment as clipping", async ({ page }) => {
+    await page.evaluate(() => {
+      const container = document.querySelector(".scroll-container")
+      container.style.overflow = "visible"
+      container.style.contain = "paint"
+      container.style.blockSize = "360px"
+    })
+
+    const popover = await openPrompt(page)
+    await expect(popover).toHaveAttribute("data-clipped-at-bottom", "")
+  })
+
+  test("keeps the clipping of a content-visibility ancestor that contains a fixed-position container", async ({ page }) => {
+    await page.evaluate(() => {
+      const form = document.querySelector("form")
+      form.style.contentVisibility = "auto"
+      form.style.overflow = "hidden"
+      form.style.blockSize = "320px"
+
+      const container = document.querySelector(".scroll-container")
+      container.style.position = "fixed"
+      container.style.insetBlockStart = "0"
+      container.style.overflow = "visible"
+      container.style.blockSize = "auto"
+    })
+
+    const popover = await openPrompt(page)
+    await expect(popover).toHaveAttribute("data-clipped-at-bottom", "")
+  })
+
+  test("ignores clipping ancestors outside a modal dialog", async ({ page }) => {
+    await page.evaluate(() => {
+      const form = document.querySelector("form")
+      form.style.transform = "translateZ(0)"
+      form.style.overflow = "hidden"
+      form.style.blockSize = "100px"
+
+      const dialog = document.createElement("dialog")
+      Object.assign(dialog.style, { margin: "0", padding: "0", border: "0", insetBlockStart: "0", overflow: "visible", maxBlockSize: "none" })
+      dialog.append(document.querySelector(".filler"), document.querySelector("lexxy-editor"))
+      form.append(dialog)
+      dialog.showModal()
+    })
+
+    const popover = await openPrompt(page)
+    await expect(popover).not.toHaveAttribute("data-clipped-at-bottom", "")
+  })
 })
 
 async function openPrompt(page) {
