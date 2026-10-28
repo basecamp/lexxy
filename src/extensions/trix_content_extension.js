@@ -1,6 +1,6 @@
 import { defineExtension } from "lexical"
 import { CodeNode } from "@lexical/code"
-import { normalizeCodeLanguage } from "@lexical/code-prism"
+import { isCodeLanguageLoaded, normalizeCodeLanguage } from "@lexical/code-prism"
 import { extendConversion, extendTextNodeConversion } from "../helpers/lexical_helper"
 import { $applyHighlightStyle } from "./highlight_extension"
 import LexxyExtension from "./lexxy_extension"
@@ -55,10 +55,38 @@ function $applyStrikethrough(textNode) {
 }
 
 function onlyPreLanguageElements(element, conversion) {
-  return element.hasAttribute(TRIX_LANGUAGE_ATTR) ? conversion : null
+  return importedCodeLanguage(element) ? conversion : null
 }
 
 function $applyLanguage(conversionOutput, element) {
-  const language = normalizeCodeLanguage(element.getAttribute(TRIX_LANGUAGE_ATTR))
-  conversionOutput.node.setLanguage(language)
+  conversionOutput.node.setLanguage(importedCodeLanguage(element))
+}
+
+// Lexical reads a code block's language from data-language alone. Trix writes it
+// as `language` on <pre>, and markdown renderers as `lang` on <pre> or as a
+// `language-*` class on its <code>.
+function importedCodeLanguage(element) {
+  if (element.hasAttribute("data-language")) {
+    return null
+  } else if (element.hasAttribute(TRIX_LANGUAGE_ATTR)) {
+    return normalizeCodeLanguage(element.getAttribute(TRIX_LANGUAGE_ATTR))
+  } else {
+    return markdownCodeLanguage(element)
+  }
+}
+
+function markdownCodeLanguage(element) {
+  const language = normalizeCodeLanguage(element.getAttribute("lang") || codeLanguageClass(element) || "")
+
+  if (isCodeLanguageLoaded(language)) {
+    return language
+  } else {
+    return null
+  }
+}
+
+function codeLanguageClass(element) {
+  const code = element.querySelector(":scope > code")
+  const languageClass = Array.from(code?.classList ?? []).find(name => name.startsWith("language-"))
+  return languageClass?.replace("language-", "")
 }
