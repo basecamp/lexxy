@@ -353,23 +353,27 @@ export class LexicalPromptElement extends HTMLElement {
     return overflowsBelow && roomAbove > roomBelow
   }
 
-  // A scroll container or modal around the editor clips the menu before the window does,
-  // so the visible area is the window narrowed by every clipping ancestor. A fixed ancestor
-  // escapes the clipping of everything above it, so the walk ends there.
+  // A scroll container or modal around the editor clips the menu at its scrollport before the
+  // window does, so the visible area is the window narrowed by every clipping ancestor. A fixed
+  // ancestor escapes the clipping of everything up to its containing block: the window, or the
+  // nearest ancestor that a transform, filter or containment makes contain fixed descendants.
   #visibleBounds() {
     let top = 0
     let bottom = window.innerHeight
+    let escapingToContainingBlock = false
 
     for (let node = this.#editorElement; node && node !== document.body; node = node.parentElement) {
       const style = getComputedStyle(node)
 
-      if (style.overflowY !== "visible" && style.display !== "contents") {
-        const rect = node.getBoundingClientRect()
-        top = Math.max(top, rect.top)
-        bottom = Math.min(bottom, rect.bottom)
-      }
+      if (!escapingToContainingBlock || containsFixedDescendants(style)) {
+        escapingToContainingBlock = style.position === "fixed"
 
-      if (style.position === "fixed") break
+        if (style.overflowY !== "visible" && style.display !== "contents") {
+          const scrollportTop = node.getBoundingClientRect().top + node.clientTop
+          top = Math.max(top, scrollportTop)
+          bottom = Math.min(bottom, scrollportTop + node.clientHeight)
+        }
+      }
     }
 
     return { top, bottom }
@@ -654,3 +658,11 @@ export class LexicalPromptElement extends HTMLElement {
 }
 
 export default LexicalPromptElement
+
+function containsFixedDescendants(style) {
+  return [ style.transform, style.translate, style.rotate, style.scale, style.perspective, style.filter, style.backdropFilter ]
+    .some(value => value && value !== "none") ||
+    /transform|translate|rotate|scale|perspective|filter/.test(style.willChange) ||
+    /paint|layout|strict|content/.test(style.contain) ||
+    /size/.test(style.containerType)
+}

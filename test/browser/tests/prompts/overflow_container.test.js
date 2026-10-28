@@ -72,6 +72,33 @@ test.describe("Prompt popover inside a clipping container", () => {
     const popover = await openPrompt(page)
     await expect(popover).not.toHaveAttribute("data-clipped-at-bottom", "")
   })
+
+  test("measures the scroll container's scrollport, not its border box", async ({ page }) => {
+    await page.evaluate(() => {
+      document.querySelector(".scroll-container").style.borderBlockEnd = "250px solid #ccc"
+    })
+
+    const popover = await openPrompt(page)
+    await expect(popover).toHaveAttribute("data-clipped-at-bottom", "")
+  })
+
+  test("keeps the clipping of a transformed ancestor that contains a fixed-position container", async ({ page }) => {
+    await page.evaluate(() => {
+      const form = document.querySelector("form")
+      form.style.transform = "translateZ(0)"
+      form.style.overflow = "hidden"
+      form.style.blockSize = "320px"
+
+      const container = document.querySelector(".scroll-container")
+      container.style.position = "fixed"
+      container.style.insetBlockStart = "0"
+      container.style.overflow = "visible"
+      container.style.blockSize = "auto"
+    })
+
+    const popover = await openPrompt(page)
+    await expect(popover).toHaveAttribute("data-clipped-at-bottom", "")
+  })
 })
 
 async function openPrompt(page) {
