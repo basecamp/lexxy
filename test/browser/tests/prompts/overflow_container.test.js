@@ -99,6 +99,31 @@ test.describe("Prompt popover inside a clipping container", () => {
     const popover = await openPrompt(page)
     await expect(popover).toHaveAttribute("data-clipped-at-bottom", "")
   })
+
+  test("measures a scaled scroll container in viewport coordinates", async ({ page }) => {
+    await page.evaluate(() => {
+      const container = document.querySelector(".scroll-container")
+      container.style.transform = "scale(0.5)"
+      container.style.transformOrigin = "top left"
+    })
+
+    const popover = await openPrompt(page)
+    await expect(popover).toHaveAttribute("data-clipped-at-bottom", "")
+  })
+
+  test("ignores a boxless fixed-position wrapper between the editor and its scroll container", async ({ page }) => {
+    await page.evaluate(() => {
+      const editor = document.querySelector("lexxy-editor")
+      const wrapper = document.createElement("div")
+      wrapper.style.display = "contents"
+      wrapper.style.position = "fixed"
+      editor.before(wrapper)
+      wrapper.append(editor)
+    })
+
+    const popover = await openPrompt(page)
+    await expect(popover).toHaveAttribute("data-clipped-at-bottom", "")
+  })
 })
 
 async function openPrompt(page) {

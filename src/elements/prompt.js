@@ -365,13 +365,13 @@ export class LexicalPromptElement extends HTMLElement {
     for (let node = this.#editorElement; node && node !== document.body; node = node.parentElement) {
       const style = getComputedStyle(node)
 
-      if (!escapingToContainingBlock || containsFixedDescendants(style)) {
+      if (style.display !== "contents" && (!escapingToContainingBlock || containsFixedDescendants(style))) {
         escapingToContainingBlock = style.position === "fixed"
 
-        if (style.overflowY !== "visible" && style.display !== "contents") {
-          const scrollportTop = node.getBoundingClientRect().top + node.clientTop
-          top = Math.max(top, scrollportTop)
-          bottom = Math.min(bottom, scrollportTop + node.clientHeight)
+        if (style.overflowY !== "visible") {
+          const scrollport = scrollportBounds(node)
+          top = Math.max(top, scrollport.top)
+          bottom = Math.min(bottom, scrollport.bottom)
         }
       }
     }
@@ -658,6 +658,16 @@ export class LexicalPromptElement extends HTMLElement {
 }
 
 export default LexicalPromptElement
+
+// The bounding rect is in viewport coordinates, already scaled by any transform, while
+// clientTop and clientHeight are untransformed layout sizes, so they're scaled to match.
+function scrollportBounds(element) {
+  const rect = element.getBoundingClientRect()
+  const scale = rect.height / element.offsetHeight || 1
+  const top = rect.top + element.clientTop * scale
+
+  return { top, bottom: top + element.clientHeight * scale }
+}
 
 function containsFixedDescendants(style) {
   return [ style.transform, style.translate, style.rotate, style.scale, style.perspective, style.filter, style.backdropFilter ]
