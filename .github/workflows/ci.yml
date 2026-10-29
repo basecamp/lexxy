@@ -140,6 +140,9 @@ jobs:
       - name: Build JavaScript assets
         run: yarn build
 
+      - name: Verify bundled JavaScript packages match yarn.lock
+        run: bundle exec rake verify_bundled_dependencies
+
       - name: Run Rails tests
         env:
           RAILS_ENV: test
