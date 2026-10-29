@@ -122,6 +122,8 @@ http://localhost:4000/docs/ and the sandbox at http://localhost:4000/sandbox/.
 3. Commit the version bump
 4. Run `rake release` to publish the gem
 
+`rake build` (and therefore `rake release`) installs JavaScript dependencies from `yarn.lock` before bundling them into the gem, and fails if the bundled DOMPurify doesn't match the locked version.
+
 ### NPM package
 
 ```bash
