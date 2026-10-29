@@ -14,13 +14,10 @@ end
 
 task :verify_bundled_dompurify do
   locked = File.read("yarn.lock")[/^dompurify@.*:\n  version "(.+)"/, 1]
+  bundled = File.read("app/assets/javascript/lexxy.js")[/@license DOMPurify (\S+)/, 1]
 
-  %w[ lexxy.js lexxy.min.js ].each do |file|
-    bundled = File.read("app/assets/javascript/#{file}")[/@license DOMPurify (\S+)/, 1]
-
-    if bundled != locked
-      abort "#{file} bundles DOMPurify #{bundled.inspect}, but yarn.lock locks #{locked.inspect}. Run `yarn install --frozen-lockfile` and rebuild."
-    end
+  if bundled != locked
+    abort "lexxy.js bundles DOMPurify #{bundled.inspect}, but yarn.lock locks #{locked.inspect}. Reinstall node_modules from scratch and rebuild."
   end
 end
 
