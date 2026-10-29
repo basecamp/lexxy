@@ -1,11 +1,9 @@
 import { defineExtension } from "lexical"
 import { CodeNode } from "@lexical/code"
-import { normalizeCodeLanguage } from "@lexical/code-prism"
 import { extendConversion, extendTextNodeConversion } from "../helpers/lexical_helper"
+import { importedCodeLanguage } from "../helpers/code_language_helper"
 import { $applyHighlightStyle } from "./highlight_extension"
 import LexxyExtension from "./lexxy_extension"
-
-const TRIX_LANGUAGE_ATTR = "language"
 
 export class TrixContentExtension extends LexxyExtension {
 
@@ -55,10 +53,9 @@ function $applyStrikethrough(textNode) {
 }
 
 function onlyPreLanguageElements(element, conversion) {
-  return element.hasAttribute(TRIX_LANGUAGE_ATTR) ? conversion : null
+  return !element.hasAttribute("data-language") && importedCodeLanguage(element) ? conversion : null
 }
 
 function $applyLanguage(conversionOutput, element) {
-  const language = normalizeCodeLanguage(element.getAttribute(TRIX_LANGUAGE_ATTR))
-  conversionOutput.node.setLanguage(language)
+  conversionOutput.node.setLanguage(importedCodeLanguage(element))
 }
