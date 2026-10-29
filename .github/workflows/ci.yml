@@ -140,6 +140,9 @@ jobs:
       - name: Build JavaScript assets
         run: yarn build
 
+      - name: Verify bundled DOMPurify matches yarn.lock
+        run: bundle exec rake verify_bundled_dompurify
+
       - name: Run Rails tests
         env:
           RAILS_ENV: test
