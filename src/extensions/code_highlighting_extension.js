@@ -1,5 +1,5 @@
-import { defineExtension } from "lexical"
-import { PrismTokenizer, registerCodeHighlighting } from "@lexical/code"
+import { $hasUpdateTag, $isLineBreakNode, $isTabNode, COLLABORATION_TAG, defineExtension } from "lexical"
+import { $isCodeHighlightNode, PrismTokenizer, registerCodeHighlighting } from "@lexical/code"
 import { $applyHighlightRangesToTokens, $takeHighlightRanges } from "./highlight_extension"
 import { $applyLinkRangesToTokens, $extractLinkRangesFromCodeNode } from "../helpers/code_link_helper"
 import LexxyExtension from "./lexxy_extension"
@@ -31,17 +31,39 @@ export class CodeHighlightingExtension extends LexxyExtension {
 // during HTML import, or read from the children the fresh tokens are about to
 // replace — and reapplies them to the fresh tokens before the retokenizer
 // splices them in.
+//
+// The retokenizer runs whenever the block is dirty, which an edit anywhere in
+// the block or a change the block merely contains can cause, and it splices in
+// every token Lexical's diff sees as changed. A pass over text that has not
+// changed since the last one is answered with the block's current tokens, so
+// it never replaces a node.
 function buildMarkupPreservingTokenizer(editor) {
+  const tokenizedBlocks = new Map()
+
   return {
     defaultLanguage: PrismTokenizer.defaultLanguage,
     tokenize(code, language) {
       return PrismTokenizer.tokenize(code, language)
     },
     $tokenize(codeNode, language) {
-      const linkRanges = $extractLinkRangesFromCodeNode(codeNode)
-      const highlightRanges = $takeHighlightRanges(editor, codeNode)
-      const tokens = PrismTokenizer.$tokenize(codeNode, language)
-      return $applyLinkRangesToTokens($applyHighlightRangesToTokens(tokens, highlightRanges), linkRanges)
+      const tokenized = tokenizedBlocks.get(codeNode.getKey())
+      const text = codeNode.getTextContent()
+      const tokens = codeNode.getChildren()
+
+      if ($hasUpdateTag(COLLABORATION_TAG) || tokenized?.language === language && tokenized?.text === text && tokens.every($isToken)) {
+        tokenizedBlocks.set(codeNode.getKey(), { language, text })
+        return tokens
+      } else {
+        const linkRanges = $extractLinkRangesFromCodeNode(codeNode)
+        const highlightRanges = $takeHighlightRanges(editor, codeNode)
+        const freshTokens = PrismTokenizer.$tokenize(codeNode, language)
+        tokenizedBlocks.set(codeNode.getKey(), { language, text })
+        return $applyLinkRangesToTokens($applyHighlightRangesToTokens(freshTokens, highlightRanges), linkRanges)
+      }
     }
   }
+}
+
+function $isToken(node) {
+  return $isCodeHighlightNode(node) || $isLineBreakNode(node) || $isTabNode(node)
 }
