@@ -1,5 +1,7 @@
-import { defineExtension } from "lexical"
+import { $hasUpdateTag, $isLineBreakNode, $isTabNode, COLLABORATION_TAG, defineExtension } from "lexical"
+import { $isCodeHighlightNode, CodeNode } from "@lexical/code"
 import { PrismTokenizer, registerCodeHighlighting } from "@lexical/code-prism"
+import { mergeRegister } from "@lexical/utils"
 import { $applyHighlightRangesToTokens, $takeHighlightRanges } from "./highlight_extension"
 import { $applyLinkRangesToTokens, $extractLinkRangesFromCodeNode } from "../helpers/code_link_helper"
 import LexxyExtension from "./lexxy_extension"
@@ -18,7 +20,12 @@ export class CodeHighlightingExtension extends LexxyExtension {
     return defineExtension({
       name: "lexxy/code-highlighting",
       register(editor) {
-        return registerCodeHighlighting(editor, buildMarkupPreservingTokenizer(editor))
+        const lastTokenizationByBlock = new Map()
+
+        return mergeRegister(
+          registerCodeHighlighting(editor, buildMarkupPreservingTokenizer(editor, lastTokenizationByBlock)),
+          editor.registerMutationListener(CodeNode, (mutations) => forgetDestroyedBlocks(mutations, lastTokenizationByBlock))
+        )
       }
     })
   }
@@ -31,17 +38,44 @@ export class CodeHighlightingExtension extends LexxyExtension {
 // during HTML import, or read from the children the fresh tokens are about to
 // replace — and reapplies them to the fresh tokens before the retokenizer
 // splices them in.
-function buildMarkupPreservingTokenizer(editor) {
+function buildMarkupPreservingTokenizer(editor, lastTokenizationByBlock) {
   return {
     defaultLanguage: PrismTokenizer.defaultLanguage,
     tokenize(code, language) {
       return PrismTokenizer.tokenize(code, language)
     },
     $tokenize(codeNode, language) {
-      const linkRanges = $extractLinkRangesFromCodeNode(codeNode)
-      const highlightRanges = $takeHighlightRanges(editor, codeNode)
-      const tokens = PrismTokenizer.$tokenize(codeNode, language)
-      return $applyLinkRangesToTokens($applyHighlightRangesToTokens(tokens, highlightRanges), linkRanges)
+      const lastTokenization = lastTokenizationByBlock.get(codeNode.getKey())
+      lastTokenizationByBlock.set(codeNode.getKey(), { language, text: codeNode.getTextContent() })
+
+      if ($keepsCurrentTokens(codeNode, language, lastTokenization)) {
+        return codeNode.getChildren()
+      } else {
+        const linkRanges = $extractLinkRangesFromCodeNode(codeNode)
+        const highlightRanges = $takeHighlightRanges(editor, codeNode)
+        const freshTokens = PrismTokenizer.$tokenize(codeNode, language)
+        return $applyLinkRangesToTokens($applyHighlightRangesToTokens(freshTokens, highlightRanges), linkRanges)
+      }
     }
   }
+}
+
+function $keepsCurrentTokens(codeNode, language, lastTokenization) {
+  if ($hasUpdateTag(COLLABORATION_TAG)) {
+    return true
+  } else {
+    return lastTokenization?.language === language && lastTokenization?.text === codeNode.getTextContent() && codeNode.getChildren().every($isToken)
+  }
+}
+
+function forgetDestroyedBlocks(mutations, lastTokenizationByBlock) {
+  for (const [ key, mutation ] of mutations) {
+    if (mutation === "destroyed") {
+      lastTokenizationByBlock.delete(key)
+    }
+  }
+}
+
+function $isToken(node) {
+  return $isCodeHighlightNode(node) || $isLineBreakNode(node) || $isTabNode(node)
 }
