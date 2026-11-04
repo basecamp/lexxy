@@ -71,7 +71,10 @@ export class TableTools extends HTMLElement {
     this.appendChild(this.#createColumnButtonsContainer())
 
     this.appendChild(this.#createDeleteTableButton())
-    this.#listeners.track(registerEventListener(this, "keydown", this.#handleToolsKeydown))
+    this.#listeners.track(
+      registerEventListener(this, "keydown", this.#handleToolsKeydown),
+      registerEventListener(this, "focusout", () => this.#handleCommandButtonHover())
+    )
   }
 
   #createButtonsContainer(childType, setCountProperty, moreMenu) {
@@ -225,9 +228,13 @@ export class TableTools extends HTMLElement {
 
     this.#clearCellStyles()
 
-    const activeElement = focusedButton ||
-      this.querySelector("button[data-action]:hover") ||
-      this.querySelector("button[data-action]:focus")
+    let activeElement
+    if (focusedButton?.matches(":focus")) {
+      activeElement = focusedButton
+    } else {
+      activeElement = this.querySelector("button[data-action]:hover") ||
+        this.querySelector("button[data-action]:focus")
+    }
     if (!activeElement) return
 
     const command = {

@@ -45,6 +45,20 @@ for (const childType of [ "row", "column" ]) {
       await assertPreview(editor, childType, menuCommands[0])
     })
 
+    test("moving focus to the menu trigger clears the command preview", async ({ page, editor }) => {
+      await page.keyboard.press("Alt+F10")
+      const commandSteps = { row: 0, column: 3 }
+      for (let step = 0; step < commandSteps[childType]; step++) {
+        await page.keyboard.press("ArrowRight")
+      }
+      await assertPreview(editor, childType, menuCommands[3])
+
+      await page.keyboard.press("ArrowRight")
+
+      await expect(tableControls(editor, childType).locator("[data-dropdown-trigger]")).toBeFocused()
+      await expect(editor.content.locator(".lexxy-content__table-cell--highlight")).toHaveCount(0)
+    })
+
     test("switching between mouse and keyboard updates the preview", async ({ page, editor }) => {
       const controls = tableControls(editor, childType)
       await controls.locator("[data-dropdown-trigger]").click()
