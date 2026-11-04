@@ -96,8 +96,8 @@ export class AttachmentToolbar extends HTMLElement {
     this.#alternativeTextButton = createElement("button", {
       type: "button",
       className: "lexxy-attachment-toolbar__alternative-text",
-      ariaLabel: "Alternative text",
-      title: "Alternative text",
+      ariaLabel: "Alt text",
+      title: "Alt text",
       ariaHasPopup: "dialog",
       tabIndex: -1
     })
