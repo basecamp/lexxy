@@ -174,7 +174,7 @@ export class TableTools extends HTMLElement {
     button.addEventListener("click", () => this.#executeTableCommand(command))
 
     button.addEventListener("mouseover", () => this.#handleCommandButtonHover())
-    button.addEventListener("focus", () => this.#handleCommandButtonHover())
+    button.addEventListener("focus", () => this.#handleCommandButtonHover(button))
     button.addEventListener("mouseout", () => this.#handleCommandButtonHover())
 
     return button
@@ -220,12 +220,14 @@ export class TableTools extends HTMLElement {
     this.#update()
   }
 
-  async #handleCommandButtonHover() {
+  async #handleCommandButtonHover(focusedButton) {
     await nextFrame()
 
     this.#clearCellStyles()
 
-    const activeElement = this.querySelector("button:hover, button:focus")
+    const activeElement = focusedButton ||
+      this.querySelector("button[data-action]:hover") ||
+      this.querySelector("button[data-action]:focus")
     if (!activeElement) return
 
     const command = {
