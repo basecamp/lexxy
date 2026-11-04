@@ -303,6 +303,9 @@ export class CommandDispatcher {
 
     const input = createElement("input", attributes)
 
+    // WebKit drops the picker's selection if the input is garbage collected while the picker is open
+    this.fileInput = input
+
     // Append and remove to make testable
     this.editorElement.appendChild(input)
     input.click()
