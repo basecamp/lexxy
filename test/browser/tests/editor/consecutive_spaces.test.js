@@ -1,5 +1,6 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
+import { applyHighlightOption } from "../../helpers/toolbar.js"
 
 test.describe("Consecutive spaces", () => {
   test.beforeEach(async ({ page }) => {
@@ -64,6 +65,37 @@ test.describe("Consecutive spaces", () => {
 
     expect(await editor.value()).toContain("alpha  beta")
   })
+
+  test("spaces in code blocks stay plain after highlighting part of the block", async ({ page, editor }) => {
+    await page.waitForSelector("lexxy-toolbar[connected]")
+    await editor.setValue('<pre data-language="plain"><code>  alpha  beta</code></pre>')
+    await editor.select("beta")
+    await applyHighlightOption(page, "background-color", 1)
+    await editor.flush()
+
+    const html = await editor.value()
+    expect(html).toContain("  alpha  ")
+    expect(html).not.toContain("&nbsp;")
+  })
+
+  test("reloaded runs of spaces edit as plain spaces", async ({ editor }) => {
+    await editor.send("alpha  beta")
+    await editor.flush()
+    await reloadOwnValue(editor)
+
+    await editor.placeCaretInside("beta", 0)
+    await editor.send("Backspace")
+    await editor.flush()
+
+    expect(await editor.value()).toBe("<p>alpha beta</p>")
+  })
+
+  test("a non-breaking space between words is kept", async ({ editor }) => {
+    await editor.setValue("<p>10&nbsp;km</p>")
+    await editor.flush()
+
+    expect(await editor.value()).toBe("<p>10&nbsp;km</p>")
+  })
 })
 
 async function reloadOwnValue(editor) {
@@ -77,5 +109,5 @@ async function editorText(editor) {
 }
 
 function normalizeSpaces(text) {
-  return text.replaceAll(" ", " ")
+  return text.replaceAll("\u00a0", " ")
 }

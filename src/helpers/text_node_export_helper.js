@@ -1,7 +1,5 @@
-import { $isElementNode, $isLineBreakNode } from "lexical"
 import { $getCodeLink } from "./code_link_helper"
-
-const NON_BREAKING_SPACE = "\u00a0"
+import { $encodeCollapsibleSpaces } from "./collapsible_spaces_helper"
 
 // Custom TextNode exportDOM that avoids redundant wrapping.
 //
@@ -17,11 +15,8 @@ const NON_BREAKING_SPACE = "\u00a0"
 // Any <span> elements produced by createDOM() are unwrapped, since they only carry
 // editor classes that aren't meaningful in exported HTML.
 //
-// Spaces that HTML would collapse are exported as non-breaking spaces, as Trix did:
-// runs of spaces alternate non-breaking and regular spaces so lines can still wrap,
-// and a space that starts a line, or follows another space, becomes non-breaking.
-// Otherwise both the rendered HTML and Lexical's importer collapse them, and every
-// re-save loses them.
+// Spaces that HTML would collapse are exported as non-breaking spaces; see
+// collapsible_spaces_helper.js.
 
 // A CodeHighlightNode exports like any other text node, plus an <a> wrapper
 // when it carries link state — that's how a link survives inside a code
@@ -110,7 +105,7 @@ function $preserveSpaces(element, textNode) {
   const domText = findTextNode(element)
 
   if (domText) {
-    domText.data = encodeSpaces(domText.data, { collapsesLeadingSpace: $collapsesLeadingSpace(textNode) })
+    domText.data = $encodeCollapsibleSpaces(domText.data, textNode)
   }
 }
 
@@ -120,37 +115,4 @@ function findTextNode(element) {
   } else {
     return document.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode()
   }
-}
-
-function encodeSpaces(text, { collapsesLeadingSpace }) {
-  let encoded = text.replace(/ {2,}/g, (run) => alternatingSpaces(run.length))
-
-  if (collapsesLeadingSpace) {
-    encoded = encoded.replace(/^ /, NON_BREAKING_SPACE)
-  }
-
-  return encoded
-}
-
-function alternatingSpaces(length) {
-  return `${NON_BREAKING_SPACE} `.repeat(Math.ceil(length / 2)).slice(0, length)
-}
-
-function $collapsesLeadingSpace(node) {
-  const previous = $previousInLine(node)
-  return previous === null || $isLineBreakNode(previous) || /[ \t\n]$/.test(previous.getTextContent())
-}
-
-function $previousInLine(node) {
-  let current = node
-
-  while (current.getPreviousSibling() === null && $isInlineElement(current.getParent())) {
-    current = current.getParent()
-  }
-
-  return current.getPreviousSibling()
-}
-
-function $isInlineElement(node) {
-  return $isElementNode(node) && node.isInline()
 }

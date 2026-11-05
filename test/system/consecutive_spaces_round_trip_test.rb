@@ -20,6 +20,6 @@ class ConsecutiveSpacesRoundTripTest < ApplicationSystemTestCase
   private
     def rendered_body_text
       find "article.post p"
-      evaluate_script(%(document.querySelector("article.post p").innerText)).tr(" ", " ")
+      evaluate_script(%(document.querySelector("article.post p").innerText)).tr("\u00a0", " ")
     end
 end

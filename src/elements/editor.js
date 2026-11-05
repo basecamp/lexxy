@@ -8,6 +8,7 @@ import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesF
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
 import { $filterDisallowedCode, $removeInlineCodeFormat, $replaceCodeNodeWithParagraphs } from "../helpers/code_filter_helper"
 import { $convertInlineImageDataURIs } from "../helpers/inline_image_uri_helper"
+import { $decodeCollapsibleSpaces } from "../helpers/collapsible_spaces_helper"
 import { CodeHighlightNode, CodeNode } from "@lexical/code"
 import { CODE, INLINE_CODE, TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transformer"
@@ -279,6 +280,7 @@ export class LexicalEditorElement extends HTMLElement {
   $generateNodesFromDOM(doc, { editor = this.editor } = {}) {
     stripTrailingCodeBlockNewlines(doc)
     let nodes = $generateLexicalNodesFromDOM(editor, doc)
+    $decodeCollapsibleSpaces(nodes)
     if ($hasUpdateTag(PASTE_TAG)) nodes = $convertInlineImageDataURIs(nodes, this)
     return $filterDisallowedCode(filterDisallowedAttachmentNodes(nodes, this), this)
   }
