@@ -47,7 +47,11 @@ export default class Clipboard {
     }
 
     if (this.#isTextBesideClipboardReferenceFiles(clipboardData)) {
-      this.#pastePlainText(clipboardData.getData("text/plain"))
+      // Like the getAsString callback of the plain-text path, insert after the
+      // paste command's update, so a pasted URL's link has its key by the time
+      // lexxy:insert-link listeners act on it.
+      const text = clipboardData.getData("text/plain")
+      setTimeout(() => this.#pastePlainText(text))
       event.preventDefault()
       return true
     }

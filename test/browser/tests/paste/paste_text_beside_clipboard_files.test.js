@@ -29,6 +29,19 @@ test.describe("Paste — Text beside a clipboard file", () => {
     await expect(editor.content.locator("figure.attachment")).toHaveCount(0)
   })
 
+  test("a URL pasted beside a clipboard reference can be replaced by a link listener", async ({ page, editor }) => {
+    await page.evaluate(() => {
+      document.querySelector("lexxy-editor").addEventListener("lexxy:insert-link", (event) => {
+        event.detail.replaceLinkWith("<p>Replaced link</p>")
+      })
+    })
+
+    await editor.paste("https://example.com/page", { files: [ GOOGLE_CLIPBOARD_REFERENCE ] })
+
+    await expect(editor.content).toContainText("Replaced link")
+    await expect(editor.content.locator("figure.attachment")).toHaveCount(0)
+  })
+
   test("still uploads a file whose name is the pasted text", async ({ editor }) => {
     const pdf = Buffer.from("%PDF-1.4 dummy", "utf8").toString("base64")
     await editor.paste("report.pdf", { files: [ { base64: pdf, name: "report.pdf", type: "application/pdf" } ] })
