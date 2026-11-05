@@ -1,6 +1,7 @@
 import {
   $createTextNode,
   $getSelection,
+  $hasUpdateTag,
   $isNodeSelection,
   $isRangeSelection,
   $isTextNode,
@@ -15,6 +16,7 @@ import {
   KEY_TAB_COMMAND,
   OUTDENT_CONTENT_COMMAND,
   REDO_COMMAND,
+  SKIP_DOM_SELECTION_TAG,
   UNDO_COMMAND
 } from "lexical"
 import { CodeNode } from "@lexical/code"
@@ -310,7 +312,21 @@ export class CommandDispatcher {
   }
 
   dispatchInsertTable() {
+    const selection = $getSelection()?.clone()
+
     this.editor.dispatchCommand(INSERT_TABLE_COMMAND, { "rows": 3, "columns": 3, "includeHeaders": true })
+
+    if ($hasUpdateTag(SKIP_DOM_SELECTION_TAG)) this.#keepSelectionWithPageCaret(selection)
+  }
+
+  // Inserting a table selects its first cell. When the page caret isn't moving
+  // with it (keyboard activation keeps focus on the toolbar), keep the selection
+  // on the caret the user still sees. Otherwise, after Tab back, ArrowDown runs
+  // from the hidden header-cell selection and lands in row 2.
+  #keepSelectionWithPageCaret(selection) {
+    if ($isRangeSelection(selection) && selection.anchor.getNode().isAttached() && selection.focus.getNode().isAttached()) {
+      $setSelection(selection)
+    }
   }
 
   dispatchUndo() {

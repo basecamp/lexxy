@@ -1,11 +1,37 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 
-test("ArrowDown from the line above a table inserted from the keyboard lands in the header row", async ({ page, editor }) => {
-  await page.goto("/")
-  await editor.waitForConnected()
-  await editor.content.click()
-  await page.keyboard.type("Before the table")
+test.describe("Inserting a table from the keyboard toolbar, then Tab back", () => {
+  test.beforeEach(async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+    await editor.content.click()
+  })
+
+  test("ArrowDown from the line above lands in the header row", async ({ page, editor }) => {
+    await page.keyboard.type("Before the table")
+    await insertTableFromKeyboardAndReturn(page, editor)
+
+    await page.keyboard.press("ArrowDown")
+    await page.keyboard.type("A1")
+
+    await expect(editor.content.locator("table tr").nth(0).locator("th, td").nth(0)).toHaveText("A1")
+    await expect(editor.content.locator("table tr").nth(1)).not.toContainText("A1")
+  })
+
+  test("typing continues the formatted line above", async ({ page, editor }) => {
+    await page.keyboard.press("ControlOrMeta+b")
+    await page.keyboard.type("Bold line")
+    await insertTableFromKeyboardAndReturn(page, editor)
+
+    await page.keyboard.type(" continues")
+
+    await expect(editor.content.locator("p strong")).toHaveText("Bold line continues")
+    await expect(editor.content.locator("table")).not.toContainText("continues")
+  })
+})
+
+async function insertTableFromKeyboardAndReturn(page, editor) {
   await page.keyboard.press("Shift+Tab")
 
   const tableButton = page.locator("lexxy-toolbar button[data-command='insertTable']")
@@ -17,10 +43,4 @@ test("ArrowDown from the line above a table inserted from the keyboard lands in 
   await expect(editor.content.locator("table")).toHaveCount(1)
   await page.keyboard.press("Tab")
   await expect(editor.content).toBeFocused()
-
-  await page.keyboard.press("ArrowDown")
-  await page.keyboard.type("A1")
-
-  await expect(editor.content.locator("table tr").nth(0).locator("th, td").nth(0)).toHaveText("A1")
-  await expect(editor.content.locator("table tr").nth(1)).not.toContainText("A1")
-})
+}

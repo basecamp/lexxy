@@ -1,8 +1,8 @@
 import {
-  $addUpdateTag, $createParagraphNode, $createRangeSelectionFromDom, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $hasUpdateTag, $isDecoratorNode, $isElementNode,
+  $addUpdateTag, $createParagraphNode, $getNearestNodeFromDOMNode, $getRoot, $getSelection, $hasUpdateTag, $isDecoratorNode, $isElementNode,
   $isLineBreakNode, $isNodeSelection, $isRangeSelection, $isTextNode, $setSelection, CLICK_COMMAND, COMMAND_PRIORITY_CRITICAL, COMMAND_PRIORITY_LOW,
-  DELETE_CHARACTER_COMMAND, FOCUS_COMMAND, HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_BACKSPACE_COMMAND,
-  SELECTION_CHANGE_COMMAND, SKIP_DOM_SELECTION_TAG, getDOMSelection, isDOMNode
+  DELETE_CHARACTER_COMMAND, HISTORY_MERGE_TAG, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_LEFT_COMMAND, KEY_ARROW_RIGHT_COMMAND, KEY_ARROW_UP_COMMAND, KEY_BACKSPACE_COMMAND,
+  SELECTION_CHANGE_COMMAND, SKIP_DOM_SELECTION_TAG, isDOMNode
 } from "lexical"
 import { $getNearestNodeOfType } from "@lexical/utils"
 import { $getListDepth, $isListItemNode, ListItemNode, ListNode } from "@lexical/list"
@@ -22,7 +22,6 @@ const FOCUS_TAG = "focus"
 
 export default class Selection {
   #listeners = new ListenerBin()
-  #domSelectionBehind = false
 
   constructor(editorElement) {
     this.editorElement = editorElement
@@ -401,53 +400,8 @@ export default class Selection {
       this.editor.registerCommand(SELECTION_CHANGE_COMMAND, () => {
         this.#preserveFocusOutsideEditor()
         return false
-      }, COMMAND_PRIORITY_CRITICAL),
-
-      this.editor.registerUpdateListener(({ tags, editorState, prevEditorState }) => {
-        if (tags.has(SKIP_DOM_SELECTION_TAG) && this.#isAnotherElementFocused && this.#movedToAnotherBlock(prevEditorState, editorState)) {
-          this.#domSelectionBehind = true
-        }
-      }),
-
-      this.editor.registerCommand(FOCUS_COMMAND, () => {
-        this.#followPageCaretOnReturn()
-        return false
       }, COMMAND_PRIORITY_CRITICAL)
     )
-  }
-
-  // While focus is outside the editor, its selection can move without the page
-  // caret (SKIP_DOM_SELECTION_TAG), e.g. inserting a table from the toolbar puts
-  // it in the first header cell. Chrome and WebKit fire no selectionchange when
-  // Tab brings focus back to an unmoved caret, so the two stay apart and the
-  // next key acts on a position the user can't see. Follow the page caret.
-  //
-  // Only when the selection moved to another block: commands that format in
-  // place (Bold at a collapsed caret or on a range) keep their selection, with
-  // its pending format, and may have re-rendered the text the page caret was in.
-  #followPageCaretOnReturn() {
-    if (!this.#domSelectionBehind) return
-    this.#domSelectionBehind = false
-
-    if (!$isRangeSelection($getSelection())) return
-
-    const rootElement = this.editor.getRootElement()
-    const domSelection = getDOMSelection(rootElement.ownerDocument.defaultView)
-    if (!domSelection?.anchorNode || !rootElement.contains(domSelection.anchorNode)) return
-
-    const pageSelection = $createRangeSelectionFromDom(domSelection, this.editor)
-    if (pageSelection) $setSelection(pageSelection)
-  }
-
-  #movedToAnotherBlock(prevEditorState, editorState) {
-    return this.#selectedBlockKey(prevEditorState) !== this.#selectedBlockKey(editorState)
-  }
-
-  #selectedBlockKey(editorState) {
-    return editorState.read(() => {
-      const selection = $getSelection()
-      return $isRangeSelection(selection) ? selection.anchor.getNode().getTopLevelElement()?.getKey() : null
-    })
   }
 
   // Selection changes can arrive after Tab moves focus to a toolbar or another field.

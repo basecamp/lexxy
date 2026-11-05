@@ -40,11 +40,11 @@ function caretPosition() {
 }
 
 // Keyboard flow: type above, Shift+Tab to the toolbar, Enter on "Insert a table"
-// (the button keeps focus), Tab back, ArrowDown. Inserting moves the editor's
-// selection into the first header cell but, with focus outside the editor, not
-// the page caret. Once focus returns, the editor must follow the page caret;
-// otherwise Lexical reads ArrowDown as "leave the header cell downward" and the
-// caret lands in row 2.
+// (the button keeps focus), Tab back, ArrowDown. With focus outside the editor
+// the page caret stays on the line above, so the editor's selection must stay
+// there too rather than move into the first header cell; otherwise Lexical
+// reads ArrowDown as "leave the header cell downward" and the caret lands in
+// row 2.
 test("inserting a table from the keyboard keeps the selection on the caret above it", async () => {
   editorElement = await createTestEditor()
   await setContent(editorElement, "<p>Before the table</p>")
