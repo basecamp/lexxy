@@ -89,6 +89,15 @@ test.describe("Paste — HTML snippets as plain text", () => {
     })
   })
 
+  test("reads only the exact tag name as a script", async ({ editor }) => {
+    await editor.paste("**bold** <script>const tag = \"</script-widget>\"; run(`ok`)</script> here")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content).toContainText("<script>const tag = \"</script-widget>\"; run(`ok`)</script>")
+      await expect(content.locator("strong")).toHaveText("bold")
+    })
+  })
+
   test("still imports formatting tags in markdown without a snippet", async ({ editor }) => {
     await editor.paste("Some <b>well known</b> words")
 

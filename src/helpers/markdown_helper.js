@@ -45,8 +45,8 @@ export function parsePastedMarkdown(text) {
 // an inline element of this kind is tokenized whole, contents included.
 const DISCARDED_ELEMENTS = new Set([ "script", "style", "iframe", "noscript", "template", "object", "embed", "link", "meta" ])
 
-const INLINE_DISCARDED_ELEMENT_START = /<(?:script|style|iframe|noscript|template|object)\b/i
-const INLINE_DISCARDED_ELEMENT_OPENING = /^<(script|style|iframe|noscript|template|object)\b(?:"[^"]*"|'[^']*'|[^'">])*>/i
+const INLINE_DISCARDED_ELEMENT_START = /<(?:script|style|iframe|noscript|template|object)(?=[\s/>])/i
+const INLINE_DISCARDED_ELEMENT_OPENING = /^<(script|style|iframe|noscript|template|object)(?=[\s/>])(?:"[^"]*"|'[^']*'|[^'">])*>/i
 
 // Script, style and iframe hold raw text, so their first closing tag ends them.
 // The others can nest, so they end at the closing tag that balances the opening.
@@ -69,7 +69,7 @@ const inlineDiscardedElement = {
 }
 
 function closingTagEnd(src, name, from) {
-  const tags = new RegExp(`<(/?)${name}\\b(?:"[^"]*"|'[^']*'|[^'">])*>`, "gi")
+  const tags = new RegExp(`<(/?)${name}(?=[\\s/>])(?:"[^"]*"|'[^']*'|[^'">])*>`, "gi")
   tags.lastIndex = from
 
   let depth = 1
