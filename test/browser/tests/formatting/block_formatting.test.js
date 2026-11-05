@@ -378,6 +378,30 @@ test.describe("Block formatting", () => {
     )
   })
 
+  test("quote only the selected items of a list", async ({ page, editor }) => {
+    await editor.setValue("<p>Intro:</p><ul><li>one</li><li>two</li><li>three</li></ul><p>After</p>")
+    await selectAcross(editor, "Intro:", "two")
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<blockquote><p>Intro:</p><ul><li value="1">one</li><li value="2">two</li></ul></blockquote><ul><li value="1">three</li></ul><p>After</p>',
+    )
+  })
+
+  test("quote the middle items of a numbered list", async ({ page, editor }) => {
+    await editor.setValue("<ol><li>one</li><li>two</li><li>three</li></ol>")
+    await editor.select("two")
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<ol><li value="1">one</li></ol><blockquote><ol start="2"><li value="2">two</li></ol></blockquote><ol start="3"><li value="3">three</li></ol>',
+    )
+  })
+
   test("bullet list only the selected line from soft line breaks", async ({
     page,
     editor,
@@ -791,3 +815,21 @@ test.describe("Blockquote selection matrix", () => {
     })
   }
 })
+
+async function selectAcross(editor, startText, endText) {
+  await editor.content.evaluate((el, { startText, endText }) => {
+    const textNodes = []
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    let node
+    while ((node = walker.nextNode())) textNodes.push(node)
+    const start = textNodes.find(textNode => textNode.nodeValue.includes(startText))
+    const end = textNodes.find(textNode => textNode.nodeValue.includes(endText))
+    const range = document.createRange()
+    range.setStart(start, start.nodeValue.indexOf(startText))
+    range.setEnd(end, end.nodeValue.indexOf(endText) + endText.length)
+    const selection = window.getSelection()
+    selection.removeAllRanges()
+    selection.addRange(range)
+  }, { startText, endText })
+  await editor.flush()
+}

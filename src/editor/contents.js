@@ -18,7 +18,7 @@ import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode }
 import { $findMatchingParent, $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
 import PastedContentFormatter from "./contents/pasted_content_formatter"
-import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
+import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isAtBlockEnd, $isAtBlockStart, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -148,7 +148,8 @@ export default class Contents {
     } else {
       topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
-       $expandSelectionToLineBreaksAndSplitAtEdges(selection)
+      this.#splitListsAroundSelectedItems(selection)
+      $expandSelectionToLineBreaksAndSplitAtEdges(selection)
       const elements = this.#topLevelElementsInSelection(selection)
       if (elements.length === 0) return
 
@@ -565,6 +566,39 @@ export default class Contents {
     }
 
     return runs.filter((run) => run.size > 0).map((run) => Array.from(run))
+  }
+
+  // Quoting part of a list quotes only the selected items: the items before and
+  // after them move to lists of their own, numbered where they were.
+  #splitListsAroundSelectedItems(selection) {
+    const [ start, end ] = selection.getStartEndPoints().sort((a, b) => a.isBefore(b) ? -1 : 1)
+
+    for (const list of this.#topLevelElementsInSelection(selection).filter($isListNode)) {
+      const lastIndex = list.getChildrenSize() - 1
+      let first = this.#listItemIndexAt(list, start) ?? 0
+      let last = this.#listItemIndexAt(list, end) ?? lastIndex
+
+      if (first < last && $isAtBlockEnd(start, list.getChildAtIndex(first))) first++
+      if (first < last && $isAtBlockStart(end, list.getChildAtIndex(last))) last--
+
+      this.#moveListItemsToNewListAfter(list, last + 1)
+      this.#moveListItemsToNewListAfter(list, first)
+    }
+  }
+
+  #listItemIndexAt(list, point) {
+    const item = $findMatchingParent(point.getNode(), (node) => node.getParent()?.is(list))
+    return item?.getIndexWithinParent()
+  }
+
+  #moveListItemsToNewListAfter(list, index) {
+    const items = list.getChildren().slice(index)
+    if (index === 0 || items.length === 0) return
+
+    const start = list.getListType() === "number" ? list.getStart() + index : 1
+    const newList = $createListNode(list.getListType(), start)
+    list.insertAfter(newList)
+    newList.append(...items)
   }
 
   #topLevelElementsInSelection(selection) {
