@@ -595,7 +595,10 @@ export default class Contents {
     const items = list.getChildren().slice(index)
     if (index === 0 || items.length === 0) return
 
-    const start = list.getListType() === "number" ? list.getStart() + index : 1
+    // Wrapper items that only hold a nested list don't take a number, so start
+    // from the first numbered item that moves rather than from its index.
+    const numberedItem = items.find(item => !$isListNode(item.getFirstChild())) ?? items[0]
+    const start = list.getListType() === "number" ? numberedItem.getValue() : 1
     const newList = $createListNode(list.getListType(), start)
     list.insertAfter(newList)
     newList.append(...items)

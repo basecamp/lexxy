@@ -402,6 +402,18 @@ test.describe("Block formatting", () => {
     )
   })
 
+  test("quoting an item after a nested list keeps its number", async ({ page, editor }) => {
+    await editor.setValue("<ol><li>First</li><li><ol><li>Nested</li></ol></li><li>Second</li></ol>")
+    await editor.select("Second")
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<ol><li value="1">First<ol><li value="1">Nested</li></ol></li></ol><blockquote><ol start="2"><li value="2">Second</li></ol></blockquote>',
+    )
+  })
+
   test("bullet list only the selected line from soft line breaks", async ({
     page,
     editor,
