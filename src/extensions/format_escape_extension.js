@@ -31,7 +31,7 @@ export class FormatEscapeExtension extends LexxyExtension {
         return mergeRegister(
           editor.registerCommand(
             INSERT_PARAGRAPH_COMMAND,
-            () => $escapeFromBlockquote(),
+            () => $handleInsertParagraph(),
             COMMAND_PRIORITY_HIGH
           ),
           editor.registerCommand(
@@ -46,8 +46,8 @@ export class FormatEscapeExtension extends LexxyExtension {
   }
 }
 
-function $escapeFromBlockquote() {
-  return $escapeBeforeBlockquoteStart() || $escapeFromBlankBlockquoteParagraph()
+function $handleInsertParagraph() {
+  return $escapeBeforeBlockquoteStart() || $escapeFromBlankBlockquoteParagraph() || $insertUnformattedParagraphBefore()
 }
 
 function $escapeBeforeBlockquoteStart() {
@@ -88,6 +88,33 @@ function $escapeFromBlankBlockquoteParagraph() {
   }
 
   return false
+}
+
+// Enter at the start of a paragraph leaves an empty line above it. Lexical keeps
+// the original paragraph there, with the text format its content had, so typing
+// on that line picks up the formatting of the text that moved down. Insert a
+// fresh paragraph instead, keeping only the block-level alignment and indent.
+function $insertUnformattedParagraphBefore() {
+  const selection = $getSelection()
+  if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+
+  const paragraph = $getNearestNodeOfType(selection.anchor.getNode(), ParagraphNode)
+  if (!paragraph || $isBlankNode(paragraph) || !$isAtParagraphStart(selection.anchor, paragraph)) return false
+  if (paragraph.getTextFormat() === 0 && paragraph.getTextStyle() === "") return false
+
+  const emptyParagraph = $createParagraphNode()
+  emptyParagraph.setFormat(paragraph.getFormatType())
+  emptyParagraph.setIndent(paragraph.getIndent())
+  emptyParagraph.setDirection(paragraph.getDirection())
+  paragraph.insertBefore(emptyParagraph)
+  return true
+}
+
+function $isAtParagraphStart(point, paragraph) {
+  if (point.offset !== 0) return false
+
+  const node = point.getNode()
+  return node.is(paragraph) || node.is(paragraph.getFirstDescendant())
 }
 
 function $splitQuoteNode(node, paragraph) {
