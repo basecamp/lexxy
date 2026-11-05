@@ -128,15 +128,23 @@ export default class PastedContentFormatter {
     return null
   }
 
-  // A data table never holds another table, and a layout one often says so with
-  // its role. Inside a layout table, a single-column table is one more layout
-  // row; pasted on its own it may be a column copied from a spreadsheet, so it
-  // stays a table.
+  // A layout table often says so with its role, and rarely holds data, so one
+  // holding another table is layout too, unless it declares itself tabular with
+  // header cells or a table role. Inside a layout table, a single-column table
+  // is one more layout row; pasted on its own it may be a column copied from a
+  // spreadsheet, so it stays a table.
   #isLayoutTable(table, nestedInLayout) {
     const role = table.getAttribute("role")
-    return role === "presentation" || role === "none" ||
-      table.querySelector("table") !== null ||
-      (nestedInLayout && this.#isSingleColumn(table))
+    if (role === "presentation" || role === "none") return true
+    if (this.#isExplicitlyTabular(table)) return false
+
+    return table.querySelector("table") !== null || (nestedInLayout && this.#isSingleColumn(table))
+  }
+
+  #isExplicitlyTabular(table) {
+    const role = table.getAttribute("role")
+    return role === "table" || role === "grid" || role === "treegrid" ||
+      this.#ownCells(table).some((cell) => cell.tagName === "TH")
   }
 
   #isSingleColumn(table) {

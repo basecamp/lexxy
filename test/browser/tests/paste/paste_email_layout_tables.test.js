@@ -131,6 +131,27 @@ test.describe("Paste email layout tables", () => {
     expect(page).toHaveNoErrors()
   })
 
+  test("keeps a data table with headers whose cell holds a layout table", async ({ page, editor }) => {
+    await pasteHtml(page, editor, `
+      <table>
+        <thead><tr><th>Item</th><th>Price</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><table role="presentation"><tbody><tr><td>Book</td></tr></tbody></table></td>
+            <td>$10</td>
+          </tr>
+        </tbody>
+      </table>
+    `)
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("table")).toHaveCount(1)
+      await expect(content.locator("table td, table th")).toHaveCount(4)
+      await expect(content.locator("table")).toContainText("Book")
+    })
+    expect(page).toHaveNoErrors()
+  })
+
   test("keeps a pasted data table", async ({ page, editor }) => {
     await pasteHtml(page, editor, `
       <table>
