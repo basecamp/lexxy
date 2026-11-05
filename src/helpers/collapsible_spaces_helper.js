@@ -39,7 +39,7 @@ function $decodeTextNode(textNode) {
   const text = textNode.getTextContent()
   let decoded = text.replace(/[ \u00a0]{2,}/g, (run) => decodeRun(run))
 
-  if (textNode.getParent() !== null && $collapsesLeadingSpace(textNode)) {
+  if ($isAttachedToLine(textNode) && $collapsesLeadingSpace(textNode)) {
     decoded = decoded.replace(/^\u00a0/, " ")
   }
 
@@ -77,6 +77,16 @@ function $previousInLine(node) {
   }
 
   return current.getPreviousSibling()
+}
+
+function $isAttachedToLine(node) {
+  let current = node
+
+  while ($isInlineElement(current.getParent())) {
+    current = current.getParent()
+  }
+
+  return current.getParent() !== null
 }
 
 function $isInlineElement(node) {

@@ -105,6 +105,14 @@ test.describe("Consecutive spaces", () => {
     expect(await editor.value()).toContain("<strong>&nbsp;km</strong>")
   })
 
+  test("a non-breaking space opening a pasted link is kept", async ({ editor }) => {
+    await editor.send("x")
+    await editor.paste("10 km", { html: '10<a href="https://example.com/">&nbsp;km</a>' })
+    await editor.flush()
+
+    expect(await editor.value()).toContain(">&nbsp;km</a>")
+  })
+
   test("a non-breaking space between words is kept", async ({ editor }) => {
     await editor.setValue("<p>10&nbsp;km</p>")
     await editor.flush()
