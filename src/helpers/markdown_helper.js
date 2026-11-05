@@ -31,10 +31,45 @@ export function parsePastedMarkdown(text) {
 // code-region collection, or lexer-option syncing required. This renderer fires
 // only for genuine raw-HTML tokens, and marked inserts its return value verbatim
 // (it does not re-encode), so we escape unsupported tags to literal text here.
+//
+// An HTML snippet is a different matter. Embed codes, tracking snippets and HTML
+// samples carry tags the importer can't keep: it drops script and style along
+// with everything inside them, and an iframe or the empty <div id="widget"> an
+// embed code hangs off has no content to keep either. Rendered as HTML, such a
+// paste loses its code, often all of it, with no error. When any raw HTML in the
+// paste holds one of those tags, the user is pasting code to show, so every raw
+// HTML token in it pastes as the literal text they copied, while the Markdown
+// around it still renders.
 const pasteMarked = new Marked({
   breaks: true,
   renderer: { html: renderPastedHtmlToken }
-}).use({ tokenizer: { code: () => undefined } })
+}).use({
+  tokenizer: { code: () => undefined },
+  hooks: { processAllTokens: markHtmlSnippetTokens }
+})
+
+// Elements the importer drops with their content, or that hold no content to keep.
+const DISCARDED_ELEMENTS = new Set([ "script", "style", "iframe", "noscript", "template", "object", "embed", "link", "meta" ])
+
+function markHtmlSnippetTokens(tokens) {
+  const htmlTokens = []
+  pasteMarked.walkTokens(tokens, (token) => {
+    if (token.type === "html") htmlTokens.push(token)
+  })
+
+  if (htmlTokens.some(containsDiscardedElement)) {
+    for (const token of htmlTokens) token.literal = true
+  }
+
+  return tokens
+}
+
+function containsDiscardedElement(token) {
+  for (const [ , , name ] of token.text.matchAll(HTML_TAG_LEXEME)) {
+    if (DISCARDED_ELEMENTS.has(name.toLowerCase())) return true
+  }
+  return false
+}
 
 // Matches a single HTML tag lexeme: an optional "/", a tag name, then attribute
 // characters up to the closing ">". Quoted attribute values may contain ">" —
@@ -52,9 +87,21 @@ const HTML_TAG_LEXEME = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:"[^"]*"|'[^']*'|[^'">]
 // the <div> so it still renders, and escape the nested <v Name> so it survives
 // as literal text rather than being unwrapped and dropped by the importer.
 function renderPastedHtmlToken(token) {
+  if (token.literal) return renderLiteralHtmlToken(token)
+
   return token.text.replace(HTML_TAG_LEXEME, (lexeme, _slash, name) => {
     return isSupportedHtmlElement(name) ? lexeme : escapeHtml(lexeme)
   })
+}
+
+// A block token stands alone, so it becomes a paragraph of its own, keeping its
+// lines; an inline token sits inside the paragraph that holds it.
+function renderLiteralHtmlToken(token) {
+  if (token.block) {
+    return `<p>${escapeHtml(token.text.replace(/\n+$/, "")).replace(/\n/g, "<br>")}</p>`
+  } else {
+    return escapeHtml(token.text)
+  }
 }
 
 // The renderer's output is final, so escape the full lexeme — "&", "<" and ">" —
