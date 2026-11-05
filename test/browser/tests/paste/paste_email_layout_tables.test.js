@@ -67,6 +67,37 @@ test.describe("Paste email layout tables", () => {
     expect(page).toHaveNoErrors()
   })
 
+  test("keeps a media-only cell of a layout table", async ({ page, editor }) => {
+    await pasteHtml(page, editor, `
+      <table role="presentation"><tbody>
+        <tr><td><video src="https://example.com/clip.mp4"></video></td></tr>
+        <tr><td><p>Watch the clip</p></td></tr>
+      </tbody></table>
+    `)
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("table")).toHaveCount(0)
+      await expect(content.locator("action-text-attachment, figure.attachment, video")).not.toHaveCount(0)
+      await expect(content).toContainText("Watch the clip")
+    })
+    await expect.poll(async () => (await editor.value()).includes("clip.mp4")).toBe(true)
+    expect(page).toHaveNoErrors()
+  })
+
+  test("keeps the caption of a layout table", async ({ page, editor }) => {
+    await pasteHtml(page, editor, `
+      <table role="presentation"><caption>Weekly update</caption><tbody>
+        <tr><td><p>All good</p></td></tr>
+      </tbody></table>
+    `)
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("table")).toHaveCount(0)
+      await expect(content.locator("p")).toHaveText([ "Weekly update", "All good" ])
+    })
+    expect(page).toHaveNoErrors()
+  })
+
   test("keeps a data table that sits inside a layout table", async ({ page, editor }) => {
     await pasteHtml(page, editor, `
       <table role="presentation"><tbody><tr><td>

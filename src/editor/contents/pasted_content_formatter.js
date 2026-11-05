@@ -11,6 +11,10 @@ const PRESERVABLE_STYLES = {
   p: [ "margin-top", "margin-bottom" ]
 }
 
+// Elements that show nothing once they hold no text, as in the spacer cells
+// email layouts pad themselves with.
+const SPACER_ELEMENTS = new Set([ "BR", "DIV", "P", "SPAN", "FONT", "CENTER", "A", "B", "STRONG", "I", "EM", "U" ])
+
 export default class PastedContentFormatter {
   constructor(doc) {
     this.doc = doc
@@ -139,18 +143,23 @@ export default class PastedContentFormatter {
     return Array.from(table.rows).every((row) => row.cells.length <= 1)
   }
 
-  // Each cell becomes a block of its own, so the text of neighbouring cells
-  // doesn't run together. Cells with nothing to show are spacers and go.
+  // The caption and each cell become a block of their own, so the text of
+  // neighbouring cells doesn't run together. Cells with nothing to show are
+  // spacers and go.
   #unwrapTable(table) {
     const blocks = []
-    for (const cell of this.#ownCells(table)) {
-      if (this.#hasVisibleContent(cell)) {
+    for (const part of [ ...this.#ownCaptions(table), ...this.#ownCells(table) ]) {
+      if (this.#hasVisibleContent(part)) {
         const block = this.doc.createElement("div")
-        block.append(...cell.childNodes)
+        block.append(...part.childNodes)
         blocks.push(block)
       }
     }
     table.replaceWith(...blocks)
+  }
+
+  #ownCaptions(table) {
+    return Array.from(table.children).filter((child) => child.tagName === "CAPTION")
   }
 
   // Only this table's cells, not those of the tables nested inside them.
@@ -158,8 +167,12 @@ export default class PastedContentFormatter {
     return Array.from(table.querySelectorAll("td, th")).filter((cell) => cell.closest("table") === table)
   }
 
+  // Spacer cells hold at most whitespace, line breaks and empty wrappers. Any
+  // other element, such as an image, a video or an attachment that renders from
+  // its attributes, is content.
   #hasVisibleContent(cell) {
-    return cell.textContent.trim() !== "" || cell.querySelector("img, table, hr") !== null
+    return cell.textContent.trim() !== "" ||
+      Array.from(cell.querySelectorAll("*")).some((element) => !SPACER_ELEMENTS.has(element.tagName))
   }
 
   // Table cells copied from a page inherit the source theme's inline color
