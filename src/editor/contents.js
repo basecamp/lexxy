@@ -49,12 +49,17 @@ export default class Contents {
     }, { tag })
   }
 
+  // The text takes the formatting at the caret, as typed text would.
   insertText(text, { tag } = {}) {
     this.editor.update(() => {
+      const selection = $getSelection()
+      const format = $isRangeSelection(selection) ? selection.format : 0
+      const style = $isRangeSelection(selection) ? selection.style : ""
+
       const paragraph = $createParagraphNode()
       text.split(/\r\n|\r|\n/).forEach((line, index) => {
         if (index > 0) paragraph.append($createLineBreakNode())
-        paragraph.append($createTextNode(line))
+        paragraph.append($createTextNode(line).setFormat(format).setStyle(style))
       })
       this.insertAtCursor(paragraph)
     }, { tag })
