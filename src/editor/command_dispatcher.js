@@ -324,9 +324,19 @@ export class CommandDispatcher {
   // on the caret the user still sees. Otherwise, after Tab back, ArrowDown runs
   // from the hidden header-cell selection and lands in row 2.
   #keepSelectionWithPageCaret(selection) {
-    if ($isRangeSelection(selection) && selection.anchor.getNode().isAttached() && selection.focus.getNode().isAttached()) {
+    if ($isRangeSelection(selection) && this.#isPointStillValid(selection.anchor) && this.#isPointStillValid(selection.focus)) {
       $setSelection(selection)
     }
+  }
+
+  // Inserting can split the text a range covered, leaving the point attached
+  // but past the end of what remains.
+  #isPointStillValid(point) {
+    const node = point.getNode()
+    if (!node.isAttached()) return false
+
+    const size = $isTextNode(node) ? node.getTextContentSize() : node.getChildrenSize()
+    return point.offset <= size
   }
 
   dispatchUndo() {

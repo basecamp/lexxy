@@ -29,6 +29,29 @@ test.describe("Inserting a table from the keyboard toolbar, then Tab back", () =
     await expect(editor.content.locator("p strong")).toHaveText("Bold line continues")
     await expect(editor.content.locator("table")).not.toContainText("continues")
   })
+
+  for (const [ direction, selectWord ] of [
+    [ "forward", async (page) => {
+      for (let index = 0; index < 5; index++) await page.keyboard.press("ArrowLeft")
+      for (let index = 0; index < 5; index++) await page.keyboard.press("Shift+ArrowRight")
+    } ],
+    [ "backward", async (page) => {
+      for (let index = 0; index < 5; index++) await page.keyboard.press("Shift+ArrowLeft")
+    } ]
+  ]) {
+    test(`a ${direction} selection inside a line inserts without an invalid selection`, async ({ page, editor }) => {
+      const errors = []
+      page.on("pageerror", error => errors.push(error.message))
+      page.on("console", message => { if (message.type() === "error") errors.push(message.text()) })
+
+      await page.keyboard.type("Hello world")
+      await selectWord(page)
+      await insertTableFromKeyboardAndReturn(page, editor)
+      await editor.flush()
+
+      expect(errors.filter(error => /offset/i.test(error))).toEqual([])
+    })
+  }
 })
 
 async function insertTableFromKeyboardAndReturn(page, editor) {
