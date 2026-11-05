@@ -46,6 +46,12 @@ export default class Clipboard {
       return true
     }
 
+    if (this.#isTextBesideClipboardReferenceFiles(clipboardData)) {
+      this.#pastePlainText(clipboardData.getData("text/plain"))
+      event.preventDefault()
+      return true
+    }
+
     if (this.#isUnregisteredLexicalDataWithHtml(clipboardData)) {
       this.contents.insertHtml(clipboardData.getData("text/html"), { tag: PASTE_TAG })
       event.preventDefault()
@@ -87,6 +93,25 @@ export default class Clipboard {
 
   #isPlainTextOrURLPasted(clipboardData) {
     return this.#isOnlyPlainTextPasted(clipboardData) || this.#isOnlyURLPasted(clipboardData)
+  }
+
+  // Google apps on Android copy text as text/plain, with no HTML, beside a
+  // "file" that only references their own clipboard. A long-press paste hands
+  // the editor both, and uploading the file inserts an attachment named after
+  // that reference instead of the text. Paste the text when there is no HTML
+  // and none of the files is media or named in the text: copying files in a
+  // file manager also puts their names on the clipboard as text.
+  #isTextBesideClipboardReferenceFiles(clipboardData) {
+    const files = Array.from(clipboardData.files)
+    if (files.length === 0 || clipboardData.getData("text/html")) return false
+    if (this.#isLexicalClipboardData(clipboardData)) return false
+
+    const text = clipboardData.getData("text/plain")
+    return text.trim() !== "" && files.every((file) => !this.#isMediaFile(file) && !text.includes(file.name))
+  }
+
+  #isMediaFile(file) {
+    return /^(image|video|audio)\//.test(file.type)
   }
 
   #isOnlyPlainTextPasted(clipboardData) {
@@ -178,16 +203,18 @@ export default class Clipboard {
 
   #pastePlainTextOrURL(clipboardData) {
     const item = this.#plainTextOrURLItem(clipboardData)
-    item.getAsString((text) => {
-      const url = text.trim()
-      if (this.editorElement.supportsRichText && isAutolinkableURL(url)) {
-        this.#pasteURL(url)
-      } else if (this.editorElement.supportsMarkdown) {
-        this.#pasteMarkdown(text)
-      } else {
-        this.contents.insertText(text, { tag: PASTE_TAG })
-      }
-    })
+    item.getAsString((text) => this.#pastePlainText(text))
+  }
+
+  #pastePlainText(text) {
+    const url = text.trim()
+    if (this.editorElement.supportsRichText && isAutolinkableURL(url)) {
+      this.#pasteURL(url)
+    } else if (this.editorElement.supportsMarkdown) {
+      this.#pasteMarkdown(text)
+    } else {
+      this.contents.insertText(text, { tag: PASTE_TAG })
+    }
   }
 
   #plainTextOrURLItem(clipboardData) {
