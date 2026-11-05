@@ -46,18 +46,42 @@ export function parsePastedMarkdown(text) {
 const DISCARDED_ELEMENTS = new Set([ "script", "style", "iframe", "noscript", "template", "object", "embed", "link", "meta" ])
 
 const INLINE_DISCARDED_ELEMENT_START = /<(?:script|style|iframe|noscript|template|object)\b/i
-const INLINE_DISCARDED_ELEMENT = /^<(script|style|iframe|noscript|template|object)\b(?:"[^"]*"|'[^']*'|[^'">])*>[\s\S]*?<\/\1\s*>/i
+const INLINE_DISCARDED_ELEMENT_OPENING = /^<(script|style|iframe|noscript|template|object)\b(?:"[^"]*"|'[^']*'|[^'">])*>/i
+
+// Script, style and iframe hold raw text, so their first closing tag ends them.
+// The others can nest, so they end at the closing tag that balances the opening.
+const RAW_TEXT_ELEMENTS = new Set([ "script", "style", "iframe" ])
 
 const inlineDiscardedElement = {
   name: "inlineDiscardedElement",
   level: "inline",
   start: (src) => src.match(INLINE_DISCARDED_ELEMENT_START)?.index,
   tokenizer(src) {
-    const match = src.match(INLINE_DISCARDED_ELEMENT)
-    if (match) {
-      return { type: "html", raw: match[0], text: match[0], block: false, inLink: false, inRawBlock: false }
+    const opening = src.match(INLINE_DISCARDED_ELEMENT_OPENING)
+    if (!opening) return
+
+    const end = closingTagEnd(src, opening[1].toLowerCase(), opening[0].length)
+    if (end !== -1) {
+      const raw = src.slice(0, end)
+      return { type: "html", raw, text: raw, block: false, inLink: false, inRawBlock: false }
     }
   }
+}
+
+function closingTagEnd(src, name, from) {
+  const tags = new RegExp(`<(/?)${name}\\b(?:"[^"]*"|'[^']*'|[^'">])*>`, "gi")
+  tags.lastIndex = from
+
+  let depth = 1
+  for (let match = tags.exec(src); match; match = tags.exec(src)) {
+    if (match[1]) {
+      depth--
+    } else if (!RAW_TEXT_ELEMENTS.has(name)) {
+      depth++
+    }
+    if (depth === 0) return tags.lastIndex
+  }
+  return -1
 }
 
 const pasteMarked = new Marked({

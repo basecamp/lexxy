@@ -80,6 +80,15 @@ test.describe("Paste — HTML snippets as plain text", () => {
     })
   })
 
+  test("keeps markdown out of a nested inline template", async ({ editor }) => {
+    await editor.paste("**Use** <template><template>nested</template>`literal`</template> here")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("strong")).toHaveText("Use")
+      await expect(content).toContainText("<template><template>nested</template>`literal`</template> here")
+    })
+  })
+
   test("still imports formatting tags in markdown without a snippet", async ({ editor }) => {
     await editor.paste("Some <b>well known</b> words")
 
