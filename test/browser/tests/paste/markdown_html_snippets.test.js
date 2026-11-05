@@ -60,6 +60,25 @@ test.describe("Paste — HTML snippets as plain text", () => {
     })
   })
 
+  test("keeps the indentation and spacing of a block snippet", async ({ editor }) => {
+    const snippet = '<script>\n  const s = "a  b";\n\tgo(s);\n</script>'
+    await editor.paste(`Intro:\n\n${snippet}`)
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content).toContainText("Intro:")
+    })
+    await expect.poll(() => editor.plainTextValue()).toContain(snippet)
+  })
+
+  test("keeps markdown out of an inline script", async ({ editor }) => {
+    await editor.paste("**Use** <script>console.log(`ok`)</script> here")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("strong")).toHaveText("Use")
+      await expect(content).toContainText("<script>console.log(`ok`)</script> here")
+    })
+  })
+
   test("still imports formatting tags in markdown without a snippet", async ({ editor }) => {
     await editor.paste("Some <b>well known</b> words")
 

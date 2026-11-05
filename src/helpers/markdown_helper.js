@@ -38,18 +38,36 @@ export function parsePastedMarkdown(text) {
 // embed code hangs off has no content to keep either. Rendered as HTML, such a
 // paste loses its code, often all of it, with no error. When any raw HTML in the
 // paste holds one of those tags, the user is pasting code to show, so every raw
-// HTML token in it pastes as the literal text they copied, while the Markdown
-// around it still renders.
+// HTML token in it pastes as the literal text they copied: a block of HTML as a
+// code block, which keeps its indentation and spacing, and HTML within a line
+// as inline code. The Markdown around it still renders. Within a line, marked
+// reads only the tags as HTML and parses what sits between them as Markdown, so
+// an inline element of this kind is tokenized whole, contents included.
+const DISCARDED_ELEMENTS = new Set([ "script", "style", "iframe", "noscript", "template", "object", "embed", "link", "meta" ])
+
+const INLINE_DISCARDED_ELEMENT_START = /<(?:script|style|iframe|noscript|template|object)\b/i
+const INLINE_DISCARDED_ELEMENT = /^<(script|style|iframe|noscript|template|object)\b(?:"[^"]*"|'[^']*'|[^'">])*>[\s\S]*?<\/\1\s*>/i
+
+const inlineDiscardedElement = {
+  name: "inlineDiscardedElement",
+  level: "inline",
+  start: (src) => src.match(INLINE_DISCARDED_ELEMENT_START)?.index,
+  tokenizer(src) {
+    const match = src.match(INLINE_DISCARDED_ELEMENT)
+    if (match) {
+      return { type: "html", raw: match[0], text: match[0], block: false, inLink: false, inRawBlock: false }
+    }
+  }
+}
+
 const pasteMarked = new Marked({
   breaks: true,
   renderer: { html: renderPastedHtmlToken }
 }).use({
+  extensions: [ inlineDiscardedElement ],
   tokenizer: { code: () => undefined },
   hooks: { processAllTokens: markHtmlSnippetTokens }
 })
-
-// Elements the importer drops with their content, or that hold no content to keep.
-const DISCARDED_ELEMENTS = new Set([ "script", "style", "iframe", "noscript", "template", "object", "embed", "link", "meta" ])
 
 function markHtmlSnippetTokens(tokens) {
   const htmlTokens = []
@@ -94,13 +112,11 @@ function renderPastedHtmlToken(token) {
   })
 }
 
-// A block token stands alone, so it becomes a paragraph of its own, keeping its
-// lines; an inline token sits inside the paragraph that holds it.
 function renderLiteralHtmlToken(token) {
   if (token.block) {
-    return `<p>${escapeHtml(token.text.replace(/\n+$/, "")).replace(/\n/g, "<br>")}</p>`
+    return `<pre><code>${escapeHtml(token.text.replace(/\n+$/, ""))}</code></pre>`
   } else {
-    return escapeHtml(token.text)
+    return `<code>${escapeHtml(token.text)}</code>`
   }
 }
 
