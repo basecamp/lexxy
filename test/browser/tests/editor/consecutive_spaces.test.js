@@ -90,6 +90,21 @@ test.describe("Consecutive spaces", () => {
     expect(await editor.value()).toBe("<p>alpha beta</p>")
   })
 
+  test("runs of only non-breaking spaces are kept", async ({ editor }) => {
+    await editor.setValue("<p>alpha&nbsp;&nbsp;beta</p>")
+    await editor.flush()
+
+    expect(await editor.value()).toBe("<p>alpha&nbsp;&nbsp;beta</p>")
+  })
+
+  test("a non-breaking space opening a pasted inline fragment is kept", async ({ editor }) => {
+    await editor.send("x")
+    await editor.paste("10 km", { html: "10<strong>&nbsp;km</strong>" })
+    await editor.flush()
+
+    expect(await editor.value()).toContain("<strong>&nbsp;km</strong>")
+  })
+
   test("a non-breaking space between words is kept", async ({ editor }) => {
     await editor.setValue("<p>10&nbsp;km</p>")
     await editor.flush()

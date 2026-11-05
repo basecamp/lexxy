@@ -7,8 +7,11 @@ const NON_BREAKING_SPACE = "\u00a0"
 // Lexical's HTML importer, so a document that kept them as plain spaces lost
 // them on every re-save. Like Trix, the export writes such spaces as
 // non-breaking spaces, alternating with plain ones so lines can still wrap.
-// The import turns them back into plain spaces, so they edit like the spaces
-// the person typed. A lone non-breaking space between words is left alone.
+// The import turns that encoding back into plain spaces, so they edit like the
+// spaces the person typed: runs mixing both kinds of space, and a non-breaking
+// space that starts a line or follows a space. Runs made only of non-breaking
+// spaces, and a lone one between words, are left alone. A pasted fragment's
+// top-level nodes have no line around them yet, so their leading space is too.
 
 export function $encodeCollapsibleSpaces(text, textNode) {
   if ($isInCodeBlock(textNode)) return text
@@ -34,14 +37,22 @@ export function $decodeCollapsibleSpaces(nodes) {
 
 function $decodeTextNode(textNode) {
   const text = textNode.getTextContent()
-  let decoded = text.replace(/[ \u00a0]{2,}/g, (run) => " ".repeat(run.length))
+  let decoded = text.replace(/[ \u00a0]{2,}/g, (run) => decodeRun(run))
 
-  if ($collapsesLeadingSpace(textNode)) {
+  if (textNode.getParent() !== null && $collapsesLeadingSpace(textNode)) {
     decoded = decoded.replace(/^\u00a0/, " ")
   }
 
   if (decoded !== text) {
     textNode.setTextContent(decoded)
+  }
+}
+
+function decodeRun(run) {
+  if (run.includes(" ")) {
+    return " ".repeat(run.length)
+  } else {
+    return run
   }
 }
 
