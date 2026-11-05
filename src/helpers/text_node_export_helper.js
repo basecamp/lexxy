@@ -1,4 +1,7 @@
+import { $isElementNode, $isLineBreakNode } from "lexical"
 import { $getCodeLink } from "./code_link_helper"
+
+const NON_BREAKING_SPACE = "\u00a0"
 
 // Custom TextNode exportDOM that avoids redundant wrapping.
 //
@@ -13,18 +16,24 @@ import { $getCodeLink } from "./code_link_helper"
 //
 // Any <span> elements produced by createDOM() are unwrapped, since they only carry
 // editor classes that aren't meaningful in exported HTML.
+//
+// Spaces that HTML would collapse are exported as non-breaking spaces, as Trix did:
+// runs of spaces alternate non-breaking and regular spaces so lines can still wrap,
+// and a space that starts a line, or follows another space, becomes non-breaking.
+// Otherwise both the rendered HTML and Lexical's importer collapse them, and every
+// re-save loses them.
 
 // A CodeHighlightNode exports like any other text node, plus an <a> wrapper
 // when it carries link state — that's how a link survives inside a code
 // block, whose retokenizer would destroy an actual LinkNode child.
 export function exportCodeHighlightNodeDOM(editor, codeHighlightNode) {
-  const output = exportTextNodeDOM(editor, codeHighlightNode)
+  const element = exportFormattedTextDOM(editor, codeHighlightNode)
   const link = $getCodeLink(codeHighlightNode)
 
   if (link) {
-    return { element: wrapWithAnchor(output.element, link) }
+    return { element: wrapWithAnchor(element, link) }
   } else {
-    return output
+    return { element }
   }
 }
 
@@ -39,6 +48,12 @@ function wrapWithAnchor(element, link) {
 }
 
 export function exportTextNodeDOM(editor, textNode) {
+  const element = exportFormattedTextDOM(editor, textNode)
+  $preserveSpaces(element, textNode)
+  return { element }
+}
+
+function exportFormattedTextDOM(editor, textNode) {
   const element = textNode.createDOM(editor._config, editor)
   element.style.whiteSpace = "pre-wrap"
 
@@ -65,7 +80,7 @@ export function exportTextNodeDOM(editor, textNode) {
     result = wrapWith(result, "u")
   }
 
-  return { element: unwrapSpans(result) }
+  return unwrapSpans(result)
 }
 
 function containsTag(element, tagName) {
@@ -89,4 +104,53 @@ function unwrapSpans(element) {
   }
 
   return element
+}
+
+function $preserveSpaces(element, textNode) {
+  const domText = findTextNode(element)
+
+  if (domText) {
+    domText.data = encodeSpaces(domText.data, { collapsesLeadingSpace: $collapsesLeadingSpace(textNode) })
+  }
+}
+
+function findTextNode(element) {
+  if (element.nodeType === Node.TEXT_NODE) {
+    return element
+  } else {
+    return document.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode()
+  }
+}
+
+function encodeSpaces(text, { collapsesLeadingSpace }) {
+  let encoded = text.replace(/ {2,}/g, (run) => alternatingSpaces(run.length))
+
+  if (collapsesLeadingSpace) {
+    encoded = encoded.replace(/^ /, NON_BREAKING_SPACE)
+  }
+
+  return encoded
+}
+
+function alternatingSpaces(length) {
+  return `${NON_BREAKING_SPACE} `.repeat(Math.ceil(length / 2)).slice(0, length)
+}
+
+function $collapsesLeadingSpace(node) {
+  const previous = $previousInLine(node)
+  return previous === null || $isLineBreakNode(previous) || /[ \t\n]$/.test(previous.getTextContent())
+}
+
+function $previousInLine(node) {
+  let current = node
+
+  while (current.getPreviousSibling() === null && $isInlineElement(current.getParent())) {
+    current = current.getParent()
+  }
+
+  return current.getPreviousSibling()
+}
+
+function $isInlineElement(node) {
+  return $isElementNode(node) && node.isInline()
 }
