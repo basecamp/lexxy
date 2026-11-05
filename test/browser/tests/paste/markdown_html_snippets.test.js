@@ -19,6 +19,7 @@ test.describe("Paste — HTML snippets as plain text", () => {
     await assertEditorContent(editor, async (content) => {
       await expect(content).toContainText('<div id="w"></div>')
       await expect(content).toContainText("<script>window.x = 1</script>")
+      await expect(content.locator("pre, code[data-language]").first()).toHaveAttribute("data-language", "html")
     })
     await assertEditorPlainText(editor, 'Add this:\n\n<div id="w"></div>\n<script>window.x = 1</script>')
   })

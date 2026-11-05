@@ -114,7 +114,7 @@ function renderPastedHtmlToken(token) {
 
 function renderLiteralHtmlToken(token) {
   if (token.block) {
-    return `<pre><code>${escapeHtml(token.text.replace(/\n+$/, ""))}</code></pre>`
+    return `<pre data-language="html"><code>${escapeHtml(token.text.replace(/\n+$/, ""))}</code></pre>`
   } else {
     return `<code>${escapeHtml(token.text)}</code>`
   }
