@@ -51,4 +51,9 @@ test.describe("Code block language on import", () => {
     await editor.paste("Some code:\n\n```ruby\ndef hello\nend\n```")
     await assertEditorHtml(editor, '<p>Some code:</p><pre data-language="ruby" data-highlight-language="ruby">def hello<br>end</pre>')
   })
+
+  test("keeps the language of a pasted swift fence", async ({ editor }) => {
+    await editor.paste("```swift\nfunc makeFun() async {\n}\n```")
+    await assertEditorHtml(editor, '<pre data-language="swift" data-highlight-language="swift">func makeFun() async {<br>}</pre>')
+  })
 })
