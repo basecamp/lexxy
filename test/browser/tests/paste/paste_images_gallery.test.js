@@ -87,4 +87,16 @@ test.describe("Paste — Adjacent images form a gallery", () => {
     // No gallery should have been formed because the second paste isn't an image.
     await expect(editor.content.locator(".attachment-gallery")).toHaveCount(0)
   })
+
+  test("pasting a gallery copied from rendered content keeps it a gallery", async ({ editor }) => {
+    const image = (n) => `<action-text-attachment sgid="sgid${n}" content-type="image/png" url="/example.png" filename="${n}.png" previewable="true" presentation="gallery"><figure class="attachment attachment--preview"><img src="/example.png"><figcaption class="attachment__caption"><span>${n}.png</span> <a href="/example.png">Download</a></figcaption></figure></action-text-attachment>`
+
+    await editor.paste("1.png Download 2.png Download", {
+      html: `<div class="attachment-gallery attachment-gallery--2">${image(1)}\n${image(2)}</div>`,
+    })
+
+    const gallery = editor.content.locator(".attachment-gallery")
+    await expect(gallery).toHaveCount(1)
+    await expect(gallery.locator("figure.attachment")).toHaveCount(2)
+  })
 })
