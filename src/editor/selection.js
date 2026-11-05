@@ -403,8 +403,10 @@ export default class Selection {
         return false
       }, COMMAND_PRIORITY_CRITICAL),
 
-      this.editor.registerUpdateListener(({ tags }) => {
-        if (tags.has(SKIP_DOM_SELECTION_TAG) && this.#isAnotherElementFocused) this.#domSelectionBehind = true
+      this.editor.registerUpdateListener(({ tags, editorState, prevEditorState }) => {
+        if (tags.has(SKIP_DOM_SELECTION_TAG) && this.#isAnotherElementFocused && this.#movedToAnotherBlock(prevEditorState, editorState)) {
+          this.#domSelectionBehind = true
+        }
       }),
 
       this.editor.registerCommand(FOCUS_COMMAND, () => {
@@ -419,6 +421,10 @@ export default class Selection {
   // it in the first header cell. Chrome and WebKit fire no selectionchange when
   // Tab brings focus back to an unmoved caret, so the two stay apart and the
   // next key acts on a position the user can't see. Follow the page caret.
+  //
+  // Only when the selection moved to another block: commands that format in
+  // place (Bold at a collapsed caret or on a range) keep their selection, with
+  // its pending format, and may have re-rendered the text the page caret was in.
   #followPageCaretOnReturn() {
     if (!this.#domSelectionBehind) return
     this.#domSelectionBehind = false
@@ -431,6 +437,17 @@ export default class Selection {
 
     const pageSelection = $createRangeSelectionFromDom(domSelection, this.editor)
     if (pageSelection) $setSelection(pageSelection)
+  }
+
+  #movedToAnotherBlock(prevEditorState, editorState) {
+    return this.#selectedBlockKey(prevEditorState) !== this.#selectedBlockKey(editorState)
+  }
+
+  #selectedBlockKey(editorState) {
+    return editorState.read(() => {
+      const selection = $getSelection()
+      return $isRangeSelection(selection) ? selection.anchor.getNode().getTopLevelElement()?.getKey() : null
+    })
   }
 
   // Selection changes can arrive after Tab moves focus to a toolbar or another field.
