@@ -30,6 +30,14 @@ test.describe("Turning indented list items into paragraphs", () => {
     await expect(editor.content.locator("p[style]")).toHaveCount(0)
   })
 
+  test("clearing formatting leaves no indentation", async ({ page, editor }) => {
+    await editor.selectAll()
+    await clickToolbarButton(page, "clearFormatting")
+
+    await assertEditorHtml(editor, "<p>First</p><p>Second</p><p>Third</p>")
+    await expect(editor.content.locator("p[style]")).toHaveCount(0)
+  })
+
   test("toggling only the indented item off leaves no indentation", async ({ page, editor }) => {
     await editor.select("Second")
     await page.getByRole("button", { name: "Bullet list" }).click()
