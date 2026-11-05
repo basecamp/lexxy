@@ -76,7 +76,7 @@ class AttachmentAlternativeTextRoundTripTest < ApplicationSystemTestCase
     assert_selector "figure.attachment img[alt='']"
     assert_selector "figure.attachment figcaption", text: "On the river"
     find("figure.attachment").click x: 8, y: 8
-    click_on "Alternative text"
+    click_on "Alt text"
     assert_field "Description", with: ""
   end
 
@@ -107,7 +107,7 @@ class AttachmentAlternativeTextRoundTripTest < ApplicationSystemTestCase
   private
     def edit_description(description)
       find("figure.attachment").click x: 8, y: 8
-      click_on "Alternative text"
+      click_on "Alt text"
       within "dialog[open]" do
         fill_in "Description", with: description
         click_on "Save"
