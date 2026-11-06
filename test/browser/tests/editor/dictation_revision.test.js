@@ -54,8 +54,39 @@ test.describe("Dictation revisions", () => {
   })
 })
 
-async function sendRevision(editor, { inputType, text, target }) {
-  await editor.content.evaluate((root, { inputType, text, target }) => {
+// On macOS Chrome, a handled Backspace can accept a pending text replacement, which Lexical
+// rejects while keeping the caret where it was. Lexical reads the platform when it loads, so
+// this presents Chromium as macOS Chrome.
+test.describe("Dictation revisions on macOS Chrome", () => {
+  test.beforeEach(async ({ page, editor, browserName }) => {
+    test.skip(browserName !== "chromium", "presents Chromium as macOS Chrome")
+
+    await page.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, "platform", { get: () => "MacIntel" })
+      Object.defineProperty(Navigator.prototype, "userAgent", {
+        get: () => "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+      })
+    })
+    await page.goto("/")
+    await editor.waitForConnected()
+    await editor.setValue("<p>this is a test</p>")
+  })
+
+  test("a replacement rejected after Backspace leaves the caret where it was", async ({ editor }) => {
+    await editor.placeCaretInside("this", 4)
+    await sendRevision(editor, { inputType: "insertText", text: "best", target: "test", afterBackspace: true })
+    await editor.send("X")
+
+    await assertEditorPlainText(editor, "thiX is a test")
+  })
+})
+
+async function sendRevision(editor, { inputType, text, target, afterBackspace = false }) {
+  await editor.content.evaluate((root, { inputType, text, target, afterBackspace }) => {
+    if (afterBackspace) {
+      root.dispatchEvent(new KeyboardEvent("keydown", { key: "Backspace", code: "Backspace", bubbles: true, cancelable: true }))
+    }
+
     const range = findTextRange(root, target)
     const event = new InputEvent("beforeinput", {
       bubbles: true,
@@ -91,6 +122,6 @@ async function sendRevision(editor, { inputType, text, target }) {
         endContainer: last.node, endOffset: end - last.start
       }
     }
-  }, { inputType, text, target })
+  }, { inputType, text, target, afterBackspace })
   await editor.flush()
 }

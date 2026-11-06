@@ -13,6 +13,10 @@ const REVISION_INPUT_TYPES = new Set([ "insertText", "insertReplacementText" ])
 // instead and the misheard words disappeared (facebook/lexical#6940). The target range is the
 // browser's statement of what to replace, so this applies it first and lets Lexical's own
 // handler insert the text.
+//
+// A collapsed selection is left to Lexical, which already applies the target range to it. Lexical
+// also relies on the caret staying put when it rejects a replacement macOS Chrome sends after a
+// handled Backspace.
 export class DictationRevisionExtension extends LexxyExtension {
   get lexicalExtension() {
     return defineExtension({
@@ -28,9 +32,13 @@ function $selectRevisionTargetRange(event) {
   const targetRange = event.getTargetRanges?.()[0]
   const selection = $getSelection()
 
-  if (targetRange && !targetRange.collapsed && $isRangeSelection(selection) && !$isRootNode(selection.anchor.getNode())) {
+  if (targetRange && !targetRange.collapsed && $isStaleRangeSelection(selection)) {
     selection.applyDOMRange(targetRange)
   }
 
   return false
+}
+
+function $isStaleRangeSelection(selection) {
+  return $isRangeSelection(selection) && !selection.isCollapsed() && !$isRootNode(selection.anchor.getNode())
 }
