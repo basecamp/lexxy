@@ -9,7 +9,7 @@ import { $getCodeLink } from "./code_link_helper"
 //
 // This custom export skips <b> when <strong> is already present and <i> when <em> is
 // already present, while preserving <s> and <u> wrappers which have no semantic equivalents
-// in createDOM's output.
+// in createDOM's output. On highlighted text, <s> and <u> go inside the <mark>.
 //
 // Any <span> elements produced by createDOM() are unwrapped, since they only carry
 // editor classes that aren't meaningful in exported HTML.
@@ -59,10 +59,10 @@ export function exportTextNodeDOM(editor, textNode) {
     result = wrapWith(result, "i")
   }
   if (textNode.hasFormat("strikethrough")) {
-    result = wrapWith(result, "s")
+    result = wrapDecoration(result, element, "s")
   }
   if (textNode.hasFormat("underline")) {
-    result = wrapWith(result, "u")
+    result = wrapDecoration(result, element, "u")
   }
 
   return { element: unwrapSpans(result) }
@@ -79,6 +79,19 @@ function wrapWith(element, tag) {
   const wrapper = document.createElement(tag)
   wrapper.appendChild(element)
   return wrapper
+}
+
+// A text decoration line is drawn in the color of the element that declares it,
+// so <s> and <u> go inside a highlight's <mark> to take its color.
+function wrapDecoration(result, element, tag) {
+  if (element.tagName === "MARK") {
+    const wrapper = document.createElement(tag)
+    wrapper.append(...element.childNodes)
+    element.appendChild(wrapper)
+    return result
+  } else {
+    return wrapWith(result, tag)
+  }
 }
 
 function unwrapSpans(element) {
