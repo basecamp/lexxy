@@ -24,7 +24,7 @@ test.describe("Backspace after mention in list item", () => {
     await page.waitForSelector("lexxy-editor[connected]")
   })
 
-  test("backspace after mention in list item selects the mention instead of outdenting", async ({ page, editor }) => {
+  test("backspace after mention in list item deletes the mention instead of outdenting", async ({ page, editor }) => {
     // Set up a list item containing only a mention
     await editor.setValue(`<ul><li>${mentionHtml}</li></ul>`)
     await editor.flush()
@@ -35,18 +35,78 @@ test.describe("Backspace after mention in list item", () => {
     await editor.send("End")
     await editor.flush()
 
-    // Backspace should select the mention, NOT outdent the list item
+    // Backspace should delete the mention, NOT outdent the list item
     await editor.send("Backspace")
 
-    // The list should still exist (not outdented to a paragraph)
     await assertEditorContent(editor, async (content) => {
       await expect(content.locator("ul")).toHaveCount(1)
+      await expect(content.locator("action-text-attachment")).toHaveCount(0)
     })
+  })
+})
 
-    // The mention should be selected (node--selected class)
-    await assertEditorContent(editor, async (content) => {
-      await expect(content.locator(".node--selected")).toHaveCount(1)
+// A mention deletes like a character of text: one Backspace or Delete removes it
+// and the caret stays where it was. Selecting it first would take the caret
+// away, and Android dismisses the on-screen keyboard when there is no caret.
+test.describe("Deleting a mention like text", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/")
+    await page.waitForSelector("lexxy-editor[connected]")
+  })
+
+  async function expectCaretInEditor(editor) {
+    const caret = await editor.content.evaluate((el) => {
+      const selection = window.getSelection()
+      return { ranges: selection.rangeCount, collapsed: selection.isCollapsed, inside: el.contains(selection.anchorNode) }
     })
+    expect(caret).toEqual({ ranges: 1, collapsed: true, inside: true })
+  }
+
+  test("backspace after a mention deletes it in one press and keeps the caret", async ({ editor }) => {
+    await editor.setValue(`<p>Hello ${mentionHtml} world</p>`)
+    await editor.flush()
+    await editor.placeCaretInside(" world", 0)
+
+    await editor.send("Backspace")
+
+    await expect(editor.content.locator("action-text-attachment")).toHaveCount(0)
+    await expect(editor.content.locator(".node--selected")).toHaveCount(0)
+    await expectCaretInEditor(editor)
+
+    await editor.send("X")
+    await assertEditorHtml(editor, "<p>Hello X world</p>")
+  })
+
+  test("delete before a mention deletes it in one press and keeps the caret", async ({ editor }) => {
+    await editor.setValue(`<p>Hello ${mentionHtml} world</p>`)
+    await editor.flush()
+    await editor.placeCaretInside("Hello ", 6)
+
+    await editor.send("Delete")
+
+    await expect(editor.content.locator("action-text-attachment")).toHaveCount(0)
+    await expectCaretInEditor(editor)
+
+    await editor.send("X")
+    await assertEditorHtml(editor, "<p>Hello X world</p>")
+  })
+
+  // The Android keyboard sends no usable keydown for Backspace (key code 229),
+  // only a deleteContentBackward beforeinput event. Playwright can't drive an
+  // Android IME, so this dispatches that event the way the IME does.
+  test("an Android keyboard's backspace after a mention deletes it and keeps the caret", async ({ editor }) => {
+    await editor.setValue(`<p>Hello ${mentionHtml} world</p>`)
+    await editor.flush()
+    await editor.placeCaretInside(" world", 0)
+
+    await editor.content.evaluate((el) => {
+      el.dispatchEvent(new InputEvent("beforeinput", { inputType: "deleteContentBackward", bubbles: true, cancelable: true }))
+    })
+    await editor.flush()
+
+    await expect(editor.content.locator("action-text-attachment")).toHaveCount(0)
+    await expect(editor.content.locator(".node--selected")).toHaveCount(0)
+    await expectCaretInEditor(editor)
   })
 })
 
@@ -164,6 +224,30 @@ test.describe("Mention deletion cursor position", () => {
       expect(text).not.toContain("Alice")
       expect(text).toMatch(/Hello[\s]*X/)
       await expect(content.locator("action-text-attachment")).toHaveCount(1)
+    })
+  })
+})
+
+// Images are easier to remove with touch, so Backspace still selects them first.
+test.describe("Backspace after an image", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/attachments-enabled.html")
+    await page.waitForSelector("lexxy-editor[connected]")
+  })
+
+  test("selects the image instead of deleting it", async ({ editor }) => {
+    await editor.setValue(
+      '<action-text-attachment content-type="image/png" url="http://example.com/image.png" filename="photo.png"></action-text-attachment>' +
+      "<p>Hello</p>",
+    )
+    await editor.flush()
+    await editor.placeCaretInside("Hello", 0)
+
+    await editor.send("Backspace")
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("figure")).toHaveCount(1)
+      await expect(content.locator("figure.node--selected")).toHaveCount(1)
     })
   })
 })
