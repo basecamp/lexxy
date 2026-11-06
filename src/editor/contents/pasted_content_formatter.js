@@ -17,8 +17,6 @@ const BLOCK_ELEMENTS = new Set([
   "LEGEND", "LI", "MAIN", "MENU", "NAV", "OL", "P", "PRE", "SEARCH", "SECTION", "SUMMARY", "TABLE", "TD", "TH", "UL"
 ])
 
-const BLOCK_SELECTOR = Array.from(BLOCK_ELEMENTS, (name) => name.toLowerCase()).join(", ")
-
 // Elements that show something on a line without any text inside them.
 const INLINE_CONTENT_ELEMENTS = new Set([ "ACTION-TEXT-ATTACHMENT", "AUDIO", "EMBED", "IFRAME", "IMG", "OBJECT", "PICTURE", "SVG", "VIDEO" ])
 
@@ -185,26 +183,22 @@ export default class PastedContentFormatter {
   // shows as an empty line, so it stays.
   #stripBreaksBeforeBlocks() {
     for (const br of Array.from(this.doc.querySelectorAll("br"))) {
-      if (this.#isBlockElement(this.#nextNodeOnLine(br)) && this.#hasContentBeforeOnLine(br)) {
+      if (this.#blockFollowsOnLine(br) && this.#hasContentBeforeOnLine(br)) {
         br.remove()
       }
     }
   }
 
-  // The node after the <br>, stepping out of inline wrappers such as the <span>s
-  // Outlook puts around each run of text, and over empty ones.
-  #nextNodeOnLine(br) {
+  // Whether a block comes right after the <br>, stepping out of and into inline
+  // wrappers such as the <span>s Outlook puts around each run of text.
+  #blockFollowsOnLine(br) {
     for (let node = br; node !== this.doc.body && !this.#isBlockElement(node); node = node.parentNode) {
       for (let sibling = node.nextSibling; sibling; sibling = sibling.nextSibling) {
-        if (!this.#isCollapsibleWhitespace(sibling) && !this.#isEmptyInlineWrapper(sibling)) return sibling
+        const start = this.#lineEdgeIn(sibling, "start")
+        if (start) return start === "block"
       }
     }
-    return null
-  }
-
-  #isEmptyInlineWrapper(node) {
-    return node.nodeType === Node.ELEMENT_NODE && node.nodeName !== "BR" && !this.#isBlockElement(node) &&
-      !this.#hasInlineContent(node) && !node.querySelector("br, " + BLOCK_SELECTOR)
+    return false
   }
 
   // Whether text or media comes before the <br> since its block, or the block
@@ -212,33 +206,31 @@ export default class PastedContentFormatter {
   #hasContentBeforeOnLine(br) {
     for (let node = br; node !== this.doc.body && !this.#isBlockElement(node); node = node.parentNode) {
       for (let sibling = node.previousSibling; sibling; sibling = sibling.previousSibling) {
-        const ending = this.#lineEndingIn(sibling)
-        if (ending) return ending === "content"
+        const end = this.#lineEdgeIn(sibling, "end")
+        if (end) return end === "content"
       }
     }
     return false
   }
 
-  // What the end of a node leaves on the line after it: "content", a "block"
-  // boundary that starts a new line, or null for nothing at all.
-  #lineEndingIn(node) {
+  // What a node shows first ("start") or last ("end") on its line: "content", a
+  // "block" that starts a line of its own, or null for nothing at all. Looking
+  // ahead, a <br> counts as content, since it ends a line of its own; looking
+  // back, it doesn't, so a run of breaks needs text or media before it.
+  #lineEdgeIn(node, edge) {
     if (this.#isBlockElement(node)) return "block"
     if (node.nodeType === Node.TEXT_NODE) return this.#isCollapsibleWhitespace(node) ? null : "content"
     if (node.nodeType !== Node.ELEMENT_NODE) return null
+    if (node.nodeName === "BR") return edge === "start" ? "content" : null
     if (INLINE_CONTENT_ELEMENTS.has(node.nodeName.toUpperCase())) return "content"
 
-    for (let child = node.lastChild; child; child = child.previousSibling) {
-      const ending = this.#lineEndingIn(child)
-      if (ending) return ending
+    const children = Array.from(node.childNodes)
+    if (edge === "end") children.reverse()
+    for (const child of children) {
+      const found = this.#lineEdgeIn(child, edge)
+      if (found) return found
     }
     return null
-  }
-
-  #hasInlineContent(node) {
-    if (node.nodeType === Node.TEXT_NODE) return !this.#isCollapsibleWhitespace(node)
-    if (node.nodeType !== Node.ELEMENT_NODE) return false
-    if (INLINE_CONTENT_ELEMENTS.has(node.nodeName.toUpperCase())) return true
-    return Array.from(node.childNodes).some((child) => this.#hasInlineContent(child))
   }
 
   // HTML collapses spaces, tabs and newlines but not non-breaking spaces, which
