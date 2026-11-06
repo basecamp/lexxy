@@ -119,6 +119,51 @@ test.describe("Paste with styles", () => {
     )
   })
 
+  test("canonicalizes highlight styles in a pasted code block", async ({
+    editor,
+  }) => {
+    await editor.paste("one two three", {
+      html: `<pre data-language="plain">one <mark style="background-color: rgba(229, 223, 6, 0.3); color: inherit;">two</mark> three</pre>`,
+    })
+    await assertEditorHtml(
+      editor,
+      `<pre data-language="plain" data-highlight-language="plain">one <mark style="background-color: var(--highlight-bg-1);">two</mark> three</pre>`,
+    )
+  })
+
+  test("strips non-canonical highlight styles in a pasted code block", async ({
+    editor,
+  }) => {
+    await editor.paste("one two three", {
+      html: `<pre data-language="plain">one <mark style="background-color: yellow;">two</mark> three</pre>`,
+    })
+    await assertEditorHtml(
+      editor,
+      `<pre data-language="plain" data-highlight-language="plain">one two three</pre>`,
+    )
+  })
+
+  test("canonicalizes highlight styles on pasted inline code", async ({
+    editor,
+  }) => {
+    await editor.paste("some code", {
+      html: `some <code style="background-color: rgba(229, 223, 6, 0.3); color: oklch(0.2 0 0); font-family: monospace;">code</code>`,
+    })
+    await assertEditorHtml(
+      editor,
+      `<p>some <code style="background-color: var(--highlight-bg-1);">code</code></p>`,
+    )
+  })
+
+  test("strips non-canonical styles on pasted inline code", async ({
+    editor,
+  }) => {
+    await editor.paste("some code", {
+      html: `some <code style="background-color: oklch(0.96 0 0); color: oklch(0.2 0 0);">code</code>`,
+    })
+    await assertEditorHtml(editor, `<p>some <code>code</code></p>`)
+  })
+
   test("canonicalizes selection styles on paste", async ({
     page,
     editor,
