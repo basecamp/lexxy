@@ -4,7 +4,7 @@ import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
-import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
+import { $generateDOMFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
 import { $filterDisallowedCode, $removeInlineCodeFormat, $replaceCodeNodeWithParagraphs } from "../helpers/code_filter_helper"
 import { $convertInlineImageDataURIs } from "../helpers/inline_image_uri_helper"
@@ -423,7 +423,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #readSanitizedEditorValue() {
     return this.editor?.read(() => {
-      return withoutEmptyParagraph(this.sanitizer.sanitize(withoutLexicalExportArtifacts($generateHtmlFromNodes(this.editor, null))))
+      return withoutEmptyParagraph(this.sanitizer.sanitize($generateHtmlWithoutExportArtifacts(this.editor)))
     }) ?? null
   }
 
@@ -1060,13 +1060,29 @@ function $getReadableTextContent(node) {
 // way Trix stores them. A <br> that ends a block renders nothing and is dropped
 // on import, so without it a Shift+Enter at the end of an item would vanish from
 // the rendered content and from the editor on reload.
-const LEXICAL_EXPORT_ARTIFACTS = / data-lexical-indent="\d+"|<br data-lexical-managed-linebreak="true">/g
-const LIST_ITEM_MANAGED_LINE_BREAK = /<br data-lexical-managed-linebreak="true"><\/li>/g
+//
+// They're removed from the exported elements rather than from the HTML string,
+// where text that reads the same would go too.
+function $generateHtmlWithoutExportArtifacts(editor) {
+  const container = $generateDOMFromNodes(document.createElement("div"), null, editor)
 
-function withoutLexicalExportArtifacts(html) {
-  return html
-    .replace(LIST_ITEM_MANAGED_LINE_BREAK, "<br></li>")
-    .replace(LEXICAL_EXPORT_ARTIFACTS, "")
+  for (const element of container.querySelectorAll("[data-lexical-indent]")) {
+    element.removeAttribute("data-lexical-indent")
+  }
+
+  for (const lineBreak of container.querySelectorAll("br[data-lexical-managed-linebreak]")) {
+    if (isLastChildOfListItem(lineBreak)) {
+      lineBreak.removeAttribute("data-lexical-managed-linebreak")
+    } else {
+      lineBreak.remove()
+    }
+  }
+
+  return container.innerHTML
+}
+
+function isLastChildOfListItem(node) {
+  return node.parentElement?.tagName === "LI" && !node.nextSibling
 }
 
 // An empty editor still holds one paragraph, so there is somewhere to type and
