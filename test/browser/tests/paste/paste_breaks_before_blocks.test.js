@@ -98,6 +98,18 @@ test.describe("Paste — a line break right before a block", () => {
     await expect.poll(() => editor.value()).toContain('<p><br></p><ul><li value="1">Item</li></ul>')
   })
 
+  test("keeps the line a preserved newline adds after a line break before a list", async ({ editor }) => {
+    await editor.paste("ignored", { html: '<div style="white-space: pre-wrap">Intro<br>\n<ul><li>Item</li></ul></div>' })
+
+    await assertEditorHtml(editor, '<p>Intro<br></p><ul><li value="1">Item</li></ul>')
+  })
+
+  test("keeps an empty line at the start of a span shown as a block after text outside it", async ({ editor }) => {
+    await editor.paste("ignored", { html: '<div>Outside text<span style="display: block"><br><ul><li>Item</li></ul></span></div>' })
+
+    await assertEditorHtml(editor, '<p>Outside text<br></p><ul><li value="1">Item</li></ul>')
+  })
+
   test("keeps a blank line the author left before a list", async ({ editor }) => {
     await editor.paste("ignored", { html: "<div>Intro<br><br><ul><li>Item</li></ul></div>" })
 

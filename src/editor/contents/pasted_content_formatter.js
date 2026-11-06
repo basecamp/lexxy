@@ -347,8 +347,14 @@ export default class PastedContentFormatter {
     return node.nodeType === Node.TEXT_NODE && /^[ \t\n\r\f]*$/.test(node.textContent)
   }
 
+  // An inline display style decides, as it does in the browser, so a <span> shown as a
+  // block starts a line of its own and a <div> shown inline doesn't.
   #isBlockElement(node) {
-    return node?.nodeType === Node.ELEMENT_NODE && BLOCK_ELEMENTS.has(node.nodeName)
+    if (node?.nodeType !== Node.ELEMENT_NODE) return false
+
+    const display = node.style?.display
+    if (display) return !display.startsWith("inline") && display !== "contents" && display !== "none"
+    return BLOCK_ELEMENTS.has(node.nodeName)
   }
 
   // Read the rules from a sheet we build rather than from this.doc.styleSheets: the
