@@ -16,6 +16,9 @@ const BLOCK_ELEMENTS = new Set([
   "HEADER", "HR", "LI", "OL", "P", "PRE", "SECTION", "TABLE", "UL"
 ])
 
+// Elements that show something on a line without any text inside them.
+const INLINE_CONTENT_ELEMENTS = new Set([ "ACTION-TEXT-ATTACHMENT", "AUDIO", "EMBED", "IFRAME", "IMG", "OBJECT", "PICTURE", "SVG", "VIDEO" ])
+
 export default class PastedContentFormatter {
   constructor(doc) {
     this.doc = doc
@@ -175,11 +178,11 @@ export default class PastedContentFormatter {
   // Outlook, and the web apps that show its mail, end a line with <br> right before
   // a list or other block starts. The block starts a new line anyway, so that <br>
   // only ends the line before it and shows nothing, but imported it becomes a line
-  // break that adds a blank line. A <br> alone at the start of its block does show,
-  // as an empty line, so it stays.
+  // break that adds a blank line. A <br> with no content before it on its line
+  // shows as an empty line, so it stays.
   #stripBreaksBeforeBlocks() {
-    for (const br of this.doc.querySelectorAll("br")) {
-      if (this.#isBlockElement(this.#nextNodeOnLine(br)) && this.#endsLineOfContent(br)) {
+    for (const br of Array.from(this.doc.querySelectorAll("br"))) {
+      if (this.#isBlockElement(this.#nextNodeOnLine(br)) && this.#hasContentBeforeOnLine(br)) {
         br.remove()
       }
     }
@@ -188,26 +191,38 @@ export default class PastedContentFormatter {
   // The node after the <br>, stepping out of inline wrappers such as the <span>s
   // Outlook puts around each run of text.
   #nextNodeOnLine(br) {
-    let node = br
-    let next = this.#meaningfulSibling(node, "nextSibling")
-    while (!next && node.parentNode !== this.doc.body && !this.#isBlockElement(node.parentNode)) {
-      node = node.parentNode
-      next = this.#meaningfulSibling(node, "nextSibling")
+    for (let node = br; node !== this.doc.body && !this.#isBlockElement(node); node = node.parentNode) {
+      for (let sibling = node.nextSibling; sibling; sibling = sibling.nextSibling) {
+        if (!this.#isCollapsibleWhitespace(sibling)) return sibling
+      }
     }
-    return next
+    return null
   }
 
-  #endsLineOfContent(br) {
-    const previous = this.#meaningfulSibling(br, "previousSibling")
-    return previous !== null && !this.#isBlockElement(previous)
+  // Whether text or media comes before the <br> since its block, or the block
+  // before it, began, looking through earlier breaks and empty inline wrappers.
+  #hasContentBeforeOnLine(br) {
+    for (let node = br; node !== this.doc.body && !this.#isBlockElement(node); node = node.parentNode) {
+      for (let sibling = node.previousSibling; sibling; sibling = sibling.previousSibling) {
+        if (this.#isBlockElement(sibling)) return false
+        if (this.#hasInlineContent(sibling)) return true
+      }
+    }
+    return false
   }
 
-  #meaningfulSibling(node, direction) {
-    let sibling = node[direction]
-    while (sibling && this.#isIgnorableTrailingNode(sibling)) {
-      sibling = sibling[direction]
-    }
-    return sibling
+  #hasInlineContent(node) {
+    if (node.nodeType === Node.TEXT_NODE) return !this.#isCollapsibleWhitespace(node)
+    if (node.nodeType !== Node.ELEMENT_NODE) return false
+    if (INLINE_CONTENT_ELEMENTS.has(node.nodeName.toUpperCase())) return true
+    return Array.from(node.childNodes).some((child) => this.#hasInlineContent(child))
+  }
+
+  // HTML collapses spaces, tabs and newlines but not non-breaking spaces, which
+  // hold a line open.
+  #isCollapsibleWhitespace(node) {
+    if (node.nodeType === Node.COMMENT_NODE) return true
+    return node.nodeType === Node.TEXT_NODE && /^[ \t\n\r\f]*$/.test(node.textContent)
   }
 
   #isBlockElement(node) {

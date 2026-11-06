@@ -38,6 +38,30 @@ test.describe("Paste — a line break right before a block", () => {
     })
   })
 
+  test("adds no blank line when the text and the line break are in separate styled runs", async ({ editor }) => {
+    await editor.paste("ignored", { html: "<ul><li><span>Level 1</span><span><br></span><ul><li>Level 2</li></ul></li></ul>" })
+
+    await assertEditorHtml(editor, '<ul><li value="1">Level 1<ul><li value="1">Level 2</li></ul></li></ul>')
+  })
+
+  test("keeps an empty line before a list when only an empty wrapper comes first", async ({ editor }) => {
+    await editor.paste("ignored", { html: "<div><span></span><br><ul><li>Item</li></ul></div>" })
+
+    await assertEditorHtml(editor, '<p><br></p><ul><li value="1">Item</li></ul>')
+  })
+
+  test("keeps both empty lines at the start of a block before a list", async ({ editor }) => {
+    await editor.paste("ignored", { html: "<div><br><br><ul><li>Item</li></ul></div>" })
+
+    await assertEditorHtml(editor, '<p><br><br></p><ul><li value="1">Item</li></ul>')
+  })
+
+  test("keeps a line holding a non-breaking space before a list", async ({ editor }) => {
+    await editor.paste("ignored", { html: "<div>Intro<br>&nbsp;<ul><li>Item</li></ul></div>" })
+
+    await assertEditorHtml(editor, '<p>Intro<br>&nbsp;</p><ul><li value="1">Item</li></ul>')
+  })
+
   test("keeps a blank line the author left before a list", async ({ editor }) => {
     await editor.paste("ignored", { html: "<div>Intro<br><br><ul><li>Item</li></ul></div>" })
 
