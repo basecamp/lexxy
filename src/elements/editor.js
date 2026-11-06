@@ -20,7 +20,7 @@ import CaptionEditor from "../editor/attachments/caption_editor"
 import { UploadRequests } from "../editor/attachments/upload_requests"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
-import { createElement, dispatch, generateDomId, parseHtml, stripTrailingCodeBlockNewlines } from "../helpers/html_helper"
+import { createElement, dispatch, generateDomId, parseHtml, stripTrailingCodeBlockNewlines, trimLinkAddresses } from "../helpers/html_helper"
 import { isAttachmentSpacerTextNode, isEditorFocused } from "../helpers/lexical_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
@@ -279,6 +279,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   $generateNodesFromDOM(doc, { editor = this.editor } = {}) {
     stripTrailingCodeBlockNewlines(doc)
+    trimLinkAddresses(doc)
     let nodes = $generateLexicalNodesFromDOM(editor, doc)
     $decodeCollapsibleSpaces(nodes)
     if ($hasUpdateTag(PASTE_TAG)) nodes = $convertInlineImageDataURIs(nodes, this)

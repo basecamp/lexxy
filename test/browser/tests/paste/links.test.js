@@ -239,4 +239,15 @@ test.describe("Paste: rendered content with placeholder anchors", () => {
       await expect(content).toContainText("Hello world")
     })
   })
+
+  test("trims spaces around a pasted link's address", async ({ editor }) => {
+    const html = '<p>Read <a href=" https://example.com/docs ">the docs</a></p>'
+
+    await editor.paste("Read the docs", { html })
+
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator('a[href="https://example.com/docs"]')).toHaveText("the docs")
+    })
+    await assertEditorHtml(editor, '<p>Read <a href="https://example.com/docs">the docs</a></p>')
+  })
 })
