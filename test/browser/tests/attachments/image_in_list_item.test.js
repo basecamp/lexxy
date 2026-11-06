@@ -83,6 +83,19 @@ test.describe("Inserting an image into a list item", () => {
     await expect(editor.content.locator("ol").nth(1)).toHaveAttribute("start", "3")
   })
 
+  test("image inserted into a numbered list keeps counting after the image", async ({ editor }) => {
+    await editor.setValue("<ol><li>First</li><li>Second</li><li>Third</li></ol>")
+    await editor.select("Second")
+    await editor.send("End")
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+    await assertImageAttachments(editor, 1)
+
+    await assertListIntegrity(editor)
+    expect(await editor.value()).toMatch(/^<ol><li value="1">First<\/li><li value="2">Second<\/li><\/ol><action-text-attachment [^>]*><\/action-text-attachment><ol start="3"><li value="3">Third<\/li><\/ol>$/)
+    await expect(editor.content.locator("ol").nth(1)).toHaveAttribute("start", "3")
+  })
+
   test("image inserted into a blank bullet inside a quote leaves no empty list behind", async ({ editor }) => {
     await editor.setValue("<blockquote><ol><li>First</li></ol></blockquote>")
     await editor.select("First")
