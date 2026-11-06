@@ -18,6 +18,15 @@ class SanitizerListsTest < ActiveSupport::TestCase
     assert_includes lists["assigned_attributes"], "data-language"
   end
 
+  test "allows the markup Lexxy produces before Action Text content loads" do
+    [ false, true ].each do |eager_load|
+      lists = sanitizer_lists_for_app(configuration: rails_without_lexxy, eager_load: eager_load, load_content: false)
+
+      assert_includes lists["tags"], "table", "eager_load: #{eager_load}"
+      assert_includes lists["attributes"], "data-language", "eager_load: #{eager_load}"
+    end
+  end
+
   test "adds the markup Lexxy produces to the lists an application sets" do
     lists = sanitizer_lists_for_app(configuration: rails_without_lexxy, initializer: APPLICATION_LISTS)
 
@@ -50,7 +59,7 @@ class SanitizerListsTest < ActiveSupport::TestCase
       "config.action_text.editors = ActiveSupport::InheritableOptions.new(trix: {})" if Lexxy.supports_editor_adapter?
     end
 
-    def sanitizer_lists_for_app(configuration: "", initializer: "", eager_load: false)
+    def sanitizer_lists_for_app(configuration: "", initializer: "", eager_load: false, load_content: true)
       output, status = Dir.mktmpdir do |root|
         environment = { "DATABASE_URL" => "sqlite3::memory:", "PRIMARY_DATABASE_URL" => nil }
 
@@ -81,7 +90,7 @@ class SanitizerListsTest < ActiveSupport::TestCase
           end
 
           Rails.application.initialize!
-          ActionText::Content
+          #{"ActionText::Content" if load_content}
 
           helper = Class.new.include(ActionText::ContentHelper).new
           print "lists=\#{JSON.generate(

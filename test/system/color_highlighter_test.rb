@@ -24,4 +24,18 @@ class ColorHighlighterTest < ApplicationSystemTestCase
 
     assert_selector "mark[style='background-color:var(--highlight-bg-1);']", text: "everyone"
   end
+
+  test "highlighted inline code is preserved after saving and re-editing" do
+    find_editor.select "everyone"
+    find_editor.toggle_command "insertCodeBlock"
+    apply_highlight_option "background-color", 1
+
+    click_on "Update Post"
+
+    assert_selector "code[style='background-color:var(--highlight-bg-1);']", text: "everyone"
+
+    click_on "Edit this post"
+
+    assert_editor_html "<p>Hello <code style=\"background-color: var(--highlight-bg-1);\">everyone</code></p>"
+  end
 end

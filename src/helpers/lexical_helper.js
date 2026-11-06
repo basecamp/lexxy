@@ -280,7 +280,12 @@ export function $expandSelectionToLineBreaksAndSplitAtEdges(selection, fallbackA
   const anchorOuter = anchorBrCaret && $splitAroundLineBreak(anchorBrCaret)
 
   const innerStart = anchorOuter?.getNextSibling() ?? fallbackAncestor(selection.anchor.getNode())
-  const innerEnd = focusOuter?.getPreviousSibling() ?? fallbackAncestor(selection.focus.getNode())
+  let innerEnd = focusOuter?.getPreviousSibling() ?? fallbackAncestor(selection.focus.getNode())
+
+  // Splitting at the anchor's <br> moves everything after it into a new
+  // paragraph, but a focus point on the paragraph element itself (a cursor
+  // after a trailing <br>) still names the original one, now the line above.
+  if (anchorOuter && innerEnd?.is(anchorOuter)) innerEnd = innerStart
   if (!innerStart || !innerEnd) return
 
   $setSelectionFromCaretRange($getCaretRange(
@@ -331,11 +336,11 @@ function $nearestElementSibling(block, direction) {
   return sibling
 }
 
-function $isAtBlockEnd(point, block) {
+export function $isAtBlockEnd(point, block) {
   return $isAtBlockBoundary($caretFromPoint(point, "next"), block)
 }
 
-function $isAtBlockStart(point, block) {
+export function $isAtBlockStart(point, block) {
   return $isAtBlockBoundary($caretFromPoint(point, "previous"), block)
 }
 

@@ -18,7 +18,7 @@ import { $createActionTextAttachmentUploadNode, ActionTextAttachmentUploadNode }
 import { $findMatchingParent, $getNearestBlockElementAncestorOrThrow } from "@lexical/utils"
 import NodeInserter from "./contents/node_inserter"
 import PastedContentFormatter from "./contents/pasted_content_formatter"
-import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
+import { $consecutiveSiblingGroups, $expandSelectionToLineBreaksAndSplitAtEdges, $isAtBlockEnd, $isAtBlockStart, $isShadowRoot, $splitSelectedParagraphsAtInnerLineBreaks } from "../helpers/lexical_helper"
 
 export default class Contents {
   constructor(editorElement) {
@@ -49,12 +49,17 @@ export default class Contents {
     }, { tag })
   }
 
+  // The text takes the formatting at the caret, as typed text would.
   insertText(text, { tag } = {}) {
     this.editor.update(() => {
+      const selection = $getSelection()
+      const format = $isRangeSelection(selection) ? selection.format : 0
+      const style = $isRangeSelection(selection) ? selection.style : ""
+
       const paragraph = $createParagraphNode()
       text.split(/\r\n|\r|\n/).forEach((line, index) => {
         if (index > 0) paragraph.append($createLineBreakNode())
-        paragraph.append($createTextNode(line))
+        paragraph.append($createTextNode(line).setFormat(format).setStyle(style))
       })
       this.insertAtCursor(paragraph)
     }, { tag })
@@ -72,7 +77,7 @@ export default class Contents {
     if (!$isRangeSelection(selection)) return
 
     $expandSelectionToLineBreaksAndSplitAtEdges(selection, (node) => $getNearestBlockElementAncestorOrThrow(node))
-    $setBlocksType(selection, () => $createParagraphNode())
+    $setBlocksType(selection, () => $createParagraphNode(), $copyBlockFormat)
   }
 
   applyHeadingFormat(tag) {
@@ -80,7 +85,7 @@ export default class Contents {
     if (!$isRangeSelection(selection)) return
 
     $expandSelectionToLineBreaksAndSplitAtEdges(selection)
-    $setBlocksType(selection, () => $createHeadingNode(tag))
+    $setBlocksType(selection, () => $createHeadingNode(tag), $copyBlockFormat)
   }
 
   applyUnorderedListFormat() {
@@ -104,7 +109,7 @@ export default class Contents {
 
     this.#topLevelElementsInSelection(selection).filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
-    $setBlocksType(selection, () => $createParagraphNode())
+    $setBlocksType(selection, () => $createParagraphNode(), $copyBlockFormat)
   }
 
   toggleCodeBlock() {
@@ -148,7 +153,8 @@ export default class Contents {
     } else {
       topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
-       $expandSelectionToLineBreaksAndSplitAtEdges(selection)
+      this.#splitListsAroundSelectedItems(selection)
+      $expandSelectionToLineBreaksAndSplitAtEdges(selection)
       const elements = this.#topLevelElementsInSelection(selection)
       if (elements.length === 0) return
 
@@ -567,6 +573,42 @@ export default class Contents {
     return runs.filter((run) => run.size > 0).map((run) => Array.from(run))
   }
 
+  // Quoting part of a list quotes only the selected items: the items before and
+  // after them move to lists of their own, numbered where they were.
+  #splitListsAroundSelectedItems(selection) {
+    const [ start, end ] = selection.getStartEndPoints().sort((a, b) => a.isBefore(b) ? -1 : 1)
+
+    for (const list of this.#topLevelElementsInSelection(selection).filter($isListNode)) {
+      const lastIndex = list.getChildrenSize() - 1
+      let first = this.#listItemIndexAt(list, start) ?? 0
+      let last = this.#listItemIndexAt(list, end) ?? lastIndex
+
+      if (first < last && $isAtBlockEnd(start, list.getChildAtIndex(first))) first++
+      if (first < last && $isAtBlockStart(end, list.getChildAtIndex(last))) last--
+
+      this.#moveListItemsToNewListAfter(list, last + 1)
+      this.#moveListItemsToNewListAfter(list, first)
+    }
+  }
+
+  #listItemIndexAt(list, point) {
+    const item = $findMatchingParent(point.getNode(), (node) => node.getParent()?.is(list))
+    return item?.getIndexWithinParent()
+  }
+
+  #moveListItemsToNewListAfter(list, index) {
+    const items = list.getChildren().slice(index)
+    if (index === 0 || items.length === 0) return
+
+    // Wrapper items that only hold a nested list don't take a number, so start
+    // from the first numbered item that moves rather than from its index.
+    const numberedItem = items.find(item => !$isListNode(item.getFirstChild())) ?? items[0]
+    const start = list.getListType() === "number" ? numberedItem.getValue() : 1
+    const newList = $createListNode(list.getListType(), start)
+    list.insertAfter(newList)
+    newList.append(...items)
+  }
+
   #topLevelElementsInSelection(selection) {
     const elements = new Set()
     for (const node of selection.getNodes()) {
@@ -724,4 +766,12 @@ export default class Contents {
     anchorNode.append(paragraph)
     paragraph.selectStart()
   }
+}
+
+// Lexical's default carries the source block's indent over, but indentation
+// only exists in Lexxy as list nesting: a list item turned into a paragraph or
+// heading would keep an indent nothing else can create or remove.
+function $copyBlockFormat(source, target) {
+  const format = source.getFormatType()
+  if (format !== target.getFormatType()) target.setFormat(format)
 }
