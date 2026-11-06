@@ -336,11 +336,11 @@ function $nearestElementSibling(block, direction) {
   return sibling
 }
 
-function $isAtBlockEnd(point, block) {
+export function $isAtBlockEnd(point, block) {
   return $isAtBlockBoundary($caretFromPoint(point, "next"), block)
 }
 
-function $isAtBlockStart(point, block) {
+export function $isAtBlockStart(point, block) {
   return $isAtBlockBoundary($caretFromPoint(point, "previous"), block)
 }
 
