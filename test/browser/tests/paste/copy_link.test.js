@@ -103,6 +103,20 @@ test.describe("Paste — Lexxy → Lexxy link copy", () => {
     })
   })
 
+  test("a bare link copied from Lexxy and pasted into a Markdown link being typed completes the Markdown link", async ({
+    editor,
+  }) => {
+    await editor.send("[the site](")
+    await pasteWithLexicalPayload(editor, lexicalPayload([ paragraphNode([ bareLinkNode() ]) ]))
+    await editor.send(")")
+
+    await assertEditorHtml(editor, `<p><a href="${URL}">the site</a></p>`)
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("a")).toHaveCount(1)
+      await expect(content).not.toContainText("](")
+    })
+  })
+
   test("inserts the link when pasting a single-link Lexxy payload with no selection", async ({
     editor,
   }) => {
