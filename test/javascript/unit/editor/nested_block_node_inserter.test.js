@@ -31,7 +31,7 @@ describe("Pasting blocks into a paragraph inside a quote", () => {
 
   test("keeps a pasted list whole and the rest of the line after it", async () => {
     expect(await pasteIntoQuote("<ul><li>L1</li><li>L2</li></ul>", 5))
-      .toBe("<blockquote><p>Hello</p><ul><li value=\"1\">L1</li><li value=\"2\">L2</li></ul><p> world</p></blockquote>")
+      .toBe("<blockquote><p>Hello</p><ul><li value=\"1\">L1</li><li value=\"2\">L2</li></ul><p>&nbsp;world</p></blockquote>")
   })
 
   test("puts a list pasted at the start of the line before it", async () => {

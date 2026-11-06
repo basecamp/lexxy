@@ -11,11 +11,13 @@ module Lexxy
 
     # Rails versions that include Lexxy register it as an editor and allow its markup in
     # Action Text content themselves, so sanitizer lists are left to the application there.
-    # This runs before Lexxy registers itself as an editor.
+    # This runs before Lexxy registers itself as an editor. The lists are set once the app
+    # has booted rather than when ActionText::Content loads, so code that sanitizes with them
+    # in a process without eager loading (development, test, rake tasks) sees Lexxy's markup.
     initializer "lexxy.sanitization", before: "lexxy.action_text_editor" do |app|
       next if app.config.action_text.editors&.key?(:lexxy)
 
-      ActiveSupport.on_load(:action_text_content) do
+      app.config.after_initialize do
         default_allowed_tags = Class.new.include(ActionText::ContentHelper).new.sanitizer_allowed_tags
         ActionText::ContentHelper.allowed_tags = default_allowed_tags + %w[ s u video audio source embed table tbody tr th td ]
 

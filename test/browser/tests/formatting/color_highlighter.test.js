@@ -82,6 +82,13 @@ test.describe("Color highlighter", () => {
     }).toPass({ timeout: 5_000 })
   })
 
+  test("highlight on inline code survives setValue round-trip", async ({ editor }) => {
+    const html = '<p>some <code style="background-color: var(--highlight-bg-1);">code</code></p>'
+    await editor.setValue(html)
+
+    await assertEditorHtml(editor, html)
+  })
+
   test("highlight in a multiline code block survives round-trip", async ({ page, editor }) => {
     const html = '<pre data-language="plain"><code>line one<br>line <mark style="background-color: var(--highlight-bg-1);">two</mark><br>line three</code></pre>'
     await editor.setValue(html)
