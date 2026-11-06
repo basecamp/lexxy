@@ -12,7 +12,7 @@ class ImageInNumberedListTest < ApplicationSystemTestCase
     attach_file file_fixture("example.png") do
       click_on "Upload file"
     end
-    assert_selector "lexxy-editor figure.attachment"
+    assert_selector "lexxy-editor figure.attachment img[src*='/rails/active_storage']"
 
     click_on "Update Post"
     assert_text "Post was successfully updated."

@@ -126,11 +126,11 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
   }
 }
 
-// For a list inside a quote, the second half of the split is a quote that starts
-// with the copy of the list.
+// For a list inside quotes, the second half of the split is a quote (or a chain
+// of nested quotes) that starts with the copy of the list.
 function $firstListIn(node) {
   if ($isListNode(node)) return node
-  if ($isQuoteNode(node) && $isListNode(node.getFirstChild())) return node.getFirstChild()
+  if ($isQuoteNode(node)) return $firstListIn(node.getFirstChild())
   return null
 }
 

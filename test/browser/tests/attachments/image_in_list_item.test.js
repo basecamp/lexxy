@@ -108,6 +108,18 @@ test.describe("Inserting an image into a list item", () => {
     expect(await editor.value()).toMatch(/^<blockquote><ol><li value="1">One<\/li><\/ol><p>Between<\/p><ol start="10"><li value="10">Ten<\/li><\/ol><\/blockquote><action-text-attachment [^>]*><\/action-text-attachment><blockquote><ol start="11"><li value="11">Eleven<\/li><\/ol><\/blockquote>$/)
   })
 
+  test("image inserted into a numbered list inside nested quotes continues the list", async ({ editor }) => {
+    await editor.setValue("<blockquote><blockquote><ol><li>One</li><li>Two</li></ol></blockquote></blockquote>")
+    await editor.select("One")
+    await editor.send("End")
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+    await assertImageAttachments(editor, 1)
+
+    await assertListIntegrity(editor)
+    expect(await editor.value()).toMatch(/<action-text-attachment [^>]*><\/action-text-attachment><blockquote><blockquote><ol start="2"><li value="2">Two<\/li><\/ol><\/blockquote><\/blockquote>$/)
+  })
+
   test("image inserted after the last bullet of a quote leaves a later list's numbering alone", async ({ editor }) => {
     await editor.setValue('<blockquote><ol><li>One</li></ol><p>Between</p><ol start="5"><li>Five</li></ol></blockquote>')
     await editor.select("One")
