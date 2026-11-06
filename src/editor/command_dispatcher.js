@@ -1,6 +1,7 @@
 import {
   $createTextNode,
   $getSelection,
+  $hasUpdateTag,
   $isNodeSelection,
   $isRangeSelection,
   $isTextNode,
@@ -15,6 +16,7 @@ import {
   KEY_TAB_COMMAND,
   OUTDENT_CONTENT_COMMAND,
   REDO_COMMAND,
+  SKIP_DOM_SELECTION_TAG,
   UNDO_COMMAND
 } from "lexical"
 import { CodeNode } from "@lexical/code"
@@ -310,7 +312,13 @@ export class CommandDispatcher {
   }
 
   dispatchInsertTable() {
+    const selection = $getSelection()?.clone()
+
     this.editor.dispatchCommand(INSERT_TABLE_COMMAND, { "rows": 3, "columns": 3, "includeHeaders": true })
+
+    if ($hasUpdateTag(SKIP_DOM_SELECTION_TAG)) {
+      this.#keepSelectionWithPageCaret(selection)
+    }
   }
 
   dispatchUndo() {
@@ -323,6 +331,35 @@ export class CommandDispatcher {
 
   dispose() {
     this.#listeners.dispose()
+  }
+
+  // Inserting a table selects its first cell, but with focus on the toolbar the
+  // page caret stays put. Keep the editor's selection with the caret, or the next
+  // key acts on a cell the user can't see (ArrowDown lands in row 2).
+  #keepSelectionWithPageCaret(selection) {
+    if ($isRangeSelection(selection) && this.#isPointStillValid(selection.anchor) && this.#isPointStillValid(selection.focus)) {
+      $setSelection(selection)
+    }
+  }
+
+  // Inserting can split the text a range covered, leaving a point attached but
+  // past the end of what remains.
+  #isPointStillValid(point) {
+    const node = point.getNode()
+
+    if (node.isAttached()) {
+      return point.offset <= this.#pointSize(node)
+    } else {
+      return false
+    }
+  }
+
+  #pointSize(node) {
+    if ($isTextNode(node)) {
+      return node.getTextContentSize()
+    } else {
+      return node.getChildrenSize()
+    }
   }
 
   #applyConfiguredHeadingFormat(index) {
