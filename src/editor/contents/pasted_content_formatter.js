@@ -11,6 +11,10 @@ const PRESERVABLE_STYLES = {
   p: [ "margin-top", "margin-bottom" ]
 }
 
+// Elements that show nothing once they hold no text, as in the spacer cells
+// email layouts pad themselves with.
+const SPACER_ELEMENTS = new Set([ "BR", "DIV", "P", "SPAN", "FONT", "CENTER", "A", "B", "STRONG", "I", "EM", "U" ])
+
 export default class PastedContentFormatter {
   constructor(doc) {
     this.doc = doc
@@ -21,6 +25,7 @@ export default class PastedContentFormatter {
     this.#stripStyleElements()
     this.#stripInterchangeNewlines()
     this.#unwrapPlaceholderAnchors()
+    this.#unwrapLayoutTables()
     this.#stripTableCellColorStyles()
     new OfficeFormatter(this.doc).format()
     this.#unwrapWrappedListChildren()
@@ -95,6 +100,87 @@ export default class PastedContentFormatter {
         anchor.replaceWith(...anchor.childNodes)
       }
     }
+  }
+
+  // Email clients (Gmail, Apple Mail) and newsletters lay out messages with
+  // tables: a full-width wrapper, a fixed-width body, single-cell rows, often
+  // nested several deep. They hold the message, not tabular data, and imported
+  // as real tables they paste as a table inside a table that the author never
+  // wrote. Dissolve each layout table into its cells' content, outermost first,
+  // so a data table inside one is still judged on its own and survives.
+  #unwrapLayoutTables() {
+    const nestedInLayout = new WeakSet()
+
+    let table = this.#firstLayoutTable(nestedInLayout)
+    while (table) {
+      for (const nested of table.querySelectorAll("table")) {
+        nestedInLayout.add(nested)
+      }
+      this.#unwrapTable(table)
+      table = this.#firstLayoutTable(nestedInLayout)
+    }
+  }
+
+  #firstLayoutTable(nestedInLayout) {
+    for (const table of this.doc.querySelectorAll("table")) {
+      if (this.#isLayoutTable(table, nestedInLayout.has(table))) return table
+    }
+    return null
+  }
+
+  // A layout table often says so with its role, and rarely holds data, so one
+  // holding another table is layout too, unless it declares itself tabular with
+  // header cells or a table role. Inside a layout table, a single-column table
+  // is one more layout row; pasted on its own it may be a column copied from a
+  // spreadsheet, so it stays a table.
+  #isLayoutTable(table, nestedInLayout) {
+    const role = table.getAttribute("role")
+    if (role === "presentation" || role === "none") return true
+    if (this.#isExplicitlyTabular(table)) return false
+
+    return table.querySelector("table") !== null || (nestedInLayout && this.#isSingleColumn(table))
+  }
+
+  #isExplicitlyTabular(table) {
+    const role = table.getAttribute("role")
+    return role === "table" || role === "grid" || role === "treegrid" ||
+      this.#ownCells(table).some((cell) => cell.tagName === "TH")
+  }
+
+  #isSingleColumn(table) {
+    return Array.from(table.rows).every((row) => row.cells.length <= 1)
+  }
+
+  // The caption and each cell become a block of their own, so the text of
+  // neighbouring cells doesn't run together. Cells with nothing to show are
+  // spacers and go.
+  #unwrapTable(table) {
+    const blocks = []
+    for (const part of [ ...this.#ownCaptions(table), ...this.#ownCells(table) ]) {
+      if (this.#hasVisibleContent(part)) {
+        const block = this.doc.createElement("div")
+        block.append(...part.childNodes)
+        blocks.push(block)
+      }
+    }
+    table.replaceWith(...blocks)
+  }
+
+  #ownCaptions(table) {
+    return Array.from(table.children).filter((child) => child.tagName === "CAPTION")
+  }
+
+  // Only this table's cells, not those of the tables nested inside them.
+  #ownCells(table) {
+    return Array.from(table.querySelectorAll("td, th")).filter((cell) => cell.closest("table") === table)
+  }
+
+  // Spacer cells hold at most whitespace, line breaks and empty wrappers. Any
+  // other element, such as an image, a video or an attachment that renders from
+  // its attributes, is content.
+  #hasVisibleContent(cell) {
+    return cell.textContent.trim() !== "" ||
+      Array.from(cell.querySelectorAll("*")).some((element) => !SPACER_ELEMENTS.has(element.tagName))
   }
 
   // Table cells copied from a page inherit the source theme's inline color
