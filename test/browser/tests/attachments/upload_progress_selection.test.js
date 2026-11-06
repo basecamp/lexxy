@@ -1,6 +1,7 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 import { mockActiveStorageUploads } from "../../helpers/active_storage_mock.js"
+import { selectGalleryAtOffset } from "../../helpers/gallery_test_helpers.js"
 
 // Android's WebView scrolls the caret into view whenever the DOM selection is
 // set, so setting it on every upload progress tick keeps dragging the page back
@@ -61,7 +62,32 @@ test.describe("Upload progress and the DOM selection", () => {
     await editor.send("After")
     await expect(editor.content.locator("p").last()).toHaveText("After")
   })
+
+  test("failed uploads in a gallery keep the caret after them", async ({ page, editor }) => {
+    await editor.focus()
+    await editor.uploadFile([ "test/fixtures/files/example.png", "test/fixtures/files/example2.png" ])
+
+    const gallery = page.locator(".attachment-gallery")
+    await expect(gallery.locator("figure.attachment progress")).toHaveCount(2, { timeout: 10_000 })
+    await expect.poll(() => page.evaluate(() => window.uploadRequests.length)).toBe(2)
+
+    await selectGalleryAtOffset(page, editor, 2)
+    expect(await domCaretOffsetInGallery(page)).toBe(2)
+
+    await page.evaluate(() => window.uploadRequests.forEach((request) => request.dispatchEvent(new ProgressEvent("error"))))
+    await expect(gallery.locator("figure.attachment progress")).toHaveCount(0)
+    await editor.flush()
+
+    expect(await domCaretOffsetInGallery(page)).toBe(2)
+  })
 })
+
+async function domCaretOffsetInGallery(page) {
+  return page.evaluate(() => {
+    const selection = window.getSelection()
+    return selection.anchorNode?.classList?.contains("attachment-gallery") ? selection.anchorOffset : null
+  })
+}
 
 async function startHeldUpload(page, editor) {
   const diskUploadStarted = page.waitForRequest((request) =>

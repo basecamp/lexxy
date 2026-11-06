@@ -85,18 +85,20 @@ export class RewritableHistoryExtension extends LexxyExtension {
     return nodeKeys.some(key => entry.editorState._nodeMap.has(key))
   }
 
-  // A focused editor re-syncs the DOM selection only when a node is replaced, which
-  // swaps its element out from beside the caret. Patches update nodes in place, and
-  // setting the DOM selection on every upload progress tick makes Android's WebView
-  // scroll back to the caret each time.
+  // A focused editor re-syncs the DOM selection after a rewrite, because replacing a
+  // node's element can move the caret from after it to before it. Progress patches
+  // update the progress bar in place and arrive many times per upload, and setting
+  // the DOM selection on each one makes Android's WebView scroll back to the caret.
   #getBackgroundUpdateTags(rewrites) {
     const tags = [ HISTORY_MERGE_TAG, SKIP_SCROLL_INTO_VIEW_TAG ]
-    if (!isEditorFocused(this.editorElement.editor) || !this.#replacesNodes(rewrites)) { tags.push(SKIP_DOM_SELECTION_TAG) }
+    if (!isEditorFocused(this.editorElement.editor) || this.#onlyPatchesProgress(rewrites)) { tags.push(SKIP_DOM_SELECTION_TAG) }
     return tags
   }
 
-  #replacesNodes(rewrites) {
-    return Object.values(rewrites).some(({ replace }) => replace)
+  #onlyPatchesProgress(rewrites) {
+    return Object.values(rewrites).every(({ patch, replace }) =>
+      !replace && patch && Object.keys(patch).every(property => property === "progress")
+    )
   }
 
   #patchNodeInEditorState(editorState, node, patch) {
