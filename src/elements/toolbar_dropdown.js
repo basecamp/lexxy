@@ -118,9 +118,11 @@ export class ToolbarDropdown extends HTMLElement {
   async #focusFirstInteractive() {
     // Ask for the ring explicitly: opening the menu with the mouse otherwise leaves the
     // first item focused without a focus ring, since focus() inherits the mouse modality.
-    // The panel opens next to its trigger, so it's already in view: without preventScroll,
-    // a sticky toolbar inside the page's scroll padding scrolls the page on every open.
-    this.#interactiveElements[0]?.focus({ focusVisible: true, preventScroll: true })
+    // Only scroll when the item is off screen (e.g. a shortcut opened the dropdown with the
+    // toolbar scrolled away). Otherwise a sticky toolbar inside the page's scroll padding
+    // would scroll the page on every open.
+    const element = this.#interactiveElements[0]
+    element?.focus({ focusVisible: true, preventScroll: isInViewport(element) })
     if (this.panel.role === "menu") await this.#resetTabIndexValues()
   }
 
@@ -138,6 +140,11 @@ export class ToolbarDropdown extends HTMLElement {
   get #buttons() {
     return Array.from(this.panel.querySelectorAll("button"))
   }
+}
+
+function isInViewport(element) {
+  const { top, bottom } = element.getBoundingClientRect()
+  return top >= 0 && bottom <= window.innerHeight
 }
 
 export default ToolbarDropdown

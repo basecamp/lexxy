@@ -24,4 +24,22 @@ test.describe("Opening a toolbar dropdown", () => {
     await expect(page.locator("lexxy-toolbar [data-dropdown-panel] button").first()).toBeFocused()
     expect(await page.evaluate(() => window.scrollY)).toBe(scrollBefore)
   })
+
+  test("brings a dropdown opened with a shortcut into view when the toolbar is scrolled off screen", async ({ page, editor }) => {
+    await page.goto("/")
+    await page.waitForSelector("lexxy-toolbar[connected]")
+
+    const block = "<p>Some text</p><ul><li>First</li><li>Second</li></ul>"
+    await editor.setValue(block.repeat(40) + "<p>Last line</p>")
+    await editor.flush()
+    await editor.content.locator("p", { hasText: "Last line" }).click()
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    await expect(page.locator("lexxy-toolbar")).not.toBeInViewport()
+
+    await page.keyboard.press("Control+k")
+
+    const input = page.locator("lexxy-link-dropdown input")
+    await expect(input).toBeFocused()
+    await expect(input).toBeInViewport()
+  })
 })
