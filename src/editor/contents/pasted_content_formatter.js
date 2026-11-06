@@ -24,6 +24,9 @@ const BLOCK_ELEMENTS = new Set([
 // Elements that show something on a line without any text inside them.
 const INLINE_CONTENT_ELEMENTS = new Set([ "ACTION-TEXT-ATTACHMENT", "AUDIO", "EMBED", "IFRAME", "IMG", "OBJECT", "PICTURE", "SVG", "VIDEO" ])
 
+// Elements whose text never shows on the page.
+const HIDDEN_ELEMENTS = new Set([ "SCRIPT", "STYLE", "TEMPLATE", "TITLE", "META", "LINK" ])
+
 export default class PastedContentFormatter {
   constructor(doc) {
     this.doc = doc
@@ -329,6 +332,7 @@ export default class PastedContentFormatter {
     if (node.nodeType === Node.TEXT_NODE) return this.#isCollapsibleWhitespace(node) ? null : "content"
     if (node.nodeType !== Node.ELEMENT_NODE) return null
     if (node.nodeName === "BR") return edge === "start" ? "content" : null
+    if (HIDDEN_ELEMENTS.has(node.nodeName)) return null
     if (INLINE_CONTENT_ELEMENTS.has(node.nodeName.toUpperCase())) return "content"
 
     const children = Array.from(node.childNodes)

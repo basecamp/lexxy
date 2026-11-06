@@ -110,6 +110,12 @@ test.describe("Paste — a line break right before a block", () => {
     await assertEditorHtml(editor, '<p>Outside text<br></p><ul><li value="1">Item</li></ul>')
   })
 
+  test("keeps an empty line before a list when only a script comes first", async ({ editor }) => {
+    await editor.paste("ignored", { html: "<div><script>track()</script><br><ul><li>Item</li></ul></div>" })
+
+    await assertEditorHtml(editor, '<p><br></p><ul><li value="1">Item</li></ul>')
+  })
+
   test("keeps a blank line the author left before a list", async ({ editor }) => {
     await editor.paste("ignored", { html: "<div>Intro<br><br><ul><li>Item</li></ul></div>" })
 
