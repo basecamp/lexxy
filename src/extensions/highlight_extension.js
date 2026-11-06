@@ -91,12 +91,16 @@ function $markConversion() {
 // <code> conversions.
 function $inlineCodeConversion(element) {
   if (!hasHighlightStyles(extractHighlightStyleFromElement(element) ?? "")) return null
-  if (element.closest("pre")) return null
+  if (element.closest("pre") || isMultiLineCodeElement(element)) return null
 
   return {
     conversion: extendTextNodeConversion("code", $applyHighlightStyle),
     priority: 1
   }
+}
+
+function isMultiLineCodeElement(element) {
+  return /\r?\n/.test(element.textContent) || element.querySelector("br") !== null
 }
 
 // Register a custom <pre> converter directly in the editor's HTML conversion
