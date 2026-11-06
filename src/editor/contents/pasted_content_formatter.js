@@ -12,8 +12,9 @@ const PRESERVABLE_STYLES = {
 }
 
 const BLOCK_ELEMENTS = new Set([
-  "ADDRESS", "ARTICLE", "ASIDE", "BLOCKQUOTE", "DD", "DIV", "DL", "DT", "FIGURE", "FOOTER", "H1", "H2", "H3", "H4", "H5",
-  "H6", "HEADER", "HR", "LI", "OL", "P", "PRE", "SECTION", "TABLE", "TD", "TH", "UL"
+  "ADDRESS", "ARTICLE", "ASIDE", "BLOCKQUOTE", "CAPTION", "CENTER", "DD", "DETAILS", "DIALOG", "DIV", "DL", "DT",
+  "FIELDSET", "FIGCAPTION", "FIGURE", "FOOTER", "FORM", "H1", "H2", "H3", "H4", "H5", "H6", "HEADER", "HGROUP", "HR",
+  "LEGEND", "LI", "MAIN", "MENU", "NAV", "OL", "P", "PRE", "SEARCH", "SECTION", "SUMMARY", "TABLE", "TD", "TH", "UL"
 ])
 
 const BLOCK_SELECTOR = Array.from(BLOCK_ELEMENTS, (name) => name.toLowerCase()).join(", ")
@@ -211,11 +212,26 @@ export default class PastedContentFormatter {
   #hasContentBeforeOnLine(br) {
     for (let node = br; node !== this.doc.body && !this.#isBlockElement(node); node = node.parentNode) {
       for (let sibling = node.previousSibling; sibling; sibling = sibling.previousSibling) {
-        if (this.#isBlockElement(sibling)) return false
-        if (this.#hasInlineContent(sibling)) return true
+        const ending = this.#lineEndingIn(sibling)
+        if (ending) return ending === "content"
       }
     }
     return false
+  }
+
+  // What the end of a node leaves on the line after it: "content", a "block"
+  // boundary that starts a new line, or null for nothing at all.
+  #lineEndingIn(node) {
+    if (this.#isBlockElement(node)) return "block"
+    if (node.nodeType === Node.TEXT_NODE) return this.#isCollapsibleWhitespace(node) ? null : "content"
+    if (node.nodeType !== Node.ELEMENT_NODE) return null
+    if (INLINE_CONTENT_ELEMENTS.has(node.nodeName.toUpperCase())) return "content"
+
+    for (let child = node.lastChild; child; child = child.previousSibling) {
+      const ending = this.#lineEndingIn(child)
+      if (ending) return ending
+    }
+    return null
   }
 
   #hasInlineContent(node) {

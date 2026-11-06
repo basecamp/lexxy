@@ -74,6 +74,18 @@ test.describe("Paste — a line break right before a block", () => {
     await expect.poll(() => editor.value()).toContain('<td><p><br></p><ul><li value="1">Item</li></ul></td>')
   })
 
+  test("keeps an empty line at the start of a container after text outside it", async ({ editor }) => {
+    await editor.paste("ignored", { html: "Outside text<main><br><ul><li>Item</li></ul></main>" })
+
+    await expect.poll(() => editor.value()).toContain('<p><br></p><ul><li value="1">Item</li></ul>')
+  })
+
+  test("keeps an empty line after a block nested in styled text", async ({ editor }) => {
+    await editor.paste("ignored", { html: "<div><span><p>Earlier</p></span><br><ul><li>Item</li></ul></div>" })
+
+    await expect.poll(() => editor.value()).toContain('<p><br></p><ul><li value="1">Item</li></ul>')
+  })
+
   test("keeps a blank line the author left before a list", async ({ editor }) => {
     await editor.paste("ignored", { html: "<div>Intro<br><br><ul><li>Item</li></ul></div>" })
 
