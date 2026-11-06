@@ -1,4 +1,5 @@
 import { $getCodeLink } from "./code_link_helper"
+import { $encodeCollapsibleSpaces } from "./collapsible_spaces_helper"
 
 // Custom TextNode exportDOM that avoids redundant wrapping.
 //
@@ -13,18 +14,21 @@ import { $getCodeLink } from "./code_link_helper"
 //
 // Any <span> elements produced by createDOM() are unwrapped, since they only carry
 // editor classes that aren't meaningful in exported HTML.
+//
+// Spaces that HTML would collapse are exported as non-breaking spaces; see
+// collapsible_spaces_helper.js.
 
 // A CodeHighlightNode exports like any other text node, plus an <a> wrapper
 // when it carries link state — that's how a link survives inside a code
 // block, whose retokenizer would destroy an actual LinkNode child.
 export function exportCodeHighlightNodeDOM(editor, codeHighlightNode) {
-  const output = exportTextNodeDOM(editor, codeHighlightNode)
+  const element = exportFormattedTextDOM(editor, codeHighlightNode)
   const link = $getCodeLink(codeHighlightNode)
 
   if (link) {
-    return { element: wrapWithAnchor(output.element, link) }
+    return { element: wrapWithAnchor(element, link) }
   } else {
-    return output
+    return { element }
   }
 }
 
@@ -39,6 +43,12 @@ function wrapWithAnchor(element, link) {
 }
 
 export function exportTextNodeDOM(editor, textNode) {
+  const element = exportFormattedTextDOM(editor, textNode)
+  $preserveSpaces(element, textNode)
+  return { element }
+}
+
+function exportFormattedTextDOM(editor, textNode) {
   const element = textNode.createDOM(editor._config, editor)
   element.style.whiteSpace = "pre-wrap"
 
@@ -65,7 +75,7 @@ export function exportTextNodeDOM(editor, textNode) {
     result = wrapWith(result, "u")
   }
 
-  return { element: unwrapSpans(result) }
+  return unwrapSpans(result)
 }
 
 function containsTag(element, tagName) {
@@ -89,4 +99,20 @@ function unwrapSpans(element) {
   }
 
   return element
+}
+
+function $preserveSpaces(element, textNode) {
+  const domText = findTextNode(element)
+
+  if (domText) {
+    domText.data = $encodeCollapsibleSpaces(domText.data, textNode)
+  }
+}
+
+function findTextNode(element) {
+  if (element.nodeType === Node.TEXT_NODE) {
+    return element
+  } else {
+    return document.createTreeWalker(element, NodeFilter.SHOW_TEXT).nextNode()
+  }
 }
