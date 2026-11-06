@@ -15,6 +15,18 @@ const PRESERVABLE_STYLES = {
 // email layouts pad themselves with.
 const SPACER_ELEMENTS = new Set([ "BR", "DIV", "P", "SPAN", "FONT", "CENTER", "A", "B", "STRONG", "I", "EM", "U" ])
 
+const BLOCK_ELEMENTS = new Set([
+  "ADDRESS", "ARTICLE", "ASIDE", "BLOCKQUOTE", "CAPTION", "CENTER", "DD", "DETAILS", "DIALOG", "DIV", "DL", "DT",
+  "FIELDSET", "FIGCAPTION", "FIGURE", "FOOTER", "FORM", "H1", "H2", "H3", "H4", "H5", "H6", "HEADER", "HGROUP", "HR",
+  "LEGEND", "LI", "MAIN", "MENU", "NAV", "OL", "P", "PRE", "SEARCH", "SECTION", "SUMMARY", "TABLE", "TD", "TH", "UL"
+])
+
+// Elements that show something on a line without any text inside them.
+const INLINE_CONTENT_ELEMENTS = new Set([ "ACTION-TEXT-ATTACHMENT", "AUDIO", "EMBED", "IFRAME", "IMG", "OBJECT", "PICTURE", "SVG", "VIDEO" ])
+
+// Elements whose text never shows on the page.
+const HIDDEN_ELEMENTS = new Set([ "SCRIPT", "STYLE", "TEMPLATE", "TITLE", "META", "LINK" ])
+
 export default class PastedContentFormatter {
   constructor(doc) {
     this.doc = doc
@@ -31,6 +43,7 @@ export default class PastedContentFormatter {
     this.#unwrapWrappedListChildren()
     this.#nestStrayListChildren()
     this.#stripStrayListChildren()
+    this.#stripBreaksBeforeBlocks()
     this.#convertBlankLineDivsToParagraphs()
     this.#replaceGmailEmojiImgTags()
     return this.doc
@@ -271,6 +284,81 @@ export default class PastedContentFormatter {
   #isBlankLineDiv(div) {
     const children = Array.from(div.childNodes).filter((node) => !this.#isIgnorableTrailingNode(node))
     return children.length === 1 && children[0].nodeName === "BR"
+  }
+
+  // Outlook, and the web apps that show its mail, end a line with <br> right before
+  // a list or other block starts. The block starts a new line anyway, so that <br>
+  // only ends the line before it and shows nothing, but imported it becomes a line
+  // break that adds a blank line. A <br> with no content before it on its line
+  // shows as an empty line, so it stays.
+  #stripBreaksBeforeBlocks() {
+    for (const br of Array.from(this.doc.querySelectorAll("br"))) {
+      if (this.#blockFollowsOnLine(br) && this.#hasContentBeforeOnLine(br)) {
+        br.remove()
+      }
+    }
+  }
+
+  // Whether a block comes right after the <br>, stepping out of and into inline
+  // wrappers such as the <span>s Outlook puts around each run of text.
+  #blockFollowsOnLine(br) {
+    for (let node = br; node !== this.doc.body && !this.#isBlockElement(node); node = node.parentNode) {
+      for (let sibling = node.nextSibling; sibling; sibling = sibling.nextSibling) {
+        const start = this.#lineEdgeIn(sibling, "start")
+        if (start) return start === "block"
+      }
+    }
+    return false
+  }
+
+  // Whether text or media comes before the <br> since its block, or the block
+  // before it, began, looking through earlier breaks and empty inline wrappers.
+  #hasContentBeforeOnLine(br) {
+    for (let node = br; node !== this.doc.body && !this.#isBlockElement(node); node = node.parentNode) {
+      for (let sibling = node.previousSibling; sibling; sibling = sibling.previousSibling) {
+        const end = this.#lineEdgeIn(sibling, "end")
+        if (end) return end === "content"
+      }
+    }
+    return false
+  }
+
+  // What a node shows first ("start") or last ("end") on its line: "content", a
+  // "block" that starts a line of its own, or null for nothing at all. Looking
+  // ahead, a <br> counts as content, since it ends a line of its own; looking
+  // back, it doesn't, so a run of breaks needs text or media before it.
+  #lineEdgeIn(node, edge) {
+    if (this.#isBlockElement(node)) return "block"
+    if (node.nodeType === Node.TEXT_NODE) return this.#isCollapsibleWhitespace(node) ? null : "content"
+    if (node.nodeType !== Node.ELEMENT_NODE) return null
+    if (node.nodeName === "BR") return edge === "start" ? "content" : null
+    if (HIDDEN_ELEMENTS.has(node.nodeName)) return null
+    if (INLINE_CONTENT_ELEMENTS.has(node.nodeName.toUpperCase())) return "content"
+
+    const children = Array.from(node.childNodes)
+    if (edge === "end") children.reverse()
+    for (const child of children) {
+      const found = this.#lineEdgeIn(child, edge)
+      if (found) return found
+    }
+    return null
+  }
+
+  // HTML collapses spaces, tabs and newlines but not non-breaking spaces, which
+  // hold a line open.
+  #isCollapsibleWhitespace(node) {
+    if (node.nodeType === Node.COMMENT_NODE) return true
+    return node.nodeType === Node.TEXT_NODE && /^[ \t\n\r\f]*$/.test(node.textContent)
+  }
+
+  // An inline display style decides, as it does in the browser, so a <span> shown as a
+  // block starts a line of its own and a <div> shown inline doesn't.
+  #isBlockElement(node) {
+    if (node?.nodeType !== Node.ELEMENT_NODE) return false
+
+    const display = node.style?.display
+    if (display) return !display.startsWith("inline") && display !== "contents" && display !== "none"
+    return BLOCK_ELEMENTS.has(node.nodeName)
   }
 
   // Read the rules from a sheet we build rather than from this.doc.styleSheets: the
