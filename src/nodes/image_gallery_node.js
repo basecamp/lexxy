@@ -46,9 +46,15 @@ export class ImageGalleryNode extends ElementNode {
 
   static #isGalleryElement(element) {
     const attachmentChildren = element.querySelectorAll(`:scope > :is(${this.#attachmentTags.join()})`)
-    return element.textContent.trim() === ""
-      && attachmentChildren.length > 0
+    return attachmentChildren.length > 0
       && element.children.length === attachmentChildren.length
+      && !this.#hasLooseText(element)
+  }
+
+  // Text inside an attachment is its rendered caption, which the attachment conversion
+  // discards. Only text sitting directly in the div means it isn't a gallery.
+  static #hasLooseText(element) {
+    return Array.from(element.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== "")
   }
 
   static get #attachmentTags() {
