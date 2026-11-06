@@ -18,7 +18,7 @@ test.describe("Attachment alternative text editing", () => {
     for (const description of [ "A red canoe beside green trees", 'A blue canoe near a sign reading "River & lake"' ]) {
       await editor.focus()
       await selectAttachment(figure)
-      await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+      await page.getByRole("button", { name: "Alt text", exact: true }).click()
       const dialog = page.getByRole("dialog", { name: "Alternative text" })
       await dialog.getByRole("textbox", { name: "Description" }).fill(description)
       await dialog.getByRole("button", { name: "Save", exact: true }).click()
@@ -35,7 +35,7 @@ test.describe("Attachment alternative text editing", () => {
     await editor.focus()
     const figure = page.locator("figure.attachment")
     await selectAttachment(figure)
-    await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+    await page.getByRole("button", { name: "Alt text", exact: true }).click()
     const dialog = page.getByRole("dialog", { name: "Alternative text" })
     await dialog.getByRole("textbox", { name: "Description" }).fill("")
     await dialog.getByRole("button", { name: "Save", exact: true }).click()
@@ -52,7 +52,7 @@ test.describe("Attachment alternative text editing", () => {
       await editor.focus()
       const figure = page.locator("figure.attachment")
       await selectAttachment(figure)
-      const button = page.getByRole("button", { name: "Alternative text", exact: true })
+      const button = page.getByRole("button", { name: "Alt text", exact: true })
       await button.focus()
       await button.press("Enter")
       const dialog = page.getByRole("dialog", { name: "Alternative text" })
@@ -78,7 +78,7 @@ test.describe("Attachment alternative text editing", () => {
     await editor.focus()
     const figure = page.locator("figure.attachment")
     await selectAttachment(figure)
-    await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+    await page.getByRole("button", { name: "Alt text", exact: true }).click()
 
     const dialog = page.getByRole("dialog", { name: "Alternative text" })
     await expect(dialog).toBeVisible()
@@ -98,7 +98,7 @@ test.describe("Attachment alternative text editing", () => {
     await editor.flush()
     await editor.focus()
     await selectAttachment(page.locator("figure.attachment"))
-    await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+    await page.getByRole("button", { name: "Alt text", exact: true }).click()
 
     const dialog = page.getByRole("dialog", { name: "Alternative text" })
     const input = dialog.getByRole("textbox", { name: "Description" })
@@ -133,7 +133,7 @@ test.describe("Attachment alternative text editing", () => {
     const linkPanel = page.locator("lexxy-link-dropdown [data-dropdown-panel]")
     await expect(linkPanel).toBeVisible()
 
-    await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+    await page.getByRole("button", { name: "Alt text", exact: true }).click()
 
     await expect(page.getByRole("dialog", { name: "Alternative text" })).toBeVisible()
     await expect(linkPanel).toBeHidden()
@@ -145,7 +145,7 @@ test.describe("Attachment alternative text editing", () => {
     await editor.focus()
     const figure = page.locator("figure.attachment")
     await selectAttachment(figure)
-    await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+    await page.getByRole("button", { name: "Alt text", exact: true }).click()
 
     const dialog = page.getByRole("dialog", { name: "Alternative text" })
     await dialog.getByRole("textbox", { name: "Description" }).fill("Discard this description")
@@ -165,7 +165,7 @@ test.describe("Attachment alternative text editing", () => {
     await selectAttachment(figure)
     await editor.focus()
     await page.keyboard.press("Alt+F10")
-    const button = page.getByRole("button", { name: "Alternative text", exact: true })
+    const button = page.getByRole("button", { name: "Alt text", exact: true })
     await expect(button).toBeFocused()
     await page.keyboard.press("Enter")
 
@@ -199,7 +199,7 @@ test.describe("Attachment alternative text editing", () => {
     await editor.flush()
     await editor.focus()
     await selectAttachment(page.locator("figure.attachment").nth(1))
-    await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+    await page.getByRole("button", { name: "Alt text", exact: true }).click()
     const dialog = page.getByRole("dialog", { name: "Alternative text" })
     await dialog.getByRole("textbox", { name: "Description" }).fill("Two people paddling a canoe")
     await dialog.getByRole("button", { name: "Save", exact: true }).click()
@@ -214,7 +214,7 @@ test.describe("Attachment alternative text editing", () => {
     await expect(figure).toHaveClass(/attachment--file/)
     await editor.focus()
     await selectAttachment(figure)
-    await page.getByRole("button", { name: "Alternative text", exact: true }).click()
+    await page.getByRole("button", { name: "Alt text", exact: true }).click()
     const dialog = page.getByRole("dialog", { name: "Alternative text" })
     await dialog.getByRole("textbox", { name: "Description" }).fill("A chart of monthly rainfall")
     await dialog.getByRole("button", { name: "Save", exact: true }).click()
@@ -229,7 +229,7 @@ test.describe("Attachment alternative text editing", () => {
     await editor.focus()
     await selectAttachment(page.locator("figure.attachment"))
     await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible()
-    await expect(page.getByRole("button", { name: "Alternative text", exact: true })).toBeHidden()
+    await expect(page.getByRole("button", { name: "Alt text", exact: true })).toBeHidden()
   })
 
   test("older Action Text hides authoring without removing existing descriptions", async ({ page, editor }) => {
@@ -242,7 +242,7 @@ test.describe("Attachment alternative text editing", () => {
     await selectAttachment(page.locator("figure.attachment"))
 
     await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible()
-    await expect(page.getByRole("button", { name: "Alternative text", exact: true })).toBeHidden()
+    await expect(page.getByRole("button", { name: "Alt text", exact: true })).toBeHidden()
     await expect(page.locator("figure.attachment img")).toHaveAttribute("alt", "A red canoe")
     expect(await editor.value()).toContain('alt="A red canoe"')
   })
