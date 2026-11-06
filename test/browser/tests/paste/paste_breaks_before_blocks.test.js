@@ -62,6 +62,18 @@ test.describe("Paste — a line break right before a block", () => {
     await assertEditorHtml(editor, '<p>Intro<br>&nbsp;</p><ul><li value="1">Item</li></ul>')
   })
 
+  test("adds no blank line when an empty styled run follows the line break", async ({ editor }) => {
+    await editor.paste("ignored", { html: "<div>Intro<br><span></span><ul><li>Item</li></ul></div>" })
+
+    await assertEditorHtml(editor, '<p>Intro</p><ul><li value="1">Item</li></ul>')
+  })
+
+  test("keeps an empty line at the start of a table cell after a cell with text", async ({ editor }) => {
+    await editor.paste("ignored", { html: "<table><tr><td>Other cell</td><td><br><ul><li>Item</li></ul></td></tr></table>" })
+
+    await expect.poll(() => editor.value()).toContain('<td><p><br></p><ul><li value="1">Item</li></ul></td>')
+  })
+
   test("keeps a blank line the author left before a list", async ({ editor }) => {
     await editor.paste("ignored", { html: "<div>Intro<br><br><ul><li>Item</li></ul></div>" })
 

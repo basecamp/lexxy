@@ -12,9 +12,11 @@ const PRESERVABLE_STYLES = {
 }
 
 const BLOCK_ELEMENTS = new Set([
-  "ADDRESS", "ARTICLE", "ASIDE", "BLOCKQUOTE", "DIV", "DL", "FIGURE", "FOOTER", "H1", "H2", "H3", "H4", "H5", "H6",
-  "HEADER", "HR", "LI", "OL", "P", "PRE", "SECTION", "TABLE", "UL"
+  "ADDRESS", "ARTICLE", "ASIDE", "BLOCKQUOTE", "DD", "DIV", "DL", "DT", "FIGURE", "FOOTER", "H1", "H2", "H3", "H4", "H5",
+  "H6", "HEADER", "HR", "LI", "OL", "P", "PRE", "SECTION", "TABLE", "TD", "TH", "UL"
 ])
+
+const BLOCK_SELECTOR = Array.from(BLOCK_ELEMENTS, (name) => name.toLowerCase()).join(", ")
 
 // Elements that show something on a line without any text inside them.
 const INLINE_CONTENT_ELEMENTS = new Set([ "ACTION-TEXT-ATTACHMENT", "AUDIO", "EMBED", "IFRAME", "IMG", "OBJECT", "PICTURE", "SVG", "VIDEO" ])
@@ -189,14 +191,19 @@ export default class PastedContentFormatter {
   }
 
   // The node after the <br>, stepping out of inline wrappers such as the <span>s
-  // Outlook puts around each run of text.
+  // Outlook puts around each run of text, and over empty ones.
   #nextNodeOnLine(br) {
     for (let node = br; node !== this.doc.body && !this.#isBlockElement(node); node = node.parentNode) {
       for (let sibling = node.nextSibling; sibling; sibling = sibling.nextSibling) {
-        if (!this.#isCollapsibleWhitespace(sibling)) return sibling
+        if (!this.#isCollapsibleWhitespace(sibling) && !this.#isEmptyInlineWrapper(sibling)) return sibling
       }
     }
     return null
+  }
+
+  #isEmptyInlineWrapper(node) {
+    return node.nodeType === Node.ELEMENT_NODE && node.nodeName !== "BR" && !this.#isBlockElement(node) &&
+      !this.#hasInlineContent(node) && !node.querySelector("br, " + BLOCK_SELECTOR)
   }
 
   // Whether text or media comes before the <br> since its block, or the block
