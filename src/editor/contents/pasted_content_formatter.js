@@ -11,6 +11,11 @@ const PRESERVABLE_STYLES = {
   p: [ "margin-top", "margin-bottom" ]
 }
 
+const BLOCK_ELEMENTS = new Set([
+  "ADDRESS", "ARTICLE", "ASIDE", "BLOCKQUOTE", "DIV", "DL", "FIGURE", "FOOTER", "H1", "H2", "H3", "H4", "H5", "H6",
+  "HEADER", "HR", "LI", "OL", "P", "PRE", "SECTION", "TABLE", "UL"
+])
+
 export default class PastedContentFormatter {
   constructor(doc) {
     this.doc = doc
@@ -26,6 +31,7 @@ export default class PastedContentFormatter {
     this.#unwrapWrappedListChildren()
     this.#nestStrayListChildren()
     this.#stripStrayListChildren()
+    this.#stripBreaksBeforeBlocks()
     this.#replaceGmailEmojiImgTags()
     return this.doc
   }
@@ -164,6 +170,48 @@ export default class PastedContentFormatter {
         stray = this.#firstStrayListChild(list)
       }
     }
+  }
+
+  // Outlook, and the web apps that show its mail, end a line with <br> right before
+  // a list or other block starts. The block starts a new line anyway, so that <br>
+  // only ends the line before it and shows nothing, but imported it becomes a line
+  // break that adds a blank line. A <br> alone at the start of its block does show,
+  // as an empty line, so it stays.
+  #stripBreaksBeforeBlocks() {
+    for (const br of this.doc.querySelectorAll("br")) {
+      if (this.#isBlockElement(this.#nextNodeOnLine(br)) && this.#endsLineOfContent(br)) {
+        br.remove()
+      }
+    }
+  }
+
+  // The node after the <br>, stepping out of inline wrappers such as the <span>s
+  // Outlook puts around each run of text.
+  #nextNodeOnLine(br) {
+    let node = br
+    let next = this.#meaningfulSibling(node, "nextSibling")
+    while (!next && node.parentNode !== this.doc.body && !this.#isBlockElement(node.parentNode)) {
+      node = node.parentNode
+      next = this.#meaningfulSibling(node, "nextSibling")
+    }
+    return next
+  }
+
+  #endsLineOfContent(br) {
+    const previous = this.#meaningfulSibling(br, "previousSibling")
+    return previous !== null && !this.#isBlockElement(previous)
+  }
+
+  #meaningfulSibling(node, direction) {
+    let sibling = node[direction]
+    while (sibling && this.#isIgnorableTrailingNode(sibling)) {
+      sibling = sibling[direction]
+    }
+    return sibling
+  }
+
+  #isBlockElement(node) {
+    return node?.nodeType === Node.ELEMENT_NODE && BLOCK_ELEMENTS.has(node.nodeName)
   }
 
   // Read the rules from a sheet we build rather than from this.doc.styleSheets: the
