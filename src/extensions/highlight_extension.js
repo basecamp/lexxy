@@ -38,7 +38,8 @@ export class HighlightExtension extends LexxyExtension {
       },
       html: {
         import: {
-          mark: $markConversion
+          mark: $markConversion,
+          code: $inlineCodeConversion
         }
       },
       register(editor, config) {
@@ -48,7 +49,7 @@ export class HighlightExtension extends LexxyExtension {
         // Register the <pre> converter directly in the conversion cache so it
         // coexists with other extensions' "pre" converters (the extension-level
         // html.import uses Object.assign, which means only one "pre" per key).
-        $registerPreConversion(editor)
+        $registerPreConversion(editor, canonicalizers)
 
         return mergeRegister(
           editor.registerCommand(TOGGLE_HIGHLIGHT_COMMAND, (styles) => $toggleSelectionStyles(editor, styles), COMMAND_PRIORITY_NORMAL),
@@ -85,11 +86,24 @@ function $markConversion() {
   }
 }
 
+// Highlighted inline code exports as <code style="...">, so read the highlight
+// back from that element. Code blocks keep their own <pre> and multi-line
+// <code> conversions.
+function $inlineCodeConversion(element) {
+  if (!hasHighlightStyles(extractHighlightStyleFromElement(element) ?? "")) return null
+  if (element.closest("pre")) return null
+
+  return {
+    conversion: extendTextNodeConversion("code", $applyHighlightStyle),
+    priority: 1
+  }
+}
+
 // Register a custom <pre> converter directly in the editor's HTML conversion
 // cache. We can't use the extension-level html.import because Object.assign
 // merges all extensions' converters by tag, and a later extension (e.g.
 // TrixContentExtension) would overwrite ours.
-function $registerPreConversion(editor) {
+function $registerPreConversion(editor, canonicalizers) {
   if (!editor._htmlConversions) return
 
   let preEntries = editor._htmlConversions.get("pre")
@@ -97,16 +111,20 @@ function $registerPreConversion(editor) {
     preEntries = []
     editor._htmlConversions.set("pre", preEntries)
   }
-  preEntries.push($preConversionWithHighlightsFactory(editor))
+  preEntries.push($preConversionWithHighlightsFactory(editor, canonicalizers))
 }
 
 // Returns a <pre> converter factory scoped to a specific editor instance.
 // The factory extracts highlight ranges from <mark> elements before the code
 // retokenizer can destroy them. The ranges are stored in pendingCodeHighlights
 // and restored by the highlight-preserving tokenizer during retokenization.
-function $preConversionWithHighlightsFactory(editor) {
+// Pasted highlights are canonicalized like those in the rest of the content,
+// so a color frozen by the copy (e.g. a resolved rgb() value) maps back to
+// its palette variable and follows the current theme.
+function $preConversionWithHighlightsFactory(editor, canonicalizers) {
   return function $preConversionWithHighlights(domNode) {
-    const highlights = extractHighlightRanges(domNode)
+    let highlights = extractHighlightRanges(domNode)
+    if ($hasUpdateTag(PASTE_TAG)) highlights = canonicalizeHighlightRanges(highlights, canonicalizers)
     if (highlights.length === 0) return null
 
     return {
@@ -160,6 +178,12 @@ function extractHighlightRanges(preElement) {
   }
 
   return ranges
+}
+
+function canonicalizeHighlightRanges(ranges, canonicalizers) {
+  return ranges
+    .map((range) => ({ ...range, style: applyCanonicalizers(range.style, canonicalizers) }))
+    .filter((range) => hasHighlightStyles(range.style))
 }
 
 function $getPendingHighlights(editor) {
