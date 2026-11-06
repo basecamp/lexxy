@@ -3,12 +3,17 @@ import { parsePastedMarkdown } from "../helpers/markdown_helper"
 import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
-import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $onUpdate, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
+import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $onUpdate, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
 import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
+import { $findMatchingParent } from "@lexical/utils"
 import { ListenerBin } from "../helpers/listener_helper"
 import NodeInserter from "./contents/node_inserter"
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
 import NestedBlockNodeInserter from "./contents/node_inserter/nested_block_node_inserter"
+
+// The `[text](` that opens a Markdown inline link, matching the link text the
+// way Lexical's LINK transformer does (one level of nested brackets).
+const MARKDOWN_LINK_DESTINATION_START = /\[[^[\]]*(?:\[[^[\]]*\][^[\]]*)*\]\($/
 
 export default class Clipboard {
   #listeners = new ListenerBin()
@@ -190,6 +195,31 @@ export default class Clipboard {
     })
   }
 
+  // Typing `[text](`, pasting the URL and typing `)` should produce a link through
+  // the Markdown link shortcut. That shortcut only matches plain text, so a URL
+  // pasted there stays plain text instead of becoming a link of its own.
+  #isCaretInMarkdownLinkDestination() {
+    if (!this.editorElement.supportsMarkdown) return false
+
+    return this.editor.getEditorState().read(() => {
+      const selection = $getSelection()
+      if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+
+      const node = selection.anchor.getNode()
+      if (!$isTextNode(node) || $findMatchingParent(node, $isLinkNode)) return false
+
+      const textBeforeCaret = node.getTextContent().slice(0, selection.anchor.offset)
+      return MARKDOWN_LINK_DESTINATION_START.test(textBeforeCaret)
+    })
+  }
+
+  #pasteURLAsText(url) {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if ($isRangeSelection(selection)) selection.insertText(url)
+    }, { tag: PASTE_TAG })
+  }
+
   #plainTextOrURLItem(clipboardData) {
     const items = Array.from(clipboardData.items)
     return items.find((item) => item.type === "text/plain") || items.find((item) => item.type === "text/uri-list")
@@ -198,6 +228,8 @@ export default class Clipboard {
   #pasteURL(url) {
     if (this.contents.hasSelectedText()) {
       this.contents.createLinkWithSelectedText(url)
+    } else if (this.#isCaretInMarkdownLinkDestination()) {
+      this.#pasteURLAsText(url)
     } else {
       const nodeKey = this.contents.createLink(url)
       this.#dispatchLinkInsertEvent(nodeKey, { url })
