@@ -4,6 +4,7 @@ import { $getSelectionStyleValueForProperty, $patchStyleText, getCSSFromStyleObj
 import { $createCodeHighlightNode, $createCodeNode, $isCodeHighlightNode, $isCodeNode, CodeHighlightNode } from "@lexical/code"
 import { extendTextNodeConversion } from "../helpers/lexical_helper"
 import { segmentTextByRanges } from "../helpers/text_range_helper"
+import { importedCodeLanguage } from "../helpers/code_language_helper"
 import { StyleCanonicalizer, applyCanonicalizers, hasHighlightStyles, normalizeColorButtons } from "../helpers/format_helper"
 import { RichTextExtension } from "@lexical/rich-text"
 import LexxyExtension from "./lexxy_extension"
@@ -111,7 +112,7 @@ function $preConversionWithHighlightsFactory(editor) {
 
     return {
       conversion: (domNode) => {
-        const language = domNode.getAttribute("data-language")
+        const language = importedCodeLanguage(domNode)
         const codeNode = $createCodeNode(language)
         $getPendingHighlights(editor).set(codeNode.getKey(), highlights)
         return { node: codeNode }
