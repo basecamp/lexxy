@@ -80,7 +80,11 @@ export default class Clipboard {
 
     const url = $bareUrlFromSingleLink(nodes)
     if (url && $isRangeSelection(selection)) {
-      this.#insertSingleLinkAt(selection, url)
+      if (this.editorElement.supportsMarkdown && $isInMarkdownLinkDestination(selection)) {
+        selection.insertText(url)
+      } else {
+        this.#insertSingleLinkAt(selection, url)
+      }
       return true
     }
 
@@ -195,22 +199,10 @@ export default class Clipboard {
     })
   }
 
-  // Typing `[text](`, pasting the URL and typing `)` should produce a link through
-  // the Markdown link shortcut. That shortcut only matches plain text, so a URL
-  // pasted there stays plain text instead of becoming a link of its own.
   #isCaretInMarkdownLinkDestination() {
     if (!this.editorElement.supportsMarkdown) return false
 
-    return this.editor.getEditorState().read(() => {
-      const selection = $getSelection()
-      if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
-
-      const node = selection.anchor.getNode()
-      if (!$isTextNode(node) || $findMatchingParent(node, $isLinkNode)) return false
-
-      const textBeforeCaret = node.getTextContent().slice(0, selection.anchor.offset)
-      return MARKDOWN_LINK_DESTINATION_START.test(textBeforeCaret)
-    })
+    return this.editor.getEditorState().read(() => $isInMarkdownLinkDestination($getSelection()))
   }
 
   #pasteURLAsText(url) {
@@ -388,4 +380,17 @@ function $bareUrlFromLink(linkNode) {
   const url = linkNode.getURL()
   if (!url) return null
   return linkNode.getTextContent() === url ? url : null
+}
+
+// Typing `[text](`, pasting the URL and typing `)` should produce a link through
+// the Markdown link shortcut. That shortcut only matches plain text, so a URL
+// pasted there stays plain text instead of becoming a link of its own.
+function $isInMarkdownLinkDestination(selection) {
+  if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+
+  const node = selection.anchor.getNode()
+  if (!$isTextNode(node) || $findMatchingParent(node, $isLinkNode)) return false
+
+  const textBeforeCaret = node.getTextContent().slice(0, selection.anchor.offset)
+  return MARKDOWN_LINK_DESTINATION_START.test(textBeforeCaret)
 }
