@@ -96,6 +96,30 @@ test.describe("Inserting an image into a list item", () => {
     await expect(editor.content.locator("ol").nth(1)).toHaveAttribute("start", "3")
   })
 
+  test("image inserted into the second numbered list of a quote continues that list", async ({ editor }) => {
+    await editor.setValue('<blockquote><ol><li>One</li></ol><p>Between</p><ol start="10"><li>Ten</li><li>Eleven</li></ol></blockquote>')
+    await editor.select("Ten")
+    await editor.send("End")
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+    await assertImageAttachments(editor, 1)
+
+    await assertListIntegrity(editor)
+    expect(await editor.value()).toMatch(/^<blockquote><ol><li value="1">One<\/li><\/ol><p>Between<\/p><ol start="10"><li value="10">Ten<\/li><\/ol><\/blockquote><action-text-attachment [^>]*><\/action-text-attachment><blockquote><ol start="11"><li value="11">Eleven<\/li><\/ol><\/blockquote>$/)
+  })
+
+  test("image inserted after the last bullet of a quote leaves a later list's numbering alone", async ({ editor }) => {
+    await editor.setValue('<blockquote><ol><li>One</li></ol><p>Between</p><ol start="5"><li>Five</li></ol></blockquote>')
+    await editor.select("One")
+    await editor.send("End")
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+    await assertImageAttachments(editor, 1)
+
+    await assertListIntegrity(editor)
+    expect(await editor.value()).toMatch(/<ol start="5"><li value="5">Five<\/li><\/ol><\/blockquote>$/)
+  })
+
   test("image inserted into a blank bullet inside a quote leaves no empty list behind", async ({ editor }) => {
     await editor.setValue("<blockquote><ol><li>First</li></ol></blockquote>")
     await editor.select("First")

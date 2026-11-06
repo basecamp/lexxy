@@ -42,9 +42,11 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
     }
 
     const topItem = this.#topLevelItemFor(anchorNode, outerList)
-    const [ listBefore, listAfter ] = this.#split(outerList, this.#splitIndexFor(topItem))
+    const splitIndex = this.#splitIndexFor(topItem)
+    const splitsList = splitIndex > 0 && splitIndex < outerList.getChildrenSize()
+    const [ listBefore, listAfter ] = this.#split(outerList, splitIndex)
     if (topItem && this.#isBareInsertionPoint(topItem)) { topItem.remove() }
-    this.#continueNumbering(listBefore, listAfter)
+    if (splitsList) this.#continueNumbering(outerList, $firstListIn(listAfter))
 
     let anchor = listBefore ?? listAfter
     for (const node of nodes) {
@@ -88,12 +90,11 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
   }
 
   // Splitting a numbered list copies its start, so the second half would count
-  // from 1 again. Continue it from where the first half ends instead.
-  #continueNumbering(before, after) {
-    const listBefore = $listIn(before)
-    const listAfter = $listIn(after)
-    if (!listBefore || !listAfter || listBefore.isEmpty() || listAfter.isEmpty()) return
-    if (listBefore.getListType() !== "number" || listAfter.getListType() !== "number") return
+  // from 1 again. Continue it from where the first half ends instead. The first
+  // half is the split list itself; $splitNode moves the rest into a copy.
+  #continueNumbering(listBefore, listAfter) {
+    if (!listAfter || listBefore.isEmpty() || listAfter.isEmpty()) return
+    if (listBefore.getListType() !== "number") return
 
     const numberedItems = listBefore.getChildren().filter(item => !$isNestedListWrapper(item))
     listAfter.setStart(listBefore.getStart() + numberedItems.length)
@@ -125,10 +126,11 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
   }
 }
 
-// For a list inside a quote, each half of the split is a quote holding the list.
-function $listIn(node) {
+// For a list inside a quote, the second half of the split is a quote that starts
+// with the copy of the list.
+function $firstListIn(node) {
   if ($isListNode(node)) return node
-  if ($isQuoteNode(node)) return node.getChildren().find($isListNode) ?? null
+  if ($isQuoteNode(node) && $isListNode(node.getFirstChild())) return node.getFirstChild()
   return null
 }
 
