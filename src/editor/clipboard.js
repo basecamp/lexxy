@@ -10,6 +10,8 @@ import NodeInserter from "./contents/node_inserter"
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
 import NestedBlockNodeInserter from "./contents/node_inserter/nested_block_node_inserter"
 
+const CODE_EDITOR_PROSE_LANGUAGES = [ "markdown", "plaintext" ]
+
 export default class Clipboard {
   #listeners = new ListenerBin()
 
@@ -86,7 +88,9 @@ export default class Clipboard {
   }
 
   #isPlainTextOrURLPasted(clipboardData) {
-    return this.#isOnlyPlainTextPasted(clipboardData) || this.#isOnlyURLPasted(clipboardData)
+    return this.#isOnlyPlainTextPasted(clipboardData)
+      || this.#isOnlyURLPasted(clipboardData)
+      || this.#isProseCopiedFromCodeEditor(clipboardData)
   }
 
   #isOnlyPlainTextPasted(clipboardData) {
@@ -113,6 +117,22 @@ export default class Clipboard {
 
     const html = clipboardData.getData("text/html")
     return !html || this.#htmlIsBareLinkToURL(html, text)
+  }
+
+  // VS Code, and editors built on it such as Cursor, copy syntax-highlighted HTML next to the
+  // plain text, which pastes as a code block. That suits source code, but Markdown or plain text
+  // copied from them should paste as plain text, so the Markdown converts. The editor names the
+  // file's language in vscode-editor-data, which Chromium-based browsers expose.
+  #isProseCopiedFromCodeEditor(clipboardData) {
+    const types = Array.from(clipboardData.types)
+    if (!types.includes("vscode-editor-data") || !types.includes("text/plain")) return false
+
+    try {
+      const { mode } = JSON.parse(clipboardData.getData("vscode-editor-data"))
+      return CODE_EDITOR_PROSE_LANGUAGES.includes(mode)
+    } catch {
+      return false
+    }
   }
 
   #htmlIsBareLinkToURL(html, url) {
