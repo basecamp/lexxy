@@ -337,12 +337,49 @@ export class LexicalPromptElement extends HTMLElement {
 
     const forceTop = this.verticalDirection === "top"
     const forceBottom = this.verticalDirection === "bottom"
-    const overflowsWindow = popoverRect.bottom > window.innerHeight
 
-    if (!forceBottom && (forceTop || overflowsWindow)) {
+    if (!forceBottom && (forceTop || this.#fitsBetterAbove(popoverRect, fontSize))) {
       this.#setPopoverOffsetY(contentRect.height - y + fontSize)
       this.popoverElement.toggleAttribute("data-clipped-at-bottom", true)
     }
+  }
+
+  #fitsBetterAbove(popoverRect, fontSize) {
+    const { top, bottom } = this.#visibleBounds()
+    const overflowsBelow = popoverRect.bottom > bottom
+    const roomAbove = popoverRect.top - fontSize - top
+    const roomBelow = bottom - popoverRect.top
+
+    return overflowsBelow && roomAbove > roomBelow
+  }
+
+  // A scroll container or modal around the editor clips the menu at its scrollport before the
+  // window does, so the visible area is the window narrowed by every clipping ancestor. A fixed
+  // ancestor escapes the clipping of everything up to its containing block: the window, or the
+  // nearest ancestor that a transform, filter or containment makes contain fixed descendants.
+  // A top-layer ancestor, such as a modal dialog, escapes everything outside it.
+  #visibleBounds() {
+    let top = 0
+    let bottom = window.innerHeight
+    let escapingToContainingBlock = false
+
+    for (let node = this.#editorElement; node && node !== document.body; node = node.parentElement) {
+      const style = getComputedStyle(node)
+
+      if (style.display !== "contents" && (!escapingToContainingBlock || containsFixedDescendants(style))) {
+        escapingToContainingBlock = style.position === "fixed"
+
+        if (clipsDescendants(style)) {
+          const scrollport = scrollportBounds(node)
+          top = Math.max(top, scrollport.top)
+          bottom = Math.min(bottom, scrollport.bottom)
+        }
+      }
+
+      if (node.matches(":modal, :popover-open")) break
+    }
+
+    return { top, bottom }
   }
 
   #setPopoverOffsetX(value) {
@@ -631,3 +668,26 @@ export class LexicalPromptElement extends HTMLElement {
 }
 
 export default LexicalPromptElement
+
+function clipsDescendants(style) {
+  return style.overflowY !== "visible" || /paint|strict|content/.test(style.contain) || style.contentVisibility === "auto"
+}
+
+// The bounding rect is in viewport coordinates, already scaled by any transform, while
+// clientTop and clientHeight are untransformed layout sizes, so they're scaled to match.
+function scrollportBounds(element) {
+  const rect = element.getBoundingClientRect()
+  const scale = rect.height / element.offsetHeight || 1
+  const top = rect.top + element.clientTop * scale
+
+  return { top, bottom: top + element.clientHeight * scale }
+}
+
+function containsFixedDescendants(style) {
+  return [ style.transform, style.translate, style.rotate, style.scale, style.perspective, style.filter, style.backdropFilter ]
+    .some(value => value && value !== "none") ||
+    /transform|translate|rotate|scale|perspective|filter/.test(style.willChange) ||
+    /paint|layout|strict|content/.test(style.contain) ||
+    /size/.test(style.containerType) ||
+    style.contentVisibility === "auto"
+}

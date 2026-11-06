@@ -43,7 +43,7 @@ test.describe("Attachment toolbar", () => {
     await expect(figure).toHaveClass(/node--selected/)
     await page.keyboard.press("Alt+F10")
 
-    await expect(page.locator("lexxy-attachment-toolbar button[aria-label='Alternative text']")).toBeFocused()
+    await expect(page.locator("lexxy-attachment-toolbar button[aria-label='Alt text']")).toBeFocused()
 
     await page.keyboard.press("ArrowRight")
     await expect(page.locator("lexxy-attachment-toolbar button[aria-label='Remove']")).toBeFocused()
@@ -64,7 +64,7 @@ test.describe("Attachment toolbar", () => {
     await selectAttachment(figure)
     await page.keyboard.press("Alt+F10")
 
-    await expect(page.locator("lexxy-attachment-toolbar button[aria-label='Alternative text']")).toBeHidden()
+    await expect(page.locator("lexxy-attachment-toolbar button[aria-label='Alt text']")).toBeHidden()
     await expect(page.locator("lexxy-attachment-toolbar button[aria-label='Remove']")).toBeFocused()
   })
 

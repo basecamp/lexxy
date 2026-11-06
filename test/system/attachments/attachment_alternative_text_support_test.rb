@@ -13,6 +13,6 @@ class AttachmentAlternativeTextSupportTest < ApplicationSystemTestCase
     find("figure.attachment").click x: 8, y: 8
 
     assert_selector "lexxy-attachment-toolbar button[aria-label='Remove']"
-    assert_no_selector "lexxy-attachment-toolbar button[aria-label='Alternative text']"
+    assert_no_selector "lexxy-attachment-toolbar button[aria-label='Alt text']"
   end
 end
