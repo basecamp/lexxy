@@ -57,6 +57,32 @@ test.describe("Inserting an image into a list item", () => {
     await assertNestedListIntact(editor)
   })
 
+  test("image inserted after a soft line break in an otherwise empty bullet keeps the bullet", async ({ editor }) => {
+    await editor.send("Intro", "Enter", "1. ", "Shift+Enter")
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+    await assertImageAttachments(editor, 1)
+
+    await assertListIntegrity(editor)
+    expect(await editor.value()).toMatch(/^<p>Intro<\/p><ol><li value="1"><br><br><\/li><\/ol><action-text-attachment [^>]*><\/action-text-attachment>$/)
+    await expect(editor.content.locator("ol > li")).toHaveCount(1)
+  })
+
+  test("image inserted after a soft line break in an empty middle bullet keeps the list in one piece before it", async ({ editor }) => {
+    await editor.setValue("<ol><li>First</li><li>Second</li></ol>")
+    await editor.select("First")
+    await editor.send("End", "Enter", "Shift+Enter")
+
+    await editor.uploadFile("test/fixtures/files/example.png")
+    await assertImageAttachments(editor, 1)
+
+    await assertListIntegrity(editor)
+    expect(await editor.value()).toMatch(/^<ol><li value="1">First<\/li><li value="2"><br><br><\/li><\/ol><action-text-attachment [^>]*><\/action-text-attachment><ol start="3"><li value="3">Second<\/li><\/ol>$/)
+    await expect(editor.content.locator("ol")).toHaveCount(2)
+    await expect(editor.content.locator("ol").nth(0).locator("li")).toHaveCount(2)
+    await expect(editor.content.locator("ol").nth(1)).toHaveAttribute("start", "3")
+  })
+
   test("image inserted into a blank bullet inside a quote leaves no empty list behind", async ({ editor }) => {
     await editor.setValue("<blockquote><ol><li>First</li></ol></blockquote>")
     await editor.select("First")

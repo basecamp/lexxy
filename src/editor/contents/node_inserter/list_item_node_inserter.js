@@ -1,4 +1,4 @@
-import { $isDecoratorNode, $isElementNode, $isRangeSelection, $isRootOrShadowRoot, $splitNode } from "lexical"
+import { $isDecoratorNode, $isElementNode, $isLineBreakNode, $isRangeSelection, $isRootOrShadowRoot, $splitNode } from "lexical"
 import { $isListItemNode, $isListNode, ListItemNode } from "@lexical/list"
 import { $isQuoteNode } from "@lexical/rich-text"
 import { $getNearestNodeOfType } from "@lexical/utils"
@@ -43,7 +43,8 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
 
     const topItem = this.#topLevelItemFor(anchorNode, outerList)
     const [ listBefore, listAfter ] = this.#split(outerList, this.#splitIndexFor(topItem))
-    if (topItem && $isBlankNode(topItem)) { topItem.remove() }
+    if (topItem && this.#isBareInsertionPoint(topItem)) { topItem.remove() }
+    this.#continueNumbering(listBefore, listAfter)
 
     let anchor = listBefore ?? listAfter
     for (const node of nodes) {
@@ -57,14 +58,15 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
   }
 
   // A blank top-level bullet is just the insertion point (e.g. the user pressed
-  // Enter to leave the list); break out of it entirely. A bullet with content —
+  // Enter to leave the list); break out of it entirely. A bullet holding only a
+  // soft line break was kept on purpose, so it stays. A bullet with content —
   // including one wrapping a nested list — splits so its content stays in the
   // list. With no top-level bullet at all — removeText() relocated the anchor
   // onto the list node itself — the anchor offset is the boundary between items.
   #splitIndexFor(topItem) {
     if (!topItem) return this.selection.anchor.offset
 
-    const splitAfterItem = $isBlankNode(topItem) ? topItem.getPreviousSibling() : topItem
+    const splitAfterItem = this.#isBareInsertionPoint(topItem) ? topItem.getPreviousSibling() : topItem
     return splitAfterItem ? splitAfterItem.getIndexWithinParent() + 1 : 0
   }
 
@@ -79,6 +81,22 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
     } else {
       return this.#split(parent, node.getIndexWithinParent() + 1)
     }
+  }
+
+  #isBareInsertionPoint(item) {
+    return $isBlankNode(item) && !$containsLineBreak(item)
+  }
+
+  // Splitting a numbered list copies its start, so the second half would count
+  // from 1 again. Continue it from where the first half ends instead.
+  #continueNumbering(before, after) {
+    const listBefore = $listIn(before)
+    const listAfter = $listIn(after)
+    if (!listBefore || !listAfter || listBefore.isEmpty() || listAfter.isEmpty()) return
+    if (listBefore.getListType() !== "number" || listAfter.getListType() !== "number") return
+
+    const numberedItems = listBefore.getChildren().filter(item => !$isNestedListWrapper(item))
+    listAfter.setStart(listBefore.getStart() + numberedItems.length)
   }
 
   #outermostList(node) {
@@ -105,4 +123,20 @@ export default class ListItemNodeInserter extends BaseNodeInserter {
   #isBlockDecorator(node) {
     return $isDecoratorNode(node) && !node.isInline()
   }
+}
+
+// For a list inside a quote, each half of the split is a quote holding the list.
+function $listIn(node) {
+  if ($isListNode(node)) return node
+  if ($isQuoteNode(node)) return node.getChildren().find($isListNode) ?? null
+  return null
+}
+
+function $containsLineBreak(node) {
+  return node.getChildren().some(child => $isLineBreakNode(child) || ($isElementNode(child) && $containsLineBreak(child)))
+}
+
+// A list item that only wraps a nested list takes no number of its own.
+function $isNestedListWrapper(item) {
+  return $isListItemNode(item) && item.getChildrenSize() === 1 && $isListNode(item.getFirstChild())
 }
