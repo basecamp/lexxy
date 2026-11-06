@@ -31,6 +31,7 @@ export default class PastedContentFormatter {
     this.#unwrapWrappedListChildren()
     this.#nestStrayListChildren()
     this.#stripStrayListChildren()
+    this.#convertBlankLineDivsToParagraphs()
     this.#replaceGmailEmojiImgTags()
     return this.doc
   }
@@ -250,6 +251,26 @@ export default class PastedContentFormatter {
         stray = this.#firstStrayListChild(list)
       }
     }
+  }
+
+  // Trix writes a blank line as <div><br></div>. Lexical has no importer for
+  // <div>, and it drops a <br> that is a block's only child, so the blank line
+  // would vanish and the paragraphs around it would run together. An empty
+  // paragraph is how Lexxy writes a blank line, so turn each one into that.
+  // List items are left alone: a paragraph can't sit inside one.
+  #convertBlankLineDivsToParagraphs() {
+    for (const div of this.doc.querySelectorAll("div")) {
+      if (this.#isBlankLineDiv(div) && !div.closest("li")) {
+        const paragraph = this.doc.createElement("p")
+        paragraph.appendChild(this.doc.createElement("br"))
+        div.replaceWith(paragraph)
+      }
+    }
+  }
+
+  #isBlankLineDiv(div) {
+    const children = Array.from(div.childNodes).filter((node) => !this.#isIgnorableTrailingNode(node))
+    return children.length === 1 && children[0].nodeName === "BR"
   }
 
   // Read the rules from a sheet we build rather than from this.doc.styleSheets: the
