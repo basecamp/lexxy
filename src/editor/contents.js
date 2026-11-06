@@ -72,7 +72,7 @@ export default class Contents {
     if (!$isRangeSelection(selection)) return
 
     $expandSelectionToLineBreaksAndSplitAtEdges(selection, (node) => $getNearestBlockElementAncestorOrThrow(node))
-    $setBlocksType(selection, () => $createParagraphNode())
+    $setBlocksType(selection, () => $createParagraphNode(), $copyBlockFormat)
   }
 
   applyHeadingFormat(tag) {
@@ -80,7 +80,7 @@ export default class Contents {
     if (!$isRangeSelection(selection)) return
 
     $expandSelectionToLineBreaksAndSplitAtEdges(selection)
-    $setBlocksType(selection, () => $createHeadingNode(tag))
+    $setBlocksType(selection, () => $createHeadingNode(tag), $copyBlockFormat)
   }
 
   applyUnorderedListFormat() {
@@ -104,7 +104,7 @@ export default class Contents {
 
     this.#topLevelElementsInSelection(selection).filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
-    $setBlocksType(selection, () => $createParagraphNode())
+    $setBlocksType(selection, () => $createParagraphNode(), $copyBlockFormat)
   }
 
   toggleCodeBlock() {
@@ -724,4 +724,12 @@ export default class Contents {
     anchorNode.append(paragraph)
     paragraph.selectStart()
   }
+}
+
+// Lexical's default carries the source block's indent over, but indentation
+// only exists in Lexxy as list nesting: a list item turned into a paragraph or
+// heading would keep an indent nothing else can create or remove.
+function $copyBlockFormat(source, target) {
+  const format = source.getFormatType()
+  if (format !== target.getFormatType()) target.setFormat(format)
 }
