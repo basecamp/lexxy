@@ -7,6 +7,8 @@ CI.run do
   step "Style: GitHub Actions (zizmor)", "zizmor ."
 
   step "Tests: JavaScript", "yarn test"
+  step "Build: JavaScript", "yarn build"
+  step "Tests: Bundled JavaScript packages", "bundle exec rake verify_bundled_dependencies"
   step "Tests: Rails (prepare)", "env RAILS_ENV=test bin/rails db:test:prepare"
   step "Tests: Rails (run)", "env RAILS_ENV=test bin/rails test:all -d"
 
