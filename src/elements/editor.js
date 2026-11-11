@@ -60,6 +60,7 @@ export class LexicalEditorElement extends HTMLElement {
   static observedAttributes = [ "autocapitalize", "connected", "required" ]
 
   #initialValue = ""
+  #hasLiveEditor = false
   #previousInternalFormValue = null
 
   #initializeEventDispatched = false
@@ -79,6 +80,7 @@ export class LexicalEditorElement extends HTMLElement {
     super()
     this.internals = this.attachInternals()
     this.internals.role = "presentation"
+    this.#upgradeValueProperty()
   }
 
   get uploadRequests() {
@@ -92,6 +94,7 @@ export class LexicalEditorElement extends HTMLElement {
     this.#disposables.push(this.extensions)
 
     this.editor = this.#createEditor()
+    this.#hasLiveEditor = true
     this.#disposables.push(this.editor)
     this.#disposables.push(this.#listeners)
 
@@ -137,6 +140,7 @@ export class LexicalEditorElement extends HTMLElement {
 
     this.#clearCachedValues()
     this.#reset() // Prevent hangs with Safari when morphing
+    this.#hasLiveEditor = false
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -396,11 +400,22 @@ export class LexicalEditorElement extends HTMLElement {
     return !!this.editor && isEditorFocused(this.editor)
   }
 
+  // Until the editor connects, and after it disconnects, there's no live editor to
+  // read or write. The value is kept to load on connect, as #loadInitialValue does
+  // with the one saved on disconnect, so frameworks can set it before inserting
+  // the element, the way they do with built-in form controls.
   get value() {
+    if (!this.#hasLiveEditor) return this.valueBeforeDisconnect ?? this.getAttribute("value") ?? ""
+
     return this.cachedValue ??= this.#readSanitizedEditorValue()
   }
 
   set value(html) {
+    if (!this.#hasLiveEditor) {
+      this.valueBeforeDisconnect = html
+      return
+    }
+
     const editorHasFocus = this.#isContentFocused
 
     this.editor.update(() => {
@@ -1012,6 +1027,16 @@ export class LexicalEditorElement extends HTMLElement {
   #dispose() {
     while (this.#disposables.length) {
       this.#disposables.pop().dispose()
+    }
+  }
+
+  // A value assigned before the element was upgraded is a plain property that
+  // hides the accessor. Move it to the accessor so it loads on connect.
+  #upgradeValueProperty() {
+    if (Object.hasOwn(this, "value")) {
+      const value = this.value
+      delete this.value
+      this.value = value
     }
   }
 
