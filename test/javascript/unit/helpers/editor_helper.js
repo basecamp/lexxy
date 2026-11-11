@@ -1,3 +1,6 @@
+// The languages the package bundles, loaded as its entry point loads them. Since Lexical 0.53 a code
+// block in a language Prism hasn't loaded is left as plain text, without its links or highlights.
+import "../../../../src/config/prism"
 import { $getRoot, $isTextNode } from "lexical"
 import { defineElements } from "../../../../src/elements/index"
 import { NativeAdapter } from "../../../../src/editor/adapters/native_adapter"

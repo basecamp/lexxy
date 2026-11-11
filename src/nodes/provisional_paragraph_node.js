@@ -74,8 +74,10 @@ export class ProvisionalParagraphNode extends ParagraphNode {
     if (!self.required) self.remove()
   }
 
+  // getTextContent() returns "" so the spacer adds nothing to the editor's text, and Lexical
+  // derives getTextContentSize() from it, so count what was typed from the children instead.
   concretizeIfEdited(self = this.getLatest()) {
-    if (self.getTextContentSize() > 0) {
+    if (self.getChildren().some(child => child.getTextContentSize() > 0)) {
       self.replace($createParagraphNode(), true)
     }
   }

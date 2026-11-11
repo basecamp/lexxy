@@ -80,6 +80,17 @@ test.describe("Inline formatting", () => {
     await expect(codeButton).toHaveAttribute("aria-pressed", "false")
   })
 
+  test("clicking past the end of a line that ends in bold text types bold", async ({ page, editor }) => {
+    await editor.setValue("<p>Hello <strong>everyone</strong></p>")
+
+    const box = await editor.content.locator("p").boundingBox()
+    await page.mouse.click(box.x + box.width - 2, box.y + box.height / 2)
+    await expect(page.getByRole("button", { name: "Bold" })).toHaveAttribute("aria-pressed", "true")
+
+    await editor.send("!")
+    await assertEditorHtml(editor, "<p>Hello <strong>everyone!</strong></p>")
+  })
+
   test("clicking plain text after inline code clears the active code state", async ({
     page,
     editor,
