@@ -1021,14 +1021,14 @@
     }
 
     /* The divider is thinner than the button. */
-    &[data-node-type="horizontal_divider"] {
+    &:not([data-custom-controls])[data-node-type="horizontal_divider"] {
       --button-size: 1.8lh;
 
       top: calc(var(--lexxy-anchor-top) + var(--lexxy-anchor-height) / 2);
       transform: translate(calc(-100% - 0.5ch), -50%);
     }
 
-    &[data-presentation="inline"] {
+    &:not([data-custom-controls])[data-presentation="inline"] {
       --button-size: 1.6lh;
 
       top: calc(var(--lexxy-anchor-top) + var(--lexxy-anchor-height) / 2);

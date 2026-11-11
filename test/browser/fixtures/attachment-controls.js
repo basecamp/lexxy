@@ -1,15 +1,26 @@
 import { ActionTextAttachmentNode, configure, Extension } from "lexxy"
 import { defineExtension } from "@lexical/extension"
 
+const options = new URLSearchParams(location.search)
+
 class AudioNode extends ActionTextAttachmentNode {
+  static clone(node) {
+    return new AudioNode({ ...node }, node.__key)
+  }
+
   $config() {
     return this.config("test-audio", { extends: ActionTextAttachmentNode })
+  }
+
+  isInline() {
+    return options.has("inline") || super.isInline()
   }
 
   createDOM() {
     const figure = document.createElement("figure")
     figure.className = "attachment"
     figure.style.padding = "12px"
+    if (options.has("inline")) figure.style.display = "inline-block"
     const preview = document.createElement("div")
     preview.className = "audio-preview"
     preview.textContent = this.caption
@@ -52,9 +63,20 @@ class AudioExtension extends Extension {
       play.ariaLabel = `Play ${node.caption}`
       play.textContent = "Play"
       element.append(play)
+      if (options.has("group")) {
+        const position = document.createElement("input")
+        position.ariaLabel = "Position"
+        position.value = "0:00"
+        element.append(position)
+        const reset = document.createElement("button")
+        reset.type = "button"
+        reset.textContent = "Reset"
+        element.append(reset)
+      }
       const progress = document.createElement("div")
       progress.className = "audio-progress"
       element.append(progress)
+      let mute
 
       const togglePlayback = () => {
         play.ariaLabel = play.ariaLabel.replace(/^Play|^Pause/, state => {
@@ -67,6 +89,7 @@ class AudioExtension extends Extension {
 
       return {
         element,
+        role: options.has("group") ? "group" : "toolbar",
         placements: [
           { element: play, anchor: attachmentElement.firstElementChild },
           { element: progress, anchor: attachmentElement.lastElementChild }
@@ -74,6 +97,13 @@ class AudioExtension extends Extension {
         label: `Audio controls: ${node.caption}`,
         update({ node }) {
           play.ariaLabel = `${play.textContent} ${node.caption}`
+          this.label = `Audio controls: ${node.caption}`
+          if (node.caption === "With mute" && !mute) {
+            mute = document.createElement("button")
+            mute.type = "button"
+            mute.textContent = "Mute"
+            element.append(mute)
+          }
         },
         dispose() {
           play.removeEventListener("click", togglePlayback)
@@ -85,3 +115,12 @@ class AudioExtension extends Extension {
 }
 
 configure({ global: { extensions: [AudioExtension] } })
+
+document.getElementById("toggle-editor").addEventListener("click", () => {
+  const editor = document.querySelector("lexxy-editor")
+  if (editor.style.display === "none") {
+    editor.style.display = ""
+  } else {
+    editor.style.display = "none"
+  }
+})

@@ -84,7 +84,15 @@ Remove. Alt+F10 focuses its first available button; Left/Right and Home/End move
 between buttons; Escape returns to the selected attachment; Tab opens its
 caption when one is available. Buttons stay outside the normal Tab sequence
 when the toolbar loses focus. Fields keep the Tab index set by the extension.
-The same interactions work when the editor is read-only.
+These controls also work when Lexical's `editor.setEditable(false)` temporarily
+disables editing in the content area, as in a staged attachment composer. This
+does not disable external attachment actions or the caption editor. A controls
+group (`role: "group"`) retains its native Tab and field navigation instead of
+the toolbar's arrow navigation.
+
+Lexxy keeps the controls aligned after resizing, scrolling, and hiding or
+showing the editor. Controls follow the attachment's clipping ancestors;
+focusing a control reveals its underlying anchor in a scrolling content area.
 
 Style the supplied controls in your application. Lexxy's floating-button styles
 apply to its own actions, leaving the supplied controls' appearance intact.

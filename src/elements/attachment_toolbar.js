@@ -55,6 +55,7 @@ export class AttachmentToolbar extends HTMLElement {
 
   refresh() {
     if (this.#controls) this.ariaLabel = this.#controls.label
+    this.#refreshButtons()
     this.#refresh()
   }
 
@@ -96,13 +97,22 @@ export class AttachmentToolbar extends HTMLElement {
     this.#alternativeTextDialog = new AlternativeTextDialog(this.#editorElement)
     this.appendChild(container)
 
-    this.#buttons = Array.from(this.querySelectorAll("button"))
-    this.#buttons.forEach(button => button.tabIndex = -1)
+    this.#refreshButtons()
     this.#listeners.track(
       registerEventListener(this, "keydown", this.#navigateOrExit),
       registerEventListener(this, "focusout", this.#resetTabIndexOnExit),
-      registerEventListener(this, "focusin", () => this.#selectBoundNode())
+      registerEventListener(this, "focusin", event => {
+        this.#revealControl(event.target)
+        this.#selectBoundNode()
+      })
     )
+  }
+
+  #refreshButtons() {
+    this.#buttons = Array.from(this.querySelectorAll("button"))
+    for (const button of this.#buttons) {
+      if ((this.role === "toolbar" || this.#buttonGroup.contains(button)) && button !== document.activeElement) button.tabIndex = -1
+    }
   }
 
   #createRemoveButton() {
@@ -165,7 +175,7 @@ export class AttachmentToolbar extends HTMLElement {
       } else if (this.#editorElement.captionEditor.open(this.#currentNodeKey)) {
         event.preventDefault()
       }
-    } else {
+    } else if (this.role === "toolbar") {
       handleRollingTabIndex(this.#buttons, event)
     }
   }
@@ -183,7 +193,7 @@ export class AttachmentToolbar extends HTMLElement {
 
   #resetTabIndexOnExit = (event) => {
     if (!this.contains(event.relatedTarget)) {
-      this.#buttons.forEach(button => button.tabIndex = -1)
+      this.#refreshButtons()
     }
   }
 
@@ -294,12 +304,19 @@ export class AttachmentToolbar extends HTMLElement {
       this.style.setProperty("--lexxy-anchor-width", `${rect.width}px`)
       this.style.setProperty("--lexxy-anchor-height", `${rect.height}px`)
       if (this.#controls) {
-        const anchor = (this.#controls.anchor || figureElement).getBoundingClientRect()
+        const anchorElement = this.#controls.anchor || figureElement
+        const anchor = anchorElement.getBoundingClientRect()
+        const anchorStyle = getComputedStyle(anchorElement)
         this.#controlsContainer.style.left = `${anchor.left - rect.left}px`
         this.#controlsContainer.style.top = `${anchor.top - rect.top}px`
         this.#controlsContainer.style.width = `${anchor.width}px`
         this.#controlsContainer.style.height = `${anchor.height}px`
+        this.#controlsContainer.style.font = anchorStyle.font
+        this.#controlsContainer.style.color = anchorStyle.color
+        this.#controlsContainer.style.overflow = anchorStyle.overflow
+        this.#controlsContainer.style.borderRadius = anchorStyle.borderRadius
         for (const placement of this.#controls.placements || []) this.#positionControl(placement)
+        this.#clipToScrollport(figureElement)
       }
       this.#flipWhenOverflowing(editorRect)
     }
@@ -308,12 +325,44 @@ export class AttachmentToolbar extends HTMLElement {
   #positionControl({ element, anchor }) {
     element.style.position = "absolute"
     const container = element.offsetParent
+    // Hidden editors have no containing block until they are displayed again.
+    if (!container) return
     const containerRect = container.getBoundingClientRect()
     const rect = anchor.getBoundingClientRect()
     element.style.left = `${rect.left - containerRect.left - container.clientLeft + container.scrollLeft}px`
     element.style.top = `${rect.top - containerRect.top - container.clientTop + container.scrollTop}px`
     element.style.width = `${rect.width}px`
     element.style.height = `${rect.height}px`
+  }
+
+  #clipToScrollport(figureElement) {
+    const rect = this.getBoundingClientRect()
+    const clip = { top: 0, right: 0, bottom: 0, left: 0 }
+
+    for (let ancestor = figureElement.parentElement; ancestor !== this.#editorElement; ancestor = ancestor.parentElement) {
+      const style = getComputedStyle(ancestor)
+      const bounds = ancestor.getBoundingClientRect()
+      if (style.overflowY !== "visible") {
+        clip.top = Math.max(clip.top, bounds.top + ancestor.clientTop - rect.top)
+        clip.bottom = Math.max(clip.bottom, rect.bottom - bounds.top - ancestor.clientTop - ancestor.clientHeight)
+      }
+      if (style.overflowX !== "visible") {
+        clip.left = Math.max(clip.left, bounds.left + ancestor.clientLeft - rect.left)
+        clip.right = Math.max(clip.right, rect.right - bounds.left - ancestor.clientLeft - ancestor.clientWidth)
+      }
+    }
+
+    this.style.clipPath = Object.values(clip).some(value => value > 0)
+      ? `inset(${clip.top}px ${clip.right}px ${clip.bottom}px ${clip.left}px)` : "none"
+  }
+
+  #revealControl(element) {
+    if (this.#controls) {
+      const placement = this.#controls.placements?.find(placement => placement.element.contains(element))
+      const anchor = placement?.anchor || this.#controls.anchor || this.#editor.getElementByKey(this.#boundNodeKey)
+      anchor.scrollIntoView({ block: "nearest", inline: "nearest" })
+      this.#updatePosition()
+    }
   }
 
   #flipWhenOverflowing(editorRect) {
@@ -349,8 +398,12 @@ export class AttachmentToolbar extends HTMLElement {
       this.#focusToolbarOnAltF10,
       COMMAND_PRIORITY_HIGH
     ), registerEventListener(this.#editorElement, "keydown", event => {
-      if (!this.#editor.isEditable() && event.target === this.#editor.getRootElement() && this.#focusToolbarOnAltF10(event)) {
-        event.stopPropagation()
+      if (!this.#editor.isEditable() && event.target === this.#editor.getRootElement()) {
+        if (this.#focusToolbarOnAltF10(event)) {
+          event.stopPropagation()
+        } else if (this.#hasSelectedNode && event.key === "Tab" && !event.shiftKey && this.#editorElement.captionEditor.open(this.#currentNodeKey)) {
+          event.preventDefault()
+        }
       }
     }))
   }
@@ -358,7 +411,11 @@ export class AttachmentToolbar extends HTMLElement {
   #focusToolbarOnAltF10 = (event) => {
     if (this.#hasSelectedNode && event.altKey && event.key === "F10") {
       event.preventDefault()
-      this.#buttons.find(isActiveAndVisible)?.focus()
+      const button = this.#buttons.find(isActiveAndVisible)
+      if (button) {
+        this.#revealControl(button)
+        button.focus({ preventScroll: true })
+      }
       return true
     } else {
       return false
