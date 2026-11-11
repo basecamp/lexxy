@@ -13,12 +13,15 @@ export function focusWithoutNeedlessScroll(element, options = {}) {
 }
 
 // Within the window and not clipped by a scrolling or clipping ancestor, such as a menu
-// with overflow: auto.
+// with overflow: auto. The window check covers the root element, and the body when its
+// overflow applies to the window, since their boxes move with the page as it scrolls.
 export function isInViewport(element) {
   const rect = element.getBoundingClientRect()
-  if (rect.top < 0 || rect.bottom > window.innerHeight) return false
+  if (rect.top < 0 || rect.bottom > window.innerHeight || rect.left < 0 || rect.right > window.innerWidth) return false
 
   for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+    if (clipsAtWindow(ancestor)) continue
+
     const { overflowX, overflowY } = getComputedStyle(ancestor)
     const bounds = ancestor.getBoundingClientRect()
     if (overflowY !== "visible" && (rect.top < bounds.top || rect.bottom > bounds.bottom)) return false
@@ -26,6 +29,15 @@ export function isInViewport(element) {
   }
 
   return true
+}
+
+function clipsAtWindow(element) {
+  const root = document.documentElement
+  if (element === root) return true
+  if (element !== document.body) return false
+
+  const { overflowX, overflowY } = getComputedStyle(root)
+  return overflowX === "visible" && overflowY === "visible"
 }
 
 // The elements Tab can reach in the container, in document order.

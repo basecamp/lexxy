@@ -92,6 +92,32 @@ test.describe("Moving through a pinned toolbar with the keyboard", () => {
     await expect.poll(() => toolbarHasFocus(page)).toBe(true)
     await expect(page.locator("lexxy-toolbar")).toBeInViewport()
   })
+  test("arrow keys keep the page scroll position when the page's root element scrolls", async ({ page }) => {
+    await page.addStyleTag({ content: "html { block-size: 100%; overflow-y: auto; }" })
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2))
+    await focusInPlace(page.locator("lexxy-toolbar button[name='bold']"))
+    const scrollBefore = await scrollY(page)
+
+    await page.keyboard.press("ArrowRight")
+
+    await expect(page.locator("lexxy-toolbar button[name='bold']")).not.toBeFocused()
+    expect(await scrollY(page)).toBe(scrollBefore)
+  })
+
+  test("arrow keys bring buttons past the window's right edge into view", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 800 })
+    await page.addStyleTag({ content: "lexxy-toolbar { position: static; min-inline-size: 1200px; }" })
+    await page.locator("lexxy-toolbar").evaluate((toolbar) => toolbar.scrollIntoView({ block: "center" }))
+    await focusInPlace(page.locator("lexxy-toolbar button[name='bold']"))
+
+    // Browsers differ on scrolling to a button that is already partly visible, so check only
+    // that focus never lands on one that is fully off screen.
+    for (let i = 0; i < 10; i++) {
+      await page.keyboard.press("ArrowRight")
+      await expect(page.locator("lexxy-toolbar :focus")).toBeInViewport()
+    }
+  })
+
   test("an arrow key scrolls a menu item clipped by its scrolling menu into view", async ({ page }) => {
     await page.addStyleTag({ content: "lexxy-toolbar [data-dropdown-panel] { max-block-size: 4rem; overflow: auto; }" })
     const trigger = page.locator("lexxy-toolbar button[name='format']")
