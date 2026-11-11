@@ -1,9 +1,9 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
 
-// Lexical's HTML export carries markers Lexxy doesn't store: block indentation and a marked
-// <br> after a block's trailing line break. The value drops them, but never text that reads
-// the same.
+// Lexical's HTML export carries markers Lexxy doesn't store as they are: block indentation,
+// which the value drops, and a marked <br> after a block's trailing line break, which it keeps
+// as a plain <br>. Text that reads the same is never touched.
 test.describe("Editor value export cleanup", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/")
@@ -32,13 +32,13 @@ test.describe("Editor value export cleanup", () => {
     expect(await editor.value()).toBe("<p>Indented</p>")
   })
 
-  test("drop the marked line break after a paragraph's trailing Shift+Enter", async ({ editor }) => {
+  test("keep the line break after a paragraph's trailing Shift+Enter as a plain <br>", async ({ editor }) => {
     await editor.setValue("<p>First</p>")
     await editor.flush()
 
     await editor.placeCaretInside("First", "First".length)
     await editor.send("Shift+Enter")
 
-    expect(await editor.value()).toBe("<p>First<br></p>")
+    expect(await editor.value()).toBe("<p>First<br><br></p>")
   })
 })
