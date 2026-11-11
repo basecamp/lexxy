@@ -1,4 +1,4 @@
-import { defineExtension } from "lexical"
+import { $createParagraphNode, defineExtension } from "lexical"
 import { CodeNode } from "@lexical/code"
 import { extendConversion, extendTextNodeConversion } from "../helpers/lexical_helper"
 import { importedCodeLanguage } from "../helpers/code_language_helper"
@@ -35,11 +35,30 @@ export class TrixContentExtension extends LexxyExtension {
           pre: (element) => onlyPreLanguageElements(element, {
             conversion: extendConversion(CodeNode, "pre", $applyLanguage),
             priority: 1
+          }),
+          div: (element) => onlyBlankLineDivs(element, {
+            conversion: () => ({ node: $createParagraphNode() }),
+            priority: 1
           })
         }
       }
     })
   }
+}
+
+// Trix writes a blank line as <div><br></div>. Lexical has no importer for <div>,
+// and it drops a <br> that is a block's only child, so the blank line would
+// vanish and the paragraphs around it would run together. An empty paragraph is
+// how Lexxy writes a blank line, so load each one as that. List items and quotes
+// are left alone: a paragraph can't sit inside them.
+function onlyBlankLineDivs(element, conversion) {
+  const children = Array.from(element.childNodes).filter((node) => !isIgnorableNode(node))
+  const isBlankLine = children.length === 1 && children[0].nodeName === "BR"
+  return isBlankLine && !element.closest("li, blockquote") ? conversion : null
+}
+
+function isIgnorableNode(node) {
+  return node.nodeType === Node.COMMENT_NODE || (node.nodeType === Node.TEXT_NODE && node.textContent.trim() === "")
 }
 
 function onlyStyledElements(element, conversion) {

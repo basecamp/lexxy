@@ -290,11 +290,23 @@ export default class PastedContentFormatter {
   // a list or other block starts. The block starts a new line anyway, so that <br>
   // only ends the line before it and shows nothing, but imported it becomes a line
   // break that adds a blank line. A <br> with no content before it on its line
-  // shows as an empty line, so it stays.
+  // shows as an empty line. After an earlier break, that break already gives the
+  // line, so it goes. Otherwise it is an empty paragraph in the editor, since a
+  // paragraph that holds only a line break shows two lines. A list item can't hold
+  // a paragraph, so there it stays a line break. A quote shows its breaks as they
+  // are, so there they all stay.
   #stripBreaksBeforeBlocks() {
     for (const br of Array.from(this.doc.querySelectorAll("br"))) {
-      if (this.#blockFollowsOnLine(br) && this.#hasContentBeforeOnLine(br)) {
+      if (!this.#blockFollowsOnLine(br)) continue
+
+      if (this.#hasContentBeforeOnLine(br)) {
         br.remove()
+      } else if (br.closest("blockquote")) {
+        continue
+      } else if (this.#hasContentBeforeOnLine(br, { countBreaks: true })) {
+        br.remove()
+      } else if (!br.closest("li")) {
+        br.replaceWith(this.doc.createElement("p"))
       }
     }
   }
@@ -312,11 +324,12 @@ export default class PastedContentFormatter {
   }
 
   // Whether text or media comes before the <br> since its block, or the block
-  // before it, began, looking through earlier breaks and empty inline wrappers.
-  #hasContentBeforeOnLine(br) {
+  // before it, began, looking through empty inline wrappers and, unless
+  // countBreaks is set, earlier breaks.
+  #hasContentBeforeOnLine(br, { countBreaks = false } = {}) {
     for (let node = br; node !== this.doc.body && !this.#isBlockElement(node); node = node.parentNode) {
       for (let sibling = node.previousSibling; sibling; sibling = sibling.previousSibling) {
-        const end = this.#lineEdgeIn(sibling, "end")
+        const end = this.#lineEdgeIn(sibling, "end", countBreaks)
         if (end) return end === "content"
       }
     }
@@ -326,19 +339,19 @@ export default class PastedContentFormatter {
   // What a node shows first ("start") or last ("end") on its line: "content", a
   // "block" that starts a line of its own, or null for nothing at all. Looking
   // ahead, a <br> counts as content, since it ends a line of its own; looking
-  // back, it doesn't, so a run of breaks needs text or media before it.
-  #lineEdgeIn(node, edge) {
+  // back, it counts only with countBreaks.
+  #lineEdgeIn(node, edge, countBreaks = false) {
     if (this.#isBlockElement(node)) return "block"
     if (node.nodeType === Node.TEXT_NODE) return this.#isCollapsibleWhitespace(node) ? null : "content"
     if (node.nodeType !== Node.ELEMENT_NODE) return null
-    if (node.nodeName === "BR") return edge === "start" ? "content" : null
+    if (node.nodeName === "BR") return edge === "start" || countBreaks ? "content" : null
     if (HIDDEN_ELEMENTS.has(node.nodeName)) return null
     if (INLINE_CONTENT_ELEMENTS.has(node.nodeName.toUpperCase())) return "content"
 
     const children = Array.from(node.childNodes)
     if (edge === "end") children.reverse()
     for (const child of children) {
-      const found = this.#lineEdgeIn(child, edge)
+      const found = this.#lineEdgeIn(child, edge, countBreaks)
       if (found) return found
     }
     return null

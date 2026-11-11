@@ -57,10 +57,11 @@ export function addBlockSpacing(doc) {
 // emit one, and the HTML spec similarly disregards a leading newline right after <pre>.
 // Left in place, it imports as a spurious blank last line in the code block. Only a
 // newline that ends the block is stripped; one followed by a <br> is a real line.
-// Blocks highlighted by highlightElement() are skipped: it turns each stored <br>
-// into a newline, so their trailing newline is a real line too.
+// Blocks highlighted by highlightElement() are stripped too: it turns each stored
+// <br> into a newline, and a block that ends in a line break is stored with one
+// more <br> to end it, which shows nothing, so their last newline is that one.
 export function stripTrailingCodeBlockNewlines(doc) {
-  for (const pre of doc.querySelectorAll("pre:not([data-highlighted])")) {
+  for (const pre of doc.querySelectorAll("pre")) {
     const last = lastDescendantOf(pre)
     if (last.nodeType === Node.TEXT_NODE && last.nodeValue.endsWith("\n")) {
       last.nodeValue = last.nodeValue.slice(0, -1)

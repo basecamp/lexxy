@@ -107,8 +107,8 @@ test("keeps a newline followed by a line break, which is a real blank line", () 
   expect(bodyHtml(doc)).toBe("<pre>content\n<br></pre>")
 })
 
-test("keeps the trailing newline of a block rendered by highlightElement", () => {
-  const doc = parseHtml("<pre data-language=\"ruby\" data-highlighted=\"true\">def a\n</pre>")
+test("strips the newline that ends a block rendered by highlightElement", () => {
+  const doc = parseHtml("<pre data-language=\"ruby\" data-highlighted=\"true\">def a\n\n</pre>")
   stripTrailingCodeBlockNewlines(doc)
   expect(bodyHtml(doc)).toBe("<pre data-language=\"ruby\" data-highlighted=\"true\">def a\n</pre>")
 })
