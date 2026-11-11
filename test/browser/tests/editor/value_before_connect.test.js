@@ -74,4 +74,21 @@ test.describe("Value set before the editor connects", () => {
 
     expect(await connectedEditor(page, "upgraded-editor")).toEqual({ value: "<p>Before upgrade</p>", shown: "Before upgrade" })
   })
+
+  test("a null value set before connecting clears the value attribute, as it does when connected", async ({ page }) => {
+    const result = await page.evaluate(() => {
+      const connected = document.querySelector("lexxy-editor")
+      connected.value = null
+      const editor = document.createElement("lexxy-editor")
+      editor.id = "cleared-editor"
+      editor.setAttribute("value", "<p>From the attribute</p>")
+      editor.value = null
+      const valueBeforeConnect = editor.value
+      document.body.append(editor)
+      return { valueBeforeConnect, connectedValue: connected.value }
+    })
+
+    expect(result.valueBeforeConnect).toBe("")
+    expect(await connectedEditor(page, "cleared-editor")).toEqual({ value: result.connectedValue, shown: "" })
+  })
 })

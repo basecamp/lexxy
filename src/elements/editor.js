@@ -412,7 +412,9 @@ export class LexicalEditorElement extends HTMLElement {
 
   set value(html) {
     if (!this.#hasLiveEditor) {
-      this.valueBeforeDisconnect = html
+      // A nullish value clears the editor, as it does when connected, rather than
+      // falling back to the value attribute.
+      this.valueBeforeDisconnect = html ?? ""
       return
     }
 
