@@ -66,6 +66,31 @@ test.describe("Attachment captions", () => {
     expect(await editor.value()).toContain('caption="At sunset"')
   })
 
+  test("uses a custom caption field label and restores the default for the next edit", async ({ page, editor }) => {
+    await editor.setValue(`<p>Before attachment</p>${attachmentTag("a", "example.png", { caption: "Before" })}<p>After attachment</p>`)
+    await editor.flush()
+
+    const figure = editor.content.locator("figure.attachment")
+    const captionElement = figure.locator("figcaption")
+    await captionElement.evaluate(element => element.dataset.captionLabel = "Audio caption")
+    await editor.content.locator("p", { hasText: "Before attachment" }).click()
+    await selectAttachment(figure)
+    await expect(figure).toHaveClass(/node--selected/)
+    await page.keyboard.press("Tab")
+
+    const caption = page.getByRole("textbox", { name: "Audio caption", exact: true })
+    await expect(caption).toBeFocused()
+    await caption.fill("After")
+    await caption.press("Escape")
+    expect(await editor.value()).toContain('caption="After"')
+
+    await captionElement.evaluate(element => element.dataset.captionLabel = "")
+    await page.keyboard.press("Tab")
+    const imageCaption = page.getByRole("textbox", { name: "Image caption", exact: true })
+    await expect(imageCaption).toBeFocused()
+    await expect(imageCaption).toHaveValue("After")
+  })
+
   test("Shift+Tab from a caption returns to the attachment after using its toolbar", async ({ page, editor }) => {
     await editor.setValue(`<p>Before</p>${attachmentTag("a", "canoe.png")}<p>After</p>`)
     await editor.flush()

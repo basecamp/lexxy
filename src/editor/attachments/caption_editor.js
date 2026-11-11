@@ -126,7 +126,9 @@ export default class CaptionEditor {
     this.#editor.getEditorState().read(() => {
       const node = $getNodeByKey(nodeKey)
       this.#input.value = node.caption
-      if (node.isVideo) {
+      if (caption.dataset.captionLabel) {
+        this.#input.ariaLabel = caption.dataset.captionLabel
+      } else if (node.isVideo) {
         this.#input.ariaLabel = "Video caption"
       } else {
         this.#input.ariaLabel = "Image caption"
