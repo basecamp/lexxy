@@ -424,11 +424,6 @@ export default class Selection {
   }
 
   #listenForNodeSelections() {
-    this.#listeners.track(this.editor.registerCommand(CLICK_COMMAND, () => {
-      $adoptFormatOfClickedCaret()
-      return false
-    }, COMMAND_PRIORITY_CRITICAL))
-
     this.#listeners.track(this.editor.registerCommand(CLICK_COMMAND, ({ target }) => {
       if (!isDOMNode(target)) return false
 
@@ -1010,19 +1005,4 @@ export default class Selection {
 
     return range.getBoundingClientRect()
   }
-}
-
-// Since Lexical 0.53 a click takes its selection from the DOM when the button is pressed or released,
-// keeping the format the editor's previous selection had, and the selectionchange that follows keeps
-// that format too. When the browser leaves the caret where it was (a click past the end of a line
-// that ends in bold text), a caret without the text's format stays without it: bold shows off and
-// typing inserts plain text. Give a clicked caret the format of the text it lands in, as a
-// selectionchange does.
-function $adoptFormatOfClickedCaret() {
-  const selection = $getSelection()
-  if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.type !== "text") return
-
-  const node = selection.anchor.getNode()
-  selection.setFormat(node.getFormat())
-  selection.setStyle(node.getStyle())
 }
