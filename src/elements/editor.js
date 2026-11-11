@@ -35,7 +35,7 @@ import { normalizeColorButtons } from "../helpers/format_helper"
 import { styleResolverRoot } from "../helpers/style_resolver_root"
 
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
-import { exportCodeHighlightNodeDOM, exportTextNodeDOM } from "../helpers/text_node_export_helper"
+import { exportCodeHighlightNodeDOM, exportTextNodeDOM, exportingTextWithoutWhiteSpaceStyle } from "../helpers/text_node_export_helper"
 import { ProvisionalParagraphExtension } from "../extensions/provisional_paragraph_extension"
 import { CodeHighlightingExtension } from "../extensions/code_highlighting_extension"
 import { HighlightExtension } from "../extensions/highlight_extension"
@@ -1094,9 +1094,10 @@ function $getReadableTextContent(node) {
 // reload would drop one more trailing line break. The indentation is removed.
 //
 // Both are changed on the exported elements rather than in the HTML string,
-// where text that reads the same would change too.
+// where text that reads the same would change too. The text export also leaves
+// out formatted text's white-space style; see text_node_export_helper.js.
 function $generateHtmlWithoutExportArtifacts(editor) {
-  const container = $generateDOMFromNodes(document.createElement("div"), null, editor)
+  const container = exportingTextWithoutWhiteSpaceStyle(() => $generateDOMFromNodes(document.createElement("div"), null, editor))
 
   for (const element of container.querySelectorAll("[data-lexical-indent]")) {
     element.removeAttribute("data-lexical-indent")
