@@ -5,11 +5,28 @@ export function isKeyboardActivation(event) {
   return event instanceof PointerEvent && event.pointerId === -1
 }
 
+// When the page sets a scroll padding and pins a toolbar inside it, the browser treats a
+// focused toolbar button as hidden and scrolls the page to show it, though the button is
+// on screen. Scroll only when the element is off screen.
+export function focusWithoutNeedlessScroll(element, options = {}) {
+  element.focus({ ...options, preventScroll: isInViewport(element) })
+}
+
+export function isInViewport(element) {
+  const { top, bottom } = element.getBoundingClientRect()
+  return top >= 0 && bottom <= window.innerHeight
+}
+
+// The elements Tab can reach in the container, in document order.
+export function tabStopsIn(container) {
+  return Array.from(container.querySelectorAll("a[href], area[href], button, input:not([type='hidden']), select, textarea, iframe, object, embed, [contenteditable]:not([contenteditable='false']), [tabindex], summary, audio[controls], video[controls]"))
+    .filter(element => element.tabIndex >= 0 && !element.matches(":disabled") && !element.closest("[inert]") && isActiveAndVisible(element))
+}
+
 export function trapFocusAtTabBoundary(container, event) {
   if (event.key !== "Tab") return
 
-  const tabStops = Array.from(container.querySelectorAll("a[href], area[href], button, input:not([type='hidden']), select, textarea, iframe, object, embed, [contenteditable]:not([contenteditable='false']), [tabindex], summary, audio[controls], video[controls]"))
-    .filter(element => element.tabIndex >= 0 && !element.matches(":disabled") && !element.closest("[inert]") && isActiveAndVisible(element))
+  const tabStops = tabStopsIn(container)
     .sort((first, second) => {
       if (first.tabIndex > 0 && second.tabIndex > 0) {
         return first.tabIndex - second.tabIndex
@@ -131,7 +148,7 @@ class NextElementFinder {
   #focusWithActiveTabIndex(element) {
     if (isActiveAndVisible(element)) {
       element.tabIndex = 0
-      element.focus()
+      focusWithoutNeedlessScroll(element)
     }
   }
 
