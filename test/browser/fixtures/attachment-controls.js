@@ -16,6 +16,10 @@ class AudioNode extends ActionTextAttachmentNode {
     return options.has("inline") || super.isInline()
   }
 
+  get label() {
+    return window.attachmentLabel || super.label
+  }
+
   createDOM() {
     const figure = document.createElement("figure")
     figure.className = "attachment"
@@ -75,6 +79,7 @@ class AudioExtension extends Extension {
       }
       const progress = document.createElement("div")
       progress.className = "audio-progress"
+      progress.addEventListener("mousedown", event => event.preventDefault())
       element.append(progress)
       let mute
 

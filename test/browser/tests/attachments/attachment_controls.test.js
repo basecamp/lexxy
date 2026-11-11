@@ -36,6 +36,14 @@ test("controls can retain separate playback and progress positions", async ({ pa
   }).toBeLessThanOrEqual(1)
 })
 
+test("seeking selects the attachment without moving focus away from the editor", async ({ page, editor }) => {
+  await editor.content.locator("p").first().click()
+  await page.locator("lexxy-attachment-toolbar .audio-progress").click()
+  await expect(editor.content.locator("figure")).toHaveClass(/node--selected/)
+  await page.keyboard.press("Alt+F10")
+  await expect(page.getByRole("button", { name: "Play Example", exact: true })).toBeFocused()
+})
+
 test("the attachment toolbar owns keyboard navigation and Tab still reaches the caption", async ({ page, editor }) => {
   await selectAttachment(editor.content.locator("figure"))
   await page.keyboard.press("Alt+F10")
@@ -87,6 +95,17 @@ test("Tab from a selected attachment still opens its caption in a read-only edit
   await expect(page.locator(".lexxy-caption-editor")).toBeFocused()
 })
 
+test("returning focus to a selected attachment restores its range in a noneditable root", async ({ page, editor }) => {
+  await editor.setValue(AUDIO)
+  await editor.content.evaluate(element => element.querySelectorAll("p").forEach(paragraph => paragraph.style.display = "none"))
+  await selectAttachment(editor.content.locator("figure"))
+  await page.evaluate(() => document.querySelector("lexxy-editor").editor.setEditable(false))
+  await page.getByRole("button", { name: "Before editor", exact: true }).click()
+  await page.evaluate(() => window.attachmentLabel = "Example updated")
+  await editor.content.focus()
+  await expect.poll(() => page.evaluate(() => getSelection().toString())).toBe("Example updated")
+})
+
 test("new controls from an attachment update join toolbar navigation", async ({ page, editor }) => {
   await selectAttachment(editor.content.locator("figure"))
   await page.keyboard.press("Tab")
@@ -121,9 +140,11 @@ test("controls respect the editor scrollport and keyboard focus reveals their at
   await page.mouse.wheel(0, 160)
   await expect.poll(() => editor.content.evaluate(element => element.scrollTop)).toBeGreaterThan(before)
   const play = page.getByRole("button", { name: "Play Example", exact: true })
-  const box = await play.boundingBox()
-  expect(box.y + box.height / 2).toBeLessThan(viewport.y)
-  expect(await play.evaluate(element => {
+  await expect.poll(async () => {
+    const box = await play.boundingBox()
+    return box.y + box.height / 2
+  }).toBeLessThan(viewport.y)
+  await expect.poll(() => play.evaluate(element => {
     const rect = element.getBoundingClientRect()
     return document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) === element
   })).toBe(false)

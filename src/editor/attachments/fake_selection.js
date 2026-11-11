@@ -27,7 +27,8 @@ export class AttachmentFakeSelection {
   }
 
   #restoreSelection = () => {
-    this.#update(this.#editor.read($selectedLabelledDecoratorNode))
+    // Reconcile the browser's caret before the update listener parks our range.
+    if (this.#editor.read($selectedLabelledDecoratorNode)) this.#editor.focus()
   }
 
   #update(target) {

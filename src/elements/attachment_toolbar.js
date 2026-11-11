@@ -100,6 +100,7 @@ export class AttachmentToolbar extends HTMLElement {
     this.#refreshButtons()
     this.#listeners.track(
       registerEventListener(this, "keydown", this.#navigateOrExit),
+      registerEventListener(this, "click", () => this.#selectBoundNode()),
       registerEventListener(this, "focusout", this.#resetTabIndexOnExit),
       registerEventListener(this, "focusin", event => {
         this.#revealControl(event.target)
