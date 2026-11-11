@@ -812,7 +812,7 @@
   position: absolute;
   z-index: 2;
 
-  button {
+  button:not(:where(.lexxy-attachment-controls button)) {
     align-items: center;
     background: transparent;
     block-size: var(--button-size);
@@ -844,7 +844,7 @@
     }
   }
 
-  button {
+  button:not(:where(.lexxy-attachment-controls button)) {
     aspect-ratio: 1 / 1;
     font-weight: bold;
 
@@ -995,6 +995,31 @@
       display: none;
     }
 
+    &[data-custom-controls] {
+      color: inherit;
+      font: inherit;
+      height: var(--lexxy-anchor-height);
+      left: var(--lexxy-anchor-left);
+      pointer-events: none;
+      top: var(--lexxy-anchor-top);
+      transform: none;
+      width: var(--lexxy-anchor-width);
+
+      > .lexxy-attachment-controls {
+        pointer-events: auto;
+        position: absolute;
+      }
+
+      > .lexxy-floating-controls__group {
+        font-size: var(--lexxy-text-small);
+        line-height: 1;
+        pointer-events: auto;
+        position: absolute;
+        right: 1.5ch;
+        top: 1.5ch;
+      }
+    }
+
     /* The divider is thinner than the button. */
     &[data-node-type="horizontal_divider"] {
       --button-size: 1.8lh;
@@ -1016,6 +1041,10 @@
 
     .lexxy-floating-controls__group {
       display: flex;
+
+      &[hidden] {
+        display: none;
+      }
     }
 
     button[hidden] {

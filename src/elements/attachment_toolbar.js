@@ -1,6 +1,6 @@
-import { $getNodeByKey, $setSelection, COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND } from "lexical"
+import { $getNodeByKey, $setSelection, COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 
-import { $createNodeSelectionWith, registerLabelledDecoratorSelection } from "../helpers/lexical_helper"
+import { $createNodeSelectionWith, $singleSelectedNode, registerLabelledDecoratorSelection } from "../helpers/lexical_helper"
 import { $isImageGalleryNode } from "../nodes/image_gallery_node"
 import AlternativeTextDialog from "../editor/attachments/alternative_text_dialog"
 import { createElement, isActiveAndVisible } from "../helpers/html_helper"
@@ -17,21 +17,44 @@ export class AttachmentToolbar extends HTMLElement {
   #alternativeTextButton
   #alternativeTextDialog
   #currentNodeKey = null
+  #boundNodeKey
+  #controls
+  #controlsContainer
+  #buttonGroup
+  #selected = false
   #reflowObserver = new ResizeObserver(() => this.#updatePosition())
   #presentationObserver = new MutationObserver(() => this.#refresh())
   #observedElement = null
 
   connectedCallback() {
     this.classList.add("lexxy-floating-controls")
-    this.role = "toolbar"
-    this.hidden = true
+    this.role = this.#controls?.role || "toolbar"
+    this.ariaLabel = this.#controls?.label || this.ariaLabel || "Attachment controls"
+    this.hidden = !this.#controls
+    this.toggleAttribute("data-custom-controls", Boolean(this.#controls))
 
     if (this.#editor) {
       this.#setUpButtons()
       this.#monitorSelection()
       this.#followScrolling()
       this.#registerKeyboardShortcut()
+      if (this.#controls) {
+        this.refresh()
+        this.#reflowObserver.observe(this.#editorElement)
+        this.#reflowObserver.observe(this.#controls.anchor || this.#editor.getElementByKey(this.#boundNodeKey))
+      }
     }
+  }
+
+  bind({ nodeKey, controls }) {
+    this.#boundNodeKey = nodeKey
+    this.#currentNodeKey = nodeKey
+    this.#controls = controls
+  }
+
+  refresh() {
+    if (this.#controls) this.ariaLabel = this.#controls.label
+    this.#refresh()
   }
 
   disconnectedCallback() {
@@ -43,6 +66,8 @@ export class AttachmentToolbar extends HTMLElement {
     this.#reflowObserver.disconnect()
     this.#presentationObserver.disconnect()
     this.#alternativeTextDialog?.dispose()
+    this.#controls?.dispose?.()
+    this.#controls = null
   }
 
   get #editor() {
@@ -56,16 +81,26 @@ export class AttachmentToolbar extends HTMLElement {
   #setUpButtons() {
     this.innerHTML = ""
 
+    if (this.#controls) {
+      this.#controlsContainer = createElement("div", { className: "lexxy-attachment-controls" })
+      this.#controlsContainer.append(this.#controls.element)
+      this.append(this.#controlsContainer)
+    }
+
     const container = createElement("div", { className: "lexxy-floating-controls__group" })
+    this.#buttonGroup = container
+    container.hidden = Boolean(this.#controls)
     container.appendChild(this.#createAlternativeTextButton())
     container.appendChild(this.#createRemoveButton())
     this.#alternativeTextDialog = new AlternativeTextDialog(this.#editorElement)
     this.appendChild(container)
 
     this.#buttons = Array.from(this.querySelectorAll("button"))
+    this.#buttons.forEach(button => button.tabIndex = -1)
     this.#listeners.track(
       registerEventListener(this, "keydown", this.#navigateOrExit),
-      registerEventListener(this, "focusout", this.#resetTabIndexOnExit)
+      registerEventListener(this, "focusout", this.#resetTabIndexOnExit),
+      registerEventListener(this, "focusin", () => this.#selectBoundNode())
     )
   }
 
@@ -89,7 +124,16 @@ export class AttachmentToolbar extends HTMLElement {
   }
 
   get #hasSelectedNode() {
-    return this.#currentNodeKey !== null
+    return this.#selected
+  }
+
+  #selectBoundNode() {
+    if (this.#boundNodeKey && this.role === "toolbar" && !this.#selected) {
+      this.#editor.update(() => {
+        const node = $getNodeByKey(this.#boundNodeKey)
+        if (node && !$singleSelectedNode()?.is(node)) $setSelection($createNodeSelectionWith(node))
+      }, { tag: SKIP_DOM_SELECTION_TAG })
+    }
   }
 
   #createAlternativeTextButton() {
@@ -113,6 +157,13 @@ export class AttachmentToolbar extends HTMLElement {
       event.preventDefault()
       event.stopPropagation()
       this.#returnFocusToEditor()
+    } else if (event.key === "Tab" && this.role === "toolbar") {
+      if (event.shiftKey) {
+        event.preventDefault()
+        this.#returnFocusToEditor()
+      } else if (this.#editorElement.captionEditor.open(this.#currentNodeKey)) {
+        event.preventDefault()
+      }
     } else {
       handleRollingTabIndex(this.#buttons, event)
     }
@@ -142,7 +193,19 @@ export class AttachmentToolbar extends HTMLElement {
   }
 
   #updateForSelection(target) {
-    if (target) {
+    if (this.#boundNodeKey) {
+      if (target?.key === this.#boundNodeKey) {
+        if (this.#selected) {
+          this.#updatePosition()
+        } else {
+          this.#show(this.#boundNodeKey)
+        }
+      } else if (this.#selected) {
+        this.#hide()
+      } else {
+        this.#updatePosition()
+      }
+    } else if (target && !this.#editorElement.attachmentControls.has(target.key)) {
       this.#show(target.key)
     } else {
       this.#hide()
@@ -151,13 +214,16 @@ export class AttachmentToolbar extends HTMLElement {
 
   #show(nodeKey) {
     this.#currentNodeKey = nodeKey
+    this.#selected = true
+    this.toggleAttribute("data-selected", true)
+    this.#buttonGroup.hidden = false
     this.#refresh()
     this.hidden = false
     this.#reflowObserver.observe(this.#editorElement)
   }
 
   #refresh() {
-    if (this.#hasSelectedNode) {
+    if (this.#currentNodeKey) {
       this.#watchPresentation(this.#currentNodeKey)
       this.#describeNode(this.#currentNodeKey)
       this.#updatePosition()
@@ -226,6 +292,13 @@ export class AttachmentToolbar extends HTMLElement {
       this.style.setProperty("--lexxy-anchor-left", `${rect.left - editorRect.left - borderLeft}px`)
       this.style.setProperty("--lexxy-anchor-width", `${rect.width}px`)
       this.style.setProperty("--lexxy-anchor-height", `${rect.height}px`)
+      if (this.#controls) {
+        const anchor = (this.#controls.anchor || figureElement).getBoundingClientRect()
+        this.#controlsContainer.style.left = `${anchor.left - rect.left}px`
+        this.#controlsContainer.style.top = `${anchor.top - rect.top}px`
+        this.#controlsContainer.style.width = `${anchor.width}px`
+        this.#controlsContainer.style.height = `${anchor.height}px`
+      }
       this.#flipWhenOverflowing(editorRect)
     }
   }
@@ -238,7 +311,12 @@ export class AttachmentToolbar extends HTMLElement {
   }
 
   #hide() {
-    if (this.#hasSelectedNode) {
+    this.#selected = false
+    this.toggleAttribute("data-selected", false)
+    this.#buttonGroup.hidden = true
+    if (this.#boundNodeKey) {
+      this.#refresh()
+    } else {
       this.#currentNodeKey = null
       this.hidden = true
       this.#reflowObserver.disconnect()
@@ -257,7 +335,11 @@ export class AttachmentToolbar extends HTMLElement {
       KEY_DOWN_COMMAND,
       this.#focusToolbarOnAltF10,
       COMMAND_PRIORITY_HIGH
-    ))
+    ), registerEventListener(this.#editorElement, "keydown", event => {
+      if (!this.#editor.isEditable() && event.target === this.#editor.getRootElement() && this.#focusToolbarOnAltF10(event)) {
+        event.stopPropagation()
+      }
+    }))
   }
 
   #focusToolbarOnAltF10 = (event) => {

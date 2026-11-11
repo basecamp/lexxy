@@ -37,6 +37,56 @@ Should you need to extend any of Lexxy's nodes, they are exported at the top-lev
 import { ActionTextAttachmentNode } from "@37signals/lexxy"
 ```
 
+## Attachment controls
+
+An extension can provide interactive controls for its attachment nodes through
+`attachmentControls`. Lexxy mounts these controls outside the contenteditable,
+positioned over an anchor inside the attachment. The node retains its in-flow
+presentation and remains responsible for its serialized content.
+
+```js
+get attachmentControls() {
+  return [ {
+    node: AudioNode,
+    create({ node, attachmentElement }) {
+      return new AudioControls({ node, attachmentElement })
+    }
+  } ]
+}
+```
+
+The node class must already be registered with the editor. The factory runs
+after its attachment DOM exists and returns an object with:
+
+- `element`: the DOM containing the controls.
+- `anchor`: an element inside the attachment whose bounds determine the
+  controls' position and size. Defaults to the whole attachment.
+- `label`: an accessible name for this attachment's controls.
+- `role`: defaults to `"toolbar"`. Use `"group"` for a group of fields that
+  should retain ordinary Tab and arrow-key behavior.
+- `update({ node, attachmentElement })`: an optional callback receiving the
+  current node after it changes. Update the view and its accessible name here.
+- `dispose()`: an optional callback to release media, listeners and timers.
+
+The factory may return `null` for nodes that need no custom controls. Lexxy
+disposes the controls when their node disappears or its DOM is rebuilt, and
+recreates them if the node returns through Undo. It does not persist controls
+in the editor's value. Avoid retaining the node passed to `create`: later edits
+may replace it with a new node instance.
+
+Custom controls stay visible when their attachment is unselected. When selected,
+the same external toolbar also contains Lexxy's contextual actions, such as
+Remove. Alt+F10 focuses its first available button; Left/Right and Home/End move
+between buttons; Escape returns to the selected attachment; Tab opens its
+caption when one is available. Buttons stay outside the normal Tab sequence
+when the toolbar loses focus. Fields keep the Tab index set by the extension.
+The same interactions work when the editor is read-only.
+
+Style the supplied controls in your application. Lexxy's floating-button styles
+apply to its own actions, leaving the supplied controls' appearance intact.
+`editorElement.attachmentControls.elementFor(nodeKey)` returns the mounted
+control element, or `null` if none is mounted.
+
 ## Allowing additional HTML elements
 
 Lexxy sanitizes HTML when loading and pasting content, stripping any element it doesn't recognize. If your extension introduces new elements, declare them with an `allowedElements` getter so they survive sanitization. Each entry is either a tag name, or an object pairing a `tag` with the extra `attributes` to preserve on it:
