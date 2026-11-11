@@ -312,8 +312,6 @@ export class AttachmentToolbar extends HTMLElement {
         this.#controlsContainer.style.top = `${anchor.top - rect.top}px`
         this.#controlsContainer.style.width = `${anchor.width}px`
         this.#controlsContainer.style.height = `${anchor.height}px`
-        this.#controlsContainer.style.font = anchorStyle.font
-        this.#controlsContainer.style.color = anchorStyle.color
         this.#controlsContainer.style.overflow = anchorStyle.overflow
         this.#controlsContainer.style.borderRadius = anchorStyle.borderRadius
         for (const placement of this.#controls.placements || []) this.#positionControl(placement)

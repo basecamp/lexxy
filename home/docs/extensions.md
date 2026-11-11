@@ -96,6 +96,8 @@ focusing a control reveals its underlying anchor in a scrolling content area.
 
 Style the supplied controls in your application. Lexxy's floating-button styles
 apply to its own actions, leaving the supplied controls' appearance intact.
+The inheritance context is the editor. Keep the component's typography and
+colors in its own styles so they follow theme changes.
 `editorElement.attachmentControls.elementFor(nodeKey)` returns the mounted
 control element, or `null` if none is mounted.
 

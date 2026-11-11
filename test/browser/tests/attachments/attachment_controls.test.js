@@ -20,6 +20,20 @@ test("custom controls stay available outside the textbox before the attachment i
   await expect(page.getByRole("button", { name: "Pause Example", exact: true })).toBeFocused()
 })
 
+test("controls inherit theme changes without retaining resolved colors and fonts", async ({ page, editor }) => {
+  await page.addStyleTag({ content: "lexxy-editor { color: rgb(20, 30, 40); } .audio-controls, .audio-controls button { color: inherit; font: inherit; }" })
+  await editor.setValue(AUDIO)
+  const play = page.getByRole("button", { name: "Play Example", exact: true })
+  await expect(play).toHaveCSS("color", "rgb(20, 30, 40)")
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+  await page.locator("lexxy-editor").evaluate(element => {
+    element.style.color = "rgb(220, 230, 240)"
+  })
+  await expect(play).toHaveCSS("color", "rgb(220, 230, 240)")
+  await page.locator("lexxy-editor").evaluate(element => element.style.fontFamily = "serif")
+  await expect(play).toHaveCSS("font-family", "serif")
+})
+
 test("controls can retain separate playback and progress positions", async ({ page, editor }) => {
   const preview = await editor.content.locator(".audio-preview").boundingBox()
   const play = page.getByRole("button", { name: "Play Example", exact: true })
