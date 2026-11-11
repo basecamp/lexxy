@@ -316,24 +316,22 @@ export default class Clipboard {
     return doc.body.children.length === 0 && doc.body.textContent.trim() === ""
   }
 
+  // Pasted HTML goes through the editor's own import even when attachments are
+  // disabled, so it's normalized and filtered the same way; only files need them.
   #handlePastedFiles(clipboardData) {
-    if (this.editorElement.supportsAttachments) {
-      const html = clipboardData.getData("text/html")
-      const files = clipboardData.files
-      const copiedImage = files.length && this.#copiedImage(html)
+    const html = clipboardData.getData("text/html")
+    const files = this.editorElement.supportsAttachments ? clipboardData.files : []
+    const copiedImage = files.length && this.#copiedImage(html)
 
-      if (copiedImage) {
-        this.#uploadFilesPreservingScroll(files, copiedImage.getAttribute("alt"))
-        return true
-      } else if (html && !this.#isLexicalClipboardData(clipboardData)) {
-        this.contents.insertHtml(html, { tag: PASTE_TAG })
-        return true
-      } else if (files.length) {
-        this.#uploadFilesPreservingScroll(files)
-        return true
-      } else {
-        return false
-      }
+    if (copiedImage) {
+      this.#uploadFilesPreservingScroll(files, copiedImage.getAttribute("alt"))
+      return true
+    } else if (html && !this.#isLexicalClipboardData(clipboardData)) {
+      this.contents.insertHtml(html, { tag: PASTE_TAG })
+      return true
+    } else if (files.length) {
+      this.#uploadFilesPreservingScroll(files)
+      return true
     } else {
       return false
     }
