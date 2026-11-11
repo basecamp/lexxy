@@ -289,12 +289,18 @@ export default class PastedContentFormatter {
   // Outlook, and the web apps that show its mail, end a line with <br> right before
   // a list or other block starts. The block starts a new line anyway, so that <br>
   // only ends the line before it and shows nothing, but imported it becomes a line
-  // break that adds a blank line. A <br> with no content before it on its line
-  // shows as an empty line, so it stays.
+  // break that adds a blank line. A <br> with nothing before it on its line shows
+  // as an empty line, which is an empty paragraph in the editor: a paragraph that
+  // holds only a line break shows two. List items and quotes can't hold a
+  // paragraph, so there it stays a line break.
   #stripBreaksBeforeBlocks() {
     for (const br of Array.from(this.doc.querySelectorAll("br"))) {
-      if (this.#blockFollowsOnLine(br) && this.#hasContentBeforeOnLine(br)) {
+      if (!this.#blockFollowsOnLine(br)) continue
+
+      if (this.#hasContentBeforeOnLine(br)) {
         br.remove()
+      } else if (!br.closest("li, blockquote")) {
+        br.replaceWith(this.doc.createElement("p"))
       }
     }
   }
@@ -311,8 +317,8 @@ export default class PastedContentFormatter {
     return false
   }
 
-  // Whether text or media comes before the <br> since its block, or the block
-  // before it, began, looking through earlier breaks and empty inline wrappers.
+  // Whether text, media or an earlier <br> comes before the <br> since its block,
+  // or the block before it, began, looking through empty inline wrappers.
   #hasContentBeforeOnLine(br) {
     for (let node = br; node !== this.doc.body && !this.#isBlockElement(node); node = node.parentNode) {
       for (let sibling = node.previousSibling; sibling; sibling = sibling.previousSibling) {
@@ -324,14 +330,13 @@ export default class PastedContentFormatter {
   }
 
   // What a node shows first ("start") or last ("end") on its line: "content", a
-  // "block" that starts a line of its own, or null for nothing at all. Looking
-  // ahead, a <br> counts as content, since it ends a line of its own; looking
-  // back, it doesn't, so a run of breaks needs text or media before it.
+  // "block" that starts a line of its own, or null for nothing at all. A <br>
+  // counts as content, since it ends a line of its own.
   #lineEdgeIn(node, edge) {
     if (this.#isBlockElement(node)) return "block"
     if (node.nodeType === Node.TEXT_NODE) return this.#isCollapsibleWhitespace(node) ? null : "content"
     if (node.nodeType !== Node.ELEMENT_NODE) return null
-    if (node.nodeName === "BR") return edge === "start" ? "content" : null
+    if (node.nodeName === "BR") return "content"
     if (HIDDEN_ELEMENTS.has(node.nodeName)) return null
     if (INLINE_CONTENT_ELEMENTS.has(node.nodeName.toUpperCase())) return "content"
 

@@ -41,9 +41,11 @@ test.describe("Code block trailing newline", () => {
     await editor.setValue("<pre data-language=\"plain\">line one\n<br></pre>")
     await editor.flush()
 
+    // The value ends in two breaks: the blank line, and the one that ends it, which
+    // a browser would otherwise drop on reload.
     await assertEditorHtml(
       editor,
-      "<pre data-language=\"plain\" data-highlight-language=\"plain\">line one<br></pre>",
+      "<pre data-language=\"plain\" data-highlight-language=\"plain\">line one<br><br></pre>",
     )
   })
 })
