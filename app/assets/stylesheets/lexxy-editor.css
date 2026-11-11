@@ -1006,7 +1006,7 @@
       width: var(--lexxy-anchor-width);
 
       > .lexxy-attachment-controls {
-        pointer-events: auto;
+        pointer-events: none;
         position: absolute;
       }
 
@@ -1113,6 +1113,10 @@
       }
     }
   }
+}
+
+:where(.lexxy-attachment-controls :is(button, input, select, textarea, a[href])) {
+  pointer-events: auto;
 }
 
 

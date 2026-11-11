@@ -61,6 +61,10 @@ after its attachment DOM exists and returns an object with:
 - `element`: the DOM containing the controls.
 - `anchor`: an element inside the attachment whose bounds determine the
   controls' position and size. Defaults to the whole attachment.
+- `placements`: an optional array of `{ element, anchor }` pairs for controls
+  that occupy separate regions, such as a playback button and a progress bar.
+  Each supplied element remains inside `element`, and Lexxy positions and sizes
+  it over its anchor without changing toolbar ownership.
 - `label`: an accessible name for this attachment's controls.
 - `role`: defaults to `"toolbar"`. Use `"group"` for a group of fields that
   should retain ordinary Tab and arrow-key behavior.

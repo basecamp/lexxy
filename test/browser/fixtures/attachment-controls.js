@@ -21,6 +21,9 @@ class AudioNode extends ActionTextAttachmentNode {
     text.textContent = this.caption
     caption.append(text)
     figure.append(caption)
+    const progress = document.createElement("span")
+    progress.className = "audio-progress-anchor"
+    figure.append(progress)
     return figure
   }
 
@@ -49,6 +52,9 @@ class AudioExtension extends Extension {
       play.ariaLabel = `Play ${node.caption}`
       play.textContent = "Play"
       element.append(play)
+      const progress = document.createElement("div")
+      progress.className = "audio-progress"
+      element.append(progress)
 
       const togglePlayback = () => {
         play.ariaLabel = play.ariaLabel.replace(/^Play|^Pause/, state => {
@@ -61,7 +67,10 @@ class AudioExtension extends Extension {
 
       return {
         element,
-        anchor: attachmentElement.firstElementChild,
+        placements: [
+          { element: play, anchor: attachmentElement.firstElementChild },
+          { element: progress, anchor: attachmentElement.lastElementChild }
+        ],
         label: `Audio controls: ${node.caption}`,
         update({ node }) {
           play.ariaLabel = `${play.textContent} ${node.caption}`

@@ -42,6 +42,7 @@ export class AttachmentToolbar extends HTMLElement {
         this.refresh()
         this.#reflowObserver.observe(this.#editorElement)
         this.#reflowObserver.observe(this.#controls.anchor || this.#editor.getElementByKey(this.#boundNodeKey))
+        for (const { anchor } of this.#controls.placements || []) this.#reflowObserver.observe(anchor)
       }
     }
   }
@@ -298,9 +299,21 @@ export class AttachmentToolbar extends HTMLElement {
         this.#controlsContainer.style.top = `${anchor.top - rect.top}px`
         this.#controlsContainer.style.width = `${anchor.width}px`
         this.#controlsContainer.style.height = `${anchor.height}px`
+        for (const placement of this.#controls.placements || []) this.#positionControl(placement)
       }
       this.#flipWhenOverflowing(editorRect)
     }
+  }
+
+  #positionControl({ element, anchor }) {
+    element.style.position = "absolute"
+    const container = element.offsetParent
+    const containerRect = container.getBoundingClientRect()
+    const rect = anchor.getBoundingClientRect()
+    element.style.left = `${rect.left - containerRect.left - container.clientLeft + container.scrollLeft}px`
+    element.style.top = `${rect.top - containerRect.top - container.clientTop + container.scrollTop}px`
+    element.style.width = `${rect.width}px`
+    element.style.height = `${rect.height}px`
   }
 
   #flipWhenOverflowing(editorRect) {

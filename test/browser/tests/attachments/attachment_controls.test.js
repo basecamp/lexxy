@@ -20,6 +20,22 @@ test("custom controls stay available outside the textbox before the attachment i
   await expect(page.getByRole("button", { name: "Pause Example", exact: true })).toBeFocused()
 })
 
+test("controls can retain separate playback and progress positions", async ({ page, editor }) => {
+  const preview = await editor.content.locator(".audio-preview").boundingBox()
+  const play = page.getByRole("button", { name: "Play Example", exact: true })
+  await expect(play).toBeVisible()
+  await expect.poll(async () => {
+    const box = await play.boundingBox()
+    return Math.max(Math.abs(box.x - preview.x), Math.abs(box.y - preview.y), Math.abs(box.width - preview.width), Math.abs(box.height - preview.height))
+  }).toBeLessThanOrEqual(1)
+  const anchor = await editor.content.locator(".audio-progress-anchor").boundingBox()
+  const progress = page.locator("lexxy-attachment-toolbar .audio-progress")
+  await expect.poll(async () => {
+    const box = await progress.boundingBox()
+    return Math.max(Math.abs(box.x - anchor.x), Math.abs(box.y - anchor.y), Math.abs(box.width - anchor.width), Math.abs(box.height - anchor.height))
+  }).toBeLessThanOrEqual(1)
+})
+
 test("the attachment toolbar owns keyboard navigation and Tab still reaches the caption", async ({ page, editor }) => {
   await selectAttachment(editor.content.locator("figure"))
   await page.keyboard.press("Alt+F10")
