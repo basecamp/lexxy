@@ -1,4 +1,4 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
@@ -646,6 +646,7 @@ export class LexicalEditorElement extends HTMLElement {
       .clear()
       .selectEnd()
       .insertNodes(this.#parseHtmlIntoLexicalNodes(html, { editor }))
+    $adoptFormatOfCaret()
   }
 
   #synchronizeWithChanges() {
@@ -1095,4 +1096,16 @@ function isLastChildOfListItem(node) {
 // empty editor's value is "", so a form submits nothing rather than <p><br></p>.
 function withoutEmptyParagraph(html) {
   return html === "<p><br></p>" ? "" : html
+}
+
+// Inserting the value leaves the caret at its end without the format of the text there. Since
+// Lexical 0.53 a click that leaves the caret in place keeps that format, so a click past the end of
+// a value that ends in bold text would show bold off and type plain text.
+function $adoptFormatOfCaret() {
+  const selection = $getSelection()
+  if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.type !== "text") return
+
+  const node = selection.anchor.getNode()
+  if (selection.format !== node.getFormat()) selection.setFormat(node.getFormat())
+  if (selection.style !== node.getStyle()) selection.setStyle(node.getStyle())
 }
