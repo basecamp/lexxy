@@ -47,4 +47,25 @@ test.describe("Text node export: clean bold and italic markup", () => {
     expect(html).not.toContain("<b>")
     expect(html).toContain("<strong>")
   })
+
+  test("strikethrough and underline go inside a highlight so their lines take its color", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.setValue('<p><u><s><i><mark style="color: var(--highlight-1);"><strong>done</strong></mark></i></s></u></p>')
+
+    await assertEditorHtml(
+      editor,
+      '<p><i><mark style="color: var(--highlight-1);"><u><s><strong>done</strong></s></u></mark></i></p>',
+    )
+  })
+
+  test("strikethrough and underline wrap text that has no highlight", async ({ page, editor }) => {
+    await page.goto("/")
+    await editor.waitForConnected()
+
+    await editor.setValue("<p><u><s><strong>done</strong></s></u></p>")
+
+    await assertEditorHtml(editor, "<p><u><s><strong>done</strong></s></u></p>")
+  })
 })

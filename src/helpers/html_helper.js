@@ -68,6 +68,17 @@ export function stripTrailingCodeBlockNewlines(doc) {
   }
 }
 
+// Browsers ignore spaces around a link's address when they follow it, but Lexical
+// doesn't: an address that doesn't start with a scheme gets https:// put in front,
+// so " https://example.com" becomes "https:// https://example.com", a dead link.
+export function trimLinkAddresses(doc) {
+  for (const link of doc.querySelectorAll("a[href]")) {
+    const href = link.getAttribute("href")
+    const trimmed = href.trim()
+    if (trimmed !== href) link.setAttribute("href", trimmed)
+  }
+}
+
 function lastDescendantOf(node) {
   while (node.lastChild) node = node.lastChild
   return node

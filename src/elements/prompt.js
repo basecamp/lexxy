@@ -2,7 +2,7 @@ import Lexxy from "../config/lexxy"
 import { createElement, generateDomId, parseHtml } from "../helpers/html_helper"
 import { getNonce } from "../helpers/csp_helper"
 import { $createTextNode, $isTextNode, COMMAND_PRIORITY_CRITICAL, INPUT_COMMAND, KEY_ARROW_DOWN_COMMAND, KEY_ARROW_UP_COMMAND, KEY_ENTER_COMMAND, KEY_SPACE_COMMAND, KEY_TAB_COMMAND } from "lexical"
-import { $textBeforeOffset } from "../helpers/lexical_helper"
+import { $textBeforeOffset, isEditorFocused } from "../helpers/lexical_helper"
 import { CustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import InlinePromptSource from "../editor/prompt/inline_source"
 import DeferredPromptSource from "../editor/prompt/deferred_source"
@@ -106,6 +106,11 @@ export class LexicalPromptElement extends HTMLElement {
     if (!this.#promptContentTypePermitted) return
 
     this.#popoverListeners.track(this.#editor.registerUpdateListener(({ editorState }) => {
+      // A value set while focus is elsewhere, such as a restored draft that ends in
+      // the trigger, leaves no cursor to anchor the menu to: it opened at a
+      // meaningless spot and stayed there once the user came back to the editor.
+      if (!isEditorFocused(this.#editor)) return
+
       editorState.read(() => {
         if (this.#selection.isInsideCodeBlock) return
 

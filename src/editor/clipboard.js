@@ -3,12 +3,19 @@ import { parsePastedMarkdown } from "../helpers/markdown_helper"
 import { nextFrame } from "../helpers/timing_helper"
 import { addBlockSpacing, dispatch, parseHtml } from "../helpers/html_helper"
 import { $isCodeNode } from "@lexical/code"
-import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $onUpdate, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
+import { $createTextNode, $getSelection, $isParagraphNode, $isRangeSelection, $isTextNode, $onUpdate, COMMAND_PRIORITY_NORMAL, PASTE_COMMAND, PASTE_TAG, SELECTION_INSERT_CLIPBOARD_NODES_COMMAND } from "lexical"
 import { $createLinkNode, $isLinkNode, $toggleLink } from "@lexical/link"
+import { $findMatchingParent } from "@lexical/utils"
 import { ListenerBin } from "../helpers/listener_helper"
 import NodeInserter from "./contents/node_inserter"
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
 import NestedBlockNodeInserter from "./contents/node_inserter/nested_block_node_inserter"
+
+const CODE_EDITOR_PROSE_LANGUAGES = [ "markdown", "plaintext" ]
+
+// The `[text](` that opens a Markdown inline link, matching the link text the
+// way Lexical's LINK transformer does (one level of nested brackets).
+const MARKDOWN_LINK_DESTINATION_START = /\[[^[\]]*(?:\[[^[\]]*\][^[\]]*)*\]\($/
 
 export default class Clipboard {
   #listeners = new ListenerBin()
@@ -75,7 +82,11 @@ export default class Clipboard {
 
     const url = $bareUrlFromSingleLink(nodes)
     if (url && $isRangeSelection(selection)) {
-      this.#insertSingleLinkAt(selection, url)
+      if (this.editorElement.supportsMarkdown && $isInMarkdownLinkDestination(selection)) {
+        selection.insertText(url)
+      } else {
+        this.#insertSingleLinkAt(selection, url)
+      }
       return true
     }
 
@@ -86,7 +97,9 @@ export default class Clipboard {
   }
 
   #isPlainTextOrURLPasted(clipboardData) {
-    return this.#isOnlyPlainTextPasted(clipboardData) || this.#isOnlyURLPasted(clipboardData)
+    return this.#isOnlyPlainTextPasted(clipboardData)
+      || this.#isOnlyURLPasted(clipboardData)
+      || this.#isProseCopiedFromCodeEditor(clipboardData)
   }
 
   #isOnlyPlainTextPasted(clipboardData) {
@@ -113,6 +126,22 @@ export default class Clipboard {
 
     const html = clipboardData.getData("text/html")
     return !html || this.#htmlIsBareLinkToURL(html, text)
+  }
+
+  // VS Code, and editors built on it such as Cursor, copy syntax-highlighted HTML next to the
+  // plain text, which pastes as a code block. That suits source code, but Markdown or plain text
+  // copied from them should paste as plain text, so the Markdown converts. The editor names the
+  // file's language in vscode-editor-data, which Chromium-based browsers expose.
+  #isProseCopiedFromCodeEditor(clipboardData) {
+    const types = Array.from(clipboardData.types)
+    if (!types.includes("vscode-editor-data") || !types.includes("text/plain")) return false
+
+    try {
+      const { mode } = JSON.parse(clipboardData.getData("vscode-editor-data"))
+      return CODE_EDITOR_PROSE_LANGUAGES.includes(mode)
+    } catch {
+      return false
+    }
   }
 
   #htmlIsBareLinkToURL(html, url) {
@@ -190,6 +219,19 @@ export default class Clipboard {
     })
   }
 
+  #isCaretInMarkdownLinkDestination() {
+    if (!this.editorElement.supportsMarkdown) return false
+
+    return this.editor.getEditorState().read(() => $isInMarkdownLinkDestination($getSelection()))
+  }
+
+  #pasteURLAsText(url) {
+    this.editor.update(() => {
+      const selection = $getSelection()
+      if ($isRangeSelection(selection)) selection.insertText(url)
+    }, { tag: PASTE_TAG })
+  }
+
   #plainTextOrURLItem(clipboardData) {
     const items = Array.from(clipboardData.items)
     return items.find((item) => item.type === "text/plain") || items.find((item) => item.type === "text/uri-list")
@@ -198,6 +240,8 @@ export default class Clipboard {
   #pasteURL(url) {
     if (this.contents.hasSelectedText()) {
       this.contents.createLinkWithSelectedText(url)
+    } else if (this.#isCaretInMarkdownLinkDestination()) {
+      this.#pasteURLAsText(url)
     } else {
       const nodeKey = this.contents.createLink(url)
       this.#dispatchLinkInsertEvent(nodeKey, { url })
@@ -356,4 +400,17 @@ function $bareUrlFromLink(linkNode) {
   const url = linkNode.getURL()
   if (!url) return null
   return linkNode.getTextContent() === url ? url : null
+}
+
+// Typing `[text](`, pasting the URL and typing `)` should produce a link through
+// the Markdown link shortcut. That shortcut only matches plain text, so a URL
+// pasted there stays plain text instead of becoming a link of its own.
+function $isInMarkdownLinkDestination(selection) {
+  if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false
+
+  const node = selection.anchor.getNode()
+  if (!$isTextNode(node) || $findMatchingParent(node, $isLinkNode)) return false
+
+  const textBeforeCaret = node.getTextContent().slice(0, selection.anchor.offset)
+  return MARKDOWN_LINK_DESTINATION_START.test(textBeforeCaret)
 }

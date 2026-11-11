@@ -11,6 +11,22 @@ const PRESERVABLE_STYLES = {
   p: [ "margin-top", "margin-bottom" ]
 }
 
+// Elements that show nothing once they hold no text, as in the spacer cells
+// email layouts pad themselves with.
+const SPACER_ELEMENTS = new Set([ "BR", "DIV", "P", "SPAN", "FONT", "CENTER", "A", "B", "STRONG", "I", "EM", "U" ])
+
+const BLOCK_ELEMENTS = new Set([
+  "ADDRESS", "ARTICLE", "ASIDE", "BLOCKQUOTE", "CAPTION", "CENTER", "DD", "DETAILS", "DIALOG", "DIV", "DL", "DT",
+  "FIELDSET", "FIGCAPTION", "FIGURE", "FOOTER", "FORM", "H1", "H2", "H3", "H4", "H5", "H6", "HEADER", "HGROUP", "HR",
+  "LEGEND", "LI", "MAIN", "MENU", "NAV", "OL", "P", "PRE", "SEARCH", "SECTION", "SUMMARY", "TABLE", "TD", "TH", "UL"
+])
+
+// Elements that show something on a line without any text inside them.
+const INLINE_CONTENT_ELEMENTS = new Set([ "ACTION-TEXT-ATTACHMENT", "AUDIO", "EMBED", "IFRAME", "IMG", "OBJECT", "PICTURE", "SVG", "VIDEO" ])
+
+// Elements whose text never shows on the page.
+const HIDDEN_ELEMENTS = new Set([ "SCRIPT", "STYLE", "TEMPLATE", "TITLE", "META", "LINK" ])
+
 export default class PastedContentFormatter {
   constructor(doc) {
     this.doc = doc
@@ -21,11 +37,14 @@ export default class PastedContentFormatter {
     this.#stripStyleElements()
     this.#stripInterchangeNewlines()
     this.#unwrapPlaceholderAnchors()
+    this.#unwrapLayoutTables()
     this.#stripTableCellColorStyles()
     new OfficeFormatter(this.doc).format()
     this.#unwrapWrappedListChildren()
     this.#nestStrayListChildren()
     this.#stripStrayListChildren()
+    this.#stripBreaksBeforeBlocks()
+    this.#convertBlankLineDivsToParagraphs()
     this.#replaceGmailEmojiImgTags()
     return this.doc
   }
@@ -97,6 +116,87 @@ export default class PastedContentFormatter {
     }
   }
 
+  // Email clients (Gmail, Apple Mail) and newsletters lay out messages with
+  // tables: a full-width wrapper, a fixed-width body, single-cell rows, often
+  // nested several deep. They hold the message, not tabular data, and imported
+  // as real tables they paste as a table inside a table that the author never
+  // wrote. Dissolve each layout table into its cells' content, outermost first,
+  // so a data table inside one is still judged on its own and survives.
+  #unwrapLayoutTables() {
+    const nestedInLayout = new WeakSet()
+
+    let table = this.#firstLayoutTable(nestedInLayout)
+    while (table) {
+      for (const nested of table.querySelectorAll("table")) {
+        nestedInLayout.add(nested)
+      }
+      this.#unwrapTable(table)
+      table = this.#firstLayoutTable(nestedInLayout)
+    }
+  }
+
+  #firstLayoutTable(nestedInLayout) {
+    for (const table of this.doc.querySelectorAll("table")) {
+      if (this.#isLayoutTable(table, nestedInLayout.has(table))) return table
+    }
+    return null
+  }
+
+  // A layout table often says so with its role, and rarely holds data, so one
+  // holding another table is layout too, unless it declares itself tabular with
+  // header cells or a table role. Inside a layout table, a single-column table
+  // is one more layout row; pasted on its own it may be a column copied from a
+  // spreadsheet, so it stays a table.
+  #isLayoutTable(table, nestedInLayout) {
+    const role = table.getAttribute("role")
+    if (role === "presentation" || role === "none") return true
+    if (this.#isExplicitlyTabular(table)) return false
+
+    return table.querySelector("table") !== null || (nestedInLayout && this.#isSingleColumn(table))
+  }
+
+  #isExplicitlyTabular(table) {
+    const role = table.getAttribute("role")
+    return role === "table" || role === "grid" || role === "treegrid" ||
+      this.#ownCells(table).some((cell) => cell.tagName === "TH")
+  }
+
+  #isSingleColumn(table) {
+    return Array.from(table.rows).every((row) => row.cells.length <= 1)
+  }
+
+  // The caption and each cell become a block of their own, so the text of
+  // neighbouring cells doesn't run together. Cells with nothing to show are
+  // spacers and go.
+  #unwrapTable(table) {
+    const blocks = []
+    for (const part of [ ...this.#ownCaptions(table), ...this.#ownCells(table) ]) {
+      if (this.#hasVisibleContent(part)) {
+        const block = this.doc.createElement("div")
+        block.append(...part.childNodes)
+        blocks.push(block)
+      }
+    }
+    table.replaceWith(...blocks)
+  }
+
+  #ownCaptions(table) {
+    return Array.from(table.children).filter((child) => child.tagName === "CAPTION")
+  }
+
+  // Only this table's cells, not those of the tables nested inside them.
+  #ownCells(table) {
+    return Array.from(table.querySelectorAll("td, th")).filter((cell) => cell.closest("table") === table)
+  }
+
+  // Spacer cells hold at most whitespace, line breaks and empty wrappers. Any
+  // other element, such as an image, a video or an attachment that renders from
+  // its attributes, is content.
+  #hasVisibleContent(cell) {
+    return cell.textContent.trim() !== "" ||
+      Array.from(cell.querySelectorAll("*")).some((element) => !SPACER_ELEMENTS.has(element.tagName))
+  }
+
   // Table cells copied from a page inherit the source theme's inline color
   // styles (e.g. dark-mode backgrounds). Strip them so pasted tables adopt
   // the current theme instead of carrying stale colors.
@@ -164,6 +264,101 @@ export default class PastedContentFormatter {
         stray = this.#firstStrayListChild(list)
       }
     }
+  }
+
+  // Trix writes a blank line as <div><br></div>. Lexical has no importer for
+  // <div>, and it drops a <br> that is a block's only child, so the blank line
+  // would vanish and the paragraphs around it would run together. An empty
+  // paragraph is how Lexxy writes a blank line, so turn each one into that.
+  // List items are left alone: a paragraph can't sit inside one.
+  #convertBlankLineDivsToParagraphs() {
+    for (const div of this.doc.querySelectorAll("div")) {
+      if (this.#isBlankLineDiv(div) && !div.closest("li")) {
+        const paragraph = this.doc.createElement("p")
+        paragraph.appendChild(this.doc.createElement("br"))
+        div.replaceWith(paragraph)
+      }
+    }
+  }
+
+  #isBlankLineDiv(div) {
+    const children = Array.from(div.childNodes).filter((node) => !this.#isIgnorableTrailingNode(node))
+    return children.length === 1 && children[0].nodeName === "BR"
+  }
+
+  // Outlook, and the web apps that show its mail, end a line with <br> right before
+  // a list or other block starts. The block starts a new line anyway, so that <br>
+  // only ends the line before it and shows nothing, but imported it becomes a line
+  // break that adds a blank line. A <br> with no content before it on its line
+  // shows as an empty line, so it stays.
+  #stripBreaksBeforeBlocks() {
+    for (const br of Array.from(this.doc.querySelectorAll("br"))) {
+      if (this.#blockFollowsOnLine(br) && this.#hasContentBeforeOnLine(br)) {
+        br.remove()
+      }
+    }
+  }
+
+  // Whether a block comes right after the <br>, stepping out of and into inline
+  // wrappers such as the <span>s Outlook puts around each run of text.
+  #blockFollowsOnLine(br) {
+    for (let node = br; node !== this.doc.body && !this.#isBlockElement(node); node = node.parentNode) {
+      for (let sibling = node.nextSibling; sibling; sibling = sibling.nextSibling) {
+        const start = this.#lineEdgeIn(sibling, "start")
+        if (start) return start === "block"
+      }
+    }
+    return false
+  }
+
+  // Whether text or media comes before the <br> since its block, or the block
+  // before it, began, looking through earlier breaks and empty inline wrappers.
+  #hasContentBeforeOnLine(br) {
+    for (let node = br; node !== this.doc.body && !this.#isBlockElement(node); node = node.parentNode) {
+      for (let sibling = node.previousSibling; sibling; sibling = sibling.previousSibling) {
+        const end = this.#lineEdgeIn(sibling, "end")
+        if (end) return end === "content"
+      }
+    }
+    return false
+  }
+
+  // What a node shows first ("start") or last ("end") on its line: "content", a
+  // "block" that starts a line of its own, or null for nothing at all. Looking
+  // ahead, a <br> counts as content, since it ends a line of its own; looking
+  // back, it doesn't, so a run of breaks needs text or media before it.
+  #lineEdgeIn(node, edge) {
+    if (this.#isBlockElement(node)) return "block"
+    if (node.nodeType === Node.TEXT_NODE) return this.#isCollapsibleWhitespace(node) ? null : "content"
+    if (node.nodeType !== Node.ELEMENT_NODE) return null
+    if (node.nodeName === "BR") return edge === "start" ? "content" : null
+    if (HIDDEN_ELEMENTS.has(node.nodeName)) return null
+    if (INLINE_CONTENT_ELEMENTS.has(node.nodeName.toUpperCase())) return "content"
+
+    const children = Array.from(node.childNodes)
+    if (edge === "end") children.reverse()
+    for (const child of children) {
+      const found = this.#lineEdgeIn(child, edge)
+      if (found) return found
+    }
+    return null
+  }
+
+  // HTML collapses spaces, tabs and newlines but not non-breaking spaces, which
+  // hold a line open.
+  #isCollapsibleWhitespace(node) {
+    if (node.nodeType === Node.COMMENT_NODE) return true
+    return node.nodeType === Node.TEXT_NODE && /^[ \t\n\r\f]*$/.test(node.textContent)
+  }
+
+  // An inline display style decides, as it does in the browser, so a <span> shown as a
+  // block starts a line of its own and a <div> shown inline doesn't.
+  #isBlockElement(node) {
+    if (node?.nodeType !== Node.ELEMENT_NODE) return false
+
+    const display = node.style?.display
+    if (display) return !display.startsWith("inline") && display !== "contents" && display !== "none"
+    return BLOCK_ELEMENTS.has(node.nodeName)
   }
 
   // Read the rules from a sheet we build rather than from this.doc.styleSheets: the

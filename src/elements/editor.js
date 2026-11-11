@@ -1,13 +1,14 @@
-import { $addUpdateTag, $createParagraphNode, $getRoot, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
+import { $addUpdateTag, $createParagraphNode, $getRoot, $getSelection, $hasUpdateTag, $isElementNode, $isLineBreakNode, $isRangeSelection, $isTextNode, $onUpdate, CAN_REDO_COMMAND, CAN_UNDO_COMMAND, CLEAR_HISTORY_COMMAND, COMMAND_PRIORITY_NORMAL, KEY_ENTER_COMMAND, PASTE_TAG, SKIP_DOM_SELECTION_TAG, TextNode } from "lexical"
 import { buildEditorFromExtensions } from "@lexical/extension"
 import { ListItemNode, ListNode, registerList } from "@lexical/list"
 import { AutoLinkNode, LinkNode } from "@lexical/link"
 import { registerPlainText } from "@lexical/plain-text"
 import { HeadingNode, QuoteNode, registerRichText } from "@lexical/rich-text"
-import { $generateHtmlFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
+import { $generateDOMFromNodes, $generateNodesFromDOM as $generateLexicalNodesFromDOM } from "@lexical/html"
 import { filterDisallowedAttachmentNodes } from "../helpers/attachment_filter_helper"
 import { $filterDisallowedCode, $removeInlineCodeFormat, $replaceCodeNodeWithParagraphs } from "../helpers/code_filter_helper"
 import { $convertInlineImageDataURIs } from "../helpers/inline_image_uri_helper"
+import { $decodeCollapsibleSpaces } from "../helpers/collapsible_spaces_helper"
 import { CodeHighlightNode, CodeNode } from "@lexical/code"
 import { CODE, INLINE_CODE, TRANSFORMERS, registerMarkdownShortcuts } from "@lexical/markdown"
 import { HORIZONTAL_DIVIDER } from "../editor/markdown/horizontal_divider_transformer"
@@ -19,7 +20,7 @@ import CaptionEditor from "../editor/attachments/caption_editor"
 import { UploadRequests } from "../editor/attachments/upload_requests"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
-import { createElement, dispatch, generateDomId, parseHtml, stripTrailingCodeBlockNewlines } from "../helpers/html_helper"
+import { createElement, dispatch, generateDomId, parseHtml, stripTrailingCodeBlockNewlines, trimLinkAddresses } from "../helpers/html_helper"
 import { isAttachmentSpacerTextNode, isEditorFocused } from "../helpers/lexical_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
 import LexicalToolbar from "./toolbar"
@@ -44,6 +45,7 @@ import { RewritableHistoryExtension } from "../extensions/rewritable_history_ext
 import { AttachmentsExtension } from "../extensions/attachments_extension.js"
 import { FormatEscapeExtension } from "../extensions/format_escape_extension.js"
 import { LinkOpenerExtension } from "../extensions/link_opener_extension.js"
+import { LinkMergingExtension } from "../extensions/link_merging_extension.js"
 import { PreventLexicalTripleClickExtension } from "../extensions/prevent_lexical_triple_click_extension.js"
 import { CustomAttachmentDragAndDropExtension } from "../extensions/custom_attachment_drag_and_drop_extension.js"
 import { LineSeparatorsExtension } from "../extensions/line_separators_extension.js"
@@ -229,6 +231,7 @@ export class LexicalEditorElement extends HTMLElement {
       AttachmentsExtension,
       FormatEscapeExtension,
       LinkOpenerExtension,
+      LinkMergingExtension,
       PreventLexicalTripleClickExtension,
       CustomAttachmentDragAndDropExtension,
       LineSeparatorsExtension
@@ -278,7 +281,9 @@ export class LexicalEditorElement extends HTMLElement {
 
   $generateNodesFromDOM(doc, { editor = this.editor } = {}) {
     stripTrailingCodeBlockNewlines(doc)
+    trimLinkAddresses(doc)
     let nodes = $generateLexicalNodesFromDOM(editor, doc)
+    $decodeCollapsibleSpaces(nodes)
     if ($hasUpdateTag(PASTE_TAG)) nodes = $convertInlineImageDataURIs(nodes, this)
     return $filterDisallowedCode(filterDisallowedAttachmentNodes(nodes, this), this)
   }
@@ -423,7 +428,7 @@ export class LexicalEditorElement extends HTMLElement {
 
   #readSanitizedEditorValue() {
     return this.editor?.read(() => {
-      return withoutEmptyParagraph(this.sanitizer.sanitize(withoutLexicalExportArtifacts($generateHtmlFromNodes(this.editor, null))))
+      return withoutEmptyParagraph(this.sanitizer.sanitize($generateHtmlWithoutExportArtifacts(this.editor)))
     }) ?? null
   }
 
@@ -641,6 +646,7 @@ export class LexicalEditorElement extends HTMLElement {
       .clear()
       .selectEnd()
       .insertNodes(this.#parseHtmlIntoLexicalNodes(html, { editor }))
+    $adoptFormatOfCaret()
   }
 
   #synchronizeWithChanges() {
@@ -1060,13 +1066,29 @@ function $getReadableTextContent(node) {
 // way Trix stores them. A <br> that ends a block renders nothing and is dropped
 // on import, so without it a Shift+Enter at the end of an item would vanish from
 // the rendered content and from the editor on reload.
-const LEXICAL_EXPORT_ARTIFACTS = / data-lexical-indent="\d+"|<br data-lexical-managed-linebreak="true">/g
-const LIST_ITEM_MANAGED_LINE_BREAK = /<br data-lexical-managed-linebreak="true"><\/li>/g
+//
+// They're removed from the exported elements rather than from the HTML string,
+// where text that reads the same would go too.
+function $generateHtmlWithoutExportArtifacts(editor) {
+  const container = $generateDOMFromNodes(document.createElement("div"), null, editor)
 
-function withoutLexicalExportArtifacts(html) {
-  return html
-    .replace(LIST_ITEM_MANAGED_LINE_BREAK, "<br></li>")
-    .replace(LEXICAL_EXPORT_ARTIFACTS, "")
+  for (const element of container.querySelectorAll("[data-lexical-indent]")) {
+    element.removeAttribute("data-lexical-indent")
+  }
+
+  for (const lineBreak of container.querySelectorAll("br[data-lexical-managed-linebreak]")) {
+    if (isLastChildOfListItem(lineBreak)) {
+      lineBreak.removeAttribute("data-lexical-managed-linebreak")
+    } else {
+      lineBreak.remove()
+    }
+  }
+
+  return container.innerHTML
+}
+
+function isLastChildOfListItem(node) {
+  return node.parentElement?.tagName === "LI" && !node.nextSibling
 }
 
 // An empty editor still holds one paragraph, so there is somewhere to type and
@@ -1074,4 +1096,16 @@ function withoutLexicalExportArtifacts(html) {
 // empty editor's value is "", so a form submits nothing rather than <p><br></p>.
 function withoutEmptyParagraph(html) {
   return html === "<p><br></p>" ? "" : html
+}
+
+// Inserting the value leaves the caret at its end without the format of the text there. Since
+// Lexical 0.53 a click that leaves the caret in place keeps that format, so a click past the end of
+// a value that ends in bold text would show bold off and type plain text.
+function $adoptFormatOfCaret() {
+  const selection = $getSelection()
+  if (!$isRangeSelection(selection) || !selection.isCollapsed() || selection.anchor.type !== "text") return
+
+  const node = selection.anchor.getNode()
+  if (selection.format !== node.getFormat()) selection.setFormat(node.getFormat())
+  if (selection.style !== node.getStyle()) selection.setStyle(node.getStyle())
 }
