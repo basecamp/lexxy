@@ -122,6 +122,21 @@ test.describe("Paste — a line break right before a block", () => {
     await assertEditorHtml(editor, '<p>Intro<br><br></p><ul><li value="1">Item</li></ul>')
   })
 
+  test("keeps two empty lines in a list item before a nested list, not three", async ({ editor }) => {
+    await editor.paste("ignored", { html: "<ul><li><br><br><ul><li>Item</li></ul></li></ul>" })
+
+    await assertEditorHtml(editor, '<ul><li value="1"><br><br><ul><li value="1">Item</li></ul></li></ul>')
+    await assertEditorContent(editor, async (content) => {
+      await expect(content.locator("li:not(:has(ul)) > br, li:has(> ul) > br")).toHaveCount(2)
+    })
+  })
+
+  test("keeps both empty lines in a quote before a list", async ({ editor }) => {
+    await editor.paste("ignored", { html: "<blockquote><br><br><ul><li>Item</li></ul></blockquote>" })
+
+    await assertEditorHtml(editor, '<blockquote><br><br><ul><li value="1">Item</li></ul></blockquote>')
+  })
+
   test("keeps a line break between two lines", async ({ editor }) => {
     await editor.paste("ignored", { html: "<ul><li>One<br>Two</li></ul>" })
 
