@@ -1083,17 +1083,23 @@ function $getReadableTextContent(node) {
   return node.getTextContent()
 }
 
-// Lexical's HTML export (as of 0.52) writes two things Lexxy doesn't store as
+// Lexical's HTML export (as of 0.52) writes three things Lexxy doesn't store as
 // they are: a marked terminator <br> after a block's trailing line break,
-// mirroring the one the reconciler adds to the live DOM, and block indentation as
-// data-lexical-indent, which Lexxy's content styles don't render.
+// mirroring the one the reconciler adds to the live DOM, block indentation as
+// data-lexical-indent, which Lexxy's content styles don't render, and
+// white-space: pre-wrap on formatted text, which Lexxy's text export keeps, as
+// Lexical's does, for HTML copied to other apps.
 //
 // The terminator stays, as a plain <br>, the way Trix stores it. A <br> that ends
 // a block renders nothing and is dropped on import, so without it a Shift+Enter
 // at the end of a line would vanish from the rendered content, and each save and
 // reload would drop one more trailing line break. The indentation is removed.
 //
-// Both are changed on the exported elements rather than in the HTML string,
+// The white-space style is removed too. The sanitizer would drop it anyway, but
+// it parses the HTML first, and on a page whose Content Security Policy forbids
+// inline styles, parsing a style attribute reports a violation.
+//
+// All three are changed on the exported elements rather than in the HTML string,
 // where text that reads the same would change too.
 function $generateHtmlWithoutExportArtifacts(editor) {
   const container = $generateDOMFromNodes(document.createElement("div"), null, editor)
@@ -1104,6 +1110,11 @@ function $generateHtmlWithoutExportArtifacts(editor) {
 
   for (const lineBreak of container.querySelectorAll("br[data-lexical-managed-linebreak]")) {
     lineBreak.removeAttribute("data-lexical-managed-linebreak")
+  }
+
+  for (const element of container.querySelectorAll("[style]")) {
+    element.style.removeProperty("white-space")
+    if (element.style.length === 0) element.removeAttribute("style")
   }
 
   return container.innerHTML
