@@ -105,8 +105,16 @@ jobs:
       USE_RAILS_WITHOUT_ACTION_TEXT_ADAPTER: ${{ matrix.use_legacy_rails }}
 
     steps:
+      # The runner image already has build-essential, git, libyaml-dev, pkg-config,
+      # Chrome and zip. The tests upload only images and a PDF, so they need just
+      # libvips for image variants and mutool for PDF previews. Fewer packages
+      # keep the job from stalling on a slow Ubuntu mirror, and the timeout and
+      # retries make a stalled download fail fast instead of using the whole job.
       - name: Install packages
-        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config google-chrome-stable mupdf build-essential ffmpeg groff libreoffice-writer libreoffice-impress libreoffice-calc mupdf-tools libvips zip
+        timeout-minutes: 10
+        run: |
+          sudo apt-get -o Acquire::Retries=3 update
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install --no-install-recommends -y libvips mupdf-tools
 
       - name: Remove runner's ChromeDriver
         run: |
