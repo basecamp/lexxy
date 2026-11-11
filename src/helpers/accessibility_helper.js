@@ -5,11 +5,51 @@ export function isKeyboardActivation(event) {
   return event instanceof PointerEvent && event.pointerId === -1
 }
 
+// When the page sets a scroll padding and pins a toolbar inside it, the browser treats a
+// focused toolbar button as hidden and scrolls the page to show it, though the button is
+// on screen. Scroll only when the element is off screen.
+export function focusWithoutNeedlessScroll(element, options = {}) {
+  element.focus({ ...options, preventScroll: isInViewport(element) })
+}
+
+// Within the window and not clipped by a scrolling or clipping ancestor, such as a menu
+// with overflow: auto. The window check covers the root element, and the body when its
+// overflow applies to the window, since their boxes move with the page as it scrolls.
+export function isInViewport(element) {
+  const rect = element.getBoundingClientRect()
+  if (rect.top < 0 || rect.bottom > window.innerHeight || rect.left < 0 || rect.right > window.innerWidth) return false
+
+  for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+    if (clipsAtWindow(ancestor)) continue
+
+    const { overflowX, overflowY } = getComputedStyle(ancestor)
+    const bounds = ancestor.getBoundingClientRect()
+    if (overflowY !== "visible" && (rect.top < bounds.top || rect.bottom > bounds.bottom)) return false
+    if (overflowX !== "visible" && (rect.left < bounds.left || rect.right > bounds.right)) return false
+  }
+
+  return true
+}
+
+function clipsAtWindow(element) {
+  const root = document.documentElement
+  if (element === root) return true
+  if (element !== document.body) return false
+
+  const { overflowX, overflowY } = getComputedStyle(root)
+  return overflowX === "visible" && overflowY === "visible"
+}
+
+// The elements Tab can reach in the container, in document order.
+export function tabStopsIn(container) {
+  return Array.from(container.querySelectorAll("a[href], area[href], button, input:not([type='hidden']), select, textarea, iframe, object, embed, [contenteditable]:not([contenteditable='false']), [tabindex], summary, audio[controls], video[controls]"))
+    .filter(element => element.tabIndex >= 0 && !element.matches(":disabled") && !element.closest("[inert]") && isActiveAndVisible(element))
+}
+
 export function trapFocusAtTabBoundary(container, event) {
   if (event.key !== "Tab") return
 
-  const tabStops = Array.from(container.querySelectorAll("a[href], area[href], button, input:not([type='hidden']), select, textarea, iframe, object, embed, [contenteditable]:not([contenteditable='false']), [tabindex], summary, audio[controls], video[controls]"))
-    .filter(element => element.tabIndex >= 0 && !element.matches(":disabled") && !element.closest("[inert]") && isActiveAndVisible(element))
+  const tabStops = tabStopsIn(container)
     .sort((first, second) => {
       if (first.tabIndex > 0 && second.tabIndex > 0) {
         return first.tabIndex - second.tabIndex
@@ -131,7 +171,7 @@ class NextElementFinder {
   #focusWithActiveTabIndex(element) {
     if (isActiveAndVisible(element)) {
       element.tabIndex = 0
-      element.focus()
+      focusWithoutNeedlessScroll(element)
     }
   }
 

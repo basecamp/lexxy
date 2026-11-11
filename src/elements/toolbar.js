@@ -9,7 +9,7 @@ import {
 } from "lexical"
 import { getNonce } from "../helpers/csp_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
-import { handleRollingTabIndex, isKeyboardActivation } from "../helpers/accessibility_helper"
+import { focusWithoutNeedlessScroll, handleRollingTabIndex, isKeyboardActivation, tabStopsIn } from "../helpers/accessibility_helper"
 import ToolbarIcons from "./toolbar_icons"
 import { generateDomId, isActiveAndVisible } from "../helpers/html_helper"
 
@@ -185,7 +185,8 @@ export class LexicalToolbarElement extends HTMLElement {
     this.#listeners.track(
       registerEventListener(this.editorElement, "lexxy:focus", this.#handleEditorFocus),
       registerEventListener(this.editorElement, "lexxy:blur", this.#handleEditorBlur),
-      registerEventListener(this, "keydown", this.#handleKeydown)
+      registerEventListener(this, "keydown", this.#handleKeydown),
+      registerEventListener(this.editorElement, "keydown", this.#handleEditorShiftTab)
     )
   }
 
@@ -200,6 +201,30 @@ export class LexicalToolbarElement extends HTMLElement {
 
   #handleKeydown = (event) => {
     handleRollingTabIndex(this.#toolbarButtons, event)
+  }
+
+  // Shift+Tab from the text moves focus to the toolbar, and the browser scrolls the page
+  // to show the button even when it is on screen (see focusWithoutNeedlessScroll). When
+  // the browser would land on this toolbar's button, focus it here instead. A Shift+Tab
+  // the editor uses, such as outdenting a list item, is already prevented, and one from a
+  // control inside the text, such as a link in an attachment, keeps its own order.
+  #handleEditorShiftTab = (event) => {
+    if (event.key !== "Tab" || !event.shiftKey || event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return
+
+    const content = this.editorElement.editorContentElement
+    const tabStop = this.#toolbarButtons.find((button) => button.tabIndex === 0 && isActiveAndVisible(button))
+
+    if (content && event.target === content && tabStop && this.#isTabStopBefore(content, tabStop)) {
+      event.preventDefault()
+      focusWithoutNeedlessScroll(tabStop)
+    }
+  }
+
+  #isTabStopBefore(content, tabStop) {
+    if (content.tabIndex !== 0) return false
+
+    const tabStops = tabStopsIn(this.editorElement).filter((element) => element.tabIndex === 0)
+    return tabStops[tabStops.indexOf(content) - 1] === tabStop
   }
 
   #resetTabIndexValues() {
