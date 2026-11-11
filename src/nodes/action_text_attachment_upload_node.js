@@ -142,7 +142,8 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return createElement("progress", { value: this.progress ?? 0, max: 100 })
   }
 
-  #setDimensionsFromImage({ width, height }) {
+  // The file's pixel size: `width` and `height` would be its size on screen.
+  #setDimensionsFromImage({ naturalWidth: width, naturalHeight: height }) {
     if (this.#hasDimensions) return
 
     this.patchAndRewriteHistory({ width, height })
