@@ -318,6 +318,7 @@ export default class Clipboard {
 
   // Pasted HTML goes through the editor's own import even when attachments are
   // disabled, so it's normalized and filtered the same way; only files need them.
+  // A plain-text editor without attachments keeps the plain-text paste.
   #handlePastedFiles(clipboardData) {
     const html = clipboardData.getData("text/html")
     const files = this.editorElement.supportsAttachments ? clipboardData.files : []
@@ -326,7 +327,7 @@ export default class Clipboard {
     if (copiedImage) {
       this.#uploadFilesPreservingScroll(files, copiedImage.getAttribute("alt"))
       return true
-    } else if (html && !this.#isLexicalClipboardData(clipboardData)) {
+    } else if (html && this.#importsPastedHtml && !this.#isLexicalClipboardData(clipboardData)) {
       this.contents.insertHtml(html, { tag: PASTE_TAG })
       return true
     } else if (files.length) {
@@ -335,6 +336,10 @@ export default class Clipboard {
     } else {
       return false
     }
+  }
+
+  get #importsPastedHtml() {
+    return this.editorElement.supportsRichText || this.editorElement.supportsAttachments
   }
 
   #isLexicalClipboardData(clipboardData) {
