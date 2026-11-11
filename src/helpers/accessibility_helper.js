@@ -12,9 +12,20 @@ export function focusWithoutNeedlessScroll(element, options = {}) {
   element.focus({ ...options, preventScroll: isInViewport(element) })
 }
 
+// Within the window and not clipped by a scrolling or clipping ancestor, such as a menu
+// with overflow: auto.
 export function isInViewport(element) {
-  const { top, bottom } = element.getBoundingClientRect()
-  return top >= 0 && bottom <= window.innerHeight
+  const rect = element.getBoundingClientRect()
+  if (rect.top < 0 || rect.bottom > window.innerHeight) return false
+
+  for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+    const { overflowX, overflowY } = getComputedStyle(ancestor)
+    const bounds = ancestor.getBoundingClientRect()
+    if (overflowY !== "visible" && (rect.top < bounds.top || rect.bottom > bounds.bottom)) return false
+    if (overflowX !== "visible" && (rect.left < bounds.left || rect.right > bounds.right)) return false
+  }
+
+  return true
 }
 
 // The elements Tab can reach in the container, in document order.

@@ -92,4 +92,37 @@ test.describe("Moving through a pinned toolbar with the keyboard", () => {
     await expect.poll(() => toolbarHasFocus(page)).toBe(true)
     await expect(page.locator("lexxy-toolbar")).toBeInViewport()
   })
+  test("an arrow key scrolls a menu item clipped by its scrolling menu into view", async ({ page }) => {
+    await page.addStyleTag({ content: "lexxy-toolbar [data-dropdown-panel] { max-block-size: 4rem; overflow: auto; }" })
+    const trigger = page.locator("lexxy-toolbar button[name='format']")
+    await focusInPlace(trigger)
+    await page.keyboard.press("Enter")
+    await expect.poll(() => toolbarHasFocus(page)).toBe(true)
+
+    for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowDown")
+
+    const focused = page.locator("lexxy-toolbar [data-dropdown-panel] :focus")
+    await expect(focused).toHaveCount(1)
+    await expect(focused).toBeInViewport({ ratio: 1 })
+  })
+})
+
+test.describe("Shift+Tab inside an attachment", () => {
+  const linkAttachment = (n) => `<div><bc-attachment sgid="test-sgid-${n}" content-type="application/vnd.basecamp.opengraph-embed" content="&lt;a href=&quot;https://example.com/${n}&quot;&gt;Link ${n}&lt;/a&gt;"></bc-attachment></div>`
+
+  test("moves to the previous link, not the toolbar", async ({ page, editor, browserName }) => {
+    test.skip(browserName === "firefox", "Firefox doesn't let links inside the editable text take focus")
+    await page.goto("/attachments-unset-permitted-list.html")
+    await page.waitForSelector("lexxy-toolbar[connected]")
+    await editor.setValue(`<p>Before</p>${linkAttachment(1)}${linkAttachment(2)}`)
+    await editor.flush()
+
+    const second = editor.content.locator("a", { hasText: "Link 2" })
+    await second.focus()
+    await expect(second).toBeFocused()
+
+    await page.keyboard.press("Shift+Tab")
+
+    await expect(editor.content.locator("a", { hasText: "Link 1" })).toBeFocused()
+  })
 })

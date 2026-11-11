@@ -206,14 +206,15 @@ export class LexicalToolbarElement extends HTMLElement {
   // Shift+Tab from the text moves focus to the toolbar, and the browser scrolls the page
   // to show the button even when it is on screen (see focusWithoutNeedlessScroll). When
   // the browser would land on this toolbar's button, focus it here instead. A Shift+Tab
-  // the editor uses, such as outdenting a list item, is already prevented.
+  // the editor uses, such as outdenting a list item, is already prevented, and one from a
+  // control inside the text, such as a link in an attachment, keeps its own order.
   #handleEditorShiftTab = (event) => {
     if (event.key !== "Tab" || !event.shiftKey || event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return
 
     const content = this.editorElement.editorContentElement
     const tabStop = this.#toolbarButtons.find((button) => button.tabIndex === 0 && isActiveAndVisible(button))
 
-    if (content?.contains(event.target) && tabStop && this.#isTabStopBefore(content, tabStop)) {
+    if (content && event.target === content && tabStop && this.#isTabStopBefore(content, tabStop)) {
       event.preventDefault()
       focusWithoutNeedlessScroll(tabStop)
     }
