@@ -167,24 +167,32 @@ test("controls respect the editor scrollport and keyboard focus reveals their at
   await expect.poll(async () => (await play.boundingBox()).y).toBeGreaterThanOrEqual(viewport.y - 1)
 })
 
-test("group controls retain native Tab and field arrow navigation", async ({ page, editor }) => {
-  await page.goto("/attachment-controls.html?group")
+test("a standalone field retains native navigation without an extra group or toolbar", async ({ page, editor }) => {
+  await page.goto("/attachment-controls.html?field")
   await page.waitForSelector("lexxy-editor[connected]")
   await editor.setValue(AUDIO)
-  await page.getByRole("button", { name: "Play Example", exact: true }).click()
-  await page.keyboard.press("Tab")
+  const native = await page.evaluateHandle(() => {
+    const input = document.body.appendChild(document.createElement("input"))
+    input.value = "0:00"
+    input.readOnly = true
+    input.focus()
+    return input
+  })
+  await page.keyboard.press("Home")
+  await page.keyboard.press("ArrowRight")
+  const nativeSelection = await native.evaluate(element => [element.selectionStart, element.selectionEnd])
+  await native.evaluate(element => element.remove())
   const position = page.getByRole("textbox", { name: "Position", exact: true })
-  await expect(position).toBeFocused()
+  await position.focus()
+  await expect(position.locator("xpath=ancestor::*[@role='group' or @role='toolbar']")).toHaveCount(0)
   await page.keyboard.press("Home")
   await page.keyboard.press("ArrowRight")
   await expect(position).toBeFocused()
-  await expect.poll(() => position.evaluate(element => element.selectionStart)).toBe(1)
-  await page.keyboard.press("Tab")
-  await expect(page.getByRole("button", { name: "Reset", exact: true })).toBeFocused()
+  expect(await position.evaluate(element => [element.selectionStart, element.selectionEnd])).toEqual(nativeSelection)
   await page.keyboard.press("Tab")
   await expect(page.getByRole("button", { name: "After editor", exact: true })).toBeFocused()
   await page.keyboard.press("Shift+Tab")
-  await expect(page.getByRole("button", { name: "Reset", exact: true })).toBeFocused()
+  await expect(position).toBeFocused()
 })
 
 test("inline attachment controls keep their anchor position", async ({ page, editor }) => {

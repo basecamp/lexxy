@@ -26,10 +26,6 @@ export default class AttachmentControls {
     }
   }
 
-  has(nodeKey) {
-    return this.#mounted.has(nodeKey)
-  }
-
   elementFor(nodeKey) {
     return this.#mounted.get(nodeKey)?.controls.element ?? null
   }

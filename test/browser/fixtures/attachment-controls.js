@@ -17,7 +17,7 @@ class AudioNode extends ActionTextAttachmentNode {
   }
 
   get label() {
-    return window.attachmentLabel || super.label
+    if (!options.has("field")) return window.attachmentLabel || super.label
   }
 
   createDOM() {
@@ -60,6 +60,14 @@ class AudioExtension extends Extension {
 
   get attachmentControls() {
     return [{ node: AudioNode, create: ({ node, attachmentElement }) => {
+      if (options.has("field")) {
+        const element = document.createElement("input")
+        element.className = "audio-field"
+        element.ariaLabel = "Position"
+        element.value = "0:00"
+        element.readOnly = true
+        return { element, placements: [{ element, anchor: attachmentElement.firstElementChild }] }
+      }
       const element = document.createElement("div")
       element.className = "audio-controls"
       const play = document.createElement("button")
@@ -67,16 +75,6 @@ class AudioExtension extends Extension {
       play.ariaLabel = `Play ${node.caption}`
       play.textContent = "Play"
       element.append(play)
-      if (options.has("group")) {
-        const position = document.createElement("input")
-        position.ariaLabel = "Position"
-        position.value = "0:00"
-        element.append(position)
-        const reset = document.createElement("button")
-        reset.type = "button"
-        reset.textContent = "Reset"
-        element.append(reset)
-      }
       const progress = document.createElement("div")
       progress.className = "audio-progress"
       progress.addEventListener("mousedown", event => event.preventDefault())
@@ -94,7 +92,6 @@ class AudioExtension extends Extension {
 
       return {
         element,
-        role: options.has("group") ? "group" : "toolbar",
         placements: [
           { element: play, anchor: attachmentElement.firstElementChild },
           { element: progress, anchor: attachmentElement.lastElementChild }

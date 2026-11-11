@@ -28,8 +28,10 @@ export class AttachmentToolbar extends HTMLElement {
 
   connectedCallback() {
     this.classList.add("lexxy-floating-controls")
-    this.role = this.#controls?.role || "toolbar"
-    this.ariaLabel = this.#controls?.label || this.ariaLabel || "Attachment controls"
+    if (!this.#controls) {
+      this.role = "toolbar"
+      this.ariaLabel ||= "Attachment controls"
+    }
     this.hidden = !this.#controls
     this.toggleAttribute("data-custom-controls", Boolean(this.#controls))
 
@@ -41,7 +43,7 @@ export class AttachmentToolbar extends HTMLElement {
       if (this.#controls) {
         this.refresh()
         this.#reflowObserver.observe(this.#editorElement)
-        this.#reflowObserver.observe(this.#controls.anchor || this.#editor.getElementByKey(this.#boundNodeKey))
+        this.#reflowObserver.observe(this.#editor.getElementByKey(this.#boundNodeKey))
         for (const { anchor } of this.#controls.placements || []) this.#reflowObserver.observe(anchor)
       }
     }
@@ -54,7 +56,7 @@ export class AttachmentToolbar extends HTMLElement {
   }
 
   refresh() {
-    if (this.#controls) this.ariaLabel = this.#controls.label
+    if (this.#controls && this.#selected) this.ariaLabel = this.#controls.label
     this.#refreshButtons()
     this.#refresh()
   }
@@ -112,7 +114,7 @@ export class AttachmentToolbar extends HTMLElement {
   #refreshButtons() {
     this.#buttons = Array.from(this.querySelectorAll("button"))
     for (const button of this.#buttons) {
-      if ((this.role === "toolbar" || this.#buttonGroup.contains(button)) && button !== document.activeElement) button.tabIndex = -1
+      if (button !== document.activeElement) button.tabIndex = -1
     }
   }
 
@@ -140,10 +142,10 @@ export class AttachmentToolbar extends HTMLElement {
   }
 
   #selectBoundNode() {
-    if (this.#boundNodeKey && this.role === "toolbar" && !this.#selected) {
+    if (this.#boundNodeKey && !this.#selected) {
       this.#editor.update(() => {
         const node = $getNodeByKey(this.#boundNodeKey)
-        if (node && !$singleSelectedNode()?.is(node)) $setSelection($createNodeSelectionWith(node))
+        if (typeof node?.label === "string" && !$singleSelectedNode()?.is(node)) $setSelection($createNodeSelectionWith(node))
       }, { tag: SKIP_DOM_SELECTION_TAG })
     }
   }
@@ -217,7 +219,7 @@ export class AttachmentToolbar extends HTMLElement {
       } else {
         this.#updatePosition()
       }
-    } else if (target && !this.#editorElement.attachmentControls.has(target.key)) {
+    } else if (target && !this.#editorElement.attachmentControls.elementFor(target.key)) {
       this.#show(target.key)
     } else {
       this.#hide()
@@ -227,6 +229,8 @@ export class AttachmentToolbar extends HTMLElement {
   #show(nodeKey) {
     this.#currentNodeKey = nodeKey
     this.#selected = true
+    this.role = "toolbar"
+    if (this.#controls) this.ariaLabel = this.#controls.label
     this.toggleAttribute("data-selected", true)
     this.#buttonGroup.hidden = false
     this.#refresh()
@@ -305,13 +309,7 @@ export class AttachmentToolbar extends HTMLElement {
       this.style.setProperty("--lexxy-anchor-width", `${rect.width}px`)
       this.style.setProperty("--lexxy-anchor-height", `${rect.height}px`)
       if (this.#controls) {
-        const anchorElement = this.#controls.anchor || figureElement
-        const anchor = anchorElement.getBoundingClientRect()
-        const anchorStyle = getComputedStyle(anchorElement)
-        this.#controlsContainer.style.left = `${anchor.left - rect.left}px`
-        this.#controlsContainer.style.top = `${anchor.top - rect.top}px`
-        this.#controlsContainer.style.width = `${anchor.width}px`
-        this.#controlsContainer.style.height = `${anchor.height}px`
+        const anchorStyle = getComputedStyle(figureElement)
         this.#controlsContainer.style.overflow = anchorStyle.overflow
         this.#controlsContainer.style.borderRadius = anchorStyle.borderRadius
         for (const placement of this.#controls.placements || []) this.#positionControl(placement)
@@ -358,7 +356,7 @@ export class AttachmentToolbar extends HTMLElement {
   #revealControl(element) {
     if (this.#controls) {
       const placement = this.#controls.placements?.find(placement => placement.element.contains(element))
-      const anchor = placement?.anchor || this.#controls.anchor || this.#editor.getElementByKey(this.#boundNodeKey)
+      const anchor = placement?.anchor || this.#editor.getElementByKey(this.#boundNodeKey)
       anchor.scrollIntoView({ block: "nearest", inline: "nearest" })
       this.#updatePosition()
     }
@@ -376,6 +374,8 @@ export class AttachmentToolbar extends HTMLElement {
     this.toggleAttribute("data-selected", false)
     this.#buttonGroup.hidden = true
     if (this.#boundNodeKey) {
+      this.removeAttribute("role")
+      this.removeAttribute("aria-label")
       this.#refresh()
     } else {
       this.#currentNodeKey = null

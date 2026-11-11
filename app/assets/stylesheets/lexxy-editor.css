@@ -1006,6 +1006,7 @@
       width: var(--lexxy-anchor-width);
 
       > .lexxy-attachment-controls {
+        inset: 0;
         pointer-events: none;
         position: absolute;
       }

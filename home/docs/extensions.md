@@ -59,15 +59,11 @@ The node class must already be registered with the editor. The factory runs
 after its attachment DOM exists and returns an object with:
 
 - `element`: the DOM containing the controls.
-- `anchor`: an element inside the attachment whose bounds determine the
-  controls' position and size. Defaults to the whole attachment.
 - `placements`: an optional array of `{ element, anchor }` pairs for controls
   that occupy separate regions, such as a playback button and a progress bar.
-  Each supplied element remains inside `element`, and Lexxy positions and sizes
-  it over its anchor without changing toolbar ownership.
-- `label`: an accessible name for this attachment's controls.
-- `role`: defaults to `"toolbar"`. Use `"group"` for a group of fields that
-  should retain ordinary Tab and arrow-key behavior.
+  Each positioned control is part of the supplied view. Lexxy positions and
+  sizes it over its anchor without changing toolbar ownership.
+- `label`: the accessible name of the toolbar shown when this attachment is selected.
 - `update({ node, attachmentElement })`: an optional callback receiving the
   current node after it changes. Update the view and its accessible name here.
 - `dispose()`: an optional callback to release media, listeners and timers.
@@ -87,8 +83,9 @@ when the toolbar loses focus. Fields keep the Tab index set by the extension.
 These controls also work when Lexical's `editor.setEditable(false)` temporarily
 disables editing in the content area, as in a staged attachment composer. This
 does not disable external attachment actions or the caption editor. A controls
-group (`role: "group"`) retains its native Tab and field navigation instead of
-the toolbar's arrow navigation.
+view without a selectable attachment label, such as a recording-time field,
+retains its native Tab and field navigation. It does not create a toolbar or
+an additional ARIA group.
 
 Lexxy keeps the controls aligned after resizing, scrolling, and hiding or
 showing the editor. Controls follow the attachment's clipping ancestors;
