@@ -142,7 +142,10 @@ export class ActionTextAttachmentUploadNode extends ActionTextAttachmentNode {
     return createElement("progress", { value: this.progress ?? 0, max: 100 })
   }
 
-  #setDimensionsFromImage({ width, height }) {
+  // The file's own pixel size, as Trix saves it. The image's `width` and `height`
+  // are its size on screen, which depends on where it sits when it loads: a
+  // narrow column or a gallery slot would be saved as if it were the image's size.
+  #setDimensionsFromImage({ naturalWidth: width, naturalHeight: height }) {
     if (this.#hasDimensions) return
 
     this.patchAndRewriteHistory({ width, height })
