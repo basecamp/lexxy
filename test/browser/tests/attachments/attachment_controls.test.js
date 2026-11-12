@@ -207,6 +207,32 @@ test("a standalone field retains native navigation without an extra group or too
   await expect(position).toBeFocused()
 })
 
+test("fields on a selected attachment retain native caret and Tab navigation", async ({ page, editor }) => {
+  await page.goto("/attachment-controls.html?fields")
+  await page.waitForSelector("lexxy-editor[connected]")
+  await editor.setValue(AUDIO)
+  await page.getByRole("button", { name: "Play Example", exact: true }).click()
+  const position = page.getByRole("textbox", { name: "Position", exact: true })
+  await position.focus()
+  await page.keyboard.press("Home")
+  await page.keyboard.press("ArrowRight")
+  await expect(position).toBeFocused()
+  expect(await position.evaluate(element => element.selectionStart)).toBe(1)
+  await page.keyboard.press("Tab")
+  await expect(page.getByRole("textbox", { name: "Volume", exact: true })).toBeFocused()
+  await page.keyboard.press("Shift+Tab")
+  await expect(position).toBeFocused()
+  await page.keyboard.press("Escape")
+  await expect(editor.content).toBeFocused()
+})
+
+test("two extensions cannot silently claim the same attachment controls", async ({ page }) => {
+  const errors = []
+  page.on("pageerror", error => errors.push(error.message))
+  await page.goto("/attachment-controls.html?duplicate")
+  await expect.poll(() => errors).toContain("Only one attachment controls definition can target test-audio")
+})
+
 test("inline attachment controls keep their anchor position", async ({ page, editor }) => {
   await page.goto("/attachment-controls.html?inline")
   await page.waitForSelector("lexxy-editor[connected]")

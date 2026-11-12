@@ -75,6 +75,14 @@ class AudioExtension extends Extension {
       play.ariaLabel = `Play ${node.caption}`
       play.textContent = "Play"
       element.append(play)
+      if (options.has("fields")) {
+        for (const name of ["Position", "Volume"]) {
+          const field = document.createElement("input")
+          field.ariaLabel = name
+          field.value = "0:00"
+          element.append(field)
+        }
+      }
       const progress = document.createElement("div")
       progress.className = "audio-progress"
       progress.addEventListener("mousedown", event => event.preventDefault())
@@ -114,7 +122,15 @@ class AudioExtension extends Extension {
   }
 }
 
-configure({ global: { extensions: [AudioExtension] } })
+class ExtraAudioControls extends Extension {
+  get attachmentControls() {
+    return [{ node: AudioNode, create: () => ({ element: document.createElement("button") }) }]
+  }
+}
+
+const extensions = [AudioExtension]
+if (options.has("duplicate")) extensions.push(ExtraAudioControls)
+configure({ global: { extensions } })
 
 document.getElementById("toggle-editor").addEventListener("click", () => {
   const editor = document.querySelector("lexxy-editor")

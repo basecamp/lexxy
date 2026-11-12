@@ -11,6 +11,12 @@ export default class AttachmentControls {
     this.#editorElement = editorElement
     this.#editor = editorElement.editor
 
+    const nodes = new Set()
+    for (const { node } of definitions) {
+      if (nodes.has(node)) throw new Error(`Only one attachment controls definition can target ${node.getType()}`)
+      nodes.add(node)
+    }
+
     for (const definition of definitions) {
       this.#listeners.track(this.#editor.registerMutationListener(definition.node, mutations => {
         this.#editor.read(() => {

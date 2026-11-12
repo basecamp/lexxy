@@ -170,7 +170,7 @@ export class AttachmentToolbar extends HTMLElement {
       event.preventDefault()
       event.stopPropagation()
       this.#returnFocusToEditor()
-    } else if (event.key === "Tab" && this.role === "toolbar") {
+    } else if (event.key === "Tab" && this.role === "toolbar" && this.#buttons.includes(event.target)) {
       if (event.shiftKey) {
         event.preventDefault()
         this.#returnFocusToEditor()

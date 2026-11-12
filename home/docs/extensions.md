@@ -117,6 +117,10 @@ For your own node class, register it through your extension's
 `lexicalExtension` as described above, then use that class in `attachmentControls`.
 Declaring it in `attachmentControls` does not register the node itself.
 
+Use one controls definition per node class. Put that attachment's buttons and
+fields in the element returned by its `create` function. Lexxy reports a
+configuration error if two definitions target the same node class.
+
 ### Create and update the controls
 
 Lexxy calls `create({ node, attachmentElement })` with the current node and
