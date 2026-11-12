@@ -322,6 +322,7 @@ export class AttachmentToolbar extends HTMLElement {
   }
 
   #positionControl({ element, anchor }) {
+    element.style.boxSizing = "border-box"
     element.style.position = "absolute"
     const container = element.offsetParent
     // Hidden editors have no containing block until they are displayed again.

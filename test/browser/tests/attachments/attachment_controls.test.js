@@ -50,6 +50,18 @@ test("controls can retain separate playback and progress positions", async ({ pa
   }).toBeLessThanOrEqual(1)
 })
 
+test("placements include a control's padding and borders in its reserved space", async ({ page, editor }) => {
+  await page.addStyleTag({ content: ".audio-controls button { box-sizing: content-box; padding: 8px; border: 3px solid; }" })
+  const play = page.getByRole("button", { name: "Play Example", exact: true })
+  await page.getByRole("button", { name: "Before editor", exact: true }).click()
+  await page.keyboard.press("Tab")
+  await expect.poll(async () => {
+    const anchor = await editor.content.locator(".audio-preview").boundingBox()
+    const box = await play.boundingBox()
+    return Math.max(Math.abs(box.x - anchor.x), Math.abs(box.y - anchor.y), Math.abs(box.width - anchor.width), Math.abs(box.height - anchor.height))
+  }).toBeLessThanOrEqual(1)
+})
+
 test("seeking selects the attachment without moving focus away from the editor", async ({ page, editor }) => {
   await editor.content.locator("p").first().click()
   await page.locator("lexxy-attachment-toolbar .audio-progress").click()
