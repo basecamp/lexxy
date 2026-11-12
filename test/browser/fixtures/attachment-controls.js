@@ -96,10 +96,8 @@ class AudioExtension extends Extension {
           { element: play, anchor: attachmentElement.firstElementChild },
           { element: progress, anchor: attachmentElement.lastElementChild }
         ],
-        label: `Audio controls: ${node.caption}`,
         update({ node }) {
           play.ariaLabel = `${play.textContent} ${node.caption}`
-          this.label = `Audio controls: ${node.caption}`
           if (node.caption === "With mute" && !mute) {
             mute = document.createElement("button")
             mute.type = "button"

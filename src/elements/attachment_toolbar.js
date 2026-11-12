@@ -30,7 +30,6 @@ export class AttachmentToolbar extends HTMLElement {
     this.classList.add("lexxy-floating-controls")
     if (!this.#controls) {
       this.role = "toolbar"
-      this.ariaLabel ||= "Attachment controls"
     }
     this.hidden = !this.#controls
     this.toggleAttribute("data-custom-controls", Boolean(this.#controls))
@@ -56,7 +55,6 @@ export class AttachmentToolbar extends HTMLElement {
   }
 
   refresh() {
-    if (this.#controls && this.#selected) this.ariaLabel = this.#controls.label
     this.#refreshButtons()
     this.#refresh()
   }
@@ -235,7 +233,6 @@ export class AttachmentToolbar extends HTMLElement {
     this.#currentNodeKey = nodeKey
     this.#selected = true
     this.role = "toolbar"
-    if (this.#controls) this.ariaLabel = this.#controls.label
     this.toggleAttribute("data-selected", true)
     this.#buttonGroup.hidden = false
     this.#refresh()
@@ -380,7 +377,6 @@ export class AttachmentToolbar extends HTMLElement {
     this.#buttonGroup.hidden = true
     if (this.#boundNodeKey) {
       this.removeAttribute("role")
-      this.removeAttribute("aria-label")
       this.#refresh()
     } else {
       this.#currentNodeKey = null

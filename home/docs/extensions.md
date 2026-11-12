@@ -63,9 +63,8 @@ after its attachment DOM exists and returns an object with:
   that occupy separate regions, such as a playback button and a progress bar.
   Each positioned control is part of the supplied view. Lexxy positions and
   sizes it over its anchor without changing toolbar ownership.
-- `label`: the accessible name of the toolbar shown when this attachment is selected.
 - `update({ node, attachmentElement })`: an optional callback receiving the
-  current node after it changes. Update the view and its accessible name here.
+  current node after it changes. Update the controls here.
 - `dispose()`: an optional callback to release media, listeners and timers.
 
 The factory may return `null` for nodes that need no custom controls. Lexxy
