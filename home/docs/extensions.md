@@ -78,14 +78,15 @@ Custom controls stay visible when their attachment is unselected. When selected,
 the same external toolbar also contains Lexxy's contextual actions, such as
 Remove. Alt+F10 focuses its first available button; Left/Right and Home/End move
 between buttons; Escape returns to the selected attachment; Tab opens its
-caption when one is available. Buttons stay outside the normal Tab sequence
-when the toolbar loses focus. Fields keep the Tab index set by the extension.
+caption when one is available. Buttons for selectable attachments stay outside
+the normal Tab sequence when the toolbar loses focus. Fields keep the Tab index
+set by the extension.
 These controls also work when Lexical's `editor.setEditable(false)` temporarily
 disables editing in the content area, as in a staged attachment composer. This
 does not disable external attachment actions or the caption editor. A controls
 view without a selectable attachment label, such as a recording-time field,
-retains its native Tab and field navigation. It does not create a toolbar or
-an additional ARIA group.
+retains its fields' and buttons' native Tab stops and field navigation. It does
+not create a toolbar or an additional ARIA group.
 
 Lexxy keeps the controls aligned after resizing, scrolling, and hiding or
 showing the editor. Controls follow the attachment's clipping ancestors;

@@ -779,10 +779,10 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #registerAttachmentToolbar() {
+    this.querySelectorAll(":scope > lexxy-attachment-toolbar").forEach(toolbar => toolbar.remove())
     this.attachmentControls = new AttachmentControls(this, this.extensions.attachmentControls)
     this.#disposables.push(this.attachmentControls)
-    let attachmentToolbar = this.querySelector("lexxy-attachment-toolbar")
-    attachmentToolbar ??= createElement("lexxy-attachment-toolbar")
+    const attachmentToolbar = createElement("lexxy-attachment-toolbar")
     this.append(attachmentToolbar)
     this.#disposables.push(attachmentToolbar)
     this.captionEditor = new CaptionEditor(this)

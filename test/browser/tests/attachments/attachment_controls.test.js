@@ -214,3 +214,53 @@ test("inline attachment controls keep their anchor position", async ({ page, edi
   await play.click()
   await expect(page.getByRole("button", { name: "Pause Example", exact: true })).toBeFocused()
 })
+
+test("buttons on unlabelled attachments keep their native Tab stops", async ({ page, editor }) => {
+  await page.goto("/attachment-controls.html?unlabelled")
+  await page.waitForSelector("lexxy-editor[connected]")
+  await editor.setValue(`<p>Before</p>${AUDIO}<p>After</p>`)
+  await editor.content.locator("p").first().click()
+  await page.keyboard.press("Tab")
+  await expect(page.getByRole("button", { name: "Play Example", exact: true })).toBeFocused()
+  await page.keyboard.press("Enter")
+  const pause = page.getByRole("button", { name: "Pause Example", exact: true })
+  await expect(pause).toBeFocused()
+  await page.keyboard.press("Tab")
+  await expect(page.getByRole("button", { name: "After editor", exact: true })).toBeFocused()
+  await page.keyboard.press("Shift+Tab")
+  await expect(pause).toBeFocused()
+})
+
+test("caret navigation avoids attachment geometry work while edits still reposition controls", async ({ page, editor }) => {
+  await editor.setValue(`<p>Before the attachments</p>${AUDIO.repeat(3)}<p>After</p>`)
+  await editor.content.locator("p").first().click()
+  await page.keyboard.press("Home")
+  await editor.flush()
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+  await editor.content.locator("figure").evaluateAll(figures => {
+    window.attachmentGeometryReads = 0
+    window.restoreAttachmentGeometry = figures.map(figure => {
+      const measure = figure.getBoundingClientRect
+      figure.getBoundingClientRect = function() {
+        window.attachmentGeometryReads++
+        return measure.call(this)
+      }
+      return () => figure.getBoundingClientRect = measure
+    })
+  })
+  await page.keyboard.press("ArrowRight")
+  await page.keyboard.press("ArrowRight")
+  await page.keyboard.press("ArrowLeft")
+  expect(await page.evaluate(() => window.attachmentGeometryReads)).toBe(0)
+  await page.evaluate(() => window.restoreAttachmentGeometry.forEach(restore => restore()))
+
+  const play = page.getByRole("button", { name: "Play Example", exact: true }).first()
+  const before = await play.boundingBox()
+  await page.keyboard.press("Enter")
+  await expect.poll(async () => (await play.boundingBox()).y).toBeGreaterThan(before.y)
+  await expect.poll(async () => {
+    const control = await play.boundingBox()
+    const anchor = await editor.content.locator(".audio-preview").first().boundingBox()
+    return Math.abs(control.y - anchor.y)
+  }).toBeLessThanOrEqual(1)
+})

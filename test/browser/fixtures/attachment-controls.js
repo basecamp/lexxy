@@ -17,7 +17,7 @@ class AudioNode extends ActionTextAttachmentNode {
   }
 
   get label() {
-    if (!options.has("field")) return window.attachmentLabel || super.label
+    if (!options.has("field") && !options.has("unlabelled")) return window.attachmentLabel || super.label
   }
 
   createDOM() {

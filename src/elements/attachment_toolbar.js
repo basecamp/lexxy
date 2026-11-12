@@ -1,6 +1,6 @@
 import { $getNodeByKey, $setSelection, COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 
-import { $createNodeSelectionWith, $singleSelectedNode, registerLabelledDecoratorSelection } from "../helpers/lexical_helper"
+import { $createNodeSelectionWith, $selectedLabelledDecoratorNode, $singleSelectedNode } from "../helpers/lexical_helper"
 import { $isImageGalleryNode } from "../nodes/image_gallery_node"
 import AlternativeTextDialog from "../editor/attachments/alternative_text_dialog"
 import { createElement, isActiveAndVisible } from "../helpers/html_helper"
@@ -113,8 +113,9 @@ export class AttachmentToolbar extends HTMLElement {
 
   #refreshButtons() {
     this.#buttons = Array.from(this.querySelectorAll("button"))
+    const useToolbarNavigation = !this.#controls || this.#editor.read(() => typeof $getNodeByKey(this.#boundNodeKey)?.label === "string")
     for (const button of this.#buttons) {
-      if (button !== document.activeElement) button.tabIndex = -1
+      if ((useToolbarNavigation || this.#buttonGroup.contains(button)) && button !== document.activeElement) button.tabIndex = -1
     }
   }
 
@@ -202,21 +203,25 @@ export class AttachmentToolbar extends HTMLElement {
 
   #monitorSelection() {
     this.#listeners.track(
-      registerLabelledDecoratorSelection(this.#editor, (target) => this.#updateForSelection(target))
+      this.#editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves }) => {
+        this.#updateForSelection(editorState.read($selectedLabelledDecoratorNode), {
+          contentChanged: dirtyElements.size > 0 || dirtyLeaves.size > 0
+        })
+      })
     )
   }
 
-  #updateForSelection(target) {
+  #updateForSelection(target, { contentChanged }) {
     if (this.#boundNodeKey) {
       if (target?.key === this.#boundNodeKey) {
         if (this.#selected) {
-          this.#updatePosition()
+          if (contentChanged) this.#updatePosition()
         } else {
           this.#show(this.#boundNodeKey)
         }
       } else if (this.#selected) {
         this.#hide()
-      } else {
+      } else if (contentChanged) {
         this.#updatePosition()
       }
     } else if (target && !this.#editorElement.attachmentControls.elementFor(target.key)) {
