@@ -22,7 +22,7 @@ export class AttachmentFakeSelection {
           for (const key of dirtyLeaves) {
             const node = $getNodeByKey(key)
             const figure = editor.getElementByKey(key)
-            if (figure && typeof node?.label === "string") this.#prepareContainer(figure, node.label)
+            if (figure && typeof node?.label === "string") this.#prepareContainer(figure)
           }
           this.#update($selectedLabelledDecoratorNode())
         })
@@ -36,13 +36,13 @@ export class AttachmentFakeSelection {
     this.#container = null
   }
 
-  #prepareContainer(figure, label) {
+  #prepareContainer(figure) {
     let container = this.#containers.get(figure)
     if (!container) {
       container = createElement("span", { className: "lexxy-fake-selection", ariaHidden: "true" })
+      container.append(document.createTextNode(""))
       this.#containers.set(figure, container)
     }
-    if (container.textContent !== label) container.textContent = label
     if (container.parentNode !== figure) figure.append(container)
     return container
   }
@@ -51,7 +51,9 @@ export class AttachmentFakeSelection {
     const figure = target && this.#editor.getElementByKey(target.key)
     const previous = this.#container
     if (figure) {
-      this.#container = this.#prepareContainer(figure, target.label || "Attachment")
+      this.#container = this.#prepareContainer(figure)
+      const label = target.label || "Attachment"
+      if (this.#container.firstChild.data !== label) this.#container.firstChild.data = label
       this.#container.ariaHidden = "false"
       this.#parkSelection()
     } else {
@@ -59,6 +61,7 @@ export class AttachmentFakeSelection {
     }
     if (previous && previous !== this.#container) {
       previous.ariaHidden = "true"
+      previous.firstChild.data = ""
     }
   }
 
