@@ -991,6 +991,11 @@
     top: var(--lexxy-anchor-top);
     transform: translate(calc(-100% - 1.5ch), 1.5ch);
 
+    /* Preserve layout while selecting and deselecting attachments. */
+    &[aria-hidden="true"] {
+      visibility: hidden;
+    }
+
     &[hidden] {
       display: none;
     }
