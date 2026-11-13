@@ -44,7 +44,11 @@ function wrapWithAnchor(element, link) {
 
 export function exportTextNodeDOM(editor, textNode) {
   const element = exportFormattedTextDOM(editor, textNode)
-  $preserveSpaces(element, textNode)
+
+  if (element) {
+    $preserveSpaces(element, textNode)
+  }
+
   return { element }
 }
 
