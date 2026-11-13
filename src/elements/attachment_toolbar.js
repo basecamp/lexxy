@@ -131,8 +131,10 @@ export class AttachmentToolbar extends HTMLElement {
 
   #removeSelectedNode() {
     if (this.#hasSelectedNode) {
-      this.#editor.update(() => $getNodeByKey(this.#currentNodeKey)?.remove())
-      this.#editor.focus()
+      const editor = this.#editor
+      editor.update(() => $getNodeByKey(this.#currentNodeKey)?.remove(), {
+        onUpdate: () => editor.focus()
+      })
     }
   }
 

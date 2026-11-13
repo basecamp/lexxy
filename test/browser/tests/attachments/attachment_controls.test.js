@@ -114,6 +114,25 @@ test("selected controls remain reachable when the editor is read-only", async ({
   await expect(page.locator(".lexxy-caption-editor")).toBeFocused()
 })
 
+test("removing a read-only attachment returns focus after the editor becomes editable", async ({ page, editor }) => {
+  await editor.setValue(AUDIO)
+  await selectAttachment(editor.content.locator("figure"))
+  await page.evaluate(() => {
+    const element = document.querySelector("lexxy-editor")
+    element.editor.setEditable(false)
+    element.editor.registerUpdateListener(() => {
+      if (!element.editorContentElement.querySelector("figure")) element.editor.setEditable(true)
+    })
+  })
+  await page.keyboard.press("Alt+F10")
+  await page.keyboard.press("End")
+  await page.keyboard.press("Enter")
+  await expect(editor.content.locator("figure")).toHaveCount(0)
+  await expect(editor.content).toBeFocused()
+  await page.keyboard.type("Keep writing")
+  await expect(editor.content).toHaveText("Keep writing")
+})
+
 test("Tab from a selected attachment still opens its caption in a read-only editor", async ({ page, editor }) => {
   await selectAttachment(editor.content.locator("figure"))
   await page.evaluate(() => document.querySelector("lexxy-editor").editor.setEditable(false))
