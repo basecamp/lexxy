@@ -83,6 +83,25 @@ for (const childType of [ "row", "column" ]) {
   })
 }
 
+test.describe("Tables — column previews with merged cells", () => {
+  test("hovering a column command previews the cells the column has", async ({ page, editor }) => {
+    const errors = []
+    page.on("pageerror", (error) => errors.push(error.message))
+
+    await page.goto("/")
+    await page.waitForSelector("lexxy-editor[connected]")
+    await editor.setValue(`<figure class="lexxy-content__table-wrapper"><table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr><tr><td colspan="2">merged</td></tr><tr><td>3</td><td>4</td></tr></tbody></table></figure>`)
+    await editor.flush()
+
+    await editor.content.locator("td", { hasText: "2" }).click()
+    await tableControls(editor, "column").getByRole("button", { name: "Remove column" }).hover()
+
+    const highlightedCells = editor.content.locator(".lexxy-content__table-cell--highlight")
+    await expect(highlightedCells).toHaveText([ "B", "2", "4" ])
+    expect(errors).toEqual([])
+  })
+})
+
 function tableControls(editor, childType) {
   return editor.locator.locator(`lexxy-table-tools .lexxy-table-control--${childType}`)
 }
