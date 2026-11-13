@@ -28,12 +28,12 @@ test.describe("Selecting content that contains a mention", () => {
     await editor.setValue(`<p>Hello ${MENTION} world</p>`)
     await editor.flush()
 
+    await editor.placeCaretInside("Hello ", 6)
+    await editor.send("ArrowRight", "ArrowRight")
     await dragAcrossParagraph(page, editor)
 
-    const selection = await selectedText(page)
-    expect(selection).toContain("Hello")
-    expect(selection).toContain("world")
-    expect(selection).toContain("Zacharias")
+    const selection = (await selectedText(page)).replace(/\s+/g, " ").trim()
+    expect(selection).toBe("Hello Zacharias world")
   })
 
   test("dragging across plain text still selects it", async ({ page, editor }) => {
