@@ -1,5 +1,6 @@
 import { test } from "../../test_helper.js"
 import { expect } from "@playwright/test"
+import { selectAttachment } from "../../helpers/attachment_helpers.js"
 
 // Turbo clones the DOM one event loop tick after dispatching `turbo:before-cache`,
 // so the snapshot carries whatever the editor has built by then.
@@ -63,4 +64,33 @@ test.describe("Turbo caching without navigating", () => {
     await editor.send("@")
     await expect(page.locator(".lexxy-prompt-menu--visible")).toBeVisible({ timeout: 5_000 })
   })
+})
+
+test("restoring custom attachment controls does not duplicate ordinary attachment actions", async ({ page, editor }) => {
+  await page.goto("/attachment-controls.html")
+  await page.waitForSelector("lexxy-editor[connected]")
+  const html = '<p>Before</p><action-text-attachment sgid="audio" content-type="audio/mpeg" filename="example.mp3" caption="Example"></action-text-attachment><action-text-attachment sgid="file" content-type="application/pdf" filename="example.pdf"></action-text-attachment><p>After</p>'
+  await editor.locator.evaluate((element, value) => {
+    element.setAttribute("value", value)
+    element.value = value
+  }, html)
+  await expect(page.getByRole("button", { name: "Play Example", exact: true })).toBeVisible()
+
+  for (let restore = 0; restore < 2; restore++) {
+    await cacheAndRestoreSnapshot(page)
+    await expect(page.getByRole("button", { name: "Play Example", exact: true })).toBeVisible()
+    await selectAttachment(editor.content.locator("figure").filter({ hasText: "example.pdf" }))
+    const remove = page.getByRole("button", { name: "Remove", exact: true })
+    await expect(remove).toHaveCount(1)
+    await page.keyboard.press("Alt+F10")
+    await expect(remove).toBeFocused()
+    await page.keyboard.press("Escape")
+  }
+
+  await selectAttachment(editor.content.locator("figure").filter({ hasText: "example.pdf" }))
+  await page.keyboard.press("Alt+F10")
+  await page.keyboard.press("Enter")
+  await expect(editor.content.locator("figure").filter({ hasText: "example.pdf" })).toHaveCount(0)
+  await page.getByRole("button", { name: "Play Example", exact: true }).click()
+  await expect(page.getByRole("button", { name: "Pause Example", exact: true })).toBeFocused()
 })

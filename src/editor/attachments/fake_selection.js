@@ -1,5 +1,5 @@
 import { createElement } from "../../helpers/html_helper"
-import { registerLabelledDecoratorSelection } from "../../helpers/lexical_helper"
+import { $selectedLabelledDecoratorNode, registerLabelledDecoratorSelection } from "../../helpers/lexical_helper"
 import { ListenerBin } from "../../helpers/listener_helper"
 
 // Lexical clears the DOM range on NodeSelection, leaving screen readers in focus
@@ -12,7 +12,11 @@ export class AttachmentFakeSelection {
   constructor(editor) {
     this.#editor = editor
     this.#listeners.track(
-      registerLabelledDecoratorSelection(editor, (target) => this.#update(target))
+      registerLabelledDecoratorSelection(editor, (target) => this.#update(target)),
+      editor.registerRootListener((root, previousRoot) => {
+        previousRoot?.removeEventListener("focus", this.#restoreSelection)
+        root?.addEventListener("focus", this.#restoreSelection)
+      })
     )
   }
 
@@ -20,6 +24,11 @@ export class AttachmentFakeSelection {
     this.#listeners.dispose()
     this.#container.remove()
     this.#container = null
+  }
+
+  #restoreSelection = () => {
+    // Reconcile the browser's caret before the update listener parks our range.
+    if (this.#editor.read($selectedLabelledDecoratorNode)) this.#editor.focus()
   }
 
   #update(target) {

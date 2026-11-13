@@ -17,6 +17,7 @@ import { registerMarkdownLeadingTagHandler } from "../editor/markdown/leading_ta
 import theme from "../config/theme"
 import { HorizontalDividerNode } from "../nodes/horizontal_divider_node"
 import CaptionEditor from "../editor/attachments/caption_editor"
+import AttachmentControls from "../editor/attachments/attachment_controls"
 import { UploadRequests } from "../editor/attachments/upload_requests"
 import { CommandDispatcher } from "../editor/command_dispatcher"
 import Selection from "../editor/selection"
@@ -796,8 +797,10 @@ export class LexicalEditorElement extends HTMLElement {
   }
 
   #registerAttachmentToolbar() {
-    let attachmentToolbar = this.querySelector("lexxy-attachment-toolbar")
-    attachmentToolbar ??= createElement("lexxy-attachment-toolbar")
+    this.querySelectorAll(":scope > lexxy-attachment-toolbar").forEach(toolbar => toolbar.remove())
+    this.attachmentControls = new AttachmentControls(this, this.extensions.attachmentControls)
+    this.#disposables.push(this.attachmentControls)
+    const attachmentToolbar = createElement("lexxy-attachment-toolbar")
     this.append(attachmentToolbar)
     this.#disposables.push(attachmentToolbar)
     this.captionEditor = new CaptionEditor(this)
