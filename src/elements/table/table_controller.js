@@ -89,7 +89,7 @@ export class TableController {
     if (!rows) return null
 
     return this.editor.getEditorState().read(() => {
-      return rows.map(row => row.getChildAtIndex(columnIndex))
+      return rows.map(row => row.getChildAtIndex(columnIndex)).filter(cell => cell !== null)
     }) ?? null
   }
 
