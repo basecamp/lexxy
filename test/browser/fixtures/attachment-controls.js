@@ -98,12 +98,16 @@ class AudioExtension extends Extension {
       play.addEventListener("click", togglePlayback)
       window.controlsCreated = (window.controlsCreated || 0) + 1
 
-      return {
-        element,
-        placements: [
+      const placements = []
+      if (!options.has("unplaced")) {
+        placements.push(
           { element: play, anchor: attachmentElement.firstElementChild },
           { element: progress, anchor: attachmentElement.lastElementChild }
-        ],
+        )
+      }
+      return {
+        element,
+        placements,
         update({ node }) {
           play.ariaLabel = `${play.textContent} ${node.caption}`
           if (node.caption === "With mute" && !mute) {

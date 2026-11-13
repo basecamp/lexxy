@@ -198,6 +198,27 @@ test("controls respect the editor scrollport and keyboard focus reveals their at
   await expect.poll(async () => (await play.boundingBox()).y).toBeGreaterThanOrEqual(viewport.y - 1)
 })
 
+test("toolbar shortcuts reveal bottom-aligned controls on an attachment taller than its scrollport", async ({ page, editor }) => {
+  await page.goto("/attachment-controls.html?unplaced")
+  await editor.waitForConnected()
+  await page.addStyleTag({ content: `
+    .lexxy-editor__content { max-height: 150px; overflow: auto; }
+    .attachment { height: 600px; }
+    .audio-controls button { position: absolute; bottom: 0; left: 0; }
+  ` })
+  await editor.setValue(`<p>Before</p>${AUDIO}<p>After</p>`)
+  await selectAttachment(editor.content.locator("figure"))
+  await page.keyboard.press("Alt+F10")
+  const play = page.getByRole("button", { name: "Play Example", exact: true })
+  await expect(play).toBeFocused()
+  await expect.poll(() => play.evaluate(element => {
+    const rect = element.getBoundingClientRect()
+    return document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2) === element
+  })).toBe(true)
+  await page.keyboard.press("Space")
+  await expect(page.getByRole("button", { name: "Pause Example", exact: true })).toBeFocused()
+})
+
 test("a standalone field retains native navigation without an extra group or toolbar", async ({ page, editor }) => {
   await page.goto("/attachment-controls.html?field")
   await page.waitForSelector("lexxy-editor[connected]")

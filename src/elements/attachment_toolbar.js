@@ -364,6 +364,33 @@ export class AttachmentToolbar extends HTMLElement {
       const anchor = placement?.anchor || this.#editor.getElementByKey(this.#boundNodeKey)
       anchor.scrollIntoView({ block: "nearest", inline: "nearest" })
       this.#updatePosition()
+      const figure = this.#editor.getElementByKey(this.#boundNodeKey)
+      for (let ancestor = figure.parentElement; ancestor !== this.#editorElement; ancestor = ancestor.parentElement) {
+        const style = getComputedStyle(ancestor)
+        const bounds = ancestor.getBoundingClientRect()
+        const rect = element.getBoundingClientRect()
+        const top = bounds.top + ancestor.clientTop
+        const left = bounds.left + ancestor.clientLeft
+        if (style.overflowY !== "visible") {
+          ancestor.scrollTop += this.#scrollOffset(rect.top, rect.bottom, top, top + ancestor.clientHeight)
+        }
+        if (style.overflowX !== "visible") {
+          ancestor.scrollLeft += this.#scrollOffset(rect.left, rect.right, left, left + ancestor.clientWidth)
+        }
+        this.#updatePosition()
+      }
+      element.scrollIntoView({ block: "nearest", inline: "nearest" })
+      this.#updatePosition()
+    }
+  }
+
+  #scrollOffset(start, end, visibleStart, visibleEnd) {
+    if (start < visibleStart && end > visibleEnd) {
+      return 0
+    } else if (start < visibleStart) {
+      return start - visibleStart
+    } else {
+      return Math.max(0, end - visibleEnd)
     }
   }
 
