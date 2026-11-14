@@ -1,4 +1,4 @@
-import { $getNodeByKey } from "lexical"
+import { $getNodeByKey, $isDecoratorNode } from "lexical"
 
 import { createElement } from "../../helpers/html_helper"
 import { $selectedLabelledDecoratorNode } from "../../helpers/lexical_helper"
@@ -22,7 +22,7 @@ export class AttachmentFakeSelection {
           for (const key of dirtyLeaves) {
             const node = $getNodeByKey(key)
             const figure = editor.getElementByKey(key)
-            if (figure && typeof node?.label === "string") this.#prepareContainer(figure)
+            if (figure && $isDecoratorNode(node) && node.isKeyboardSelectable() && typeof node.label === "string") this.#prepareContainer(figure)
           }
           this.#update($selectedLabelledDecoratorNode())
         })
