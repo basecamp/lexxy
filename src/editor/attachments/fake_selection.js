@@ -1,5 +1,7 @@
+import { $getNodeByKey, $isDecoratorNode } from "lexical"
+
 import { createElement } from "../../helpers/html_helper"
-import { registerLabelledDecoratorSelection } from "../../helpers/lexical_helper"
+import { $selectedLabelledDecoratorNode } from "../../helpers/lexical_helper"
 import { ListenerBin } from "../../helpers/listener_helper"
 
 // Lexical clears the DOM range on NodeSelection, leaving screen readers in focus
@@ -7,32 +9,59 @@ import { ListenerBin } from "../../helpers/listener_helper"
 export class AttachmentFakeSelection {
   #editor
   #listeners = new ListenerBin()
-  #container = createElement("span", { className: "lexxy-fake-selection" })
+  // Inserting and removing selection elements can invalidate host :has() rules
+  // and flood screen readers with unrelated accessibility tree changes.
+  #containers = new WeakMap()
+  #container = null
 
   constructor(editor) {
     this.#editor = editor
     this.#listeners.track(
-      registerLabelledDecoratorSelection(editor, (target) => this.#update(target))
+      editor.registerUpdateListener(({ editorState, dirtyLeaves }) => {
+        editorState.read(() => {
+          for (const key of dirtyLeaves) {
+            const node = $getNodeByKey(key)
+            const figure = editor.getElementByKey(key)
+            if (figure && $isDecoratorNode(node) && node.isKeyboardSelectable() && typeof node.label === "string") this.#prepareContainer(figure)
+          }
+          this.#update($selectedLabelledDecoratorNode())
+        })
+      })
     )
   }
 
   destroy() {
     this.#listeners.dispose()
-    this.#container.remove()
+    this.#editor.getRootElement()?.querySelectorAll(".lexxy-fake-selection").forEach(container => container.remove())
     this.#container = null
   }
 
+  #prepareContainer(figure) {
+    let container = this.#containers.get(figure)
+    if (!container) {
+      container = createElement("span", { className: "lexxy-fake-selection", ariaHidden: "true" })
+      container.append(document.createTextNode(""))
+      this.#containers.set(figure, container)
+    }
+    if (container.parentNode !== figure) figure.append(container)
+    return container
+  }
+
   #update(target) {
-    if (this.#container) {
-      const figure = target && this.#editor.getElementByKey(target.key)
-      if (figure) {
-        const label = target.label || "Attachment"
-        if (this.#container.textContent !== label) this.#container.textContent = label
-        if (this.#container.parentNode !== figure) figure.append(this.#container)
-        this.#parkSelection()
-      } else {
-        this.#container.remove()
-      }
+    const figure = target && this.#editor.getElementByKey(target.key)
+    const previous = this.#container
+    if (figure) {
+      this.#container = this.#prepareContainer(figure)
+      const label = target.label || "Attachment"
+      if (this.#container.firstChild.data !== label) this.#container.firstChild.data = label
+      this.#container.ariaHidden = "false"
+      this.#parkSelection()
+    } else {
+      this.#container = null
+    }
+    if (previous && previous !== this.#container) {
+      previous.ariaHidden = "true"
+      previous.firstChild.data = ""
     }
   }
 

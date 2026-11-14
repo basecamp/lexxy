@@ -153,11 +153,11 @@ export class CodeLanguagePicker extends HTMLElement {
   }
 
   #show() {
-    this.hidden = false
+    if (this.hidden) this.hidden = false
   }
 
   #hide() {
-    this.hidden = true
+    if (!this.hidden) this.hidden = true
   }
 }
 

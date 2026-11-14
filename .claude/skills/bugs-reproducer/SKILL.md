@@ -437,6 +437,8 @@ These are areas where bugs tend to cluster, based on the architecture:
 
 **Temporary accessibility hints** — Cursor navigation temporarily changes `alt` and `aria-hidden` on attachment content. Teardown must preserve attributes supplied by the host application and undo only the temporary changes. Test both initially visible and initially hidden labels as the caret approaches, selects, and leaves an attachment.
 
+**Native selection events and host styles** — Correct selected text alone does not prove screen reader announcements. Structural edits and repeated attribute writes under host relational selectors can rebuild unrelated accessible text and crowd out selection events. Reproduce with host-like CSS and real arrow keys, check surrounding accessibility-tree identities, and confirm actual speech separately. Also check ordinary text selection across a previously selected attachment for duplicate labels.
+
 **Host and textbox attribute synchronization** — The form-associated `<lexxy-editor>` and its inner contenteditable expose different parts of the control's state. Attributes copied only at initialization can leave assistive technology with stale names, descriptions, or validation states. Test additions and removals after connection, defaults derived from editing modes and form constraints, explicit application overrides, and reconnection. Updating one attribute must not clear temporary ARIA state owned by prompts.
 
 **Toolbar focus after commands** — Clicking a toolbar button with the mouse moves focus to the button. If focus isn't returned to the editor, keyboard shortcuts like Ctrl+Z go to the browser instead of Lexical. The toolbar calls `editor.focus()` after mouse-click commands to prevent this.
