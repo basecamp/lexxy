@@ -25,6 +25,9 @@ export class AttachmentToolbar extends HTMLElement {
     this.classList.add("lexxy-floating-controls")
     this.role = "toolbar"
     this.ariaHidden = "true"
+    if (this.hidden) {
+      this.hidden = false
+    }
 
     if (this.#editor) {
       this.#setUpButtons()
