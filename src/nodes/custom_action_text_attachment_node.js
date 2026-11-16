@@ -87,7 +87,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
     // in extensions/attachments_extension.js — and mXSS-safe mode drops it. That loss
     // is cosmetic: it is a nested attachment's rendering inside this one, not the
     // attribute anything re-imports from.
-    figure.insertAdjacentHTML("beforeend", EditorSanitizer.for(editor).sanitize(this.innerHtml, { safeForXml: true }))
+    figure.insertAdjacentHTML("beforeend", EditorSanitizer.for(editor).sanitizeAttachmentContent(this.innerHtml))
     this.#markImagesAsDecorative(figure)
     this.#tagLabelImage(figure)
     this.#tagLabelMirrors(figure)

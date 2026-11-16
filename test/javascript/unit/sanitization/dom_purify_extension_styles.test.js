@@ -245,6 +245,6 @@ describe("EditorSanitizer — allowed styles are per editor", () => {
   test("the strict mode keeps the editor's style policy", () => {
     const aligned = EditorSanitizer.register(editorAllowing("p"), [], [ TEXT_ALIGN ])
 
-    expect(styleOf(aligned.sanitize(html, { safeForXml: true }))).toBe("text-align: center;")
+    expect(styleOf(aligned.sanitizeAttachmentContent(html))).toBe("text-align: center;")
   })
 })

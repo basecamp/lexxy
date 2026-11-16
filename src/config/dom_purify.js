@@ -248,6 +248,24 @@ export function buildConfig(allowedElements = null, allowedStyles = []) {
   return config
 }
 
+export function buildAttachmentContentConfig(config) {
+  return { ...config, SAFE_FOR_XML: true }
+}
+
+export function withAttributeOptions(config, { allowDataAttributes, allowedAttributes = [] } = {}) {
+  const result = { ...config }
+
+  if (allowDataAttributes !== undefined) result.ALLOW_DATA_ATTR = allowDataAttributes
+
+  if (config.ALLOWED_ATTR) {
+    result.ALLOWED_ATTR = [ ...config.ALLOWED_ATTR, ...allowedAttributes ]
+  } else {
+    result.ADD_ATTR = allowedAttributes
+  }
+
+  return result
+}
+
 function allowlistFor(allowedElements) {
   // Null prototype, so a declared tag can never read through to an
   // Object.prototype key: `tagAttributes["constructor"]` would answer with a
