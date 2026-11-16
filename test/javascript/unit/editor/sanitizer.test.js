@@ -1,6 +1,7 @@
 import { beforeEach, expect, test } from "vitest"
 import DOMPurify from "dompurify"
 import EditorSanitizer from "src/editor/sanitizer"
+import Lexxy from "src/config/lexxy"
 
 // Lexxy must not configure the DOMPurify singleton the host app also imports.
 //
@@ -24,6 +25,7 @@ let editor, sanitizer
 
 beforeEach(() => {
   DOMPurify.clearConfig()
+  Lexxy.configure({ global: { sanitizer: { attachmentContent: { allowDataAttributes: undefined, allowedAttributes: [] } } } })
   editor = editorAllowing()
   sanitizer = EditorSanitizer.register(editor, [ "span", "p", "strong" ])
 })
@@ -117,8 +119,8 @@ test("an editor denying attachment content strips it when another editor allows 
   expect(result).toContain("action-text-attachment")
 })
 
-// The mXSS-safe re-inflation opt-in, which the attachment node passes on
-// createDOM. The strict config is this instance's own, spread rather than
+// The mXSS-safe re-inflation, which the attachment node uses on createDOM.
+// The strict config is this instance's own, spread rather than
 // rebuilt, so everything buildConfig put in it survives the SAFE_FOR_XML flip —
 // rebuilding from a bare buildConfig([]) here would drop the allowlist along
 // with the rest.
@@ -126,17 +128,15 @@ test("safe-XML mode keeps the editor's own allowlist and the rest of its config"
   const allows = editorAllowing()
   EditorSanitizer.register(allows, ALLOWS_CONTENT)
 
-  expect(EditorSanitizer.for(allows).sanitize("<span>a</span>", { safeForXml: true })).toBe("a")
-  expect(EditorSanitizer.for(allows).sanitize(ATTACHMENT, { safeForXml: true })).toContain("action-text-attachment")
+  expect(EditorSanitizer.for(allows).sanitizeAttachmentContent("<span>a</span>")).toBe("a")
+  expect(EditorSanitizer.for(allows).sanitizeAttachmentContent(ATTACHMENT)).toContain("action-text-attachment")
 })
 
-// Every other call site — an editor reading its own value back — passes no
-// options at all, and has to keep sanitizing exactly as it did before the option
-// existed. SAFE_FOR_XML off is what buildConfig sets, and it is what keeps a
+// Every other call site — an editor reading its own value back — has to keep
+// sanitizing exactly as it did before attachment content got its own entry
+// point. SAFE_FOR_XML off is what buildConfig sets, and it is what keeps a
 // serialized `content` attribute intact on the way out.
-test("sanitizing without options leaves mXSS-safe mode off", () => {
-  expect(sanitizer.sanitize(ATTACHMENT)).toBe(EditorSanitizer.for(editor).sanitize(ATTACHMENT, { safeForXml: false }))
-
+test("sanitizing the value leaves mXSS-safe mode off", () => {
   const withContent = EditorSanitizer.register(editorAllowing(), ALLOWS_CONTENT)
 
   // A comment terminator in the value is what SAFE_FOR_XML rejects, so this is
@@ -144,5 +144,23 @@ test("sanitizing without options leaves mXSS-safe mode off", () => {
   const commented = '<action-text-attachment sgid="x" content-type="text/html" content="&lt;!-- BEGIN --&gt;"></action-text-attachment>'
 
   expect(withContent.sanitize(commented)).toContain("content=")
-  expect(withContent.sanitize(commented, { safeForXml: true })).not.toContain("content=")
+  expect(withContent.sanitizeAttachmentContent(commented)).not.toContain("content=")
+})
+
+const BEHAVIORS = '<span data-behavior="load" data-url="https://x.example/a" data-language="ruby">x</span>'
+
+test("a host can deny data attributes on attachment content and name the ones it keeps", () => {
+  expect(sanitizer.sanitizeAttachmentContent(BEHAVIORS)).toBe(BEHAVIORS)
+
+  Lexxy.configure({ global: { sanitizer: { attachmentContent: { allowDataAttributes: false, allowedAttributes: [ "data-language" ] } } } })
+
+  expect(sanitizer.sanitizeAttachmentContent(BEHAVIORS)).toBe('<span data-language="ruby">x</span>')
+  expect(sanitizer.sanitize(BEHAVIORS)).toBe(BEHAVIORS)
+})
+
+test("attachment content options reach editors that registered before they were set, and the one that never did", () => {
+  Lexxy.configure({ global: { sanitizer: { attachmentContent: { allowDataAttributes: false, allowedAttributes: [ "lang" ] } } } })
+
+  expect(sanitizer.sanitizeAttachmentContent('<span lang="en" data-url="/a">x</span>')).toBe('<span lang="en">x</span>')
+  expect(EditorSanitizer.for({}).sanitizeAttachmentContent('<span lang="en" data-url="/a" title="t">x</span>')).toBe('<span lang="en" title="t">x</span>')
 })

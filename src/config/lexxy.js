@@ -4,7 +4,8 @@ const global = new Configuration({
   attachmentTagName: "action-text-attachment",
   attachmentContentTypeNamespace: "actiontext",
   authenticatedUploads: false,
-  extensions: []
+  extensions: [],
+  sanitizer: { attachmentContent: {} }
 })
 
 const presets = new Configuration({

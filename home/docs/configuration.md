@@ -115,6 +115,30 @@ Lexxy.configure({
 })
 ```
 
+### Sanitizer
+
+Contents of `CustomActionTextAttachment`s are sanitized by default with Lexxy's sanitizer configuration. If your app requires stricter settings, the `sanitizer.attachmentContent` key accepts these properties:
+
+- `allowDataAttributes`: whether `data-` attributes are preserved. Set to `false` to strip non-allowlisted `data-` attributes. The current default is `true`.
+- `allowedAttributes`: Additional attributes to preserve in attachment content, above what Lexxy and your extensions allow.
+
+For example, to keep only the `data-language` and strip all other `data-*` attributes.
+
+```js
+Lexxy.configure({
+  global: {
+    sanitizer: {
+      attachmentContent: {
+        allowDataAttributes: false,
+        allowedAttributes: [ "data-language" ]
+      }
+    }
+  }
+})
+```
+
+Lexxy always strips `data-controller`, `data-action`, event handlers, `srcdoc` and `patchsrc`.
+
 ## Content Security Policy
 
 Lexxy sanitizes with its own DOMPurify instance rather than the shared one, so
