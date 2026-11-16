@@ -181,8 +181,10 @@ export class AttachmentToolbar extends HTMLElement {
 
     this.#editor.getEditorState().read(() => {
       const node = $getNodeByKey(nodeKey)
-      const hideAlternativeText = !this.#canEditAlternativeText(node)
-      if (this.#alternativeTextButton.hidden !== hideAlternativeText) this.#alternativeTextButton.hidden = hideAlternativeText
+      const alternativeTextHidden = !this.#canEditAlternativeText(node)
+      if (this.#alternativeTextButton.hidden !== alternativeTextHidden) {
+        this.#alternativeTextButton.hidden = alternativeTextHidden
+      }
       this.dataset.nodeType = node.getType()
       this.dataset.presentation = this.#presentationOf(node, element)
 

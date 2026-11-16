@@ -30,18 +30,26 @@ test("keeps surrounding accessible text stable while selecting a mention", async
   await editor.placeCaretInside("Before ", 7)
   await editor.flush()
 
-  const surroundingText = async () => {
+  const surroundingTextNodeIds = async () => {
     const { nodes } = await accessibility.send("Accessibility.getFullAXTree")
-    return nodes.filter(node => node.role.value === "InlineTextBox" && node.name?.value === "Surrounding content").map(node => node.nodeId)
+    return nodes
+      .filter(node => node.role.value === "InlineTextBox" && node.name?.value === "Surrounding content")
+      .map(node => node.nodeId)
   }
-  const original = await editor.value()
-  const before = await surroundingText()
-  expect(before).toHaveLength(1)
+  const originalValue = await editor.value()
+  const originalNodeIds = await surroundingTextNodeIds()
+  expect(originalNodeIds).toHaveLength(1)
 
-  for (const [ key, selected ] of [ [ "ArrowRight", "Zacharias" ], [ "ArrowRight", "" ], [ "ArrowLeft", "Zacharias" ], [ "ArrowLeft", "" ] ]) {
+  const navigation = [
+    [ "ArrowRight", "Zacharias" ],
+    [ "ArrowRight", "" ],
+    [ "ArrowLeft", "Zacharias" ],
+    [ "ArrowLeft", "" ]
+  ]
+  for (const [ key, selectedText ] of navigation) {
     await editor.send(key)
-    expect(await page.evaluate(() => getSelection().toString())).toBe(selected)
-    expect(await surroundingText()).toEqual(before)
-    expect(await editor.value()).toBe(original)
+    expect(await page.evaluate(() => getSelection().toString())).toBe(selectedText)
+    expect(await surroundingTextNodeIds()).toEqual(originalNodeIds)
+    expect(await editor.value()).toBe(originalValue)
   }
 })
