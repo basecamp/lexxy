@@ -577,15 +577,16 @@ export default class Contents {
   // before and after them move to quotes of their own. A quote holding lines
   // rather than blocks is unquoted whole.
   #isolateSelectedBlocksInQuotes(selection) {
-    return this.#topLevelElementsInSelection(selection).filter($isQuoteNode).map((quote) => {
-      if (quote.getChildren().some(child => child.isInline())) return quote
+    return this.#topLevelElementsInSelection(selection).filter($isQuoteNode).flatMap((quote) => {
+      if (quote.getChildren().some(child => child.isInline())) return [ quote ]
 
       const [ first, last ] = this.#selectedChildrenRange(quote, selection)
+      if (first > last) return []
 
       this.#moveBlocksToNewQuoteAfter(quote, last + 1)
       this.#moveBlocksToNewQuoteAfter(quote, first)
 
-      return first === 0 ? quote : quote.getNextSibling()
+      return [ first === 0 ? quote : quote.getNextSibling() ]
     })
   }
 
@@ -601,14 +602,19 @@ export default class Contents {
   }
 
   // A selection that ends at the very start of a child, or starts at the very
-  // end of one, doesn't take that child in.
+  // end of one, doesn't take that child in. When the selection reaches past
+  // the parent, that can leave the range empty: the selection only touches
+  // the parent's edge.
   #selectedChildrenRange(parent, selection) {
     const [ start, end ] = selection.getStartEndPoints().sort((a, b) => a.isBefore(b) ? -1 : 1)
-    let first = this.#childIndexAt(parent, start) ?? 0
-    let last = this.#childIndexAt(parent, end) ?? parent.getChildrenSize() - 1
+    const startIndex = this.#childIndexAt(parent, start)
+    const endIndex = this.#childIndexAt(parent, end)
+    const reachesPastParent = startIndex === undefined || endIndex === undefined
+    let first = startIndex ?? 0
+    let last = endIndex ?? parent.getChildrenSize() - 1
 
-    if (first < last && $isAtBlockEnd(start, parent.getChildAtIndex(first))) first++
-    if (first < last && $isAtBlockStart(end, parent.getChildAtIndex(last))) last--
+    if (startIndex !== undefined && (first < last || reachesPastParent) && $isAtBlockEnd(start, parent.getChildAtIndex(first))) first++
+    if (endIndex !== undefined && (first < last || reachesPastParent) && $isAtBlockStart(end, parent.getChildAtIndex(last))) last--
 
     return [ first, last ]
   }
