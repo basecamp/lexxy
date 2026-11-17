@@ -129,6 +129,66 @@ test.describe("Block formatting", () => {
     await assertEditorHtml(editor, "<p>Hello everyone</p>")
   })
 
+  test("unquote only the selected paragraph of a quote", async ({ page, editor }) => {
+    await editor.setValue("<blockquote><p>one</p><p>two</p><p>three</p></blockquote>")
+    await editor.select("two")
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      "<blockquote><p>one</p></blockquote><p>two</p><blockquote><p>three</p></blockquote>",
+    )
+  })
+
+  test("unquote the first paragraph of a quote", async ({ page, editor }) => {
+    await editor.setValue("<blockquote><p>one</p><p>two</p></blockquote>")
+    await editor.select("one")
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(editor, "<p>one</p><blockquote><p>two</p></blockquote>")
+  })
+
+  test("unquote does not take the paragraph above when the selection anchors at its end", async ({ page, editor }) => {
+    await editor.setValue("<blockquote><p>one</p><p>two</p></blockquote>")
+    await selectBetweenParagraphs(editor, { paragraph: 0, at: "end" }, { paragraph: 1, at: "end" })
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(editor, "<blockquote><p>one</p></blockquote><p>two</p>")
+  })
+
+  test("unquote does not take the paragraph below when the selection ends at its start", async ({ page, editor }) => {
+    await editor.setValue("<blockquote><p>one</p><p>two</p></blockquote>")
+    await selectBetweenParagraphs(editor, { paragraph: 0, at: "start" }, { paragraph: 1, at: "start" })
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(editor, "<p>one</p><blockquote><p>two</p></blockquote>")
+  })
+
+  test("unquote all of a quote that holds lines rather than paragraphs", async ({ page, editor }) => {
+    await editor.setValue("<blockquote>one<br>two<br>three</blockquote>")
+    await editor.select("two")
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(editor, "<p>one</p><p>two</p><p>three</p>")
+  })
+
+  test("unquote a reply typed below a quoted list", async ({ page, editor }) => {
+    await editor.setValue("<blockquote><p>Intro</p><ol><li>one</li></ol><p>Reply</p></blockquote>")
+    await editor.select("Reply")
+
+    await page.getByRole("button", { name: "Quote" }).click()
+
+    await assertEditorHtml(
+      editor,
+      '<blockquote><p>Intro</p><ol><li value="1">one</li></ol></blockquote><p>Reply</p>',
+    )
+  })
+
   test("multi line quote", async ({ page, editor }) => {
     await editor.setValue("<p>Hello</p><p>Everyone</p>")
     await editor.selectAll()
@@ -843,5 +903,22 @@ async function selectAcross(editor, startText, endText) {
     selection.removeAllRanges()
     selection.addRange(range)
   }, { startText, endText })
+  await editor.flush()
+}
+
+async function selectBetweenParagraphs(editor, start, end) {
+  await editor.content.evaluate((el, { start, end }) => {
+    const paragraphs = el.querySelectorAll("p")
+    const pointAt = ({ paragraph, at }) => {
+      const element = paragraphs[paragraph]
+      return [ element, at === "start" ? 0 : element.childNodes.length ]
+    }
+    const range = document.createRange()
+    range.setStart(...pointAt(start))
+    range.setEnd(...pointAt(end))
+    const selection = window.getSelection()
+    selection.removeAllRanges()
+    selection.addRange(range)
+  }, { start, end })
   await editor.flush()
 }
