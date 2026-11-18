@@ -10,7 +10,7 @@ Lexxy uploads files using Active Storage's Direct Upload protocol and renders pr
 
 See [attachment hotkeys](hotkeys.html#attachments) for editing captions and arranging galleries with the keyboard.
 
-Custom attachments can set `data-caption-label` on their editable `figcaption` to name the caption field, for example `data-caption-label="Audio caption"`. Without a nonempty label, Lexxy uses "Video caption" or "Image caption".
+Custom attachments can set `data-caption-label` on their editable `figcaption` to name the caption field, for example `data-caption-label="Audio caption"`. Lexxy uses "Video caption" or "Image caption" unless a non-blank value is provided.
 
 ## Alternative text
 
