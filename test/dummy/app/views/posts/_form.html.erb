@@ -19,6 +19,13 @@
   </script>
 <% end %>
 
+<% if params.key?("restrict_attachment_content") %>
+  <script type="module">
+    import * as Lexxy from "lexxy"
+    Lexxy.configure({ global: { sanitizer: { attachmentContent: { allowDataAttributes: false, allowedAttributes: [ "data-person-id" ] } } } })
+  </script>
+<% end %>
+
 <% if params.key?("allow_text_align") %>
   <script type="module">
     import * as Lexxy from "lexxy"
