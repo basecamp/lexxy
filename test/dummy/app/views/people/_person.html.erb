@@ -9,5 +9,8 @@
 <%# which is how comments turn up inside real attachment content. A comment is %>
 <%# the value DOMPurify's SAFE_FOR_XML guard rejects, so this is what %>
 <%# attachment_content_round_trip_test needs in order to mean anything. %>
+<%# %>
+<%# The data attributes on the name are one the attachment content policy in %>
+<%# attachment_content_attribute_policy_test denies and one it allows. %>
 <!-- BEGIN app/views/people/_person.html.erb -->
-<bc-mention gid="<%= person.to_gid %>"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="<%= person.name %>" width="20" height="20" class="avatar"><em><%= person.name %></em> (<strong><%= person.initials %></strong>)</bc-mention>
+<bc-mention gid="<%= person.to_gid %>"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="<%= person.name %>" width="20" height="20" class="avatar"><em data-behavior="hovercard" data-person-id="<%= person.id %>"><%= person.name %></em> (<strong><%= person.initials %></strong>)</bc-mention>
