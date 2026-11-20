@@ -17,6 +17,26 @@ import { $encodeCollapsibleSpaces } from "./collapsible_spaces_helper"
 //
 // Spaces that HTML would collapse are exported as non-breaking spaces; see
 // collapsible_spaces_helper.js.
+//
+// Formatted text is exported with white-space: pre-wrap, as Lexical's own export
+// does, so HTML copied to other apps keeps its spacing. The editor's value leaves
+// it out: the sanitizer would drop it anyway, but it parses the HTML first, and on
+// a page whose Content Security Policy forbids inline styles, parsing a style
+// attribute reports a violation. Only this style is left out, so a white-space
+// style an extension's node exports on purpose stays in the value.
+
+let exportsWhiteSpaceStyle = true
+
+export function exportingTextWithoutWhiteSpaceStyle(callback) {
+  const previous = exportsWhiteSpaceStyle
+  exportsWhiteSpaceStyle = false
+
+  try {
+    return callback()
+  } finally {
+    exportsWhiteSpaceStyle = previous
+  }
+}
 
 // A CodeHighlightNode exports like any other text node, plus an <a> wrapper
 // when it carries link state — that's how a link survives inside a code
@@ -50,7 +70,7 @@ export function exportTextNodeDOM(editor, textNode) {
 
 function exportFormattedTextDOM(editor, textNode) {
   const element = textNode.createDOM(editor._config, editor)
-  element.style.whiteSpace = "pre-wrap"
+  if (exportsWhiteSpaceStyle) element.style.whiteSpace = "pre-wrap"
 
   if (textNode.hasFormat("lowercase")) {
     element.style.textTransform = "lowercase"
