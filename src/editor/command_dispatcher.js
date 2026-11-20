@@ -64,6 +64,8 @@ const COMMANDS = [
 export class CommandDispatcher {
   #selectionBeforeDrag = null
   #listeners = new ListenerBin()
+  // eslint-disable-next-line no-unused-private-class-members -- WebKit drops the picker's selection if the input is garbage collected while the picker is open
+  #fileInput = null
 
   static configureFor(editorElement) {
     return new CommandDispatcher(editorElement)
@@ -304,6 +306,8 @@ export class CommandDispatcher {
     if (accept) attributes.accept = accept
 
     const input = createElement("input", attributes)
+
+    this.#fileInput = input
 
     // Append and remove to make testable
     this.editorElement.appendChild(input)
