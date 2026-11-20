@@ -69,7 +69,7 @@ export class CustomActionTextAttachmentNode extends DecoratorNode {
   }
 
   createDOM(_config, editor) {
-    const figure = createElement(CustomActionTextAttachmentNode.TAG_NAME, { "content-type": this.contentType, "data-lexxy-decorator": true, draggable: true })
+    const figure = createElement(CustomActionTextAttachmentNode.TAG_NAME, { sgid: this.sgid, "content-type": this.contentType, "data-lexxy-decorator": true, draggable: true })
     figure.dataset.lexicalNodeKey = this.__key
 
     // Resolved from the editor so this content is sanitized with its own
