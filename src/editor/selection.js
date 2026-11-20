@@ -14,6 +14,7 @@ import { $createNodeSelectionWith, $isListItemStructurallyEmpty, getListType } f
 import { $isLinkNode, LinkNode } from "@lexical/link"
 import { $isHeadingNode, $isQuoteNode, QuoteNode } from "@lexical/rich-text"
 import { $isActionTextAttachmentNode, $isLinkableAttachmentNode } from "../nodes/action_text_attachment_node"
+import { $isCustomActionTextAttachmentNode } from "../nodes/custom_action_text_attachment_node"
 import { ListenerBin, handlingDefault, registerEventListener } from "../helpers/listener_helper"
 
 // The tag editor.focus() adds to its update. Lexical types it, but doesn't export it.
@@ -693,6 +694,12 @@ export default class Selection {
     if (!$isDecoratorNode(node)) return false
 
     if (this.#collapseListItemToParagraph(node)) return true
+
+    // Inline custom attachments, such as mentions, delete like a character of
+    // text: Lexical removes them and keeps the caret. Selecting them first
+    // would take the caret away, and Android dismisses the on-screen keyboard
+    // when there is no caret.
+    if ($isCustomActionTextAttachmentNode(node) && node.isInline()) return false
 
     this.#removeEmptyElementAnchorNode()
 
