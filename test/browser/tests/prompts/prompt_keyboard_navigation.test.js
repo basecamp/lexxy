@@ -13,14 +13,16 @@ test.describe("Prompt keyboard navigation", () => {
     await expect(popover).toBeVisible()
 
     const items = popover.locator(".lexxy-prompt-menu__item")
-    await expect(items.first()).toHaveAttribute("aria-selected")
+    await expect(items.first()).toHaveAttribute("aria-selected", "true")
 
     await editor.send("ArrowUp")
-    await expect(items.last()).toHaveAttribute("aria-selected")
+    await expect(items.last()).toHaveAttribute("aria-selected", "true")
+    await expect(items.first()).not.toHaveAttribute("aria-selected")
     await expect(popover.locator("[aria-selected]")).toHaveCount(1)
 
     await editor.send("ArrowDown")
-    await expect(items.first()).toHaveAttribute("aria-selected")
+    await expect(items.first()).toHaveAttribute("aria-selected", "true")
+    await expect(items.last()).not.toHaveAttribute("aria-selected")
     await expect(popover.locator("[aria-selected]")).toHaveCount(1)
   })
 

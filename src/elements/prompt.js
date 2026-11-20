@@ -283,7 +283,7 @@ export class LexicalPromptElement extends HTMLElement {
 
   #selectOption(listItem, { scrollIntoView = false } = {}) {
     this.#clearListItemSelection()
-    listItem.toggleAttribute("aria-selected", true)
+    listItem.setAttribute("aria-selected", "true")
     if (scrollIntoView) {
       listItem.scrollIntoView({ block: "nearest", container: "nearest", behavior: "smooth" })
     }
@@ -294,7 +294,7 @@ export class LexicalPromptElement extends HTMLElement {
   }
 
   #clearListItemSelection() {
-    this.#listItemElements.forEach((item) => { item.toggleAttribute("aria-selected", false) })
+    this.#listItemElements.forEach((item) => { item.removeAttribute("aria-selected") })
   }
 
   #clearSelection() {
