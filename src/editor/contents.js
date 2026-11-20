@@ -149,7 +149,7 @@ export default class Contents {
     const allQuoted = topLevelElements.length > 0 && topLevelElements.every($isQuoteNode)
 
     if (allQuoted) {
-      topLevelElements.forEach(node => this.#unwrap(node))
+      this.#isolateSelectedBlocksInQuotes(selection).forEach(node => this.#unwrap(node))
     } else {
       topLevelElements.filter($isQuoteNode).forEach(node => this.#unwrap(node))
 
@@ -573,27 +573,64 @@ export default class Contents {
     return runs.filter((run) => run.size > 0).map((run) => Array.from(run))
   }
 
+  // Unquoting part of a quote unquotes only the selected blocks: the blocks
+  // before and after them move to quotes of their own. A quote holding lines
+  // rather than blocks is unquoted whole.
+  #isolateSelectedBlocksInQuotes(selection) {
+    return this.#topLevelElementsInSelection(selection).filter($isQuoteNode).flatMap((quote) => {
+      if (quote.getChildren().some(child => child.isInline())) return [ quote ]
+
+      const [ first, last ] = this.#selectedChildrenRange(quote, selection)
+      if (first > last) return []
+
+      this.#moveBlocksToNewQuoteAfter(quote, last + 1)
+      this.#moveBlocksToNewQuoteAfter(quote, first)
+
+      return [ first === 0 ? quote : quote.getNextSibling() ]
+    })
+  }
+
   // Quoting part of a list quotes only the selected items: the items before and
   // after them move to lists of their own, numbered where they were.
   #splitListsAroundSelectedItems(selection) {
-    const [ start, end ] = selection.getStartEndPoints().sort((a, b) => a.isBefore(b) ? -1 : 1)
-
     for (const list of this.#topLevelElementsInSelection(selection).filter($isListNode)) {
-      const lastIndex = list.getChildrenSize() - 1
-      let first = this.#listItemIndexAt(list, start) ?? 0
-      let last = this.#listItemIndexAt(list, end) ?? lastIndex
-
-      if (first < last && $isAtBlockEnd(start, list.getChildAtIndex(first))) first++
-      if (first < last && $isAtBlockStart(end, list.getChildAtIndex(last))) last--
+      const [ first, last ] = this.#selectedChildrenRange(list, selection)
 
       this.#moveListItemsToNewListAfter(list, last + 1)
       this.#moveListItemsToNewListAfter(list, first)
     }
   }
 
-  #listItemIndexAt(list, point) {
-    const item = $findMatchingParent(point.getNode(), (node) => node.getParent()?.is(list))
-    return item?.getIndexWithinParent()
+  // A selection that ends at the very start of a child, or starts at the very
+  // end of one, doesn't take that child in. When the selection reaches past
+  // the parent, that can leave the range empty: the selection only touches
+  // the parent's edge.
+  #selectedChildrenRange(parent, selection) {
+    const [ start, end ] = selection.getStartEndPoints().sort((a, b) => a.isBefore(b) ? -1 : 1)
+    const startIndex = this.#childIndexAt(parent, start)
+    const endIndex = this.#childIndexAt(parent, end)
+    const reachesPastParent = startIndex === undefined || endIndex === undefined
+    let first = startIndex ?? 0
+    let last = endIndex ?? parent.getChildrenSize() - 1
+
+    if (startIndex !== undefined && (first < last || reachesPastParent) && $isAtBlockEnd(start, parent.getChildAtIndex(first))) first++
+    if (endIndex !== undefined && (first < last || reachesPastParent) && $isAtBlockStart(end, parent.getChildAtIndex(last))) last--
+
+    return [ first, last ]
+  }
+
+  #childIndexAt(parent, point) {
+    const child = $findMatchingParent(point.getNode(), (node) => node.getParent()?.is(parent))
+    return child?.getIndexWithinParent()
+  }
+
+  #moveBlocksToNewQuoteAfter(quote, index) {
+    const blocks = quote.getChildren().slice(index)
+    if (index === 0 || blocks.length === 0) return
+
+    const newQuote = $createQuoteNode()
+    quote.insertAfter(newQuote)
+    newQuote.append(...blocks)
   }
 
   #moveListItemsToNewListAfter(list, index) {
