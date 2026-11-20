@@ -39,6 +39,10 @@ export default class LexxyExtension {
   initializeToolbar(_lexxyToolbar) {
   }
 
+  get attachmentControls() {
+    return []
+  }
+
   setEditorValidity(flags, message) {
     this.editorElement.setElementValidity(this, flags, message)
   }

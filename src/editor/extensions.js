@@ -12,6 +12,10 @@ export default class Extensions {
     return this.enabledExtensions.map(ext => ext.lexicalExtension).filter(Boolean)
   }
 
+  get attachmentControls() {
+    return this.enabledExtensions.flatMap(extension => extension.attachmentControls)
+  }
+
   initializeToolbars() {
     const toolbar = this.#lexxyToolbar
     if (!toolbar) return

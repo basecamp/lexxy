@@ -37,6 +37,179 @@ Should you need to extend any of Lexxy's nodes, they are exported at the top-lev
 import { ActionTextAttachmentNode } from "@37signals/lexxy"
 ```
 
+## Attachment controls
+
+Use `attachmentControls` to add buttons or fields to attachments. For example,
+an audio attachment could have Play and Pause buttons, or a recording could
+have a field showing the elapsed time.
+
+The controls appear over the attachment, but Lexxy places their HTML outside
+the editable text. This lets a button work as a button without becoming part
+of the text being edited.
+
+There are three parts to this:
+
+- The **attachment node** defines the attachment's content and appearance in
+  the document, including what gets saved.
+- Your **extension** creates the buttons or fields and defines what they do.
+- **Lexxy** adds and removes those controls, keeps them aligned with the
+  attachment, and provides keyboard navigation alongside actions such as Remove.
+
+### Add a button to existing attachments
+
+This example adds a “Show file name” button to each attachment. Pressing it
+opens a browser alert with the file name. It uses `ActionTextAttachmentNode`,
+which Lexxy already registers, so it does not need a custom node class.
+
+Load this code as part of your editor setup, before creating editors:
+
+```js
+import { ActionTextAttachmentNode, configure, Extension } from "@37signals/lexxy"
+
+class FileNameControls extends Extension {
+  get attachmentControls() {
+    return [ {
+      node: ActionTextAttachmentNode,
+      create({ node }) {
+        let fileName = node.fileName
+        const button = document.createElement("button")
+        button.type = "button"
+        button.className = "attachment-file-name-button"
+        button.textContent = "Show file name"
+        button.addEventListener("click", () => window.alert(fileName))
+
+        return {
+          element: button,
+          update({ node }) {
+            fileName = node.fileName
+          }
+        }
+      }
+    } ]
+  }
+}
+
+configure({ global: { extensions: [ FileNameControls ] } })
+```
+
+Add the button's styles to your application's stylesheet:
+
+```css
+.attachment-file-name-button {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  pointer-events: auto;
+}
+```
+
+Lexxy provides a container covering the attachment. Here, the CSS places the
+button at its bottom-left corner. Set `pointer-events: auto` on interactive
+controls: the surrounding container lets pointer clicks pass through to the
+attachment underneath.
+
+In the example, `node: ActionTextAttachmentNode` tells Lexxy **which node class**
+the controls apply to. The `node` passed to `create` is **one attachment** of
+that class. Lexxy calls `create` separately for each attachment, once its HTML
+exists. Return `null` if a particular attachment does not need controls.
+
+For your own node class, register it through your extension's
+`lexicalExtension` as described above, then use that class in `attachmentControls`.
+Declaring it in `attachmentControls` does not register the node itself.
+
+Use one controls definition per node class. Put that attachment's buttons and
+fields in the element returned by its `create` function. Lexxy reports a
+configuration error if two definitions target the same node class.
+
+### Create and update the controls
+
+Lexxy calls `create({ node, attachmentElement })` with the current node and
+the HTML element that renders that attachment inside the editor. Return an
+object with these properties:
+
+| Property | Purpose |
+| --- | --- |
+| `element` | Required. The HTML element containing your controls. It can also be a single button or field, as in the example. |
+| `update({ node, attachmentElement })` | Optional. Refresh the controls when the attachment changes, for example when its caption is edited. |
+| `dispose()` | Optional. Stop playback, clear timers, or remove listeners attached to other elements when Lexxy removes the controls. |
+| `placements` | Optional. Position and size controls to match particular elements inside the attachment. See below. |
+
+Lexxy can replace a node instance when it is edited. Event handlers should
+therefore use values refreshed by `update`, rather than keep using the node
+originally passed to `create`. The example copies the file name into a variable
+and updates that variable when the attachment changes.
+
+Lexxy removes the controls when the attachment is deleted or its HTML is
+replaced, and calls `dispose` if provided. Undo creates the controls again.
+Disconnecting the editor also cleans them up. The controls themselves are not
+included in the editor's saved content.
+
+### Align controls with specific parts of an attachment
+
+CSS is enough when all your controls can share the attachment's overall area,
+as in the example above. Use `placements` when a control needs to match the
+position and size of a specific part of the attachment.
+
+For example, a custom audio node could render an empty space for its Play button:
+
+```html
+<figure>
+  <span data-play-button-space style="display: block; width: 32px; height: 32px"></span>
+  <figcaption>Voice message</figcaption>
+</figure>
+```
+
+In that node's controls factory, create your Play button and include this pair
+in the returned object:
+
+```js
+placements: [ {
+  element: playButton,
+  anchor: attachmentElement.querySelector("[data-play-button-space]")
+} ]
+```
+
+Here, `playButton` is the button your factory created. `anchor` is the empty
+span rendered by the node. Lexxy makes the button occupy the same rectangle
+as that span, while keeping the button outside the editable text. The span
+must reserve enough space for the button in the attachment's layout.
+
+Each `element` in `placements` must be the returned `element` or one of its
+children. Each `anchor` must exist inside `attachmentElement`. You can provide
+more than one pair, for example one for a Play button and another for a
+progress bar. Lexxy updates their positions as the editor scrolls or resizes,
+and clips them to the same scrolling area as the attachment.
+
+### Keyboard navigation and styling
+
+For selectable attachments, your buttons join Lexxy's existing attachment
+toolbar:
+
+- Select the attachment, then press **Alt+F10** to focus the first available button.
+- Use **Left/Right**, **Home**, and **End** to move between buttons, including Remove.
+- Press **Escape** to return to the selected attachment.
+- Press **Tab** to edit the caption, when the attachment has an editable caption.
+
+Lexxy manages the buttons' Tab order so users do not have to Tab through every
+attachment's buttons while moving through the editor. Fields retain the Tab
+order you give them.
+
+Custom attachment nodes use their existing `label` getter to support selection
+and these keyboard commands. A node without a selection label keeps its
+controls' normal Tab stops and native keyboard behavior. For example, a field
+showing the recording time can be reached with Tab without making the recording
+a selectable attachment. This node label is separate from the accessible names
+you give individual buttons or fields.
+
+Style your controls in your application. They inherit the editor's font and
+text color; Lexxy's built-in button styles apply to its own actions. Give each
+button or field an accessible name, such as visible button text or `aria-label`.
+
+If you need to find the controls later, call
+`editorElement.attachmentControls.elementFor(nodeKey)`, where `nodeKey` is the
+attachment's `node.getKey()`. It returns the element supplied by your factory,
+or `null` when that attachment has no controls.
+
 ## Allowing additional HTML elements
 
 Lexxy sanitizes HTML when loading and pasting content, stripping any element it doesn't recognize. If your extension introduces new elements, declare them with an `allowedElements` getter so they survive sanitization. Each entry is either a tag name, or an object pairing a `tag` with the extra `attributes` to preserve on it:

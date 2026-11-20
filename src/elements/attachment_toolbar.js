@@ -1,6 +1,6 @@
-import { $getNodeByKey, $setSelection, COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND } from "lexical"
+import { $getNodeByKey, $setSelection, COMMAND_PRIORITY_HIGH, KEY_DOWN_COMMAND, SKIP_DOM_SELECTION_TAG } from "lexical"
 
-import { $createNodeSelectionWith, registerLabelledDecoratorSelection } from "../helpers/lexical_helper"
+import { $createNodeSelectionWith, $selectedLabelledDecoratorNode, $singleSelectedNode } from "../helpers/lexical_helper"
 import { $isImageGalleryNode } from "../nodes/image_gallery_node"
 import AlternativeTextDialog from "../editor/attachments/alternative_text_dialog"
 import { createElement, isActiveAndVisible } from "../helpers/html_helper"
@@ -17,21 +17,46 @@ export class AttachmentToolbar extends HTMLElement {
   #alternativeTextButton
   #alternativeTextDialog
   #currentNodeKey = null
+  #boundNodeKey
+  #controls
+  #controlsContainer
+  #buttonGroup
+  #selected = false
   #reflowObserver = new ResizeObserver(() => this.#updatePosition())
   #presentationObserver = new MutationObserver(() => this.#refresh())
   #observedElement = null
 
   connectedCallback() {
     this.classList.add("lexxy-floating-controls")
-    this.role = "toolbar"
-    this.hidden = true
+    if (!this.#controls) {
+      this.role = "toolbar"
+    }
+    this.hidden = !this.#controls
+    this.toggleAttribute("data-custom-controls", Boolean(this.#controls))
 
     if (this.#editor) {
       this.#setUpButtons()
       this.#monitorSelection()
       this.#followScrolling()
       this.#registerKeyboardShortcut()
+      if (this.#controls) {
+        this.refresh()
+        this.#reflowObserver.observe(this.#editorElement)
+        this.#reflowObserver.observe(this.#editor.getElementByKey(this.#boundNodeKey))
+        for (const { anchor } of this.#controls.placements || []) this.#reflowObserver.observe(anchor)
+      }
     }
+  }
+
+  bind({ nodeKey, controls }) {
+    this.#boundNodeKey = nodeKey
+    this.#currentNodeKey = nodeKey
+    this.#controls = controls
+  }
+
+  refresh() {
+    this.#refreshButtons()
+    this.#refresh()
   }
 
   disconnectedCallback() {
@@ -43,6 +68,8 @@ export class AttachmentToolbar extends HTMLElement {
     this.#reflowObserver.disconnect()
     this.#presentationObserver.disconnect()
     this.#alternativeTextDialog?.dispose()
+    this.#controls?.dispose?.()
+    this.#controls = null
   }
 
   get #editor() {
@@ -56,17 +83,38 @@ export class AttachmentToolbar extends HTMLElement {
   #setUpButtons() {
     this.innerHTML = ""
 
+    if (this.#controls) {
+      this.#controlsContainer = createElement("div", { className: "lexxy-attachment-controls" })
+      this.#controlsContainer.append(this.#controls.element)
+      this.append(this.#controlsContainer)
+    }
+
     const container = createElement("div", { className: "lexxy-floating-controls__group" })
+    this.#buttonGroup = container
+    container.hidden = Boolean(this.#controls)
     container.appendChild(this.#createAlternativeTextButton())
     container.appendChild(this.#createRemoveButton())
     this.#alternativeTextDialog = new AlternativeTextDialog(this.#editorElement)
     this.appendChild(container)
 
-    this.#buttons = Array.from(this.querySelectorAll("button"))
+    this.#refreshButtons()
     this.#listeners.track(
       registerEventListener(this, "keydown", this.#navigateOrExit),
-      registerEventListener(this, "focusout", this.#resetTabIndexOnExit)
+      registerEventListener(this, "click", () => this.#selectBoundNode()),
+      registerEventListener(this, "focusout", this.#resetTabIndexOnExit),
+      registerEventListener(this, "focusin", event => {
+        this.#revealControl(event.target)
+        this.#selectBoundNode()
+      })
     )
+  }
+
+  #refreshButtons() {
+    this.#buttons = Array.from(this.querySelectorAll("button"))
+    const useToolbarNavigation = !this.#controls || this.#editor.read(() => typeof $getNodeByKey(this.#boundNodeKey)?.label === "string")
+    for (const button of this.#buttons) {
+      if ((useToolbarNavigation || this.#buttonGroup.contains(button)) && button !== document.activeElement) button.tabIndex = -1
+    }
   }
 
   #createRemoveButton() {
@@ -83,13 +131,24 @@ export class AttachmentToolbar extends HTMLElement {
 
   #removeSelectedNode() {
     if (this.#hasSelectedNode) {
-      this.#editor.update(() => $getNodeByKey(this.#currentNodeKey)?.remove())
-      this.#editor.focus()
+      const editor = this.#editor
+      editor.update(() => $getNodeByKey(this.#currentNodeKey)?.remove(), {
+        onUpdate: () => editor.focus()
+      })
     }
   }
 
   get #hasSelectedNode() {
-    return this.#currentNodeKey !== null
+    return this.#selected
+  }
+
+  #selectBoundNode() {
+    if (this.#boundNodeKey && !this.#selected) {
+      this.#editor.update(() => {
+        const node = $getNodeByKey(this.#boundNodeKey)
+        if (typeof node?.label === "string" && !$singleSelectedNode()?.is(node)) $setSelection($createNodeSelectionWith(node))
+      }, { tag: SKIP_DOM_SELECTION_TAG })
+    }
   }
 
   #createAlternativeTextButton() {
@@ -113,7 +172,14 @@ export class AttachmentToolbar extends HTMLElement {
       event.preventDefault()
       event.stopPropagation()
       this.#returnFocusToEditor()
-    } else {
+    } else if (event.key === "Tab" && this.role === "toolbar" && this.#buttons.includes(event.target)) {
+      if (event.shiftKey) {
+        event.preventDefault()
+        this.#returnFocusToEditor()
+      } else if (this.#editorElement.captionEditor.open(this.#currentNodeKey)) {
+        event.preventDefault()
+      }
+    } else if (this.role === "toolbar") {
       handleRollingTabIndex(this.#buttons, event)
     }
   }
@@ -131,18 +197,34 @@ export class AttachmentToolbar extends HTMLElement {
 
   #resetTabIndexOnExit = (event) => {
     if (!this.contains(event.relatedTarget)) {
-      this.#buttons.forEach(button => button.tabIndex = -1)
+      this.#refreshButtons()
     }
   }
 
   #monitorSelection() {
     this.#listeners.track(
-      registerLabelledDecoratorSelection(this.#editor, (target) => this.#updateForSelection(target))
+      this.#editor.registerUpdateListener(({ editorState, dirtyElements, dirtyLeaves }) => {
+        this.#updateForSelection(editorState.read($selectedLabelledDecoratorNode), {
+          contentChanged: dirtyElements.size > 0 || dirtyLeaves.size > 0
+        })
+      })
     )
   }
 
-  #updateForSelection(target) {
-    if (target) {
+  #updateForSelection(target, { contentChanged }) {
+    if (this.#boundNodeKey) {
+      if (target?.key === this.#boundNodeKey) {
+        if (this.#selected) {
+          if (contentChanged) this.#updatePosition()
+        } else {
+          this.#show(this.#boundNodeKey)
+        }
+      } else if (this.#selected) {
+        this.#hide()
+      } else if (contentChanged) {
+        this.#updatePosition()
+      }
+    } else if (target && !this.#editorElement.attachmentControls.elementFor(target.key)) {
       this.#show(target.key)
     } else {
       this.#hide()
@@ -151,13 +233,17 @@ export class AttachmentToolbar extends HTMLElement {
 
   #show(nodeKey) {
     this.#currentNodeKey = nodeKey
+    this.#selected = true
+    this.role = "toolbar"
+    this.toggleAttribute("data-selected", true)
+    this.#buttonGroup.hidden = false
     this.#refresh()
     this.hidden = false
     this.#reflowObserver.observe(this.#editorElement)
   }
 
   #refresh() {
-    if (this.#hasSelectedNode) {
+    if (this.#currentNodeKey) {
       this.#watchPresentation(this.#currentNodeKey)
       this.#describeNode(this.#currentNodeKey)
       this.#updatePosition()
@@ -226,7 +312,85 @@ export class AttachmentToolbar extends HTMLElement {
       this.style.setProperty("--lexxy-anchor-left", `${rect.left - editorRect.left - borderLeft}px`)
       this.style.setProperty("--lexxy-anchor-width", `${rect.width}px`)
       this.style.setProperty("--lexxy-anchor-height", `${rect.height}px`)
+      if (this.#controls) {
+        const anchorStyle = getComputedStyle(figureElement)
+        this.#controlsContainer.style.overflow = anchorStyle.overflow
+        this.#controlsContainer.style.borderRadius = anchorStyle.borderRadius
+        for (const placement of this.#controls.placements || []) this.#positionControl(placement)
+        this.#clipToScrollport(figureElement)
+      }
       this.#flipWhenOverflowing(editorRect)
+    }
+  }
+
+  #positionControl({ element, anchor }) {
+    element.style.boxSizing = "border-box"
+    element.style.position = "absolute"
+    const container = element.offsetParent
+    // Hidden editors have no containing block until they are displayed again.
+    if (!container) return
+    const containerRect = container.getBoundingClientRect()
+    const rect = anchor.getBoundingClientRect()
+    element.style.left = `${rect.left - containerRect.left - container.clientLeft + container.scrollLeft}px`
+    element.style.top = `${rect.top - containerRect.top - container.clientTop + container.scrollTop}px`
+    element.style.width = `${rect.width}px`
+    element.style.height = `${rect.height}px`
+  }
+
+  #clipToScrollport(figureElement) {
+    const rect = this.getBoundingClientRect()
+    const clip = { top: 0, right: 0, bottom: 0, left: 0 }
+
+    for (let ancestor = figureElement.parentElement; ancestor !== this.#editorElement; ancestor = ancestor.parentElement) {
+      const style = getComputedStyle(ancestor)
+      const bounds = ancestor.getBoundingClientRect()
+      if (style.overflowY !== "visible") {
+        clip.top = Math.max(clip.top, bounds.top + ancestor.clientTop - rect.top)
+        clip.bottom = Math.max(clip.bottom, rect.bottom - bounds.top - ancestor.clientTop - ancestor.clientHeight)
+      }
+      if (style.overflowX !== "visible") {
+        clip.left = Math.max(clip.left, bounds.left + ancestor.clientLeft - rect.left)
+        clip.right = Math.max(clip.right, rect.right - bounds.left - ancestor.clientLeft - ancestor.clientWidth)
+      }
+    }
+
+    this.style.clipPath = Object.values(clip).some(value => value > 0)
+      ? `inset(${clip.top}px ${clip.right}px ${clip.bottom}px ${clip.left}px)` : "none"
+  }
+
+  #revealControl(element) {
+    if (this.#controls) {
+      const placement = this.#controls.placements?.find(placement => placement.element.contains(element))
+      const anchor = placement?.anchor || this.#editor.getElementByKey(this.#boundNodeKey)
+      anchor.scrollIntoView({ block: "nearest", inline: "nearest" })
+      this.#updatePosition()
+      const figure = this.#editor.getElementByKey(this.#boundNodeKey)
+      for (let ancestor = figure.parentElement; ancestor !== this.#editorElement; ancestor = ancestor.parentElement) {
+        const style = getComputedStyle(ancestor)
+        const bounds = ancestor.getBoundingClientRect()
+        const rect = element.getBoundingClientRect()
+        const top = bounds.top + ancestor.clientTop
+        const left = bounds.left + ancestor.clientLeft
+        if (style.overflowY !== "visible") {
+          ancestor.scrollTop += this.#scrollOffset(rect.top, rect.bottom, top, top + ancestor.clientHeight)
+        }
+        if (style.overflowX !== "visible") {
+          ancestor.scrollLeft += this.#scrollOffset(rect.left, rect.right, left, left + ancestor.clientWidth)
+        }
+        this.#updatePosition()
+      }
+      element.scrollIntoView({ block: "nearest", inline: "nearest" })
+      this.#updatePosition()
+    }
+  }
+
+  #scrollOffset(start, end, visibleStart, visibleEnd) {
+    if (start < visibleStart && end > visibleEnd) {
+      return 0
+    } else if (start < visibleStart) {
+      return start - visibleStart
+    } else {
+      return Math.max(0, end - visibleEnd)
     }
   }
 
@@ -238,7 +402,13 @@ export class AttachmentToolbar extends HTMLElement {
   }
 
   #hide() {
-    if (this.#hasSelectedNode) {
+    this.#selected = false
+    this.toggleAttribute("data-selected", false)
+    this.#buttonGroup.hidden = true
+    if (this.#boundNodeKey) {
+      this.removeAttribute("role")
+      this.#refresh()
+    } else {
       this.#currentNodeKey = null
       this.hidden = true
       this.#reflowObserver.disconnect()
@@ -257,13 +427,25 @@ export class AttachmentToolbar extends HTMLElement {
       KEY_DOWN_COMMAND,
       this.#focusToolbarOnAltF10,
       COMMAND_PRIORITY_HIGH
-    ))
+    ), registerEventListener(this.#editorElement, "keydown", event => {
+      if (!this.#editor.isEditable() && event.target === this.#editor.getRootElement()) {
+        if (this.#focusToolbarOnAltF10(event)) {
+          event.stopPropagation()
+        } else if (this.#hasSelectedNode && event.key === "Tab" && !event.shiftKey && this.#editorElement.captionEditor.open(this.#currentNodeKey)) {
+          event.preventDefault()
+        }
+      }
+    }))
   }
 
   #focusToolbarOnAltF10 = (event) => {
     if (this.#hasSelectedNode && event.altKey && event.key === "F10") {
       event.preventDefault()
-      this.#buttons.find(isActiveAndVisible)?.focus()
+      const button = this.#buttons.find(isActiveAndVisible)
+      if (button) {
+        this.#revealControl(button)
+        button.focus({ preventScroll: true })
+      }
       return true
     } else {
       return false
