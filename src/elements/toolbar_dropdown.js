@@ -1,6 +1,6 @@
 import { nextFrame } from "../helpers/timing_helper"
 import { ListenerBin, registerEventListener } from "../helpers/listener_helper"
-import { handleRollingTabIndex, isKeyboardActivation, trapFocusAtTabBoundary } from "../helpers/accessibility_helper"
+import { focusWithoutNeedlessScroll, handleRollingTabIndex, isKeyboardActivation, trapFocusAtTabBoundary } from "../helpers/accessibility_helper"
 
 export class ToolbarDropdown extends HTMLElement {
   #listeners = new ListenerBin()
@@ -102,7 +102,7 @@ export class ToolbarDropdown extends HTMLElement {
     if (event.key === "Escape" && this.isOpen) {
       event.stopPropagation()
       this.close({ focusEditor: !this.#shouldReturnFocusToTrigger })
-      if (this.#shouldReturnFocusToTrigger) this.trigger?.focus()
+      if (this.#shouldReturnFocusToTrigger && this.trigger) focusWithoutNeedlessScroll(this.trigger)
     } else if (this.isOpen && this.panel.role === "dialog") {
       trapFocusAtTabBoundary(this.panel, event)
     } else if (this.#isNavigatingMenu(event)) {
@@ -118,11 +118,10 @@ export class ToolbarDropdown extends HTMLElement {
   async #focusFirstInteractive() {
     // Ask for the ring explicitly: opening the menu with the mouse otherwise leaves the
     // first item focused without a focus ring, since focus() inherits the mouse modality.
-    // Only scroll when the item is off screen (e.g. a shortcut opened the dropdown with the
-    // toolbar scrolled away). Otherwise a sticky toolbar inside the page's scroll padding
-    // would scroll the page on every open.
+    // A shortcut can open the dropdown with the toolbar scrolled away, and then focusing
+    // the item is what brings it on screen.
     const element = this.#interactiveElements[0]
-    element?.focus({ focusVisible: true, preventScroll: isInViewport(element) })
+    if (element) focusWithoutNeedlessScroll(element, { focusVisible: true })
     if (this.panel.role === "menu") await this.#resetTabIndexValues()
   }
 
@@ -140,11 +139,6 @@ export class ToolbarDropdown extends HTMLElement {
   get #buttons() {
     return Array.from(this.panel.querySelectorAll("button"))
   }
-}
-
-function isInViewport(element) {
-  const { top, bottom } = element.getBoundingClientRect()
-  return top >= 0 && bottom <= window.innerHeight
 }
 
 export default ToolbarDropdown
