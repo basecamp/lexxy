@@ -31,6 +31,37 @@ test.describe("Attachment toolbar", () => {
     await expect(toolbar).toBeHidden()
   })
 
+  test("a supplied hidden toolbar becomes usable when an attachment is selected", async ({ page, editor }) => {
+    await page.route("**/attachments.html", async route => {
+      const response = await route.fetch()
+      const html = await response.text()
+      await route.fulfill({
+        response,
+        body: html.replace("</lexxy-editor>", '<lexxy-attachment-toolbar id="supplied-toolbar" hidden></lexxy-attachment-toolbar></lexxy-editor>')
+      })
+    })
+    await page.reload()
+    await editor.waitForConnected()
+    await editor.setValue(attachmentTag("a", "example.png"))
+    await editor.flush()
+
+    const toolbar = page.locator("#supplied-toolbar")
+    const figure = page.locator("figure.attachment")
+    await expect(toolbar).toHaveCount(1)
+    await expect(toolbar).toBeHidden()
+
+    await editor.focus()
+    await selectAttachment(figure)
+    await expect(toolbar).toBeVisible()
+
+    await page.keyboard.press("Alt+F10")
+    await page.keyboard.press("End")
+    await expect(toolbar.getByRole("button", { name: "Remove", exact: true })).toBeFocused()
+    await page.keyboard.press("Enter")
+    await expect(figure).toHaveCount(0)
+    await expect(toolbar).toBeHidden()
+  })
+
   test("Alt+F10 focuses the first button; Escape returns focus to the editor", async ({ page, editor }) => {
     await editor.setValue(attachmentTag("a", "example.png"))
     await editor.flush()

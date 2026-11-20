@@ -12,7 +12,7 @@ jobs:
     permissions:
       contents: read
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Checkout code
@@ -87,7 +87,7 @@ jobs:
 
   rails-system-tests:
     name: Rails system tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: read

@@ -991,6 +991,10 @@
     top: var(--lexxy-anchor-top);
     transform: translate(calc(-100% - 1.5ch), 1.5ch);
 
+    &[aria-hidden="true"] {
+      display: none;
+    }
+
     &[hidden] {
       display: none;
     }

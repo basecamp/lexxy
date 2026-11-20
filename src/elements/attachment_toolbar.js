@@ -24,7 +24,10 @@ export class AttachmentToolbar extends HTMLElement {
   connectedCallback() {
     this.classList.add("lexxy-floating-controls")
     this.role = "toolbar"
-    this.hidden = true
+    this.ariaHidden = "true"
+    if (this.hidden) {
+      this.hidden = false
+    }
 
     if (this.#editor) {
       this.#setUpButtons()
@@ -99,6 +102,7 @@ export class AttachmentToolbar extends HTMLElement {
       ariaLabel: "Alt text",
       title: "Alt text",
       ariaHasPopup: "dialog",
+      hidden: true,
       tabIndex: -1
     })
     this.#alternativeTextButton.appendChild(createElement("span", null, "ALT"))
@@ -152,7 +156,7 @@ export class AttachmentToolbar extends HTMLElement {
   #show(nodeKey) {
     this.#currentNodeKey = nodeKey
     this.#refresh()
-    this.hidden = false
+    this.ariaHidden = "false"
     this.#reflowObserver.observe(this.#editorElement)
   }
 
@@ -180,7 +184,10 @@ export class AttachmentToolbar extends HTMLElement {
 
     this.#editor.getEditorState().read(() => {
       const node = $getNodeByKey(nodeKey)
-      this.#alternativeTextButton.hidden = !this.#canEditAlternativeText(node)
+      const alternativeTextHidden = !this.#canEditAlternativeText(node)
+      if (this.#alternativeTextButton.hidden !== alternativeTextHidden) {
+        this.#alternativeTextButton.hidden = alternativeTextHidden
+      }
       this.dataset.nodeType = node.getType()
       this.dataset.presentation = this.#presentationOf(node, element)
 
@@ -240,7 +247,7 @@ export class AttachmentToolbar extends HTMLElement {
   #hide() {
     if (this.#hasSelectedNode) {
       this.#currentNodeKey = null
-      this.hidden = true
+      this.ariaHidden = "true"
       this.#reflowObserver.disconnect()
       this.#presentationObserver.disconnect()
       this.#observedElement = null
